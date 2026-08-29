@@ -113,6 +113,13 @@ class InclusiveGenerator {
   Event make_event(const SpinCategory& cat, const RunPlan& plan,
                    const EventDraw& draw, Rng& rng, std::uint64_t number,
                    int run, int bunch) const;
+  /// The same, reconstructed IN PLACE in `ev`: `Event::reset()` keeps the
+  /// record's heap capacity, so a loop over a reused `Event` allocates
+  /// nothing per event.  The value-returning overload is this one plus a
+  /// move.
+  void make_event(const SpinCategory& cat, const RunPlan& plan,
+                  const EventDraw& draw, Rng& rng, std::uint64_t number,
+                  int run, int bunch, Event& ev) const;
 
   /// Generate a whole run plan for `total_lumi_pb` and hand every event to
   /// `sink` as it is made -- nothing is stored.  Category k uses bunch index

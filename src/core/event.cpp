@@ -17,4 +17,29 @@ double Event::total_charge_final() const {
   for (const auto& p : particles) if (p.status == Status::Final) q += p.charge;
   return q;
 }
+void Event::reset() {
+  number = 0;
+  channel = Channel::Inclusive;
+  weight = 1.0;
+  spin_weights.clear();
+  xsec_pb = 0.0;
+  xsec_err_pb = 0.0;
+  kin = Kinematics();
+  // Field by field rather than `spin = SpinLabels()`, which would free the
+  // category string's buffer -- the one allocation this method exists to keep.
+  spin.j = 0.0;
+  spin.m_ion = 0.0;
+  spin.m_struck = 0.0;
+  spin.lam_e = 0;
+  spin.pe = 0.0;
+  spin.theta_s = 0.0;
+  spin.phi_s = 0.0;
+  spin.pz = 0.0;
+  spin.pzz = 0.0;
+  spin.category.clear();
+  spin.run = 0;
+  spin.bunch = 0;
+  particles.clear();
+}
+
 }  // namespace lipolgen

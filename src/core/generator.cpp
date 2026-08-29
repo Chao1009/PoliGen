@@ -70,6 +70,15 @@ Event InclusiveGenerator::make_event(const SpinCategory& cat,
                                      std::uint64_t number, int run,
                                      int bunch) const {
   Event ev;
+  make_event(cat, plan, draw, rng, number, run, bunch, ev);
+  return ev;
+}
+
+void InclusiveGenerator::make_event(const SpinCategory& cat,
+                                    const RunPlan& plan, const EventDraw& draw,
+                                    Rng& rng, std::uint64_t number, int run,
+                                    int bunch, Event& ev) const {
+  ev.reset();
   ev.number = number;
   ev.channel = config_.channel;
   ev.weight = 1.0;
@@ -143,7 +152,11 @@ Event InclusiveGenerator::make_event(const SpinCategory& cat,
   nucleon.charge = (nucleon_pdg == 2212) ? 1.0 : 0.0;
   nucleon.mother1 = 1;
 
-  ev.particles = {beam_e, beam_ion, escat, nucleon};
+  ev.particles.reserve(6);
+  ev.particles.push_back(beam_e);
+  ev.particles.push_back(beam_ion);
+  ev.particles.push_back(escat);
+  ev.particles.push_back(nucleon);
   const int i_nucleon = 3;
   int i_gamma = -1;
   if (config_.with_virtual_photon) {
@@ -179,7 +192,6 @@ Event InclusiveGenerator::make_event(const SpinCategory& cat,
   x.mother1 = i_nucleon;
   x.mother2 = i_gamma;
   ev.particles.push_back(x);
-  return ev;
 }
 
 std::vector<double> InclusiveGenerator::sigma_per_category(

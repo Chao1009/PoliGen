@@ -749,19 +749,18 @@ void Pipeline::add_hadronic_x(Event& ev, const Vec4& p_x, double charge,
   ev.particles.push_back(x);
 }
 
-Event Pipeline::make_inclusive(std::size_t k, std::uint64_t local,
-                               std::uint64_t index, Rng& rng) const {
+void Pipeline::make_inclusive(std::size_t k, std::uint64_t local,
+                              std::uint64_t index, Rng& rng, Event& ev) const {
   (void)local;
   const SpinCategory& cat = plan_.categories()[k];
   const EventDraw draw = dis_sampler_->draw_event(cplan_[k], rng);
-  Event ev = gen_->make_event(cat, plan_, draw, rng, index,
-                              static_cast<int>(cfg_.run), static_cast<int>(k));
+  gen_->make_event(cat, plan_, draw, rng, index, static_cast<int>(cfg_.run),
+                   static_cast<int>(k), ev);
   ev.xsec_pb = sigma_[k];
-  return ev;
 }
 
-Event Pipeline::make_tagged(std::size_t k, std::uint64_t local,
-                            std::uint64_t index, Rng& rng) const {
+void Pipeline::make_tagged(std::size_t k, std::uint64_t local,
+                           std::uint64_t index, Rng& rng, Event& ev) const {
   (void)local;
   const SpinCategory& cat = plan_.categories()[k];
 
@@ -784,7 +783,6 @@ Event Pipeline::make_tagged(std::size_t k, std::uint64_t local,
   // pays nothing for it; the rebuild on the rare rejection costs one more pass
   // through the same code.
   TaggedEvent te = tsampler_->sample_one(fills_[k], rate_cdf_[k], rng);
-  Event ev;
   for (int tries = 0;; ++tries) {
     if (tries > 0) {
       if (tries >= kTaggedMaxRedraw) {
@@ -793,8 +791,8 @@ Event Pipeline::make_tagged(std::size_t k, std::uint64_t local,
             "after " + std::to_string(kTaggedMaxRedraw) + " draws");
       }
       te = tsampler_->sample_one(fills_[k], rate_cdf_[k], rng);
-      ev = Event();
     }
+  ev.reset();
   label_event(ev, k, index);
   ev.kin.x = te.x;
   ev.kin.q2 = te.q2;
@@ -876,7 +874,7 @@ Event Pipeline::make_tagged(std::size_t k, std::uint64_t local,
     ev.particles.push_back(br.struck);
     const int i_n = static_cast<int>(ev.particles.size()) - 1;
     add_hadronic_x(ev, p_x, br.struck.charge, i_n);
-    return ev;
+    return;
   }
 
   const Particle& clus = ev.particles[static_cast<std::size_t>(i_clus)];
@@ -884,12 +882,12 @@ Event Pipeline::make_tagged(std::size_t k, std::uint64_t local,
   const Vec4 p_x = (beam_e_ + beam_ion_) - esc.p - spec.p;
   if (!(p_x.m2() >= 0.0)) continue;   // the rejection described above
   add_hadronic_x(ev, p_x, clus.charge, i_clus);
-  return ev;
+  return;
   }
 }
 
-Event Pipeline::make_coherent(std::size_t k, std::uint64_t local,
-                              std::uint64_t index, Rng& rng) const {
+void Pipeline::make_coherent(std::size_t k, std::uint64_t local,
+                             std::uint64_t index, Rng& rng, Event& ev) const {
   (void)local;
   const SpinCategory& cat = plan_.categories()[k];
 
@@ -911,7 +909,7 @@ Event Pipeline::make_coherent(std::size_t k, std::uint64_t local,
   draw_in_cell(*dis_sampler_, c, rng, x, q2);
   const double phi = 2.0 * kPi * rng.uniform();
   const double y = y_from_xq2(x, q2, dis_sampler_->s());
-  Event ev;
+  ev.reset();
   label_event(ev, k, index);
   ev.spin.m_ion = m_ion;
   ev.spin.m_struck = kNaN;
@@ -968,7 +966,6 @@ Event Pipeline::make_coherent(std::size_t k, std::uint64_t local,
   // WHOLE-NUCLEUS balance: X = k + P_ion - k' - P_recoil; the diffractive
   // system is neutral.
   add_hadronic_x(ev, (beam_e_ + beam_ion_) - esc.p - rec.p, 0.0, 1);
-  return ev;
 }
 
 Vec4 Pipeline::gen_scattered_electron(double x, double y, double phi) const {
@@ -985,13 +982,13 @@ void Pipeline::event(std::uint64_t index, Event& out) const {
   Rng rng(cfg_.seed, cfg_.run, k, local);
   switch (cfg_.channel) {
     case PipelineChannel::Inclusive:
-      out = make_inclusive(k, local, index, rng);
+      make_inclusive(k, local, index, rng, out);
       break;
     case PipelineChannel::CoherentLi6:
-      out = make_coherent(k, local, index, rng);
+      make_coherent(k, local, index, rng, out);
       break;
     default:
-      out = make_tagged(k, local, index, rng);
+      make_tagged(k, local, index, rng, out);
       break;
   }
   if (cfg_.hadronizer) cfg_.hadronizer(out, rng);
@@ -1020,11 +1017,28 @@ std::uint64_t Pipeline::for_each(const EventSink& sink) const {
   return total_;
 }
 
+std::uint64_t Pipeline::for_each_range(const EventSink& sink,
+                                       std::uint64_t first,
+                                       std::uint64_t last) const {
+  if (!sink) throw std::runtime_error("Pipeline::for_each_range: null sink");
+  if (last > total_) last = total_;
+  if (first >= last) return 0;
+  Event ev;
+  for (std::uint64_t i = first; i < last; ++i) {
+    event(i, ev);
+    sink(ev);
+  }
+  return last - first;
+}
+
 void Pipeline::generate_range(std::uint64_t first, std::uint64_t last,
                               std::vector<Event>& out) const {
   if (last > total_) last = total_;
-  out.clear();
-  if (first >= last) return;
+  if (first >= last) { out.clear(); return; }
+  // RESIZE, never clear-then-resize.  `clear()` destroys every record and
+  // frees its particle vector, so a chunked loop over one buffer paid a
+  // free/malloc pair per event; a plain resize keeps the records that are
+  // already there and `Pipeline::event` reconstructs into them in place.
   out.resize(static_cast<std::size_t>(last - first));
   for (std::uint64_t i = first; i < last; ++i) {
     event(i, out[static_cast<std::size_t>(i - first)]);

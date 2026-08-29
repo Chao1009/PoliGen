@@ -109,6 +109,14 @@ struct Event {
   const Particle* find(Role r) const;
   Vec4 total_final() const;            // Σ over Status::Final
   double total_charge_final() const;
+
+  /// Back to the default-constructed state, KEEPING the heap capacity of
+  /// `particles`, `spin_weights` and `spin.category`.  This is what lets a
+  /// generator reconstruct into an existing record instead of building a
+  /// fresh one and move-assigning it: a move-assignment frees the target's
+  /// buffers and steals the temporary's, so the allocator sees one
+  /// free/malloc pair per event either way, while `reset()` sees none.
+  void reset();
 };
 
 }  // namespace lipolgen

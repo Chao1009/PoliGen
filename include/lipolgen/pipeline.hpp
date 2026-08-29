@@ -501,6 +501,14 @@ class Pipeline {
   /// nothing.  Returns the number of events emitted.
   std::uint64_t for_each(const EventSink& sink) const;
 
+  /// Streaming over an index RANGE `[first, last)`, one reused `Event` and
+  /// no storage -- the pull-free half of `generate_range`.  Prefer this to
+  /// `generate_range` whenever the records are consumed and dropped: a
+  /// 4096-record buffer costs cache, not allocations (measured 2.19 M ev/s
+  /// against 2.87 M streaming, inclusive 6Li at the mid configuration).
+  std::uint64_t for_each_range(const EventSink& sink, std::uint64_t first,
+                               std::uint64_t last) const;
+
   /// Threaded streaming.  `nthreads` workers each build a `chunk`-sized block
   /// of the index range; the blocks are handed to `sink` from the CALLING
   /// thread in index order, so `sink` never needs a lock and the output is
@@ -508,18 +516,23 @@ class Pipeline {
   std::uint64_t for_each(const EventSink& sink, unsigned nthreads,
                          std::size_t chunk = 2048) const;
 
-  /// Events `[first, last)` into `out` (resized).  Thread-safe; any
-  /// decomposition of a range gives the same events.
+  /// Events `[first, last)` into `out`, RESIZED but not cleared: the records
+  /// already in `out` are reconstructed in place, so a loop that calls this
+  /// on the same buffer allocates nothing after the first chunk.
+  /// Thread-safe; any decomposition of a range gives the same events.
   void generate_range(std::uint64_t first, std::uint64_t last,
                       std::vector<Event>& out) const;
 
  private:
-  Event make_inclusive(std::size_t k, std::uint64_t local, std::uint64_t index,
-                       Rng& rng) const;
-  Event make_tagged(std::size_t k, std::uint64_t local, std::uint64_t index,
-                    Rng& rng) const;
-  Event make_coherent(std::size_t k, std::uint64_t local, std::uint64_t index,
-                      Rng& rng) const;
+  // All three reconstruct IN PLACE (`Event::reset()` keeps the record's heap
+  // capacity), so `event(i, ev)` on a reused `ev` -- and therefore
+  // `for_each` and `generate_range` -- allocates nothing per event.
+  void make_inclusive(std::size_t k, std::uint64_t local, std::uint64_t index,
+                      Rng& rng, Event& ev) const;
+  void make_tagged(std::size_t k, std::uint64_t local, std::uint64_t index,
+                   Rng& rng, Event& ev) const;
+  void make_coherent(std::size_t k, std::uint64_t local, std::uint64_t index,
+                     Rng& rng, Event& ev) const;
   void label_event(Event& ev, std::size_t k, std::uint64_t index) const;
   void add_beams(Event& ev, const SpinCategory& cat, double m_ion) const;
   void add_hadronic_x(Event& ev, const Vec4& p_x, double charge,

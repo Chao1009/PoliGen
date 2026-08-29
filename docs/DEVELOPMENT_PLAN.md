@@ -70,6 +70,11 @@ lepton QED radiation (PYTHIA dipole-recoil limitation).
 
 ## 3. Work breakdown and agent assignment
 
+**Status 2026-08-29 (end of day 1):** P0–P7 done and merged (215 doctest cases / 9.0 M
+assertions, 114 pytest cases); adversarial review done (`docs/code_review_2026-08-29.md`),
+all 12 findings fixed with tests. T1 tier (struck cluster → nucleon + partner spectator)
+in progress; see §6 for what remains open.
+
 Model policy: **Fable 5** = planning, architecture, review gates, merges.
 **Opus 5** = the physics-bearing C++ modules. **Sonnet 5** = tooling, bindings,
 scripts, docs, reference dumps.
@@ -120,3 +125,18 @@ scripts, docs, reference dumps.
 - Ion spin in HepMC3: attributes `spin_J`, `spin_M`, `spin_axis_theta/phi`,
   `P_e`, `lam_e`, `P_z`, `P_zz`, `struck_cluster_m` on the GenEvent (proposed
   convention, plans/04 #17).
+
+## 6. Open items after day 1
+
+- **T1 breakup realism**: deuteron internal wave function is Hulthén S+D; the triton
+  remnant (d vs nn) is crude and flagged (plans/05 risk table).
+- **Coherent T2**: no coherent-diffractive final-state model; the hadronizer is refused
+  on the coherent channel by default (`hadronize_coherent` opt-in reproduces v0).
+- **Physics inputs still external** (unchanged from plans/04): VMC α+d / α+t overlaps,
+  spin-3/2 rank-2 basis, b₁ for A > 2, coherent amplitude for polarized A > 2,
+  tensor-sector radiative corrections, polarized nuclear PDFs. All are `Backend`s.
+- **Conventions awaiting the author**: `TENSOR_LL_SIGN = +1` (plans/08 D1),
+  ⁶Li effective polarization 1/3 vs 0.81 (plans/04 #6), `EmcBaseline` default = Epps21
+  (mirrors the Python default of 2026-08-29).
+- **HepMC3 → abconv → npsim smoke test** not yet run (needs the eic-shell container).
+- Packaging: no `pyproject.toml` yet (PYTHONPATH route via `env.sh`).

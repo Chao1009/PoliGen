@@ -12,7 +12,14 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 _ROOT = os.path.dirname(os.path.dirname(_HERE))          # the LiPolGen repo
 _BUILD = os.path.join(_ROOT, "build", "python")
 
-if _BUILD not in sys.path and os.path.isdir(_BUILD):
+if os.path.isdir(_BUILD):
+    # FIRST, unconditionally.  `env.sh` already exports it, but a bare
+    # `cd python && pytest tests` puts the CWD (the SOURCE package, which has
+    # no compiled `_lipolgen`) ahead of it, and the source copy then shadows
+    # the staged one.  Moving it to the front is what makes both invocations
+    # import the same package.
+    while _BUILD in sys.path:
+        sys.path.remove(_BUILD)
     sys.path.insert(0, _BUILD)
 
 

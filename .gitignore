@@ -1,0 +1,10 @@
+build/
+*.o
+*.so
+*.pyc
+__pycache__/
+*.hepmc
+*.hepmc3
+*.npz
+validation/reference/*.json
+!validation/reference/.keep

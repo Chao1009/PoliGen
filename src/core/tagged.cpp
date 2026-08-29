@@ -14,6 +14,11 @@ namespace {
 /// Map a half-integer projection onto an exact integer map key.
 long long mkey(double m) { return std::llround(2.0 * m); }
 
+/// One key for the (M, m_S) pair, exact for half-integers.
+long long cdf_key(double m_ion, double m_s) {
+  return mkey(m_ion) * 1000 + mkey(m_s) + 500;
+}
+
 const double kNaN = std::nan("");
 
 /// `np.clip(np.searchsorted(grid, v) - 1, 0, n - 2)`: the module's
@@ -112,6 +117,20 @@ TaggedModel::TaggedModel(TaggedChannel channel, double k_max, std::size_t nk,
     rad_[w.l] = std::move(psi);
   }
   ms_struck_ = m_values(channel_.s_channel);
+
+  // C3: build every grid HERE.  After this the object is immutable, so every
+  // accessor is a pure lookup and `TaggedModel` is safe to share between
+  // threads with no lock and no warm-up protocol from the caller.
+  for (double mi : m_values(channel_.j_ion)) {
+    std::vector<std::vector<double>> a2 = build_amp2(mi);
+    n_.emplace(mkey(mi), build_n(a2));
+    for (std::size_t i = 0; i < ms_struck_.size(); ++i) {
+      std::vector<double> cdf = build_cdf(a2[i]);
+      if (cdf.empty()) continue;   // a CG-forbidden (M, m_S) pair
+      cdf_.emplace(cdf_key(mi, ms_struck_[i]), std::move(cdf));
+    }
+    amp2_.emplace(mkey(mi), std::move(a2));
+  }
 }
 
 const std::vector<double>& TaggedModel::radial_table(int l) const {
@@ -129,10 +148,15 @@ std::size_t TaggedModel::ms_index(double m_s) const {
 
 const std::vector<std::vector<double>>& TaggedModel::amp2_table(
     double m_ion) const {
-  const long long key = mkey(m_ion);
-  const auto it = amp2_.find(key);
-  if (it != amp2_.end()) return it->second;
+  const auto it = amp2_.find(mkey(m_ion));
+  if (it == amp2_.end()) {
+    throw std::runtime_error("TaggedModel: M is not an ion projection of "
+                             "this channel");
+  }
+  return it->second;
+}
 
+std::vector<std::vector<double>> TaggedModel::build_amp2(double m_ion) const {
   const std::size_t nk = k_.size(), nc = c_.size();
   std::vector<std::vector<double>> out(ms_struck_.size(),
                                        std::vector<double>(nk * nc, 0.0));
@@ -171,19 +195,25 @@ const std::vector<std::vector<double>>& TaggedModel::amp2_table(
       }
     }
   }
-  return amp2_.emplace(key, std::move(out)).first->second;
+  return out;
 }
 
 const std::vector<double>& TaggedModel::n_of_kc(double m_ion) const {
-  const long long key = mkey(m_ion);
-  const auto it = n_.find(key);
-  if (it != n_.end()) return it->second;
-  const auto& a2 = amp2_table(m_ion);
+  const auto it = n_.find(mkey(m_ion));
+  if (it == n_.end()) {
+    throw std::runtime_error("TaggedModel: M is not an ion projection of "
+                             "this channel");
+  }
+  return it->second;
+}
+
+std::vector<double> TaggedModel::build_n(
+    const std::vector<std::vector<double>>& a2) const {
   std::vector<double> out(k_.size() * c_.size(), 0.0);
   for (const auto& t : a2) {
     for (std::size_t j = 0; j < out.size(); ++j) out[j] += t[j];
   }
-  return n_.emplace(key, std::move(out)).first->second;
+  return out;
 }
 
 double TaggedModel::n_of_kc(double m_ion, double k, double c) const {
@@ -294,10 +324,15 @@ double TaggedModel::p2_moment_mixture(
 
 const std::vector<double>& TaggedModel::cell_cdf(double m_ion,
                                                  double m_s) const {
-  const long long key = mkey(m_ion) * 1000 + mkey(m_s) + 500;
-  const auto it = cdf_.find(key);
-  if (it != cdf_.end()) return it->second;
-  const std::vector<double>& a2 = amp2_table(m_ion)[ms_index(m_s)];
+  const auto it = cdf_.find(cdf_key(m_ion, m_s));
+  // A (M, m_S) pair the CG factors forbid has no density at all and is not
+  // built; `rates()` gives it weight zero, so the event loop never asks.
+  if (it == cdf_.end()) throw std::runtime_error("empty (M, m_S) density");
+  return it->second;
+}
+
+std::vector<double> TaggedModel::build_cdf(
+    const std::vector<double>& a2) const {
   const std::size_t nk = k_.size(), nc = c_.size();
   std::vector<double> cdf(nk * nc);
   double acc = 0.0;
@@ -308,9 +343,9 @@ const std::vector<double>& TaggedModel::cell_cdf(double m_ion,
       cdf[ik * nc + ic] = acc;
     }
   }
-  if (acc <= 0.0) throw std::runtime_error("empty (M, m_S) density");
+  if (!(acc > 0.0)) return std::vector<double>();
   for (double& v : cdf) v /= acc;
-  return cdf_.emplace(key, std::move(cdf)).first->second;
+  return cdf;
 }
 
 void TaggedModel::sample_kc_one(double m_ion, double m_s, Rng& rng,
@@ -495,7 +530,8 @@ int nuclide_pdg(int z, int a) {
 
 TaggedSampler::TaggedSampler(const TaggedModel& model, double p_per_nucleon,
                              KinematicsSource* dis)
-    : model_(&model), p_u_(p_per_nucleon), dis_(dis) {
+    : model_(&model), p_u_(p_per_nucleon), dis_(dis),
+      ms_ion_(m_values(model.channel().j_ion)) {
   const int beam_z = model.channel().base.beam_Z;
   const int beam_a = model.channel().base.beam_A;
   const std::string ion_name = beam_a == 6 ? "6Li"
@@ -509,10 +545,10 @@ TaggedSampler::TaggedSampler(const TaggedModel& model, double p_per_nucleon,
                              KinematicsSource* dis, const Optics& optics,
                              const std::string& pot_config)
     : model_(&model), p_u_(p_per_nucleon), dis_(dis), optics_(optics),
-      pot_config_(pot_config) {}
+      pot_config_(pot_config), ms_ion_(m_values(model.channel().j_ion)) {}
 
 std::vector<double> TaggedSampler::rates(const IonFill& fill) const {
-  const std::vector<double> ms_ion = m_values(model_->channel().j_ion);
+  const std::vector<double>& ms_ion = ms_ion_;
   const std::vector<double>& ms_c = model_->m_struck_values();
   if (fill.populations.size() != ms_ion.size()) {
     throw std::runtime_error("fill populations do not match the ion spin");
@@ -551,7 +587,7 @@ std::vector<double> TaggedSampler::rate_cdf(const IonFill& fill) const {
 TaggedEvent TaggedSampler::sample_one(const IonFill& fill,
                                       const std::vector<double>& cdf,
                                       Rng& rng) const {
-  const std::vector<double> ms_ion = m_values(model_->channel().j_ion);
+  const std::vector<double>& ms_ion = ms_ion_;
   const std::vector<double>& ms_c = model_->m_struck_values();
   std::size_t cell = static_cast<std::size_t>(
       std::lower_bound(cdf.begin(), cdf.end(), rng.uniform()) - cdf.begin());
@@ -566,7 +602,13 @@ TaggedEvent TaggedSampler::sample_one(const IonFill& fill,
   te.route = route_charged(te.lab.R, te.lab.theta, te.lab.pT, optics_,
                            te.lab.phi_spec, kNaN, pot_config_);
   if (dis_) {
-    std::vector<double> x, q2, y, phi;
+    // P6.  `KinematicsSource::sample` fills four vectors; allocating them per
+    // event cost four malloc/free pairs on the hot path.  THREAD-LOCAL
+    // scratch: `sample_one` is const and is called concurrently by
+    // `Pipeline::for_each(sink, nthreads)`, so the buffers cannot be members,
+    // and their CONTENTS never survive the call, so nothing about the event
+    // stream depends on them.
+    static thread_local std::vector<double> x, q2, y, phi;
     dis_->sample(te.m_struck, fill.lam_e, fill.pe, 1, rng, x, q2, y, phi);
     te.x = x[0];
     te.q2 = q2[0];
@@ -579,7 +621,7 @@ TaggedEvent TaggedSampler::sample_one(const IonFill& fill,
 std::vector<TaggedEvent> TaggedSampler::sample_category(const IonFill& fill,
                                                         std::size_t n,
                                                         Rng& rng) const {
-  const std::vector<double> ms_ion = m_values(model_->channel().j_ion);
+  const std::vector<double>& ms_ion = ms_ion_;
   const std::vector<double>& ms_c = model_->m_struck_values();
   const std::vector<double> cdf = rate_cdf(fill);
 

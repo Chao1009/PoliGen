@@ -148,15 +148,35 @@ class TaggedModel {
  private:
   std::size_t ms_index(double m_s) const;
   const std::vector<double>& cell_cdf(double m_ion, double m_s) const;
+  /// The three grid builds, called ONCE per ion projection by the
+  /// constructor.  See the note on the cache members below.
+  std::vector<std::vector<double>> build_amp2(double m_ion) const;
+  std::vector<double> build_n(const std::vector<std::vector<double>>& a2) const;
+  std::vector<double> build_cdf(const std::vector<double>& a2_ms) const;
 
   TaggedChannel channel_;
   std::vector<double> k_, c_;
   double dk_ = 0.0, dc_ = 0.0;
   std::vector<double> ms_struck_;
   std::map<int, std::vector<double>> rad_;   ///< L -> normalized radial table
-  mutable std::map<long long, std::vector<std::vector<double>>> amp2_;
-  mutable std::map<long long, std::vector<double>> n_;
-  mutable std::map<long long, std::vector<double>> cdf_;
+  // C3.  These were `mutable` and filled lazily on first use, which made
+  // every accessor a write and left thread safety resting on the caller
+  // warming every state first (`Pipeline`'s constructor did; nothing else had
+  // to).  They are now built in full by the CONSTRUCTOR and never written
+  // again, so the object is immutable after construction, every accessor is a
+  // pure lookup, and no lock is needed on any path.
+  //
+  // A mutex round the lazy caches was the alternative and was MEASURED
+  // against this one: `sample_kc + boost + route` runs at 5.18-5.36 Mev/s
+  // locked against 5.11-5.40 Mev/s eager, i.e. the lock is free at this
+  // granularity (one 26880-entry `lower_bound` dominates the call).  The
+  // eager build wins on the guarantee instead: it is the only one that makes
+  // the object immutable, so no caller has to know about a warm-up protocol.
+  // Its cost is paid once, in the constructor, and `Pipeline` was already
+  // paying it in its warm-up loop.
+  std::map<long long, std::vector<std::vector<double>>> amp2_;
+  std::map<long long, std::vector<double>> n_;
+  std::map<long long, std::vector<double>> cdf_;
 };
 
 /// Lab kinematics of the spectator cluster.  (k, c, phi_k) are spherical
@@ -319,9 +339,13 @@ class TaggedSampler {
   /// `n` tagged events for one ion spin category.
   std::vector<TaggedEvent> sample_category(const IonFill& fill, std::size_t n,
                                            Rng& rng) const;
-  /// One event (the throughput path: no vectors are allocated per event).
+  /// One event.  THE THROUGHPUT PATH: it allocates nothing per event -- the
+  /// ion-projection ladder is a member and the four DIS draw buffers the
+  /// `KinematicsSource` fills are thread-local scratch (P6).
   TaggedEvent sample_one(const IonFill& fill, const std::vector<double>& rate_cdf,
                          Rng& rng) const;
+  /// Ion projections M, ordered +J ... -J.
+  const std::vector<double>& m_ion_values() const { return ms_ion_; }
   /// Normalized cumulative of `rates`, for `sample_one`.
   std::vector<double> rate_cdf(const IonFill& fill) const;
 
@@ -339,6 +363,7 @@ class TaggedSampler {
   KinematicsSource* dis_;
   Optics optics_;
   std::string pot_config_;
+  std::vector<double> ms_ion_;   ///< m_values(j_ion), hoisted out of the loop
 };
 
 /// PDG code of a nuclide: 10-digit ion code 10LZZZAAAI, with the proton and

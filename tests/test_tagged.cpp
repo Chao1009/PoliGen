@@ -12,6 +12,7 @@
 #include <cmath>
 #include <ctime>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "check_close.hpp"
@@ -887,4 +888,80 @@ TEST_CASE("tagged: single-core throughput of sample_kc + boost") {
           << (n / secs) / 1e6 << " Mevents/s single core ("
           << 1e9 * secs / n << " ns/event)");
   CHECK(n / secs > 1e5);   // the plans/08 P8 target for the T0 tier
+}
+
+
+// C3.  `TaggedModel`'s amplitude / density / cell-CDF grids used to be
+// `mutable` maps filled lazily on first use, with no lock: two threads
+// sampling different (M, m_S) states raced on the same std::map.  Thread
+// safety rested on the caller having warmed every state first, which only
+// `Pipeline`'s constructor did.  They are built by the constructor now, so a
+// FRESH model driven directly from two threads has to be safe.
+//
+// This test drives TaggedSampler directly -- no Pipeline, no warm-up -- with
+// two threads on a model constructed inside the test, and demands that the
+// per-thread event streams are bit-identical to the single-threaded ones.
+// The pre-fix code fails it under ThreadSanitizer (data races in
+// std::_Rb_tree insert/find on all three maps) and segfaults outright in a
+// -O1 build; at -O2 without a sanitizer the window is narrow, so the
+// SANITIZER, not the plain run, is the gate this test is written for.
+TEST_CASE("tagged: a fresh TaggedModel is safe on two threads with no warm-up") {
+  const clock_t tc0 = std::clock();
+  const TaggedModel model(li6_alpha_channel());
+  const double build_ms =
+      1e3 * static_cast<double>(std::clock() - tc0) / CLOCKS_PER_SEC;
+  MESSAGE("TaggedModel eager grid build: " << build_ms << " ms");
+
+  const double p_u = default_configs("6Li")[1].ion_momentum_per_nucleon;
+  const TaggedSampler s(model, p_u, nullptr);
+  IonFill fill;
+  fill.j = 1.0;
+  fill.populations = {0.5, 0.3, 0.2};   // all three M states carry rate
+  const std::vector<double> cdf = s.rate_cdf(fill);
+
+  // the reference streams, single threaded, on a model of their own
+  const std::size_t n = 20000;
+  auto stream = [&](const TaggedSampler& smp, std::uint64_t seed) {
+    std::vector<double> out;
+    out.reserve(4 * n);
+    Rng rng(seed, 0, 0, 0);
+    for (std::size_t i = 0; i < n; ++i) {
+      const TaggedEvent e = smp.sample_one(fill, cdf, rng);
+      out.push_back(e.k);
+      out.push_back(e.cos_theta_k);
+      out.push_back(e.m_ion);
+      out.push_back(e.m_struck);
+    }
+    return out;
+  };
+  const std::vector<double> ref_a = stream(s, 11);
+  const std::vector<double> ref_b = stream(s, 22);
+
+  // ... and the same two streams from a model built fresh in this test and
+  // driven concurrently.  Under the old lazy caches this is the race.
+  const TaggedModel fresh(li6_alpha_channel());
+  const TaggedSampler sf(fresh, p_u, nullptr);
+  std::vector<double> got_a, got_b;
+  std::thread ta([&] { got_a = stream(sf, 11); });
+  std::thread tb([&] { got_b = stream(sf, 22); });
+  ta.join();
+  tb.join();
+
+  REQUIRE(got_a.size() == ref_a.size());
+  REQUIRE(got_b.size() == ref_b.size());
+  bool same = true;
+  for (std::size_t i = 0; i < ref_a.size(); ++i) {
+    if (got_a[i] != ref_a[i] || got_b[i] != ref_b[i]) same = false;
+  }
+  CHECK(same);
+
+  // the grids themselves are identical objects, built once
+  for (double m : {1.0, 0.0, -1.0}) {
+    CHECK(&model.amp2_table(m) == &model.amp2_table(m));   // pure lookup
+    CHECK(model.n_of_kc(m).size() == fresh.n_of_kc(m).size());
+  }
+  // an M that is not a projection of this ion is refused rather than built:
+  // no accessor may write to the object any more
+  CHECK_THROWS(model.amp2_table(2.0));
+  CHECK_THROWS(model.n_of_kc(2.0));
 }

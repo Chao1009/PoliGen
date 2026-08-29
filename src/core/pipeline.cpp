@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstdio>
 #include <stdexcept>
+#include <string>
 #include <thread>
 #include <utility>
 
@@ -18,6 +19,11 @@ const double kNaN = std::nan("");
 
 /// Exact integer key for a half-integer projection.
 long long mkey2(double m) { return std::llround(2.0 * m); }
+
+/// How many times a tagged draw may be repeated to land a TIMELIKE X.
+/// 0.02 % of d-control draws need one repeat, none needs two; the cap is a
+/// runaway guard, not a tuning knob.
+constexpr int kTaggedMaxRedraw = 64;
 
 /// Log-uniform (x, Q2) inside accepted cell `c`, redrawn until the event is
 /// inside the window -- the same 21-try loop, in the same draw order, as
@@ -268,6 +274,18 @@ void PipelineConfig::validate() const {
   if (!(lumi_pb > 0.0) && n_events == 0) {
     throw std::runtime_error("PipelineConfig: set either lumi_pb or n_events");
   }
+  if (hadronizer && channel == PipelineChannel::CoherentLi6 &&
+      !hadronize_coherent) {
+    throw std::runtime_error(
+        "PipelineConfig: a hadronizer on the COHERENT channel is refused "
+        "(C4).  A coherent event carries no struck nucleon and no struck "
+        "cluster, so PythiaBridge v0 falls through to its inclusive branch "
+        "and invents a nucleon at rest in the ion frame; that nucleon is not "
+        "in the record's balance, so the hadronized event loses "
+        "P_ion (1 - 1/A) of four-momentum and Z - 1 of charge.  Set "
+        "hadronize_coherent to reproduce that known-broken behaviour "
+        "deliberately.");
+  }
   const std::string want = channel_isotope(channel);
   if (!want.empty() && want != isotope) {
     throw std::runtime_error(std::string("PipelineConfig: channel ") +
@@ -473,13 +491,29 @@ Pipeline::Pipeline(PipelineConfig config, RunPlan plan)
     // folding the inclusive w_avg in on top would count the polarization twice.
     const std::vector<double>& sc = dis_sampler_->cell_xsec_pb();
     const std::vector<double>& xc = dis_sampler_->x_cells();
+    const std::vector<double>& q2c = dis_sampler_->q2_cells();
     coh_cdf_.resize(sc.size());
     double acc = 0.0;
     for (std::size_t c = 0; c < sc.size(); ++c) {
-      acc += sc[c] * cfg_.coherent.coherent_fraction(xc[c]);
+      // C1.  A cell only carries coherent rate if a diffractive system of at
+      // least M_X,min FITS in it at a pomeron fraction inside the diffractive
+      // region: x_P(M_X,min) <= x_P,max.  That is a kinematic statement, and
+      // it cuts exactly where the coherent scenario has almost no rate left
+      // anyway -- x >~ 0.05, where f_coh(x) is already 1/26 of its peak.
+      // Without it the largest-x cells would be forced onto the degenerate
+      // x_P = x_P,min branch, at which the nucleus loses ~9 % of its momentum
+      // and the "intact recoil" leaves the near-beam band altogether.
+      const double w2c = w2_from_xq2(xc[c], q2c[c]);
+      const bool fits = cfg_.coherent_xpom.x_pom_min(q2c[c], w2c)
+                        <= cfg_.coherent_xpom.x_pom_max;
+      if (fits) acc += sc[c] * cfg_.coherent.coherent_fraction(xc[c]);
       coh_cdf_[c] = acc;
     }
-    if (!(acc > 0.0)) throw std::runtime_error("Pipeline: no coherent rate");
+    if (!(acc > 0.0)) {
+      throw std::runtime_error(
+          "Pipeline: no coherent rate -- no accepted (x, Q2) cell admits a "
+          "diffractive mass of at least CoherentXpomModel::m_x_min");
+    }
     sigma_coh_pb_ = acc;
     for (double& v : coh_cdf_) v /= acc;
     for (std::size_t k = 0; k < nc; ++k) {
@@ -489,6 +523,9 @@ Pipeline::Pipeline(PipelineConfig config, RunPlan plan)
                                                  c.phi_s, beams_.ion.A,
                                                  beams_.ion.Z));
       csampler_.back()->set_optics(optics_, pot_config_);
+      csampler_.back()->set_xpom_model(cfg_.coherent_xpom);
+      // P4: THROWS if 1 + c2 cos 2phi would go negative anywhere on [0, t_max]
+      // at this category's P_zz.
       csampler_.back()->set_t_max(cfg_.coherent_t_max);
       csampler_.back()->set_weighted_azimuth(cfg_.coherent_weighted_azimuth);
       sigma_[k] = sigma_coh_pb_;
@@ -533,7 +570,12 @@ Pipeline::Pipeline(PipelineConfig config, RunPlan plan)
       ++assigned;
     }
   } else {
-    lumi_ = plan_.lumi_share_vector(cfg_.lumi_pb);
+    // C6.  `Optics::lumi_fraction` is the share of the machine luminosity the
+    // configured far-forward working point delivers -- 1 for the Yellow
+    // Report envelopes, 0.147 for the 6Li 5x41 tagging point, which buys its
+    // acceptance by de-squeezing beta*_x.  It multiplies the COUNTS and never
+    // the cross sections (`sigma_per_category_pb` stays share-invariant).
+    lumi_ = plan_.lumi_share_vector(cfg_.lumi_pb * optics_lumi_factor());
     for (std::size_t k = 0; k < nc; ++k) {
       const double mu = lumi_[k] * sigma_[k];
       if (cfg_.poisson) {
@@ -553,6 +595,12 @@ const TaggedChannel* Pipeline::tagged_channel() const { return channel_.get(); }
 
 const CoherentSampler* Pipeline::coherent_sampler(std::size_t category) const {
   return category < csampler_.size() ? csampler_[category].get() : nullptr;
+}
+
+double Pipeline::optics_lumi_factor() const {
+  if (!cfg_.apply_optics_lumi_fraction) return 1.0;
+  const double f = optics_.lumi_fraction;
+  return (f > 0.0 && f <= 1.0) ? f : 1.0;
 }
 
 double Pipeline::sigma_pb() const {
@@ -612,12 +660,26 @@ void Pipeline::add_beams(Event& ev, const SpinCategory& cat,
 
 void Pipeline::add_hadronic_x(Event& ev, const Vec4& p_x, double charge,
                               int mother) const {
+  // C1.  X is the whole hadronic final state and MUST be timelike.  This used
+  // to be sqrt(max(m2, 0)), which silently turned a spacelike residual into a
+  // massless X -- and the coherent channel produced one in 100 % of events
+  // while x_P was pinned at zero.  A hard check, not a clip: it is an
+  // invariant of the channel's own balance, not a condition on the event.
+  const double m2 = p_x.m2();
+  if (!(m2 >= 0.0)) {
+    char buf[224];
+    std::snprintf(buf, sizeof(buf),
+                  "Pipeline: the hadronic system X came out SPACELIKE on the "
+                  "%s channel, M_X^2 = %.6g GeV^2 (x = %.6g, Q2 = %.6g)",
+                  pipeline_channel_name(cfg_.channel), m2, ev.kin.x, ev.kin.q2);
+    throw std::runtime_error(buf);
+  }
   Particle x;
   x.pdg = 92;
   x.status = Status::Final;
   x.role = Role::HadronicX;
   x.p = p_x;
-  x.mass = std::sqrt(std::max(p_x.m2(), 0.0));
+  x.mass = std::sqrt(m2);
   x.charge = charge;
   x.mother1 = mother;
   x.mother2 = find_role(ev, Role::VirtualPhoton);
@@ -639,7 +701,37 @@ Event Pipeline::make_tagged(std::size_t k, std::uint64_t local,
                             std::uint64_t index, Rng& rng) const {
   (void)local;
   const SpinCategory& cat = plan_.categories()[k];
-  const TaggedEvent te = tsampler_->sample_one(fills_[k], rate_cdf_[k], rng);
+
+  // C1, and a defect the hard M_X^2 check below exposed.  The tagged struck
+  // cluster is DELIBERATELY off shell (P_X = P_ion - p_spec, the impulse
+  // approximation), and at a spectator momentum approaching the model's own
+  // k_max = 1.2 GeV it goes so far off shell that X = k + P_X - k' comes out
+  // SPACELIKE.  Measured on 200k events at the mid configuration: 0.020 % of
+  // the d(e,e'p) control (spectator proton, m_spec = 0.94 against the
+  // deuteron's 1.88 -- at k = 1.2 the struck neutron's P_X^2 is -1.3 GeV^2),
+  // and 0 % of the 6Li and 7Li alpha tags, where the spectator is an alpha and
+  // P_X^2 stays positive over the whole grid.  Before the check it was
+  // silently clipped to a MASSLESS X, which is not a hadronic system.
+  //
+  // The draw is REJECTED and repeated on the event's own stream: the tagged
+  // phase space is restricted to the region where the impulse approximation
+  // closes, which is a statement about the model, not about the event.  The
+  // event stays a pure function of its index, so determinism is untouched.
+  TaggedEvent te = tsampler_->sample_one(fills_[k], rate_cdf_[k], rng);
+  {
+    int tries = 0;
+    for (; tries < kTaggedMaxRedraw; ++tries) {
+      const Vec4 p_e = dis_source_->scattered_electron_p4(te.x, te.y, te.phi);
+      const Vec4 p_s = tsampler_->spectator_p4(te);
+      if (((beam_e_ + beam_ion_) - p_e - p_s).m2() >= 0.0) break;
+      te = tsampler_->sample_one(fills_[k], rate_cdf_[k], rng);
+    }
+    if (tries == kTaggedMaxRedraw) {
+      throw std::runtime_error(
+          "Pipeline: no timelike hadronic system on the tagged channel after "
+          + std::to_string(kTaggedMaxRedraw) + " draws");
+    }
+  }
 
   Event ev;
   label_event(ev, k, index);
@@ -714,9 +806,6 @@ Event Pipeline::make_coherent(std::size_t k, std::uint64_t local,
   draw_in_cell(*dis_sampler_, c, rng, x, q2);
   const double phi = 2.0 * kPi * rng.uniform();
   const double y = y_from_xq2(x, q2, dis_sampler_->s());
-  // 3. the recoil.
-  const CoherentEvent ce = csampler_[k]->sample(rng);
-
   Event ev;
   label_event(ev, k, index);
   ev.spin.m_ion = m_ion;
@@ -753,6 +842,16 @@ Event Pipeline::make_coherent(std::size_t k, std::uint64_t local,
     g.mother1 = 0;
     ev.particles.push_back(g);
   }
+
+  // 3. the recoil.  It is solved AGAINST this event's own residual
+  // R = k + P_ion - k', so that X = R - P_recoil comes out at exactly the
+  // diffractive mass the drawn x_P implies (C1).
+  CoherentDis dis;
+  dis.x = x;
+  dis.q2 = q2;
+  dis.w2 = ev.kin.w2;
+  dis.residual = (beam_e_ + beam_ion_) - esc.p;
+  const CoherentEvent ce = csampler_[k]->sample(rng, dis);
 
   // Adds the intact ground-state recoil and sets kin.t / kin.x_pom / channel,
   // and multiplies in the azimuthal weight 1 + c2 cos 2(phi_t - phi_S).

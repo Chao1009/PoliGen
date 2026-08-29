@@ -668,6 +668,10 @@ std::vector<TaggedEvent> TaggedSampler::sample_category(const IonFill& fill,
   return out;
 }
 
+Vec4 TaggedSampler::spectator_p4(const TaggedEvent& te) const {
+  return struck_cluster(model_->channel(), te.lab, p_u_).p_spectator;
+}
+
 void TaggedSampler::fill_event(Event& ev, const TaggedEvent& te) const {
   const TaggedChannel& ch = model_->channel();
   const ClusterChannel& base = ch.base;

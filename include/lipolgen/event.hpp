@@ -66,7 +66,10 @@ struct Kinematics {
   double k = 0, cos_theta_k = 0, phi_k = 0;      // spectator momentum in the spin frame
   double alpha_s = 0, pt_s = 0;                  // light-front α_s and p_T of the spectator
   // coherent channel
-  double t = 0, x_pom = 0;
+  double t = 0;          // |t| the exponential slope was drawn at = pT_recoil^2
+  double x_pom = 0;      // PER-NUCLEON pomeron fraction (coherent.hpp)
+  double beta_pom = 0;   // x / x_pom = Q^2/(M_X^2 + Q^2), in (0, 1]
+  double m_x2 = 0;       // M_X^2 of the diffractive system [GeV^2]
 };
 
 enum class Channel : std::uint8_t { Inclusive, TaggedLi6Alpha, TaggedLi6D, TaggedLi7Alpha, TaggedLi7T,

@@ -132,6 +132,14 @@ TEST_CASE("pipeline: every channel conserves four-momentum and charge") {
       CHECK(ev.particles[1].role == Role::BeamIon);
       REQUIRE(ev.find(Role::ScatteredElectron) != nullptr);
       REQUIRE(ev.find(Role::HadronicX) != nullptr);
+      // C1: X is the whole hadronic final state and must be TIMELIKE on
+      // EVERY channel.  `Pipeline::add_hadronic_x` used to clip a spacelike
+      // residual to a massless X; it throws now, so this is a second, direct
+      // statement of the same invariant.
+      const Particle* px = ev.find(Role::HadronicX);
+      CHECK(px->p.m2() >= 0.0);
+      CHECK(px->mass >= 0.0);
+      CHECK_CLOSE_AT(px->mass * px->mass, px->p.m2(), 1e-9, 1e-12);
       CHECK(ev.kin.q2 > 0.0);
       CHECK(ev.kin.y > 0.0);
       CHECK(ev.kin.y < 1.0);
@@ -530,7 +538,6 @@ TEST_CASE("pipeline: the coherent channel reproduces <|t|> = 1/B and the tag") {
     acc += rp_tagged(ev, p.optics(), p.pot_config());
     CHECK(ev.channel == Channel::CoherentLi6);
     CHECK(ev.find(Role::IntactRecoil) != nullptr);
-    CHECK(ev.kin.x_pom == 0.0);
   });
 
   // <|t|> of the exponential truncated at t_max
@@ -842,5 +849,251 @@ TEST_CASE("pipeline: single-core throughput per channel") {
             << " kevents/s single core (" << 1e9 * secs / p.size()
             << " ns/event)");
     CHECK(rate > 1e5);   // the plans/08 P8 target for the T0 tier
+  }
+}
+
+
+// ------------------------------------------------- C1: the pomeron and M_X
+
+// C1.  `PipelineConfig` had no x_P knob and `CoherentSampler::set_x_pom` was
+// never called, so x_P was 0 in every event: the recoil was the beam ion
+// itself and X = k + P_ion - k' - P_recoil was just the virtual photon,
+// M_X^2 = -Q^2 < 0 in 100 % of events, silently clipped to a massless X.
+TEST_CASE("pipeline: the coherent channel draws x_P and gives a timelike X") {
+  PipelineConfig cfg;
+  cfg.channel = PipelineChannel::CoherentLi6;
+  cfg.isotope = "6Li";
+  cfg.beam_config = 1;
+  cfg.n_events = 200000;
+  cfg.grid.nx = 40;
+  cfg.grid.nq2 = 28;
+  cfg.optics_choice = OpticsChoice::Tagging;
+  const Pipeline p(cfg, tensor_thirds_plan(kPZ, kPZZ));
+  const CoherentXpomModel& xm = cfg.coherent_xpom;
+  const double m_x_min2 = xm.m_x_min * xm.m_x_min;
+
+  double xp_lo = 1e300, xp_hi = 0.0, mx2_lo = 1e300, beta_hi = 0.0;
+  double r_lo = 1e300, r_hi = 0.0, worst_mx = 0.0;
+  std::uint64_t n = 0, above_max = 0;
+  p.for_each([&](const Event& ev) {
+    ++n;
+    const Particle* x = ev.find(Role::HadronicX);
+    const Particle* rec = ev.find(Role::IntactRecoil);
+    REQUIRE(x != nullptr);
+    REQUIRE(rec != nullptr);
+
+    // --- X is timelike and carries EXACTLY the drawn diffractive mass
+    CHECK(x->p.m2() > 0.0);
+    CHECK(ev.kin.m_x2 >= m_x_min2 * (1.0 - 1e-12));
+    worst_mx = std::max(worst_mx,
+                        std::fabs(x->p.m2() / ev.kin.m_x2 - 1.0));
+    mx2_lo = std::min(mx2_lo, ev.kin.m_x2);
+    // ... and X is NEUTRAL and carries no charge of the intact nucleus
+    CHECK(x->charge == 0.0);
+
+    // --- x_P is inside the model's own window at this event's kinematics
+    const double lo = xm.x_pom_min(ev.kin.q2, ev.kin.w2);
+    CHECK(ev.kin.x_pom >= lo * (1.0 - 1e-12));
+    if (ev.kin.x_pom > xm.x_pom_max * (1.0 + 1e-9)) ++above_max;
+    xp_lo = std::min(xp_lo, ev.kin.x_pom);
+    xp_hi = std::max(xp_hi, ev.kin.x_pom);
+
+    // --- beta = x/x_P is a momentum fraction.  With the per-nucleon
+    // W^2 = Q^2 (1-x)/x + M_N^2 the identity is exact as written below and
+    // collapses to the textbook Q^2/(M_X^2 + Q^2) when the nucleon mass is
+    // dropped (they differ by the factor 1 + x M_N^2/Q^2, ~1e-3 here).
+    CHECK(ev.kin.beta_pom > 0.0);
+    CHECK(ev.kin.beta_pom <= 1.0);
+    CHECK_CLOSE(ev.kin.beta_pom,
+                ev.kin.x * (ev.kin.w2 + ev.kin.q2)
+                    / (ev.kin.m_x2 + ev.kin.q2), 1e-12);
+    CHECK_CLOSE(ev.kin.beta_pom, ev.kin.q2 / (ev.kin.m_x2 + ev.kin.q2), 0.05);
+    beta_hi = std::max(beta_hi, ev.kin.beta_pom);
+
+    // --- the recoil is ON SHELL at the 6Li mass and still near-beam
+    CHECK_CLOSE(rec->p.m2(), rec->mass * rec->mass, 1e-9);
+    const double pt = rec->p.pt();
+    const double rr = std::sqrt(pt * pt + rec->p.pz * rec->p.pz)
+                      / (6.0 * p.beam_config().ion_momentum_per_nucleon);
+    r_lo = std::min(r_lo, rr);
+    r_hi = std::max(r_hi, rr);
+    CHECK(std::fabs(rr - 1.0) < NEAR_BEAM_BAND);
+    // pT^2 IS the sampled |t|; the exact Mandelstam t adds |t_min|
+    CHECK_CLOSE(pt * pt, ev.kin.t, 1e-9);
+  });
+  MESSAGE("coherent x_P in [" << xp_lo << ", " << xp_hi << "] (x_P,max = "
+          << xm.x_pom_max << ", " << above_max << "/" << n
+          << " above it from the intra-cell redraw), min M_X^2 = " << mx2_lo
+          << " (M_X,min^2 = " << m_x_min2 << "), max beta = " << beta_hi
+          << ", recoil R in [" << r_lo << ", " << r_hi
+          << "], worst |M_X^2(record)/M_X^2(model) - 1| = " << worst_mx);
+  CHECK(n == 200000);
+  // the recoil construction is EXACT, not a small-x_P expansion
+  CHECK(worst_mx < 1e-9);
+  // the window is really scanned, not pinned
+  CHECK(xp_lo < 1e-2);
+  CHECK(xp_hi > 5e-2);
+  // only the intra-cell redraw can leave the window, and only just
+  CHECK(above_max * 200 < n);
+  CHECK(xp_hi < 1.5 * xm.x_pom_max);
+}
+
+// P4.  c2 = -(P_zz/2) eps_B0 B |t| + amp P_zz is linear and UNBOUNDED in |t|,
+// so the azimuthal weight 1 + c2 cos 2(phi_t - phi_S) goes negative at large
+// |t|.  The default t_max was 0.5, past the |t| = 0.245 zero at P_zz = -2 and
+// past the |t| = 0.495 zero at P_zz = +1, and past the |t| <= 0.30 range of
+// the Mantysaari input the deformation term is scaled from.
+TEST_CASE("coherent: the azimuthal weight is positive over the whole t range") {
+  const CoherentScenario sc;
+  CHECK(COHERENT_T_MAX_DEFAULT == 0.2);
+
+  // the analytic zeros the new default avoids
+  CHECK_CLOSE_AT(sc.positivity_margin(0.495, 1.0), 0.0, 0.0, 1e-3);
+  CHECK_CLOSE_AT(sc.positivity_margin(0.245, -2.0), 0.0, 0.0, 1e-3);
+  CHECK(sc.positivity_margin(0.5, 1.0) < 0.0);
+  CHECK(sc.positivity_margin(0.5, -2.0) < 0.0);
+  for (double pzz : {1.0, 0.6, 0.0, -0.6, -2.0}) {
+    CHECK(sc.positivity_margin(COHERENT_T_MAX_DEFAULT, pzz) > 0.0);
+  }
+
+  // the SAMPLER refuses the range at setup, the way the inclusive kernel does
+  const double p_u = default_configs("6Li")[1].ion_momentum_per_nucleon;
+  CoherentSampler s(sc, p_u, -2.0, 0.0);
+  CHECK(s.t_max() == COHERENT_T_MAX_DEFAULT);
+  CHECK_THROWS(s.set_t_max(0.5));
+  CHECK(s.t_max() == COHERENT_T_MAX_DEFAULT);   // and leaves it alone
+  CHECK_NOTHROW(s.set_t_max(0.24));
+  // ... and so does the Pipeline, at every category's own P_zz
+  PipelineConfig bad;
+  bad.channel = PipelineChannel::CoherentLi6;
+  bad.isotope = "6Li";
+  bad.beam_config = 1;
+  bad.n_events = 100;
+  bad.coherent_t_max = 0.5;
+  CHECK_THROWS(Pipeline(bad, tensor_thirds_plan(kPZ, kPZZ)));
+
+  // no generated event carries a negative weight
+  PipelineConfig cfg;
+  cfg.channel = PipelineChannel::CoherentLi6;
+  cfg.isotope = "6Li";
+  cfg.beam_config = 1;
+  cfg.n_events = 50000;
+  cfg.grid.nx = 30;
+  cfg.grid.nq2 = 20;
+  // the m0-enriched fill sits at P_zz = -2 kPZZ, the worst case
+  const Pipeline p(cfg, tensor_thirds_plan(kPZ, kPZZ));
+  double w_lo = 1e300, w_hi = 0.0, t_hi = 0.0;
+  p.for_each([&](const Event& ev) {
+    w_lo = std::min(w_lo, ev.weight);
+    w_hi = std::max(w_hi, ev.weight);
+    t_hi = std::max(t_hi, ev.kin.t);
+  });
+  MESSAGE("coherent event weights in [" << w_lo << ", " << w_hi
+          << "] over |t| <= " << t_hi);
+  CHECK(w_lo > 0.0);
+  CHECK(t_hi <= COHERENT_T_MAX_DEFAULT);
+}
+
+// C4.  `Pipeline::event` called `cfg_.hadronizer` on EVERY channel, coherent
+// included.  A coherent event carries neither a struck nucleon nor a struck
+// cluster, so PythiaBridge falls through to its inclusive branch and invents
+// a nucleon that is not in the record's balance.
+TEST_CASE("pipeline: the hadronizer hook is refused on the coherent channel") {
+  struct Row { PipelineChannel ch; const char* iso; int plan; bool coherent; };
+  const Row rows[] = {
+      {PipelineChannel::Inclusive, "6Li", 0, false},
+      {PipelineChannel::TaggedLi6Alpha, "6Li", 0, false},
+      {PipelineChannel::TaggedDeuteronP, "d", 0, false},
+      {PipelineChannel::CoherentLi6, "6Li", 0, true},
+  };
+  for (const Row& row : rows) {
+    const std::string what = pipeline_channel_name(row.ch);
+    CAPTURE(what);
+    std::uint64_t calls = 0;
+    PipelineConfig cfg;
+    cfg.channel = row.ch;
+    cfg.isotope = row.iso;
+    cfg.beam_config = 1;
+    cfg.n_events = 500;
+    cfg.grid.nx = 24;
+    cfg.grid.nq2 = 16;
+    cfg.hadronizer = [&calls](Event&, Rng&) { ++calls; };
+
+    if (row.coherent) {
+      // refused at configuration time, before a single event is built
+      CHECK_THROWS_AS(Pipeline(cfg, tensor_thirds_plan(kPZ, kPZZ)),
+                      std::runtime_error);
+      CHECK(calls == 0);
+      // ... and the escape hatch is explicit and documented
+      cfg.hadronize_coherent = true;
+      const Pipeline opt_in(cfg, tensor_thirds_plan(kPZ, kPZZ));
+      opt_in.for_each([](const Event&) {});
+      CHECK(calls == opt_in.size());
+      // no hook at all is always fine
+      PipelineConfig plain = cfg;
+      plain.hadronizer = nullptr;
+      plain.hadronize_coherent = false;
+      CHECK_NOTHROW(Pipeline(plain, tensor_thirds_plan(kPZ, kPZZ)));
+    } else {
+      const Pipeline p(cfg, tensor_thirds_plan(kPZ, kPZZ));
+      p.for_each([](const Event&) {});
+      CHECK(calls == p.size());
+      CHECK(calls > 0);
+    }
+  }
+}
+
+// C6.  `Optics::lumi_fraction` -- the share of the machine luminosity a
+// far-forward working point actually delivers -- was computed, carried on
+// every `Optics`, and never applied to anything.  The lithium TAGGING optics
+// buy their acceptance by de-squeezing beta*_x, and that costs luminosity.
+TEST_CASE("pipeline: the optics luminosity fraction reaches the event count") {
+  auto counts = [](OpticsChoice oc, bool apply) {
+    PipelineConfig cfg;
+    cfg.channel = PipelineChannel::TaggedLi6Alpha;
+    cfg.isotope = "6Li";
+    cfg.beam_config = 0;              // 5x41, where the de-squeeze costs most
+    cfg.lumi_pb = 20.0;
+    cfg.poisson = false;              // the expectation, not a draw
+    cfg.optics_choice = oc;
+    cfg.apply_optics_lumi_fraction = apply;
+    cfg.grid.nx = 24;
+    cfg.grid.nq2 = 16;
+    return Pipeline(cfg, tensor_thirds_plan(kPZ, kPZZ));
+  };
+  const Pipeline yr = counts(OpticsChoice::YellowReportHighAcceptance, true);
+  const Pipeline tag = counts(OpticsChoice::Tagging, true);
+  const Pipeline tag_off = counts(OpticsChoice::Tagging, false);
+
+  const double f = tag.optics().lumi_fraction;
+  MESSAGE("6Li 5x41: YR lumi_fraction = " << yr.optics().lumi_fraction
+          << ", tagging lumi_fraction = " << f << "; events "
+          << yr.size() << " (YR) vs " << tag.size() << " (tagging) vs "
+          << tag_off.size() << " (tagging, knob off)");
+
+  CHECK(yr.optics().lumi_fraction == 1.0);
+  CHECK(f < 0.2);
+  CHECK(yr.optics_lumi_factor() == 1.0);
+  CHECK(tag.optics_lumi_factor() == f);
+  CHECK(tag_off.optics_lumi_factor() == 1.0);
+
+  // the tagging point delivers lumi_fraction x the events at the same lumi_pb
+  REQUIRE(yr.size() > 0);
+  CHECK_CLOSE(static_cast<double>(tag.size())
+                  / static_cast<double>(yr.size()), f, 2e-3);
+  // ... and the knob is what does it
+  CHECK_CLOSE(static_cast<double>(tag_off.size())
+                  / static_cast<double>(yr.size()), 1.0, 2e-3);
+  // THE SHARE RULE: cross sections never see it (bookkeeping.hpp)
+  REQUIRE(tag.sigma_per_category_pb().size()
+          == tag_off.sigma_per_category_pb().size());
+  for (std::size_t k = 0; k < tag.sigma_per_category_pb().size(); ++k) {
+    CHECK(tag.sigma_per_category_pb()[k] == tag_off.sigma_per_category_pb()[k]);
+  }
+  CHECK(tag.sigma_pb() == tag_off.sigma_pb());
+  // it is the LUMINOSITY that carries it
+  for (std::size_t k = 0; k < tag.lumi_per_category_pb().size(); ++k) {
+    CHECK_CLOSE(tag.lumi_per_category_pb()[k],
+                f * tag_off.lumi_per_category_pb()[k], 1e-12);
   }
 }

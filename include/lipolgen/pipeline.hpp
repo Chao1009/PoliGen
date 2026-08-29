@@ -296,13 +296,45 @@ struct PipelineConfig {
 
   // --- coherent channel ---------------------------------------------------
   CoherentScenario coherent;
-  double coherent_t_max = 0.5;         ///< |t| truncation [GeV^2]
+  /// |t| truncation [GeV^2].  0.2 since 2026-08-29 (P4): the azimuthal weight
+  /// 1 + c2 cos 2(phi_t - phi_S) goes NEGATIVE beyond |t| = 0.245 at
+  /// P_zz = -2, and the deformation input is digitized only to |t| = 0.30.
+  /// The `Pipeline` constructor refuses a range in which it would.
+  double coherent_t_max = COHERENT_T_MAX_DEFAULT;
+  /// How x_P -- and with it the diffractive mass M_X -- is drawn per event.
+  /// The default guarantees M_X >= 1 GeV, i.e. a TIMELIKE X (C1).
+  CoherentXpomModel coherent_xpom;
   /// Draw phi_t from the modulated density instead of carrying it as an event
   /// weight (`CoherentSampler::set_weighted_azimuth`).
   bool coherent_weighted_azimuth = false;
 
   // --- tiers --------------------------------------------------------------
   HadronizerHook hadronizer;
+  /// C4.  Let `hadronizer` run on the COHERENT channel.  Default FALSE, and
+  /// `validate()` REFUSES the combination unless it is set.
+  ///
+  /// A coherent event carries no struck nucleon and no struck cluster -- the
+  /// nucleus is intact and X is a diffractive system -- so `PythiaBridge` v0
+  /// falls through to its inclusive branch and INVENTS a nucleon at rest in
+  /// the ion frame.  That nucleon is not in the record's balance, so the
+  /// hadronized event misses P_ion (1 - 1/A) of four-momentum and Z - 1 of
+  /// charge: measured, a 16 % four-momentum residual and one unit of charge.
+  /// Set this only to reproduce that known-broken behaviour deliberately
+  /// (docs/T2_CHAIN.md); a real coherent-diffractive target is the fix.
+  bool hadronize_coherent = false;
+
+  /// C6.  Multiply the luminosity of every category by
+  /// `Optics::lumi_fraction` -- the share of the machine luminosity the
+  /// configured far-forward working point actually delivers.  Default TRUE.
+  ///
+  /// COUNTS ONLY, NEVER CROSS SECTIONS: `sigma_per_category_pb()` is
+  /// share-invariant by the same rule that keeps `Scenario::run_share` out of
+  /// it (bookkeeping.hpp).  The tagging optics buy their acceptance by
+  /// de-squeezing beta*_x, which costs luminosity -- 0.147 of it at 6Li
+  /// 5x41 -- and quoting a tagged yield at the Yellow Report luminosity while
+  /// routing it through the de-squeezed envelope overstates the sample by
+  /// 7-10x.  Ignored in fixed-`n_events` mode, where the count is given.
+  bool apply_optics_lumi_fraction = true;
 
   /// Throws std::runtime_error on an inconsistent configuration.
   void validate() const;
@@ -394,7 +426,12 @@ class Pipeline {
   /// plan's luminosity buys.
   double sigma_pb() const;
   /// Integrated luminosity [pb^-1] per category (zero in fixed-count mode).
+  /// Already carries `Optics::lumi_fraction` when
+  /// `PipelineConfig::apply_optics_lumi_fraction` is on.
   const std::vector<double>& lumi_per_category_pb() const { return lumi_; }
+  /// The luminosity factor the optics contributes to the COUNTS: the
+  /// configured `Optics::lumi_fraction`, or 1 when the knob is off.
+  double optics_lumi_factor() const;
 
   // --- event counts -------------------------------------------------------
 

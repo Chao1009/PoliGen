@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
+#include <string>
 #include <utility>
 
 namespace lipolgen {
@@ -135,13 +136,22 @@ Event InclusiveGenerator::make_event(const SpinCategory& cat,
     i_gamma = static_cast<int>(ev.particles.size()) - 1;
   }
 
-  // X carries the remainder EXACTLY: k + P_N - k'.
+  // X carries the remainder EXACTLY: k + P_N - k'.  On the per-nucleon
+  // balance with an ON-SHELL target its mass IS W, so a spacelike X means the
+  // `GeneratorConfig::target` hook handed back something the acceptance window
+  // cannot support -- a hard check, not a clip (C1).
   Particle x;
   x.pdg = 92;
   x.status = Status::Final;
   x.role = Role::HadronicX;
   x.p = (beam_e_ + pn) - escat.p;
-  x.mass = std::sqrt(std::max(x.p.m2(), 0.0));
+  const double m2_x = x.p.m2();
+  if (!(m2_x >= 0.0)) {
+    throw std::runtime_error(
+        "InclusiveGenerator: the hadronic system X came out SPACELIKE "
+        "(M_X^2 = " + std::to_string(m2_x) + " GeV^2) -- check the target hook");
+  }
+  x.mass = std::sqrt(m2_x);
   x.charge = nucleon.charge;
   x.mother1 = i_nucleon;
   x.mother2 = i_gamma;

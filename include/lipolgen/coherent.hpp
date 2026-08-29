@@ -38,6 +38,26 @@ inline constexpr double GEV_PER_FM_INV = 0.19733;
 /// One-sided rate-weighting model systematic on `a2_tagged`.
 inline constexpr double RATE_WEIGHT_SYST = 0.73;
 
+/// |t| truncation of the coherent channel [GeV^2].
+///
+/// 0.2, NOT the 0.5 carried until 2026-08-29 (P4).  Two reasons, and they
+/// agree: the deformation mechanism is scaled from Mantysaari et al.'s
+/// polarized-deuteron a_2, digitized over |t| <= 0.30 and LINEAR in |t| only
+/// as |t| -> 0, so 0.5 is outside the input; and the linear c_2 crosses -1 at
+/// |t| = 0.245 for P_zz = -2, i.e. the azimuthal weight goes NEGATIVE inside
+/// the old range.  See `CoherentScenario::positivity_margin`.
+inline constexpr double COHERENT_T_MAX_DEFAULT = 0.2;
+
+/// Smallest diffractive mass M_X of the coherent channel [GeV].
+///
+/// 1.0 GeV: above the vector-meson region (rho 0.775, omega 0.783, phi 1.019
+/// are exclusive channels this inclusive-diffractive scenario does not
+/// describe) and above the two-pion threshold by a wide margin, so every
+/// event carries a hadronic system PYTHIA could in principle fragment.  It is
+/// a SCENARIO cut, not a measured threshold, and it is the knob
+/// `CoherentXpomModel::m_x_min`.
+inline constexpr double COHERENT_MX_MIN_DEFAULT = 1.0;
+
 /// Coherent |F(t)|^2 t-slope B [GeV^-2] for a Gaussian density:
 /// F(t) = exp(-R_rms^2 |t|/6) -> |F|^2 = exp(-B|t|), B = R_rms^2/3.
 double gaussian_slope(double r_rms_fm);
@@ -69,7 +89,7 @@ struct CoherentScenario {
   /// f_coh(x) = f0 / (1 + (x/x_coh)^2).
   double coherent_fraction(double x) const;
   /// |t| ~ B exp(-B|t|), truncated at t_max [GeV^2].
-  double sample_t(Rng& rng, double t_max = 0.5) const;
+  double sample_t(Rng& rng, double t_max = COHERENT_T_MAX_DEFAULT) const;
   /// dsigma/d|t| normalized on [0, inf): B exp(-B|t|).
   double dsigma_dt(double t_abs) const;
   /// Fraction of coherent recoils above a near-beam pT cut: exp(-B cut^2).
@@ -101,6 +121,20 @@ struct CoherentScenario {
   /// deformation coefficient 2 a_2 PLUS the flat gluon-transversity term
   /// amp * P_zz (`money_cos2phi_coherent.py` injects 1 + amp P_zz cos 2phi).
   double cos2phi_coefficient(double t_abs, double pzz) const;
+
+  /// P4.  Minimum over phi_t of the azimuthal weight 1 + c_2 cos 2(phi_t -
+  /// phi_S), normalized: 1 - |c_2|.  NEGATIVE means the "weight" is not a
+  /// density any more and the sample carries events of negative weight.
+  ///
+  /// c_2 = -(P_zz/2) eps_B0 B |t| + amp P_zz is LINEAR AND UNBOUNDED in |t|,
+  /// so this is the same statement as `InclusiveKernel::positivity_margin`
+  /// and is checked the same way -- at setup, over the whole |t| range, and
+  /// it throws rather than silently clipping.  |c_2| is monotone in |t|
+  /// (2|t| + amp > 0 for every |t| >= 0), so the margin at `t_max` is the
+  /// worst one.  At the scenario defaults it is 1 - |P_zz| (2 |t| + 0.01):
+  /// zero at |t| = 0.495 for P_zz = +1 and at |t| = 0.245 for P_zz = -2,
+  /// which is why `COHERENT_T_MAX_DEFAULT` is 0.2 and not 0.5.
+  double positivity_margin(double t_max, double pzz) const;
 };
 
 /// Lab kinematics of the intact 6Li recoil.  pT = sqrt(|t|), neglecting
@@ -113,8 +147,64 @@ struct CoherentRecoil {
   double xL = 0.0;
   double phi_t = 0.0;
 };
+/// The geometric form, `reco.recoil_fourvector`'s: `x_pom` is the fraction of
+/// the WHOLE-NUCLEUS momentum the pomeron takes.  Kept because it is what the
+/// reference tables were dumped from; the generator uses `recoil_lab_of`.
 CoherentRecoil recoil_lab(double t_abs, double phi_t, double p_per_nucleon,
                           double x_pom = 0.0, int a_beam = 6);
+/// The same observables read off an EXACT recoil four-vector.
+CoherentRecoil recoil_lab_of(const Vec4& p_recoil, double phi_t,
+                             double p_per_nucleon, int a_beam = 6);
+
+// ------------------------------------------------------------- the pomeron
+
+/// HOW x_P -- AND WITH IT THE DIFFRACTIVE MASS M_X -- IS DRAWN PER EVENT.
+///
+/// There is no diffractive model to port.  `recopseudo.CoherentResponse`
+/// (plans/08 D8) draws x_P log-uniform over a fixed decade and uses it for
+/// ONE thing, the t_min kinematic cut; it never forms M_X, and the produced
+/// system is not generated at all.  LiPolGen does generate it -- X is the
+/// pseudo-particle that closes k + P_ion = k' + P_recoil + X -- so x_P has to
+/// be a real per-event variable or X comes out SPACELIKE, which is what
+/// happened while x_P was pinned at 0: with P_recoil = P_ion the residual is
+/// just the virtual photon and M_X^2 = -Q^2 in 100 % of events.
+///
+/// CONVENTION.  x_P is the PER-NUCLEON pomeron fraction, the one the
+/// diffractive literature quotes and the one whose conventional upper edge is
+/// 0.1:
+///     x_P = (M_X^2 + Q^2 - t) / (W^2 + Q^2 - M_N^2)  ~  (M_X^2 + Q^2)/(W^2 + Q^2)
+/// with W the PER-NUCLEON gamma*N invariant mass the event already carries.
+/// The nucleus loses x_P/A of its own light-cone momentum, so the recoil
+/// rigidity stays inside the near-beam band: at A = 6 the whole x_P range
+/// [x_P,min, 0.1] is a nucleus fraction of at most 1.7e-2, which brackets the
+/// [1e-3, 1e-2] decade `recopseudo` draws its (nucleus-fraction) x_pom on.
+///
+/// beta = x / x_P = Q^2/(M_X^2 + Q^2) <= 1 follows identically.
+struct CoherentXpomModel {
+  /// Smallest diffractive mass [GeV]; sets the LOWER x_P edge per event.
+  double m_x_min = COHERENT_MX_MIN_DEFAULT;
+  /// Upper x_P edge: the conventional edge of the diffractive region.
+  double x_pom_max = 0.1;
+
+  /// x_P of a diffractive mass, and the inverse.
+  static double x_pom_of(double m_x2, double q2, double w2);
+  static double m_x2_of(double x_pom, double q2, double w2);
+  /// The lower edge x_P(M_X,min) at this (Q^2, W^2).
+  double x_pom_min(double q2, double w2) const;
+  /// Log-uniform on [x_pom_min, x_pom_max].  When the kinematics cannot fit
+  /// M_X,min below `x_pom_max` -- large x, where the coherent weight f_coh(x)
+  /// is 1e-4 of its peak anyway -- the draw DEGENERATES to `x_pom_min`, so
+  /// M_X = M_X,min exactly and the event is still physical.  One uniform is
+  /// consumed either way, so the RNG stream does not depend on the branch.
+  double draw(double q2, double w2, Rng& rng) const;
+};
+
+/// The DIS side an exact coherent recoil needs.
+struct CoherentDis {
+  double x = 0.0, q2 = 0.0, w2 = 0.0;
+  /// R = k + P_ion - k', the four-momentum the recoil and X share.
+  Vec4 residual;
+};
 
 /// Rigidity ratio R of a beam-velocity fragment: R = (m/Z)/(m_beam/Z_beam), a
 /// ratio of MASS-to-charge ratios, not of mass numbers.  NaN for Z = 0.
@@ -151,9 +241,12 @@ std::vector<VetoRow> veto_table(int beam_a = 6, int beam_z = 3,
 
 /// One coherent event.
 struct CoherentEvent {
-  double t = 0.0;       ///< |t| [GeV^2]
+  double t = 0.0;       ///< |t| the slope was sampled at; the recoil's pT^2
+  double t_exact = 0.0; ///< |(P_ion - P_recoil)^2|, i.e. `t` plus |t_min|
   double phi_t = 0.0;   ///< recoil azimuth about the ion axis [rad]
-  double x_pom = 0.0;
+  double x_pom = 0.0;   ///< PER-NUCLEON pomeron fraction (CoherentXpomModel)
+  double m_x2 = 0.0;    ///< M_X^2 of the diffractive system [GeV^2], > 0
+  double beta = 0.0;    ///< x / x_P = Q^2/(M_X^2 + Q^2)
   CoherentRecoil recoil;
   Vec4 p_recoil;        ///< head-on frame four-vector of the intact nucleus
   double weight = 1.0;  ///< azimuthal weight 1 + c_2 cos 2(phi_t - phi_S)
@@ -176,26 +269,37 @@ class CoherentSampler {
                   int beam_z = 3);
 
   const CoherentScenario& scenario() const { return sc_; }
+  const CoherentXpomModel& xpom_model() const { return xpom_; }
+  double t_max() const { return t_max_; }
   void set_optics(const Optics& optics, const std::string& pot_config);
   void set_weighted_azimuth(bool on) { weighted_ = on; }
-  void set_x_pom(double x_pom) { x_pom_ = x_pom; }
-  void set_t_max(double t_max) { t_max_ = t_max; }
+  void set_xpom_model(const CoherentXpomModel& m) { xpom_ = m; }
+  /// THROWS if the azimuthal weight would go negative anywhere on
+  /// [0, t_max] at this sampler's P_zz (`CoherentScenario::positivity_margin`).
+  void set_t_max(double t_max);
 
-  CoherentEvent sample(Rng& rng) const;
+  /// One coherent event AT this event's DIS kinematics.  `dis` is required:
+  /// x_P, M_X and the recoil's longitudinal momentum are all functions of it,
+  /// and the recoil is solved so that
+  ///     (R - P_recoil)^2 = M_X^2   EXACTLY, with P_recoil^2 = M_A^2,
+  /// which is what makes X timelike event by event.
+  CoherentEvent sample(Rng& rng, const CoherentDis& dis) const;
 
   /// ADD the intact recoil (Role::IntactRecoil) to an event whose beams and
   /// e' are already set, and fill `Event::kin.t` / `kin.x_pom`.
   void fill_event(Event& ev, const CoherentEvent& ce) const;
 
  private:
+  void check_positivity() const;
+
   CoherentScenario sc_;
+  CoherentXpomModel xpom_;
   double p_u_;
   double pzz_;
   double phi_s_;
   int beam_a_, beam_z_;
   double m_beam_;
-  double x_pom_ = 0.0;
-  double t_max_ = 0.5;
+  double t_max_ = COHERENT_T_MAX_DEFAULT;
   bool weighted_ = false;
   Optics optics_;
   std::string pot_config_;

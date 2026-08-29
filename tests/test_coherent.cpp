@@ -17,6 +17,7 @@
 #include "lipolgen/constants.hpp"
 #include "lipolgen/event.hpp"
 #include "lipolgen/rng.hpp"
+#include "lipolgen/sampler.hpp"
 #include "lipolgen/spectator.hpp"
 
 using namespace lipolgen;
@@ -281,18 +282,44 @@ TEST_CASE("coherent: the veto table routing") {
   CHECK_CLOSE_AT(r_at_rest[r_at_rest.size() / 2], alpha.rigidity, 0.0, 1e-3);
 }
 
+namespace {
+
+/// A representative DIS side for the coherent sampler: one accepted (x, Q2)
+/// of the generator window, with the exact head-on residual
+/// R = k + P_ion - k' the recoil is solved against.
+CoherentDis test_dis(const BeamConfig& cfg, double x, double q2) {
+  CoherentDis d;
+  d.x = x;
+  d.q2 = q2;
+  d.w2 = w2_from_xq2(x, q2);
+  const double p_a = 6.0 * cfg.ion_momentum_per_nucleon;
+  const double m_a = nuclear_mass(3, 6);
+  const Vec4 k{cfg.electron_energy, 0.0, 0.0, -cfg.electron_energy};
+  const Vec4 p_ion{std::sqrt(p_a * p_a + m_a * m_a), 0.0, 0.0, p_a};
+  const double s4 = 4.0 * cfg.electron_energy * cfg.ion_momentum_per_nucleon;
+  const double y = y_from_xq2(x, q2, s4);
+  const ScatteredElectron e = scattered_electron(x, y, s4, cfg.electron_energy);
+  const Vec4 kp{e.e_prime, e.e_prime * std::sin(e.theta), 0.0,
+                e.e_prime * std::cos(e.theta)};
+  d.residual = (k + p_ion) - kp;
+  return d;
+}
+
+}  // namespace
+
 TEST_CASE("coherent: the sampler's recoil, weights and event record") {
   const CoherentScenario sc;
   const BeamConfig cfg = default_configs("6Li")[1];
   const double p_u = cfg.ion_momentum_per_nucleon;
   const double pzz = 0.6, phi_s = 0.0;
+  const CoherentDis dis = test_dis(cfg, 2e-3, 3.0);
   CoherentSampler s(sc, p_u, pzz, phi_s);
   Rng rng(7, 0, 0, 0);
   const std::size_t n = 200000;
   double tsum = 0.0, wsum = 0.0, wc2 = 0.0, c2sum = 0.0;
   const double m_beam = nuclear_mass(3, 6);
   for (std::size_t i = 0; i < n; ++i) {
-    const CoherentEvent e = s.sample(rng);
+    const CoherentEvent e = s.sample(rng, dis);
     tsum += e.t;
     wsum += e.weight;
     wc2 += e.weight * std::cos(2.0 * e.phi_t);
@@ -306,6 +333,7 @@ TEST_CASE("coherent: the sampler's recoil, weights and event record") {
     }
   }
   CHECK_CLOSE(tsum / n, 1.0 / sc.slope_b, 0.02);
+  CHECK_CLOSE(c2sum / n, sc.cos2phi_coefficient(tsum / n, pzz), 0.02);
   CHECK_CLOSE(wsum / n, 1.0, 0.01);   // the weight is unbiased in the azimuth
   // E[2 w cos 2phi] = E[c2] exactly (the azimuth is uniform, so
   // E[cos^2 2phi] = 1/2); the MC error of the estimator is 2 sqrt(1/2n) =
@@ -319,7 +347,7 @@ TEST_CASE("coherent: the sampler's recoil, weights and event record") {
   sw.set_weighted_azimuth(true);
   double c2_hat = 0.0;
   for (std::size_t i = 0; i < n; ++i) {
-    const CoherentEvent e = sw.sample(rng);
+    const CoherentEvent e = sw.sample(rng, dis);
     CHECK(e.weight == 1.0);
     c2_hat += std::cos(2.0 * e.phi_t);
   }
@@ -336,7 +364,7 @@ TEST_CASE("coherent: the sampler's recoil, weights and event record") {
   beam_i.mass = m_beam;
   beam_i.charge = 3;
   ev.particles.push_back(beam_i);
-  const CoherentEvent ce = s.sample(rng);
+  const CoherentEvent ce = s.sample(rng, dis);
   s.fill_event(ev, ce);
   const Particle* rec = ev.find(Role::IntactRecoil);
   REQUIRE(rec != nullptr);
@@ -346,7 +374,10 @@ TEST_CASE("coherent: the sampler's recoil, weights and event record") {
   CHECK(rec->mother1 == 0);
   CHECK_CLOSE(rec->mass, m_beam, kRtol);
   CHECK_CLOSE(ev.kin.t, ce.t, kRtol);
-  CHECK(ev.kin.x_pom == 0.0);
+  CHECK(ev.kin.x_pom == ce.x_pom);
+  CHECK(ev.kin.x_pom > 0.0);
+  CHECK(ev.kin.m_x2 == ce.m_x2);
+  CHECK(ev.kin.beta_pom == ce.beta);
   CHECK(ev.channel == Channel::CoherentLi6);
   CHECK_CLOSE(ev.weight, ce.weight, kRtol);
 }

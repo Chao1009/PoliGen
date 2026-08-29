@@ -55,6 +55,7 @@
 
 #include "check_close.hpp"
 #include "doctest.h"
+#include <stdexcept>
 
 #include "lipolgen/pipeline.hpp"
 #include "lipolgen/pythia_bridge.hpp"
@@ -296,9 +297,8 @@ TEST_CASE("T2 chain: tagged 6Li-alpha, 300 events, whole-record balance "
   CHECK(st.worst_pt < 1e-8);
 }
 
-TEST_CASE("T2 chain: coherent 6Li, 300 events -- the call works, but "
-          "whole-record conservation does NOT hold (see file header: "
-          "PythiaBridge v0 has no coherent-diffractive target)") {
+TEST_CASE("T2 chain: coherent 6Li -- a hadronizer is REFUSED by default (C4); "
+          "opting in reproduces the known-broken v0 fallback") {
   PipelineConfig cfg;
   cfg.channel = PipelineChannel::CoherentLi6;
   cfg.isotope = "6Li";
@@ -309,41 +309,33 @@ TEST_CASE("T2 chain: coherent 6Li, 300 events -- the call works, but "
 
   const BeamConfig bc = default_configs(cfg.isotope)[static_cast<std::size_t>(cfg.beam_config)];
   PythiaBridge bridge(bc, bridge_opts(kSeed + 2));
-  // No hook applies here: hadronize() never looks for a coherent target
-  // (there is no Role for one), so it always takes the plain inclusive
-  // fallback (a nucleon at rest in the ion frame) regardless of what a
-  // caller might install.
 
-  ChainStats st;
-  run_channel(cfg, tensor_thirds_plan(0.7, 0.6), bridge, Role::IntactRecoil, &st);
+  SUBCASE("default: refused") {
+    ChainStats st;
+    CHECK_THROWS_AS(run_channel(cfg, tensor_thirds_plan(0.7, 0.6), bridge, Role::IntactRecoil, &st),
+                    std::runtime_error);
+  }
 
-  MESSAGE("coherent 6Li: " << st.n_ok << "/" << st.n_attempted
-                           << " hadronized (the call works mechanically), "
-                              "worst 4p rel " << st.worst_p_rel
-                           << " and worst charge " << st.worst_q
-                           << " -- NOT conserved (measured ~0.16 / 1 with the "
-                              "fallback target; see docs/T2_CHAIN.md), worst "
-                              "Sum(E-pz) exact " << st.worst_empz_exact
-                           << " GeV, worst Sum(E-pz) truth rel "
-                           << st.worst_empz_truth_rel << ", worst pT "
-                           << st.worst_pt << " GeV, " << st.secs << " s -> "
-                           << (st.secs > 0 ? st.n_ok / st.secs : 0.0)
-                           << " ev/s");
-  CHECK(st.n_attempted == kN);
-  CHECK(st.n_ok > kN - 30);
-  CHECK(st.n_untouched_fail == 0);   // the recoil itself is still never touched
-  CHECK(st.n_electron_fail == 0);
-  // These two hold because they are the bridge's OWN internal identities,
-  // exact relative to whatever target it used, independent of whether that
-  // target has anything to do with the physical coherent process.
-  CHECK(st.worst_empz_exact < 1e-6);
-  CHECK(st.worst_empz_truth_rel < 1e-3);
-  CHECK(st.worst_pt < 1e-8);
-  // Whole-record momentum/charge conservation is DELIBERATELY NOT asserted
-  // at the tight tolerance the other two channels meet: it does not hold.
-  // The bound below is only a regression guard on the size of the known gap.
-  CHECK(st.worst_p_rel < 0.30);
-  CHECK(st.worst_q <= 1.0);
+  SUBCASE("opt-in: the v0 fallback target runs but does not conserve the whole record") {
+    // PythiaBridge v0 has no coherent-diffractive target: hadronize() takes
+    // the inclusive fallback (a nucleon at rest in the ion frame), so the
+    // whole-record balance is off by ~P_ion(1-1/A).  Regression guard only.
+    cfg.hadronize_coherent = true;
+    ChainStats st;
+    run_channel(cfg, tensor_thirds_plan(0.7, 0.6), bridge, Role::IntactRecoil, &st);
+    MESSAGE("coherent 6Li (opt-in): " << st.n_ok << "/" << st.n_attempted
+            << " hadronized, worst 4p rel " << st.worst_p_rel << ", worst charge "
+            << st.worst_q << " -- NOT conserved by design of v0 (docs/T2_CHAIN.md)");
+    CHECK(st.n_attempted == kN);
+    CHECK(st.n_ok > kN - 30);
+    CHECK(st.n_untouched_fail == 0);
+    CHECK(st.n_electron_fail == 0);
+    CHECK(st.worst_empz_exact < 1e-6);
+    CHECK(st.worst_empz_truth_rel < 1e-3);
+    CHECK(st.worst_pt < 1e-8);
+    CHECK(st.worst_p_rel < 0.30);
+    CHECK(st.worst_q <= 1.0);
+  }
 }
 
 // ---------------------------------------------------------------------------

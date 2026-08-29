@@ -23,7 +23,7 @@
 //     --slope B             |F(t)|^2 slope [GeV^-2]           (band 40-60)
 //     --amp A               flat cos 2phi amplitude at P_zz=1 (band 3e-3-1e-2)
 //     --eps-b0 E            m = 0 relative slope modulation   (band -0.04..-0.13)
-//     --tmax T              |t| truncation [GeV^2]            (default 0.5)
+//     --tmax T              |t| truncation [GeV^2]            (default 0.2; see P4)
 //     --weighted-azimuth    draw phi_t from the modulated density instead of
 //                           carrying it as an event weight
 //     --seed S              RNG seed                          (default 20260713)
@@ -51,7 +51,7 @@ struct Args {
   std::string optics = "tagging";
   long long events = 200000;
   double lumi = -1.0;
-  double t_max = 0.5;
+  double t_max = COHERENT_T_MAX_DEFAULT;   // P4: 0.5 makes the weight negative
   bool weighted_azimuth = false;
   unsigned long long seed = 20260713;
   unsigned threads = 1;

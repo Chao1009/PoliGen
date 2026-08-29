@@ -263,7 +263,11 @@ const DigitizedTable& kTmtPolemcNmQ10();
 // -------------------------------------------------------------- EMC hooks
 
 /// Qualitative unpolarized EMC ratio for a light nucleus (SCENARIO): the
-/// 12-point canonical shape, linearly interpolated.
+/// 12-point canonical shape, linearly interpolated.  This is
+/// `polli_fastsim.polarized.unpolarized_emc_ratio(x, mode="table")`, the shape
+/// every figure published before 2026-08-29 carried; the data-driven curves
+/// (EPPS21, nNNPDF) need nuclear PDFs and live behind the LHAPDF backend, not
+/// in the dependency-free core.
 double unpolarized_emc_ratio(double x);
 
 /// Digitized 7Li UNPOLARIZED EMC ratio (CBT Fig. 6, blue dashed).
@@ -271,22 +275,69 @@ double cbt_unpolarized_emc_ratio(double x);
 
 enum class EmcMode { kDigitized, kConstant };
 
-/// Cloet-Bentz-Thomas polarized EMC ratio for 7Li; eq = 23 is the
-/// R^{3/2 3/2}_{As} of their Eq. (23), eq = 26 the R^{(3/2 1)}_{As}.
+/// WHICH UNPOLARIZED BASELINE THE POLARIZED-EMC TRANSFER IS REFERENCED TO
+/// (`polli_fastsim.polarized.POLEMC_BASELINE`).
+///
+/// Both published polarized-EMC curves are quoted on a nucleus that is not
+/// ours -- CBT computed 7Li, TMT computed nuclear matter -- so each is
+/// transferred by the VALENCE SCALE
+///     s(table) = <1 - R_unpol,baseline> / <1 - R_unpol,table>
+/// averaged over POLEMC_VALENCE_WINDOW, and the transferred curve is
+/// 1 - s (1 - R_pol,published).  The scale therefore depends entirely on how
+/// deep the baseline's own unpolarized EMC effect is, and that is a CHOICE:
+///
+///   LegacyTable  the baseline of every number published before 2026-08-29 --
+///                CBT's own digitized 7Li R_unpol, <1 - R> = 0.0583.  CBT is
+///                then referenced to itself, so its scale is exactly 1, and
+///                TMT's is 0.397.
+///   Epps21       the default since 2026-08-29 and the default HERE: the
+///                EPPS21nlo_CT18Anlo_Li6 / CT18NLO F2 ratio at Q2 = 5,
+///                <1 - R> = 0.0298 -- half as deep, so BOTH transferred
+///                curves shrink by a factor two (CBT 0.5105, TMT 0.2027).
+///
+/// The EPPS21 depletion is stored as DATA (`EMC_VALENCE_DEPLETION_EPPS21`)
+/// because computing it needs LHAPDF, which the core does not link.
+enum class EmcBaseline { LegacyTable, Epps21 };
+
+/// The library default, matching `polli_fastsim.polarized.POLEMC_BASELINE`.
+inline constexpr EmcBaseline EMC_BASELINE_DEFAULT = EmcBaseline::Epps21;
+
+/// <1 - R_unpol> of the EPPS21 baseline over POLEMC_VALENCE_WINDOW.
+///
+/// PROVENANCE: `polli_fastsim.polarized.valence_depletion(mode="epps21")` --
+/// the mean of 1 - R over 301 points of x in [0.35, 0.65], with
+/// R = F2(EPPS21nlo_CT18Anlo_Li6) / F2(CT18NLO) at Q2 = UNPOL_EMC_Q2 = 5 GeV2
+/// through `structure.NuclearF2Ratio`.  Transcribed at full double precision
+/// from that call on 2026-08-29; it is the ONLY copy in LiPolGen.
+inline constexpr double EMC_VALENCE_DEPLETION_EPPS21 = 0.029788812318099069;
+
+/// <1 - R_unpol> of a baseline over POLEMC_VALENCE_WINDOW.
+double emc_valence_depletion(EmcBaseline baseline);
+
+/// Cloet-Bentz-Thomas polarized EMC ratio for 7Li, TRANSFERRED to `baseline`;
+/// eq = 23 is the R^{3/2 3/2}_{As} of their Eq. (23), eq = 26 the
+/// R^{(3/2 1)}_{As}.
 double cbt_polarized_emc_ratio(double x, EmcMode mode = EmcMode::kDigitized,
-                               int eq = 23);
+                               int eq = 23,
+                               EmcBaseline baseline = EMC_BASELINE_DEFAULT);
 /// Tronchin-Matevosyan-Thomas ratio TRANSFERRED to 7Li valence strength.
-double tmt_polarized_emc_ratio(double x, EmcMode mode = EmcMode::kDigitized);
+double tmt_polarized_emc_ratio(double x, EmcMode mode = EmcMode::kDigitized,
+                               EmcBaseline baseline = EMC_BASELINE_DEFAULT);
+/// CBT's PUBLISHED 7Li polarized ratio, BEFORE the transfer.
+double cbt_published_emc_ratio(double x, int eq = 23);
 /// TMT's PUBLISHED nuclear-matter polarized ratio, BEFORE the transfer.
 double tmt_published_emc_ratio(double x);
-/// Pointwise (1 - R_pol)/(1 - R_unpol) of each camp's own figure.
+/// Pointwise (1 - R_pol)/(1 - R_unpol) of each camp's OWN figure -- both
+/// published curves, so baseline-independent by construction.
 double cbt_ratio_of_effects(double x, int eq = 23);
 double tmt_ratio_of_effects(double x);
 
-/// <1 - R_unpol,7Li>/<1 - R_unpol,table> over POLEMC_VALENCE_WINDOW.
-/// CBT computed 7Li itself, so its scale is exactly 1; TMT's is 0.397.
-double cbt_valence_scale();
-double tmt_valence_scale();
+/// <1 - R_unpol,baseline>/<1 - R_unpol,table> over POLEMC_VALENCE_WINDOW, ONE
+/// code path for both camps.  On `LegacyTable` CBT is referenced to its own
+/// curve, so its scale is exactly 1 and TMT's is 0.397; on `Epps21` they are
+/// 0.5105 and 0.2027.
+double cbt_valence_scale(EmcBaseline baseline = EMC_BASELINE_DEFAULT);
+double tmt_valence_scale(EmcBaseline baseline = EMC_BASELINE_DEFAULT);
 
 // ------------------------------------------------------------- tensor SFs
 

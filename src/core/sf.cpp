@@ -242,26 +242,53 @@ double cbt_unpolarized_emc_ratio(double x) {
   return tables::kCbtPolemc7liQ5().interp("R_unpol", x);
 }
 
-double cbt_valence_scale() { return 1.0; }
+namespace {
 
-double tmt_valence_scale() {
-  static const double s = []() {
-    const std::vector<double> g = linspace(POLEMC_VALENCE_WINDOW_LO,
-                                           POLEMC_VALENCE_WINDOW_HI, 301);
-    std::vector<double> d_ref(g.size()), d_mod(g.size());
-    for (std::size_t i = 0; i < g.size(); ++i) {
-      d_ref[i] = 1.0 - tables::kCbtPolemc7liQ5().interp("R_unpol", g[i]);
-      d_mod[i] = 1.0 - tables::kTmtPolemcNmQ10().interp("R_unpol", g[i]);
-    }
-    return mean_of(d_ref) / mean_of(d_mod);
-  }();
-  return s;
+/// <1 - R_unpol> of one digitized table over POLEMC_VALENCE_WINDOW, the
+/// 301-point mean of `polli_fastsim.polarized.valence_depletion`.
+double table_valence_depletion(const DigitizedTable& t) {
+  const std::vector<double> g = linspace(POLEMC_VALENCE_WINDOW_LO,
+                                         POLEMC_VALENCE_WINDOW_HI, 301);
+  std::vector<double> d(g.size());
+  for (std::size_t i = 0; i < g.size(); ++i) {
+    d[i] = 1.0 - t.interp("R_unpol", g[i]);
+  }
+  return mean_of(d);
 }
 
-double cbt_polarized_emc_ratio(double x, EmcMode mode, int eq) {
-  if (mode == EmcMode::kConstant) {
-    return 1.0 - 2.0 * (1.0 - unpolarized_emc_ratio(x));
+double cbt_depletion() {
+  static const double v = table_valence_depletion(tables::kCbtPolemc7liQ5());
+  return v;
+}
+
+double tmt_depletion() {
+  static const double v = table_valence_depletion(tables::kTmtPolemcNmQ10());
+  return v;
+}
+
+}  // namespace
+
+double emc_valence_depletion(EmcBaseline baseline) {
+  switch (baseline) {
+    // The pre-2026-08-29 baseline IS the CBT 7Li curve: CBT is referenced to
+    // itself, which is why its own scale comes out exactly 1.
+    case EmcBaseline::LegacyTable: return cbt_depletion();
+    case EmcBaseline::Epps21:      return EMC_VALENCE_DEPLETION_EPPS21;
   }
+  throw std::runtime_error("unknown EmcBaseline");
+}
+
+// ONE code path for both camps: the scale of a table is the baseline's own
+// valence depletion over that table's.
+double cbt_valence_scale(EmcBaseline baseline) {
+  return emc_valence_depletion(baseline) / cbt_depletion();
+}
+
+double tmt_valence_scale(EmcBaseline baseline) {
+  return emc_valence_depletion(baseline) / tmt_depletion();
+}
+
+double cbt_published_emc_ratio(double x, int eq) {
   if (eq != 23 && eq != 26) {
     throw std::runtime_error("eq must be 23 (R^{3/2 3/2}) or 26 (R^{(3/2 1)})");
   }
@@ -269,18 +296,32 @@ double cbt_polarized_emc_ratio(double x, EmcMode mode, int eq) {
       eq == 23 ? "R_pol_eq23" : "R_pol_eq26", x);
 }
 
+double cbt_polarized_emc_ratio(double x, EmcMode mode, int eq,
+                               EmcBaseline baseline) {
+  if (mode == EmcMode::kConstant) {
+    // the pre-digitization scenario, explicitly on the 12-point table
+    // (`cbt_polarized_emc_ratio(..., mode="constant")` passes mode="table")
+    if (eq != 23 && eq != 26) {
+      throw std::runtime_error("eq must be 23 (R^{3/2 3/2}) or 26 (R^{(3/2 1)})");
+    }
+    return 1.0 - 2.0 * (1.0 - unpolarized_emc_ratio(x));
+  }
+  return 1.0 - cbt_valence_scale(baseline)
+                   * (1.0 - cbt_published_emc_ratio(x, eq));
+}
+
 double tmt_published_emc_ratio(double x) {
   return tables::kTmtPolemcNmQ10().interp("R_pol", x);
 }
 
-double tmt_polarized_emc_ratio(double x, EmcMode mode) {
+double tmt_polarized_emc_ratio(double x, EmcMode mode, EmcBaseline baseline) {
   if (mode == EmcMode::kConstant) return unpolarized_emc_ratio(x);
-  return 1.0 - tmt_valence_scale() * (1.0 - tmt_published_emc_ratio(x));
+  return 1.0 - tmt_valence_scale(baseline) * (1.0 - tmt_published_emc_ratio(x));
 }
 
 double cbt_ratio_of_effects(double x, int eq) {
   const double d_unpol = 1.0 - cbt_unpolarized_emc_ratio(x);
-  return (1.0 - cbt_polarized_emc_ratio(x, EmcMode::kDigitized, eq)) / d_unpol;
+  return (1.0 - cbt_published_emc_ratio(x, eq)) / d_unpol;
 }
 
 double tmt_ratio_of_effects(double x) {

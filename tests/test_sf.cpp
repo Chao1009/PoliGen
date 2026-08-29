@@ -224,18 +224,25 @@ TEST_CASE("the digitized polarized-EMC curves and the valence transfer") {
                            0.91428491634172282, 0.90516809929078013};
   const double tmt[4] = {0.92581573098751413, 0.92510085569517631,
                          0.84892190839075798, 0.88122116416700425};
+  const EmcBaseline kLegacy = EmcBaseline::LegacyTable;
   for (int i = 0; i < 4; ++i) {
     CHECK_CLOSE(cbt_unpolarized_emc_ratio(xs[i]), unpol[i], kRtol);
-    CHECK_CLOSE(cbt_polarized_emc_ratio(xs[i]), pol23[i], kRtol);
+    CHECK_CLOSE(cbt_published_emc_ratio(xs[i]), pol23[i], kRtol);
+    // on the LEGACY baseline CBT is referenced to itself, so the transferred
+    // curve IS the published one
+    CHECK(cbt_polarized_emc_ratio(xs[i], EmcMode::kDigitized, 23, kLegacy)
+          == pol23[i]);
     CHECK_CLOSE(tmt_published_emc_ratio(xs[i]), tmt[i], kRtol);
   }
-  // CBT computed 7Li itself, so its valence scale is exactly 1; TMT's
-  // nuclear matter is scaled down to 7Li strength by 0.397
-  CHECK(cbt_valence_scale() == 1.0);
-  CHECK_CLOSE(tmt_valence_scale(), 0.39700861081338656, kRtol);
-  CHECK_CLOSE(tmt_polarized_emc_ratio(0.45), 0.95204010409497919, kRtol);
-  CHECK_CLOSE(tmt_polarized_emc_ratio(0.45),
-              1.0 - tmt_valence_scale() * (1.0 - tmt_published_emc_ratio(0.45)),
+  // CBT computed 7Li itself, so on its own baseline the valence scale is
+  // exactly 1; TMT's nuclear matter is scaled down to 7Li strength by 0.397
+  CHECK(cbt_valence_scale(kLegacy) == 1.0);
+  CHECK_CLOSE(tmt_valence_scale(kLegacy), 0.39700861081338656, kRtol);
+  CHECK_CLOSE(tmt_polarized_emc_ratio(0.45, EmcMode::kDigitized, kLegacy),
+              0.95204010409497919, kRtol);
+  CHECK_CLOSE(tmt_polarized_emc_ratio(0.45, EmcMode::kDigitized, kLegacy),
+              1.0 - tmt_valence_scale(kLegacy)
+                        * (1.0 - tmt_published_emc_ratio(0.45)),
               kRtol);
   // "about twice" vs "about equal" over the valence region
   const double rx[4] = {0.40, 0.45, 0.50, 0.60};
@@ -252,6 +259,87 @@ TEST_CASE("the digitized polarized-EMC curves and the valence transfer") {
               unpolarized_emc_ratio(0.3), kRtol);
   CHECK_CLOSE(unpolarized_emc_ratio(0.5), 0.93666666666666665, kRtol);
   CHECK_THROWS(cbt_polarized_emc_ratio(0.3, EmcMode::kDigitized, 24));
+}
+
+// C5.  The polarized-EMC transfer is referenced to an explicit unpolarized
+// BASELINE, and the library default is the Python's default (epps21) -- not
+// the pre-2026-08-29 CBT-on-CBT one that was hard-coded as `1.0` and
+// `0.397009`.  Every number below is
+// `polli_fastsim.polarized.valence_scale / *_polarized_emc_ratio` run at that
+// baseline on 2026-08-29.
+TEST_CASE("the polarized-EMC valence transfer names its unpolarized baseline") {
+  // --- the two baselines' own valence depletion <1 - R_unpol>
+  CHECK_CLOSE(emc_valence_depletion(EmcBaseline::LegacyTable),
+              0.05834952032138685, kRtol);
+  CHECK(emc_valence_depletion(EmcBaseline::Epps21)
+        == 0.029788812318099069);
+  // EPPS21 is HALF as deep as the digitized CBT curve, which is the whole
+  // content of the change: both transferred curves shrink by that factor
+  CHECK_CLOSE_AT(emc_valence_depletion(EmcBaseline::Epps21)
+                     / emc_valence_depletion(EmcBaseline::LegacyTable),
+                 0.5105, 0.0, 5e-4);
+
+  // --- both scales, from the SAME code path, against the Python
+  CHECK(cbt_valence_scale(EmcBaseline::LegacyTable) == 1.0);
+  CHECK_CLOSE(tmt_valence_scale(EmcBaseline::LegacyTable),
+              0.39700861081338656, kRtol);
+  CHECK_CLOSE(cbt_valence_scale(EmcBaseline::Epps21),
+              0.51052368818155602, kRtol);
+  CHECK_CLOSE(tmt_valence_scale(EmcBaseline::Epps21),
+              0.20268230023228612, kRtol);
+
+  // --- the DEFAULT is the Python's default
+  CHECK(EMC_BASELINE_DEFAULT == EmcBaseline::Epps21);
+  CHECK(cbt_valence_scale() == cbt_valence_scale(EmcBaseline::Epps21));
+  CHECK(tmt_valence_scale() == tmt_valence_scale(EmcBaseline::Epps21));
+
+  // --- the transferred curves themselves, both baselines, both camps
+  struct Row { double x, cbt23_legacy, cbt23_epps, tmt_legacy, tmt_epps; };
+  const Row rows[5] = {
+      {0.10, 0.9270243359682393,  0.96274419485100737,
+             0.97054820641514639, 0.98496416171549861},
+      {0.30, 0.93043464976958523, 0.96448524083072695,
+             0.97026439476843063, 0.98481926914686835},
+      {0.45, 0.91831399964551574, 0.95829736182622882,
+             0.95204010409497919, 0.97551533705776527},
+      {0.50, 0.91428491634172282, 0.95624041935798576,
+             0.94002069672587729, 0.96937914487793475},
+      {0.70, 0.90516809929078013, 0.9515860682926619,
+             0.95284377939191101, 0.97592563233445528}};
+  for (const Row& r : rows) {
+    CHECK_CLOSE(cbt_polarized_emc_ratio(r.x, EmcMode::kDigitized, 23,
+                                        EmcBaseline::LegacyTable),
+                r.cbt23_legacy, kRtol);
+    CHECK_CLOSE(cbt_polarized_emc_ratio(r.x, EmcMode::kDigitized, 23,
+                                        EmcBaseline::Epps21),
+                r.cbt23_epps, kRtol);
+    CHECK_CLOSE(tmt_polarized_emc_ratio(r.x, EmcMode::kDigitized,
+                                        EmcBaseline::LegacyTable),
+                r.tmt_legacy, kRtol);
+    CHECK_CLOSE(tmt_polarized_emc_ratio(r.x, EmcMode::kDigitized,
+                                        EmcBaseline::Epps21),
+                r.tmt_epps, kRtol);
+    // the default really is the epps21 column
+    CHECK(cbt_polarized_emc_ratio(r.x)
+          == cbt_polarized_emc_ratio(r.x, EmcMode::kDigitized, 23,
+                                     EmcBaseline::Epps21));
+    CHECK(tmt_polarized_emc_ratio(r.x)
+          == tmt_polarized_emc_ratio(r.x, EmcMode::kDigitized,
+                                     EmcBaseline::Epps21));
+  }
+
+  // --- the ratio-of-effects statements are on each camp's PUBLISHED figure,
+  // so they do not move with the baseline at all
+  for (double x : {0.40, 0.45, 0.50, 0.60}) {
+    const double c = cbt_ratio_of_effects(x);
+    const double t = tmt_ratio_of_effects(x);
+    CHECK(c == (1.0 - cbt_published_emc_ratio(x))
+                   / (1.0 - cbt_unpolarized_emc_ratio(x)));
+    CHECK(std::isfinite(t));
+  }
+  CHECK_CLOSE(cbt_ratio_of_effects(0.40), 2.2487868592171982, kRtol);
+  CHECK_CLOSE(cbt_ratio_of_effects(0.60), 1.1366929792889406, kRtol);
+  CHECK_CLOSE(tmt_ratio_of_effects(0.45), 0.98408316213139446, kRtol);
 }
 
 TEST_CASE("toy_delta_gluon is the scenario cos-2phi source") {

@@ -96,6 +96,11 @@ def build_parser():
                    help="generation threads (forced to 1 with --hadronize)")
     p.add_argument("--hadronize", action="store_true", default=None,
                    help="run the T2 (PYTHIA 8) tier on every event")
+    p.add_argument("--hadronize-coherent", action="store_true", default=None,
+                   help="allow --hadronize on the coherent channel, which the "
+                        "core refuses by default (C4): PythiaBridge v0 has no "
+                        "coherent-diffractive target and the hadronized event "
+                        "loses four-momentum and charge")
     p.add_argument("--hepmc", default=None, help="HepMC3 Asciiv3 output file")
     p.add_argument("--npz", default=None, help="columnar .npz output file")
     p.add_argument("--hfs-npz", default=None,
@@ -108,7 +113,8 @@ def build_parser():
 DEFAULTS = dict(isotope="6Li", config=1, channel="inclusive",
                 plan="tensor-thirds", events=100000, lumi=0.0, seed=20260713,
                 run=1, optics="yr-high-acceptance", pz=0.7, pzz=0.6, pe=0.7,
-                rel_lumi_offset=0.0, nthreads=1, hadronize=False, quiet=False,
+                rel_lumi_offset=0.0, nthreads=1, hadronize=False,
+                hadronize_coherent=False, quiet=False,
                 hepmc=None, npz=None, hfs_npz=None, cluster_beta=None,
                 p_d=None, inclusive_b1=False, coherent=None)
 
@@ -150,7 +156,8 @@ def main(argv=None):
                       lumi_pb=opts["lumi"], seed=opts["seed"], run=opts["run"],
                       optics=opts["optics"], cluster_beta=opts["cluster_beta"],
                       p_d=opts["p_d"], inclusive_b1=opts["inclusive_b1"],
-                      coherent=opts["coherent"])
+                      coherent=opts["coherent"],
+                      hadronize_coherent=opts["hadronize_coherent"])
     plan = make_plan(opts["plan"], j=ion_spin(cfg.isotope), pz=opts["pz"],
                      pzz=opts["pzz"], pe=opts["pe"],
                      rel_lumi_offset=opts["rel_lumi_offset"])

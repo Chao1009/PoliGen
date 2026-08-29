@@ -989,6 +989,11 @@ static void bind_sf(py::module_& m) {
   py::enum_<EmcMode>(m, "EmcMode")
       .value("Digitized", EmcMode::kDigitized)
       .value("Constant", EmcMode::kConstant);
+  py::enum_<EmcBaseline>(m, "EmcBaseline")
+      .value("LegacyTable", EmcBaseline::LegacyTable)
+      .value("Epps21", EmcBaseline::Epps21);
+  m.attr("EMC_BASELINE_DEFAULT") = EMC_BASELINE_DEFAULT;
+  m.attr("EMC_VALENCE_DEPLETION_EPPS21") = EMC_VALENCE_DEPLETION_EPPS21;
 
   m.def("toy_b1_shape", &toy_b1_shape, py::arg("x"), py::arg("q2"), py::arg("f1"));
   m.def("toy_b1", &toy_b1, py::arg("x"), py::arg("q2"), py::arg("f1"),
@@ -1004,12 +1009,22 @@ static void bind_sf(py::module_& m) {
   m.def("unpolarized_emc_ratio", &unpolarized_emc_ratio, py::arg("x"));
   m.def("cbt_unpolarized_emc_ratio", &cbt_unpolarized_emc_ratio, py::arg("x"));
   m.def("cbt_polarized_emc_ratio", &cbt_polarized_emc_ratio, py::arg("x"),
-        py::arg("mode") = EmcMode::kDigitized, py::arg("eq") = 23);
+        py::arg("mode") = EmcMode::kDigitized, py::arg("eq") = 23,
+        py::arg("baseline") = EMC_BASELINE_DEFAULT);
   m.def("tmt_polarized_emc_ratio", &tmt_polarized_emc_ratio, py::arg("x"),
-        py::arg("mode") = EmcMode::kDigitized);
+        py::arg("mode") = EmcMode::kDigitized,
+        py::arg("baseline") = EMC_BASELINE_DEFAULT);
+  m.def("cbt_published_emc_ratio", &cbt_published_emc_ratio, py::arg("x"),
+        py::arg("eq") = 23);
   m.def("tmt_published_emc_ratio", &tmt_published_emc_ratio, py::arg("x"));
-  m.def("cbt_valence_scale", &cbt_valence_scale);
-  m.def("tmt_valence_scale", &tmt_valence_scale);
+  m.def("cbt_ratio_of_effects", &cbt_ratio_of_effects, py::arg("x"),
+        py::arg("eq") = 23);
+  m.def("tmt_ratio_of_effects", &tmt_ratio_of_effects, py::arg("x"));
+  m.def("emc_valence_depletion", &emc_valence_depletion, py::arg("baseline"));
+  m.def("cbt_valence_scale", &cbt_valence_scale,
+        py::arg("baseline") = EMC_BASELINE_DEFAULT);
+  m.def("tmt_valence_scale", &tmt_valence_scale,
+        py::arg("baseline") = EMC_BASELINE_DEFAULT);
 
   py::class_<TensorSF, std::shared_ptr<TensorSF>>(m, "TensorSF")
       .def("b1", &TensorSF::b1, py::arg("x"), py::arg("q2"), py::arg("f1"))
@@ -1175,6 +1190,7 @@ static void bind_xsec(py::module_& m) {
       .def_readwrite("b2_32_func", &InclusiveKernel::Options::b2_32_func)
       .def_readwrite("delta_32_func", &InclusiveKernel::Options::delta_32_func)
       .def_readwrite("g2_mode", &InclusiveKernel::Options::g2_mode)
+      .def_readwrite("g2_scale", &InclusiveKernel::Options::g2_scale)
       .def_readwrite("emc_ratio", &InclusiveKernel::Options::emc_ratio)
       .def_readwrite("r_func", &InclusiveKernel::Options::r_func)
       .def_readwrite("target_mass", &InclusiveKernel::Options::target_mass)
@@ -1189,6 +1205,7 @@ static void bind_xsec(py::module_& m) {
            }), py::arg("ion"), py::arg("options"))
       .def_property_readonly("ion", &InclusiveKernel::ion)
       .def_property_readonly("target_mass", &InclusiveKernel::target_mass)
+      .def_property_readonly("g2_scale", &InclusiveKernel::g2_scale)
       .def("tables", &InclusiveKernel::tables, py::arg("x"), py::arg("q2"),
            py::arg("with_g2") = false)
       .def_static("dphi", &InclusiveKernel::dphi, py::arg("t"), py::arg("x"),
@@ -1805,6 +1822,20 @@ static void bind_tagged(py::module_& m) {
 
 static void bind_coherent(py::module_& m) {
   m.def("gaussian_slope", &gaussian_slope, py::arg("r_rms_fm"));
+  m.attr("COHERENT_T_MAX_DEFAULT") = COHERENT_T_MAX_DEFAULT;
+  m.attr("COHERENT_MX_MIN_DEFAULT") = COHERENT_MX_MIN_DEFAULT;
+  py::class_<CoherentXpomModel>(m, "CoherentXpomModel")
+      .def(py::init<>())
+      .def_readwrite("m_x_min", &CoherentXpomModel::m_x_min)
+      .def_readwrite("x_pom_max", &CoherentXpomModel::x_pom_max)
+      .def_static("x_pom_of", &CoherentXpomModel::x_pom_of, py::arg("m_x2"),
+                  py::arg("q2"), py::arg("w2"))
+      .def_static("m_x2_of", &CoherentXpomModel::m_x2_of, py::arg("x_pom"),
+                  py::arg("q2"), py::arg("w2"))
+      .def("x_pom_min", &CoherentXpomModel::x_pom_min, py::arg("q2"),
+           py::arg("w2"))
+      .def("draw", &CoherentXpomModel::draw, py::arg("q2"), py::arg("w2"),
+           py::arg("rng"));
   py::class_<CoherentScenario>(m, "CoherentScenario")
       .def(py::init<>())
       .def_readwrite("f0", &CoherentScenario::f0)
@@ -1910,6 +1941,10 @@ static void bind_pipeline(py::module_& m) {
       .def_readwrite("struck", &PipelineConfig::struck)
       .def_readwrite("coherent", &PipelineConfig::coherent)
       .def_readwrite("coherent_t_max", &PipelineConfig::coherent_t_max)
+      .def_readwrite("coherent_xpom", &PipelineConfig::coherent_xpom)
+      .def_readwrite("hadronize_coherent", &PipelineConfig::hadronize_coherent)
+      .def_readwrite("apply_optics_lumi_fraction",
+                     &PipelineConfig::apply_optics_lumi_fraction)
       .def_readwrite("coherent_weighted_azimuth",
                      &PipelineConfig::coherent_weighted_azimuth)
       .def_readwrite("hadronizer", &PipelineConfig::hadronizer)
@@ -1955,6 +1990,7 @@ static void bind_pipeline(py::module_& m) {
         return copy_array(p.sigma_per_category_pb());
       })
       .def("sigma_pb", &Pipeline::sigma_pb)
+      .def("optics_lumi_factor", &Pipeline::optics_lumi_factor)
       .def("lumi_per_category_pb", [](const Pipeline& p) {
         return copy_array(p.lumi_per_category_pb());
       })

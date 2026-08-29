@@ -55,7 +55,7 @@ Which optional tiers a build carries is visible at runtime:
 
 ```bash
 source env.sh
-python3 -m pytest python/tests -q          # 108 cases
+python3 -m pytest python/tests -q          # 114 cases
 python3 -m pytest python/tests/test_throughput.py -s     # prints ev/s
 ```
 
@@ -267,6 +267,26 @@ e_energy, p_per_nucleon` and a JSON `meta` with `sigma_gen_mb` — the key
 particle list** (it is `kp`), and spectator fragments are excluded by default,
 both following `tools/pythia8/gen_dis_hfs.py`.
 
+### Defaults that are a choice
+
+Three physics defaults moved on 2026-08-29 and are reachable (and pinned by
+`test_module.py`) rather than buried:
+
+```python
+opt = lg.InclusiveKernel.Options()
+opt.target_mass          # True  -- the exact finite-gamma vector kernel
+opt.g2_scale             # 1.0   -- multiplies g2; the twist-3 systematic
+                         #          is re-run at 0.0 and 1.5
+lg.EMC_BASELINE_DEFAULT  # EmcBaseline.Epps21 -- the unpolarized baseline the
+                         # polarized-EMC transfer is referenced to
+```
+
+A hadronizer on the **coherent** channel is refused by `PipelineConfig.validate()`:
+`PythiaBridge` v0 has no coherent-diffractive target, so it would invent a
+nucleon that is not in the record's balance and the event would lose
+four-momentum and charge. Set `hadronize_coherent=True` (or
+`--hadronize-coherent`) to reproduce that known-broken behaviour on purpose.
+
 ### The one polligen key with no pipeline equivalent
 
 `cell`, the flat accepted-(x, Q²)-cell index that
@@ -299,6 +319,8 @@ present in `InclusiveSampler.sample_n()`'s dict and absent from
 --coherent-f0 --coherent-slope-b --coherent-amp
 --nthreads N                 forced to 1 with --hadronize
 --hadronize                  run the T2 (PYTHIA 8) tier
+--hadronize-coherent         allow --hadronize on the coherent channel, which
+                             the core refuses by default (C4)
 --npz FILE                   the columnar sample
 --hfs-npz FILE               polligen HFSSample (needs --hadronize)
 --hepmc FILE                 HepMC3 Asciiv3
@@ -332,10 +354,10 @@ Measured on this machine, single core, from Python, columnar output only
 
 | channel | ev/s |
 |---|---|
-| inclusive | 6.7 × 10⁵ |
-| tagged 6Li α | 5.2 × 10⁵ |
-| coherent | 6.2 × 10⁵ |
-| inclusive, `Event` records kept | 1.9 × 10⁵ |
+| inclusive | 5.9 × 10⁵ |
+| tagged 6Li α | 4.9 × 10⁵ |
+| coherent | 5.4 × 10⁵ |
+| inclusive, `Event` records kept | 1.8 × 10⁵ |
 | inclusive, T2 (PYTHIA 8) | 1.9 × 10⁴ |
 
 The bare C++ streaming loop does 3.4 × 10⁶ ev/s inclusive; the gap is the

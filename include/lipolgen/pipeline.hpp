@@ -81,6 +81,7 @@
 
 #include "lipolgen/beams.hpp"
 #include "lipolgen/bookkeeping.hpp"
+#include "lipolgen/breakup.hpp"
 #include "lipolgen/coherent.hpp"
 #include "lipolgen/event.hpp"
 #include "lipolgen/generator.hpp"
@@ -131,6 +132,14 @@ class InclusiveKinematicsSource : public KinematicsSource {
   void sample(double m_struck, int lam_e, double pe, std::size_t n, Rng& rng,
               std::vector<double>& x, std::vector<double>& q2,
               std::vector<double>& y, std::vector<double>& phi) override;
+
+  /// The same, reporting the accepted-cell index of each draw
+  /// (`Kinematics::cell`).  `sample` forwards to this one, so there is a
+  /// single draw path and the two cannot diverge.
+  void sample_cells(double m_struck, int lam_e, double pe, std::size_t n,
+                    Rng& rng, std::vector<double>& x, std::vector<double>& q2,
+                    std::vector<double>& y, std::vector<double>& phi,
+                    std::vector<int>& cell) override;
 
   double sigma_tot_pb(double m_struck, int lam_e, double pe) const override;
 
@@ -246,6 +255,22 @@ Optics tagging_optics(const std::string& ion_name, double p_per_nucleon,
 Optics optics_for(OpticsChoice choice, const std::string& ion_name,
                   double p_per_nucleon, double n_sigma = 10.0);
 
+/// Fidelity tier of the final state a run writes (DEVELOPMENT_PLAN.md 2).
+///
+///   T0  the struck cluster stays a single off-shell pseudo-particle
+///       (`Role::StruckCluster`) and nothing inside it is resolved.
+///   T1  the struck cluster is broken up into a struck NUCLEON plus its
+///       on-shell partner spectator(s) (`breakup.hpp`), so the record names
+///       the object the hard process actually consumes and
+///       k + P_ion = k' + p_spec + sum(p_partner) + X holds exactly.
+///
+/// T1 is the DEFAULT on the tagged channels.  T0 is kept because it is what
+/// every tagged number published before this tier existed was made with, and
+/// because the partner spectators are pure addition: no T0 quantity moves.
+/// The switch does nothing on the inclusive and coherent channels, which have
+/// no struck cluster to resolve.
+enum class Tier : std::uint8_t { T0, T1 };
+
 /// The T2 hand-off.  Called once per finished T0 event with the event's own
 /// counter-based stream, AFTER every T0 particle (including the off-shell
 /// struck cluster and the spectator) is in place.  Deliberately the signature
@@ -309,6 +334,15 @@ struct PipelineConfig {
   bool coherent_weighted_azimuth = false;
 
   // --- tiers --------------------------------------------------------------
+  /// Fidelity tier of the TAGGED final state; `Tier::T1` by default (the
+  /// struck cluster is resolved into a nucleon + partner spectators).  See
+  /// `Tier` above and `breakup.hpp`.
+  Tier tier = Tier::T1;
+  /// Options of the T1 cluster breakup.  `BreakupOptions::beta` and
+  /// `f2` are overwritten by the `Pipeline` constructor with the run's own
+  /// `cluster_beta` and the struck cluster's own unpolarized backend, so the
+  /// three draws that share them cannot disagree.
+  BreakupOptions breakup;
   HadronizerHook hadronizer;
   /// C4.  Let `hadronizer` run on the COHERENT channel.  Default FALSE, and
   /// `validate()` REFUSES the combination unless it is set.
@@ -412,6 +446,12 @@ class Pipeline {
   const TaggedModel* tagged_model() const { return model_.get(); }
   const TaggedSampler* tagged_sampler() const { return tsampler_.get(); }
   const TaggedChannel* tagged_channel() const;
+  /// The T1 cluster-breakup model; null outside the tagged channels or when
+  /// the run is configured at `Tier::T0`.
+  const ClusterBreakup* breakup() const { return breakup_.get(); }
+  /// The tier this run actually writes (`Tier::T0` on channels with no
+  /// struck cluster, whatever the configuration says).
+  Tier tier() const { return tier_; }
   /// Null outside `CoherentLi6`.  One sampler per category (they differ by
   /// P_zz and phi_S); index is the category index.
   const CoherentSampler* coherent_sampler(std::size_t category) const;
@@ -503,6 +543,9 @@ class Pipeline {
   std::shared_ptr<TaggedModel> model_;
   std::shared_ptr<InclusiveKinematicsSource> dis_source_;
   std::unique_ptr<TaggedSampler> tsampler_;
+  std::unique_ptr<ClusterBreakup> breakup_;
+  Tier tier_ = Tier::T0;
+  ClusterSpecies cluster_species_ = ClusterSpecies::Nucleon;
   std::vector<IonFill> fills_;
   std::vector<std::vector<double>> rate_cdf_;
 

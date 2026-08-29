@@ -609,11 +609,14 @@ TaggedEvent TaggedSampler::sample_one(const IonFill& fill,
     // and their CONTENTS never survive the call, so nothing about the event
     // stream depends on them.
     static thread_local std::vector<double> x, q2, y, phi;
-    dis_->sample(te.m_struck, fill.lam_e, fill.pe, 1, rng, x, q2, y, phi);
+    static thread_local std::vector<int> dis_cell;
+    dis_->sample_cells(te.m_struck, fill.lam_e, fill.pe, 1, rng, x, q2, y, phi,
+                       dis_cell);
     te.x = x[0];
     te.q2 = q2[0];
     te.y = y[0];
     te.phi = phi[0];
+    te.cell = dis_cell[0];
   }
   return te;
 }
@@ -638,13 +641,16 @@ std::vector<TaggedEvent> TaggedSampler::sample_category(const IonFill& fill,
   std::vector<TaggedEvent> out;
   out.reserve(n);
   std::vector<double> k, c, phi_k, x, q2, y, phi;
+  std::vector<int> dis_cell;
   for (std::size_t cell = 0; cell < counts.size(); ++cell) {
     const std::size_t cnt = counts[cell];
     if (cnt == 0) continue;
     const double m_ion = ms_ion[cell / ms_c.size()];
     const double m_s = ms_c[cell % ms_c.size()];
     model_->sample_kc(m_ion, m_s, cnt, rng, k, c, phi_k);
-    if (dis_) dis_->sample(m_s, fill.lam_e, fill.pe, cnt, rng, x, q2, y, phi);
+    if (dis_)
+      dis_->sample_cells(m_s, fill.lam_e, fill.pe, cnt, rng, x, q2, y, phi,
+                         dis_cell);
     for (std::size_t i = 0; i < cnt; ++i) {
       TaggedEvent te;
       te.m_ion = m_ion;
@@ -661,6 +667,7 @@ std::vector<TaggedEvent> TaggedSampler::sample_category(const IonFill& fill,
         te.q2 = q2[i];
         te.y = y[i];
         te.phi = phi[i];
+        te.cell = dis_cell[i];
       }
       out.push_back(te);
     }
@@ -708,6 +715,19 @@ void TaggedSampler::fill_event(Event& ev, const TaggedEvent& te) const {
   ev.kin.phi_k = te.phi_k;
   ev.kin.alpha_s = sc.alpha_s;
   ev.kin.pt_s = sc.pt_s;
+  // The spectator's LAB block, STORED rather than left to be re-derived by
+  // every consumer from the four-vector (`Kinematics`): these are the exact
+  // numbers `boost_spectator` computed, so nothing downstream has to invert
+  // the beam boost or re-do the rigidity algebra to get them back.
+  ev.kin.spec_pt = te.lab.pT;
+  ev.kin.spec_theta = te.lab.theta;
+  ev.kin.spec_p_lab = te.lab.p_lab;
+  ev.kin.spec_r = te.lab.R;
+  ev.kin.spec_xl = te.lab.xL;
+  ev.kin.spec_kx = te.lab.kx;
+  ev.kin.spec_ky = te.lab.ky;
+  ev.kin.spec_kz = te.lab.kz;
+  ev.kin.phi_spec = te.lab.phi_spec;
   ev.spin.m_ion = te.m_ion;
   ev.spin.m_struck = te.m_struck;
   if (base.beam_A == 6) {

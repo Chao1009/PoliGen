@@ -288,6 +288,19 @@ struct KinematicsSource {
   virtual void sample(double m_struck, int lam_e, double pe, std::size_t n,
                       Rng& rng, std::vector<double>& x, std::vector<double>& q2,
                       std::vector<double>& y, std::vector<double>& phi) = 0;
+  /// The same, additionally reporting the sampler's accepted-CELL index of
+  /// every draw (`Kinematics::cell`, the column Mode-W reweighting needs).
+  /// The default forwards to `sample` and reports "unknown" (-1), so a source
+  /// that has no cell notion needs no change; `InclusiveKinematicsSource`
+  /// overrides it.  It exists as a separate entry point rather than a default
+  /// argument because a virtual default argument is bound statically.
+  virtual void sample_cells(double m_struck, int lam_e, double pe,
+                            std::size_t n, Rng& rng, std::vector<double>& x,
+                            std::vector<double>& q2, std::vector<double>& y,
+                            std::vector<double>& phi, std::vector<int>& cell) {
+    sample(m_struck, lam_e, pe, n, rng, x, q2, y, phi);
+    cell.assign(n, -1);
+  }
   /// Accepted cross section [pb] of the pure struck-cluster state, which sets
   /// the relative (M, m_S) rates.  Default 1: unweighted rates.
   virtual double sigma_tot_pb(double m_struck, int lam_e, double pe) const {
@@ -299,6 +312,7 @@ struct KinematicsSource {
 /// One tagged event, before it is turned into an `Event` record.
 struct TaggedEvent {
   double x = 0.0, q2 = 0.0, y = 0.0, phi = 0.0;
+  int cell = -1;              ///< the DIS source's accepted-cell index
   double m_ion = 0.0, m_struck = 0.0;
   double k = 0.0, cos_theta_k = 0.0, phi_k = 0.0;
   SpectatorLab lab;

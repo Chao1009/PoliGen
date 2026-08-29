@@ -91,6 +91,7 @@ Event InclusiveGenerator::make_event(const SpinCategory& cat,
   ev.kin.q2 = draw.q2;
   ev.kin.y = draw.y;
   ev.kin.phi = draw.phi;
+  ev.kin.cell = draw.cell;   // the accepted-cell index Mode-W reweights on
   ev.kin.s = sampler_->s();
   ev.kin.w2 = w2_from_xq2(draw.x, draw.q2);
   ev.kin.nu = draw.q2 / (2.0 * M_NUCLEON * draw.x);

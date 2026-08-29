@@ -51,6 +51,39 @@ std::size_t pick(const std::vector<double>& cdf, double u) {
   return i;
 }
 
+/// The `Kinematics` spectator-lab block of a far-forward fragment that did
+/// NOT come out of `boost_spectator` (the coherent intact recoil).  The beam
+/// boost is longitudinal, so (kx, ky) = (px, py) and kz is the exact inverse
+/// boost of (E, pz) -- the same algebra `boost_spectator` runs forwards.
+void fill_fragment_lab(Event& ev, const Particle& frag, int frag_a,
+                       double p_per_nucleon) {
+  const Particle* bi = ev.find(Role::BeamIon);
+  const double pt = frag.p.pt(), plab = frag.p.p();
+  ev.kin.spec_pt = pt;
+  ev.kin.spec_theta = std::atan2(pt, frag.p.pz);
+  ev.kin.spec_p_lab = plab;
+  ev.kin.phi_spec = std::atan2(frag.p.py, frag.p.px);
+  ev.kin.spec_kx = frag.p.px;
+  ev.kin.spec_ky = frag.p.py;
+  if (bi && bi->mass > 0.0) {
+    const double gamma = bi->p.e / bi->mass;
+    const double gbeta = bi->p.pz / bi->mass;
+    ev.kin.spec_kz = gamma * frag.p.pz - gbeta * frag.p.e;
+    ev.kin.spec_r = (frag.charge != 0.0 && bi->charge > 0.0)
+                        ? (plab / frag.charge) / (bi->p.pz / bi->charge)
+                        : kNaN;
+  }
+  ev.kin.spec_xl = (frag_a > 0 && p_per_nucleon > 0.0)
+                       ? plab / (frag_a * p_per_nucleon)
+                       : kNaN;
+}
+
+Vec4 sum_p(const std::vector<Particle>& v) {
+  Vec4 s;
+  for (const Particle& p : v) s = s + p.p;
+  return s;
+}
+
 int find_role(const Event& ev, Role r) {
   for (std::size_t i = 0; i < ev.particles.size(); ++i) {
     if (ev.particles[i].role == r) return static_cast<int>(i);
@@ -149,11 +182,22 @@ void InclusiveKinematicsSource::sample(double m_struck, int lam_e, double pe,
                                        std::vector<double>& q2,
                                        std::vector<double>& y,
                                        std::vector<double>& phi) {
+  static thread_local std::vector<int> cell;
+  sample_cells(m_struck, lam_e, pe, n, rng, x, q2, y, phi, cell);
+}
+
+void InclusiveKinematicsSource::sample_cells(double m_struck, int lam_e,
+                                             double pe, std::size_t n, Rng& rng,
+                                             std::vector<double>& x,
+                                             std::vector<double>& q2,
+                                             std::vector<double>& y,
+                                             std::vector<double>& phi,
+                                             std::vector<int>& cell) {
   const InclusiveSampler::CategoryPlan& plan = plan_for(m_struck, lam_e, pe);
-  x.resize(n); q2.resize(n); y.resize(n); phi.resize(n);
+  x.resize(n); q2.resize(n); y.resize(n); phi.resize(n); cell.resize(n);
   for (std::size_t i = 0; i < n; ++i) {
     const EventDraw d = sampler_->draw_event(plan, rng);
-    x[i] = d.x; q2[i] = d.q2; y[i] = d.y; phi[i] = d.phi;
+    x[i] = d.x; q2[i] = d.q2; y[i] = d.y; phi[i] = d.phi; cell[i] = d.cell;
   }
 }
 
@@ -464,6 +508,25 @@ Pipeline::Pipeline(PipelineConfig config, RunPlan plan)
       rate_cdf_.push_back(tsampler_->rate_cdf(f));
       sigma_[k] = tsampler_->sigma_tot_pb(f);
     }
+
+    // --- T1: the struck cluster is resolved into a nucleon + partners -----
+    //
+    // The species is read off the CHANNEL's own partner (Z, A), so nothing
+    // here has to know which channel it is: (1, 2) -> deuteron, (1, 3) ->
+    // triton, (Z, 1) -> a nucleon that only needs relabelling.
+    cluster_species_ = cluster_species(channel_->base.partner_Z(),
+                                       channel_->base.partner_A());
+    tier_ = cfg_.tier;
+    if (tier_ == Tier::T1) {
+      BreakupOptions bo = cfg_.breakup;
+      // One beta, one F2 backend.  The breakup's internal wave function and
+      // its species draw MUST be the ones the rest of the run is made with,
+      // or the T1 tier would describe a different nucleus from the T0 one
+      // (docs/CONVENTIONS.md: no physics number is defined twice).
+      bo.beta = cfg_.cluster_beta;
+      if (!bo.f2) bo.f2 = dis_sampler_->kernel().nuclear_f2().base();
+      breakup_.reset(new ClusterBreakup(bo));
+    }
   } else {
     const Ion& ion = ion_by_name(cfg_.isotope);
     const auto kernel = cfg_.kernel ? cfg_.kernel : default_inclusive_kernel(ion);
@@ -737,6 +800,7 @@ Event Pipeline::make_tagged(std::size_t k, std::uint64_t local,
   ev.kin.q2 = te.q2;
   ev.kin.y = te.y;
   ev.kin.phi = te.phi;
+  ev.kin.cell = te.cell;
   ev.kin.s = dis_sampler_->s();
   ev.kin.w2 = w2_from_xq2(te.x, te.q2);
   ev.kin.nu = te.q2 / (2.0 * M_NUCLEON * te.x);
@@ -774,6 +838,47 @@ Event Pipeline::make_tagged(std::size_t k, std::uint64_t local,
   const int i_spec = find_role(ev, Role::Spectator);
   const int i_clus = find_role(ev, Role::StruckCluster);
   const Particle& spec = ev.particles[static_cast<std::size_t>(i_spec)];
+
+  if (tier_ == Tier::T1) {
+    // ---- T1: resolve the struck cluster ---------------------------------
+    //
+    // The partner spectators go on shell and the struck NUCLEON takes the
+    // remainder of P_X, so the whole-nucleus balance becomes
+    //     k + P_ion = k' + p_spec + sum(p_partner) + X,
+    // and X is the PER-NUCLEON remainder X = k + p_N,struck - k'.  Naming
+    // the struck nucleon is also what lets `PythiaBridge` find a target it
+    // can use verbatim: its cluster branch never fires on a T1 event.
+    BreakupInput bi;
+    bi.species = cluster_species_;
+    bi.p_cluster = ev.particles[static_cast<std::size_t>(i_clus)].p;
+    bi.z = channel_->base.partner_Z();
+    bi.a = channel_->base.partner_A();
+    bi.m_s = te.m_struck;
+    bi.s_cluster = channel_->s_channel;
+    bi.x = te.x;
+    bi.q2 = te.q2;
+    bi.eff_pol_p = channel_->dis_target.eff_pol_p;
+    bi.eff_pol_n = channel_->dis_target.eff_pol_n;
+    BreakupResult br;
+    if (!breakup_->resolve(bi, rng, br)) continue;
+
+    const Vec4 p_x = (beam_e_ + beam_ion_) - esc.p - spec.p - sum_p(br.partners);
+    // The T1 X is SMALLER than the T0 one by every partner spectator, so the
+    // timelike test has to be redone on it -- a draw that was fine at T0 can
+    // leave a spacelike per-nucleon remainder here.
+    if (!(p_x.m2() >= 0.0)) continue;
+
+    for (Particle& f : br.partners) {
+      f.mother1 = i_clus;
+      ev.particles.push_back(f);
+    }
+    br.struck.mother1 = i_clus;
+    ev.particles.push_back(br.struck);
+    const int i_n = static_cast<int>(ev.particles.size()) - 1;
+    add_hadronic_x(ev, p_x, br.struck.charge, i_n);
+    return ev;
+  }
+
   const Particle& clus = ev.particles[static_cast<std::size_t>(i_clus)];
   // WHOLE-NUCLEUS balance: X = k + P_ion - k' - p_spec = k + P_X - k'.
   const Vec4 p_x = (beam_e_ + beam_ion_) - esc.p - spec.p;
@@ -814,6 +919,7 @@ Event Pipeline::make_coherent(std::size_t k, std::uint64_t local,
   ev.kin.q2 = q2;
   ev.kin.y = y;
   ev.kin.phi = phi;
+  ev.kin.cell = static_cast<int>(c);
   ev.kin.s = dis_sampler_->s();
   ev.kin.w2 = w2_from_xq2(x, q2);
   ev.kin.nu = q2 / (2.0 * M_NUCLEON * x);
@@ -858,6 +964,7 @@ Event Pipeline::make_coherent(std::size_t k, std::uint64_t local,
   csampler_[k]->fill_event(ev, ce);
   const int i_rec = find_role(ev, Role::IntactRecoil);
   const Particle& rec = ev.particles[static_cast<std::size_t>(i_rec)];
+  fill_fragment_lab(ev, rec, beams_.ion.A, beams_.ion_momentum_per_nucleon);
   // WHOLE-NUCLEUS balance: X = k + P_ion - k' - P_recoil; the diffractive
   // system is neutral.
   add_hadronic_x(ev, (beam_e_ + beam_ion_) - esc.p - rec.p, 0.0, 1);

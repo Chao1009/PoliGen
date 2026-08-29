@@ -346,9 +346,6 @@ class TaggedSampler {
                          Rng& rng) const;
   /// Ion projections M, ordered +J ... -J.
   const std::vector<double>& m_ion_values() const { return ms_ion_; }
-  /// The ON-SHELL spectator four-vector `fill_event` would write, without
-  /// building the event: `struck_cluster(channel, te.lab, p_u).p_spectator`.
-  Vec4 spectator_p4(const TaggedEvent& te) const;
   /// Normalized cumulative of `rates`, for `sample_one`.
   std::vector<double> rate_cdf(const IonFill& fill) const;
 

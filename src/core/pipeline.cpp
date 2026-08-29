@@ -717,23 +717,21 @@ Event Pipeline::make_tagged(std::size_t k, std::uint64_t local,
   // phase space is restricted to the region where the impulse approximation
   // closes, which is a statement about the model, not about the event.  The
   // event stays a pure function of its index, so determinism is untouched.
+  // The test is on the FINISHED record, so the fast path -- 99.98 % of draws --
+  // pays nothing for it; the rebuild on the rare rejection costs one more pass
+  // through the same code.
   TaggedEvent te = tsampler_->sample_one(fills_[k], rate_cdf_[k], rng);
-  {
-    int tries = 0;
-    for (; tries < kTaggedMaxRedraw; ++tries) {
-      const Vec4 p_e = dis_source_->scattered_electron_p4(te.x, te.y, te.phi);
-      const Vec4 p_s = tsampler_->spectator_p4(te);
-      if (((beam_e_ + beam_ion_) - p_e - p_s).m2() >= 0.0) break;
-      te = tsampler_->sample_one(fills_[k], rate_cdf_[k], rng);
-    }
-    if (tries == kTaggedMaxRedraw) {
-      throw std::runtime_error(
-          "Pipeline: no timelike hadronic system on the tagged channel after "
-          + std::to_string(kTaggedMaxRedraw) + " draws");
-    }
-  }
-
   Event ev;
+  for (int tries = 0;; ++tries) {
+    if (tries > 0) {
+      if (tries >= kTaggedMaxRedraw) {
+        throw std::runtime_error(
+            "Pipeline: no timelike hadronic system on the tagged channel "
+            "after " + std::to_string(kTaggedMaxRedraw) + " draws");
+      }
+      te = tsampler_->sample_one(fills_[k], rate_cdf_[k], rng);
+      ev = Event();
+    }
   label_event(ev, k, index);
   ev.kin.x = te.x;
   ev.kin.q2 = te.q2;
@@ -778,9 +776,11 @@ Event Pipeline::make_tagged(std::size_t k, std::uint64_t local,
   const Particle& spec = ev.particles[static_cast<std::size_t>(i_spec)];
   const Particle& clus = ev.particles[static_cast<std::size_t>(i_clus)];
   // WHOLE-NUCLEUS balance: X = k + P_ion - k' - p_spec = k + P_X - k'.
-  add_hadronic_x(ev, (beam_e_ + beam_ion_) - esc.p - spec.p, clus.charge,
-                 i_clus);
+  const Vec4 p_x = (beam_e_ + beam_ion_) - esc.p - spec.p;
+  if (!(p_x.m2() >= 0.0)) continue;   // the rejection described above
+  add_hadronic_x(ev, p_x, clus.charge, i_clus);
   return ev;
+  }
 }
 
 Event Pipeline::make_coherent(std::size_t k, std::uint64_t local,

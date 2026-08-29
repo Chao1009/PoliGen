@@ -24,12 +24,19 @@ Every function takes either the columnar dict `Pipeline.generate()` returns
 (the fast path -- the arrays are already there) or a sequence of `Event`
 records (the general path).
 
-ONE POLLIGEN KEY HAS NO LiPolGen EQUIVALENT ON THE PIPELINE PATH: `cell`, the
-flat accepted-(x, Q2)-cell index that `sample.weights_for` needs for Mode-W
-reweighting.  It is an `InclusiveSampler` internal and is not stored on the
-`Event` record, so it is present in `InclusiveSampler.sample_n()`'s dict and
-absent from `Pipeline.generate()`'s.  Reweight sampler batches, not pipeline
-output.
+`cell` -- the flat accepted-(x, Q2)-cell index `sample.weights_for` needs for
+Mode-W reweighting -- is on BOTH paths since 2026-08-30: it is stored on the
+record as `Event.kin.cell` (the ION-level sampler's cell on the inclusive
+channel, the STRUCK-CLUSTER sampler's on the tagged ones), so a
+`Pipeline.generate()` sample reweights exactly like an
+`InclusiveSampler.sample_n()` batch.
+
+The tagged dicts also carry the tier-T1 block: `n_partner`, `struck_pdg`,
+`struck_pol` and `struck_virtuality`, from the `Role.StruckNucleon` and
+`Role.PartnerSpectator` particles the cluster breakup writes (`breakup.hpp`).
+These are LiPolGen additions with no polligen counterpart, so `tagged_dict`
+puts them in only when they are asked for through `extra` -- except that
+`columns_from_events` always builds them.
 """
 
 import json
@@ -44,6 +51,9 @@ __all__ = ["inclusive_dict", "tagged_dict", "columns_from_events",
 
 #: `polligen.sample.InclusiveSampler.sample_category` keys.
 INCLUSIVE_KEYS = ("x", "q2", "y", "phi", "m", "cell", "category", "lam_e")
+
+#: The tier-T1 columns (`breakup.hpp`); LiPolGen additions, not polligen keys.
+T1_KEYS = ("n_partner", "struck_pdg", "struck_pol", "struck_virtuality")
 
 #: `polligen.tagged.TaggedSampler.sample_category` keys.
 TAGGED_KEYS = ("x", "q2", "y", "phi", "m_ion", "m_struck", "k", "cos_theta_k",
@@ -60,11 +70,15 @@ def _is_columns(obj):
 def columns_from_events(events, optics=None, pot_config="18x275"):
     """Columnar dict from a sequence of `Event` records.
 
-    The spectator lab quantities are RECONSTRUCTED from the record, not read
-    off it: the beam boost is longitudinal, so (kx, ky) = (px, py) exactly and
-    kz = gamma p_z - gamma*beta E is the exact inverse of `boost_spectator`
-    (tagged.hpp).  `route` needs an envelope; pass `optics` (an `Optics`, e.g.
-    `pipeline.optics`) to get it, otherwise every event is `Route.Lost`.
+    The spectator lab quantities are READ OFF `Event.kin` (`spec_pt`,
+    `spec_theta`, `spec_p_lab`, `spec_r`, `spec_xl`, `spec_kx/ky/kz`,
+    `phi_spec`) -- `boost_spectator`'s own numbers, stored on the record since
+    2026-08-30 instead of being re-derived here.  The re-derivation is exact
+    (the beam boost is longitudinal, so (kx, ky) = (px, py) and
+    kz = gamma p_z - gamma*beta E inverts the boost) and is kept as a test,
+    `python/tests/test_pipeline.py`.  `route` needs an envelope; pass `optics`
+    (an `Optics`, e.g. `pipeline.optics`) to get it, otherwise every event is
+    `Route.Lost`.
     """
     events = list(events)
     n = len(events)
@@ -76,10 +90,15 @@ def columns_from_events(events, optics=None, pot_config="18x275"):
             "kx", "ky", "kz", "phi_spec")}
     out["R"][:] = np.nan
     out["xL"][:] = np.nan
+    out["struck_virtuality"] = np.full(n, np.nan)
+    out["struck_pol"] = np.full(n, 9.0)
     out["kp"] = np.zeros((n, 4))
     out["lam_e"] = np.zeros(n, dtype=np.int64)
     out["route"] = np.zeros(n, dtype=np.int64)
     out["number"] = np.zeros(n, dtype=np.int64)
+    out["cell"] = np.full(n, -1, dtype=np.int64)
+    out["n_partner"] = np.zeros(n, dtype=np.int64)
+    out["struck_pdg"] = np.zeros(n, dtype=np.int64)
     cats = []
     for i, ev in enumerate(events):
         kin, spin = ev.kin, ev.spin
@@ -87,6 +106,7 @@ def columns_from_events(events, optics=None, pot_config="18x275"):
                   "phi_k", "alpha_s", "pt_s", "t", "x_pom"):
             out[k][i] = getattr(kin, k)
         out["weight"][i] = ev.weight
+        out["cell"][i] = kin.cell
         out["m_ion"][i] = spin.m_ion
         out["m_struck"][i] = spin.m_struck
         for k in ("pe", "theta_s", "phi_s", "pz", "pzz", "j"):
@@ -102,25 +122,28 @@ def columns_from_events(events, optics=None, pot_config="18x275"):
             pm = e1.p.p()
             if pm > abs(e1.p.pz):
                 out["eta_e"][i] = 0.5 * np.log((pm + e1.p.pz) / (pm - e1.p.pz))
+        # the tier-T1 block
+        pn = ev.find(_l.Role.StruckNucleon)
+        if pn is not None:
+            out["struck_pdg"][i] = pn.pdg
+            out["struck_pol"][i] = pn.pol
+            out["struck_virtuality"][i] = pn.p.m2() - _l.M_NUCLEON ** 2
+        out["n_partner"][i] = sum(
+            1 for q in ev.particles if q.role == _l.Role.PartnerSpectator)
+
         frag = ev.find(_l.Role.Spectator) or ev.find(_l.Role.IntactRecoil)
         if frag is None:
             continue
-        bi = ev.find(_l.Role.BeamIon)
-        pt, plab = frag.p.pt(), frag.p.p()
-        out["pT"][i] = pt
-        out["theta"][i] = np.arctan2(pt, frag.p.pz)
-        out["p_lab"][i] = plab
-        out["phi_spec"][i] = np.arctan2(frag.p.py, frag.p.px)
-        out["kx"][i] = frag.p.px
-        out["ky"][i] = frag.p.py
-        if bi is not None and bi.mass > 0.0:
-            gamma, gbeta = bi.p.e / bi.mass, bi.p.pz / bi.mass
-            out["kz"][i] = gamma * frag.p.pz - gbeta * frag.p.e
-            if frag.charge != 0.0 and bi.charge > 0.0:
-                out["R"][i] = (plab / frag.charge) / (bi.p.pz / bi.charge)
-            a_frag, a_beam = _pdg_mass_number(frag.pdg), _pdg_mass_number(bi.pdg)
-            if a_frag and a_beam:
-                out["xL"][i] = plab / (a_frag * bi.p.pz / a_beam)
+        # Stored, not re-derived (see the docstring).
+        out["pT"][i] = kin.spec_pt
+        out["theta"][i] = kin.spec_theta
+        out["p_lab"][i] = kin.spec_p_lab
+        out["phi_spec"][i] = kin.phi_spec
+        out["kx"][i] = kin.spec_kx
+        out["ky"][i] = kin.spec_ky
+        out["kz"][i] = kin.spec_kz
+        out["R"][i] = kin.spec_r
+        out["xL"][i] = kin.spec_xl
         if optics is not None:
             out["route"][i] = _l.route_of(ev, optics, pot_config)
     out["m"] = out["m_ion"]
@@ -149,10 +172,10 @@ def _columns(events, optics=None, pot_config="18x275"):
 def inclusive_dict(events, extra=()):
     """`polligen.sample.InclusiveSampler.sample_category`'s dict.
 
-    Keys x, q2, y, phi, m and the per-event category / lam_e labels; `cell`
-    only when the input carries it (an `InclusiveSampler.sample_n` batch does,
-    a `Pipeline.generate()` sample does not -- see the module docstring).
-    `extra` names further columns to carry through.
+    Keys x, q2, y, phi, m, cell and the per-event category / lam_e labels.
+    Both input paths carry `cell` (`Event.kin.cell` since 2026-08-30), so a
+    `Pipeline.generate()` sample reweights like an `InclusiveSampler.sample_n`
+    batch.  `extra` names further columns to carry through.
     """
     c = _columns(events)
     out = {}

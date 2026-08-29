@@ -175,7 +175,9 @@ struct Columns {
   std::vector<double> e_prime, theta_e, eta_e, kp;   // kp flat (n, 4)
   std::vector<double> spec_pT, spec_theta, spec_p_lab, spec_R, spec_xL;
   std::vector<double> spec_kx, spec_ky, spec_kz, spec_phi;
+  std::vector<double> struck_pol, struck_virtuality;
   std::vector<std::int64_t> number, lam_e, category_index, route;
+  std::vector<std::int64_t> cell, n_partner, struck_pdg;
 
   void resize(std::size_t n) {
     for (auto* v : {&x, &q2, &y, &phi, &w2, &nu, &s, &weight, &m_ion,
@@ -183,11 +185,14 @@ struct Columns {
                     &cos_theta_k, &phi_k, &alpha_s, &pt_s, &t, &x_pom,
                     &e_prime, &theta_e, &eta_e, &spec_pT, &spec_theta,
                     &spec_p_lab, &spec_R, &spec_xL, &spec_kx, &spec_ky,
-                    &spec_kz, &spec_phi})
+                    &spec_kz, &spec_phi, &struck_pol, &struck_virtuality})
       v->assign(n, 0.0);
     kp.assign(n * 4, 0.0);
     for (auto* v : {&number, &lam_e, &category_index, &route})
       v->assign(n, 0);
+    cell.assign(n, -1);
+    n_partner.assign(n, 0);
+    struck_pdg.assign(n, 0);
   }
 };
 
@@ -218,6 +223,23 @@ void fill_row(Columns& c, std::size_t i, const Event& ev, const Pipeline& p,
   c.x_pom[i] = ev.kin.x_pom;
   c.number[i] = static_cast<std::int64_t>(ev.number);
   c.lam_e[i] = ev.spin.lam_e;
+  c.cell[i] = ev.kin.cell;
+
+  // The T1 block: the struck nucleon and how many partner spectators came
+  // out of the cluster with it (0 for a channel whose struck object already
+  // was a nucleon, 1 for d* -> N + N, 1 or 2 for t* -> n + d / p + nn).
+  if (const Particle* pn = ev.find(Role::StruckNucleon)) {
+    c.struck_pdg[i] = pn->pdg;
+    c.struck_pol[i] = pn->pol;
+    c.struck_virtuality[i] = pn->p.m2() - M_NUCLEON * M_NUCLEON;
+  } else {
+    c.struck_virtuality[i] = std::nan("");
+    c.struck_pol[i] = 9.0;
+  }
+  std::int64_t n_part = 0;
+  for (const Particle& q : ev.particles)
+    if (q.role == Role::PartnerSpectator) ++n_part;
+  c.n_partner[i] = n_part;
 
   if (const Particle* e1 = ev.find(Role::ScatteredElectron)) {
     c.e_prime[i] = e1->p.e;
@@ -232,30 +254,19 @@ void fill_row(Columns& c, std::size_t i, const Event& ev, const Pipeline& p,
   const Particle* frag = ev.find(Role::Spectator);
   if (!frag) frag = ev.find(Role::IntactRecoil);
   if (frag) {
-    const Particle* bi = ev.find(Role::BeamIon);
-    const double pt = frag->p.pt();
-    const double plab = frag->p.p();
-    c.spec_pT[i] = pt;
-    c.spec_theta[i] = std::atan2(pt, frag->p.pz);
-    c.spec_p_lab[i] = plab;
-    c.spec_phi[i] = std::atan2(frag->p.py, frag->p.px);
-    c.spec_kx[i] = frag->p.px;
-    c.spec_ky[i] = frag->p.py;
-    if (bi && bi->mass > 0.0) {
-      // The beam boost is longitudinal, so the rest-frame k_z is the inverse
-      // boost of (E, p_z) and (k_x, k_y) = (p_x, p_y) exactly -- the same
-      // algebra `boost_spectator` used forwards.
-      const double gamma = bi->p.e / bi->mass;
-      const double gbeta = bi->p.pz / bi->mass;
-      c.spec_kz[i] = gamma * frag->p.pz - gbeta * frag->p.e;
-      if (frag->charge != 0.0 && bi->charge > 0.0)
-        c.spec_R[i] = (plab / frag->charge) / (bi->p.pz / bi->charge);
-      else
-        c.spec_R[i] = std::nan("");
-    }
-    const int a_frag = pdg_mass_number(frag->pdg);
-    const double p_u = p.beam_config().ion_momentum_per_nucleon;
-    c.spec_xL[i] = a_frag > 0 ? plab / (a_frag * p_u) : std::nan("");
+    // READ OFF THE RECORD, not re-derived: `Kinematics` now stores
+    // `boost_spectator`'s own lab block (and `Pipeline::make_coherent`
+    // stores the recoil's), so the four lines of inverse-boost and rigidity
+    // algebra this used to repeat have exactly one home.
+    c.spec_pT[i] = ev.kin.spec_pt;
+    c.spec_theta[i] = ev.kin.spec_theta;
+    c.spec_p_lab[i] = ev.kin.spec_p_lab;
+    c.spec_phi[i] = ev.kin.phi_spec;
+    c.spec_kx[i] = ev.kin.spec_kx;
+    c.spec_ky[i] = ev.kin.spec_ky;
+    c.spec_kz[i] = ev.kin.spec_kz;
+    c.spec_R[i] = ev.kin.spec_r;
+    c.spec_xL[i] = ev.kin.spec_xl;
     if (with_route) c.route[i] = route_of(ev, p.optics(), p.pot_config());
   } else {
     c.spec_R[i] = std::nan("");
@@ -273,11 +284,13 @@ void generate_columns(const Pipeline& p, std::uint64_t n, Columns& cols,
                           || p.config().channel == PipelineChannel::CoherentLi6;
   auto worker = [&](std::uint64_t lo, std::uint64_t hi) {
     if (!events) {
-      // Streaming: ONE Event reused for the whole range, the way
-      // `Pipeline::for_each` does it.  Going through `generate_range` here
-      // cost a clear()/resize() of a whole chunk of Event records per chunk
-      // -- 3x the total time on the inclusive channel, for records nobody
-      // asked for.
+      // Streaming: ONE Event reused for the whole range, i.e.
+      // `Pipeline::for_each_range` written out so that `fill_row` can keep
+      // its row index without a captured counter.  Materializing a
+      // `generate_range` chunk here would buy nothing and cost cache:
+      // re-measured 2026-08-30, after `Pipeline::event` learned to
+      // reconstruct in place, 2.19 M ev/s through a 4096-record buffer
+      // against 2.87 M streaming (inclusive 6Li, mid configuration).
       Event ev;
       for (std::uint64_t i = lo; i < hi; ++i) {
         p.event(i, ev);
@@ -352,6 +365,12 @@ py::dict columns_to_dict(Columns& c, const Pipeline& p, std::uint64_t n) {
   d["number"] = move_array(std::move(c.number));
   d["lam_e"] = move_array(std::move(c.lam_e));
   d["route"] = move_array(std::move(c.route));
+  // polligen's Mode-W reweighting column, and the T1 block.
+  d["cell"] = move_array(std::move(c.cell));
+  d["n_partner"] = move_array(std::move(c.n_partner));
+  d["struck_pdg"] = move_array(std::move(c.struck_pdg));
+  d["struck_pol"] = move_array(std::move(c.struck_pol));
+  d["struck_virtuality"] = move_array(std::move(c.struck_virtuality));
 
   py::list names;
   for (const SpinCategory& cat : p.plan().categories()) names.append(cat.name);
@@ -377,6 +396,7 @@ py::dict columns_to_dict(Columns& c, const Pipeline& p, std::uint64_t n) {
   meta["n_events_total"] = p.size();
   meta["sigma_pb"] = p.sigma_pb();
   meta["sigma_gen_mb"] = p.sigma_pb() * 1e-9;   // 1 mb = 1e9 pb
+  meta["tier"] = (p.tier() == Tier::T1) ? "T1" : "T0";
   meta["sigma_per_category_pb"] = p.sigma_per_category_pb();
   meta["lumi_per_category_pb"] = p.lumi_per_category_pb();
   meta["optics"] = p.optics().name;
@@ -693,13 +713,28 @@ static void bind_event(py::module_& m) {
       .def_readonly("w2", &Kinematics::w2)
       .def_readonly("nu", &Kinematics::nu)
       .def_readonly("s", &Kinematics::s)
+      .def_readonly("cell", &Kinematics::cell,
+                    "Accepted-cell index of the sampler the (x, Q2) was "
+                    "drawn from -- polligen's Mode-W `cell` column.")
       .def_readonly("k", &Kinematics::k)
       .def_readonly("cos_theta_k", &Kinematics::cos_theta_k)
       .def_readonly("phi_k", &Kinematics::phi_k)
       .def_readonly("alpha_s", &Kinematics::alpha_s)
       .def_readonly("pt_s", &Kinematics::pt_s)
+      // the spectator's lab block, as `tagged.SpectatorLab` spells it
+      .def_readonly("spec_pt", &Kinematics::spec_pt)
+      .def_readonly("spec_theta", &Kinematics::spec_theta)
+      .def_readonly("spec_p_lab", &Kinematics::spec_p_lab)
+      .def_readonly("spec_r", &Kinematics::spec_r)
+      .def_readonly("spec_xl", &Kinematics::spec_xl)
+      .def_readonly("spec_kx", &Kinematics::spec_kx)
+      .def_readonly("spec_ky", &Kinematics::spec_ky)
+      .def_readonly("spec_kz", &Kinematics::spec_kz)
+      .def_readonly("phi_spec", &Kinematics::phi_spec)
       .def_readonly("t", &Kinematics::t)
-      .def_readonly("x_pom", &Kinematics::x_pom);
+      .def_readonly("x_pom", &Kinematics::x_pom)
+      .def_readonly("beta_pom", &Kinematics::beta_pom)
+      .def_readonly("m_x2", &Kinematics::m_x2);
 
   py::class_<Event>(m, "Event")
       .def(py::init<>())
@@ -1890,6 +1925,40 @@ static void bind_pipeline(py::module_& m) {
   m.def("is_tagged", &is_tagged, py::arg("c"));
   m.def("channel_isotope", &channel_isotope, py::arg("c"));
 
+  // ---- tier T1: the cluster breakup (breakup.hpp) ------------------------
+  py::enum_<Tier>(m, "Tier",
+      "Fidelity tier of the final state: T0 keeps the struck cluster as one "
+      "off-shell pseudo-particle, T1 resolves it into a struck nucleon plus "
+      "on-shell partner spectators.")
+      .value("T0", Tier::T0)
+      .value("T1", Tier::T1);
+
+  py::enum_<ClusterSpecies>(m, "ClusterSpecies")
+      .value("Nucleon", ClusterSpecies::Nucleon)
+      .value("Deuteron", ClusterSpecies::Deuteron)
+      .value("Triton", ClusterSpecies::Triton);
+  m.def("cluster_species", &cluster_species, py::arg("z"), py::arg("a"));
+  m.attr("KAPPA_NN_VIRTUAL") = KAPPA_NN_VIRTUAL;
+
+  py::class_<BreakupOptions>(m, "BreakupOptions",
+      "Configuration of the T1 cluster breakup.  `beta` and `f2` are "
+      "overwritten by the Pipeline with the run's own values.")
+      .def(py::init<>())
+      .def_readwrite("beta", &BreakupOptions::beta)
+      .def_readwrite("p_d", &BreakupOptions::p_d)
+      .def_readwrite("kappa_nn", &BreakupOptions::kappa_nn)
+      .def_readwrite("k_max", &BreakupOptions::k_max)
+      .def_readwrite("nk", &BreakupOptions::nk)
+      .def_readwrite("nc", &BreakupOptions::nc)
+      .def_readwrite("n_grid", &BreakupOptions::n_grid)
+      .def_property("f2",
+          [](const BreakupOptions& o) {
+            return std::const_pointer_cast<UnpolSF>(o.f2);
+          },
+          [](BreakupOptions& o, std::shared_ptr<UnpolSF> f) {
+            o.f2 = std::move(f);
+          });
+
   py::enum_<OpticsChoice>(m, "OpticsChoice")
       .value("YellowReportHighAcceptance",
              OpticsChoice::YellowReportHighAcceptance)
@@ -1939,6 +2008,11 @@ static void bind_pipeline(py::module_& m) {
       .def_readwrite("cluster_beta", &PipelineConfig::cluster_beta)
       .def_readwrite("p_d", &PipelineConfig::p_d)
       .def_readwrite("struck", &PipelineConfig::struck)
+      .def_readwrite("tier", &PipelineConfig::tier,
+                     "Fidelity tier of the tagged final state; Tier.T1 by "
+                     "default (the struck cluster is resolved into a nucleon "
+                     "plus partner spectators).")
+      .def_readwrite("breakup", &PipelineConfig::breakup)
       .def_readwrite("coherent", &PipelineConfig::coherent)
       .def_readwrite("coherent_t_max", &PipelineConfig::coherent_t_max)
       .def_readwrite("coherent_xpom", &PipelineConfig::coherent_xpom)
@@ -1986,6 +2060,9 @@ static void bind_pipeline(py::module_& m) {
                              py::return_value_policy::reference_internal)
       .def_property_readonly("tagged_channel", &Pipeline::tagged_channel,
                              py::return_value_policy::reference_internal)
+      .def_property_readonly("tier", &Pipeline::tier,
+                             "The tier this run actually writes (Tier.T0 on "
+                             "channels with no struck cluster).")
       .def("sigma_per_category_pb", [](const Pipeline& p) {
         return copy_array(p.sigma_per_category_pb());
       })
@@ -2148,6 +2225,13 @@ static void bind_io(py::module_& m) {
       .def_readonly("n_no_surrogate", &PythiaBridgeStats::n_no_surrogate)
       .def_readonly("n_proton", &PythiaBridgeStats::n_proton)
       .def_readonly("n_neutron", &PythiaBridgeStats::n_neutron)
+      .def_readonly("n_flavour_dropped",
+                    &PythiaBridgeStats::n_flavour_dropped)
+      .def_readonly("n_cluster_fallback",
+                    &PythiaBridgeStats::n_cluster_fallback,
+                    "Events that took the DEPRECATED Role::StruckCluster "
+                    "branch; non-zero means the run is at Tier.T0 and the "
+                    "whole record does not conserve.")
       .def_readonly("max_rescale_dev", &PythiaBridgeStats::max_rescale_dev);
 
   py::class_<PythiaBridge, std::shared_ptr<PythiaBridge>>(m, "PythiaBridge")

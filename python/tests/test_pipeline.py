@@ -36,8 +36,10 @@ def test_columnar_schema(tagged_run):
     for key in ("x", "q2", "y", "phi", "m", "m_ion", "m_struck", "k",
                 "cos_theta_k", "phi_k", "pT", "theta", "p_lab", "R", "xL",
                 "kx", "ky", "kz", "phi_spec", "route", "weight", "lam_e",
-                "e_prime", "eta_e", "kp"):
+                "e_prime", "eta_e", "kp", "cell",
+                "n_partner", "struck_pdg", "struck_pol", "struck_virtuality"):
         assert key in cols, key
+    assert cols["meta"]["tier"] == "T1"
     assert cols["kp"].shape == (N_TAGGED, 4)
     assert cols["category"].shape == (N_TAGGED,)
     assert set(np.unique(cols["category"])) <= set(cols["category_names"])
@@ -142,13 +144,21 @@ def test_tagged_dict_is_the_polligen_schema(tagged_run):
     assert export.rp_accepted(d).sum() > 0
 
 
+def p_of(run):
+    return run[0]
+
+
 def test_inclusive_dict_is_the_polligen_schema(inclusive_run):
     _, c = inclusive_run
     d = export.inclusive_dict(c)
-    for k in ("x", "q2", "y", "phi", "m", "category", "lam_e"):
+    for k in ("x", "q2", "y", "phi", "m", "cell", "category", "lam_e"):
         assert k in d, k
-    # `cell` is a sampler internal, absent on the pipeline path (documented)
-    assert "cell" not in d
+    # `cell` used to be a sampler internal that never reached the record; it
+    # is now on `Event.kin`, so the pipeline path reweights (Mode W) too.
+    cells = np.asarray(d["cell"])
+    assert cells.dtype.kind == "i"
+    assert (cells >= 0).all()
+    assert cells.max() < p_of(inclusive_run).dis_sampler.n_cells
 
 
 def test_columns_from_events_reproduces_the_fast_path(tagged_run):
@@ -187,3 +197,89 @@ def test_coherent_channel_runs():
     assert (c["t"] > 0).all() and (c["t"] <= cfg.coherent_t_max).all()
     assert np.mean(c["t"]) == pytest.approx(1.0 / cfg.coherent.slope_b,
                                             rel=0.10)
+
+
+# ------------------------------------------------------------------ tier T1
+
+def test_spectator_lab_block_matches_its_own_rederivation(tagged_run):
+    """The block is STORED on `Event.kin` now (export.py reads it off).
+
+    This is the cross-check that the stored numbers are the ones the record's
+    four-vectors imply: the beam boost is longitudinal, so (kx, ky) = (px, py)
+    exactly and kz = gamma p_z - gamma*beta E inverts it.
+    """
+    p, _ = tagged_run
+    evs = p.generate_range(0, 500)
+    worst = 0.0
+    for ev in evs:
+        f = ev.find(lg.Role.Spectator)
+        bi = ev.find(lg.Role.BeamIon)
+        assert f is not None and bi is not None
+        pt, plab = f.p.pt(), f.p.p()
+        gamma, gbeta = bi.p.e / bi.mass, bi.p.pz / bi.mass
+        for got, want in (
+                (ev.kin.spec_pt, pt),
+                (ev.kin.spec_p_lab, plab),
+                (ev.kin.spec_theta, np.arctan2(pt, f.p.pz)),
+                (ev.kin.spec_kx, f.p.px),
+                (ev.kin.spec_ky, f.p.py),
+                (ev.kin.spec_kz, gamma * f.p.pz - gbeta * f.p.e),
+                (ev.kin.phi_spec, np.arctan2(f.p.py, f.p.px)),
+                (ev.kin.spec_r,
+                 (plab / f.charge) / (bi.p.pz / bi.charge)),
+        ):
+            worst = max(worst, abs(got - want))
+    assert worst < 1e-9, worst
+
+
+def test_t1_record_conserves_the_whole_nucleus(tagged_run):
+    """k + P_ion = k' + p_spec + sum(p_partner) + X, exactly."""
+    p, _ = tagged_run
+    assert p.tier == lg.Tier.T1
+    evs = p.generate_range(0, 1000)
+    worst_p, worst_q = 0.0, 0.0
+    n_struck = 0
+    for ev in evs:
+        r = lg.momentum_residual(ev)
+        worst_p = max(worst_p, abs(r.e), abs(r.px), abs(r.py), abs(r.pz))
+        worst_q = max(worst_q, abs(lg.charge_residual(ev)))
+        pn = ev.find(lg.Role.StruckNucleon)
+        assert pn is not None
+        assert pn.pdg in (2212, 2112)
+        assert pn.pol in (-1.0, 1.0)
+        n_struck += 1
+    assert n_struck == len(evs)
+    assert worst_p < 1e-9, worst_p
+    assert worst_q == 0.0
+
+
+def test_t0_tier_keeps_the_pseudo_cluster():
+    cfg = lg.make_config(isotope="6Li", channel="tagged-alpha", config=1,
+                         events=500, seed=3)
+    cfg.tier = lg.Tier.T0
+    p = lg.Pipeline(cfg, lg.tensor_thirds_plan(0.7, 0.6))
+    assert p.tier == lg.Tier.T0
+    for ev in p.generate_range(0, 200):
+        assert ev.find(lg.Role.StruckNucleon) is None
+        assert ev.find(lg.Role.StruckCluster) is not None
+        assert not any(q.role == lg.Role.PartnerSpectator
+                       for q in ev.particles)
+
+
+def test_partner_multiplicity_and_charge_by_channel():
+    want = {"tagged-6Li-alpha": ("6Li", {1}),
+            "tagged-7Li-alpha": ("7Li", {1, 2}),
+            "tagged-d-p": ("d", {0})}
+    for channel, (iso, mult) in want.items():
+        cfg = lg.make_config(isotope=iso, channel=channel, config=1,
+                             events=2000, seed=4)
+        plan = (lg.make_plan("helicity-flip", j=1.5)
+                if iso == "7Li" else lg.tensor_thirds_plan(0.7, 0.6))
+        p = lg.Pipeline(cfg, plan)
+        c = p.generate(0)
+        assert set(np.unique(c["n_partner"])) == mult, channel
+        assert set(np.unique(c["struck_pdg"])) <= {2212, 2112}, channel
+        # off shell, by a Fermi-motion amount
+        v = c["struck_virtuality"]
+        assert (v < 0).all()
+        assert -1.0 < v.mean() < 0.0

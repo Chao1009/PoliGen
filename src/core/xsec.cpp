@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
+#include <string>
 
 namespace lipolgen {
 
@@ -55,16 +56,15 @@ InclusiveKernel::InclusiveKernel(Ion ion, Options options)
       b2_32_func_(std::move(options.b2_32_func)),
       delta_32_func_(std::move(options.delta_32_func)),
       g2_mode_(options.g2_mode),
+      g2_scale_(options.g2_scale),
       target_mass_(options.target_mass),
       g2_npts_(options.g2_npts) {
   if (!g1_model_) {
     g1_model_ = std::make_shared<const ToyG1>(nf2_.base(), options.r_func);
   }
-  if (target_mass_ && g2_mode_ == G2Mode::kZero) {
-    throw std::runtime_error(
-        "target_mass=true needs g2 (g2_mode='ww'): A1 = (g1 - gamma^2 g2)/F1 "
-        "and A2 both carry it");
-  }
+  // `target_mass = true` with `G2Mode::kZero` is NOT refused (xsec.py:126-129):
+  // g2 is filled with zeros and the finite-gamma kernel runs on them, which is
+  // exactly the g2_scale = 0 twist-3 variation.
 }
 
 double InclusiveKernel::g1a(double x, double q2) const {
@@ -102,8 +102,9 @@ SFTables InclusiveKernel::tables(double x, double q2, bool with_g2) const {
   if (with_g2 || target_mass_) {
     t.has_g2 = true;
     t.g2 = (g2_mode_ == G2Mode::kWandzuraWilczek)
-               ? g2_ww([this](double xx, double qq) { return g1a(xx, qq); }, x,
-                       q2, g2_npts_)
+               ? g2_scale_ * g2_ww([this](double xx, double qq) {
+                   return g1a(xx, qq);
+                 }, x, q2, g2_npts_)
                : 0.0;
   }
   return t;
@@ -157,6 +158,29 @@ std::pair<double, double> InclusiveKernel::tensor_moments(double m) const {
 Amplitudes InclusiveKernel::amplitudes(const SFTables& t, double x, double q2,
                                        double s, const EventSpinState& state,
                                        bool with_perp) const {
+  // P8.  The rank-2 branch below used to be gated on `state.j` alone while
+  // `tensor_moments(state.m)` reads the KERNEL's ion spin, so a mismatched
+  // pair would compute the alignment Q_NN for one spin and apply it to a
+  // population of another.  Two rules close that:
+  //
+  //   (a) a kernel that HAS a rank-2 sector (ion spin >= 1, the only case in
+  //       which `tables()` fills b1/b2/Delta at all) refuses any spin state
+  //       that is not its own J;
+  //   (b) the branch is entered only when BOTH spins are >= 1, so the gate and
+  //       the moments can no longer disagree.
+  //
+  // (b) changes no number: with ion spin < 1 `tensor_moments` returns (0, 0)
+  // and `tables()` leaves b1 = b2 = Delta = 0, so the branch contributed
+  // exactly zero.  That is the d(e,e'p) control, where the struck cluster is a
+  // spin-1/2 NEUTRON but the projection m_S labels the S_c = 1 channel spin --
+  // legitimate, and what the Python does.
+  const double j_ion = ion_.spin;
+  if (j_ion >= 1.0 - 1e-9 && std::fabs(state.j - j_ion) > 1e-9) {
+    throw std::runtime_error(
+        "InclusiveKernel::amplitudes: spin state J = " +
+        std::to_string(state.j) + " is not the kernel's ion spin " +
+        std::to_string(j_ion));
+  }
   const double y = q2 / (s * x);
   const double den = dphi(t, x, y);
   const double j = state.j;
@@ -164,7 +188,7 @@ Amplitudes InclusiveKernel::amplitudes(const SFTables& t, double x, double q2,
   const double st = std::sin(state.theta_s);
 
   Amplitudes out;
-  if (j >= 1.0 - 1e-9) {
+  if (j >= 1.0 - 1e-9 && j_ion >= 1.0 - 1e-9) {
     const std::pair<double, double> qc = tensor_moments(state.m);
     // T_LL = Q_NN P_2(cos theta_S), one line for every spin
     const double t_geo = TENSOR_LL_SIGN * qc.first * 0.5 * (3.0 * ct * ct - 1.0);

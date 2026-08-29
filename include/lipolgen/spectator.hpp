@@ -207,9 +207,11 @@ inline bool rp_accepted(int route) {
   return route == kRouteRomanPots || route == kRouteRPNearBeam;
 }
 
-/// Pot transport levers (R12 [m], R34 [m] or < 0 when the vertical plane is
-/// shut, dispersion D [m]) and the second-order dispersion D2 [m], measured
-/// 2026-08-28 per machine configuration ("5x41", "10x100", "18x275").
+/// Pot transport levers (R12 [m], R34 [m], dispersion D [m]) and the
+/// second-order dispersion D2 [m], measured 2026-08-28 per machine
+/// configuration ("5x41", "10x100", "18x275"); the 5x41 vertical lever was
+/// measured on 2026-08-29.  A negative `r34` would mean "never measured"; no
+/// configuration the library carries is in that state any more.
 struct PotLevers {
   double r12 = 0.0, r34 = -1.0, dispersion = 0.0, dispersion2 = 0.0;
   double blind_half_width = 0.0;

@@ -79,13 +79,22 @@ RFunc const_r(double value) {
   return [value](double, double) { return value; };
 }
 
+/// The MASSLESS kernel: `InclusiveKernel::Options::target_mass` defaults to
+/// TRUE since 2026-08-29 (`xsec.py`'s own default), so every identity written
+/// against A_par = D(y) g1/F1 has to ask for the massless kernel by name.
+InclusiveKernel massless_kernel(const Ion& ion) {
+  InclusiveKernel::Options opt;
+  opt.target_mass = false;
+  return InclusiveKernel(ion, opt);
+}
+
 }  // namespace
 
 // --- the three sector identities ----------------------------------------
 
 TEST_CASE("vector sector: (w+ - w-)/(2 + w+ + w-) = P_e A_par") {
   const double s = s_mid_6li();
-  const InclusiveKernel kern(LI6());  // no tensor SFs -> pure vector sector
+  const InclusiveKernel kern = massless_kernel(LI6());  // pure vector sector
   const double pe = 0.7;
   for (const Point& p : analysis_grid(s)) {
     const SFTables t = kern.tables(p.x, p.q2);
@@ -102,7 +111,7 @@ TEST_CASE("vector sector: (w+ - w-)/(2 + w+ + w-) = P_e A_par") {
 
 TEST_CASE("vector sector for spin 3/2, and rank-2 slots default to zero") {
   const double s = s_mid_6li();
-  const InclusiveKernel kern(LI7());
+  const InclusiveKernel kern = massless_kernel(LI7());
   for (const Point& p : analysis_grid(s)) {
     const SFTables t = kern.tables(p.x, p.q2);
     // m = +3/2: full vector polarization m/J = 1
@@ -536,7 +545,7 @@ TEST_CASE("at gamma = 0 the finite-gamma set IS the fast simulation's") {
 }
 
 TEST_CASE("target_mass off is bit-for-bit the published kernel") {
-  const InclusiveKernel k0(LI6());
+  const InclusiveKernel k0 = massless_kernel(LI6());
   InclusiveKernel::Options tm;
   tm.target_mass = true;
   const InclusiveKernel k1(LI6(), tm);
@@ -559,20 +568,115 @@ TEST_CASE("target_mass off is bit-for-bit the published kernel") {
   }
 }
 
-TEST_CASE("target_mass needs g2") {
-  InclusiveKernel::Options bad;
-  bad.target_mass = true;
-  bad.g2_mode = G2Mode::kZero;
-  CHECK_THROWS(InclusiveKernel(LI6(), bad));
-  InclusiveKernel::Options tm;
-  tm.target_mass = true;
-  const InclusiveKernel k1(LI6(), tm);
-  const InclusiveKernel k0(LI6());
-  CHECK_THROWS(k1.a_parallel(k0.tables(0.2, 5.0), 0.2, 5.0, 0.3));
+// C2b: `target_mass = true` with `G2Mode::kZero` is the twist-3 g2_scale = 0
+// variation and is PERMITTED (xsec.py:126-129 zeroes g2 in the tables and
+// proceeds); only handing the finite-gamma kernel a table with no g2 slot at
+// all is an error.
+TEST_CASE("target_mass with g2_mode = zero is the g2_scale = 0 variation") {
+  InclusiveKernel::Options z;
+  z.target_mass = true;
+  z.g2_mode = G2Mode::kZero;
+  const InclusiveKernel kz(LI6(), z);            // no longer refused
+  InclusiveKernel::Options s0;
+  s0.target_mass = true;
+  s0.g2_scale = 0.0;
+  const InclusiveKernel k0s(LI6(), s0);
+  InclusiveKernel::Options tmw;
+  tmw.target_mass = true;
+  const InclusiveKernel k1(LI6(), tmw);          // g2 = g2_WW, scale 1
+  InclusiveKernel::Options s15;
+  s15.target_mass = true;
+  s15.g2_scale = 1.5;
+  const InclusiveKernel k15(LI6(), s15);
+
+  bool moved = false;
+  for (double q2 : {2.0, 5.0, 20.0}) {
+    for (double x : {0.05, 0.2, 0.5}) {
+      const SFTables tz = kz.tables(x, q2);
+      const SFTables t0 = k0s.tables(x, q2);
+      const SFTables t1 = k1.tables(x, q2);
+      const SFTables t15 = k15.tables(x, q2);
+      // g2_mode = zero and g2_scale = 0 are the SAME variation, bit for bit
+      CHECK(tz.has_g2);
+      CHECK(tz.g2 == 0.0);
+      CHECK(t0.g2 == 0.0);
+      // g2_scale multiplies the WW table exactly
+      CHECK_CLOSE(t15.g2, 1.5 * t1.g2, kRtol);
+      // ... and it is a real handle on A_par
+      const double y = 0.3;
+      const double a_zero = kz.a_parallel(tz, x, q2, y);
+      const double a_ww = k1.a_parallel(t1, x, q2, y);
+      CHECK(std::isfinite(a_zero));
+      CHECK(k0s.a_parallel(t0, x, q2, y) == a_zero);
+      if (std::fabs(a_ww / a_zero - 1.0) > 1e-6) moved = true;
+    }
+  }
+  CHECK(moved);
+  // the finite-gamma kernel still refuses a table with NO g2 slot
+  CHECK_THROWS(k1.a_parallel(massless_kernel(LI6()).tables(0.2, 5.0), 0.2, 5.0,
+                             0.3));
+}
+
+// C2: the DEFAULT-constructed kernel is the Python default -- target mass ON.
+TEST_CASE("the default kernel is the Python default: target_mass on") {
+  const InclusiveKernel kdef(LI6());
+  CHECK(kdef.target_mass());
+  CHECK(kdef.g2_scale() == 1.0);
+  InclusiveKernel::Options tm2;
+  tm2.target_mass = true;
+  const InclusiveKernel ktm(LI6(), tm2);
+  const double s = s_mid_6li();
+  for (const Point& p : analysis_grid(s)) {
+    const SFTables td = kdef.tables(p.x, p.q2);
+    const SFTables tt = ktm.tables(p.x, p.q2);
+    CHECK(td.has_g2);
+    CHECK(td.g2 == tt.g2);
+    CHECK(kdef.a_parallel(td, p.x, p.q2, 0.3)
+          == ktm.a_parallel(tt, p.x, p.q2, 0.3));
+  }
+  CHECK(!massless_kernel(LI6()).target_mass());
+}
+
+// P8: a spin state whose J is not the kernel's ion spin is refused -- the
+// rank-2 branch is gated on state.j while tensor_moments reads ion().spin.
+TEST_CASE("amplitudes refuse a spin state of the wrong J") {
+  const double s = s_mid_6li();
+  const InclusiveKernel k6(LI6());   // J = 1
+  const InclusiveKernel k7(LI7());   // J = 3/2
+  const SFTables t6 = k6.tables(0.2, 5.0);
+  const SFTables t7 = k7.tables(0.2, 5.0);
+  CHECK_THROWS(k6.amplitudes(t6, 0.2, 5.0, s,
+                             EventSpinState{+1, 1.0, 1.5, 1.5, 0.0, 0.0}));
+  CHECK_THROWS(k7.amplitudes(t7, 0.2, 5.0, s,
+                             EventSpinState{+1, 1.0, 1.0, 1.0, 0.0, 0.0}));
+  CHECK_THROWS(k6.amplitudes(t6, 0.2, 5.0, s,
+                             EventSpinState{+1, 1.0, 0.5, 0.5, 0.0, 0.0}));
+  // the matching state is fine
+  CHECK_NOTHROW(k6.amplitudes(t6, 0.2, 5.0, s,
+                              EventSpinState{+1, 1.0, 1.0, 1.0, 0.0, 0.0}));
+  CHECK_NOTHROW(k7.amplitudes(t7, 0.2, 5.0, s,
+                              EventSpinState{+1, 1.0, 1.5, 0.5, 0.0, 0.0}));
+  // ... and so is a J = 1 CHANNEL state on a spin-1/2 kernel: that is the
+  // d(e,e'p) control, where m_S labels the S_c = 1 channel spin of p (x) n
+  // while the DIS target is the struck NEUTRON.  The kernel has no rank-2
+  // sector at all there, so the tensor term is identically zero.
+  const Ion neutron{"n", 1, 0, 0.5, 0.0, 1.0};  // tagged.hpp NEUTRON_TARGET
+  const InclusiveKernel kn(neutron);
+  const SFTables tn = kn.tables(0.2, 5.0);
+  for (double m : {1.0, 0.0, -1.0}) {
+    Amplitudes a;
+    CHECK_NOTHROW(a = kn.amplitudes(tn, 0.2, 5.0, s,
+                                    EventSpinState{+1, 1.0, 1.0, m, 0.4, 0.0}));
+    CHECK(a.a2 == 0.0);
+    // the whole w_avg is the vector term m/J times the longitudinal asymmetry
+    const double y = 5.0 / (s * 0.2);
+    CHECK_CLOSE_AT(a.w_avg, m * std::cos(0.4)
+                                * kn.a_parallel(tn, 0.2, 5.0, y), kRtol, 1e-300);
+  }
 }
 
 TEST_CASE("the target-mass flag moves A_par by O(gamma^2) and by nothing else") {
-  const InclusiveKernel k0(LI6());
+  const InclusiveKernel k0 = massless_kernel(LI6());
   InclusiveKernel::Options tm;
   tm.target_mass = true;
   const InclusiveKernel k1(LI6(), tm);
@@ -611,7 +715,7 @@ TEST_CASE("the target-mass flag moves A_par by O(gamma^2) and by nothing else") 
 }
 
 TEST_CASE("at small y the target-mass shift collapses to (1 + gamma^2)") {
-  const InclusiveKernel k0(LI6());
+  const InclusiveKernel k0 = massless_kernel(LI6());
   InclusiveKernel::Options tm;
   tm.target_mass = true;
   const InclusiveKernel k1(LI6(), tm);
@@ -641,6 +745,7 @@ TEST_CASE("the target-mass flag leaves the tensor and unpolarized sectors alone"
   const double s = s_mid_6li();
   InclusiveKernel::Options o0, o1;
   o0.b1_func = toy_b1_func();
+  o0.target_mass = false;
   o1 = o0;
   o1.target_mass = true;
   const InclusiveKernel k0(LI6(), o0);

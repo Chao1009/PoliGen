@@ -106,10 +106,18 @@ double density_min(double a1n, double a2n);
 /// the g1/F1 of the default `ToyG1` -- so one argument moves R consistently.
 /// An EXPLICIT `g1_model` keeps whatever R it was built with.
 ///
-/// `target_mass` (default false) selects the longitudinal vector kernel:
-/// false is the massless A_par = D g1/F1 of the fast simulation, which every
-/// published number uses; true is the exact finite-gamma D_gamma (A1 + eta A2)
-/// and needs g2, so it is refused with G2Mode::kZero.
+/// `target_mass` (DEFAULT TRUE since 2026-08-29, matching `xsec.py`'s own
+/// default) selects the longitudinal vector kernel: true is the exact
+/// finite-gamma D_gamma (A1 + eta A2), false the massless A_par = D g1/F1 of
+/// the fast simulation that every number published before that date used.
+///
+/// `g2_mode` chooses the g2 model (Wandzura-Wilczek, the default, or zero) and
+/// `g2_scale` MULTIPLIES it.  Together they are the twist-3 handle on the
+/// finite-gamma A_par -- the residual systematic that replaced the target-mass
+/// bias is measured by re-running an extraction at g2_scale = 0 and 1.5
+/// (`evgen/scripts/target_mass_bound.py`).  `target_mass = true` with
+/// `G2Mode::kZero` is legitimate and is exactly the g2_scale = 0 variation:
+/// g2 is filled with zeros and the finite-gamma kernel is evaluated on them.
 class InclusiveKernel {
  public:
   struct Options {
@@ -118,9 +126,11 @@ class InclusiveKernel {
     SFFunc3 b1_func, b2_func, delta_func;       ///< spin-1 rank-2 slots
     SFFunc3 b1_32_func, b2_32_func, delta_32_func;  ///< spin-3/2 rank-2 slots
     G2Mode g2_mode = G2Mode::kWandzuraWilczek;
+    /// Multiplies g2 (the WW table, or nothing when `g2_mode` is kZero).
+    double g2_scale = 1.0;
     std::function<double(double)> emc_ratio;
     RFunc r_func;
-    bool target_mass = false;
+    bool target_mass = true;
     int g2_npts = 96;
   };
 
@@ -129,6 +139,7 @@ class InclusiveKernel {
 
   const Ion& ion() const { return ion_; }
   bool target_mass() const { return target_mass_; }
+  double g2_scale() const { return g2_scale_; }
 
   /// Per-nucleon SF table at one (x, Q2).  g2 is filled when `with_g2` (a_perp
   /// needs it) or whenever `target_mass` is on.
@@ -149,6 +160,10 @@ class InclusiveKernel {
   std::pair<double, double> tensor_moments(double m) const;
 
   /// (w_avg, a_1, a_2).  a_1 is only computed when `with_perp` (needs g2).
+  ///
+  /// THROWS if `state.j` is not the kernel's own ion spin: the rank-2 branch
+  /// is gated on `state.j` but `tensor_moments` reads `ion().spin`, so a
+  /// mismatched pair would silently mix the two (P8).
   Amplitudes amplitudes(const SFTables& t, double x, double q2, double s,
                         const EventSpinState& state,
                         bool with_perp = false) const;
@@ -180,6 +195,7 @@ class InclusiveKernel {
   SFFunc3 b1_func_, b2_func_, delta_func_;
   SFFunc3 b1_32_func_, b2_32_func_, delta_32_func_;
   G2Mode g2_mode_;
+  double g2_scale_;
   bool target_mass_;
   int g2_npts_;
 };

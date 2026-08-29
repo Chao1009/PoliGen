@@ -49,7 +49,15 @@ InclusiveKernel build_kernel(const std::string& ion_name,
                              const std::string& block) {
   const Ion& ion = ion_by_name(ion_name);
   InclusiveKernel::Options opt;
-  opt.target_mass = (block == "kernel_default_target_mass");
+  // C2: `target_mass` DEFAULTS to true (xsec.py:149), so the finite-gamma
+  // block is built from the DEFAULT options -- this is the assertion that the
+  // C++ default-constructed kernel IS the Python default-constructed one --
+  // and the massless block has to ask for target_mass = false by name.
+  if (block == "kernel_default_target_mass") {
+    CHECK(opt.target_mass);
+  } else {
+    opt.target_mass = false;
+  }
   if (ion_name == "6Li") {
     // b1_func = toy_b1(..., mode="toy"), delta_func = toy_delta_gluon(scale=1e-3)
     opt.b1_func = [](double x, double q2, double f1) {
@@ -274,6 +282,12 @@ TEST_CASE("reference tables: xsec.json") {
       const std::string block = bkv.first;
       const jsonmin::Value& b = bkv.second;
       const InclusiveKernel kern = build_kernel(ion_name, block);
+      if (block == "kernel_default_target_mass") {
+        CHECK(kern.target_mass());
+        CHECK(kern.g2_scale() == 1.0);
+        // ... and so is the kernel built with no Options at all.
+        CHECK(InclusiveKernel(ion_by_name(ion_name)).target_mass());
+      }
 
       std::vector<SFTables> tabs(np);
       for (std::size_t i = 0; i < np; ++i) {

@@ -311,3 +311,23 @@ TEST_CASE("farforward: the envelope is a RECTANGLE once the azimuth is known") {
   CHECK_CLOSE(h / 65e-6, std::sqrt(2.0), 3e-3);
   CHECK_CLOSE(v, h, 1e-12);
 }
+
+// P5: the pot transport levers are `polli_fastsim.farforward.POT_LEVERS`
+// (R12, R34, D) verbatim.  R34 at 5x41 was carried as -1 ("never measured")
+// until 2026-08-29 -- it is 4.56 m, and this table is the only C++ copy.
+TEST_CASE("spectator: pot levers pin farforward.POT_LEVERS") {
+  struct Row { const char* key; double r12, r34, d; };
+  const Row rows[3] = {{"5x41", 19.24, 4.56, 0.311},
+                       {"10x100", 21.25, 3.35, 0.287},
+                       {"18x275", 29.97, 2.93, 0.292}};
+  for (const Row& r : rows) {
+    const PotLevers& l = pot_levers(r.key);
+    CHECK(l.r12 == r.r12);
+    CHECK(l.r34 == r.r34);
+    CHECK(l.dispersion == r.d);
+    // every configuration's vertical lever is now MEASURED, so none of them
+    // may carry the "never measured" sentinel
+    CHECK(l.r34 > 0.0);
+  }
+  CHECK_THROWS(pot_levers("5x100"));
+}

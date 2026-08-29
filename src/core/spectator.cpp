@@ -219,8 +219,18 @@ const Optics& HIGH_DIVERGENCE() {
 }
 
 const PotLevers& pot_levers(const std::string& config) {
+  // `polli_fastsim.farforward.POT_LEVERS` (R12, R34, D) plus the second-order
+  // dispersion and the blind half width.  R34 AT 5x41 IS 4.56 m, measured on
+  // 2026-08-29 by re-running the theta_y ladder through a zero-insertion
+  // `epic_craterlake_5x41` (4.564 / 4.558 m at station 1 layers 1 / 2, 149 and
+  // 154 rows, residual rms 0.79 mm; 4.57 m at station 2).  The first scan saw
+  // three rows only because the per-energy insertion holds the silicon off to
+  // |y| >= 29.6 mm, so the lever had nothing to regress on -- but transport is
+  // a property of the magnets, not of where the pots sit.  The 5x41 vertical
+  // plane is still SHUT, now with a number attached: 29.6 mm / 4.56 m =
+  // 6.49 mrad against a 2.85 mrad pot acceptance (THETA_RP_OUTER_MEASURED).
   //             R12     R34    D       D2      blind half width
-  static const PotLevers l5{19.24, -1.0, 0.311, -0.190, 0.048};
+  static const PotLevers l5{19.24, 4.56, 0.311, -0.190, 0.048};
   static const PotLevers l10{21.25, 3.35, 0.287, -0.206, 0.032};
   static const PotLevers l18{29.97, 2.93, 0.292, -0.215, 0.016};
   if (config == "5x41") return l5;

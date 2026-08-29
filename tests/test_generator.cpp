@@ -279,3 +279,74 @@ TEST_CASE("generator: run() streams a whole plan without storing it") {
   CHECK(sum == 5000u);
   CHECK_THROWS_AS(gen.run(plan, lumi, 1, nullptr), std::runtime_error);
 }
+
+// P1.  The struck nucleon used to be drawn flat Z : N, but the inclusive rate
+// off a nucleus is Z F2p(x, Q2) + N F2n(x, Q2).  For an N = Z nucleus like 6Li
+// the two agree only where F2n = F2p, i.e. nowhere: at x = 0.5 the true
+// proton share is 0.616, not 0.5, and it keeps rising towards the valence edge.
+TEST_CASE("generator: the struck nucleon is drawn Z F2p : N F2n") {
+  const auto sampler = gen_sampler();
+  const InclusiveGenerator gen(sampler);
+  const Ion& ion = sampler->config().ion;
+  const UnpolSF& sf = *sampler->kernel().nuclear_f2().base();
+
+  // --- the analytic fraction, straight off the kernel's own backend
+  for (double x : {0.01, 0.1, 0.3, 0.5, 0.7}) {
+    const double q2 = 10.0;
+    const double want = ion.Z * sf.f2p(x, q2)
+                        / (ion.Z * sf.f2p(x, q2) + ion.N() * sf.f2n(x, q2));
+    CHECK_CLOSE(gen.proton_fraction(x, q2), want, 1e-14);
+    CHECK(want > 0.0);
+    CHECK(want < 1.0);
+  }
+  // it is NOT Z/A, and the departure grows with x
+  const double flat = static_cast<double>(ion.Z) / ion.A;
+  CHECK(flat == 0.5);
+  const double f05 = gen.proton_fraction(0.5, 10.0);
+  const double f07 = gen.proton_fraction(0.7, 10.0);
+  MESSAGE("6Li P(proton): Z/A = " << flat << ", Z F2p : N F2n = "
+          << gen.proton_fraction(0.01, 10.0) << " at x = 0.01, " << f05
+          << " at x = 0.5, " << f07 << " at x = 0.7");
+  CHECK(f05 > flat + 0.05);
+  CHECK(f07 > f05);
+
+  // --- and the DRAW follows it.  make_event at a fixed (x, Q2) over many
+  // streams: the only randomness left in the species is the one uniform.
+  const RunPlan plan = tensor_flip_plan(0.6);
+  const SpinCategory& cat = plan.categories()[0];
+  for (double x : {0.05, 0.5}) {
+    EventDraw d;
+    d.x = x;
+    d.q2 = 10.0;
+    d.y = d.q2 / (sampler->s() * d.x);
+    d.phi = 0.7;
+    d.m = 0.0;
+    const int n = 40000;
+    int n_p = 0;
+    for (int i = 0; i < n; ++i) {
+      Rng rng(7, 0, 0, static_cast<std::uint64_t>(i));
+      const Event ev = gen.make_event(cat, plan, d, rng, i, 1, 0);
+      const Particle* sn = ev.find(Role::StruckNucleon);
+      REQUIRE(sn != nullptr);
+      if (sn->pdg == 2212) ++n_p;
+      CHECK(sn->charge == (sn->pdg == 2212 ? 1.0 : 0.0));
+      // P3: on shell at the FREE nucleon mass in both places it is built
+      CHECK_CLOSE(sn->p.m2(), M_NUCLEON * M_NUCLEON, 1e-9);
+    }
+    const double got = static_cast<double>(n_p) / n;
+    const double want = gen.proton_fraction(x, d.q2);
+    const double err = std::sqrt(want * (1.0 - want) / n);
+    MESSAGE("x = " << x << ": drew p in " << got << " +- " << err
+            << " of events, Z F2p/(Z F2p + N F2n) = " << want);
+    CHECK(std::fabs(got - want) < 4.0 * err);
+  }
+  // the pinned-species option still wins
+  GeneratorConfig gc;
+  gc.struck_nucleon_pdg = 2112;
+  const InclusiveGenerator pinned(sampler, gc);
+  EventDraw d;
+  d.x = 0.5; d.q2 = 10.0; d.y = d.q2 / (sampler->s() * d.x); d.phi = 0.0;
+  Rng rng(1, 0, 0, 0);
+  CHECK(pinned.make_event(cat, plan, d, rng, 0, 1, 0)
+            .find(Role::StruckNucleon)->pdg == 2112);
+}

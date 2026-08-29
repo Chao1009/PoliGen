@@ -43,6 +43,7 @@
 #include "lipolgen/beams.hpp"
 #include "lipolgen/event.hpp"
 #include "lipolgen/rng.hpp"
+#include "lipolgen/sf.hpp"
 
 namespace lipolgen {
 
@@ -127,7 +128,14 @@ double hfs_sigma_empz_exact(const Vec4& k, const Vec4& p_n, const Vec4& k_out);
 
 /// Which nucleon of the target is struck when the event does not name one.
 enum class NucleonChoice : std::uint8_t {
-  ByZN,      ///< p with probability Z/A, n with probability N/A (the default)
+  /// P1, AND THE DEFAULT: p with probability Z F2p(x, Q2) / (Z F2p + N F2n)
+  /// on `PythiaBridgeOptions::f2_source`.  The inclusive rate off a nucleus
+  /// IS Z F2p + N F2n, so this is the mixture the cross section describes.
+  ByStructureFunctions,
+  /// p with probability Z/A -- the x-independent limit of the above, and what
+  /// the bridge did before 2026-08-29.  Wrong wherever F2n/F2p is: at x = 0.5
+  /// it draws a 6Li proton half the time against a true 0.616.
+  ByZN,
   Proton,
   Neutron
 };
@@ -173,7 +181,16 @@ struct PythiaBridgeOptions {
 
   /// Default choice of the struck nucleon when the event carries no
   /// `Role::StruckNucleon`.
-  NucleonChoice nucleon_choice = NucleonChoice::ByZN;
+  ///
+  /// A `Pipeline` INCLUSIVE event always names one (`InclusiveGenerator`
+  /// writes `Role::StruckNucleon`, drawn from the same structure functions),
+  /// so this fallback only fires for callers driving the bridge directly.
+  NucleonChoice nucleon_choice = NucleonChoice::ByStructureFunctions;
+  /// Unpolarized structure functions for `ByStructureFunctions`.  Null = the
+  /// library's default `ToyF2`, which is also `InclusiveKernel`'s default;
+  /// hand it the same backend the kernel was built with to keep the two
+  /// draws consistent.
+  std::shared_ptr<const UnpolSF> f2_source;
 };
 
 /// Per-run counters.
@@ -183,6 +200,10 @@ struct PythiaBridgeStats {
   std::uint64_t n_failed = 0;      ///< gave up after max_retries
   std::uint64_t n_retries = 0;     ///< extra pythia.next() calls
   std::uint64_t n_no_surrogate = 0;///< kinematics not representable
+  /// P2: flavour offers refused because that flavour's own zeta_q had already
+  /// run past 1.  Each one used to stay in the pool and burn a
+  /// `pythia.next()` retry every time it was picked.
+  std::uint64_t n_flavour_dropped = 0;
   std::uint64_t n_proton = 0, n_neutron = 0;
   double max_rescale_dev = 0.0;    ///< max |lambda - 1| of the mass repair
   double sum_w2 = 0.0;             ///< bookkeeping: mean W^2 of accepted events

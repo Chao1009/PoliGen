@@ -238,6 +238,21 @@ struct PythiaBridge::Impl {
 
   NucleonInCluster cluster_hook;
   NucleonChooser chooser_hook;
+  std::shared_ptr<const UnpolSF> f2;   ///< P1: the ByStructureFunctions draw
+
+  /// P1.  P(proton) = Z F2p / (Z F2p + N F2n) at the event's own (x, Q2).
+  /// Falls back to Z/A when F2 is not positive there, which is what a flat
+  /// draw would have given anyway.
+  double proton_fraction_sf(const Event& ev) const {
+    const Ion& ion = beams.ion;
+    const double flat =
+        static_cast<double>(ion.Z) / static_cast<double>(ion.A);
+    if (!f2 || !(ev.kin.x > 0.0) || !(ev.kin.q2 > 0.0)) return flat;
+    const double zp = static_cast<double>(ion.Z) * f2->f2p(ev.kin.x, ev.kin.q2);
+    const double nn = static_cast<double>(ion.N()) * f2->f2n(ev.kin.x, ev.kin.q2);
+    const double tot = zp + nn;
+    return (tot > 0.0) ? zp / tot : flat;
+  }
 
   Inst* inst_for(int pdg) {
     if (pdg == 2112) return neutron.py ? &neutron : nullptr;
@@ -364,9 +379,16 @@ bool PythiaBridge::Impl::run(Event& ev, Rng& rng) {
     implicit = true;
   } else {
     // Inclusive T0: a nucleon at rest in the ion rest frame, P_ion / A.
+    //
+    // P3.  ON SHELL AT THE FREE NUCLEON MASS, not at the ion's mass per
+    // nucleon (0.9383, not 0.9338).  `InclusiveGenerator::target_nucleon`
+    // uses M_NUCLEON, the per-nucleon kinematic labels (W2, nu) are built on
+    // M_NUCLEON, and the two implicit targets have to agree or the bridge's
+    // own HFS truth identity would be evaluated against a different target
+    // from the one the record describes (docs/CONVENTIONS.md).
     const Ion& ion = beams.ion;
     const double pz = beams.ion_momentum_per_nucleon;
-    const double m = ion.mass_per_nucleon();
+    const double m = M_NUCLEON;
     p_n = {std::sqrt(pz * pz + m * m), 0.0, 0.0, pz};
     if (chooser_hook) {
       id_n = chooser_hook(ev, rng);
@@ -374,6 +396,13 @@ bool PythiaBridge::Impl::run(Event& ev, Rng& rng) {
       id_n = 2212;
     } else if (opt.nucleon_choice == NucleonChoice::Neutron) {
       id_n = 2112;
+    } else if (opt.nucleon_choice == NucleonChoice::ByStructureFunctions) {
+      // P1: the inclusive rate is Z F2p + N F2n, so draw in that proportion
+      // at the event's own (x, Q2) -- the same rule
+      // `InclusiveGenerator::proton_fraction` applies, so an event that
+      // reaches the bridge with a named struck nucleon and one that does not
+      // are drawn from the same mixture.
+      id_n = (rng.uniform() < proton_fraction_sf(ev)) ? 2212 : 2112;
     } else {
       id_n = (rng.uniform() * ion.A < ion.Z) ? 2212 : 2112;
     }
@@ -424,7 +453,14 @@ bool PythiaBridge::Impl::run(Event& ev, Rng& rng) {
   // electron*, which would silently move our fixed e'.
   auto zeta_of = [&](double mq) { return (q2 + mq * mq) / (lc_plus * qtil_minus); };
 
-  // ---- flavour: probability ~ e_q^2 x f_q(zeta, Q^2) -----------------
+  // ---- flavour: probability ~ e_q^2 x f_q(zeta_q, Q^2) ----------------
+  //
+  // P2.  Every flavour used to be weighted at the MASSLESS zeta while charm
+  // and bottom were then produced at their own, larger zeta_q -- so the pool
+  // was priced at one momentum fraction and drawn at another, and a heavy
+  // flavour whose zeta_q had run past 1 stayed in the pool and burned a
+  // retry every time it was picked.  Each flavour is now weighted at its OWN
+  // zeta_q and one with no phase space left is never offered.
   const double zeta_light = zeta_of(0.0);
   if (!(zeta_light > 0.0) || zeta_light >= 1.0) {
     ++stats.n_no_surrogate;
@@ -434,14 +470,23 @@ bool PythiaBridge::Impl::run(Event& ev, Rng& rng) {
   const double q2pdf = std::max(q2, opt.q2_pdf_min);
   int ids[10];
   double cum[10];
+  double zetas[10];
   int nfl = 0;
   double tot = 0.0;
   auto offer = [&](int id) {
+    const int a = std::abs(id);
+    const double mq = (a == 4 || a == 5) ? inst->py->particleData.m0(a) : 0.0;
+    const double z = zeta_of(mq);
+    if (!(z > 0.0) || z >= 1.0) {        // no phase space for this flavour
+      ++stats.n_flavour_dropped;
+      return;
+    }
     const double eq = quark_charge(id);
-    const double xf = inst->pdf->xf(id, zeta_light, q2pdf);
+    const double xf = inst->pdf->xf(id, z, q2pdf);
     tot += eq * eq * std::max(0.0, xf);
     ids[nfl] = id;
     cum[nfl] = tot;
+    zetas[nfl] = z;
     ++nfl;
   };
   offer(1); offer(2); offer(-1); offer(-2);
@@ -468,11 +513,12 @@ bool PythiaBridge::Impl::run(Event& ev, Rng& rng) {
     }
     id_q = ids[pick];
     // Only c and b carry a mass here, matching LesHouches:setQuarkMass = 1.
+    // `zetas[pick]` is the SAME zeta the flavour was weighted at (P2), and it
+    // is in (0, 1) by construction, so there is nothing left to reject.
     const int idq_abs = std::abs(id_q);
     const double mq = (idq_abs == 4 || idq_abs == 5)
                           ? inst->py->particleData.m0(idq_abs) : 0.0;
-    zeta = zeta_of(mq);
-    if (!(zeta > 0.0) || zeta >= 1.0) continue;
+    zeta = zetas[pick];
     const double half = 0.5 * zeta * lc_plus;
     const Vec4 p_in{half, 0.0, 0.0, half};   // exactly massless, along +z
     const Vec4 p_out = qtil + p_in;          // mass m_q by the zeta solve
@@ -640,6 +686,10 @@ PythiaBridge::PythiaBridge(const BeamConfig& beams, PythiaBridgeOptions opt)
     throw std::runtime_error("PythiaBridge: electron_energy must be positive");
   if (!(impl_->opt.headroom >= 1.0))
     throw std::runtime_error("PythiaBridge: headroom must be >= 1");
+  impl_->f2 = impl_->opt.f2_source
+                  ? impl_->opt.f2_source
+                  : std::static_pointer_cast<const UnpolSF>(
+                        std::make_shared<const ToyF2>());
   impl_->engine = std::make_shared<RngEngine>(impl_->opt.seed);
   impl_->build(impl_->proton, 2212);
   if (impl_->opt.with_neutron_instance) impl_->build(impl_->neutron, 2112);

@@ -1,5 +1,7 @@
 #include "lipolgen/generator.hpp"
 
+#include "lipolgen/sf.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
@@ -31,8 +33,25 @@ InclusiveGenerator::InclusiveGenerator(
 
 Vec4 InclusiveGenerator::target_nucleon(const EventDraw& draw, Rng& rng) const {
   if (config_.target) return config_.target(draw, rng);
+  // P3.  The implicit struck nucleon is on shell at the FREE nucleon mass
+  // M_NUCLEON, never at the ion's mass per nucleon: the per-nucleon (x, Q2,
+  // W2, nu) labels the record carries are all built on M_NUCLEON
+  // (`w2_from_xq2`, `Kinematics::nu`), and a target at 0.9338 would make them
+  // inconsistent with the four-vector they are supposed to describe.  The
+  // binding is not lost -- it is carried by the (A-1) remnant, which the
+  // per-nucleon balance deliberately does not write (generator.hpp header).
   const double p_u = sampler_->config().ion_momentum_per_nucleon;
   return {std::sqrt(p_u * p_u + M_NUCLEON * M_NUCLEON), 0.0, 0.0, p_u};
+}
+
+double InclusiveGenerator::proton_fraction(double x, double q2) const {
+  const Ion& ion = sampler_->config().ion;
+  const UnpolSF& sf = *sampler_->kernel().nuclear_f2().base();
+  const double zp = static_cast<double>(ion.Z) * sf.f2p(x, q2);
+  const double nn = static_cast<double>(ion.N()) * sf.f2n(x, q2);
+  const double tot = zp + nn;
+  if (!(tot > 0.0)) return proton_fraction_;   // Z/A, the flat fallback
+  return zp / tot;
 }
 
 Vec4 InclusiveGenerator::scattered_electron_p4(double x, double y,
@@ -108,7 +127,10 @@ Event InclusiveGenerator::make_event(const SpinCategory& cat,
   const Vec4 pn = target_nucleon(draw, rng);
   int nucleon_pdg = config_.struck_nucleon_pdg;
   if (nucleon_pdg == 0) {
-    nucleon_pdg = (rng.uniform() < proton_fraction_) ? 2212 : 2112;
+    // P1: the inclusive rate is Z F2p + N F2n, so the struck nucleon is drawn
+    // in that proportion at the event's own (x, Q2) -- not flat Z : N.
+    nucleon_pdg =
+        (rng.uniform() < proton_fraction(draw.x, draw.q2)) ? 2212 : 2112;
   }
 
   Particle nucleon;

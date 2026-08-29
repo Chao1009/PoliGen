@@ -66,8 +66,13 @@ struct GeneratorConfig {
   /// Null = the default target: one nucleon on shell at M_NUCLEON, at rest in
   /// the ion rest frame, i.e. p_z = p_u (the beam's momentum per nucleon).
   TargetSampler target;
-  /// 0 = draw proton (2212) with probability Z/A, else neutron (2112) --
-  /// the isoscalar mixture the per-nucleon structure functions describe.
+  /// 0 = draw the struck nucleon's species from the STRUCTURE FUNCTIONS:
+  /// P(proton) = Z F2p(x, Q2) / (Z F2p(x, Q2) + N F2n(x, Q2)), evaluated at
+  /// the event's own (x, Q2) on the sampler kernel's own unpolarized backend
+  /// (P1).  A flat Z : A draw -- what this did before 2026-08-29 -- is the
+  /// x-independent limit of that and is wrong wherever F2n/F2p is: at x = 0.5
+  /// it hands 6Li a proton half the time where the inclusive rate wants
+  /// 0.616, and the error grows towards the valence edge.
   /// Set 2212 / 2112 to pin the species.
   int struck_nucleon_pdg = 0;
   /// Emit the virtual photon as a status-3 documentation particle.
@@ -94,6 +99,10 @@ class InclusiveGenerator {
 
   /// The struck nucleon, from `GeneratorConfig::target` or the default.
   Vec4 target_nucleon(const EventDraw& draw, Rng& rng) const;
+
+  /// P(proton) at (x, Q2) -- Z F2p / (Z F2p + N F2n) on the kernel's own
+  /// unpolarized backend.  Falls back to Z/A if F2 is not positive there.
+  double proton_fraction(double x, double q2) const;
 
   /// Scattered electron in the head-on frame from (x, y, phi).
   Vec4 scattered_electron_p4(double x, double y, double phi) const;

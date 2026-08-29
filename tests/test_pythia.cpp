@@ -49,8 +49,14 @@ BeamConfig mid_config() {
 }
 
 /// A nucleon at rest in the ion rest frame: P_ion / A.
+/// P3.  The struck nucleon of the per-nucleon subsystem is ON SHELL AT THE
+/// FREE NUCLEON MASS -- `InclusiveGenerator::target_nucleon` and the bridge's
+/// own implicit target both use M_NUCLEON (0.9383), never the ion's mass per
+/// nucleon (0.9338), because every per-nucleon kinematic label on the record
+/// (W2, nu) is built on M_NUCLEON.  See docs/CONVENTIONS.md.
 Vec4 nucleon_at_rest_in_ion(const BeamConfig& bc) {
-  const double m = bc.ion.mass_per_nucleon();
+  (void)bc;
+  const double m = M_NUCLEON;
   return {std::sqrt(kPu * kPu + m * m), 0.0, 0.0, kPu};
 }
 
@@ -439,8 +445,11 @@ TEST_CASE("pythia: an implicit target is drawn Z : N and a cluster target "
       if (sn->pdg == 2212) ++n_p; else ++n_n;
       // p_N = P_ion / A, the nucleon at rest in the ion rest frame
       CHECK_CLOSE(sn->p.pz, kPu, 1e-12);
-      CHECK_CLOSE(sn->p.m2(),
-                  bc.ion.mass_per_nucleon() * bc.ion.mass_per_nucleon(), 1e-9);
+      // P3: the free nucleon mass, the same one InclusiveGenerator uses
+      CHECK_CLOSE(sn->p.m2(), M_NUCLEON * M_NUCLEON, 1e-9);
+      CHECK(std::fabs(sn->p.m2()
+                      - bc.ion.mass_per_nucleon() * bc.ion.mass_per_nucleon())
+            > 1e-3);
     }
     // 6Li is Z = N = 3, so the split must be compatible with 50:50.
     MESSAGE("inclusive fallback drew " << n_p << " p and " << n_n << " n");
@@ -618,4 +627,184 @@ TEST_CASE("pythia: the charged multiplicity agrees with a stock "
   // bridge sits at its mean point, and <n_ch> grows like ln W^2.
   CHECK(bridge_mean / stock_mean > 0.80);
   CHECK(bridge_mean / stock_mean < 1.20);
+}
+
+// P2.  The flavour pool used to be weighted at the MASSLESS zeta for every
+// flavour, while c and b were then produced at their own, larger
+// zeta_q = (Q^2 + m_q^2)/(P_A^+ qtil^-).  Two things went wrong: the pool was
+// priced at one momentum fraction and drawn at another, and a heavy flavour
+// whose zeta_q had already run past 1 -- which is exactly what happens at low
+// Q^2, where zeta_light is small but m_c^2/(P_A^+ qtil^-) is not -- stayed in
+// the pool and burned a pythia.next() retry every time it was picked.
+TEST_CASE("pythia: heavy flavours out of phase space cost no retries") {
+  BeamConfig bc = mid_config();
+  PythiaBridgeOptions opt;
+  opt.seed = kSeed + 31;
+  opt.include_strange = true;
+  opt.include_charm = true;
+  opt.include_bottom = true;   // b is the flavour that runs out of zeta first
+  PythiaBridge bridge(bc, opt);
+  const Vec4 p_n = nucleon_at_rest_in_ion(bc);
+
+  // A scan of the generator window: zeta_q = (Q^2 + m_q^2)/(P_A^+ qtil^-)
+  // exceeds the light zeta by (1 + m_q^2/Q^2), so a heavy flavour runs out of
+  // phase space at LARGE x and the SMALLEST Q^2 the W^2 >= 8 cut allows.
+  std::vector<Point> scan;
+  for (double x : {0.02, 0.1, 0.3, 0.5, 0.7, 0.8, 0.85}) {
+    const double q2_min = std::max(0.8, 7.2 * x / (1.0 - x));
+    for (double f : {1.0, 1.6, 4.0}) {
+      scan.push_back(Point{x, q2_min * f, 0.3 + 1.7 * f});
+    }
+  }
+  int n_ok = 0, n_built = 0;
+  for (std::size_t i = 0; i < scan.size(); ++i) {
+    for (int j = 0; j < 4; ++j) {
+      Event ev;
+      const std::uint64_t num = static_cast<std::uint64_t>(4 * i + j);
+      if (!make_event(bc, scan[i], p_n, 2212, num, &ev)) continue;
+      ++n_built;
+      Rng rng(kSeed + 31, 0, 0, num);
+      if (bridge.hadronize(ev, rng)) ++n_ok;
+    }
+  }
+  const PythiaBridgeStats& st = bridge.stats();
+  MESSAGE("flavour-pool scan: " << n_ok << "/" << st.n_called
+          << " hadronized, " << st.n_flavour_dropped
+          << " flavour offers dropped for zeta_q >= 1, " << st.n_retries
+          << " retries, " << st.n_failed << " failures");
+  CHECK(n_built > 50);
+  CHECK(n_ok > n_built - 5);
+  // The window really does drive heavy flavours out of phase space ...
+  CHECK(st.n_flavour_dropped > 0);
+  // ... and THE POINT: not one retry is spent on them.  Under the old
+  // weighting they stayed in the pool, priced at the massless zeta, and every
+  // pick of one burned a pythia.next().
+  CHECK(st.n_retries == 0);
+  CHECK(st.n_failed == 0);
+
+  // Light flavours alone never leave the pool over the same scan.
+  PythiaBridgeOptions light = opt;
+  light.include_charm = false;
+  light.include_bottom = false;
+  PythiaBridge lb(bc, light);
+  for (std::size_t i = 0; i < scan.size(); ++i) {
+    for (int j = 0; j < 4; ++j) {
+      Event ev;
+      const std::uint64_t num = static_cast<std::uint64_t>(4 * i + j);
+      if (!make_event(bc, scan[i], p_n, 2212, num, &ev)) continue;
+      Rng rng(kSeed + 31, 0, 0, num);
+      (void)lb.hadronize(ev, rng);
+    }
+  }
+  CHECK(lb.stats().n_flavour_dropped == 0);
+  CHECK(lb.stats().n_retries == 0);
+
+  // THE MISPRICING, which is the other half of P2.  A heavy flavour is
+  // produced at zeta_q = zeta_light (1 + m_q^2/Q^2) -- 1.23 at Q^2 = 10, 1.70
+  // at Q^2 = 3.2 -- and its pool weight x f_q used to be read at zeta_light
+  // instead, i.e. at a momentum fraction the event never uses, on a
+  // distribution that falls steeply in between.  The zeta that reaches PYTHIA
+  // is the one the flavour is now weighted at, and it carries the mass:
+  PythiaBridgeOptions copt;
+  copt.seed = kSeed + 51;
+  copt.include_charm = true;
+  copt.include_bottom = false;
+  PythiaBridge cb(bc, copt);
+  int n_c = 0, n_tot = 0;
+  double worst_ratio_dev = 0.0;
+  double zeta_light_ref = 0.0, zeta_c_ref = 0.0;
+  const Point cpt{0.02, 12.0, 2.1};
+  for (int i = 0; i < 400; ++i) {
+    Event ev;
+    if (!make_event(bc, cpt, p_n, 2212, static_cast<std::uint64_t>(i), &ev)) continue;
+    Rng rng(kSeed + 51, 0, 0, static_cast<std::uint64_t>(i));
+    if (!cb.hadronize(ev, rng)) continue;
+    ++n_tot;
+    const double z = cb.last_xi_pythia();
+    if (std::abs(cb.last_quark_id()) == 4) {
+      ++n_c;
+      zeta_c_ref = z;
+    } else {
+      zeta_light_ref = z;   // every light flavour shares one zeta
+    }
+  }
+  REQUIRE(n_tot > 350);
+  REQUIRE(n_c > 0);
+  REQUIRE(zeta_light_ref > 0.0);
+  const double m_c = 1.5;   // the PYTHIA table charm mass, to ~1 %
+  const double want_ratio = 1.0 + m_c * m_c / cpt.q2;
+  const double got_ratio = zeta_c_ref / zeta_light_ref;
+  worst_ratio_dev = std::fabs(got_ratio / want_ratio - 1.0);
+  MESSAGE("charm picked in " << n_c << "/" << n_tot << " events at x = "
+          << cpt.x << ", Q2 = " << cpt.q2 << "; zeta_c/zeta_light = "
+          << got_ratio << " against 1 + m_c^2/Q^2 = " << want_ratio);
+  // the produced zeta really does carry the quark mass ...
+  CHECK(got_ratio > 1.0);
+  CHECK(worst_ratio_dev < 0.05);
+  // ... and it is a different momentum fraction from the light one, which is
+  // the one the old code priced charm at
+  CHECK(zeta_c_ref > zeta_light_ref * 1.1);
+}
+
+// P1.  The bridge's own fallback -- used only when the caller drives it
+// without a `Role::StruckNucleon`, which a Pipeline event never does -- is
+// weighted by the same structure functions as the generator's draw.
+TEST_CASE("pythia: the implicit-target species follows Z F2p : N F2n") {
+  BeamConfig bc = mid_config();
+  const ToyF2 f2;
+  const Ion& ion = bc.ion;
+  const double x = 0.4, q2 = 40.0;
+  const double want = ion.Z * f2.f2p(x, q2)
+                      / (ion.Z * f2.f2p(x, q2) + ion.N() * f2.f2n(x, q2));
+  CHECK(want > 0.55);             // 6Li is N = Z, and yet not 0.5
+  PythiaBridgeOptions opt;
+  opt.seed = kSeed + 41;
+  CHECK(opt.nucleon_choice == NucleonChoice::ByStructureFunctions);
+  PythiaBridge bridge(bc, opt);
+  const Vec4 p_n = nucleon_at_rest_in_ion(bc);
+
+  const Point pt{x, q2, 1.3};
+  const int n = 400;
+  int n_p = 0, n_tried = 0;
+  for (int i = 0; i < n; ++i) {
+    Event ev;
+    if (!make_event(bc, pt, p_n, 2212, static_cast<std::uint64_t>(i), &ev)) continue;
+    std::vector<Particle> keep;
+    for (const auto& p : ev.particles)
+      if (p.role != Role::StruckNucleon) keep.push_back(p);
+    ev.particles = keep;
+    Rng rng(kSeed + 41, 0, 0, static_cast<std::uint64_t>(i));
+    if (!bridge.hadronize(ev, rng)) continue;
+    ++n_tried;
+    if (bridge.last_struck_nucleon_pdg() == 2212) ++n_p;
+  }
+  REQUIRE(n_tried > 300);
+  const double got = static_cast<double>(n_p) / n_tried;
+  const double err = std::sqrt(want * (1.0 - want) / n_tried);
+  MESSAGE("bridge implicit target at x = " << x << ": p in " << got << " +- "
+          << err << " of events, Z F2p/(Z F2p + N F2n) = " << want
+          << " (flat Z/A would be " << 0.5 << ")");
+  CHECK(std::fabs(got - want) < 4.0 * err);
+
+  // the old flat rule is still reachable by name
+  PythiaBridgeOptions zn = opt;
+  zn.nucleon_choice = NucleonChoice::ByZN;
+  PythiaBridge zb(bc, zn);
+  int zn_p = 0, zn_tried = 0;
+  for (int i = 0; i < n; ++i) {
+    Event ev;
+    if (!make_event(bc, pt, p_n, 2212, static_cast<std::uint64_t>(i), &ev)) continue;
+    std::vector<Particle> keep;
+    for (const auto& p : ev.particles)
+      if (p.role != Role::StruckNucleon) keep.push_back(p);
+    ev.particles = keep;
+    Rng rng(kSeed + 41, 0, 0, static_cast<std::uint64_t>(i));
+    if (!zb.hadronize(ev, rng)) continue;
+    ++zn_tried;
+    if (zb.last_struck_nucleon_pdg() == 2212) ++zn_p;
+  }
+  REQUIRE(zn_tried > 300);
+  const double zn_got = static_cast<double>(zn_p) / zn_tried;
+  CHECK(std::fabs(zn_got - 0.5) < 4.0 * std::sqrt(0.25 / zn_tried));
+  CHECK(zn_got < got);
 }

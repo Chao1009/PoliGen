@@ -1,0 +1,274 @@
+#ifndef LIPOLGEN_PYTHIA_BRIDGE_HPP
+#define LIPOLGEN_PYTHIA_BRIDGE_HPP
+
+/// \file pythia_bridge.hpp
+/// Tier T2: PYTHIA 8 showering / hadronization of the gamma*-nucleon system.
+///
+/// The core library never sees PYTHIA.  This header is PYTHIA-free as well
+/// (pimpl), so including it costs nothing but `<memory>`; only
+/// `src/pythia/*.cpp` needs the PYTHIA include path.
+///
+/// The physics and every approximation are written out in
+/// docs/PYTHIA_BRIDGE.md.  The two facts that shape the whole design:
+///
+///   1. `Beams:allowMomentumSpread` runs the hard process at the *initial*
+///      sqrt(s) (`ProcessLevel.cc:645` gates `newECM` on `doVarEcm`, which
+///      `Pythia.cc:662` forbids with hard processes).  A Fermi-smeared
+///      per-nucleon momentum swings sqrt(s) by +-20 %, so the only usable
+///      route is an in-memory `Pythia8::LHAup` with `Beams:frameType = 5`
+///      (docs/surveys/pythia8_survey.md sections 4(v) and 7).
+///
+///   2. With LHAup, PYTHIA still forces the total final-state four-momentum
+///      to the *initialisation* beam total (`BeamRemnants.cc:662,935`:
+///      `wPosRem = eCM - ...`).  It is therefore impossible to hand PYTHIA
+///      the physical (k, p_N) of a Fermi-moving nucleon and get the physical
+///      total back.  The bridge instead hands PYTHIA a *surrogate* e+N event
+///      at the initialisation beams matched in (W^2, Q^2) -- i.e. the same
+///      gamma*-nucleon subsystem -- and maps the resulting hadronic system
+///      onto the physical one with a pure Lorentz transformation.  Momentum
+///      and charge conservation are then exact by construction.
+///
+/// Because the hard process arrives through LHAup, **all `PhaseSpace:*`
+/// settings are irrelevant here** -- including the two silent cuts
+/// (`PhaseSpace:pTHatMinDiverge`, `PhaseSpace:mHatMin`) that
+/// `PolarizedLithiumSim/tools/pythia8/gen_dis_hfs.py` has to set.  The hard
+/// phase space is the core generator's; PYTHIA only showers and hadronizes.
+
+#include <cstdint>
+#include <functional>
+#include <memory>
+#include <string>
+#include <vector>
+
+#include "lipolgen/beams.hpp"
+#include "lipolgen/event.hpp"
+#include "lipolgen/rng.hpp"
+
+namespace lipolgen {
+
+// ---------------------------------------------------------------- helpers
+
+/// Minkowski product with the (+,-,-,-) metric.
+inline double dot4(const Vec4& a, const Vec4& b) {
+  return a.e * b.e - a.px * b.px - a.py * b.py - a.pz * b.pz;
+}
+inline Vec4 scale4(double c, const Vec4& a) {
+  return {c * a.e, c * a.px, c * a.py, c * a.pz};
+}
+
+/// The head-on-frame scattered electron of an inclusive DIS event.
+///
+/// Frame (docs/CONVENTIONS.md): ion along +z, electron along -z, so
+///   k    = (E_e, 0, 0, -E_e)                       (electron treated massless)
+///   p_N  = (E_N, 0, 0, +p_N)  for a nucleon at rest in the ion rest frame.
+/// The per-nucleon DIS variables are the invariants
+///   Q^2 = -q^2,  q = k - k',   y = (p_N.q)/(p_N.k),   x = Q^2/(2 p_N.q),
+/// and `phi` is the azimuth of e' about +z, phi = atan2(k'_y, k'_x) in
+/// [0, 2 pi).
+///
+/// Two linear conditions fix (E', k'_z):
+///   k.k'  = Q^2/2            ->  E' + k'_z = Q^2/(2 E_e)
+///   p_N.k'= (1-y) p_N.k      ->  E_N E' - p_Nz k'_z = (1-y) p_N.k
+/// whose solution for a collinear p_N = (E_N, 0, 0, p) is
+///   E'   = E_e (1-y) + p Q^2 / (2 E_e (E_N + p)),
+///   k'_z = Q^2/(2 E_e) - E',
+///   k'_T = sqrt(E'^2 - k'_z^2).
+/// (The massless-target limit is the textbook E' = E_e(1-y) + x y E_p.)
+///
+/// `y` is derived from (x, Q^2) and the beams: y = Q^2 / (2 x p_N.k).
+/// Returns false if the point is outside the physical region
+/// (E' < |k'_z|, y outside (0, 1]).
+bool dis_scattered_electron(double e_e, const Vec4& p_n, double x, double q2,
+                            double phi, Vec4* k_out, double* y_out = nullptr);
+
+/// The light-cone fraction xi of the struck parton that puts the outgoing
+/// quark q + xi p_N on the mass shell m_out (zero by default):
+///     (q + xi p_N)^2 = m_out^2
+///   -> xi^2 p_N^2 + 2 xi (q.p_N) - (Q^2 + m_out^2) = 0,
+/// solved in the numerically stable form
+///     xi = (Q^2 + m_out^2)
+///          / [ (q.p_N) + sqrt((q.p_N)^2 + p_N^2 (Q^2 + m_out^2)) ].
+/// This is the root that reduces to xi = x_Bj for a massless target and a
+/// massless outgoing quark, and stays the small positive root for p_N^2 < 0.
+/// Returns false when no positive root below `xi_max` exists.
+bool dis_parton_fraction(const Vec4& q, const Vec4& p_n, double* xi_out,
+                         double xi_max = 1.0, double m_out = 0.0);
+
+// -------------------------------------------------------------- summaries
+
+/// Hadronic-final-state sums over `Role::Hadron` particles.
+struct HfsSummary {
+  double sigma_empz = 0;   ///< Sum (E - p_z)
+  double px = 0, py = 0;   ///< Sum p_T, as a vector
+  double pt = 0;           ///< |Sum p_T|
+  double e = 0, pz = 0;    ///< Sum E, Sum p_z
+  double charge = 0;       ///< Sum charge [e]
+  int n_total = 0;         ///< multiplicity
+  int n_charged = 0;
+  int n_neutral = 0;
+};
+
+/// Sums over every `Role::Hadron`, `Status::Final` particle of the event.
+HfsSummary hfs_summary(const Event& ev);
+
+/// The truth identity the HFS is tested against:
+///     Sum (E - p_z)_hadrons = 2 E_e y + m_N^2 / (E_N + p_Nz).
+/// Exact up to Q^2 m_N^2 / (2 E_e (E_N + p_Nz)^2) -- 1.1e-5 GeV at
+/// 10 x 99.5 GeV/u and Q^2 = 10 GeV^2 -- because the target's own
+/// (E - p_z) = m_N^2/(E_N + p_Nz) is not zero.  Valid for a collinear
+/// target; for a Fermi-moving one use `hfs_sigma_empz_exact`.
+double hfs_sigma_empz_truth(double e_e, double y, const Vec4& p_n);
+
+/// The exact statement, valid for any p_N:
+///     Sum (E - p_z)_hadrons = (k + p_N - k')^- .
+double hfs_sigma_empz_exact(const Vec4& k, const Vec4& p_n, const Vec4& k_out);
+
+// ---------------------------------------------------------------- options
+
+/// Which nucleon of the target is struck when the event does not name one.
+enum class NucleonChoice : std::uint8_t {
+  ByZN,      ///< p with probability Z/A, n with probability N/A (the default)
+  Proton,
+  Neutron
+};
+
+struct PythiaBridgeOptions {
+  /// PYTHIA's own `Random:seed` (used only for the fallback stream: the
+  /// per-event randomness is driven by the `Rng` handed to `hadronize`).
+  std::uint64_t seed = 19780503;
+
+  /// Extra `pythia.readString` lines, applied after the bridge's own
+  /// settings and before `init()`, so they win.
+  std::vector<std::string> settings;
+
+  /// 0 = `Print:quiet`, no banner, no listings; 1 = banner + init report;
+  /// 2 = also `Next:numberShowEvent = 1` for the first event.
+  int verbosity = 0;
+
+  /// Re-sample the struck-quark flavour and call `pythia.next()` again this
+  /// many times before giving up on an event.
+  int max_retries = 4;
+
+  /// The PYTHIA-side nucleon beam energy is `headroom` times the nominal
+  /// per-nucleon energy.  The surrogate exists only while the physical
+  /// W^2 fits inside the surrogate's s, and Fermi motion can push the
+  /// per-nucleon momentum ~20 % above nominal, so the default leaves room.
+  /// It is a pure frame choice: the surrogate's (W^2, Q^2, xi, x) do not
+  /// depend on it.
+  double headroom = 1.5;
+
+  /// Flavours offered to the flavour sampler.
+  bool include_strange = true;
+  bool include_charm = true;
+  bool include_bottom = false;
+
+  /// PDFs are evaluated at max(Q^2, `q2_pdf_min`); PYTHIA's default
+  /// NNPDF2.3 LO grid starts at 1 GeV^2 and the generator window reaches
+  /// down to Q^2 = 0.7 GeV^2.
+  double q2_pdf_min = 1.0;
+
+  /// Build the second (neutron-beam) PYTHIA instance.  Turn it off to halve
+  /// the initialisation cost when only protons are hadronized.
+  bool with_neutron_instance = true;
+
+  /// Default choice of the struck nucleon when the event carries no
+  /// `Role::StruckNucleon`.
+  NucleonChoice nucleon_choice = NucleonChoice::ByZN;
+};
+
+/// Per-run counters.
+struct PythiaBridgeStats {
+  std::uint64_t n_called = 0;      ///< hadronize() entries
+  std::uint64_t n_ok = 0;
+  std::uint64_t n_failed = 0;      ///< gave up after max_retries
+  std::uint64_t n_retries = 0;     ///< extra pythia.next() calls
+  std::uint64_t n_no_surrogate = 0;///< kinematics not representable
+  std::uint64_t n_proton = 0, n_neutron = 0;
+  double max_rescale_dev = 0.0;    ///< max |lambda - 1| of the mass repair
+  double sum_w2 = 0.0;             ///< bookkeeping: mean W^2 of accepted events
+};
+
+// ---------------------------------------------------------------- bridge
+
+/// One `PythiaBridge` owns one PYTHIA instance per nucleon type.  Not
+/// thread-safe: give each thread its own bridge (the per-event randomness
+/// comes from the caller's `Rng`, so events stay reproducible).
+class PythiaBridge {
+ public:
+  /// Hook: pick the nucleon struck inside a `Role::StruckCluster`.  Given
+  /// the cluster four-vector and its (A, Z), it must return the nucleon
+  /// four-vector and set `pdg_out` to 2212 or 2112.  The v0 default is an
+  /// on-shell nucleon carrying p_cluster/A_c of the cluster three-momentum,
+  /// with the flavour drawn Z_c : N_c and no Fermi smearing at all; replace
+  /// it to fold in the cluster wave function.
+  using NucleonInCluster = std::function<Vec4(const Vec4& p_cluster, int a_c,
+                                              int z_c, Rng& rng,
+                                              int* pdg_out)>;
+
+  /// Hook: pick the struck nucleon species (2212 / 2112) for an event with
+  /// no explicit target.  The default follows `options().nucleon_choice`.
+  using NucleonChooser = std::function<int(const Event& ev, Rng& rng)>;
+
+  PythiaBridge(const BeamConfig& beams, PythiaBridgeOptions opt = {});
+  ~PythiaBridge();
+
+  PythiaBridge(const PythiaBridge&) = delete;
+  PythiaBridge& operator=(const PythiaBridge&) = delete;
+
+  /// Shower and hadronize the event in place.
+  ///
+  /// Reads: `Role::ScatteredElectron` (mandatory), `Role::BeamElectron`
+  /// (mandatory), and a target -- `Role::StruckNucleon`, else
+  /// `Role::StruckCluster`, else the inclusive fallback P_ion/A.
+  /// `Role::Spectator` / `Role::PartnerSpectator` particles are never
+  /// touched and never recoil-corrected (the BeAGLE light-nucleus rule).
+  ///
+  /// Writes: `Role::Hadron`, `Status::Final` particles appended to
+  /// `ev.particles`; any `Role::HadronicX` pseudo-particle is demoted to
+  /// `Status::Intermediate`; a `Role::StruckNucleon` is appended with
+  /// `Status::Intermediate` when the target was implicit.
+  ///
+  /// Returns false (and counts it) when PYTHIA vetoes or the kinematics are
+  /// not representable; the event is then left unmodified.
+  bool hadronize(Event& ev, Rng& rng);
+
+  /// The hadrons produced by the last successful `hadronize` call.
+  const std::vector<Particle>& last_hadrons() const;
+
+  /// The struck-nucleon four-vector and PDG id used by the last call.
+  const Vec4& last_struck_nucleon() const;
+  int last_struck_nucleon_pdg() const;
+  /// The light-cone fraction handed to PYTHIA and the physical xi of the
+  /// last call (they differ by the target's off-shellness; see the docs).
+  double last_xi_pythia() const;
+  double last_xi_physical() const;
+  int last_quark_id() const;
+  /// The common momentum rescale lambda applied by the mass repair of the
+  /// last call, and the hadronic invariant masses it reconciled.
+  double last_rescale() const;
+  double last_w_pythia() const;
+  double last_w_physical() const;
+
+  const PythiaBridgeStats& stats() const;
+  const PythiaBridgeOptions& options() const;
+
+  void set_nucleon_in_cluster(NucleonInCluster hook);
+  void set_nucleon_chooser(NucleonChooser hook);
+
+  /// PYTHIA's own generated cross section for the surrogate stream, in mb.
+  /// Meaningless as a physics number here (the hard process is ours, and
+  /// LHAup strategy 3 hands PYTHIA a unit cross section); exposed only so
+  /// that the example can print the bookkeeping.
+  double pythia_sigma_gen_mb() const;
+
+  /// The exact PYTHIA settings applied, in order -- what the docs quote.
+  const std::vector<std::string>& applied_settings() const;
+
+ private:
+  struct Impl;
+  std::unique_ptr<Impl> impl_;
+};
+
+}  // namespace lipolgen
+
+#endif  // LIPOLGEN_PYTHIA_BRIDGE_HPP

@@ -47,9 +47,20 @@ Bookkeeping, all share-invariant in pb:
 ```cpp
 p.sigma_per_category_pb();   // [pb], no lumi_fraction, no Scenario::run_share
 p.sigma_pb();                // sum_k lumi_fraction_k * sigma_k
-p.lumi_per_category_pb();    // [pb^-1] (luminosity mode)
+p.lumi_per_category_pb();    // [pb^-1] (luminosity mode), x Optics::lumi_fraction
 p.counts();  p.size();       // events per category / in total
+p.optics_lumi_factor();      // the Optics::lumi_fraction that reached the counts
 ```
+
+**The optics luminosity fraction reaches the COUNTS, never the cross
+sections.** A far-forward working point that buys acceptance by de-squeezing
+β*_x pays for it in luminosity: `Optics::lumi_fraction` is 1 at the Yellow
+Report envelopes and 0.1467 at the ⁶Li 5×41 tagging point. It multiplies the
+per-category luminosity (`PipelineConfig::apply_optics_lumi_fraction`, default
+`true`), so at a fixed `lumi_pb` the tagging optics deliver 0.1467× the events
+of the YR optics — 1 116 408 against 7 612 479 in the gate — while
+`sigma_per_category_pb()` is bit-identical between the two. Set the flag to
+`false` to quote a yield at the machine luminosity regardless of the optics.
 
 ## 2. Inclusive
 
@@ -63,7 +74,9 @@ cfg.isotope  = "6Li";
 cfg.lumi_pb  = 2.0;                       // or cfg.n_events = 1'000'000;
 cfg.seed     = 20260713;
 // cfg.kernel = my_kernel;                // default: Miller b1 through the 6Li
-                                          // rank-2 transfer + 1e-2 toy Delta
+                                          // rank-2 transfer + 1e-2 toy Delta,
+                                          // and target_mass ON (xsec.py's own
+                                          // default since 2026-08-29)
 Pipeline p(cfg, tensor_thirds_plan(0.7, 0.6));
 
 p.for_each([](const Event& ev) {
@@ -78,6 +91,12 @@ X (pdg 92). The balance is **per-nucleon**, `k + P_N = k' + X`, exactly as
 `generator.hpp` defines it — the (A−1) remnant is not written, so the
 whole-nucleus balance and the total charge are deliberately open here. This path
 is bit-identical to `InclusiveGenerator::run_n` for the same seed.
+
+The struck nucleon is on shell at the **free** nucleon mass `M_NUCLEON` and its
+species is drawn `Z F2p(x, Q²) : N F2n(x, Q²)` on the kernel's own unpolarized
+backend — not flat `Z : N`, which is the x-independent limit of it (0.5 against
+a true 0.6154 for ⁶Li at x = 0.5). `GeneratorConfig::struck_nucleon_pdg` pins
+the species; `InclusiveGenerator::proton_fraction(x, q2)` is the rule itself.
 
 ## 3. Tagged (⁶Li α, ⁷Li α, d control)
 
@@ -129,6 +148,9 @@ cfg.n_events = 300000;
 cfg.coherent.f0      = 0.04;     // band 0.02 - 0.08     (SCENARIO)
 cfg.coherent.slope_b = 50.0;     // band 40 - 60 GeV^-2  (SCENARIO)
 cfg.coherent.amp     = 0.01;     // flat cos2phi at P_zz = 1, band 3e-3 - 1e-2
+cfg.coherent_t_max   = COHERENT_T_MAX_DEFAULT;   // 0.2; larger THROWS (below)
+cfg.coherent_xpom.m_x_min   = 1.0;   // smallest diffractive mass [GeV]
+cfg.coherent_xpom.x_pom_max = 0.1;   // upper edge of the diffractive region
 cfg.optics_choice = OpticsChoice::Tagging;   // the YR envelope tags nothing
 Pipeline p(cfg, tensor_thirds_plan(0.7, 0.6));
 
@@ -146,6 +168,28 @@ independent and the tensor signal lives entirely in the **recoil azimuth**,
 `1 + c₂ cos 2(φ_t − φ_S)`. Folding the inclusive `w_avg` in on top would count
 the polarization twice. Balance: `k + P_ion = k' + P_recoil + X`, with the
 neutral diffractive system X carrying the remainder.
+
+**The pomeron.** `CoherentXpomModel` draws the per-nucleon fraction
+`x_P = (M_X² + Q²)/(W² + Q²)` log-uniformly on `[x_P(M_X,min), x_pom_max]`, so
+every event carries a diffractive mass of at least `m_x_min` (1 GeV, above the
+vector-meson region). The recoil is then **solved**, not approximated:
+`(k + P_ion − k′ − P_recoil)² = M_X²` with `P_recoil² = M_A²` and
+`p_T = √|t|` is a quadratic in the recoil's light-cone plus momentum, so the
+balance closes to rounding and X is timelike by construction. The record
+carries `kin.x_pom`, `kin.beta_pom = x/x_P` and `kin.m_x2`; the nucleus loses
+`x_P/A` of its light-cone momentum, which keeps the recoil rigidity in
+[0.979, 1.000] — inside the near-beam band, where it has to be to be tagged at
+all. Cells that cannot fit `m_x_min` below `x_pom_max` carry no coherent rate.
+
+**Two things throw at setup rather than biting later.** `coherent_t_max` beyond
+the range where `1 + c₂ cos 2(φ_t − φ_S)` stays positive (0.245 GeV² at
+P_zz = −2, 0.495 at P_zz = +1) is refused — `CoherentScenario::positivity_margin`
+is the coherent twin of `InclusiveKernel::positivity_margin`. And a
+`PipelineConfig::hadronizer` on this channel is refused outright: a coherent
+event names no struck nucleon and no struck cluster, so `PythiaBridge` v0 falls
+through to its inclusive branch and invents a nucleon outside the balance,
+losing `P_ion (1 − 1/A)` of four-momentum and `Z − 1` of charge. Set
+`cfg.hadronize_coherent = true` only to reproduce that known gap deliberately.
 
 ## 5. Far-forward routing
 
@@ -205,6 +249,19 @@ sc.virtuality;          // M_X^2 - m_free^2 < 0
 
 rebuilds the whole record. A hadronizer used with `for_each(sink, nthreads)`
 must be re-entrant.
+
+An **inclusive** event names its struck nucleon (`Role::StruckNucleon`, drawn
+`Z F2p : N F2n`, on shell at `M_NUCLEON`), so the bridge uses it verbatim and
+its own implicit-target fallback never fires on a `Pipeline` event. Driving the
+bridge directly without one falls back to
+`NucleonChoice::ByStructureFunctions`, which applies the same rule on
+`PythiaBridgeOptions::f2_source` — hand it the kernel's own backend to keep the
+two draws consistent. The **coherent** channel is refused (§4).
+
+The hard-process flavour is offered with probability `e_q² x f_q(ζ_q, Q²)` at
+each flavour's OWN `ζ_q = (Q² + m_q²)/(P_A⁺ q̃⁻)`, and a flavour whose ζ_q has
+run past 1 is not offered at all — `PythiaBridgeStats::n_flavour_dropped`
+counts those, and they cost no `pythia.next()` retries.
 
 ## 7. Checks you get for free
 

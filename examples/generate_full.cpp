@@ -20,23 +20,22 @@
 //                                                               20260713)
 //     --out FILE             HepMC3 output ("" = none)
 //                                       (default generate_full.hepmc)
+//     --tier T0|T1           tagged final-state fidelity      (default T1:
+//                            the struck cluster is resolved into a nucleon
+//                            plus its partner spectator(s), breakup.hpp)
 //     --no-hadronize         T0 only: PYTHIA is never linked into the run
 //
 // PYTHIA BINDING (docs/T2_CHAIN.md has the full story).  `PipelineConfig::
 // hadronizer` is bound to `PythiaBridge::hadronize`, exactly the snippet
-// docs/USAGE.md section 6 shows.  For a TAGGED channel the hard process is
-// the STRUCK CLUSTER's (`Role::StruckCluster`): the bridge's v0 default
-// (docs/PYTHIA_BRIDGE.md section 6) hands PYTHIA only 1/A_c of the cluster's
-// three-momentum as an on-shell nucleon, with no compensating particle for
-// the rest of the cluster and a stochastic Z_c:N_c flavour draw that does
-// not track the cluster's own integer charge -- so with the PLAIN binding
-// the whole-record balance (spectator + hadrons + e') does NOT close: this
-// program measures the residual and prints it plainly below (it does not
-// silently hide it).  A `set_nucleon_in_cluster` hook -- a public extension
-// point named for exactly this purpose, not a source patch -- hands PYTHIA
-// the cluster's own off-shell four-vector WHOLE (still "no Fermi smearing")
-// and its exact charge instead, which restores exact conservation, and is
-// what `--channel 6Li-alpha`/`7Li-alpha` install here.
+// docs/USAGE.md section 6 shows -- and, since the T1 tier landed, that is
+// ALL a tagged channel needs.  The pipeline resolves the struck cluster into
+// a struck NUCLEON plus its on-shell partner spectator(s) before the bridge
+// sees the event (`PipelineConfig::tier`, default `Tier::T1`), so the bridge
+// takes `Role::StruckNucleon` verbatim, the whole-record balance
+// (spectator + partners + hadrons + e') closes to the numerical floor, and
+// no `set_nucleon_in_cluster` hook is installed by this program any more.
+// Run with `--tier T0` to see the old pseudo-cluster record instead -- the
+// residual it prints below is then the honest ~19 % of the v0 fallback.
 //
 // COHERENT has no analogous fix available: a coherent event carries neither
 // `Role::StruckNucleon` nor `Role::StruckCluster` (the diffractive system X
@@ -73,6 +72,7 @@ struct Args {
   long long events = 20000;
   unsigned long long seed = 20260713;
   std::string out = "generate_full.hepmc";
+  std::string tier = "T1";
   bool hadronize = true;
 };
 
@@ -82,7 +82,8 @@ struct Args {
             << " [--isotope 6Li|7Li] [--config 0|1|2]\n"
                "       [--channel inclusive|6Li-alpha|7Li-alpha|coherent]"
                " [--plan azz|apar|cos2phi|flip|pure]\n"
-               "       [--events N] [--seed S] [--out FILE] [--no-hadronize]\n";
+               "       [--events N] [--seed S] [--out FILE] [--tier T0|T1]"
+               " [--no-hadronize]\n";
   std::exit(2);
 }
 
@@ -101,12 +102,14 @@ Args parse(int argc, char** argv) {
     else if (k == "--events") a.events = std::stoll(next());
     else if (k == "--seed") a.seed = std::stoull(next());
     else if (k == "--out") a.out = next();
+    else if (k == "--tier") a.tier = next();
     else if (k == "--no-hadronize") a.hadronize = false;
     else if (k == "-h" || k == "--help") usage(argv[0], "help");
     else usage(argv[0], "unknown option " + k);
   }
   if (a.config < 0 || a.config > 2) usage(argv[0], "--config must be 0, 1 or 2");
   if (a.events <= 0) usage(argv[0], "--events must be positive");
+  if (a.tier != "T0" && a.tier != "T1") usage(argv[0], "--tier must be T0 or T1");
   return a;
 }
 
@@ -138,17 +141,6 @@ RunPlan plan_of(const std::string& name, double j, const Scenario& sc,
   usage(argv0, "unknown --plan " + name);
 }
 
-// See the file header: hands PYTHIA the struck cluster's own off-shell
-// four-vector WHOLE (not the v0 default's 1/A_c on-shell split) and its
-// exact integer charge, so the tagged whole-record balance closes exactly.
-// Installed through the public `PythiaBridge::set_nucleon_in_cluster` hook
-// -- no source file is touched.
-Vec4 whole_cluster_hook(const Vec4& p_cluster, int /*a_c*/, int z_c, Rng&,
-                        int* pdg_out) {
-  *pdg_out = (z_c >= 1) ? 2212 : 2112;
-  return p_cluster;
-}
-
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -165,6 +157,7 @@ int main(int argc, char** argv) {
                                            : OpticsChoice::YellowReportHighAcceptance;
     cfg.seed = args.seed;
     cfg.n_events = static_cast<std::uint64_t>(args.events);
+    cfg.tier = (args.tier == "T0") ? Tier::T0 : Tier::T1;
 
     const Ion& ion = ion_by_name(cfg.isotope);
     const RunPlan plan = plan_of(args.plan, ion.spin, cfg.scenario, argv[0]);
@@ -174,7 +167,6 @@ int main(int argc, char** argv) {
     PythiaBridgeStats snapshot;  // last stats() read (bridge dies before we print)
     if (args.hadronize) {
       bridge = std::make_unique<PythiaBridge>(bc);
-      if (tagged) bridge->set_nucleon_in_cluster(whole_cluster_hook);
       cfg.hadronizer = [&](Event& ev, Rng& rng) { bridge->hadronize(ev, rng); };
     }
 
@@ -188,11 +180,15 @@ int main(int argc, char** argv) {
                p.beam_config().sqrt_s_per_nucleon(), p.pot_config().c_str(),
                p.optics().name.c_str());
     std::printf("  hadronizer   %s\n",
-               args.hadronize
-                   ? (tagged ? "PythiaBridge::hadronize, whole-cluster hook "
-                              "(see file header)"
-                             : "PythiaBridge::hadronize (plain binding)")
-                   : "none (--no-hadronize: T0 only)");
+               args.hadronize ? "PythiaBridge::hadronize (plain binding)"
+                              : "none (--no-hadronize: T0 only)");
+    if (tagged) {
+      std::printf("  tier         %s\n",
+                 p.tier() == Tier::T1
+                     ? "T1 -- struck nucleon + partner spectators (breakup.hpp)"
+                     : "T0 -- struck cluster as one pseudo-particle (does NOT "
+                       "conserve through the bridge)");
+    }
     std::printf("  build        %.3f s\n",
                std::chrono::duration<double>(t_build1 - t_build0).count());
 
@@ -272,9 +268,10 @@ int main(int argc, char** argv) {
                    " has no coherent-diffractive target (see the file header"
                    " and docs/T2_CHAIN.md).\n");
       } else if (worst_p_rel > 1e-6) {
-        std::printf("                WARNING: larger than the sub-permille"
-                   " level the whole-cluster hook should give; see"
-                   " docs/T2_CHAIN.md.\n");
+        std::printf("                EXPECTED at --tier T0: the bridge's"
+                   " DEPRECATED cluster branch feeds PYTHIA p_cluster/A_c"
+                   " with nothing carrying the rest.  Tier::T1 (the default)"
+                   " closes it; see docs/T2_CHAIN.md.\n");
       }
     }
 

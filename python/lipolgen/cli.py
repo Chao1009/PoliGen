@@ -1,0 +1,234 @@
+"""`lipolgen-run` -- one command line for a whole LiPolGen run.
+
+    lipolgen-run --isotope 6Li --config 1 --channel tagged-alpha \
+                 --plan tensor-thirds --events 100000 --seed 1 \
+                 --hepmc out.hepmc --npz out.npz [--hadronize]
+
+Every switch has a config-file twin: `--config-file run.json` (or run.yaml,
+if PyYAML is installed) is read into the same keyword set, and explicit
+command-line switches win over the file.  The file is a flat mapping of the
+long option names with the dashes turned into underscores:
+
+    {"isotope": "6Li", "config": 1, "channel": "tagged-alpha",
+     "plan": "tensor-thirds", "events": 100000, "seed": 1,
+     "optics": "yr-high-acceptance", "pzz": 0.6,
+     "coherent": {"f0": 0.04, "slope_b": 50.0}}
+
+Outputs
+    --npz       the columnar sample (`Pipeline.generate()`), one array per
+                column plus a JSON `meta` -- `lipolgen.export.write_columns_npz`
+    --hfs-npz   the polligen `HFSSample` .npz of the hadronic final state;
+                needs --hadronize (there are no T2 hadrons without it)
+    --hepmc     HepMC3 Asciiv3, the full event record
+"""
+
+import argparse
+import json
+import os
+import sys
+import time
+
+import numpy as np
+
+from . import _lipolgen as _l
+from . import export
+from . import CHANNELS, OPTICS, PLANS, ion_spin, make_config, make_plan
+
+
+def _load_config_file(path):
+    with open(path) as f:
+        text = f.read()
+    if path.lower().endswith((".yaml", ".yml")):
+        try:
+            import yaml
+        except ImportError:
+            raise SystemExit(
+                "%s looks like YAML but PyYAML is not installed; use JSON "
+                "or `pip install pyyaml`" % path)
+        data = yaml.safe_load(text)
+    else:
+        data = json.loads(text)
+    if not isinstance(data, dict):
+        raise SystemExit("%s must hold a mapping of option names" % path)
+    return data
+
+
+def build_parser():
+    p = argparse.ArgumentParser(
+        prog="lipolgen-run",
+        description="Generate a LiPolGen run and write it out.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    p.add_argument("--config-file", default=None,
+                   help="JSON (or YAML, if PyYAML is installed) file of the "
+                        "same options; command-line switches win")
+    p.add_argument("--isotope", default=None, help="6Li, 7Li, d")
+    p.add_argument("--config", type=int, default=None,
+                   help="beam configuration index 0/1/2 = low/mid/top")
+    p.add_argument("--channel", default=None, choices=sorted(CHANNELS),
+                   help="physics channel")
+    p.add_argument("--plan", default=None, choices=sorted(set(PLANS)),
+                   help="spin run plan")
+    p.add_argument("--events", type=int, default=None,
+                   help="fixed event count (exclusive with --lumi)")
+    p.add_argument("--lumi", type=float, default=None,
+                   help="integrated luminosity [pb^-1] (exclusive with "
+                        "--events)")
+    p.add_argument("--seed", type=int, default=None)
+    p.add_argument("--run", type=int, default=None, help="run number")
+    p.add_argument("--optics", default=None, choices=sorted(OPTICS),
+                   help="far-forward envelope the route label is priced at")
+    p.add_argument("--pz", type=float, default=None, help="fill P_z")
+    p.add_argument("--pzz", type=float, default=None, help="fill P_zz")
+    p.add_argument("--pe", type=float, default=None,
+                   help="electron polarization")
+    p.add_argument("--rel-lumi-offset", type=float, default=None,
+                   help="relative-luminosity offset on the plan's own category")
+    p.add_argument("--cluster-beta", type=float, default=None,
+                   help="short-range scale of the cluster radial waves")
+    p.add_argument("--p-d", type=float, default=None,
+                   help="D-state probability (6Li alpha tag)")
+    p.add_argument("--inclusive-b1", action="store_true", default=None,
+                   help="put an inclusive b1 in the struck cluster's kernel")
+    p.add_argument("--coherent-f0", type=float, default=None)
+    p.add_argument("--coherent-slope-b", type=float, default=None)
+    p.add_argument("--coherent-amp", type=float, default=None)
+    p.add_argument("--nthreads", type=int, default=None,
+                   help="generation threads (forced to 1 with --hadronize)")
+    p.add_argument("--hadronize", action="store_true", default=None,
+                   help="run the T2 (PYTHIA 8) tier on every event")
+    p.add_argument("--hepmc", default=None, help="HepMC3 Asciiv3 output file")
+    p.add_argument("--npz", default=None, help="columnar .npz output file")
+    p.add_argument("--hfs-npz", default=None,
+                   help="polligen HFSSample .npz (needs --hadronize)")
+    p.add_argument("--quiet", action="store_true", default=None)
+    return p
+
+
+#: defaults applied after the config file and the command line are merged
+DEFAULTS = dict(isotope="6Li", config=1, channel="inclusive",
+                plan="tensor-thirds", events=100000, lumi=0.0, seed=20260713,
+                run=1, optics="yr-high-acceptance", pz=0.7, pzz=0.6, pe=0.7,
+                rel_lumi_offset=0.0, nthreads=1, hadronize=False, quiet=False,
+                hepmc=None, npz=None, hfs_npz=None, cluster_beta=None,
+                p_d=None, inclusive_b1=False, coherent=None)
+
+
+def resolve(argv=None):
+    """Merge defaults < config file < command line into one option dict."""
+    parser = build_parser()
+    args = vars(parser.parse_args(argv))
+    opts = dict(DEFAULTS)
+    if args.get("config_file"):
+        fromfile = _load_config_file(args["config_file"])
+        unknown = set(fromfile) - set(DEFAULTS) - {"coherent"}
+        if unknown:
+            raise SystemExit("unknown option(s) in %s: %s"
+                             % (args["config_file"], ", ".join(sorted(unknown))))
+        opts.update(fromfile)
+    coh = dict(opts.get("coherent") or {})
+    for k in ("f0", "slope_b", "amp"):
+        v = args.pop("coherent_" + k, None)
+        if v is not None:
+            coh[k] = v
+    args.pop("config_file", None)
+    for k, v in args.items():
+        if v is not None:
+            opts[k] = v
+    opts["coherent"] = coh or None
+    return opts
+
+
+def main(argv=None):
+    opts = resolve(argv)
+    quiet = bool(opts["quiet"])
+    say = (lambda *a: None) if quiet else (lambda *a: print(*a))
+
+    if opts["events"] and opts["lumi"]:
+        raise SystemExit("--events and --lumi are exclusive")
+    cfg = make_config(isotope=opts["isotope"], config=opts["config"],
+                      channel=opts["channel"], events=opts["events"],
+                      lumi_pb=opts["lumi"], seed=opts["seed"], run=opts["run"],
+                      optics=opts["optics"], cluster_beta=opts["cluster_beta"],
+                      p_d=opts["p_d"], inclusive_b1=opts["inclusive_b1"],
+                      coherent=opts["coherent"])
+    plan = make_plan(opts["plan"], j=ion_spin(cfg.isotope), pz=opts["pz"],
+                     pzz=opts["pzz"], pe=opts["pe"],
+                     rel_lumi_offset=opts["rel_lumi_offset"])
+
+    nthreads = max(1, int(opts["nthreads"]))
+    bridge = None
+    if opts["hadronize"]:
+        if not _l.HAVE_PYTHIA8:
+            raise SystemExit("this build has no PYTHIA 8 tier")
+        beams = _l.default_configs(cfg.isotope)[cfg.beam_config]
+        t0 = time.time()
+        bridge = _l.PythiaBridge(beams, _l.PythiaBridgeOptions())
+        say("PYTHIA 8 bridge ready in %.1f s" % (time.time() - t0))
+        _l.set_pythia_hadronizer(cfg, bridge)
+        nthreads = 1                      # PythiaBridge is not re-entrant
+    if opts["hfs_npz"] and not opts["hadronize"]:
+        raise SystemExit("--hfs-npz needs --hadronize (no T2 hadrons "
+                         "otherwise)")
+
+    t0 = time.time()
+    p = _l.Pipeline(cfg, plan)
+    t_setup = time.time() - t0
+    say("%s  %s  %s" % (_l.pipeline_channel_name(cfg.channel),
+                        p.beam_config.label(), p.optics.name))
+    say("  setup %.2f s, %d events over %d categories, sigma = %.6g pb"
+        % (t_setup, p.size(), len(plan), p.sigma_pb()))
+    for name, sig, cnt in zip([c.name for c in plan.categories],
+                              p.sigma_per_category_pb(), p.counts()):
+        say("    %-10s sigma = %12.6g pb   N = %d" % (name, sig, cnt))
+
+    # Events are only materialized when something needs the records: the HFS
+    # exporter always, HepMC only when the T2 tier is on (regenerating a
+    # hadronized run to stream it out would double the cost; a bare T0 run is
+    # cheap enough to regenerate inside `Pipeline.write_hepmc`, which streams
+    # and stores nothing).
+    need_events = bool(opts["hfs_npz"] or (opts["hepmc"] and opts["hadronize"]))
+    t0 = time.time()
+    cols = p.generate(0, need_events, nthreads)
+    dt = time.time() - t0
+    n = int(cols["x"].size)
+    say("  generated %d events in %.3f s = %.4g ev/s (%d thread%s)"
+        % (n, dt, n / max(dt, 1e-12), nthreads, "" if nthreads == 1 else "s"))
+    if bridge is not None:
+        st = bridge.stats
+        say("  PYTHIA: %d ok, %d failed, %d retries" %
+            (st.n_ok, st.n_failed, st.n_retries))
+
+    if _l.is_tagged(cfg.channel) or cfg.channel == _l.PipelineChannel.CoherentLi6:
+        route = cols["route"]
+        say("  tag fraction at %s: %.4f (main %.4f, near-beam %.4f)"
+            % (p.optics.name, float(np.mean(export.rp_accepted(cols))),
+               float(np.mean(route == _l.Route.RomanPots)),
+               float(np.mean(route == _l.Route.RPNearBeam))))
+
+    if opts["npz"]:
+        export.write_columns_npz(cols, opts["npz"])
+        say("  wrote %s (%.1f MB)"
+            % (opts["npz"], os.path.getsize(opts["npz"]) / 1e6))
+    if opts["hfs_npz"]:
+        meta = dict(cols["meta"])
+        export.write_hfs_npz(cols["events"], opts["hfs_npz"], meta=meta)
+        say("  wrote %s (%.1f MB)"
+            % (opts["hfs_npz"], os.path.getsize(opts["hfs_npz"]) / 1e6))
+    if opts["hepmc"]:
+        if not _l.HAVE_HEPMC3:
+            raise SystemExit("this build has no HepMC3 writer")
+        t0 = time.time()
+        if "events" in cols:
+            with _l.HepMC3Writer(opts["hepmc"]) as w:
+                for ev in cols["events"]:
+                    w.write(ev)
+        else:
+            p.write_hepmc(opts["hepmc"])
+        say("  wrote %s (%.1f MB) in %.1f s"
+            % (opts["hepmc"], os.path.getsize(opts["hepmc"]) / 1e6,
+               time.time() - t0))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

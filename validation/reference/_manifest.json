@@ -1,0 +1,27 @@
+{
+ "could_not_call": [
+  {
+   "reason": "s_channel=0.5 != 1: tensor_dilution raises ValueError by design (tagged.py:299-302)",
+   "what": "TaggedModel.tensor_dilution channel=7Li alpha-tag (quasi-free t)"
+  },
+  {
+   "reason": "spin.moments_along_axis raises ValueError for j not in {1, 1.5} (spin.py:177); vector moment computed directly instead, tensor/octupole n/a",
+   "what": "SpinCategory.moments() name=apar+ (j=0.5)"
+  },
+  {
+   "reason": "spin.moments_along_axis raises ValueError for j not in {1, 1.5} (spin.py:177); vector moment computed directly instead, tensor/octupole n/a",
+   "what": "SpinCategory.moments() name=apar- (j=0.5)"
+  }
+ ],
+ "files": [
+  "spin.json",
+  "xsec.json",
+  "beams.json",
+  "tagged.json",
+  "spectator.json",
+  "coherent.json",
+  "bookkeeping.json"
+ ],
+ "generator": "LiPolGen/validation/dump_polligen_reference.py",
+ "polligen_version": "0.1.0"
+}

@@ -1,0 +1,160 @@
+{
+ "configs": {
+  "6Li": [
+   {
+    "electron_energy": 5.0,
+    "gamma_ion": 43.713873267945495,
+    "ion_momentum_per_nucleon": 40.8,
+    "label": "e(5) x 6Li(40.8/u)",
+    "sqrt_s_per_nucleon": 28.5657137141714
+   },
+   {
+    "electron_energy": 10.0,
+    "gamma_ion": 106.58293046719861,
+    "ion_momentum_per_nucleon": 99.5,
+    "label": "e(10) x 6Li(99.5/u)",
+    "sqrt_s_per_nucleon": 63.08724118235002
+   },
+   {
+    "electron_energy": 18.0,
+    "gamma_ion": 147.28488112644152,
+    "ion_momentum_per_nucleon": 137.5,
+    "label": "e(18) x 6Li(137.5/u)",
+    "sqrt_s_per_nucleon": 99.498743710662
+   }
+  ],
+  "7Li": [
+   {
+    "electron_energy": 5.0,
+    "gamma_ion": 43.722379818897,
+    "ion_momentum_per_nucleon": 40.8,
+    "label": "e(5) x 7Li(40.8/u)",
+    "sqrt_s_per_nucleon": 28.5657137141714
+   },
+   {
+    "electron_energy": 10.0,
+    "gamma_ion": 106.60368012584622,
+    "ion_momentum_per_nucleon": 99.5,
+    "label": "e(10) x 7Li(99.5/u)",
+    "sqrt_s_per_nucleon": 63.08724118235002
+   },
+   {
+    "electron_energy": 18.0,
+    "gamma_ion": 126.3157261549905,
+    "ion_momentum_per_nucleon": 117.9,
+    "label": "e(18) x 7Li(117.9/u)",
+    "sqrt_s_per_nucleon": 92.13468402290205
+   }
+  ],
+  "d": [
+   {
+    "electron_energy": 5.0,
+    "gamma_ion": 43.73047664253684,
+    "ion_momentum_per_nucleon": 41.0,
+    "label": "e(5) x d(41/u)",
+    "sqrt_s_per_nucleon": 28.635642126552707
+   },
+   {
+    "electron_energy": 10.0,
+    "gamma_ion": 106.63649740182231,
+    "ion_momentum_per_nucleon": 100.0,
+    "label": "e(10) x d(100/u)",
+    "sqrt_s_per_nucleon": 63.245553203367585
+   },
+   {
+    "electron_energy": 18.0,
+    "gamma_ion": 146.6221468154619,
+    "ion_momentum_per_nucleon": 137.5,
+    "label": "e(18) x d(137.5/u)",
+    "sqrt_s_per_nucleon": 99.498743710662
+   }
+  ]
+ },
+ "constants": {
+  "ELECTRON_ENERGIES": [
+   5.0,
+   10.0,
+   18.0
+  ],
+  "NUCLEUS_MASS": {
+   "3He_3_2": 2.808391607,
+   "6Li_6_3": 5.601518702,
+   "7Li_7_3": 6.533833028,
+   "d_2_1": 1.875612942,
+   "p_1_1": 0.938272088
+  },
+  "PROTON_CONFIG_ENERGIES": [
+   41.0,
+   100.0,
+   275.0
+  ],
+  "PROTON_MASS": 0.938272088,
+  "PROTON_TOP_MOMENTUM": 275.0
+ },
+ "gamma_of_proton_energy": [
+  {
+   "gamma": 43.70878676863391,
+   "proton_energy": 41.0
+  },
+  {
+   "gamma": 106.58358375431271,
+   "proton_energy": 100.0
+  },
+  {
+   "gamma": 293.0936603113653,
+   "proton_energy": 275.0
+  }
+ ],
+ "ions": {
+  "3He": {
+   "A": 3,
+   "N": 1,
+   "Z": 2,
+   "eff_pol_n": 0.86,
+   "eff_pol_p": -0.028,
+   "mass_per_nucleon": 0.9361305356666666,
+   "momentum_per_nucleon_max": 183.33333333333334,
+   "spin": 0.5
+  },
+  "6Li": {
+   "A": 6,
+   "N": 3,
+   "Z": 3,
+   "eff_pol_n": 0.3333333333333333,
+   "eff_pol_p": 0.3333333333333333,
+   "mass_per_nucleon": 0.9335864503333333,
+   "momentum_per_nucleon_max": 137.5,
+   "spin": 1.0
+  },
+  "7Li": {
+   "A": 7,
+   "N": 4,
+   "Z": 3,
+   "eff_pol_n": -0.00925,
+   "eff_pol_p": 0.2886666666666667,
+   "mass_per_nucleon": 0.9334047182857143,
+   "momentum_per_nucleon_max": 117.85714285714286,
+   "spin": 1.5
+  },
+  "d": {
+   "A": 2,
+   "N": 1,
+   "Z": 1,
+   "eff_pol_n": 0.93,
+   "eff_pol_p": 0.93,
+   "mass_per_nucleon": 0.937806471,
+   "momentum_per_nucleon_max": 137.5,
+   "spin": 1.0
+  },
+  "p": {
+   "A": 1,
+   "N": 0,
+   "Z": 1,
+   "eff_pol_n": 0.0,
+   "eff_pol_p": 1.0,
+   "mass_per_nucleon": 0.938272088,
+   "momentum_per_nucleon_max": 275.0,
+   "spin": 0.5
+  }
+ }
+}

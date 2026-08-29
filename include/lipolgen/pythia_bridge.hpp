@@ -205,6 +205,11 @@ struct PythiaBridgeStats {
   /// `pythia.next()` retry every time it was picked.
   std::uint64_t n_flavour_dropped = 0;
   std::uint64_t n_proton = 0, n_neutron = 0;
+  /// Events that took the DEPRECATED `Role::StruckCluster` branch -- i.e.
+  /// arrived with no `Role::StruckNucleon`.  Non-zero on a `Pipeline` run
+  /// means the run is at `Tier::T0`, and the whole record does not conserve
+  /// (`PythiaBridge::NucleonInCluster`).
+  std::uint64_t n_cluster_fallback = 0;
   double max_rescale_dev = 0.0;    ///< max |lambda - 1| of the mass repair
   double sum_w2 = 0.0;             ///< bookkeeping: mean W^2 of accepted events
 };
@@ -216,12 +221,22 @@ struct PythiaBridgeStats {
 /// comes from the caller's `Rng`, so events stay reproducible).
 class PythiaBridge {
  public:
-  /// Hook: pick the nucleon struck inside a `Role::StruckCluster`.  Given
-  /// the cluster four-vector and its (A, Z), it must return the nucleon
-  /// four-vector and set `pdg_out` to 2212 or 2112.  The v0 default is an
-  /// on-shell nucleon carrying p_cluster/A_c of the cluster three-momentum,
-  /// with the flavour drawn Z_c : N_c and no Fermi smearing at all; replace
-  /// it to fold in the cluster wave function.
+  /// DEPRECATED (2026-08-30, superseded by the T1 tier).  Hook: pick the
+  /// nucleon struck inside a `Role::StruckCluster`.  Given the cluster
+  /// four-vector and its (A, Z), it must return the nucleon four-vector and
+  /// set `pdg_out` to 2212 or 2112.
+  ///
+  /// Nothing in the library reaches this any more: a `Pipeline` tagged event
+  /// is resolved into a struck NUCLEON plus its partner spectators by
+  /// `breakup.hpp` before the bridge sees it (`PipelineConfig::tier`), so
+  /// `Role::StruckNucleon` -- the bridge's first-priority branch -- is
+  /// always there.  The cluster branch survives only for a caller who builds
+  /// a record by hand or deliberately runs at `Tier::T0`, and it does NOT
+  /// conserve the whole record: it feeds PYTHIA p_cluster/A_c with nothing
+  /// carrying the rest (measured 0.186 relative and one charge unit wrong on
+  /// half the events, docs/T2_CHAIN.md).  Taking it logs one warning per
+  /// bridge and counts every event in
+  /// `PythiaBridgeStats::n_cluster_fallback`.
   using NucleonInCluster = std::function<Vec4(const Vec4& p_cluster, int a_c,
                                               int z_c, Rng& rng,
                                               int* pdg_out)>;

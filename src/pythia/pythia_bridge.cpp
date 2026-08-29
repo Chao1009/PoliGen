@@ -237,6 +237,7 @@ struct PythiaBridge::Impl {
   int quark_id = 0;
 
   NucleonInCluster cluster_hook;
+  bool warned_cluster = false;   ///< the deprecated branch warns once
   NucleonChooser chooser_hook;
   std::shared_ptr<const UnpolSF> f2;   ///< P1: the ByStructureFunctions draw
 
@@ -360,15 +361,37 @@ bool PythiaBridge::Impl::run(Event& ev, Rng& rng) {
     p_n = pn->p;
     id_n = (pn->pdg == 2112) ? 2112 : 2212;
   } else if (const Particle* pc = ev.find(Role::StruckCluster)) {
+    // DEPRECATED.  A T1 record names its struck nucleon and never gets here;
+    // see `PythiaBridge::NucleonInCluster`.  Warn ONCE per bridge -- this is
+    // a configuration mistake, not a per-event condition -- and count every
+    // event so a run cannot quietly produce a non-conserving sample.
+    ++stats.n_cluster_fallback;
+    if (!warned_cluster) {
+      warned_cluster = true;
+      std::fprintf(stderr,
+                   "LiPolGen PythiaBridge: WARNING -- an event carries a "
+                   "Role::StruckCluster but no Role::StruckNucleon, so the "
+                   "DEPRECATED cluster branch is used and the whole-record "
+                   "four-momentum and charge will NOT be conserved.  Run the "
+                   "pipeline at PipelineConfig::tier = Tier::T1 (the "
+                   "default), which resolves the cluster into a struck "
+                   "nucleon plus partner spectators (breakup.hpp).\n");
+    }
     int a_c = 1, z_c = 1;
-    decode_ion(pc->pdg, &a_c, &z_c);
+    if (std::abs(pc->pdg) > 1000000000) {
+      decode_ion(pc->pdg, &a_c, &z_c);
+    } else {
+      // A single nucleon written as a "cluster": 2212 / 2112 are NOT
+      // 10-digit ion codes and `decode_ion` would read garbage out of them.
+      a_c = 1;
+      z_c = (pc->pdg == 2212) ? 1 : 0;
+    }
     if (a_c < 1) { ++stats.n_failed; return false; }
     if (cluster_hook) {
       p_n = cluster_hook(pc->p, a_c, z_c, rng, &id_n);
     } else {
       // v0: an on-shell nucleon carrying 1/A_c of the cluster three-momentum,
-      // with no Fermi smearing at all.  Replace through
-      // `set_nucleon_in_cluster` once the cluster wave function is available.
+      // with no Fermi smearing at all.
       const double inv = 1.0 / static_cast<double>(a_c);
       const double px = pc->p.px * inv, py = pc->p.py * inv,
                    pz = pc->p.pz * inv;

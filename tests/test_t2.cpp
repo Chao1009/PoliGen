@@ -3,23 +3,22 @@
 // coherent 6Li.  See docs/T2_CHAIN.md for the record layout and the two
 // interface findings this file exists to pin down:
 //
-//  * TAGGED.  The v0 default `NucleonInCluster` hook (p_cluster/A_c on
-//    shell, flavour drawn Z_c:N_c -- docs/PYTHIA_BRIDGE.md section 6) does
-//    not conserve the WHOLE-RECORD balance: it hands PYTHIA only 1/A_c of
-//    the struck cluster's momentum, with no compensating particle for the
-//    rest, and its stochastic proton/neutron draw does not track the
-//    cluster's own integer charge.  Measured on 300 6Li-alpha events with
-//    the plain `bridge.hadronize` binding: worst relative 4-momentum
-//    residual on (spectator + hadrons + e') vs (beam e + beam ion) is
-//    *0.186*, and charge is wrong on 157/300 events.  `set_nucleon_in_cluster`
-//    -- a public, documented extension point, not a source patch -- fixes
-//    both: hand PYTHIA the cluster's own off-shell four-vector WHOLE
-//    (still "no Fermi smearing", the v0 promise) and its exact integer
-//    charge.  That is `whole_cluster_hook` below, and with it the tagged
-//    checks pass at the same tolerance as inclusive.  A complete fix would
-//    also emit the cluster's non-struck nucleon as `Role::PartnerSpectator`
-//    (the role exists in event.hpp; nothing currently fills it), which is
-//    out of this file's scope (src/ is owned elsewhere).
+//  * TAGGED -- CLOSED by the T1 tier (`breakup.hpp`, 2026-08-30).  A tagged
+//    event now names its struck NUCLEON (`Role::StruckNucleon`, the
+//    off-shell P_X minus its on-shell partner spectators), so the bridge's
+//    first-priority branch takes it verbatim and its `StruckCluster`
+//    fallback never fires.  The whole record conserves to the numerical
+//    floor with NO caller-side hook of any kind, and the "no surrogate"
+//    tail collapses because the surrogate now has to reach one nucleon's
+//    worth of momentum instead of a whole cluster's.
+//
+//    For the record, what this replaced: the v0 default `NucleonInCluster`
+//    (p_cluster/A_c on shell, flavour drawn Z_c:N_c) broke the whole-record
+//    balance by *0.186* relative and got the charge wrong on 157/300
+//    events, and the `set_nucleon_in_cluster` workaround that fixed the
+//    balance cost a ~5-15 % no-surrogate tail and always assigned the
+//    cluster's own net charge.  Both are gone; the test below runs the
+//    plain `bridge.hadronize` binding.
 //
 //  * COHERENT.  A coherent event carries neither `Role::StruckNucleon` nor
 //    `Role::StruckCluster` (the diffractive system X is not a struck
@@ -74,17 +73,6 @@ namespace {
 
 constexpr std::uint64_t kSeed = 20260829;
 constexpr int kN = 300;
-
-// See the file header: hands PYTHIA the struck cluster's own off-shell
-// four-vector whole (not 1/A_c of it) and its exact integer charge, so the
-// whole-record balance closes exactly.  Installed through
-// `PythiaBridge::set_nucleon_in_cluster` -- the public hook
-// docs/PYTHIA_BRIDGE.md section 6 names for exactly this purpose.
-Vec4 whole_cluster_hook(const Vec4& p_cluster, int /*a_c*/, int z_c, Rng&,
-                        int* pdg_out) {
-  *pdg_out = (z_c >= 1) ? 2212 : 2112;
-  return p_cluster;
-}
 
 // Per-event bookkeeping shared by all three channels.
 struct ChainStats {
@@ -250,51 +238,61 @@ TEST_CASE("T2 chain: inclusive, 300 events, per-nucleon balance") {
   CHECK(st.worst_pt < 1e-8);
 }
 
-TEST_CASE("T2 chain: tagged 6Li-alpha, 300 events, whole-record balance "
-          "(with the whole-cluster hook -- see file header)") {
-  PipelineConfig cfg;
-  cfg.channel = PipelineChannel::TaggedLi6Alpha;
-  cfg.isotope = channel_isotope(cfg.channel);
-  cfg.beam_config = 1;
-  cfg.n_events = kN;
-  cfg.seed = kSeed;
-  cfg.optics_choice = OpticsChoice::Tagging;
+TEST_CASE("T2 chain: tagged at T1, whole-record balance with NO caller-side "
+          "hook (6Li-alpha, 7Li-alpha, d control)") {
+  struct Row { PipelineChannel ch; const char* name; std::uint64_t seed_off; };
+  const Row rows[] = {
+      {PipelineChannel::TaggedLi6Alpha, "6Li-alpha", 1},
+      {PipelineChannel::TaggedLi7Alpha, "7Li-alpha", 11},
+      {PipelineChannel::TaggedDeuteronP, "d control", 21},
+  };
+  for (const Row& row : rows) {
+    PipelineConfig cfg;
+    cfg.channel = row.ch;
+    cfg.isotope = channel_isotope(cfg.channel);
+    cfg.beam_config = 1;
+    cfg.n_events = kN;
+    cfg.seed = kSeed;
+    // The tabulated lithium tagging point exists for 6Li and 7Li only.
+    if (row.ch != PipelineChannel::TaggedDeuteronP)
+      cfg.optics_choice = OpticsChoice::Tagging;
+    REQUIRE(cfg.tier == Tier::T1);        // the default, and the point here
 
-  const BeamConfig bc = default_configs(cfg.isotope)[static_cast<std::size_t>(cfg.beam_config)];
-  PythiaBridge bridge(bc, bridge_opts(kSeed + 1));
-  bridge.set_nucleon_in_cluster(whole_cluster_hook);
+    const BeamConfig bc =
+        default_configs(cfg.isotope)[static_cast<std::size_t>(cfg.beam_config)];
+    PythiaBridge bridge(bc, bridge_opts(kSeed + row.seed_off));
+    // NO set_nucleon_in_cluster: the T1 record names the struck nucleon, so
+    // the bridge's cluster branch is never reached.
 
-  ChainStats st;
-  run_channel(cfg, tensor_thirds_plan(0.7, 0.6), bridge, Role::Spectator, &st);
+    const RunPlan plan = (row.ch == PipelineChannel::TaggedLi7Alpha)
+                             ? helicity_flip_plan(1.5, 0.7, 0.7)
+                             : tensor_thirds_plan(0.7, 0.6);
+    ChainStats st;
+    run_channel(cfg, plan, bridge, Role::Spectator, &st);
 
-  MESSAGE("tagged 6Li-alpha: " << st.n_ok << "/" << st.n_attempted
-                               << " hadronized, worst 4p rel " << st.worst_p_rel
-                               << ", worst charge " << st.worst_q
-                               << ", worst Sum(E-pz) exact " << st.worst_empz_exact
-                               << " GeV, worst Sum(E-pz) truth rel "
-                               << st.worst_empz_truth_rel
-                               << " (looser than inclusive: P_X carries the "
-                                  "spectator's recoil pT, so the collinear-"
-                                  "target 'truth' formula is only "
-                                  "approximate here), worst pT " << st.worst_pt
-                               << " GeV, " << st.secs << " s -> "
-                               << (st.secs > 0 ? st.n_ok / st.secs : 0.0)
-                               << " ev/s");
-  CHECK(st.n_attempted == kN);
-  CHECK(st.n_ok > kN - 60);          // the whole-cluster hook pushes some
-                                      // events off the surrogate's reach
-                                      // (measured ~5%); see docs/T2_CHAIN.md
-  CHECK(st.n_untouched_fail == 0);
-  CHECK(st.n_electron_fail == 0);
-  CHECK(st.worst_p_rel < 1e-9);      // measured ~1e-13 with the whole-cluster hook
-  CHECK(st.worst_q == 0.0);
-  CHECK(st.worst_empz_exact < 1e-6);
-  // Measured ~3.1e-3: P_X is not collinear (the spectator carries recoil
-  // p_T), unlike the docs' assumed-collinear target, so the closed-form
-  // "truth" formula is only approximate here; the EXACT form above is
-  // still exact to the numerical floor.
-  CHECK(st.worst_empz_truth_rel < 1e-2);
-  CHECK(st.worst_pt < 1e-8);
+    MESSAGE("tagged " << std::string(row.name) << " (T1): " << st.n_ok << "/"
+                      << st.n_attempted << " hadronized, worst 4p rel "
+                      << st.worst_p_rel << ", worst charge " << st.worst_q
+                      << ", worst Sum(E-pz) exact " << st.worst_empz_exact
+                      << " GeV, worst Sum(E-pz) truth rel "
+                      << st.worst_empz_truth_rel
+                      << " (the struck nucleon carries the Fermi p_T, so the "
+                         "collinear-target closed form is only approximate; "
+                         "the EXACT form above is not), worst pT "
+                      << st.worst_pt << " GeV, " << st.secs << " s -> "
+                      << (st.secs > 0 ? st.n_ok / st.secs : 0.0) << " ev/s");
+    CHECK(st.n_attempted == kN);
+    // The "no surrogate" tail: a few % at most now that the surrogate has to
+    // reach ONE NUCLEON's momentum instead of a whole cluster's.
+    CHECK(st.n_ok >= kN - kN / 20);
+    CHECK(st.n_untouched_fail == 0);
+    CHECK(st.n_electron_fail == 0);
+    CHECK(st.worst_p_rel < 1e-9);      // measured ~1e-13
+    CHECK(st.worst_q == 0.0);
+    CHECK(st.worst_empz_exact < 1e-6);
+    CHECK(st.worst_empz_truth_rel < 0.2);
+    CHECK(st.worst_pt < 1e-8);
+  }
 }
 
 TEST_CASE("T2 chain: coherent 6Li -- a hadronizer is REFUSED by default (C4); "
@@ -394,7 +392,6 @@ TEST_CASE("T2 chain: HepMC3 round trip through the full chain (tagged "
 
   const BeamConfig bc = default_configs(cfg.isotope)[static_cast<std::size_t>(cfg.beam_config)];
   PythiaBridge bridge(bc, bridge_opts(kSeed + 4));
-  bridge.set_nucleon_in_cluster(whole_cluster_hook);
   cfg.hadronizer = [&](Event& ev, Rng& rng) { bridge.hadronize(ev, rng); };
   Pipeline p(cfg, tensor_thirds_plan(0.7, 0.6));
 

@@ -85,6 +85,33 @@ head-on frame convention of `docs/CONVENTIONS.md`.
   it round-trips independently of any small numerical mismatch between the
   stored 4-vector and the physical on-shell mass.
 
+- **Role → status/PDG map**, complete, with the tier that writes each row:
+
+  | role | status | PDG | tier |
+  |---|---|---|---|
+  | `BeamElectron`, `BeamIon` | 4 | 11 / 10-digit ion | T0 |
+  | `ScatteredElectron` | 1 | 11 | T0 |
+  | `VirtualPhoton` | 3 | 22 | T0 |
+  | `Spectator` | 1 | 10-digit ion (`1000020040` for the α), or 2212/2112 for a nucleon spectator | T0 |
+  | **`PartnerSpectator`** | **1** | 2212 / 2112 for a nucleon, 10-digit ion for a bound remnant (`1000010020` for the t\* → n + d deuteron) | **T1** |
+  | `StruckCluster` | 3 | 10-digit ion of the cluster (2212/2112 when the "cluster" is one nucleon) | T0 |
+  | `StruckNucleon` | 3 | 2212 / 2112 | T0 (inclusive) / **T1** (tagged) |
+  | `IntactRecoil` | 1 | 10-digit ion | T0 (coherent) |
+  | `HadronicX` | forced 3 | 92 | T0 |
+  | `Hadron` | 1 | PYTHIA's | T2 |
+
+  **`PartnerSpectator` is a genuine final-state fragment, status 1**, exactly
+  like `Spectator`: it is one of the nucleons (or the bound d / the two
+  neutrons) the struck cluster broke into, it is on shell at its AME2020
+  mass, and it carries the cluster's 10-digit ion code when it is a nucleus.
+  It differs from `Spectator` only in provenance — `Spectator` is the tagged
+  cluster the far-forward detectors measure and the one `route_of` /
+  `rp_tagged` classify, `PartnerSpectator` is an interior fragment that no
+  routing function looks at.  Its `mother1` is the `StruckCluster` it came
+  from.  A consumer summing status 1 gets both, which is what the whole-record
+  balance needs; a consumer reconstructing the *tag* must select
+  `Role::Spectator`, not "every status-1 nucleus".
+
 ## 4-momentum conservation bookkeeping
 
 `Event::total_final()` sums `Status::Final` (HepMC3 status 1) particles only.

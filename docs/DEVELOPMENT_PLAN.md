@@ -70,10 +70,10 @@ lepton QED radiation (PYTHIA dipole-recoil limitation).
 
 ## 3. Work breakdown and agent assignment
 
-**Status 2026-08-29 (end of day 1):** P0–P7 done and merged (215 doctest cases / 9.0 M
-assertions, 114 pytest cases); adversarial review done (`docs/code_review_2026-08-29.md`),
-all 12 findings fixed with tests. T1 tier (struck cluster → nucleon + partner spectator)
-in progress; see §6 for what remains open.
+**Status 2026-08-30:** P0–P7 done and merged; the **T1 tier is done and default**
+(227 doctest cases / 15.1 M assertions, 118 pytest cases). Adversarial review done
+(`docs/code_review_2026-08-29.md`), all 12 findings fixed with tests. See §6 for what
+remains open.
 
 Model policy: **Fable 5** = planning, architecture, review gates, merges.
 **Opus 5** = the physics-bearing C++ modules. **Sonnet 5** = tooling, bindings,
@@ -128,8 +128,19 @@ scripts, docs, reference dumps.
 
 ## 6. Open items after day 1
 
-- **T1 breakup realism**: deuteron internal wave function is Hulthén S+D; the triton
-  remnant (d vs nn) is crude and flagged (plans/05 risk table).
+- **T1 tier: DONE** (`breakup.hpp` / `src/core/breakup.cpp`, default on the three
+  tagged channels through `PipelineConfig::tier`). The struck cluster is resolved into
+  a struck nucleon + on-shell partner spectator(s), so
+  `k + P_ion = k' + p_spec + Σ p_partner + hadrons` holds exactly and the T2 bridge
+  needs no caller-side hook (`docs/T2_CHAIN.md` §1a: worst residual 1.4e-13 relative,
+  charge 0, no-surrogate tail 0/300 on each tagged channel).
+- **T1 breakup realism** (what stays open inside it): the deuteron internal wave
+  function is Hulthén S+D at P_D = 0.045 with the full m_S angular correlation, which
+  is as good as the cluster model gets without VMC overlaps; the **triton remnant
+  (d vs nn) is crude and flagged** (plans/05 risk table) — a sequential two-body decay
+  at the AME2020 separation energies with an isotropic S-wave relative direction and
+  the unbound nn split at its virtual-state pole, no Faddeev/AV18 three-body
+  correlation and no tensor structure. **No FSI** of any fragment, on any channel.
 - **Coherent T2**: no coherent-diffractive final-state model; the hadronizer is refused
   on the coherent channel by default (`hadronize_coherent` opt-in reproduces v0).
 - **Physics inputs still external** (unchanged from plans/04): VMC α+d / α+t overlaps,

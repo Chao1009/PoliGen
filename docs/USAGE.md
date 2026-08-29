@@ -37,10 +37,15 @@ Three ways to consume a run:
 ```cpp
 p.for_each([](const Event& ev) { ... });          // streaming, nothing stored
 p.for_each(sink, /*nthreads=*/8);                 // same events, same order
+p.for_each_range(sink, 1000, 2000);               // streaming over a range
 Event ev;  while (p.next(ev)) { ... }             // pull API (cursor; rewind())
 std::vector<Event> batch;                          // explicit index range
-p.generate_range(1000, 2000, batch);
+p.generate_range(1000, 2000, batch);              // resized, reconstructed in place
 ```
+
+`event(index, ev)`, and therefore all of the above, reconstructs into `ev`
+**in place** (`Event::reset()` keeps the record's heap capacity), so a loop
+over a reused `Event` allocates nothing per event.
 
 Bookkeeping, all share-invariant in pb:
 
@@ -112,10 +117,11 @@ Pipeline p(cfg, tensor_thirds_plan(0.7, 0.6));
 p.for_each([&](const Event& ev) {
   const Particle* alpha = ev.find(Role::Spectator);      // on shell, status 1
   const Particle* dstar = ev.find(Role::StruckCluster);  // OFF shell, status 3
+  const Particle* pn    = ev.find(Role::StruckNucleon);  // T1: OFF shell, status 3
   if (rp_tagged(ev, p.optics(), p.pot_config()))         // Roman-Pot mask
-    printf("k=%.3f cos=%+.3f m_S=%+g alpha_s=%.3f pT_s=%.3f\n",
+    printf("k=%.3f cos=%+.3f m_S=%+g alpha_s=%.3f pT_s=%.3f  N=%d pol=%+g\n",
            ev.kin.k, ev.kin.cos_theta_k, ev.spin.m_struck,
-           ev.kin.alpha_s, ev.kin.pt_s);
+           ev.kin.alpha_s, ev.kin.pt_s, pn->pdg, pn->pol);
 });
 ```
 
@@ -134,9 +140,42 @@ inclusive b₁ double-counts the tagged tensor asymmetry
 for the k-integrated **rate** identity
 `Azz(σ₊₁, σ₀, σ₋₁) = tensor_dilution × ⟨Azz⟩_σ`.
 
-Balance: **whole nucleus**, `k + P_ion = k' + p_spec + X`. The spectator is on
-shell at its AME2020 mass, the struck cluster takes the remainder
-`P_X = P_ion − p_spec` and is off shell, and `X = k + P_X − k'`. Charge closes.
+### Tier T1 — the struck cluster is resolved (the default)
+
+`PipelineConfig::tier` is `Tier::T1`, so the tagged record does not stop at
+the cluster. `ClusterBreakup` (`breakup.hpp`) draws the internal relative
+momentum from the cluster's own wave function and writes
+
+* one `Role::StruckNucleon` (status 3, **off shell**, `pdg` 2212/2112, `pol`
+  a sampled ±1 helicity label), and
+* its `Role::PartnerSpectator` fragments (status 1, **on shell** at their
+  AME2020 masses, 10-digit ion codes for nuclei).
+
+| channel | struck cluster | partners | model |
+|---|---|---|---|
+| ⁶Li α | embedded d | 1 nucleon | S + D Hulthén at `P_D_DEUTERON`, the m_S-dependent \|A_{m_sc}\|²; species `F2p : F2n`; nucleon spins from the pair CG factor, so ⟨P_N⟩ = (1 − 3/2 P_D) m_S |
+| ⁷Li α | quasi-free t | d, or two n | sequential two-body at the AME2020 S_n(³H) = 6.2572 MeV / S(p+n+n) = 8.4818 MeV, nn split at 1/\|a_nn\| = 10.44 MeV — **crude and flagged** (plans/05 5.D) |
+| d control | already a nucleon | none | relabelled only |
+
+The impulse-approximation rule is applied twice: **the spectators are
+physical, the struck object is not.** Partners go on shell, the struck
+nucleon takes `P_X − Σ p_partner`, and no fragment is ever recoil-corrected.
+Mean virtuality `p_N² − M_N²`: −0.057 / −0.124 / −0.035 GeV².
+
+Balance at T1: **whole nucleus**,
+`k + P_ion = k' + p_spec + Σ p_partner + X`, with `X = k + p_N,struck − k'`
+the per-nucleon remainder. The tagged spectator is on shell at its AME2020
+mass and the struck cluster `P_X = P_ion − p_spec` stays on the record as
+documentation. Charge closes.
+
+Set `cfg.tier = Tier::T0` for the pre-T1 record
+(`k + P_ion = k' + p_spec + X`, `X = k + P_X − k'`, no partners, no struck
+nucleon), which is what every tagged number published before this tier was
+made with — every T0 quantity is bit-identical between the two apart from the
+0.02 % of draws T1's own timelike-X rejection redraws.
+
+Naming the struck nucleon is also what makes the **T2 chain conserve with no
+caller-side hook** (§6, `docs/T2_CHAIN.md` §1a).
 
 ## 4. Coherent ⁶Li
 
@@ -234,21 +273,28 @@ PythiaBridge bridge(p.beam_config());
 cfg.hadronizer = [&bridge](Event& ev, Rng& rng) { bridge.hadronize(ev, rng); };
 ```
 
-It is called once per finished T0 event with the event's own counter-based
-stream, after every T0 particle is in place. For a tagged event the hard process
-belongs to the **struck cluster**: `Role::StruckCluster` carries the off-shell
-`P_X`, `kin.alpha_s` / `kin.pt_s` are the light-front variables in the ion rest
-frame, and
+It is called once per finished T0/T1 event with the event's own counter-based
+stream, after every particle of those tiers is in place. **That is the whole
+binding on every channel except coherent** — a tagged event at the default
+`Tier::T1` names its `Role::StruckNucleon`, so the bridge uses it verbatim and
+the whole record conserves to the numerical floor (measured 1.4 × 10⁻¹³
+relative, charge exactly 0, and no "no surrogate" tail at all). The bridge's
+`Role::StruckCluster` branch is deprecated: it warns once and counts into
+`PythiaBridgeStats::n_cluster_fallback`, and only a `Tier::T0` run or a
+hand-built record can reach it.
+
+The cluster is still on the record as documentation, and
 
 ```cpp
 StruckCluster sc;
 struck_cluster_of(ev, *p.tagged_channel(), sc);
-sc.p_per_nucleon_eff;   // P_X,z / A_partner -- inject the hard process here
+sc.p_per_nucleon_eff;   // P_X,z / A_partner
 sc.virtuality;          // M_X^2 - m_free^2 < 0
 ```
 
-rebuilds the whole record. A hadronizer used with `for_each(sink, nthreads)`
-must be re-entrant.
+rebuilds it from a finished event; `kin.alpha_s` / `kin.pt_s` are the
+light-front variables in the ion rest frame. A hadronizer used with
+`for_each(sink, nthreads)` must be re-entrant.
 
 An **inclusive** event names its struck nucleon (`Role::StruckNucleon`, drawn
 `Z F2p : N F2n`, on shell at `M_NUCLEON`), so the bridge uses it verbatim and
@@ -271,6 +317,24 @@ Vec4   s = momentum_scale(ev);      // what entered that balance
 double q = charge_residual(ev);     // exactly zero
 ```
 
+## 7a. What else the record carries
+
+`Kinematics` stores two blocks a consumer would otherwise have to rebuild:
+
+```cpp
+ev.kin.cell;        // accepted-cell index of the sampler the (x, Q2) came from
+                    // -- the ION-level one (inclusive), the STRUCK-CLUSTER one
+                    // (tagged), the f_coh-reweighted one (coherent).  This is
+                    // polligen's Mode-W `cell` column.
+ev.kin.spec_pt;     // the spectator's LAB block: boost_spectator's own numbers
+ev.kin.spec_theta;  // (the coherent recoil's on that channel)
+ev.kin.spec_p_lab;
+ev.kin.spec_r;      // rigidity ratio vs the beam; NaN for a neutral fragment
+ev.kin.spec_xl;
+ev.kin.spec_kx; ev.kin.spec_ky; ev.kin.spec_kz;   // rest-frame, lab-oriented
+ev.kin.phi_spec;    // LAB azimuth -- NOT kin.phi, which is the DIS azimuth
+```
+
 ## 8. Command-line generators
 
 ```bash
@@ -282,7 +346,18 @@ double q = charge_residual(ev);     // exactly zero
 
 Each prints σ per spin category, the tag fraction at every optics of the menu,
 the conservation residual and the throughput, and writes HepMC3 (`--out ""` to
-skip). Measured single-core T0 throughput on this machine: **3.5 M ev/s**
-inclusive, **1.5 M ev/s** tagged, **2.7 M ev/s** coherent; HepMC3 output is the
-bottleneck when it is on (~18 k ev/s). Threading helps only when the per-event
-work is heavy (the T2 tier); on bare T0 the events are already ~700 ns.
+skip). Measured single-core throughput on this machine (200 k events, 6Li mid
+configuration), with `Pipeline::event` reconstructing in place since
+2026-08-30:
+
+| channel | streaming (`for_each`, `for_each_range`) | `generate_range`, chunk 4096 | chunk 1024 |
+|---|---|---|---|
+| inclusive | **2.83 M ev/s** (was 2.67) | 2.20 (was 2.07) | 2.62 (was 2.36) |
+| tagged ⁶Li α at T1 | **1.02 M ev/s** (was 0.93) | 1.01 (was 0.92) | — |
+| coherent | **2.32 M ev/s** (was 2.21) | 2.33 (was 2.03) | — |
+
+A `generate_range` buffer costs cache, not allocations, so prefer
+`for_each_range(sink, first, last)` when the records are consumed and
+dropped. HepMC3 output is the bottleneck when it is on (~18 k ev/s), and the
+T2 (PYTHIA) tier runs at ~40 k ev/s. Threading helps only when the per-event
+work is heavy; on bare T0/T1 the events are already ~1 µs.

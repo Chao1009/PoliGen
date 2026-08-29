@@ -1,7 +1,7 @@
 # The T2 chain: Pipeline -> PythiaBridge -> HepMC3 -> ePIC
 
 One page: how to run it, what a T2 record contains, what `abconv` / `npsim`
-expect of the file, and the two things that do not fit yet.
+expect of the file, and what still does not fit.
 
 ```bash
 source env.sh && cmake -S . -B build -DLIPOLGEN_WITH_PYTHON=OFF \
@@ -11,14 +11,21 @@ source env.sh && cmake -S . -B build -DLIPOLGEN_WITH_PYTHON=OFF \
 ./build/generate_full --channel 7Li-alpha  --events 200000 --plan apar
 ./build/generate_full --channel coherent   --events 200000 --plan azz
 ./build/generate_full --channel inclusive  --events 200000 --no-hadronize   # T0 only
+./build/generate_full --channel 6Li-alpha  --events 200000 --tier T0        # the old record
 ```
 
 `--isotope 6Li|7Li` (inclusive only -- the tagged channels imply their own,
 coherent is 6Li only), `--config 0|1|2` (energy point), `--seed`, `--out
-FILE` (`""` = no HepMC3), `--no-hadronize` (skip PYTHIA, print T0
-bookkeeping only). Each run prints sigma per spin category, the far-forward
-tag fraction, the PYTHIA veto/retry/no-surrogate counters, the observed
-whole-record conservation residual, and events/s.
+FILE` (`""` = no HepMC3), `--tier T0|T1` (tagged final-state fidelity,
+default T1), `--no-hadronize` (skip PYTHIA, print T0 bookkeeping only). Each
+run prints sigma per spin category, the far-forward tag fraction, the PYTHIA
+veto/retry/no-surrogate counters, the observed whole-record conservation
+residual, and events/s.
+
+**No hook of any kind is needed for a tagged channel any more.** The plain
+`cfg.hadronizer = bridge.hadronize` binding conserves the whole record,
+because the pipeline resolves the struck cluster before the bridge sees the
+event -- section 1a.
 
 ## 1. What a T2 record contains
 
@@ -31,11 +38,12 @@ the order each tier appended them.
 | `BeamElectron`, `BeamIon` | `Beam` (4) | T0 | incoming at the primary vertex |
 | `ScatteredElectron` | `Final` (1) | T0 | outgoing, untouched by the bridge |
 | `VirtualPhoton` | `Intermediate` (3) | T0 | documentation only (optional) |
-| `Spectator`, `PartnerSpectator` | `Final` (1) | T1 (tagged) | outgoing; **never read or written by the bridge** -- bit-identical before/after `hadronize()` |
-| `IntactRecoil` | `Final` (1) | T1 (coherent) | outgoing; same "never touched" guarantee |
+| `Spectator` | `Final` (1) | T0 (tagged) | the tagged cluster; outgoing, **never read or written by the bridge** -- bit-identical before/after `hadronize()` |
+| `PartnerSpectator` | `Final` (1) | **T1 (tagged)** | the struck cluster's non-struck nucleon(s) / bound remnant; same "never touched" guarantee |
+| `IntactRecoil` | `Final` (1) | T0 (coherent) | outgoing; same "never touched" guarantee |
 | `HadronicX` (pdg 92) | `Final` -> **demoted to `Intermediate` (3) by `hadronize()`** | T0 | documentation only once real hadrons exist, so a status-1 sum is never double-counted |
-| `StruckNucleon` | `Intermediate` (3) | T0 (inclusive, explicit) or **appended by `hadronize()`** (implicit target) | documentation: what nucleon 4-vector/pdg actually went into PYTHIA |
-| `StruckCluster` | `Intermediate` (3) | T1 (tagged) | documentation; read but not modified by the bridge |
+| `StruckNucleon` | `Intermediate` (3) | T0 (inclusive) / **T1 (tagged)**, or appended by `hadronize()` when the target was implicit | documentation: what nucleon 4-vector/pdg actually went into PYTHIA.  Off shell on a tagged event (it is P_X minus the partners) and carrying a +-1 `pol` label |
+| `StruckCluster` | `Intermediate` (3) | T0 (tagged) | documentation; at T1 it equals the struck nucleon plus every partner spectator, exactly |
 | `Hadron` | `Final` (1) | T2 | PYTHIA's showered/hadronized final state |
 
 `lipolgen::HepMC3Writer` (`docs/HEPMC3_CONVENTION.md`) writes this as one
@@ -47,6 +55,61 @@ unset), spin/kinematics as named `GenEvent` attributes (`spin_J`, `spin_M`,
 `total_charge_final()` sum exactly the `Status::Final` rows of the table
 above -- that is the identity every conservation check in `test_t2.cpp` is
 against.
+
+## 1a. The tagged chain at T1 (the struck cluster is resolved)
+
+`PipelineConfig::tier` is `Tier::T1` by default on the three tagged
+channels. Before the T2 hook runs, `ClusterBreakup` (`breakup.hpp`) turns the
+off-shell struck cluster `P_X = P_ion - p_spec` into
+
+    P_X  ->  p_N,struck (OFF shell, Role::StruckNucleon, status 3)
+           + partner spectator(s) (ON shell, Role::PartnerSpectator, status 1)
+
+| channel | struck cluster | what T1 writes | partners/event |
+|---|---|---|---|
+| ⁶Li α tag | embedded d | struck p or n (`F2p : F2n`) + the other nucleon | 1 |
+| ⁷Li α tag | quasi-free t | struck n + d, **or** struck p + two n | 1 or 2 |
+| d control | already a nucleon | the same nucleon, relabelled `StruckNucleon` | 0 |
+
+and `X = k + p_N,struck - k'` becomes the per-nucleon remainder, so
+
+    k + P_ion = k' + p_spec + sum(p_partner) + X            (exact)
+
+with **no caller-side hook**. The bridge's first-priority branch takes
+`Role::StruckNucleon` verbatim; its `Role::StruckCluster` branch is
+deprecated, warns once and counts into
+`PythiaBridgeStats::n_cluster_fallback`.
+
+Measured, 300 events per channel at 10 × 99.5 GeV/u with the plain binding:
+
+| channel | hadronized | worst 4p residual (rel) | worst charge | no-surrogate |
+|---|---|---|---|---|
+| ⁶Li α | 300/300 | 1.4 × 10⁻¹³ | 0 | 0 |
+| ⁷Li α | 300/300 | 5.9 × 10⁻¹⁴ | 0 | 0 |
+| d control | 300/300 | 2.2 × 10⁻¹³ | 0 | 0 |
+
+The **"no surrogate" tail is gone** (it was ~5 % for ⁶Li and ~12 % for ⁷Li
+with the whole-cluster hook, and the reason is mechanical: the PYTHIA-side
+surrogate now has to reach one nucleon's momentum inside its `headroom`
+instead of a whole cluster's). `generate_full --tier T0` still reproduces the
+old record and prints its honest residual: 0.186 relative, charge wrong by 1.
+
+Two identities move at T1 and one does not:
+
+* `hfs_sigma_empz_exact(k, p_N, k')` -- exact for any target -- still holds
+  at 1.5 × 10⁻¹³ GeV.
+* the closed-form collinear `hfs_sigma_empz_truth` is now approximate at the
+  **1.4 %** level (⁶Li α; 0.7 % for ⁷Li and the d control), because the
+  struck nucleon carries the full internal Fermi p_T where the T0 cluster
+  carried only the spectator's recoil. That is the formula's assumption
+  failing, not the record.
+* `Sum p_T,hadrons = p_N,T - p_T,e'` is unchanged, 1.4 × 10⁻¹² GeV.
+
+Mean struck-nucleon virtuality `p_N² - M_N²` over 50 k events:
+**-0.057 GeV²** (⁶Li α), **-0.124** (⁷Li α), **-0.035** (d control) -- a
+Fermi-motion scale, not a nuclear-mass one. The timelike-X rejection is
+redone on the (smaller) T1 X and fires on 0.024 % / 0.022 % / 0.004 % of
+draws respectively.
 
 ## 2. What `abconv` / `npsim` expect
 
@@ -93,29 +156,27 @@ and `tools/fullsim/README.md` (read-only references for this file):
    PythiaBridge tier; the 100-event `abconv`/`npsim` pass itself needs the
    `eic_xl`/`jug_xl` containers of `tools/fullsim/README.md`, unavailable
    here.
-2. **Tagged channels: the v0 `NucleonInCluster` default does not conserve
-   the whole record.** `docs/PYTHIA_BRIDGE.md` section 6 documents v0 as
-   "no Fermi smearing"; measured here, it is worse than that -- feeding
-   PYTHIA only `p_cluster/A_c` (one nucleon's worth) with no particle
-   carrying the rest of the cluster's momentum, plus a stochastic Z_c:N_c
-   flavour draw that ignores the cluster's own integer charge, breaks
-   `spectator + hadrons + e'` vs `beam_e + beam_ion` by **~15-20% in
-   momentum on every event and by one charge unit on about half of them**
-   (300-event 6Li-alpha measurement). `generate_full`/`test_t2.cpp` install
-   `set_nucleon_in_cluster` — a public extension point named for exactly
-   this, not a source patch — to hand PYTHIA the cluster's own off-shell
-   four-vector *whole* and its exact charge, which restores exact
-   conservation (measured ~1e-13 relative, exact charge) at the cost of a
-   ~5-15% "no surrogate" tail (the whole off-shell cluster sometimes will
-   not fit the PYTHIA-side surrogate's `headroom`) and losing the v0
-   default's isospin sampling (this hook always assigns the cluster's own
-   net charge, e.g. always "proton" for the Z=1 embedded deuteron). The
-   complete fix is upstream of this file: the cluster's non-struck
-   nucleon(s) should be emitted as `Role::PartnerSpectator` (the role
-   already exists in `event.hpp`; nothing fills it for the alpha-tag
-   channels today), so the bridge can strike one real nucleon and let the
-   partner carry the rest on shell, the same way the deuteron-control
-   channel's own spectator already works.
+2. **CLOSED (2026-08-30) -- tagged conservation.** The complete fix named
+   in the previous revision of this file ("the cluster's non-struck
+   nucleon(s) should be emitted as `Role::PartnerSpectator`") is what the T1
+   tier does; section 1a has the measurements. `set_nucleon_in_cluster` and
+   the whole-cluster workaround are gone from `generate_full` and
+   `test_t2.cpp`, and the bridge's cluster branch is deprecated. What remains
+   OPEN inside T1 is physics, not bookkeeping:
+   * **FSI.** No final-state interaction of any fragment with any other, no
+     nuclear transparency, no formation-time physics. The partners are put on
+     shell and never touched again.
+   * **Triton remnant realism.** `t* -> n + d` / `t* -> p + (nn)` is a
+     sequential two-body model with the AME2020 separation energies and an
+     isotropic S-wave relative direction, and the unbound nn pair is split at
+     its virtual-state pole `1/|a_nn|` = 10.44 MeV. plans/05 5.D asked for
+     exactly this ("crude, flagged"); a Faddeev/AV18 three-body triton wave
+     function with a correlated (p, n, n) momentum distribution is the
+     replacement. Conservation does not depend on it -- the struck nucleon
+     absorbs the whole difference -- so what the crudeness costs is the
+     SHAPE of the partner spectra.
+   * **No tensor structure in the triton breakup** (it is isotropic), where
+     the deuteron's D wave is fully correlated with m_S.
 3. **Coherent: PythiaBridge v0 has no coherent-diffractive target at all.**
    A coherent event carries neither `Role::StruckNucleon` nor
    `Role::StruckCluster` (the diffractive system X is not a struck
@@ -137,9 +198,9 @@ and `tools/fullsim/README.md` (read-only references for this file):
    implements) -- both out of this file's scope (`src/` is owned
    elsewhere). `generate_full --channel coherent` prints the residual
    plainly rather than hiding it.
-4. **7Li-alpha's "no surrogate" tail is larger than 6Li's** (measured ~12%
-   at 2000 events vs ~5-7% for 6Li, both with the whole-cluster hook): the
-   triton cluster's off-shell four-vector, fed whole, more often exceeds
-   `PythiaBridgeOptions::headroom` (default 1.5x the nominal per-nucleon
-   energy) than the lighter deuteron's does. A larger `headroom` would
-   trade this for a slower `init()`; not tuned here.
+4. **CLOSED (2026-08-30) -- the "no surrogate" tail.** It was ~12 % for
+   7Li-alpha and ~5-7 % for 6Li with the whole-cluster hook, because a whole
+   off-shell cluster fed to the surrogate exceeded
+   `PythiaBridgeOptions::headroom`. At T1 the surrogate is handed one
+   nucleon, and the tail is **0 in 300 events on each of the three tagged
+   channels**. `headroom` was not touched.

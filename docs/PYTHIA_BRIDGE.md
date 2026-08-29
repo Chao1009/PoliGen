@@ -255,9 +255,17 @@ never touched — no recoil correction, the BeAGLE light-nucleus rule
 
 | the event contains | what the bridge uses |
 |---|---|
-| `Role::StruckNucleon` | its four-vector and pdg, as given (may be off shell and moving) |
-| `Role::StruckCluster` | **v0**: an on-shell nucleon carrying `p_cluster/A_c` of the cluster three-momentum, flavour drawn `Z_c : N_c`, **no Fermi smearing at all**.  Override with `set_nucleon_in_cluster(...)` — the hook receives `(p_cluster, A_c, Z_c, Rng&)` and returns the nucleon four-vector plus its pdg. |
-| neither (inclusive T0) | a nucleon at rest in the ion rest frame, `p_N = P_ion/A` — mass `ion.mass_per_nucleon()`, *not* `m_p`: ⁶Li is bound by ~5 MeV/nucleon, so `m_ion/A = 0.9338` against `m_p = 0.9383`.  Flavour p : n = Z : N by default (`NucleonChoice::ByZN`), forced with `NucleonChoice::Proton/Neutron`, or replaced entirely with `set_nucleon_chooser(...)`. |
+| `Role::StruckNucleon` | its four-vector and pdg, as given (may be off shell and moving) — **the only branch a `Pipeline` event ever takes** |
+| `Role::StruckCluster` | **DEPRECATED** (2026-08-30, superseded by the T1 tier).  `p_cluster/A_c` on shell, flavour `Z_c : N_c`, no Fermi smearing, and **nothing carries the rest of the cluster**, so the whole record does not conserve: 0.186 relative and one charge unit wrong on half the events.  Warns once per bridge and counts into `PythiaBridgeStats::n_cluster_fallback`.  `set_nucleon_in_cluster(...)` still overrides it. |
+| neither (inclusive T0) | a nucleon at rest in the ion rest frame, `p_N = P_ion/A`, on shell at the FREE `M_NUCLEON` (docs/CONVENTIONS.md).  Flavour `Z F2p : N F2n` by default (`NucleonChoice::ByStructureFunctions`), forced with `NucleonChoice::Proton/Neutron`, or replaced entirely with `set_nucleon_chooser(...)`. |
+
+**Since the T1 tier, the cluster branch is unreachable from `Pipeline`.**
+`PipelineConfig::tier` defaults to `Tier::T1`, which resolves the tagged
+struck cluster into a struck NUCLEON plus its on-shell partner spectator(s)
+(`breakup.hpp`) before the hadronizer hook runs, so `Role::StruckNucleon` is
+always present and the whole record conserves with no hook at all
+(`docs/T2_CHAIN.md` §1a).  A non-zero `n_cluster_fallback` on a pipeline run
+means the run is at `Tier::T0`.
 
 When the target was implicit the bridge **appends** the nucleon it used as a
 `Status::Intermediate`, `Role::StruckNucleon` particle, so the record says
@@ -388,8 +396,14 @@ exact for any target and is checked at rtol 10⁻¹⁰.
 - **Spin in the hard process.**  `SigmaProcess` is helicity-averaged (survey
   §5); the polarized cross section lives entirely in the core generator's
   weight.  SPINUP is carried, not consumed.
-- **The `NucleonInCluster` v0 has no Fermi smearing.**  `p_cluster/A_c`,
-  on shell.  The hook exists so the cluster wave function (P4) can replace it.
+- **The `NucleonInCluster` v0 has no Fermi smearing** — and is now
+  DEPRECATED and unreachable from `Pipeline`.  What replaced it is not a
+  better hook but a better record: `breakup.hpp` (tier T1) draws the internal
+  relative momentum from the cluster's own wave function, emits the partner
+  spectator(s) on shell and hands the bridge a real struck nucleon.  Fermi
+  smearing therefore reaches the hard process the same way it does on the
+  inclusive channel — through `Role::StruckNucleon`'s four-vector — and the
+  hook is left only for a caller who builds a record by hand.
 - **MPI / multiple scattering**: absent by construction with a lepton beam.
 - **Charm/bottom as massive initiators**: the *incoming* parton is always
   massless and collinear (the standard collinear-factorisation statement); only

@@ -272,21 +272,21 @@ TEST_CASE("the polarized-EMC valence transfer names its unpolarized baseline") {
   CHECK_CLOSE(emc_valence_depletion(EmcBaseline::LegacyTable),
               0.05834952032138685, kRtol);
   CHECK(emc_valence_depletion(EmcBaseline::Epps21)
-        == 0.029788812318099069);
-  // EPPS21 is HALF as deep as the digitized CBT curve, which is the whole
-  // content of the change: both transferred curves shrink by that factor
+        == 0.031052077003862335);
+  // EPPS21 is just over HALF as deep as the digitized CBT curve, which is the
+  // whole content of the change: both transferred curves shrink by that factor
   CHECK_CLOSE_AT(emc_valence_depletion(EmcBaseline::Epps21)
                      / emc_valence_depletion(EmcBaseline::LegacyTable),
-                 0.5105, 0.0, 5e-4);
+                 0.5322, 0.0, 5e-4);
 
   // --- both scales, from the SAME code path, against the Python
   CHECK(cbt_valence_scale(EmcBaseline::LegacyTable) == 1.0);
   CHECK_CLOSE(tmt_valence_scale(EmcBaseline::LegacyTable),
               0.39700861081338656, kRtol);
   CHECK_CLOSE(cbt_valence_scale(EmcBaseline::Epps21),
-              0.51052368818155602, kRtol);
+              0.5321736465497698, kRtol);
   CHECK_CLOSE(tmt_valence_scale(EmcBaseline::Epps21),
-              0.20268230023228612, kRtol);
+              0.2112775201282183, kRtol);
 
   // --- the DEFAULT is the Python's default
   CHECK(EMC_BASELINE_DEFAULT == EmcBaseline::Epps21);
@@ -296,16 +296,16 @@ TEST_CASE("the polarized-EMC valence transfer names its unpolarized baseline") {
   // --- the transferred curves themselves, both baselines, both camps
   struct Row { double x, cbt23_legacy, cbt23_epps, tmt_legacy, tmt_epps; };
   const Row rows[5] = {
-      {0.10, 0.9270243359682393,  0.96274419485100737,
-             0.97054820641514639, 0.98496416171549861},
-      {0.30, 0.93043464976958523, 0.96448524083072695,
-             0.97026439476843063, 0.98481926914686835},
-      {0.45, 0.91831399964551574, 0.95829736182622882,
-             0.95204010409497919, 0.97551533705776527},
-      {0.50, 0.91428491634172282, 0.95624041935798576,
-             0.94002069672587729, 0.96937914487793475},
-      {0.70, 0.90516809929078013, 0.9515860682926619,
-             0.95284377939191101, 0.97592563233445528}};
+      {0.10, 0.9270243359682393,  0.9611642747628271,
+             0.9705482064151464,  0.9843265316105173},
+      {0.30, 0.9304346497695852,  0.9629791538943683,
+             0.9702643947684306,  0.9841754945315513},
+      {0.45, 0.9183139996455157,  0.9565288633192883,
+             0.9520401040949792,  0.9744770073080777},
+      {0.50, 0.9142849163417228,  0.954384691365256,
+             0.9400206967258773,  0.9680805954590955},
+      {0.70, 0.9051680992907801,  0.9495329615903287,
+             0.952843779391911,   0.9749047021214879}};
   for (const Row& r : rows) {
     CHECK_CLOSE(cbt_polarized_emc_ratio(r.x, EmcMode::kDigitized, 23,
                                         EmcBaseline::LegacyTable),

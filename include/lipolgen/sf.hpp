@@ -291,9 +291,14 @@ enum class EmcMode { kDigitized, kConstant };
 ///                then referenced to itself, so its scale is exactly 1, and
 ///                TMT's is 0.397.
 ///   Epps21       the default since 2026-08-29 and the default HERE: the
-///                EPPS21nlo_CT18Anlo_Li6 / CT18NLO F2 ratio at Q2 = 5,
-///                <1 - R> = 0.0298 -- half as deep, so BOTH transferred
-///                curves shrink by a factor two (CBT 0.5105, TMT 0.2027).
+///                EPPS21nlo_CT18Anlo_Li6 / CT18ANLO F2 ratio at Q2 = 5,
+///                <1 - R> = 0.03105 -- just over half as deep, so BOTH
+///                transferred curves shrink by that factor (CBT 0.5322,
+///                TMT 0.2113).  The denominator is EPPS21's OWN proton
+///                baseline, so the fit cancels and the ratio is the nuclear
+///                modification alone; it was CT18NLO until 2026-08-29, which
+///                mixed in the CT18A-vs-CT18 difference between two proton
+///                fits and made the depletion 4.2 % SHALLOWER (0.02979).
 ///
 /// The EPPS21 depletion is stored as DATA (`EMC_VALENCE_DEPLETION_EPPS21`)
 /// because computing it needs LHAPDF, which the core does not link.
@@ -306,10 +311,17 @@ inline constexpr EmcBaseline EMC_BASELINE_DEFAULT = EmcBaseline::Epps21;
 ///
 /// PROVENANCE: `polli_fastsim.polarized.valence_depletion(mode="epps21")` --
 /// the mean of 1 - R over 301 points of x in [0.35, 0.65], with
-/// R = F2(EPPS21nlo_CT18Anlo_Li6) / F2(CT18NLO) at Q2 = UNPOL_EMC_Q2 = 5 GeV2
-/// through `structure.NuclearF2Ratio`.  Transcribed at full double precision
-/// from that call on 2026-08-29; it is the ONLY copy in LiPolGen.
-inline constexpr double EMC_VALENCE_DEPLETION_EPPS21 = 0.029788812318099069;
+/// R = F2(EPPS21nlo_CT18Anlo_Li6) / F2(CT18ANLO) at Q2 = UNPOL_EMC_Q2 = 5
+/// GeV2 through `structure.NuclearF2Ratio`.  Transcribed at full double
+/// precision from that call on 2026-08-29; it is the ONLY copy in LiPolGen.
+///
+/// The free-nucleon denominator is CT18ANLO -- EPPS21's own proton baseline
+/// (the grid's SetDesc reads "EPPS21+CT18ANLO"), so taking the ratio against
+/// it cancels the proton fit and leaves the nuclear modification alone.  It
+/// was CT18NLO in the first transcription of this constant, giving
+/// 0.029788812318099069, 4.2 % shallower -- half the size of the ln-A isotope
+/// correction the same module carries as a systematic.
+inline constexpr double EMC_VALENCE_DEPLETION_EPPS21 = 0.031052077003862335;
 
 /// <1 - R_unpol> of a baseline over POLEMC_VALENCE_WINDOW.
 double emc_valence_depletion(EmcBaseline baseline);
@@ -335,7 +347,7 @@ double tmt_ratio_of_effects(double x);
 /// <1 - R_unpol,baseline>/<1 - R_unpol,table> over POLEMC_VALENCE_WINDOW, ONE
 /// code path for both camps.  On `LegacyTable` CBT is referenced to its own
 /// curve, so its scale is exactly 1 and TMT's is 0.397; on `Epps21` they are
-/// 0.5105 and 0.2027.
+/// 0.5322 and 0.2113.
 double cbt_valence_scale(EmcBaseline baseline = EMC_BASELINE_DEFAULT);
 double tmt_valence_scale(EmcBaseline baseline = EMC_BASELINE_DEFAULT);
 
@@ -491,6 +503,20 @@ class DeltaModel : public TensorSF {
 
 /// Legacy toy shape; `scale` is the peak Delta/F1.
 DeltaModel make_delta_toy(double scale = 1e-3);
+
+// `dilution` below is the money_delta convention (`polli_fastsim.delta_models`):
+// the suite folds the 2-of-6 per-nucleon dilution of 6Li into P_zz (their
+// PZZ = 0.8/3), while this library keeps P_zz as the whole-nucleus fill
+// polarization, so the same physics is expressed by a `dilution` multiplying
+// Delta (1/3 for 6Li).  That 1/3 is a COUNTING fraction -- two polarized
+// nucleons of six -- and NOT a polarization.  In particular it is not
+// `LI6().eff_pol_p`, which since 2026-08-29 is the cluster picture's
+// LI6_CLUSTER_POLARIZATION/3 (plans/04 #6): that is the VECTOR polarization of
+// the pair, rank 1, while Delta is rank 2 like b1, where the same wave function
+// transfers `LI6_B1_RANK2_TRANSFER`.  Whether Delta should carry that rank-2
+// transfer as b1 does (1/3 -> 0.3073) is open, and nothing published assumes
+// it.  Do not set dilution != 1 AND use a per-nucleon-normalized P_zz at the
+// same time.
 /// Interpretation A: Delta = dilution * A * alpha_s(Q2) * F1 * shape.
 DeltaModel make_moment_a(const std::function<double(double, double)>& f1_func,
                          double q2_ref, const std::string& variant = "mid_x",

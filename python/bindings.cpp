@@ -1711,18 +1711,68 @@ static void bind_spectator(py::module_& m) {
 // ------------------------------------------------------------------ tagged
 
 static void bind_tagged(py::module_& m) {
+  // ---- the VMC tabulated backend (cluster.hpp) --------------------------
+  py::enum_<ClusterWaveSource>(m, "ClusterWaveSource",
+      "Which family of cluster radial forms a channel is built from.  "
+      "`Hulthen` (the default everywhere) keeps every published number "
+      "bit-for-bit; `VmcAV18` swaps in the ANL VMC tables.")
+      .value("Hulthen", ClusterWaveSource::Hulthen)
+      .value("VmcAV18", ClusterWaveSource::VmcAV18);
+
+  m.def("data_dir", []() { return data_dir(); },
+        "$LIPOLGEN_DATA_DIR, else the compiled-in ${CMAKE_SOURCE_DIR}/data.");
+  m.def("data_path", &data_path, py::arg("relative"));
+
+  py::class_<VmcRadial, std::shared_ptr<VmcRadial>>(m, "VmcRadial",
+      "Tabulated, L-specific psi_L(k) [GeV], linearly interpolated and ZERO "
+      "outside the tabulated range.  Signed: the S-D interference term of "
+      "n_M(k, khat) goes as psi_0 psi_2.")
+      .def(py::init([](std::vector<double> k, std::vector<double> psi, int l,
+                       std::string prov) {
+        return VmcRadial(std::move(k), std::move(psi), l, std::move(prov));
+      }), py::arg("k_gev"), py::arg("psi"), py::arg("l"),
+          py::arg("provenance") = std::string())
+      .def("__call__", [](const VmcRadial& v, double k) { return v(k); },
+           py::arg("k"))
+      .def_property_readonly("l", &VmcRadial::l)
+      .def_property_readonly("k", [](const VmcRadial& v) {
+        return copy_array(v.k());
+      })
+      .def_property_readonly("psi", [](const VmcRadial& v) {
+        return copy_array(v.psi());
+      })
+      .def_property_readonly("provenance", &VmcRadial::provenance)
+      .def("norm2", &VmcRadial::norm2);
+
+  m.def("vmc_from_overlap_k", &vmc_from_overlap_k, py::arg("path"),
+        py::arg("column"), py::arg("l"));
+  m.def("vmc_from_overlap_r", &vmc_from_overlap_r, py::arg("path"),
+        py::arg("column"), py::arg("l"), py::arg("k_max_fm") = 5.0,
+        py::arg("nk") = 251);
+  m.def("vmc_from_momentum", [](const std::string& path, int block, int column,
+                                int l, const VmcRadial* sign_from,
+                                double node_max) {
+    return vmc_from_momentum(path, block, column, l, sign_from, node_max);
+  }, py::arg("path"), py::arg("block"), py::arg("column"), py::arg("l"),
+     py::arg("sign_from") = nullptr, py::arg("node_search_max_fm") = 3.0);
+  m.def("read_anl_momentum_norms", &read_anl_momentum_norms, py::arg("path"));
+
   py::class_<Wave>(m, "Wave")
-      .def(py::init([](int l, double prob, double beta) {
+      .def(py::init([](int l, double prob, double beta,
+                       std::shared_ptr<const VmcRadial> vmc) {
         Wave w;
         w.l = l;
         w.prob = prob;
         w.beta = beta;
+        w.vmc = std::move(vmc);
         return w;
       }), py::arg("l") = 0, py::arg("prob") = 1.0,
-          py::arg("beta") = BETA_DEFAULT)
+          py::arg("beta") = BETA_DEFAULT,
+          py::arg("vmc") = std::shared_ptr<const VmcRadial>())
       .def_readwrite("l", &Wave::l)
       .def_readwrite("prob", &Wave::prob)
       .def_readwrite("beta", &Wave::beta)
+      .def_readwrite("vmc", &Wave::vmc)
       .def("radial", [](const Wave& w, double k, double kappa) {
         return w.radial(k, kappa);
       }, py::arg("k"), py::arg("kappa"));
@@ -1743,8 +1793,13 @@ static void bind_tagged(py::module_& m) {
       .def_readwrite("label", &TaggedChannel::label)
       .def("validate", &TaggedChannel::validate);
   m.def("li6_alpha_channel", &li6_alpha_channel,
-        py::arg("beta") = BETA_DEFAULT, py::arg("p_d") = P_D_LI6);
-  m.def("li7_alpha_channel", &li7_alpha_channel, py::arg("beta") = BETA_DEFAULT);
+        py::arg("beta") = BETA_DEFAULT, py::arg("p_d") = P_D_LI6,
+        py::arg("source") = ClusterWaveSource::Hulthen);
+  m.def("li7_alpha_channel", &li7_alpha_channel, py::arg("beta") = BETA_DEFAULT,
+        py::arg("source") = ClusterWaveSource::Hulthen);
+  m.attr("VMC_P_D_LI6") = VMC_P_D_LI6;
+  m.attr("VMC_S_ALPHA_D_LI6") = VMC_S_ALPHA_D_LI6;
+  m.attr("VMC_S_ALPHA_T_LI7") = VMC_S_ALPHA_T_LI7;
   m.def("deuteron_channel", &deuteron_channel, py::arg("beta") = BETA_DEFAULT,
         py::arg("p_d") = P_D_DEUTERON);
 
@@ -1759,6 +1814,11 @@ static void bind_tagged(py::module_& m) {
       .def_property_readonly("c", [](const TaggedModel& t) {
         return copy_array(t.c());
       })
+      .def("radial_table", [](const TaggedModel& t, int l) {
+        return copy_array(t.radial_table(l));
+      }, py::arg("l"),
+         "The NORMALIZED radial table psihat_L(k) * sqrt(P_L) of wave L, on "
+         "the model's own k grid.")
       .def_property_readonly("m_struck_values", [](const TaggedModel& t) {
         return copy_array(t.m_struck_values());
       })
@@ -1817,6 +1877,20 @@ static void bind_tagged(py::module_& m) {
   m.def("azz_tensor_curve", [](const TaggedModel& t, std::size_t ic) {
     return move_array(azz_tensor_curve(t, ic));
   }, py::arg("model"), py::arg("ic"));
+  m.def("azz_tensor_curve_weighted",
+        [](const TaggedModel& t,
+           py::array_t<double, py::array::c_style | py::array::forcecast> w) {
+    const std::size_t want = t.nk() * t.nc();
+    if (static_cast<std::size_t>(w.size()) != want) {
+      throw std::runtime_error("azz_tensor_curve_weighted: weights must be an "
+                               "(nk, nc) table of the model's own grid");
+    }
+    const double* p = static_cast<const double*>(w.data());
+    return move_array(azz_tensor_curve_weighted(
+        t, std::vector<double>(p, p + want)));
+  }, py::arg("model"), py::arg("weights"),
+     "The ACCEPTANCE-WEIGHTED wave-function tensor asymmetry vs k; "
+     "`weights` is an (nk, nc) table such as `acceptance_weights`.");
   m.def("acceptance_weights", [](const TaggedModel& t, double p_u,
                                  const Optics& o, const std::string& pc,
                                  std::size_t n_phi, double theta_s,
@@ -2007,6 +2081,10 @@ static void bind_pipeline(py::module_& m) {
       .def_readwrite("pot_config", &PipelineConfig::pot_config)
       .def_readwrite("cluster_beta", &PipelineConfig::cluster_beta)
       .def_readwrite("p_d", &PipelineConfig::p_d)
+      .def_readwrite("cluster_wave", &PipelineConfig::cluster_wave,
+                     "ClusterWaveSource for the lithium alpha-tag channels; "
+                     "Hulthen by default (bit-compatible), VmcAV18 swaps in "
+                     "the ANL VMC tables and ignores cluster_beta / p_d.")
       .def_readwrite("struck", &PipelineConfig::struck)
       .def_readwrite("tier", &PipelineConfig::tier,
                      "Fidelity tier of the tagged final state; Tier.T1 by "

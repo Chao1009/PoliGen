@@ -70,6 +70,15 @@ OPTICS = {
     "tagging-legacy": _lipolgen.OpticsChoice.TaggingLegacyLevers,
 }
 
+#: cluster radial-form families.  "hulthen" is the DEFAULT and is
+#: bit-compatible with every published number; "vmc" swaps in the ANL VMC
+#: tables (see docs/CONVENTIONS.md and docs/open_items/vmc_reconciliation.md)
+#: and then ignores `cluster_beta` and `p_d` on the lithium alpha tags.
+CLUSTER_WAVES = {
+    "hulthen": _lipolgen.ClusterWaveSource.Hulthen,
+    "vmc": _lipolgen.ClusterWaveSource.VmcAV18,
+}
+
 #: Run-plan names accepted on the command line (aliases included).
 PLANS = ("tensor-thirds", "azz", "helicity-flip", "apar", "transverse-tensor",
          "cos2phi", "tensor-flip", "flip")
@@ -90,13 +99,17 @@ def make_config(isotope="6Li", config=1, channel="inclusive", events=0,
                 poisson=True, cluster_beta=None, p_d=None, coherent=None,
                 scenario=None, grid=None, n_sigma=10.0, pot_config="",
                 inclusive_b1=None, with_virtual_photon=True,
-                hadronize_coherent=None, apply_optics_lumi_fraction=None):
+                hadronize_coherent=None, apply_optics_lumi_fraction=None,
+                cluster_wave=None):
     """A `PipelineConfig` from plain values (the CLI's own constructor).
 
     `channel` is a key of `CHANNELS`; `optics` a key of `OPTICS`.  The isotope
     a channel implies wins over the `isotope` argument (a 6Li alpha tag is a
     6Li run whatever the caller said), which is `channel_isotope`'s rule.
-    `coherent` is a dict of `CoherentScenario` fields.
+    `coherent` is a dict of `CoherentScenario` fields.  `cluster_wave` is a
+    key of `CLUSTER_WAVES` ("hulthen", the default, or "vmc") or a
+    `ClusterWaveSource` directly; "vmc" replaces the lithium alpha-tag radial
+    forms with the ANL VMC tables and then ignores `cluster_beta` / `p_d`.
     """
     if channel not in CHANNELS:
         raise ValueError("unknown channel %r; know %s"
@@ -125,6 +138,9 @@ def make_config(isotope="6Li", config=1, channel="inclusive", events=0,
         cfg.cluster_beta = float(cluster_beta)
     if p_d is not None:
         cfg.p_d = float(p_d)
+    if cluster_wave is not None:
+        cfg.cluster_wave = CLUSTER_WAVES[cluster_wave] \
+            if cluster_wave in CLUSTER_WAVES else cluster_wave
     if scenario is not None:
         cfg.scenario = scenario
     if grid is not None:

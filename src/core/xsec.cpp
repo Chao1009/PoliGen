@@ -4,26 +4,40 @@
 #include <cmath>
 #include <stdexcept>
 #include <string>
+#include <utility>
 
 namespace lipolgen {
 
-double gamma_squared(double x, double q2, double m) {
-  return 4.0 * m * m * x * x / q2;
+std::pair<double, double> theta_q_cos_sin(double y, double gamma2) {
+  const double root = std::sqrt(1.0 + gamma2);
+  const double cos = (1.0 + 0.5 * gamma2 * y) / root;
+  const double sin =
+      std::sqrt(gamma2 * std::max(1.0 - y - 0.25 * gamma2 * y * y, 0.0)) / root;
+  return std::make_pair(cos, sin);
 }
 
-double epsilon_gamma(double y, double gamma2) {
-  return ((1.0 - y - 0.25 * gamma2 * y * y)
-          / (1.0 - y + 0.5 * y * y + 0.25 * gamma2 * y * y));
+CosynTensorSFs cosyn_tensor_sfs(double b1, double b2, double b3, double b4,
+                                double x, double gamma2) {
+  const double g = std::sqrt(gamma2);
+  const double onep = 1.0 + gamma2;
+  CosynTensorSFs o;
+  // Eq. (17a): the leading 2 multiplies b1 ALONE -- the large bracket opens
+  // before it.  (Applying it to the whole bracket gives 4 gamma^2 for the
+  // 5 gamma^2 of Table 1's second row and misses it by up to 2.5 %.)
+  o.f_t = -(2.0 * onep * b1 - (gamma2 / x) * (b2 / 6.0 - b3 / 2.0));
+  o.f_l = (2.0 * onep * x * b1
+           - onep * onep * (b2 / 3.0 + b3 + b4)
+           - onep * (b2 / 3.0 - b4)
+           - (b2 / 3.0 - b3)) / x;
+  o.f_lt = -(g / (2.0 * x)) * (onep * (b2 / 3.0 - b4)
+                               + (2.0 / 3.0 * b2 - 2.0 * b3));
+  o.f_tt = -(gamma2 / x) * (b2 / 6.0 - b3 / 2.0);
+  return o;
 }
 
-double depolarization_gamma(double y, double gamma2, double r) {
-  const double eps = epsilon_gamma(y, gamma2);
-  return (1.0 - (1.0 - y) * eps) / (1.0 + eps * r);
-}
-
-double eta_gamma(double y, double gamma2) {
-  const double eps = epsilon_gamma(y, gamma2);
-  return eps * std::sqrt(gamma2) * y / (1.0 - (1.0 - y) * eps);
+std::pair<double, double> cosyn_unpolarized_sfs(double f1, double f2, double x,
+                                                double gamma2) {
+  return std::make_pair(2.0 * f1, (1.0 + gamma2) * f2 / x - 2.0 * f1);
 }
 
 double density_min(double a1n, double a2n) {
@@ -55,9 +69,12 @@ InclusiveKernel::InclusiveKernel(Ion ion, Options options)
       b1_32_func_(std::move(options.b1_32_func)),
       b2_32_func_(std::move(options.b2_32_func)),
       delta_32_func_(std::move(options.delta_32_func)),
+      b3_func_(std::move(options.b3_func)),
+      b4_func_(std::move(options.b4_func)),
       g2_mode_(options.g2_mode),
       g2_scale_(options.g2_scale),
       target_mass_(options.target_mass),
+      tensor_gamma_(options.tensor_gamma),
       g2_npts_(options.g2_npts) {
   if (!g1_model_) {
     g1_model_ = std::make_shared<const ToyG1>(nf2_.base(), options.r_func);
@@ -98,6 +115,10 @@ SFTables InclusiveKernel::tables(double x, double q2, bool with_g2) const {
     t.b2 = (*b2f) ? (*b2f)(x, q2, t.f1) : 2.0 * x * t.b1;
     t.delta = (*df) ? (*df)(x, q2, t.f1) : 0.0;
   }
+  // b3, b4 are filled for EVERY spin (xsec.py fills them outside the rank-2
+  // branch) and read only by the finite-gamma tensor path.
+  t.b3 = b3_func_ ? b3_func_(x, q2, t.f1) : 0.0;
+  t.b4 = b4_func_ ? b4_func_(x, q2, t.f1) : 0.0;
 
   if (with_g2 || target_mass_) {
     t.has_g2 = true;
@@ -127,12 +148,7 @@ double InclusiveKernel::a_parallel(const SFTables& t, double x, double q2,
     throw std::runtime_error(
         "target_mass=true needs g2 in tables(); build them with this kernel");
   }
-  const double g2v = gamma_squared(x, q2);
-  const double r = resolve_r(r_func_, x, q2);
-  const double f1 = std::max(t.f1, 1e-30);
-  const double a1 = (t.g1 - g2v * t.g2) / f1;
-  const double a2 = std::sqrt(g2v) * (t.g1 + t.g2) / f1;
-  return depolarization_gamma(y, g2v, r) * (a1 + eta_gamma(y, g2v) * a2);
+  return a_parallel_exact(t.g1, t.g2, t.f1, y, x, q2, r_func_);
 }
 
 double InclusiveKernel::a_perp(const SFTables& t, double x, double q2,
@@ -153,6 +169,45 @@ std::pair<double, double> InclusiveKernel::tensor_moments(double m) const {
   if (j < 1.0 - 1e-9) return std::make_pair(0.0, 0.0);
   const double q_nn = (3.0 * m * m - j * (j + 1.0)) / 3.0;
   return std::make_pair(q_nn, 3.0 * q_nn);
+}
+
+TensorHarmonics InclusiveKernel::tensor_harmonics_gamma(
+    const SFTables& t, double x, double q2, double y,
+    const EventSpinState& state) const {
+  const std::pair<double, double> qc = tensor_moments(state.m);
+  const double pref = 1.5 * qc.first;
+  const double g2v = gamma_squared(x, q2);
+  const double eps = epsilon_gamma(y, g2v);
+  const std::pair<double, double> cs = theta_q_cos_sin(y, g2v);
+  const double c = cs.first, sn = cs.second;
+  const double ct = std::cos(state.theta_s), st = std::sin(state.theta_s);
+  const CosynTensorSFs f = cosyn_tensor_sfs(t.b1, t.b2, t.b3, t.b4, x, g2v);
+  const std::pair<double, double> fu = cosyn_unpolarized_sfs(t.f1, t.f2, x, g2v);
+  const double den = fu.first + eps * fu.second;
+  // the structure-function combination each alignment channel meets
+  const double lam_ll = f.f_t + eps * f.f_l;
+  const double lam_lt = std::sqrt(2.0 * eps * (1.0 + eps)) * f.f_lt;
+  const double lam_tt = eps * f.f_tt;
+  // harmonics of t_zz, t_xz, t_xx - t_yy in cos(n phi')
+  const double zz[3] = {
+      pref * (0.5 * sn * sn * st * st + c * c * ct * ct - 1.0 / 3.0),
+      -pref * 2.0 * sn * c * st * ct,
+      pref * 0.5 * sn * sn * st * st};
+  const double xz[3] = {
+      pref * c * sn * (ct * ct - 0.5 * st * st),
+      pref * (c * c - sn * sn) * st * ct,
+      -pref * 0.5 * c * sn * st * st};
+  const double tt[3] = {
+      pref * sn * sn * (ct * ct - 0.5 * st * st),
+      pref * 2.0 * c * sn * st * ct,
+      pref * 0.5 * st * st * (c * c + 1.0)};
+  const double scale = -TENSOR_LL_SIGN / std::max(den, 1e-30);
+  TensorHarmonics h;
+  double* out[3] = {&h.h0, &h.h1, &h.h2};
+  for (int n = 0; n < 3; ++n) {
+    *out[n] = scale * (zz[n] * lam_ll + xz[n] * lam_lt + tt[n] * lam_tt);
+  }
+  return h;
 }
 
 Amplitudes InclusiveKernel::amplitudes(const SFTables& t, double x, double q2,
@@ -188,14 +243,23 @@ Amplitudes InclusiveKernel::amplitudes(const SFTables& t, double x, double q2,
   const double st = std::sin(state.theta_s);
 
   Amplitudes out;
+  double a1_tensor = 0.0;
   if (j >= 1.0 - 1e-9 && j_ion >= 1.0 - 1e-9) {
     const std::pair<double, double> qc = tensor_moments(state.m);
-    // T_LL = Q_NN P_2(cos theta_S), one line for every spin
-    const double t_geo = TENSOR_LL_SIGN * qc.first * 0.5 * (3.0 * ct * ct - 1.0);
-    const double kern = tensor_kernel(t, x, y);
-    out.w_avg = out.w_avg + t_geo * kern / std::max(den, 1e-30);
-    out.a2 = -(1.0 - y) / (y * y) * qc.second * st * st * t.delta
-             / std::max(den, 1e-30);
+    if (tensor_gamma_) {
+      const TensorHarmonics h = tensor_harmonics_gamma(t, x, q2, y, state);
+      out.w_avg = out.w_avg + h.h0;
+      a1_tensor = a1_tensor + h.h1;
+      out.a2 = out.a2 + h.h2;
+    } else {
+      // T_LL = Q_NN P_2(cos theta_S), one line for every spin
+      const double t_geo =
+          TENSOR_LL_SIGN * qc.first * 0.5 * (3.0 * ct * ct - 1.0);
+      const double kern = tensor_kernel(t, x, y);
+      out.w_avg = out.w_avg + t_geo * kern / std::max(den, 1e-30);
+    }
+    out.a2 = out.a2 + (-(1.0 - y) / (y * y) * qc.second * st * st * t.delta
+                       / std::max(den, 1e-30));
   }
 
   const double helicity = state.lam_e * state.pe;
@@ -203,8 +267,9 @@ Amplitudes InclusiveKernel::amplitudes(const SFTables& t, double x, double q2,
   if (helicity != 0.0 && v != 0.0) {
     out.w_avg = out.w_avg + helicity * v * ct * a_parallel(t, x, q2, y);
   }
+  out.a1 = a1_tensor;
   if (with_perp && helicity != 0.0 && v != 0.0 && std::fabs(st) > 1e-12) {
-    out.a1 = helicity * v * st * a_perp(t, x, q2, y);
+    out.a1 = out.a1 + helicity * v * st * a_perp(t, x, q2, y);
   }
   return out;
 }

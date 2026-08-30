@@ -31,6 +31,7 @@
 /// Delta sector does not depend on it.
 
 #include <memory>
+#include <utility>
 
 #include "lipolgen/asymmetries.hpp"
 #include "lipolgen/beams.hpp"
@@ -40,21 +41,80 @@ namespace lipolgen {
 
 // --- finite-gamma (target-mass) kinematics, E143 PRD 58:112003 -----------
 //
-// The three factors below are the exact lab-frame ones written in (x, y):
-//   eps = 1/[1 + 2(1 + nu^2/Q^2) tan^2(theta/2)]
-//   D   = (1 - E' eps/E)/(1 + eps R)
-//   eta = eps sqrt(Q^2)/(E - E' eps)
-// At gamma -> 0 they collapse to the massless set the fast simulation uses.
+// `gamma_squared`, `epsilon_gamma`, `depolarization_d_gamma` and `eta_gamma`
+// live in `asymmetries.hpp` since 2026-08-29 -- ONE implementation for both
+// halves of the library, mirroring the move of the same block into
+// `polli_fastsim.asymmetries`.  The alias below is the name this module has
+// always used, exactly as `polligen.xsec` re-exports it.
+inline double depolarization_gamma(double y, double gamma2, double r) {
+  return depolarization_d_gamma(y, gamma2, r);
+}
 
-/// Target-mass parameter gamma^2 = 4 M^2 x^2/Q^2 (= Q^2/nu^2).  M is the FREE
-/// nucleon mass because x is per-nucleon.
-double gamma_squared(double x, double q2, double m = M_NUCLEON);
-/// Virtual-photon transverse polarization at finite gamma.
-double epsilon_gamma(double y, double gamma2);
-/// D_gamma = [1 - (1-y) eps]/(1 + eps R) with the finite-gamma eps.
-double depolarization_gamma(double y, double gamma2, double r);
-/// eta = eps gamma y/[1 - (1-y) eps], the A2 admixture in A_par.
-double eta_gamma(double y, double gamma2);
+// --- the exact finite-gamma tensor sector (Cosyn et al., plans/08 D2) -----
+//
+// Cosyn, Roldan Tomei, Sosa and Zec, EPJ A 61 (2025) 83 (arXiv:2410.12764)
+// decompose the tensor-polarized inclusive cross section (their Eq. 10) into
+// four structure functions whose GEOMETRY is explicit -- F[U T_LL, T],
+// F[U T_LL, L], F[U T_LT] and F[U T_TT] -- and give them in terms of b1..b4
+// in their Eqs. (17a)-(17e).  The two functions below are those equations and
+// Eq. (16) transcribed literally, plus the rest-frame angle theta_q of
+// Eq. (24).
+//
+// CONVENTION MAP.  Cosyn writes a deuteron with its own Bjorken variable x_d
+// and mass M_d, and plots against the rescaled x = 2 x_d.  This library is
+// per-nucleon throughout: every structure function is the target's divided by
+// A and x is the per-nucleon Bjorken variable, i.e. the target is treated as a
+// spin-1 object of mass M_NUCLEON with Bjorken variable x.  The map is
+// x_d -> x, M_d -> M_NUCLEON, b_i -> the per-nucleon b_i, under which Cosyn's
+// gamma = 2 x_d M_d/Q is exactly this program's `gamma_squared`, his tensor
+// Callan-Gross b2 = 2 x_d b1 is the default b2 = 2 x b1, and his F2 = 2 x_d F1
+// is `NuclearF2`'s F2 = 2 x (1 + R) F1 at R = 0.
+//
+// THE ANCHOR IS THE PAPER'S OWN TABLE 1, not a re-typing of Eqs. (17).  Both
+// rows of that table which retain finite gamma are closed-form functions of
+// (gamma^2, eps, theta_q), and both come out of this module exactly (1e-10 in
+// tests/test_xsec.cpp): the second row, b1/(F1 A_T) = -9(1 + eps gamma^2)/
+// (6 + 5 gamma^2 + 2 eps gamma^4) for a target polarized along q, and the
+// third row, the same quantity along the beam, which additionally exercises
+// F[U T_LT] and F[U T_TT] and the geometry of Eq. (22).  Two transcription
+// errors were caught by exactly that anchor and are recorded here so they are
+// not made again: the leading factor 2 of Eq. (17a) multiplies b1 ALONE and
+// not the whole bracket, and the incoming beam sits at +sin theta_q in the
+// photon frame, which is what makes both rows come out.  Eq. (22b) as printed
+// carries the opposite sign for T_LT cos phi_TL; it is the one place where the
+// paper is not consistent with itself, since its own Table 1, its Fig. 5 and
+// the axis triad of its Fig. 2 all require the frame this module uses.
+
+/// (cos theta_q, sin theta_q): Cosyn Eq. (24).  theta_q is the rest-frame
+/// angle between the virtual photon and the incoming electron -- zero for a
+/// massless target, O(gamma) otherwise.  It is what makes a spin axis
+/// transverse to the BEAM not transverse to q, and so what leaks the b-sector
+/// rate term into cos 2phi.
+std::pair<double, double> theta_q_cos_sin(double y, double gamma2);
+
+/// The four tensor structure functions of Cosyn Eqs. (17a)-(17e):
+/// (F_TLL_T, F_TLL_L, F_TLT, F_TTT).
+///
+/// At gamma = 0 this collapses to F_TLL_T = -2 b1,
+/// F_TLL_L = (2 x b1 - b2)/x and F_TLT = F_TTT = 0 -- b3 and b4 cancel
+/// identically -- which is exactly the b-sector of the massless
+/// Hoodbhoy-Jaffe-Manohar master formula (`InclusiveKernel::tensor_kernel`
+/// over `dphi`), for ANY b2 and not only at the tensor Callan-Gross point.
+struct CosynTensorSFs {
+  double f_t = 0.0;   ///< F[U T_LL, T]
+  double f_l = 0.0;   ///< F[U T_LL, L]
+  double f_lt = 0.0;  ///< F[U T_LT]
+  double f_tt = 0.0;  ///< F[U T_TT]
+};
+CosynTensorSFs cosyn_tensor_sfs(double b1, double b2, double b3, double b4,
+                                double x, double gamma2);
+
+/// Cosyn Eq. (16): (F_UU_T, F_UU_L) = (2 F1, (1+gamma^2) F2/x - 2 F1).
+/// F_UU_T + eps F_UU_L is the exact denominator of every tensor asymmetry; at
+/// gamma = 0 it is y^2/(1-y+y^2/2) times the massless D_phi, and
+/// F_UU_L/F_UU_T is R there.
+std::pair<double, double> cosyn_unpolarized_sfs(double f1, double f2, double x,
+                                                double gamma2);
 
 /// Spin configuration of one bunch crossing category / event.
 struct EventSpinState {
@@ -73,9 +133,22 @@ struct SFTables {
   double g1 = 0.0;
   double b1 = 0.0;
   double b2 = 0.0;
+  /// The higher-twist tensor slots of Cosyn Eqs. (17); zero unless a
+  /// `b3_func` / `b4_func` was given, and read ONLY by the `tensor_gamma`
+  /// path (they cancel identically at gamma = 0).
+  double b3 = 0.0;
+  double b4 = 0.0;
   double delta = 0.0;
   double g2 = 0.0;
   bool has_g2 = false;
+};
+
+/// The (constant, cos phi', cos 2phi') harmonics of the exact finite-gamma
+/// tensor rate shift (`InclusiveKernel::tensor_harmonics_gamma`).
+struct TensorHarmonics {
+  double h0 = 0.0;
+  double h1 = 0.0;
+  double h2 = 0.0;
 };
 
 /// Modulation amplitudes of W = 1 + w_avg + a_1 cos phi' + a_2 cos 2 phi'.
@@ -124,6 +197,23 @@ class InclusiveKernel {
     std::shared_ptr<const UnpolSF> f2_source;   ///< default: ToyF2
     std::shared_ptr<const PolSF> g1_model;      ///< default: ToyG1 on f2_source
     SFFunc3 b1_func, b2_func, delta_func;       ///< spin-1 rank-2 slots
+    /// Higher-twist tensor slots b3, b4 of Cosyn Eqs. (17); both default to
+    /// empty -> zero, and only the `tensor_gamma` path reads them.
+    SFFunc3 b3_func, b4_func;
+    /// `tensor_gamma` (DEFAULT FALSE) selects the tensor b-sector kernel:
+    /// false is the massless Hoodbhoy-Jaffe-Manohar one, bit for bit what
+    /// every published number was made on, and true the exact finite-gamma
+    /// Cosyn kernel of the header block above.  The two agree identically at
+    /// gamma = 0 -- for any b2, with b3 and b4 cancelling.
+    ///
+    /// It is off by default because the O(gamma^2) leakage of the rate sector
+    /// into cos 2phi is carried as a SYSTEMATIC of the Delta extraction rather
+    /// than as a correction the extraction subtracts (at most 0.109 % of the
+    /// published amplitude, and model-dependent through the unmeasured b3,
+    /// b4), and because switching it on would silently move every published
+    /// tensor number by O(gamma^2) with nothing on the analysis side to meet
+    /// it.
+    bool tensor_gamma = false;
     SFFunc3 b1_32_func, b2_32_func, delta_32_func;  ///< spin-3/2 rank-2 slots
     G2Mode g2_mode = G2Mode::kWandzuraWilczek;
     /// Multiplies g2 (the WW table, or nothing when `g2_mode` is kZero).
@@ -139,6 +229,7 @@ class InclusiveKernel {
 
   const Ion& ion() const { return ion_; }
   bool target_mass() const { return target_mass_; }
+  bool tensor_gamma() const { return tensor_gamma_; }
   double g2_scale() const { return g2_scale_; }
 
   /// Per-nucleon SF table at one (x, Q2).  g2 is filled when `with_g2` (a_perp
@@ -159,7 +250,58 @@ class InclusiveKernel {
   /// every spin.  Returns (0, 0) below spin 1.
   std::pair<double, double> tensor_moments(double m) const;
 
-  /// (w_avg, a_1, a_2).  a_1 is only computed when `with_perp` (needs g2).
+  /// (h0, h1, h2) of the EXACT finite-gamma b-sector: the constant, cos phi'
+  /// and cos 2phi' harmonics of the tensor rate shift.
+  ///
+  /// The massless master formula puts the whole b1/b2 sector in the
+  /// phi-independent term, because at gamma = 0 the virtual photon is along
+  /// the beam and a spin axis at theta_S to the beam is at theta_S to q.  At
+  /// finite gamma it is not: Cosyn Eq. (24) gives the rest-frame angle
+  /// theta_q between q and the beam, so the alignment tensor of Eq. (9)
+  /// acquires, in the PHOTON frame, components that depend on the
+  /// lepton-plane azimuth.  Writing the spin direction in that frame with the
+  /// axis at (theta_S, phi_S) to the beam and phi' = phi - phi_S,
+  ///
+  ///   N = (c s_S cos phi' + s c_S,  s_S sin phi',
+  ///        c c_S - s s_S cos phi'),      c, s = cos, sin theta_q,
+  ///
+  /// (the x axis is the standard one, along the incoming lepton's transverse
+  /// projection, so that the beam sits at (s, 0, c) -- the triad of Cosyn
+  /// Fig. 2, and the choice under which both finite-gamma rows of Table 1
+  /// come out exactly), and the three polarization parameters of Eq. (14) are
+  /// T_LL = t_zz, T_LT cos phi_TL = t_xz, T_TT cos 2phi_TT = t_xx - t_yy with
+  /// t_ij = (3 Q_NN/2)(N_i N_j - d_ij/3) -- Eq. (9) for a pure state,
+  /// normalized on Q_NN so that it is the same geometry `tensor_moments` uses
+  /// for every spin.  Each is a quadratic in cos phi', hence exactly a
+  /// constant plus cos phi' plus cos 2phi'.
+  ///
+  /// The three channels are combined with Eq. (17) and the exact denominator
+  /// of Eq. (16) as in Eq. (19) and multiplied by -TENSOR_LL_SIGN, so that the
+  /// constant harmonic is the same rate shift w_avg the massless path returns
+  /// (the program's w is half of Cosyn's A_T, and A_T carries the opposite
+  /// sign of b1 to the program's own master formula -- which is what
+  /// TENSOR_LL_SIGN is, and why the sign of this leakage was gated on D1).
+  ///
+  /// Two caveats, both documented rather than hidden.  (i) The cos phi'
+  /// harmonic's SIGN depends on which of the two directions in the lepton
+  /// plane defines phi' = 0; here it is the incoming lepton's transverse
+  /// projection, the convention Eq. (14b) is written in.  The constant and
+  /// the cos 2phi' harmonic are even under phi' -> phi' + pi and do not depend
+  /// on it -- but they DO depend on the frame, through t_xz, which is why the
+  /// Table 1 anchor and not Eq. (22b) fixes it.  (ii) Delta -- the gluon-
+  /// transversity term of `a_cos2phi`, which is not part of Cosyn's b1-b4
+  /// basis -- keeps its massless kinematic factor in both paths, so that
+  /// switching this on does not silently redefine the structure function the
+  /// whole programme extracts.
+  TensorHarmonics tensor_harmonics_gamma(const SFTables& t, double x, double q2,
+                                         double y,
+                                         const EventSpinState& state) const;
+
+  /// (w_avg, a_1, a_2).  The VECTOR a_1 is only computed when `with_perp` (it
+  /// needs g2); the tensor sector contributes to a_1 as well, but only on the
+  /// exact finite-gamma path (`tensor_gamma`, off by default) and only where
+  /// the axis is neither along the beam nor transverse to it, since every
+  /// cos phi' coefficient there carries sin theta_S cos theta_S.
   ///
   /// THROWS if `state.j` is not the kernel's own ion spin: the rank-2 branch
   /// is gated on `state.j` but `tensor_moments` reads `ion().spin`, so a
@@ -194,9 +336,11 @@ class InclusiveKernel {
   std::shared_ptr<const PolSF> g1_model_;
   SFFunc3 b1_func_, b2_func_, delta_func_;
   SFFunc3 b1_32_func_, b2_32_func_, delta_32_func_;
+  SFFunc3 b3_func_, b4_func_;
   G2Mode g2_mode_;
   double g2_scale_;
   bool target_mass_;
+  bool tensor_gamma_;
   int g2_npts_;
 };
 

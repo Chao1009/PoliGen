@@ -1,4 +1,5 @@
 #include "lipolgen/hepmc_writer.hpp"
+#include <cstdlib>
 
 #include <HepMC3/Attribute.h>
 #include <HepMC3/GenCrossSection.h>
@@ -127,7 +128,12 @@ void HepMC3Writer::write(const Event& ev) {
   for (std::size_t i = 0; i < n; ++i) {
     const Particle& p = ev.particles[i];
     gp[i] = std::make_shared<HepMC3::GenParticle>(to_fourvector(p.p), p.pdg, hepmc_status(p));
-    gp[i]->set_generated_mass(p.mass);
+    // Electrons are built massless in the core (standard DIS kinematics);
+    // Geant4/DD4hep assigns the PDG mass anyway and would otherwise nudge E by
+    // O(10 ppm) to keep E^2 - p^2 >= m_e^2.  Write the PDG mass as the
+    // generated mass so the downstream chain sees a consistent record.
+    const double gen_mass = (std::abs(p.pdg) == 11 && p.mass == 0.0) ? 0.51099895e-3 : p.mass;
+    gp[i]->set_generated_mass(gen_mass);
   }
 
   // Primary vertex: both beams incoming, status 4. HepMC3 requires at least

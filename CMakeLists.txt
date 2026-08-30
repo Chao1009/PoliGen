@@ -27,6 +27,14 @@ target_include_directories(lipolgen_core PUBLIC
 target_compile_options(lipolgen_core PRIVATE -Wall -Wextra -Wshadow -O2)
 set_target_properties(lipolgen_core PROPERTIES OUTPUT_NAME LiPolGenCore)
 
+# Where the packaged data tree (VMC tables, ...) lives.  `cluster.cpp`'s
+# `data_dir()` prefers $LIPOLGEN_DATA_DIR at RUNTIME and falls back to this,
+# so an in-tree build finds data/ with no environment set at all.
+set(LIPOLGEN_DATA_DIR "${CMAKE_SOURCE_DIR}/data" CACHE PATH
+    "Compiled-in default for the runtime data tree (override at run time with \$LIPOLGEN_DATA_DIR)")
+target_compile_definitions(lipolgen_core PRIVATE
+  LIPOLGEN_DATA_DIR_DEFAULT="${LIPOLGEN_DATA_DIR}")
+
 # ---------------------------------------------------------------- LHAPDF
 if(LIPOLGEN_WITH_LHAPDF)
   find_program(LHAPDF_CONFIG lhapdf-config HINTS ${LIPOLGEN_DEPS_PREFIX}/bin)

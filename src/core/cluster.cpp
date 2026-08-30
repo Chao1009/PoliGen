@@ -1,14 +1,373 @@
 #include "lipolgen/cluster.hpp"
 
+#include <algorithm>
+#include <cctype>
 #include <cmath>
+#include <cstdlib>
+#include <fstream>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 
 #include "lipolgen/constants.hpp"
+#include "lipolgen/numerics.hpp"
+
+#ifndef LIPOLGEN_DATA_DIR_DEFAULT
+#define LIPOLGEN_DATA_DIR_DEFAULT "data"
+#endif
 
 namespace lipolgen {
+namespace {
+
+/// GeV fm (CODATA hbar c).  The VMC tables are in fm / fm^-1 throughout.
+constexpr double kHbarCGeVfm = 0.1973269804;
+
+/// Spherical Bessel j_l for l = 0, 1, 2, with the small-x series where the
+/// closed forms lose all their significant digits to cancellation.
+double sph_bessel(int l, double x) {
+  const double x2 = x * x;
+  if (l == 0) {
+    if (std::fabs(x) < 1e-3) return 1.0 - x2 / 6.0 + x2 * x2 / 120.0;
+    return std::sin(x) / x;
+  }
+  if (l == 1) {
+    if (std::fabs(x) < 1e-2) return x / 3.0 * (1.0 - x2 / 10.0 + x2 * x2 / 280.0);
+    return std::sin(x) / x2 - std::cos(x) / x;
+  }
+  if (l == 2) {
+    if (std::fabs(x) < 1e-1) {
+      return x2 / 15.0 * (1.0 - x2 / 14.0 + x2 * x2 / 504.0);
+    }
+    const double x3 = x2 * x;
+    return (3.0 / x3 - 1.0 / x) * std::sin(x) - 3.0 / x2 * std::cos(x);
+  }
+  throw std::runtime_error("sph_bessel implemented for l <= 2");
+}
+
+bool is_number_start(const std::string& tok) {
+  if (tok.empty()) return false;
+  const char c = tok[0];
+  return std::isdigit(static_cast<unsigned char>(c)) || c == '-' || c == '+'
+         || c == '.';
+}
+
+/// Split a Fortran-output row into numeric fields.  The overlap files print
+/// `-0.3212E-01 (.1021E-01)-0.2882E-02` with NO space before a leading minus,
+/// so a plain whitespace split loses fields; parentheses are separators too.
+std::vector<double> split_numbers(const std::string& line) {
+  std::vector<double> out;
+  const char* p = line.c_str();
+  while (*p) {
+    if (*p == '(' || *p == ')' || std::isspace(static_cast<unsigned char>(*p))) {
+      ++p;
+      continue;
+    }
+    char* end = nullptr;
+    const double v = std::strtod(p, &end);
+    if (end == p) return out;   // a non-numeric token: the block has ended
+    out.push_back(v);
+    p = end;
+  }
+  return out;
+}
+
+std::string read_whole(const std::string& path) {
+  std::ifstream in(path);
+  if (!in) throw std::runtime_error("cannot open ANL table: " + path);
+  std::ostringstream ss;
+  ss << in.rdbuf();
+  return ss.str();
+}
+
+std::vector<std::string> split_lines(const std::string& text) {
+  std::vector<std::string> out;
+  std::istringstream in(text);
+  std::string line;
+  while (std::getline(in, line)) out.push_back(line);
+  return out;
+}
+
+std::string lstrip(const std::string& s) {
+  std::size_t i = 0;
+  while (i < s.size() && std::isspace(static_cast<unsigned char>(s[i]))) ++i;
+  return s.substr(i);
+}
+
+/// Rows of `x v0 (e0) v1 (e1) [ints...]` following `hdr`, stopping at the
+/// first line that does not start with a number.  `ncol` value columns.
+AnlTable read_pair_block(const std::vector<std::string>& lines, std::size_t hdr,
+                         std::size_t ncol) {
+  AnlTable t;
+  t.col.assign(ncol, {});
+  t.err.assign(ncol, {});
+  for (std::size_t i = hdr + 1; i < lines.size(); ++i) {
+    const std::string s = lstrip(lines[i]);
+    std::istringstream probe(s);
+    std::string tok;
+    probe >> tok;
+    if (!is_number_start(tok)) {
+      if (!t.x.empty()) break;
+      continue;
+    }
+    const std::vector<double> v = split_numbers(lines[i]);
+    if (v.size() < 1 + 2 * ncol) {
+      if (!t.x.empty()) break;
+      continue;
+    }
+    t.x.push_back(v[0]);
+    for (std::size_t c = 0; c < ncol; ++c) {
+      t.col[c].push_back(v[1 + 2 * c]);
+      t.err[c].push_back(v[2 + 2 * c]);
+    }
+  }
+  if (t.x.empty()) throw std::runtime_error("ANL block has no rows");
+  return t;
+}
+
+}  // namespace
+
+// -------------------------------------------------------------- data lookup
+
+const std::string& data_dir() {
+  static const std::string dir = [] {
+    const char* env = std::getenv("LIPOLGEN_DATA_DIR");
+    if (env != nullptr && *env != '\0') return std::string(env);
+    return std::string(LIPOLGEN_DATA_DIR_DEFAULT);
+  }();
+  return dir;
+}
+
+std::string data_path(const std::string& relative) {
+  const std::string& d = data_dir();
+  if (d.empty()) return relative;
+  if (d.back() == '/') return d + relative;
+  return d + "/" + relative;
+}
+
+// --------------------------------------------------------- the ANL readers
+
+std::vector<AnlTable> read_anl_overlap(const std::string& path) {
+  const std::vector<std::string> lines = split_lines(read_whole(path));
+  std::size_t k_hdr = lines.size(), r_hdr = lines.size();
+  for (std::size_t i = 0; i < lines.size(); ++i) {
+    const std::string s = lstrip(lines[i]);
+    if (k_hdr == lines.size() && s.rfind("k(fm-1)", 0) == 0) k_hdr = i;
+    if (r_hdr == lines.size() && s.rfind("rij", 0) == 0) r_hdr = i;
+  }
+  if (k_hdr == lines.size() || r_hdr == lines.size()) {
+    throw std::runtime_error("not an overlap_old raw output (no k(fm-1)/rij "
+                             "block): " + path);
+  }
+  return {read_pair_block(lines, k_hdr, 2), read_pair_block(lines, r_hdr, 2)};
+}
+
+std::vector<AnlTable> read_anl_momentum(const std::string& path) {
+  const std::vector<std::string> lines = split_lines(read_whole(path));
+  std::vector<AnlTable> out;
+  for (std::size_t i = 0; i < lines.size(); ++i) {
+    // The column rule ` ****  ***********  *********` introduces each block.
+    std::string bare;
+    for (char c : lines[i]) {
+      if (!std::isspace(static_cast<unsigned char>(c))) bare.push_back(c);
+    }
+    if (bare.size() < 5 || bare.find_first_not_of('*') != std::string::npos) {
+      continue;
+    }
+    AnlTable t;
+    std::size_t ncol = 0;
+    for (std::size_t j = i + 1; j < lines.size(); ++j) {
+      const std::vector<double> v = split_numbers(lines[j]);
+      if (v.size() < 3) break;
+      if (ncol == 0) {
+        ncol = (v.size() - 1) / 2;
+        t.col.assign(ncol, {});
+        t.err.assign(ncol, {});
+      }
+      if ((v.size() - 1) / 2 < ncol) break;
+      t.x.push_back(v[0]);
+      for (std::size_t c = 0; c < ncol; ++c) {
+        t.col[c].push_back(v[1 + 2 * c]);
+        t.err[c].push_back(v[2 + 2 * c]);
+      }
+    }
+    if (!t.x.empty()) {
+      out.push_back(std::move(t));
+      i += out.back().x.size();
+    }
+  }
+  if (out.empty()) {
+    throw std::runtime_error("no momentum block found in " + path);
+  }
+  return out;
+}
+
+std::vector<double> read_anl_momentum_norms(const std::string& path) {
+  std::vector<double> out;
+  for (const std::string& line : split_lines(read_whole(path))) {
+    const std::size_t at = line.find("/(2*PI)**3");
+    if (at == std::string::npos) continue;
+    const std::size_t eq = line.find('=', at);
+    if (eq == std::string::npos) continue;
+    out.push_back(std::strtod(line.c_str() + eq + 1, nullptr));
+  }
+  return out;
+}
+
+// ----------------------------------------------------------------- VmcRadial
+
+VmcRadial::VmcRadial(std::vector<double> k_gev, std::vector<double> psi, int l,
+                     std::string provenance)
+    : k_(std::move(k_gev)), psi_(std::move(psi)), l_(l),
+      provenance_(std::move(provenance)) {
+  if (k_.size() != psi_.size() || k_.size() < 2) {
+    throw std::runtime_error("VmcRadial: need >= 2 matching (k, psi) points");
+  }
+  for (std::size_t i = 1; i < k_.size(); ++i) {
+    if (!(k_[i] > k_[i - 1])) {
+      throw std::runtime_error("VmcRadial: k must be strictly increasing");
+    }
+  }
+}
+
+double VmcRadial::operator()(double k) const {
+  if (k_.empty() || k < k_.front() || k > k_.back()) return 0.0;
+  return np_interp(k, k_, psi_);
+}
+
+VmcRadial VmcRadial::scaled(double factor) const {
+  std::vector<double> p(psi_);
+  for (double& v : p) v *= factor;
+  return VmcRadial(k_, std::move(p), l_, provenance_);
+}
+
+double VmcRadial::norm2() const {
+  std::vector<double> y(k_.size());
+  for (std::size_t i = 0; i < k_.size(); ++i) y[i] = k_[i] * k_[i] * psi_[i] * psi_[i];
+  return trapezoid(y, k_);
+}
+
+std::vector<double> vmc_sign_steps(const std::vector<double>& x,
+                                   const std::vector<double>& amp,
+                                   double x_max) {
+  std::vector<double> nodes;
+  for (std::size_t i = 1; i < x.size(); ++i) {
+    if (x[i] > x_max) break;
+    const double a = amp[i - 1], b = amp[i];
+    if (a == 0.0 || b == 0.0 || (a > 0.0) == (b > 0.0)) continue;
+    nodes.push_back(x[i - 1] - a * (x[i] - x[i - 1]) / (b - a));
+  }
+  return nodes;
+}
+
+VmcRadial vmc_from_overlap_k(const std::string& path, int column, int l) {
+  const std::vector<AnlTable> b = read_anl_overlap(path);
+  const AnlTable& t = b[0];
+  if (column < 0 || static_cast<std::size_t>(column) >= t.col.size()) {
+    throw std::runtime_error("vmc_from_overlap_k: no such column");
+  }
+  std::vector<double> k(t.x.size());
+  for (std::size_t i = 0; i < t.x.size(); ++i) k[i] = t.x[i] * kHbarCGeVfm;
+  return VmcRadial(std::move(k), t.col[static_cast<std::size_t>(column)], l,
+                   path + " [k-space block, column " + std::to_string(column)
+                       + "]");
+}
+
+VmcRadial vmc_from_overlap_r(const std::string& path, int column, int l,
+                             double k_max_fm, std::size_t nk) {
+  const std::vector<AnlTable> b = read_anl_overlap(path);
+  const AnlTable& t = b[1];
+  if (column < 0 || static_cast<std::size_t>(column) >= t.col.size()) {
+    throw std::runtime_error("vmc_from_overlap_r: no such column");
+  }
+  const std::vector<double>& r = t.x;
+  const std::vector<double>& a = t.col[static_cast<std::size_t>(column)];
+  std::vector<double> k_fm = linspace(0.0, k_max_fm, nk);
+  std::vector<double> psi(nk), integrand(r.size());
+  for (std::size_t i = 0; i < nk; ++i) {
+    for (std::size_t j = 0; j < r.size(); ++j) {
+      integrand[j] = a[j] * r[j] * r[j] * sph_bessel(l, k_fm[i] * r[j]);
+    }
+    psi[i] = 4.0 * kPi * trapezoid(integrand, r);
+  }
+  std::vector<double> k_gev(nk);
+  for (std::size_t i = 0; i < nk; ++i) k_gev[i] = k_fm[i] * kHbarCGeVfm;
+  return VmcRadial(std::move(k_gev), std::move(psi), l,
+                   path + " [r-space block, column " + std::to_string(column)
+                       + ", Fourier-Bessel 4pi convention]");
+}
+
+VmcRadial vmc_from_momentum(const std::string& path, int block, int column,
+                            int l, const VmcRadial* sign_from,
+                            double node_search_max_fm) {
+  const std::vector<AnlTable> b = read_anl_momentum(path);
+  if (block < 0 || static_cast<std::size_t>(block) >= b.size()) {
+    throw std::runtime_error("vmc_from_momentum: no such block in " + path);
+  }
+  const AnlTable& t = b[static_cast<std::size_t>(block)];
+  if (column < 0 || static_cast<std::size_t>(column) >= t.col.size()) {
+    throw std::runtime_error("vmc_from_momentum: no such column");
+  }
+  const std::vector<double>& rho = t.col[static_cast<std::size_t>(column)];
+
+  // Nodes of the SIGNED reference amplitude, in fm^-1, plus an ANCHOR: the
+  // reference's own sign at the point where it is largest, which is the one
+  // place its Monte Carlo sign is beyond doubt.  Counting nodes from a
+  // k -> 0 seed instead would throw away exactly the information that
+  // matters -- both 6Li columns are node-free at low k, so the S-D RELATIVE
+  // phase lives entirely in the anchor.
+  std::vector<double> nodes;
+  std::size_t anchor_below = 0;
+  double anchor_sign = 1.0;
+  if (sign_from != nullptr && !sign_from->empty()) {
+    std::vector<double> ref_x(sign_from->k().size());
+    for (std::size_t i = 0; i < ref_x.size(); ++i) {
+      ref_x[i] = sign_from->k()[i] / kHbarCGeVfm;
+    }
+    nodes = vmc_sign_steps(ref_x, sign_from->psi(), node_search_max_fm);
+    std::size_t best = 0;
+    for (std::size_t i = 0; i < ref_x.size(); ++i) {
+      if (ref_x[i] > node_search_max_fm) break;
+      if (std::fabs(sign_from->psi()[i]) > std::fabs(sign_from->psi()[best])) {
+        best = i;
+      }
+    }
+    anchor_sign = sign_from->psi()[best] < 0.0 ? -1.0 : 1.0;
+    for (double n : nodes) {
+      if (ref_x[best] > n) ++anchor_below;
+    }
+  }
+
+  std::vector<double> k(t.x.size()), psi(t.x.size());
+  for (std::size_t i = 0; i < t.x.size(); ++i) {
+    k[i] = t.x[i] * kHbarCGeVfm;
+    std::size_t below = 0;
+    for (double n : nodes) {
+      if (t.x[i] > n) ++below;
+    }
+    const std::size_t flips = below > anchor_below ? below - anchor_below
+                                                   : anchor_below - below;
+    const double s = anchor_sign * ((flips % 2 == 0) ? 1.0 : -1.0);
+    psi[i] = s * std::sqrt(std::fmax(rho[i], 0.0));
+  }
+  std::string prov = path + " [block " + std::to_string(block) + ", column "
+                     + std::to_string(column) + ", psi = sqrt(rho)";
+  if (!nodes.empty()) {
+    prov += ", sign from " + sign_from->provenance() + " (nodes at";
+    for (double n : nodes) {
+      char buf[32];
+      std::snprintf(buf, sizeof buf, " %.3f", n);
+      prov += buf;
+    }
+    prov += " fm^-1)";
+  }
+  prov += "]";
+  return VmcRadial(std::move(k), std::move(psi), l, prov);
+}
+
+// ---------------------------------------------------------------- the waves
 
 double Wave::radial(double k, double kappa) const {
+  if (vmc) return (*vmc)(k);
   const double k2 = k * k;
   const double b2 = beta * beta;
   const double kap2 = kappa * kappa;

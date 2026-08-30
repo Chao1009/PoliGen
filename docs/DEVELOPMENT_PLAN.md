@@ -1,4 +1,4 @@
-# LiPolGen — development plan (2026-08-29)
+# LiPolGen — development plan (2026-08-30)
 
 **LiPolGen** = doubly polarized e + ⁶Li / e + ⁷Li DIS event generator for the
 EIC, C++ core with a Python interface, built as a **library on top of stock
@@ -48,7 +48,7 @@ Rules:
 - Core has **no PYTHIA/HepMC dependency**; everything heavy is C++, Python is
   orchestration + numpy views (zero-copy).
 - All conventions are **named constants with a single definition**
-  (`TENSOR_LL_SIGN = +1`, `LI6_EFF_POL`, rank-2 geometry `Q_NN`), mirrored
+  (`TENSOR_LL_SIGN = -1`, `LI6_CLUSTER_POLARIZATION`, rank-2 geometry `Q_NN`), mirrored
   from `polli_fastsim/asymmetries.py`. Flipping is a deliberate act with a test.
 - Every physics input (b₁ curves, Δ ansatz, EMC ratio, cluster radial
   functions) is a `Backend` interface with a *toy* implementation and a
@@ -71,7 +71,8 @@ lepton QED radiation (PYTHIA dipole-recoil limitation).
 ## 3. Work breakdown and agent assignment
 
 **Status 2026-08-30:** P0–P7 done and merged; the **T1 tier is done and default**
-(227 doctest cases / 15.1 M assertions, 118 pytest cases). Adversarial review done
+(252 doctest cases / 15.2 M assertions, 136 pytest cases), and the library is
+synced with `PolarizedLithiumSim` runs 15 and 16 (§6). Adversarial review done
 (`docs/code_review_2026-08-29.md`), all 12 findings fixed with tests. See §6 for what
 remains open.
 
@@ -116,7 +117,8 @@ scripts, docs, reference dumps.
 - Frame: head-on, ion along +z at p_u GeV/u, electron along −z; crossing angle
   25 mrad applied only in the lab transform (`reco.py`).
 - Beam energies γ-matched: ⁶Li 40.8 / 99.5 / 137.5 GeV/u, ⁷Li 40.8 / 99.5 / 117.9.
-- Populations ordered m = +J … −J. `TENSOR_LL_SIGN = +1` (plans/08 D1 pending).
+- Populations ordered m = +J … −J. `TENSOR_LL_SIGN = −1` — the literature
+  convention (Cosyn Eq. 27 / HERMES), decided 2026-08-29 (plans/08 D1).
 - Generator window looser than analysis: Q² ≥ 0.7, y ∈ [0.004, 0.985], W² ≥ 8.
 - PYTHIA: `WeakBosonExchange:ff2ff(t:gmZ)`, `SpaceShower:dipoleRecoil=on`,
   `PDF:lepton=off`, `TimeShower:QEDshowerByL=off`, `PhaseSpace:pTHatMinDiverge=0.5`,
@@ -128,11 +130,45 @@ scripts, docs, reference dumps.
 
 ## 6. Open items after day 1
 
-*Updated 2026-08-29 evening: every item below was investigated — see
+*Updated 2026-08-30: every item below was investigated — see
 `docs/OPEN_ITEMS_SOLUTIONS.md` for the ranked solutions. Closed since: VMC cluster
-wave functions (implemented), the ePIC chain gate (passed), tensor sign and ⁶Li
-polarization (decided by sources, awaiting the author), coherent-T2 and triton
+wave functions (implemented), the ePIC chain gate (passed), coherent-T2 and triton
 designs (prototyped), FSI model chosen.*
+
+**Run-15/16 sync, 2026-08-30 (the Python moved after the port was made;
+`PolarizedLithiumSim` `bb636b5..568ff40`).** Everything below is ported and
+gated at rtol 1e-12 against regenerated `validation/reference/*.json`
+(252 doctest cases / 15.2 M assertions, 136 pytest cases):
+
+- **D1 CLOSED — `TENSOR_LL_SIGN = −1`**, the literature convention.  The guard
+  test now asserts the literature relation itself (`A_zz(1 + εR) = −(2/3)b₁/F₁`)
+  rather than the constant, so flipping back fails it.  `A_zz^tag(k)` does NOT
+  move: it is a ratio of cluster-wave populations and carries no b₁.
+- **plans/04 #6 CLOSED — ⁶Li effective polarization = the cluster picture.**
+  `LI6_CLUSTER_POLARIZATION = 0.81123` whole-nucleus, built in `beams.hpp` from
+  the SAME `P_D_LI6` / `P_D_DEUTERON` the tagged sector uses (they moved out of
+  `tagged.hpp` into `beams.hpp`, mirroring `beams.py`); `LI6_NAIVE_ONE_THIRD`
+  keeps the retired Cloet value reachable.  ⁶Li g₁ is multiplied by 0.81123 and
+  the deuteron slot became exact (0.9325, was a rounded 0.93).
+- **D2 LANDED, off by default — the exact finite-γ tensor sector.**
+  `InclusiveKernel::Options::tensor_gamma`, `b3_func`, `b4_func`,
+  `theta_q_cos_sin`, `cosyn_tensor_sfs`, `cosyn_unpolarized_sfs`,
+  `tensor_harmonics_gamma`; `tests/test_tensor_gamma.cpp` is the full port of
+  `evgen/tests/test_tensor_gamma.py`, including both finite-γ rows of Cosyn's
+  Table 1 (1e-10), the γ → 0 identity for any b₂ with b₃/b₄ cancelling (1e-12),
+  and the leakage coefficient Δ_fake/(γ² b₁) = 0.14–0.16 that retires the
+  "γ² b₁ × 1.15" bound.  `xsec.json` gained a `kernel_tensor_gamma` block.
+- **The finite-γ kinematics moved to `asymmetries.hpp`** (one implementation for
+  both halves of the library), gaining `a_parallel_exact`, the
+  `a_parallel(..., g2)` overload and `depolarization_effective` — the divisor
+  that inverts A_par with no O(γ²) bias, which `fom.project_observables` now
+  uses on the Python side.
+- **`EMC_VALENCE_DEPLETION_EPPS21` = 0.031052** (was 0.029789): the free-nucleon
+  denominator is CT18ANLO, EPPS21's own proton baseline, not CT18NLO.  Both
+  transferred camps move (CBT 0.5322, TMT 0.2113).
+- Already in place before the sync and re-verified against the new Python: the
+  `target_mass = true` default, the per-configuration tagging optics
+  (`OpticsChoice::Tagging` vs `TaggingLegacyLevers`), and R34 = 4.56 m at 5×41.
 
 - **T1 tier: DONE** (`breakup.hpp` / `src/core/breakup.cpp`, default on the three
   tagged channels through `PipelineConfig::tier`). The struck cluster is resolved into
@@ -152,8 +188,21 @@ designs (prototyped), FSI model chosen.*
 - **Physics inputs still external** (unchanged from plans/04): VMC α+d / α+t overlaps,
   spin-3/2 rank-2 basis, b₁ for A > 2, coherent amplitude for polarized A > 2,
   tensor-sector radiative corrections, polarized nuclear PDFs. All are `Backend`s.
-- **Conventions awaiting the author**: `TENSOR_LL_SIGN = +1` (plans/08 D1),
-  ⁶Li effective polarization 1/3 vs 0.81 (plans/04 #6), `EmcBaseline` default = Epps21
-  (mirrors the Python default of 2026-08-29).
+- **Conventions, all decided**: `TENSOR_LL_SIGN = −1` (plans/08 D1, closed),
+  ⁶Li effective polarization = the cluster picture's 0.81123 (plans/04 #6,
+  closed; the 0.81–0.85 band whose top is the Wiringa VMC 0.848 is the
+  remaining uncertainty, not the convention), `EmcBaseline` default = Epps21
+  on the CT18ANLO denominator (mirrors the Python default).
+- **NOT ported, deliberately** (no C++ counterpart exists): the `reco.py` /
+  `recopseudo.py` reconstruction chain and its published seven-bin coherent |t|
+  window, `fom.project_observables`' D_eff extraction (the analytic divisor IS
+  ported, as `depolarization_effective`; the projection that uses it is
+  fastsim-only), `polarized.unpolarized_emc_ratio`'s grid modes and
+  `structure.NuclearF2Ratio` (they need LHAPDF at call time — the C++ carries
+  the one number they produce, `EMC_VALENCE_DEPLETION_EPPS21`), the
+  `ToyG1.g2_nucleus` per-grid g2 cache (a Python performance device; the C++
+  computes the quadrature per point), `miller_b1_q2_scale` /
+  `toy_b1(q2_evolve=True)` (off by default in the Python and used only by
+  `money_b1.py`), and the figure/report scripts of run 14's addendum.
 - **HepMC3 → abconv → npsim smoke test** not yet run (needs the eic-shell container).
 - Packaging: no `pyproject.toml` yet (PYTHONPATH route via `env.sh`).

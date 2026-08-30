@@ -6,7 +6,7 @@
 - Units: GeV, GeV², fm only where stated; angles rad; azimuth φ ∈ [0, 2π).
 - Frame: head-on. Ion +z, electron −z. Lab (25 mrad crossing) only in an explicit transform.
 - Spin: populations ordered m = +J … −J. Quantization axis n̂(θ_S, φ_S) in the head-on frame.
-  `TENSOR_LL_SIGN = +1.0` — one constant, defined once (`constants.hpp`), test-guarded.
+  `TENSOR_LL_SIGN = -1.0` — one constant, defined once (`constants.hpp`), test-guarded.
 - Structure-function inputs are `Backend` interfaces: toy implementation always available,
   table/LHAPDF implementations optional. No physics number is hard-coded in two places.
 - Randomness: counter-based stream keyed by (seed, run, bunch, event); never a global RNG.
@@ -14,6 +14,57 @@
 - No exceptions for control flow in the event loop; errors in setup throw `std::runtime_error`.
 
 ## Physics defaults that are a CHOICE, and where the single copy lives
+
+- **Tensor-sector sign.** `TENSOR_LL_SIGN = -1.0` since 2026-08-29 (author
+  decision, plans/08 D1): the LITERATURE convention, Cosyn et al. EPJ A 61
+  (2025) 83 Eq. (27) and HERMES,
+
+      A_zz(θ_S = 0) (1 + ε(y) R) = −(2/3) b₁/F₁   exactly, at every y,
+
+  with P_zz = n₊ + n₋ − 2n₀, i.e. b₁ > 0 means the m = 0 state has the LARGER
+  cross section.  It was `+1` — the repository's own transcription of
+  Hoodbhoy–Jaffe–Manohar — until that date, and setting the constant back is
+  the whole of the change: nothing else in the library knows the sign.  The
+  guard test (`tests/test_xsec.cpp`, "the program sign IS the literature
+  sign") is written against the LITERATURE relation itself, with no reference
+  to the constant, so flipping it back fails it.  What flips with it: A_zz at
+  fixed b₁, the by-product κ of the spin-state ratio, and any b-sector
+  subtraction built on κ — including the O(γ²) tensor leakage into cos 2φ.
+  What does NOT: |A_zz|, the whole Δ (cos 2φ) sector, and `A_zz^tag(k)`
+  (`azz_tensor_curve*`), which is a ratio of cluster-wave populations and
+  carries no b₁ at all.
+- **⁶Li effective polarization.** The CLUSTER PICTURE since 2026-08-29
+  (plans/04 #6, closed).  `LI6_CLUSTER_POLARIZATION = (1 − 1.5 P_D_LI6)
+  (1 − 1.5 P_D_DEUTERON) = 0.81123` whole-nucleus, and `LI6().eff_pol_p =
+  eff_pol_n = LI6_CLUSTER_POLARIZATION/3`, so `Z·P_p = N·P_n = 0.81123`.  The
+  two D-state probabilities live in **`beams.hpp`** — one source of truth, as
+  in `polli_fastsim.beams` — and `tagged.hpp` uses those names rather than
+  keeping copies, so the INCLUSIVE effective polarization and the TAGGED S/D
+  interference of `li6_alpha_channel` are the same wave function seen in two
+  experiments.  The deuteron slot carries `DEUTERON_VECTOR_POLARIZATION =
+  1 − 1.5 P_D_DEUTERON = 0.9325` verbatim, so per-nucleon
+  g₁(⁶Li)/g₁(d) = (1 − 1.5 P_D_LI6)/3 = 0.290 exactly (the deuteron's own D
+  state cancels between the two isoscalar ions).  The retired Cloet
+  convention stays reachable as `LI6_NAIVE_ONE_THIRD` — a whole-nucleus 1.0,
+  1.233× this one and above the 0.81–0.85 band whose top is the Wiringa VMC
+  0.848.
+- **Exact finite-γ tensor sector.** `InclusiveKernel::Options::tensor_gamma`
+  defaults to FALSE, matching `xsec.py`.  True replaces the massless
+  Hoodbhoy–Jaffe–Manohar b-sector with the Cosyn Eqs. (9)/(10)/(14)/(16)/(17)/
+  (24) kernel (`theta_q_cos_sin`, `cosyn_tensor_sfs`,
+  `cosyn_unpolarized_sfs`, `InclusiveKernel::tensor_harmonics_gamma`), which
+  carries the unmeasured `b3_func`/`b4_func` slots and leaks the rate sector
+  into cos 2φ at O(γ²).  The two paths agree IDENTICALLY at γ = 0 for any b₂,
+  with b₃ and b₄ cancelling, which is what makes the switch reversible; it is
+  off by default because that leakage is carried as a SYSTEMATIC of the Δ
+  extraction rather than as a correction the extraction subtracts, and
+  because switching it on would silently move every published tensor number.
+  Its size is Δ_fake/(γ² b₁) = 0.14–0.16 — the twist-4 Eq. (17e) term almost
+  alone, the leading-twist T_LL and twist-3 T_LT channels standing 3 : −3 : 1
+  and cancelling — which RETIRES the old bound "γ² b₁ × 1.15".
+  `tests/test_tensor_gamma.cpp` is the port of
+  `evgen/tests/test_tensor_gamma.py`, anchored on the two finite-γ rows of the
+  paper's own Table 1 at 1e-10.
 
 - **Struck nucleon mass.** The implicit struck nucleon of the per-nucleon
   subsystem is on shell at the FREE nucleon mass `M_NUCLEON` (0.9383), never at
@@ -33,7 +84,15 @@
   `NucleonChoice::ByStructureFunctions` applies it in the bridge (P1).
 - **Target mass.** `InclusiveKernel::Options::target_mass` defaults to TRUE,
   matching `xsec.py`.  Identities written against the massless
-  `A_par = D(y) g1/F1` must construct the massless kernel explicitly.
+  `A_par = D(y) g1/F1` must construct the massless kernel explicitly.  The
+  finite-γ kinematics themselves (`gamma_squared`, `epsilon_gamma`,
+  `depolarization_d_gamma`, `eta_gamma`, `a_parallel_exact`,
+  `depolarization_effective`) live in **`asymmetries.hpp`** — ONE
+  implementation for both halves of the library, mirroring their move into
+  `polli_fastsim.asymmetries`; `xsec.hpp` re-exports only the alias
+  `depolarization_gamma`, exactly as `polligen.xsec` does.  `M_NUCLEON`
+  (0.9383, the FREE nucleon mass) stays in `constants.hpp`, which is this
+  library's single-definition rule for a convention constant.
   `target_mass = true` with `G2Mode::kZero` is legitimate — it is the
   `g2_scale = 0` twist-3 variation, and `g2_scale` is the knob that spans it.
 - **Polarized-EMC baseline.** The CBT and TMT curves are quoted on nuclei that
@@ -44,7 +103,11 @@
   `polli_fastsim.polarized.POLEMC_BASELINE`) or `EmcBaseline::LegacyTable`
   (CBT on itself — the pre-2026-08-29 constants 1 and 0.397009).  Both scales
   come out of one code path; the EPPS21 depletion is the single stored number
-  `EMC_VALENCE_DEPLETION_EPPS21`, because computing it needs LHAPDF.
+  `EMC_VALENCE_DEPLETION_EPPS21` = 0.031052077003862335, because computing it
+  needs LHAPDF.  Its free-nucleon denominator is **CT18ANLO**, EPPS21's own
+  proton baseline, so the fit cancels and the ratio is the nuclear
+  modification alone; against CT18NLO it was 0.02979, 4.2 % shallower.  On
+  that baseline the two transferred camps are CBT 0.5322 and TMT 0.2113.
 - **Coherent |t| range.** `COHERENT_T_MAX_DEFAULT = 0.2 GeV²`.  The cos 2φ
   coefficient is linear and unbounded in |t| and crosses −1 at |t| = 0.245 for
   P_zz = −2, so a larger range makes the azimuthal weight negative;

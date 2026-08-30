@@ -56,6 +56,44 @@
   momentum.  `β = x/x_P` and `M_X²` are on the record.  X must be TIMELIKE on
   every channel — a hard check in `Pipeline::add_hadronic_x` and in
   `InclusiveGenerator`, never a clip.
+- **Cluster radial forms.** `ClusterWaveSource::Hulthen` is the DEFAULT
+  everywhere and is bit-compatible with every published number; the analytic
+  two-parameter forms and their `beta` band (0.20–0.40, default 0.30) are in
+  `cluster.hpp`.  `ClusterWaveSource::VmcAV18` replaces them, on the two
+  LITHIUM alpha-tag channels only, with the ANL VMC tables:
+
+  | wave | magnitude |ψ_L(k)| | sign |
+  |---|---|---|
+  | ⁶Li α+d, L = 0 and L = 2 | `momenta/li6_ad1.momentum` S/D blocks, ψ_L = √ρ_L | `overlap_old/li6.ad`, k-space amplitudes |
+  | ⁷Li α+t, L = 1 | `momenta/li7_at3.momentum` (3/2⁻ ground state) | none needed — a single wave has no interference |
+
+  Two files per wave because they carry different things.  A momentum density
+  is |ψ_L|² and has no phase, but the **S–D relative sign is observable**: the
+  interference term of `n_M(k, k̂)` goes as ψ₀ψ₂ and, at P_D ≈ 0.019, it
+  DOMINATES the tensor asymmetry (negating the D table flips A_zz^tag from
+  +0.45 to −0.52 at k = 0.20 GeV).  The signed `overlap_old` amplitudes supply
+  it.  `vmc_from_momentum` does not copy sign(A_L(k)) point by point — it
+  reduces the reference to its zero CROSSINGS below 3 fm⁻¹ (⁶Li: one S node at
+  0.678 fm⁻¹ = 0.134 GeV, one D node at 2.25 fm⁻¹ = 0.444 GeV, both confirmed
+  bin-for-bin by minima of the momentum file's own ρ_L) and anchors the phase
+  at the reference's largest |A|, where its Monte Carlo sign is beyond doubt.
+  Above ~3 fm⁻¹ both columns are at the noise floor and carry ~1e-4 of the
+  norm, so a noise-driven flip there would be all cost and no signal.  The
+  global phase is then fixed to ψ₀(k → 0) > 0, which is unobservable but makes
+  sign(ψ₂) read as the relative sign.
+  On the VMC path `beta` and `p_d` are IGNORED: the shape is the table's and
+  P_D is a property of the wave function (`VMC_P_D_LI6` = 0.01935, the file's
+  own 0.015861/(0.80362+0.015861), against the 0.0867 SCENARIO placeholder).
+  Tables are ZERO outside 5 fm⁻¹ = 0.9866 GeV, so the sampler cannot draw a
+  spectator past it.  The deuteron control channel is always Hulthen — the
+  deuteron IS the cluster and no d → p+n two-cluster table exists — which is
+  what keeps the Cosyn–Weiss tensor gate on the analytic path.
+  Reconciliation, provenance and every number:
+  `docs/open_items/vmc_reconciliation.md`, `data/vmc/README.md`.
+- **Where data files live at run time.** `data_dir()` (`cluster.hpp`) is
+  `$LIPOLGEN_DATA_DIR` when set and non-empty, else the compiled-in
+  `LIPOLGEN_DATA_DIR_DEFAULT`, which CMake sets to `${CMAKE_SOURCE_DIR}/data`.
+  Nothing resolves a data path against the working directory.
 - **Luminosity shares.** `Optics::lumi_fraction` multiplies COUNTS and never
   cross sections (`PipelineConfig::apply_optics_lumi_fraction`, default true) —
   the same share rule that keeps `Scenario::run_share` out of

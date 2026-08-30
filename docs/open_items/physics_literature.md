@@ -188,6 +188,20 @@ Both agents are in, and I verified their key claims directly. Here are the revis
 
 ## NEW — `plans/04` #15 (VMC two-cluster overlaps) is **closed for both isotopes**, and the β band is biased low
 
+> **CORRECTION, 2026-08-29 (`docs/open_items/vmc_reconciliation.md`).** The
+> data findings in this section stand and the files are now in `data/vmc/` and
+> wired into the code (`ClusterWaveSource::VmcAV18`).  **The comparison table
+> below and the "the β band is biased low" conclusion are WITHDRAWN.** The
+> β = 0.20/0.30/0.40 numbers quoted for ⁷Li (⟨k⟩ 0.1113/0.1333/0.1505,
+> P(k>0.3) 0.0231/0.0522/0.0836) are the **S-wave Hulthen** density; ⁷Li → α+t
+> is a pure **P wave** in the code, whose form is
+> `k/((k²+κ²)(k²+β²))`, and whose real numbers are ⟨k⟩ 0.2250/0.2813/0.3279
+> and P(k>0.3) 0.2133/0.3485/0.4581.  Against the right form, VMC α+t is
+> **softer** than every β in the band, not harder.  The VMC tail fractions
+> quoted here were also read at a grid-snapped 1.6 fm⁻¹ = 0.3157 GeV rather
+> than 0.300 GeV (at a true 0.300 the values are 0.212 for ⁷Li and 0.059 for
+> ⁶Li).  The ⟨k⟩ values, S_αd, S_αt and P_D = 1.94 % are all correct.
+
 The Argonne QMC momentum-distribution files exist for exactly what LiPolGen needs, with S/D decomposition and Monte-Carlo error bars. The ANL site now 403s curl behind Cloudflare, but the **Wayback mirror serves the raw ASCII** (I downloaded and integrated both):
 
 - **`momenta/li6_ad1.momentum`** — ⁶Li(1⁺) α–deuteron relative momentum distribution, VMC AV18+UX, 1M samples, K = 0–5 fm⁻¹ in 0.1 steps. Normalization 4π∫ρ_K K²dK/(2π)³ = **0.81971** (= S_αd). **It has a second block splitting S and D waves**: RHOKA0 with **0.80362** and RHOKA2 with **0.015861**, each with 1σ error bars → **α–d D-state fraction = 1.94%**. The S/D node at K ≈ 0.7 fm⁻¹ is clearly resolved.

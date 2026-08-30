@@ -140,6 +140,50 @@ inclusive b₁ double-counts the tagged tensor asymmetry
 for the k-integrated **rate** identity
 `Azz(σ₊₁, σ₀, σ₋₁) = tensor_dilution × ⟨Azz⟩_σ`.
 
+### Cluster radial forms: Hulthen (default) or the ANL VMC tables
+
+```cpp
+cfg.cluster_wave = ClusterWaveSource::VmcAV18;   // default: Hulthen
+```
+```bash
+python -m lipolgen.cli --channel tagged-alpha --cluster-wave vmc --events 400000
+```
+```python
+cfg = lipolgen.make_config(channel="tagged-alpha", events=400000,
+                           cluster_wave="vmc")     # or "hulthen" (default)
+```
+
+`Hulthen` is the two-parameter analytic family (`--cluster-beta`, `--p-d`) and
+stays the default, so every published number is unchanged bit-for-bit.
+`VmcAV18` swaps in the tabulated ANL variational-Monte-Carlo cluster wave
+functions for the two **lithium alpha tags** — magnitudes from
+`data/vmc/momenta/`, the S–D relative sign from `data/vmc/li6_alpha_d/li6.ad`
+— and then **ignores `cluster_beta` and `p_d`**: the shape is the table's, and
+P_D(⁶Li) is a property of the wave function (1.935 %, against the 8.67 %
+scenario placeholder).  The deuteron control channel is always Hulthen.  Data
+files are found at `$LIPOLGEN_DATA_DIR`, else the compiled-in
+`${CMAKE_SOURCE_DIR}/data`; the tables are zero past 5 fm⁻¹ = 0.9866 GeV, so
+no spectator is drawn beyond that.
+
+What it changes (40 k events, 10 × 99.5 GeV/u; full tables and the derivation
+in `docs/open_items/vmc_reconciliation.md`):
+
+| | Hulthen β = 0.30 | VMC AV18 |
+|---|---|---|
+| ⁶Li ⟨k⟩ / P(k>0.2) / P(k>0.45) | 0.1219 / 0.1476 / 0.0157 | 0.1225 / 0.2410 / 0.0019 |
+| ⁷Li ⟨k⟩ / P(k>0.3) / P(k>0.45) | 0.2893 / 0.3527 / 0.1555 | 0.1864 / 0.2111 / 0.0114 |
+| ⁶Li P_D | 0.0867 | 0.01935 |
+| ⁶Li tag fraction, YR high-acceptance | 0.0249 | 0.0348 |
+| ⁶Li tag fraction, tagging optics | 0.2530 | 0.2485 |
+| ⁷Li tag fraction, YR high-acceptance | 0.9730 | 0.9981 |
+| ⁶Li A_zz^tag at k = 0.20 GeV | +0.845 | +0.452 |
+
+Reach the tables directly when you want them: `VmcRadial`,
+`vmc_from_overlap_k`, `vmc_from_overlap_r` (a Fourier–Bessel transform of an
+r-space overlap, for the r-only tables) and `vmc_from_momentum` are all bound
+in Python, and `TaggedModel::radial_table(l)` gives the normalized
+ψ̂_L(k)·√P_L the sampler actually draws from.
+
 ### Tier T1 — the struck cluster is resolved (the default)
 
 `PipelineConfig::tier` is `Tier::T1`, so the tagged record does not stop at

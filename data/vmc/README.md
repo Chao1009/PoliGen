@@ -1,9 +1,13 @@
 # VMC two-cluster overlap / momentum-distribution tables (R. B. Wiringa, ANL)
 
-Downloaded 2026-08-29 for the LiPolGen `VmcRadial` prototype (see
-`validation/vmc_overlap_prototype.py`). **Not committed** — these are large,
-third-party numerical tables; keep them out of git history and re-fetch from
-the URLs below if this directory is lost.
+Downloaded 2026-08-29 for LiPolGen's `VmcRadial` backend (see
+`validation/vmc_overlap_prototype.py`, `validation/vmc_reconcile.py`).
+**These files ARE committed** (1.1 MB total): `ClusterWaveSource::VmcAV18`
+opens them at run time, and the test suite checks their contents, so the
+build cannot depend on a directory that may or may not be there.  They are
+found through `data_dir()` — `$LIPOLGEN_DATA_DIR` if set, else the
+compiled-in `${CMAKE_SOURCE_DIR}/data`.  Every URL below is recorded so any
+file can be re-fetched and re-verified.
 
 ## What was tried, and why these are Wayback Machine snapshots
 

@@ -560,8 +560,14 @@ PYBIND11_MODULE(_lipolgen, m) {
   m.attr("C_BAG") = C_BAG;
   m.attr("M_U") = M_U;
   m.attr("BETA_DEFAULT") = BETA_DEFAULT;
+  // beams.hpp -- the 6Li cluster wave function, one source of truth for the
+  // inclusive effective polarization and the tagged S/D interference
   m.attr("P_D_LI6") = P_D_LI6;
   m.attr("P_D_DEUTERON") = P_D_DEUTERON;
+  m.attr("ALPHA_D_VECTOR_POLARIZATION") = ALPHA_D_VECTOR_POLARIZATION;
+  m.attr("DEUTERON_VECTOR_POLARIZATION") = DEUTERON_VECTOR_POLARIZATION;
+  m.attr("LI6_CLUSTER_POLARIZATION") = LI6_CLUSTER_POLARIZATION;
+  m.attr("LI6_NAIVE_ONE_THIRD") = LI6_NAIVE_ONE_THIRD;
 
   // numerics.hpp -- the NumPy primitives, exposed for the bit-level tests
   m.def("pairwise_sum", [](const std::vector<double>& v) {
@@ -1115,8 +1121,26 @@ static void bind_xsec(py::module_& m) {
   // asymmetries.hpp
   m.def("depolarization_d", &depolarization_d, py::arg("y"), py::arg("x"),
         py::arg("q2"), py::arg("r_func") = nullptr);
-  m.def("a_parallel", &a_parallel, py::arg("g1"), py::arg("f1"), py::arg("y"),
-        py::arg("x"), py::arg("q2"), py::arg("r_func") = nullptr);
+  // `a_parallel(..., g2=None)`: the massless limit with no g2, exactly
+  // `a_parallel_exact` with one -- the Python's own split.
+  m.def("a_parallel", [](double g1, double f1, double y, double x, double q2,
+                         const RFunc& r_func, std::optional<double> g2) {
+    return g2 ? a_parallel(g1, f1, y, x, q2, r_func, *g2)
+              : a_parallel(g1, f1, y, x, q2, r_func);
+  }, py::arg("g1"), py::arg("f1"), py::arg("y"), py::arg("x"), py::arg("q2"),
+     py::arg("r_func") = nullptr, py::arg("g2") = py::none());
+  m.def("a_parallel_exact", &a_parallel_exact, py::arg("g1"), py::arg("g2"),
+        py::arg("f1"), py::arg("y"), py::arg("x"), py::arg("q2"),
+        py::arg("r_func") = nullptr);
+  m.def("depolarization_effective",
+        [](double y, double x, double q2, std::optional<double> g2_over_g1,
+           const RFunc& r_func) {
+          return depolarization_effective(y, x, q2,
+                                          g2_over_g1 ? *g2_over_g1 : 0.0,
+                                          static_cast<bool>(g2_over_g1),
+                                          r_func);
+        }, py::arg("y"), py::arg("x"), py::arg("q2"),
+           py::arg("g2_over_g1") = py::none(), py::arg("r_func") = nullptr);
   m.def("a_perp", &a_perp, py::arg("g1"), py::arg("g2"), py::arg("f1"),
         py::arg("y"), py::arg("x"), py::arg("q2"), py::arg("r_func") = nullptr);
   m.def("phi_averaged_density", &phi_averaged_density, py::arg("f1"),
@@ -1135,13 +1159,33 @@ static void bind_xsec(py::module_& m) {
   m.def("err_cos2phi_amplitude", &err_cos2phi_amplitude, py::arg("n"),
         py::arg("pzz"));
 
-  // xsec.hpp
+  // the finite-gamma kinematics -- asymmetries.hpp since 2026-08-29, exposed
+  // under both names exactly as the Python re-exports them from xsec
   m.def("gamma_squared", &gamma_squared, py::arg("x"), py::arg("q2"),
         py::arg("m") = M_NUCLEON);
   m.def("epsilon_gamma", &epsilon_gamma, py::arg("y"), py::arg("gamma2"));
+  m.def("depolarization_d_gamma", &depolarization_d_gamma, py::arg("y"),
+        py::arg("gamma2"), py::arg("r"));
   m.def("depolarization_gamma", &depolarization_gamma, py::arg("y"),
         py::arg("gamma2"), py::arg("r"));
   m.def("eta_gamma", &eta_gamma, py::arg("y"), py::arg("gamma2"));
+
+  // xsec.hpp -- the exact finite-gamma tensor sector (Cosyn, plans/08 D2)
+  m.def("theta_q_cos_sin", &theta_q_cos_sin, py::arg("y"), py::arg("gamma2"),
+        "(cos theta_q, sin theta_q): Cosyn Eq. (24)");
+  m.def("cosyn_tensor_sfs", [](double b1, double b2, double b3, double b4,
+                               double x, double gamma2) {
+    const CosynTensorSFs f = cosyn_tensor_sfs(b1, b2, b3, b4, x, gamma2);
+    return py::make_tuple(f.f_t, f.f_l, f.f_lt, f.f_tt);
+  }, py::arg("b1"), py::arg("b2"), py::arg("b3"), py::arg("b4"), py::arg("x"),
+     py::arg("gamma2"),
+     "(F_TLL_T, F_TLL_L, F_TLT, F_TTT): Cosyn Eqs. (17a)-(17e)");
+  m.def("cosyn_unpolarized_sfs", [](double f1, double f2, double x,
+                                    double gamma2) {
+    const std::pair<double, double> u = cosyn_unpolarized_sfs(f1, f2, x, gamma2);
+    return py::make_tuple(u.first, u.second);
+  }, py::arg("f1"), py::arg("f2"), py::arg("x"), py::arg("gamma2"),
+     "(F_UU_T, F_UU_L): Cosyn Eq. (16)");
   m.def("density_min", &density_min, py::arg("a1n"), py::arg("a2n"));
 
   py::class_<EventSpinState>(m, "EventSpinState")
@@ -1171,14 +1215,25 @@ static void bind_xsec(py::module_& m) {
       .def_readwrite("g1", &SFTables::g1)
       .def_readwrite("b1", &SFTables::b1)
       .def_readwrite("b2", &SFTables::b2)
+      .def_readwrite("b3", &SFTables::b3)
+      .def_readwrite("b4", &SFTables::b4)
       .def_readwrite("delta", &SFTables::delta)
       .def_readwrite("g2", &SFTables::g2)
       .def_readwrite("has_g2", &SFTables::has_g2)
       .def("as_dict", [](const SFTables& t) {
         py::dict d;
         d["f1"] = t.f1; d["f2"] = t.f2; d["g1"] = t.g1; d["g2"] = t.g2;
-        d["b1"] = t.b1; d["b2"] = t.b2; d["delta"] = t.delta;
+        d["b1"] = t.b1; d["b2"] = t.b2; d["b3"] = t.b3; d["b4"] = t.b4;
+        d["delta"] = t.delta;
         return d;
+      });
+
+  py::class_<TensorHarmonics>(m, "TensorHarmonics")
+      .def_readonly("h0", &TensorHarmonics::h0)
+      .def_readonly("h1", &TensorHarmonics::h1)
+      .def_readonly("h2", &TensorHarmonics::h2)
+      .def("__iter__", [](const TensorHarmonics& h) {
+        return py::iter(py::make_tuple(h.h0, h.h1, h.h2));
       });
 
   py::class_<Amplitudes>(m, "Amplitudes")
@@ -1224,6 +1279,9 @@ static void bind_xsec(py::module_& m) {
       .def_readwrite("b1_32_func", &InclusiveKernel::Options::b1_32_func)
       .def_readwrite("b2_32_func", &InclusiveKernel::Options::b2_32_func)
       .def_readwrite("delta_32_func", &InclusiveKernel::Options::delta_32_func)
+      .def_readwrite("b3_func", &InclusiveKernel::Options::b3_func)
+      .def_readwrite("b4_func", &InclusiveKernel::Options::b4_func)
+      .def_readwrite("tensor_gamma", &InclusiveKernel::Options::tensor_gamma)
       .def_readwrite("g2_mode", &InclusiveKernel::Options::g2_mode)
       .def_readwrite("g2_scale", &InclusiveKernel::Options::g2_scale)
       .def_readwrite("emc_ratio", &InclusiveKernel::Options::emc_ratio)
@@ -1240,6 +1298,7 @@ static void bind_xsec(py::module_& m) {
            }), py::arg("ion"), py::arg("options"))
       .def_property_readonly("ion", &InclusiveKernel::ion)
       .def_property_readonly("target_mass", &InclusiveKernel::target_mass)
+      .def_property_readonly("tensor_gamma", &InclusiveKernel::tensor_gamma)
       .def_property_readonly("g2_scale", &InclusiveKernel::g2_scale)
       .def("tables", &InclusiveKernel::tables, py::arg("x"), py::arg("q2"),
            py::arg("with_g2") = false)
@@ -1252,6 +1311,10 @@ static void bind_xsec(py::module_& m) {
       .def("a_perp", &InclusiveKernel::a_perp, py::arg("t"), py::arg("x"),
            py::arg("q2"), py::arg("y"))
       .def("tensor_moments", &InclusiveKernel::tensor_moments, py::arg("m"))
+      .def("tensor_harmonics_gamma", &InclusiveKernel::tensor_harmonics_gamma,
+           py::arg("t"), py::arg("x"), py::arg("q2"), py::arg("y"),
+           py::arg("state"),
+           "(h0, h1, h2) of the exact finite-gamma b-sector")
       .def("amplitudes", &InclusiveKernel::amplitudes, py::arg("tables"),
            py::arg("x"), py::arg("q2"), py::arg("s"), py::arg("state"),
            py::arg("with_perp") = false)

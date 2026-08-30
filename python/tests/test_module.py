@@ -15,10 +15,27 @@ def test_import_and_version():
 
 def test_constants_have_one_definition():
     # constants.hpp is mirrored read-only; nothing here recomputes a number.
-    assert lg.TENSOR_LL_SIGN == 1.0
+    assert lg.TENSOR_LL_SIGN == -1.0
     assert lg.ALPHA_EM == pytest.approx(1.0 / 137.036, rel=0, abs=0)
     assert lg.M_NUCLEON == 0.9383
     assert lg.GEV2_TO_PB == 0.3894e9
+    # the 6Li cluster wave function -- beams.hpp, one definition, and the
+    # inclusive eff_pol slots are a third of it each (plans/04 #6)
+    assert lg.P_D_LI6 == 0.0867
+    assert lg.P_D_DEUTERON == 0.045
+    assert lg.LI6_CLUSTER_POLARIZATION == (
+        (1.0 - 1.5 * lg.P_D_LI6) * (1.0 - 1.5 * lg.P_D_DEUTERON))
+    assert lg.LI6_CLUSTER_POLARIZATION == pytest.approx(0.81123, abs=5e-6)
+    li6 = lg.li6()
+    assert li6.Z * li6.eff_pol_p == pytest.approx(
+        lg.LI6_CLUSTER_POLARIZATION, rel=1e-15)
+    assert li6.N * li6.eff_pol_n == pytest.approx(
+        lg.LI6_CLUSTER_POLARIZATION, rel=1e-15)
+    assert lg.deuteron().eff_pol_p == 1.0 - 1.5 * lg.P_D_DEUTERON
+    # the retired Cloet convention stays reachable and is 1.233x this one
+    assert lg.LI6_NAIVE_ONE_THIRD == 1.0 / 3.0
+    assert lg.LI6_NAIVE_ONE_THIRD / (lg.LI6_CLUSTER_POLARIZATION / 3.0) == \
+        pytest.approx(1.233, abs=5e-4)
 
 
 @pytest.mark.parametrize("name", [
@@ -27,7 +44,10 @@ def test_constants_have_one_definition():
     "rho_from_populations", "moments_along_axis", "populations_maxent",
     "ToyF2", "ToyG1", "MillerB1", "Li6B1", "NuclearF2", "toy_b1",
     "InclusiveKernel", "EventSpinState", "Amplitudes", "SFTables",
-    "azz", "a_cos2phi", "a_parallel", "err_azz",
+    "azz", "a_cos2phi", "a_parallel", "a_parallel_exact", "err_azz",
+    "depolarization_effective", "gamma_squared", "epsilon_gamma",
+    "depolarization_d_gamma", "eta_gamma", "theta_q_cos_sin",
+    "cosyn_tensor_sfs", "cosyn_unpolarized_sfs", "TensorHarmonics",
     "SpinCategory", "RunPlan", "tensor_thirds_plan", "helicity_flip_plan",
     "transverse_tensor_plan", "tensor_flip_plan",
     "Scenario", "generator_scenario", "InclusiveSampler",
@@ -100,9 +120,9 @@ def test_polarized_emc_transfer_names_its_baseline():
     assert lg.tmt_valence_scale(lg.EmcBaseline.LegacyTable) == pytest.approx(
         0.397, abs=5e-4)
     assert lg.cbt_valence_scale(lg.EmcBaseline.Epps21) == pytest.approx(
-        0.5105, abs=5e-4)
+        0.5322, abs=5e-4)
     assert lg.tmt_valence_scale(lg.EmcBaseline.Epps21) == pytest.approx(
-        0.2027, abs=5e-4)
+        0.2113, abs=5e-4)
     assert lg.cbt_valence_scale() == lg.cbt_valence_scale(
         lg.EMC_BASELINE_DEFAULT)
     assert lg.emc_valence_depletion(lg.EmcBaseline.Epps21) == pytest.approx(
@@ -114,8 +134,10 @@ def test_kernel_defaults_are_the_python_ones():
     opt = lg.InclusiveKernel.Options()
     assert opt.target_mass is True
     assert opt.g2_scale == 1.0
+    assert opt.tensor_gamma is False      # the exact tensor sector is OPT-IN
     kern = lg.InclusiveKernel(lg.li6(), opt)
     assert kern.target_mass is True and kern.g2_scale == 1.0
+    assert kern.tensor_gamma is False
     # g2_scale is the twist-3 handle: it multiplies g2 and nothing else
     opt.g2_scale = 0.0
     zero = lg.InclusiveKernel(lg.li6(), opt)
@@ -209,3 +231,43 @@ def test_make_config_takes_cluster_wave_by_name():
     assert "VMC" in p.tagged_model.channel.label
     cols = p.generate(0, 500, 1)
     assert cols["x"].size == 500
+
+
+def test_a_parallel_splits_massless_from_exact():
+    """`a_parallel(..., g2=None)` is the massless D(y) g1/F1; with a g2 it is
+    `a_parallel_exact`, the E143 finite-gamma form -- the same split the
+    Python's `asymmetries.a_parallel` makes."""
+    g1, g2, f1, y, x, q2 = 0.03, -0.01, 0.9, 0.05, 0.1413, 3.127
+    massless = lg.a_parallel(g1, f1, y, x, q2)
+    assert massless == pytest.approx(
+        lg.depolarization_d(y, x, q2) * g1 / f1, rel=0, abs=0)
+    exact = lg.a_parallel(g1, f1, y, x, q2, g2=g2)
+    assert exact == lg.a_parallel_exact(g1, g2, f1, y, x, q2)
+    assert exact != massless
+    # D_eff is the divisor that inverts the exact A_par without an
+    # O(gamma^2) bias; with no rho it is the massless D, bit for bit
+    assert lg.depolarization_effective(y, x, q2) == lg.depolarization_d(
+        y, x, q2)
+    deff = lg.depolarization_effective(y, x, q2, g2_over_g1=g2 / g1)
+    assert exact == pytest.approx(deff * g1 / f1, rel=1e-14)
+
+
+def test_tensor_gamma_is_off_by_default_and_reversible():
+    """Switching `tensor_gamma` on must not move a massless number, and the
+    two paths must agree as gamma^2 -> 0 (Q^2 -> infinity at fixed x)."""
+    x, q2 = 0.1, 1.0e8
+    s = q2 / (1.0e-3 * x)
+    opt = lg.InclusiveKernel.Options()
+    opt.b1_func = lambda xx, qq, f1: lg.toy_b1(xx, qq, f1)
+    opt.target_mass = False
+    massless = lg.InclusiveKernel(lg.li6(), opt)
+    opt.tensor_gamma = True
+    exact = lg.InclusiveKernel(lg.li6(), opt)
+    st = lg.EventSpinState(lam_e=0, pe=0.0, j=1.0, m=1.0, theta_s=0.0)
+    w0 = massless.amplitudes(massless.tables(x, q2), x, q2, s, st).w_avg
+    w1 = exact.amplitudes(exact.tables(x, q2), x, q2, s, st).w_avg
+    assert w1 == pytest.approx(w0, rel=1e-9)
+    # b3/b4 default to zero and are built on every path, but only the exact
+    # one reads them
+    t = massless.tables(x, q2)
+    assert t.b3 == 0.0 and t.b4 == 0.0

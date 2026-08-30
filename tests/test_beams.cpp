@@ -96,11 +96,39 @@ TEST_CASE("the effective polarizations are per nucleon") {
   // stored divided by Z = 3 and N = 4, so Z*P_p and N*P_n return them.
   CHECK_CLOSE(LI7().Z * LI7().eff_pol_p, 0.866, 1e-14);
   CHECK_CLOSE(LI7().N() * LI7().eff_pol_n, -0.037, 1e-14);
-  // 6Li: Cloet's 1/3 per nucleon -> a whole-nucleus 1.0 (plans/04 #6, open)
-  CHECK_CLOSE(LI6().Z * LI6().eff_pol_p, 1.0, 1e-14);
-  CHECK_CLOSE(LI6().N() * LI6().eff_pol_n, 1.0, 1e-14);
+  // 6Li: the CLUSTER PICTURE since 2026-08-29 (plans/04 #6, closed).  The
+  // slots hold LI6_CLUSTER_POLARIZATION/3 each, so Z*P_p = N*P_n is the
+  // whole-nucleus 0.81123 = (1 - 1.5 P_D_LI6)(1 - 1.5 P_D_DEUTERON), built
+  // from the SAME two D-state probabilities the tagged sector uses.
+  CHECK_CLOSE(LI6().Z * LI6().eff_pol_p, LI6_CLUSTER_POLARIZATION, 1e-15);
+  CHECK_CLOSE(LI6().N() * LI6().eff_pol_n, LI6_CLUSTER_POLARIZATION, 1e-15);
+  CHECK_CLOSE(LI6_CLUSTER_POLARIZATION, 0.81123, 5e-6);
   CHECK(LI6().spin == 1.0);
   CHECK(LI7().spin == 1.5);
+}
+
+TEST_CASE("the 6Li slot is the cluster wave function, nothing hard-coded") {
+  // The 6Li slot is built from the wave function the tagged sector uses, not
+  // from a transcribed 0.81 (author decision 2026-08-29, plans/04 #6).
+  CHECK(P_D_LI6 == 0.0867);
+  CHECK(P_D_DEUTERON == 0.045);
+  CHECK(LI6_CLUSTER_POLARIZATION
+        == (1.0 - 1.5 * P_D_LI6) * (1.0 - 1.5 * P_D_DEUTERON));
+  // the deuteron carries the SAME expression, bit for bit, which is what
+  // makes the per-nucleon g1 ratio below exact
+  CHECK(DEUTERON().eff_pol_p == 1.0 - 1.5 * P_D_DEUTERON);
+  CHECK(DEUTERON().eff_pol_n == DEUTERON().eff_pol_p);
+  // per-nucleon g1(6Li)/g1(d) = (1 - 1.5 P_D_LI6)/3 = 0.290: the deuteron's
+  // own D state cancels between the two isoscalar ions
+  const double ratio = LI6().eff_pol_p / DEUTERON().eff_pol_p;
+  CHECK_CLOSE(ratio, (1.0 - 1.5 * P_D_LI6) / 3.0, 1e-15);
+  CHECK_CLOSE(ratio, 0.290, 5e-4);
+  // the retired Cloet convention, pinned: a whole-nucleus 1.0, 1.233 times
+  // the cluster picture and the g1(6Li) every number published before
+  // 2026-08-29 was computed with
+  CHECK(LI6_NAIVE_ONE_THIRD == 1.0 / 3.0);
+  CHECK_CLOSE(LI6_NAIVE_ONE_THIRD / (LI6_CLUSTER_POLARIZATION / 3.0), 1.233,
+              5e-4);
 }
 
 TEST_CASE("beam config labels and sqrt(s)") {

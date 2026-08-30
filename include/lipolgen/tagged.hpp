@@ -42,14 +42,13 @@
 
 namespace lipolgen {
 
-/// alpha-d D-state probability, chosen so the embedded-deuteron VECTOR
-/// dilution 1 - (3/2) P_D reproduces the 0.87 of `b1_li6_from_deuteron`
-/// (SCENARIO).  It is the DEFAULT because the Hulthen path is the
-/// bit-compatibility path; `VMC_P_D_LI6` is the measured replacement and is
-/// what `ClusterWaveSource::VmcAV18` uses.
-inline constexpr double P_D_LI6 = 0.0867;
-/// Deuteron D-state probability (AV18-like).
-inline constexpr double P_D_DEUTERON = 0.045;
+// P_D_LI6 and P_D_DEUTERON are NOT defined here.  Since 2026-08-29 they live
+// in `beams.hpp` (included above), which is where `polli_fastsim.beams` keeps
+// them and where `polligen.tagged` re-exports them from: the inclusive
+// effective polarization of 6Li (`LI6_CLUSTER_POLARIZATION`, the two
+// dilutions multiplied) and the tagged S/D interference below are then the
+// same wave function seen in two experiments, and cannot drift apart.  The
+// names, values and meanings are unchanged.
 
 // ------------------------------------------- the VMC numbers, as DATA
 //

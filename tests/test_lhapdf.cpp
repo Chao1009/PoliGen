@@ -201,7 +201,8 @@ TEST_CASE("LhapdfSF / LhapdfG1 nucleus combination reuses NuclearF2 / PolSF::g1_
   // do the isospin sum, exactly as the task requires ("reuse them, do not
   // duplicate").  Reference: PartonG1/PartonF2 wrapped in the Python
   // NuclearF2 / ToyG1.g1_nucleus with beams.LI6() / beams.LI7()'s exact
-  // eff_pol_p/eff_pol_n (1/3, 1/3 for 6Li; 0.866/3, -0.037/4 for 7Li).
+  // eff_pol_p/eff_pol_n (LI6_CLUSTER_POLARIZATION/3 each for 6Li since
+  // 2026-08-29; 0.866/3, -0.037/4 for 7Li).
   const auto f2 = std::make_shared<const LhapdfSF>("CT18NLO", 0);
   const LhapdfG1 g1("NNPDFpol11_100", 0);
   const NuclearF2 nf2_li6(LI6(), f2);
@@ -209,14 +210,16 @@ TEST_CASE("LhapdfSF / LhapdfG1 nucleus combination reuses NuclearF2 / PolSF::g1_
 
   struct Row { double x, q2, f2a_li6, f2a_li7, g1a_li6, g1a_li7; };
   const Row rows[] = {
-      // python3: 3*f2p+3*f2n (6Li), 3*f2p+4*f2n (7Li); g1p+g1n (6Li,
-      // Z=N=3, eff_pol=1/3 each), 0.866*g1p-0.037*g1n (7Li).
+      // python3: 3*f2p+3*f2n (6Li), 3*f2p+4*f2n (7Li);
+      // LI6_CLUSTER_POLARIZATION*(g1p+g1n) (6Li, Z=N=3, eff_pol =
+      // LI6_CLUSTER_POLARIZATION/3 each -- the g1p+g1n of the retired 1/3
+      // convention TIMES 0.81123), 0.866*g1p-0.037*g1n (7Li).
       {0.05, 4.0, 2.5262106017577564, 2.930398842631295,
-       0.14607759110254925, 0.3531118870713627},
+       0.14607759110254925 * LI6_CLUSTER_POLARIZATION, 0.3531118870713627},
       {0.1, 10.0, 2.3829763542332802, 2.7498975002179242,
-       0.28313608980326177, 0.36841240261948094},
+       0.28313608980326177 * LI6_CLUSTER_POLARIZATION, 0.36841240261948094},
       {0.3, 20.0, 1.29981581440712, 1.4662287306728055,
-       0.1739041512708846, 0.17266460700548028},
+       0.1739041512708846 * LI6_CLUSTER_POLARIZATION, 0.17266460700548028},
   };
   for (const Row& row : rows) {
     CAPTURE(row.x);

@@ -39,6 +39,49 @@ namespace lipolgen {
 /// Throws std::runtime_error for an unknown (name, A, Z).
 double nucleus_mass(const std::string& name, int a, int z);
 
+// --- the 6Li cluster wave function ---------------------------------------
+//
+// ONE SOURCE OF TRUTH for the two D-state probabilities the 6Li cluster
+// picture is built from.  They live HERE, in the module every spin consumer
+// already includes, and `tagged.hpp` uses these names rather than keeping its
+// own copies, so the INCLUSIVE effective polarization below and the TAGGED
+// S/D interference of `li6_alpha_channel` cannot drift apart: they are the
+// same wave function seen in two experiments (`polli_fastsim.beams`, which
+// `polligen.tagged` re-exports from).
+
+/// alpha-d relative D-state probability.  Chosen so that the embedded
+/// deuteron's vector dilution 1 - (3/2) P_D reproduces the 0.87 of
+/// `b1_li6_from_deuteron` (SCENARIO -- VMC overlaps are the scheduled
+/// replacement, plans/04 #15).  It is also the DEFAULT of the Hulthen tagged
+/// channel, which is the bit-compatibility path; `VMC_P_D_LI6` (tagged.hpp)
+/// is the measured replacement `ClusterWaveSource::VmcAV18` uses.
+inline constexpr double P_D_LI6 = 0.0867;
+/// The deuteron's own D-state probability (AV18-like).
+inline constexpr double P_D_DEUTERON = 0.045;
+
+/// Vector depolarization 1 - (3/2) P_D of a spin-1 system with D-state
+/// probability P_D.  The deuteron slot below carries the second of these
+/// verbatim, so the two ions are built from one expression and their ratio is
+/// exact rather than rounded.
+inline constexpr double ALPHA_D_VECTOR_POLARIZATION = 1.0 - 1.5 * P_D_LI6;
+inline constexpr double DEUTERON_VECTOR_POLARIZATION =
+    1.0 - 1.5 * P_D_DEUTERON;
+
+/// WHOLE-NUCLEUS vector polarization of the two polarized nucleons of 6Li in
+/// the cluster picture (author decision 2026-08-29, plans/04 #6).  The 6Li
+/// spin is carried by the alpha-d relative motion and by the deuteron inside
+/// it, so a nucleon of that deuteron is polarized along the 6Li spin by the
+/// PRODUCT of the two dilutions -- 0.86995 x 0.9325 = 0.81123.  The alpha
+/// contributes nothing (J = 0).
+inline constexpr double LI6_CLUSTER_POLARIZATION =
+    ALPHA_D_VECTOR_POLARIZATION * DEUTERON_VECTOR_POLARIZATION;
+
+/// The retired alternative, kept reachable and pinned: Cloet's slides use
+/// P_p = P_n = 1/3, i.e. a whole-nucleus Z*P_p = N*P_n = 1 -- one fully
+/// polarized proton and neutron out of three each.  It was the default before
+/// 2026-08-29 and is 1/0.81123 = 1.233 times the cluster value.
+inline constexpr double LI6_NAIVE_ONE_THIRD = 1.0 / 3.0;
+
 struct Ion {
   std::string name;
   int A = 1;

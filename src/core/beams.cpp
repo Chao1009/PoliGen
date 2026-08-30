@@ -68,8 +68,11 @@ const Ion& PROTON() {
   return i;
 }
 const Ion& DEUTERON() {
-  // 1 - 1.5 w_D
-  static const Ion i{"d", 2, 1, 1.0, 0.93, 0.93};
+  // The deuteron's slot IS the expression 6Li's is built from, so the two
+  // agree bit for bit and the ratio of their per-nucleon g1 is
+  // (1 - 1.5 P_D_LI6)/3 exactly.
+  static const Ion i{"d", 2, 1, 1.0, DEUTERON_VECTOR_POLARIZATION,
+                     DEUTERON_VECTOR_POLARIZATION};
   return i;
 }
 const Ion& HE3() {
@@ -78,8 +81,22 @@ const Ion& HE3() {
   return i;
 }
 const Ion& LI6() {
-  // Cloet's per-nucleon 2-of-6 dilution; the VALUE is open (plans/04 #6).
-  static const Ion i{"6Li", 6, 3, 1.0, 1.0 / 3.0, 1.0 / 3.0};
+  // The CLUSTER PICTURE, since the author decision of 2026-08-29 that closed
+  // plans/04 #6: the 6Li spin is carried by the deuteron cluster, so a nucleon
+  // of that deuteron is polarized along the 6Li spin by the product of the
+  // alpha-d and deuteron vector dilutions, LI6_CLUSTER_POLARIZATION =
+  // 0.86995 x 0.9325 = 0.81123 whole-nucleus (Schellingerhout PRC 48:2714),
+  // and the slots hold a THIRD of it each so that Z*P_p = N*P_n = 0.81123.
+  // Built from the same two D-state probabilities the tagged sector uses
+  // (`P_D_LI6`, `P_D_DEUTERON` in this header), so the inclusive and tagged
+  // 6Li share one wave function.  Per-nucleon g1(6Li)/g1(d) is therefore
+  // (1 - 1.5 P_D_LI6)/3 = 0.290 -- the deuteron's own dilution cancels
+  // between the two isoscalar ions -- against the 0.358 the retired
+  // `LI6_NAIVE_ONE_THIRD` gave.  NOT adopted, and the upper end of the band:
+  // the six-body VMC of Wiringa PRC 89:024305 Table I reads the same
+  // whole-nucleus quantity ab initio as 0.848; 0.81-0.85 is the band.
+  static const Ion i{"6Li", 6, 3, 1.0, LI6_CLUSTER_POLARIZATION / 3.0,
+                     LI6_CLUSTER_POLARIZATION / 3.0};
   return i;
 }
 const Ion& LI7() {

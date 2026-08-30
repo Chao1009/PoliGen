@@ -17,5 +17,4 @@ cmake -S . -B build && cmake --build build -j8
 ctest --test-dir build
 ```
 
-License: to be decided by the author (PYTHIA 8 is GPL-2.0-or-later; anything
-GPL-compatible works for a library that links it).
+License: GPL-3.0-or-later (see LICENSE).

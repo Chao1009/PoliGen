@@ -13,16 +13,30 @@ namespace lipolgen {
 
 /// Sign of the tensor RATE (b1, b2) sector -- the single place it is set.
 ///
-///   +1  the program's transcription of Hoodbhoy-Jaffe-Manohar
-///       (docs/Discussions.pptx p.5), giving Azz = +(2/3) b1/F1
-///   -1  the HJM/HERMES convention as written by Cosyn, Roldan Tomei, Sosa
-///       and Zec, EPJ A 61 (2025) 83 (arXiv:2410.12764) Eq. (27),
-///       Azz = -(2/3) b1/F1
+///   -1  THE CONVENTION OF THIS PROGRAM SINCE 2026-08-29 (author decision,
+///       plans/08 D1): the LITERATURE one, as written by Cosyn, Roldan Tomei,
+///       Sosa and Zec, EPJ A 61 (2025) 83 (arXiv:2410.12764) Eq. (27) and
+///       used by HERMES,
 ///
+///           Azz = -(2/3) b1/F1     (axis along q, Bjorken limit)
+///
+///       with P_zz = n+ + n- - 2 n0 the tensor polarization, i.e. b1 > 0
+///       means the m = 0 state is the one with the LARGER cross section.
+///   +1  the repository's own private convention until that date -- the
+///       transcription of Hoodbhoy-Jaffe-Manohar in docs/Discussions.pptx
+///       p.5, giving Azz = +(2/3) b1/F1.  Kept reachable by setting this
+///       constant back, which is the whole of the change: nothing else in
+///       the program knows the sign.
+///
+/// The decision was taken on the literature and not on a new derivation.
 /// The two differ by the sign of b1 itself, so |Azz| and the whole Delta
-/// (cos 2phi) sector are unaffected.  plans/08 D1 is the open decision;
-/// tests/test_xsec.cpp pins the identity it controls.
-inline constexpr double TENSOR_LL_SIGN = +1.0;
+/// (cos 2phi) sector are unaffected; what flips is the sign of Azz at fixed
+/// b1, of the by-product kappa of the spin-state ratio, and of any b-sector
+/// subtraction built on kappa -- including the O(gamma^2) tensor leakage into
+/// cos 2phi (`InclusiveKernel::Options::tensor_gamma`), which is why that
+/// switch was gated on this decision.  `tests/test_xsec.cpp` pins the
+/// identity it controls, in Cosyn's own form.
+inline constexpr double TENSOR_LL_SIGN = -1.0;
 
 /// Fine-structure constant, exactly as `polli_fastsim.structure.ALPHA_EM`.
 inline constexpr double ALPHA_EM = 1.0 / 137.036;
@@ -50,8 +64,12 @@ inline constexpr double EPIOS_GAMMA_SHIFT_HI = 293.0;
 /// with a per-NUCLEON F1, so the tables are halved on the way out.
 inline constexpr double B1_PER_DEUTERON_TO_PER_NUCLEON = 0.5;
 
-/// Rank-2 transfer of the embedded deuteron's tensor polarization to 6Li,
-/// 1 - (9/10) P_D at P_D = 0.0867 (plans/08 D9).
+/// Rank-2 transfer of the embedded deuteron's tensor polarization to 6Li:
+/// `TaggedModel(li6_alpha_channel()).tensor_dilution()` evaluated at
+/// `P_D_LI6` (beams.hpp), pinned in tests/test_tagged.cpp (plans/08 D9).
+/// It is a QUADRATURE over the channel and not a closed form: the closed form
+/// 1 - (9/10) P_D gives 0.921970 against the 0.9219467 measured, so the two
+/// are pinned to each other at 1e-4 and not asserted equal.
 inline constexpr double LI6_B1_RANK2_TRANSFER = 0.921947;
 /// The pre-2026-08-28 VECTOR dilution 1 - (3/2) P_D -- the wrong rank for b1.
 inline constexpr double LI6_B1_LEGACY_TRANSFER = 0.87;

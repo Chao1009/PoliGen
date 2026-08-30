@@ -219,7 +219,7 @@ TEST_CASE("a_perp is the leading-gamma transverse amplitude") {
 
 // --- the tensor convention ------------------------------------------------
 
-TEST_CASE("Cosyn Eq. 27: A_zz(theta_S=0)(1 + eps R) = sign (2/3) b1/F1") {
+TEST_CASE("Cosyn Eq. 27: A_zz(theta_S=0)(1 + eps R) = -(2/3) b1/F1") {
   // EXACTLY and at every y.  With b2 = 2x b1 and F2 = 2x(1+R) F1 the
   // (1-y)/(x y^2) terms of numerator and denominator combine into
   // 2(1-y+y^2/2) and 2[(1-y+y^2/2) + R(1-y)], whose ratio is 1/(1 + eps R).
@@ -230,21 +230,27 @@ TEST_CASE("Cosyn Eq. 27: A_zz(theta_S=0)(1 + eps R) = sign (2/3) b1/F1") {
     const double f2 = 2.0 * p.x * (1.0 + r) * f1;
     for (double y : {0.01, 0.05, 0.2, 0.6, 0.9}) {
       const double got = azz(b1, f1, f2, p.x, y) * (1.0 + eps_of(y) * r);
-      CHECK_CLOSE(got, TENSOR_LL_SIGN * (2.0 / 3.0) * b1 / f1, kRtol);
+      // Written against the LITERATURE relation itself, with no reference to
+      // TENSOR_LL_SIGN, so that flipping the constant back to the
+      // repository's old private +1 fails it (`test_tensor_convention.py`).
+      CHECK_CLOSE(got, -(2.0 / 3.0) * b1 / f1, kRtol);
     }
   }
 }
 
-TEST_CASE("the program sign is opposite to the literature, deliberately") {
+TEST_CASE("the program sign IS the literature sign, deliberately") {
   // Stated as a test so that flipping TENSOR_LL_SIGN is a deliberate act with
-  // a visible consequence (plans/08 D1).
+  // a visible consequence (plans/08 D1, decided 2026-08-29).  Restoring the
+  // repository's old +1 flips the sign of A_zz at fixed b1, of the by-product
+  // kappa of the spin-state ratio and of the O(gamma^2) tensor leakage into
+  // cos 2phi: update every kappa-based subtraction at the same time.
   const double x = 0.056, q2 = 1.14, y = 0.05, b1 = 0.037;
   const double r = r_sigma_lt(x, q2);
   const double f2 = 2.0 * x * (1.0 + r);
   const double cosyn = -(2.0 / 3.0) * b1;  // Cosyn Eq. (27) with F1 = 1
   const double program = azz(b1, 1.0, f2, x, y) * (1.0 + eps_of(y) * r);
-  CHECK(TENSOR_LL_SIGN == +1.0);
-  CHECK_CLOSE(program, -cosyn, kRtol);
+  CHECK(TENSOR_LL_SIGN == -1.0);
+  CHECK_CLOSE(program, cosyn, kRtol);
 }
 
 TEST_CASE("the kernel thirds combination carries the same sign as A_zz") {

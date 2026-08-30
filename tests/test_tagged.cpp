@@ -11,6 +11,8 @@
 #include <array>
 #include <cmath>
 #include <ctime>
+#include <fstream>
+#include <memory>
 #include <string>
 #include <thread>
 #include <vector>
@@ -24,6 +26,7 @@
 #include "lipolgen/event.hpp"
 #include "lipolgen/rng.hpp"
 #include "lipolgen/sf.hpp"
+#include "lipolgen/numerics.hpp"
 #include "lipolgen/spin.hpp"
 #include "lipolgen/tagged.hpp"
 #include "lipolgen/xsec.hpp"
@@ -964,4 +967,205 @@ TEST_CASE("tagged: a fresh TaggedModel is safe on two threads with no warm-up") 
   // no accessor may write to the object any more
   CHECK_THROWS(model.amp2_table(2.0));
   CHECK_THROWS(model.n_of_kc(2.0));
+}
+
+// ------------------------------------------- the VMC cluster-wave backend
+//
+// `ClusterWaveSource::VmcAV18` swaps the analytic radial forms for the ANL
+// VMC tables.  Reference numbers: validation/vmc_reconcile.py and
+// validation/vmc_tag_fractions.py, tabulated in
+// docs/open_items/vmc_reconciliation.md.
+
+namespace {
+
+/// int k^2 sum_L psihat_L^2 dk and its moments, on the model's OWN grid --
+/// the grid is part of the model (`TaggedModel`'s docstring), so this is the
+/// distribution the sampler actually draws from.
+struct GridMoments {
+  double mean_k = 0.0;
+  double p_gt_02 = 0.0, p_gt_03 = 0.0, p_gt_045 = 0.0;
+  double p_d = std::nan("");
+};
+
+GridMoments grid_moments(const TaggedModel& m) {
+  const std::vector<double>& k = m.k();
+  std::vector<double> dens(k.size(), 0.0), d2(k.size(), 0.0);
+  bool has_d = false;
+  for (const Wave& w : m.channel().waves) {
+    const std::vector<double>& r = m.radial_table(w.l);
+    for (std::size_t i = 0; i < k.size(); ++i) {
+      const double v = k[i] * k[i] * r[i] * r[i];
+      dens[i] += v;
+      if (w.l == 2) {
+        d2[i] += v;
+        has_d = true;
+      }
+    }
+  }
+  const double tot = trapezoid(dens, k);
+  std::vector<double> kd(k.size());
+  for (std::size_t i = 0; i < k.size(); ++i) kd[i] = k[i] * dens[i];
+  GridMoments g;
+  g.mean_k = trapezoid(kd, k) / tot;
+  if (has_d) g.p_d = trapezoid(d2, k) / tot;
+  const double cuts[3] = {0.20, 0.30, 0.45};
+  double* into[3] = {&g.p_gt_02, &g.p_gt_03, &g.p_gt_045};
+  for (int c = 0; c < 3; ++c) {
+    std::vector<double> kk, yy;
+    for (std::size_t i = 0; i < k.size(); ++i) {
+      if (k[i] >= cuts[c]) {
+        kk.push_back(k[i]);
+        yy.push_back(dens[i]);
+      }
+    }
+    *into[c] = trapezoid(yy, kk) / tot;
+  }
+  return g;
+}
+
+bool vmc_data_present() {
+  std::ifstream f(data_path("vmc/momenta/li6_ad1.momentum"));
+  return static_cast<bool>(f);
+}
+
+}  // namespace
+
+TEST_CASE("tagged: the VMC channels are built from the tables, and normalize") {
+  if (!vmc_data_present()) {
+    MESSAGE("data/vmc not present -- skipping");
+    return;
+  }
+  const TaggedChannel c6 = li6_alpha_channel(BETA_DEFAULT, P_D_LI6,
+                                             ClusterWaveSource::VmcAV18);
+  REQUIRE(c6.waves.size() == 2);
+  for (const Wave& w : c6.waves) {
+    REQUIRE(w.vmc);
+    CHECK(w.vmc->l() == w.l);
+    CHECK(!w.vmc->provenance().empty());
+  }
+  // `p_d` is IGNORED on the VMC path: the D-state probability is a property
+  // of the wave function, and it is the file's own printed value.
+  CHECK_CLOSE_AT(c6.waves[1].prob, VMC_P_D_LI6, 0.0, 1e-15);
+  CHECK_CLOSE_AT(c6.waves[0].prob, 1.0 - VMC_P_D_LI6, 0.0, 1e-15);
+  c6.validate();
+
+  const TaggedChannel c7 = li7_alpha_channel(BETA_DEFAULT,
+                                             ClusterWaveSource::VmcAV18);
+  REQUIRE(c7.waves.size() == 1);            // Aat11 is a selection-rule zero
+  REQUIRE(c7.waves[0].vmc);
+  CHECK(c7.waves[0].l == 1);
+
+  for (const TaggedChannel& ch : {c6, c7}) {
+    const TaggedModel m(ch);
+    for (double mi : m_values(ch.j_ion)) {
+      CHECK_CLOSE_AT(m.norm(mi), 1.0, 0.0, 1e-3);
+    }
+  }
+}
+
+TEST_CASE("tagged: VMC P_D(6Li) = 1.94% within the file's own MC error") {
+  if (!vmc_data_present()) {
+    MESSAGE("data/vmc not present -- skipping");
+    return;
+  }
+  // The constant is the file's printed 0.015861 / (0.80362 + 0.015861).  The
+  // 1-sigma MC errors on those two integrals are ~1e-4 relative on the S
+  // block and ~1% on the D block (DRHOKA2/RHOKA2 near the D peak), so 1.94%
+  // is good to about +-0.02% absolute -- and the INDEPENDENT 2004 AV18+UIX
+  // overlap file gives 2.01%, a Hamiltonian difference, not an error.
+  CHECK_CLOSE_AT(VMC_P_D_LI6, 0.0194, 0.0, 2e-4);
+  const TaggedModel m(li6_alpha_channel(BETA_DEFAULT, P_D_LI6,
+                                        ClusterWaveSource::VmcAV18));
+  const GridMoments g = grid_moments(m);
+  CHECK_CLOSE_AT(g.p_d, VMC_P_D_LI6, 0.0, 1e-6);
+  // and it is 4.5x SMALLER than the scenario placeholder it replaces
+  CHECK_CLOSE_AT(P_D_LI6 / VMC_P_D_LI6, 4.48, 0.0, 0.01);
+}
+
+TEST_CASE("tagged: the VMC moments reproduce the reconciled table") {
+  if (!vmc_data_present()) {
+    MESSAGE("data/vmc not present -- skipping");
+    return;
+  }
+  // docs/open_items/vmc_reconciliation.md, "Moments on the TaggedModel grid".
+  const GridMoments g6 = grid_moments(TaggedModel(
+      li6_alpha_channel(BETA_DEFAULT, P_D_LI6, ClusterWaveSource::VmcAV18)));
+  CHECK_CLOSE_AT(g6.mean_k, 0.1225, 0.0, 5e-4);
+  CHECK_CLOSE_AT(g6.p_gt_02, 0.2410, 0.0, 5e-4);
+  CHECK_CLOSE_AT(g6.p_gt_03, 0.0581, 0.0, 5e-4);
+  CHECK_CLOSE_AT(g6.p_gt_045, 0.0019, 0.0, 5e-4);
+
+  const GridMoments g7 = grid_moments(TaggedModel(
+      li7_alpha_channel(BETA_DEFAULT, ClusterWaveSource::VmcAV18)));
+  CHECK_CLOSE_AT(g7.mean_k, 0.1864, 0.0, 5e-4);
+  CHECK_CLOSE_AT(g7.p_gt_03, 0.2111, 0.0, 5e-4);
+  CHECK_CLOSE_AT(g7.p_gt_045, 0.0114, 0.0, 5e-4);
+
+  // The independent Python reconciliation integrates the SAME tables on a
+  // 4000-point grid capped at 5 fm^-1 = 0.98663 GeV instead of the model's
+  // 280-point grid capped at 1.2 GeV.  Agreement at the percent level is the
+  // statement that the grid is not doing the physics.
+  CHECK_CLOSE_AT(g6.mean_k, 0.1224, 0.02, 0.0);
+  CHECK_CLOSE_AT(g7.mean_k, 0.1860, 0.02, 0.0);
+  CHECK_CLOSE_AT(g7.p_gt_03, 0.2120, 0.02, 0.0);
+
+  // 7Li alpha+t is SOFTER than every beta in the model band -- against the
+  // P-WAVE form the channel really uses.  (Thread B's "the band is biased
+  // low" compared it against the S-wave form; see the reconciliation doc.)
+  for (double beta : {BETA_BAND_LO, BETA_DEFAULT, BETA_BAND_HI}) {
+    const GridMoments h = grid_moments(TaggedModel(li7_alpha_channel(beta)));
+    CHECK(g7.mean_k < h.mean_k);
+    CHECK(g7.p_gt_045 < h.p_gt_045);
+  }
+}
+
+TEST_CASE("tagged: the Hulthen path is untouched by the VMC backend") {
+  // The bit-compatibility guarantee.  The default channels carry NO table,
+  // the deuteron control channel can never carry one (the Cosyn-Weiss gate
+  // above runs on it), and `Wave::radial` on a null `vmc` is the analytic
+  // switch to the last bit.
+  for (const TaggedChannel& ch : {li6_alpha_channel(), li7_alpha_channel(),
+                                  deuteron_channel()}) {
+    for (const Wave& w : ch.waves) CHECK(!w.vmc);
+  }
+  // there is no VmcAV18 overload of `deuteron_channel` at all -- the deuteron
+  // IS the cluster, there is no d -> p + n two-cluster table
+  const TaggedChannel d = deuteron_channel();
+  const double kappa = d.base.kappa();
+  for (const Wave& w : d.waves) {
+    for (double k = 0.01; k < 1.2; k += 0.05) {
+      Wave bare;
+      bare.l = w.l;
+      bare.beta = w.beta;
+      CHECK(w.radial(k, kappa) == bare.radial(k, kappa));
+    }
+  }
+}
+
+TEST_CASE("tagged: the VMC S-D interference flips sign below the S node") {
+  if (!vmc_data_present()) {
+    MESSAGE("data/vmc not present -- skipping");
+    return;
+  }
+  // With the global phase fixed by psi_0(k -> 0) > 0 the model's own radial
+  // tables carry the sign, and it is NOT the sign the positive-definite
+  // Hulthen forms assume.  The S node is at 0.678 fm^-1 = 0.1338 GeV.
+  const TaggedModel m(li6_alpha_channel(BETA_DEFAULT, P_D_LI6,
+                                        ClusterWaveSource::VmcAV18));
+  const std::vector<double>& s = m.radial_table(0);
+  const std::vector<double>& d = m.radial_table(2);
+  const std::size_t below = argmin_abs(m.k(), 0.08);
+  const std::size_t above = argmin_abs(m.k(), 0.20);
+  CHECK(s[below] > 0.0);
+  CHECK(d[below] < 0.0);
+  CHECK(s[below] * d[below] < 0.0);     // opposite to Hulthen
+  CHECK(s[above] < 0.0);
+  CHECK(d[above] < 0.0);
+  CHECK(s[above] * d[above] > 0.0);     // same as Hulthen, above the S node
+  // the Hulthen forms have no node at all
+  const TaggedModel h(li6_alpha_channel());
+  for (std::size_t i = 0; i < h.nk(); ++i) {
+    CHECK(h.radial_table(0)[i] > 0.0);
+    CHECK(h.radial_table(2)[i] > 0.0);
+  }
 }

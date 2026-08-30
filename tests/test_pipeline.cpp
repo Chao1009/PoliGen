@@ -14,6 +14,7 @@
 #include <cmath>
 #include <cstdio>
 #include <filesystem>
+#include <fstream>
 #include <map>
 #include <memory>
 #include <string>
@@ -1095,5 +1096,65 @@ TEST_CASE("pipeline: the optics luminosity fraction reaches the event count") {
   for (std::size_t k = 0; k < tag.lumi_per_category_pb().size(); ++k) {
     CHECK_CLOSE(tag.lumi_per_category_pb()[k],
                 f * tag_off.lumi_per_category_pb()[k], 1e-12);
+  }
+}
+
+// ------------------------------------------------- the VMC cluster backend
+
+TEST_CASE("pipeline: the tagged pipeline runs on the VMC cluster waves") {
+  // `--cluster-wave vmc`, end to end, for BOTH isotopes: the pipeline builds,
+  // conserves four-momentum and charge event by event, and moves the tag
+  // fractions the way docs/open_items/vmc_reconciliation.md says it does.
+  //
+  // The VMC tables are only 4x softer than Hulthen in the FAR tail; in the
+  // 0.2-0.3 GeV band, which is exactly where the Roman-Pot envelope bites,
+  // 6Li alpha+d is HARDER (P(k>0.2) 0.148 -> 0.241), so the 6Li tag fraction
+  // GOES UP at the high-acceptance envelope even though <k> barely moves.
+  std::ifstream probe(data_path("vmc/momenta/li6_ad1.momentum"));
+  if (!probe) {
+    MESSAGE("data/vmc not present -- skipping");
+    return;
+  }
+  struct Row { PipelineChannel ch; const char* iso; int plan; double expect; };
+  const Row rows[] = {
+      {PipelineChannel::TaggedLi6Alpha, "6Li", 0, 0.0348},
+      {PipelineChannel::TaggedLi7Alpha, "7Li", 1, 0.9981},
+  };
+  for (const Row& row : rows) {
+    const std::string iso = row.iso;
+    CAPTURE(iso);
+    PipelineConfig cfg;
+    cfg.channel = row.ch;
+    cfg.isotope = iso;
+    cfg.beam_config = 1;                       // 10 x 99.5 GeV/u
+    cfg.optics_choice = OpticsChoice::YellowReportHighAcceptance;
+    cfg.n_events = 40000;
+    cfg.grid.nx = 40;
+    cfg.grid.nq2 = 28;
+    cfg.cluster_wave = ClusterWaveSource::VmcAV18;
+    const Pipeline p(cfg, plan_of(row.plan));
+    REQUIRE(p.tagged_model() != nullptr);
+    CHECK(p.tagged_model()->channel().label.find("VMC")
+          != std::string::npos);
+
+    const double p_u = p.beam_config().ion_momentum_per_nucleon;
+    const Optics ha = optics_for(OpticsChoice::YellowReportHighAcceptance, iso, p_u);
+    std::uint64_t tagged = 0, n = 0;
+    double worst_p = 0.0, worst_q = 0.0;
+    p.for_each([&](const Event& ev) {
+      ++n;
+      tagged += rp_tagged(ev, ha, p.pot_config());
+      worst_p = std::max(worst_p, relative_residual(ev));
+      worst_q = std::max(worst_q, std::fabs(charge_residual(ev)));
+      // the spectator can never be drawn outside the VMC tables' 5 fm^-1
+      CHECK(ev.kin.k <= 5.0 * 0.1973269804 + 1e-9);
+    });
+    CHECK(n == cfg.n_events);
+    CHECK(worst_p < 1e-9);
+    CHECK(worst_q < 1e-12);
+    const double frac = static_cast<double>(tagged) / n;
+    MESSAGE(iso << " alpha tag with VMC waves at YR high-acceptance: " << frac
+                << " (reconciliation table " << row.expect << ")");
+    CHECK_CLOSE(frac, row.expect, 0.05);
   }
 }

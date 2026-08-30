@@ -100,3 +100,9 @@ def test_plan_names_all_build():
         plan = lg.make_plan(name, j=1.0, pz=0.7, pzz=0.6, pe=0.7)
         assert len(plan) >= 1
         assert abs(sum(c.lumi_fraction for c in plan.categories) - 1.0) < 1e-9
+
+
+def test_cluster_wave_flag_reaches_the_config():
+    opts = cli.resolve(["--channel", "tagged-alpha", "--cluster-wave", "vmc"])
+    assert opts["cluster_wave"] == "vmc"
+    assert cli.resolve(["--channel", "tagged-alpha"])["cluster_wave"] == "hulthen"

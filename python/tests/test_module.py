@@ -1,5 +1,7 @@
 """The module imports, and the bound surface is the one docs/USAGE.md uses."""
 
+import os
+
 import numpy as np
 import pytest
 
@@ -162,3 +164,48 @@ def test_optics_luminosity_factor_is_reachable():
     cfg = lg.make_config(channel="tagged-alpha", events=10, optics="tagging")
     tagging = lg.Pipeline(cfg, lg.tensor_thirds_plan(0.7, 0.6))
     assert 0.0 < tagging.optics_lumi_factor() <= 1.0
+
+
+# ------------------------------------------------------- the VMC cluster waves
+
+
+def _have_vmc():
+    return os.path.isfile(os.path.join(lg._lipolgen.data_dir(),
+                                       "vmc", "momenta", "li6_ad1.momentum"))
+
+
+@pytest.mark.skipif(not _have_vmc(), reason="data/vmc is not present")
+def test_vmc_cluster_waves_are_reachable_and_carry_their_provenance():
+    ch = lg._lipolgen.li6_alpha_channel(
+        source=lg._lipolgen.ClusterWaveSource.VmcAV18)
+    assert "VMC" in ch.label
+    ls = sorted(w.l for w in ch.waves)
+    assert ls == [0, 2]
+    for w in ch.waves:
+        assert w.vmc is not None
+        assert w.vmc.l == w.l
+        assert "li6_ad1.momentum" in w.vmc.provenance
+        # zero outside the table: the ANL grid stops at 5 fm^-1
+        assert w.vmc(2.0) == 0.0
+    # `p_d` is ignored on the VMC path -- P_D is a property of the wave function
+    d = [w for w in ch.waves if w.l == 2][0]
+    assert d.prob == pytest.approx(lg._lipolgen.VMC_P_D_LI6, rel=1e-12)
+    assert d.prob == pytest.approx(0.01935, abs=2e-5)
+    # the S-D relative sign the momentum densities alone cannot give
+    s = [w for w in ch.waves if w.l == 0][0]
+    assert s.vmc(0.05) > 0 > d.vmc(0.05)
+    # ... and the Hulthen default carries no table at all
+    assert all(w.vmc is None for w in lg._lipolgen.li6_alpha_channel().waves)
+
+
+@pytest.mark.skipif(not _have_vmc(), reason="data/vmc is not present")
+def test_make_config_takes_cluster_wave_by_name():
+    assert lg.make_config(channel="tagged-alpha", events=10).cluster_wave \
+        == lg._lipolgen.ClusterWaveSource.Hulthen
+    cfg = lg.make_config(channel="tagged-alpha", events=500,
+                         cluster_wave="vmc")
+    assert cfg.cluster_wave == lg._lipolgen.ClusterWaveSource.VmcAV18
+    p = lg.Pipeline(cfg, lg.tensor_thirds_plan(0.7, 0.6))
+    assert "VMC" in p.tagged_model.channel.label
+    cols = p.generate(0, 500, 1)
+    assert cols["x"].size == 500

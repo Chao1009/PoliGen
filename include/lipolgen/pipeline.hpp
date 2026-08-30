@@ -317,6 +317,13 @@ struct PipelineConfig {
   // --- tagged channels ----------------------------------------------------
   double cluster_beta = BETA_DEFAULT;  ///< short-range scale of the radial waves
   double p_d = P_D_LI6;                ///< D-state probability (6Li alpha tag)
+  /// Which family of radial forms the lithium alpha-tag channels use.
+  /// `Hulthen` is the default and keeps every published number bit-for-bit;
+  /// `VmcAV18` swaps in the ANL VMC tables and then IGNORES `cluster_beta`
+  /// and `p_d` for those two channels (`docs/CONVENTIONS.md`).  The deuteron
+  /// control channel is always Hulthen -- there is no VMC d -> p+n cluster
+  /// table, the deuteron IS the cluster.
+  ClusterWaveSource cluster_wave = ClusterWaveSource::Hulthen;
   StruckClusterOptions struck;         ///< struck-cluster DIS options
 
   // --- coherent channel ---------------------------------------------------

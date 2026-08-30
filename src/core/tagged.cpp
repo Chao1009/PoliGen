@@ -1,6 +1,7 @@
 #include "lipolgen/tagged.hpp"
 
 #include <algorithm>
+#include <memory>
 #include <cmath>
 #include <stdexcept>
 
@@ -53,30 +54,115 @@ void TaggedChannel::validate() const {
   }
 }
 
-TaggedChannel li6_alpha_channel(double beta, double p_d) {
+namespace {
+
+/// The 6Li alpha-d VMC waves, built ONCE and shared.
+///
+/// MAGNITUDE from `momenta/li6_ad1.momentum` (AV18+UX, 1M samples, an
+/// explicit S/D split with MC errors and the file's own normalizations).
+/// SIGN from `overlap_old/li6.ad` (AV18+UIX, 2004), which is the only
+/// published source of the RELATIVE S-D phase: a momentum density is
+/// |psi_L|^2 and carries none.  `vmc_from_momentum` turns the overlap
+/// column's zero crossings below 3 fm^-1 into a step function of the sign,
+/// which is more robust than copying sign(A_L(k)) point by point (past
+/// ~3 fm^-1 the overlap columns are at the MC noise floor and wander, while
+/// carrying ~1e-4 of the norm).  The resulting node structure is
+///     S wave  one node at 0.678 fm^-1 = 0.134 GeV
+///     D wave  one node at 2.25  fm^-1 = 0.444 GeV
+/// and both are confirmed independently by minima of the momentum file's own
+/// rho_0 / rho_2 in the same bin (docs/open_items/vmc_reconciliation.md).
+/// With the global phase fixed by psi_0(k -> 0) > 0, sign(psi_2/psi_0) = -1
+/// below the S node -- the OPPOSITE of what the positive-definite Hulthen
+/// forms assume.
+const std::vector<Wave>& li6_vmc_waves() {
+  static const std::vector<Wave> w = [] {
+    const VmcRadial s_sign = vmc_from_overlap_k(data_path(VMC_LI6_OVERLAP), 0, 0);
+    const VmcRadial d_sign = vmc_from_overlap_k(data_path(VMC_LI6_OVERLAP), 1, 2);
+    VmcRadial s_tab = vmc_from_momentum(data_path(VMC_LI6_MOMENTUM), 1, 0, 0,
+                                        &s_sign);
+    VmcRadial d_tab = vmc_from_momentum(data_path(VMC_LI6_MOMENTUM), 1, 1, 2,
+                                        &d_sign);
+    // Fix the (unobservable) GLOBAL phase to psi_0(k -> 0) > 0, so that the
+    // (observable) relative phase reads off as sign(psi_2).  li6.ad happens
+    // to print the alpha-d overlap with A00 < 0 at low k.
+    if (s_tab.psi().front() < 0.0) {
+      s_tab = s_tab.scaled(-1.0);
+      d_tab = d_tab.scaled(-1.0);
+    }
+    auto s = std::make_shared<const VmcRadial>(std::move(s_tab));
+    auto d = std::make_shared<const VmcRadial>(std::move(d_tab));
+    Wave ws;
+    ws.l = 0;
+    ws.prob = 1.0 - VMC_P_D_LI6;
+    ws.vmc = s;
+    Wave wd;
+    wd.l = 2;
+    wd.prob = VMC_P_D_LI6;
+    wd.vmc = d;
+    return std::vector<Wave>{ws, wd};
+  }();
+  return w;
+}
+
+/// The 7Li alpha-t VMC wave.  A single L = 1 channel, so there is no
+/// interference term and no observable phase: the magnitude from
+/// `momenta/li7_at3.momentum` (the 3/2- GROUND state; `li7_at1` is the 1/2-
+/// excited state) is the whole story and no sign reference is needed.
+///
+/// `overlap_old/li7.at`'s second column `Aat11` is NOT a second partial wave:
+/// alpha(0+) x t(1/2+) with L = 1 gives j = 1/2 or 3/2 and only j = 3/2 can
+/// build the 3/2- ground state, so it is a selection-rule zero carrying MC
+/// leakage at 3.5e-5 of the norm.  It is deliberately not loaded.
+const std::vector<Wave>& li7_vmc_waves() {
+  static const std::vector<Wave> w = [] {
+    auto p = std::make_shared<const VmcRadial>(vmc_from_momentum(
+        data_path(VMC_LI7_MOMENTUM), 0, 0, 1, nullptr));
+    Wave wp;
+    wp.l = 1;
+    wp.prob = 1.0;
+    wp.vmc = p;
+    return std::vector<Wave>{wp};
+  }();
+  return w;
+}
+
+}  // namespace
+
+TaggedChannel li6_alpha_channel(double beta, double p_d,
+                                ClusterWaveSource source) {
   TaggedChannel c;
   c.base = LI6_ALPHA_TAG();
   c.j_ion = 1.0;
   c.s_struck = 1.0;
   c.s_spec = 0.0;
   c.s_channel = 1.0;
-  c.waves = {Wave{0, 1.0 - p_d, beta}, Wave{2, p_d, beta}};
+  if (source == ClusterWaveSource::VmcAV18) {
+    c.waves = li6_vmc_waves();
+    c.label = "6Li alpha-tag (embedded d, VMC AV18+UX)";
+  } else {
+    c.waves = {Wave{0, 1.0 - p_d, beta, nullptr}, Wave{2, p_d, beta, nullptr}};
+    c.label = "6Li alpha-tag (embedded d)";
+  }
   c.dis_target = DEUTERON();
-  c.label = "6Li alpha-tag (embedded d)";
   c.validate();
   return c;
 }
 
-TaggedChannel li7_alpha_channel(double beta) {
+TaggedChannel li7_alpha_channel(double beta, ClusterWaveSource source) {
   TaggedChannel c;
   c.base = LI7_ALPHA_TAG();
   c.j_ion = 1.5;
   c.s_struck = 0.5;
   c.s_spec = 0.0;
   c.s_channel = 0.5;
-  c.waves = {Wave{1, 1.0, beta}};
+  if (source == ClusterWaveSource::VmcAV18) {
+    c.waves = li7_vmc_waves();
+    c.label = "7Li alpha-tag (quasi-free t, VMC AV18+UX)";
+  } else {
+    c.waves = {Wave{1, 1.0, beta, nullptr}};
+    c.label = "7Li alpha-tag (quasi-free t)";
+  }
   c.dis_target = TRITON();
-  c.label = "7Li alpha-tag (quasi-free t)";
   c.validate();
   return c;
 }
@@ -88,7 +174,7 @@ TaggedChannel deuteron_channel(double beta, double p_d) {
   c.s_struck = 0.5;
   c.s_spec = 0.5;
   c.s_channel = 1.0;
-  c.waves = {Wave{0, 1.0 - p_d, beta}, Wave{2, p_d, beta}};
+  c.waves = {Wave{0, 1.0 - p_d, beta, nullptr}, Wave{2, p_d, beta, nullptr}};
   c.dis_target = NEUTRON_TARGET();
   c.label = "d control (n struck, p tagged)";
   c.validate();

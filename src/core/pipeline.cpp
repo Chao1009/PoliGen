@@ -454,9 +454,9 @@ Pipeline::Pipeline(PipelineConfig config, RunPlan plan)
   if (is_tagged(cfg_.channel)) {
     channel_.reset(new TaggedChannel(
         cfg_.channel == PipelineChannel::TaggedLi6Alpha
-            ? li6_alpha_channel(cfg_.cluster_beta, cfg_.p_d)
+            ? li6_alpha_channel(cfg_.cluster_beta, cfg_.p_d, cfg_.cluster_wave)
             : cfg_.channel == PipelineChannel::TaggedLi7Alpha
-                  ? li7_alpha_channel(cfg_.cluster_beta)
+                  ? li7_alpha_channel(cfg_.cluster_beta, cfg_.cluster_wave)
                   : deuteron_channel(cfg_.cluster_beta, P_D_DEUTERON)));
     model_ = std::make_shared<TaggedModel>(*channel_);
     StruckClusterOptions sopt = cfg_.struck;

@@ -44,10 +44,38 @@ namespace lipolgen {
 
 /// alpha-d D-state probability, chosen so the embedded-deuteron VECTOR
 /// dilution 1 - (3/2) P_D reproduces the 0.87 of `b1_li6_from_deuteron`
-/// (SCENARIO; VMC overlaps are the scheduled replacement).
+/// (SCENARIO).  It is the DEFAULT because the Hulthen path is the
+/// bit-compatibility path; `VMC_P_D_LI6` is the measured replacement and is
+/// what `ClusterWaveSource::VmcAV18` uses.
 inline constexpr double P_D_LI6 = 0.0867;
 /// Deuteron D-state probability (AV18-like).
 inline constexpr double P_D_DEUTERON = 0.045;
+
+// ------------------------------------------- the VMC numbers, as DATA
+//
+// PROVENANCE.  R. B. Wiringa et al. (ANL), `momenta/li6_ad1.momentum` and
+// `momenta/li7_at3.momentum`, AV18+UX variational Monte Carlo (1M and 500k
+// samples, 22-Mar-14 and 12-Apr-24), fetched via the Internet Archive; see
+// `data/vmc/README.md` for URLs and `docs/open_items/vmc_reconciliation.md`
+// for the reconciliation against the 2004 `overlap_old` amplitudes.  The
+// values below are the files' OWN printed normalizations
+// `4*PI*TOTINT(RHO*K**2:K)/(2*PI)**3`, not a re-integration.
+
+/// alpha-d D-state probability, VMC: 0.015861 / (0.80362 + 0.015861).
+inline constexpr double VMC_P_D_LI6 = 0.015861 / (0.80362 + 0.015861);
+/// alpha-d spectroscopic factor S_ad of 6Li (the file's total block).
+inline constexpr double VMC_S_ALPHA_D_LI6 = 0.81971;
+/// alpha-t spectroscopic factor S_at of the 7Li 3/2- GROUND state.
+/// (`li7_at1.momentum`, the 1/2- excited state, gives 0.98683 -- not this.)
+inline constexpr double VMC_S_ALPHA_T_LI7 = 1.0084;
+
+/// The data files `ClusterWaveSource::VmcAV18` opens, relative to
+/// `data_dir()` (`$LIPOLGEN_DATA_DIR`, else the compiled-in
+/// `${CMAKE_SOURCE_DIR}/data`).
+inline const char* const VMC_LI6_MOMENTUM = "vmc/momenta/li6_ad1.momentum";
+inline const char* const VMC_LI7_MOMENTUM = "vmc/momenta/li7_at3.momentum";
+inline const char* const VMC_LI6_OVERLAP = "vmc/li6_alpha_d/li6.ad";
+inline const char* const VMC_LI7_OVERLAP = "vmc/li7_alpha_t/li7.at";
 
 /// Struck-cluster DIS targets that are not beam species.  TRITON mirrors
 /// `beams.HE3` under p <-> n and its constants are PER NUCLEON like every
@@ -72,10 +100,19 @@ struct TaggedChannel {
 };
 
 /// 6Li: DIS on the embedded deuteron, alpha spectator (S+D waves).
-TaggedChannel li6_alpha_channel(double beta = BETA_DEFAULT,
-                                double p_d = P_D_LI6);
+///
+/// `source` defaults to `Hulthen`, which keeps every existing number
+/// BIT-FOR-BIT; `VmcAV18` replaces both radial shapes with the ANL tables and
+/// IGNORES `beta` and `p_d` (the D-state probability is then a property of
+/// the wave function, `VMC_P_D_LI6`, not a knob).
+TaggedChannel li6_alpha_channel(
+    double beta = BETA_DEFAULT, double p_d = P_D_LI6,
+    ClusterWaveSource source = ClusterWaveSource::Hulthen);
 /// 7Li: DIS on the quasi-free triton, alpha spectator (pure P-wave).
-TaggedChannel li7_alpha_channel(double beta = BETA_DEFAULT);
+/// `source` as above; `VmcAV18` ignores `beta`.
+TaggedChannel li7_alpha_channel(
+    double beta = BETA_DEFAULT,
+    ClusterWaveSource source = ClusterWaveSource::Hulthen);
 /// Deuteron control: DIS on the neutron, proton spectator (S+D).  The
 /// Cosyn-Weiss tagged limit of the machinery.
 TaggedChannel deuteron_channel(double beta = BETA_DEFAULT,

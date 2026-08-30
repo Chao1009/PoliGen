@@ -69,7 +69,11 @@ on TOY structure functions only.
 
 `constants`: `structure.ALPHA_EM` (structure.py:21, =1/137.036),
 `structure.GEV2_TO_PB` (structure.py:38), `asymmetries.TENSOR_LL_SIGN`
-(asymmetries.py:41, =+1.0), `xsec.M_NUCLEON` (xsec.py:79, =0.9383 GeV,
+(=-1.0 since 2026-08-29: the LITERATURE convention, Cosyn et al. Eq. 27
+/ HERMES, A_zz = -(2/3) b1/F1), `beams.LI6_CLUSTER_POLARIZATION`
+(=0.81123, the whole-nucleus 6Li vector polarization of the cluster
+picture, from which beams.LI6's per-nucleon slots are a third each),
+`asymmetries.M_NUCLEON` (=0.9383 GeV,
 the FREE-nucleon mass used in gamma^2 = 4 M^2 x^2/Q^2), and per-ion
 `beams.Ion` fields (A, Z, N=A-Z, spin, eff_pol_p, eff_pol_n,
 mass_per_nucleon) for `beams.LI6`/`beams.LI7` (beams.py:197,199).
@@ -116,6 +120,17 @@ exact finite-gamma E143 vector sector) each contain:
     grid_points[i]).  `dsigma_unpol` is `InclusiveKernel.dsigma_unpol`
     (xsec.py:383), i.e. `structure.dsigma_dx_dq2` (structure.py:341) on
     the per-nucleon F2.
+  * (tensor_gamma variant only) `tensor_gamma`: the pieces of the EXACT
+    finite-gamma tensor sector (Cosyn et al. Eqs. 9/10/14/16/17/24,
+    plans/08 D2) -- `xsec.theta_q_cos_sin` (Eq. 24),
+    `xsec.cosyn_tensor_sfs` (Eqs. 17a-17e, on the block's own b1..b4),
+    `xsec.cosyn_unpolarized_sfs` (Eq. 16), and the (h0, h1, h2)
+    harmonics `InclusiveKernel._tensor_harmonics_gamma` returns for
+    every (axis, m).  Those blocks are dumped from a kernel built with
+    `tensor_gamma=True` and both higher-twist slots filled
+    (b3_func=0.05*f1, b4_func=-0.02*f1 -- SCENARIO shapes, b3 and b4
+    are unmeasured), so their `amplitudes` carry the exact b-sector
+    while every other block carries the massless one.
   * (target_mass variant only) `target_mass`: `xsec.gamma_squared`
     (xsec.py:118), `xsec.epsilon_gamma` (xsec.py:129),
     `xsec.depolarization_gamma` (xsec.py:136), `xsec.eta_gamma`

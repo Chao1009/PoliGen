@@ -71,11 +71,15 @@
   ]
  },
  "constants": {
+  "ALPHA_D_VECTOR_POLARIZATION": 0.86995,
+  "DEUTERON_VECTOR_POLARIZATION": 0.9325,
   "ELECTRON_ENERGIES": [
    5.0,
    10.0,
    18.0
   ],
+  "LI6_CLUSTER_POLARIZATION": 0.811228375,
+  "LI6_NAIVE_ONE_THIRD": 0.3333333333333333,
   "NUCLEUS_MASS": {
    "3He_3_2": 2.808391607,
    "6Li_6_3": 5.601518702,
@@ -89,7 +93,9 @@
    275.0
   ],
   "PROTON_MASS": 0.938272088,
-  "PROTON_TOP_MOMENTUM": 275.0
+  "PROTON_TOP_MOMENTUM": 275.0,
+  "P_D_DEUTERON": 0.045,
+  "P_D_LI6": 0.0867
  },
  "gamma_of_proton_energy": [
   {
@@ -120,8 +126,8 @@
    "A": 6,
    "N": 3,
    "Z": 3,
-   "eff_pol_n": 0.3333333333333333,
-   "eff_pol_p": 0.3333333333333333,
+   "eff_pol_n": 0.27040945833333335,
+   "eff_pol_p": 0.27040945833333335,
    "mass_per_nucleon": 0.9335864503333333,
    "momentum_per_nucleon_max": 137.5,
    "spin": 1.0
@@ -140,8 +146,8 @@
    "A": 2,
    "N": 1,
    "Z": 1,
-   "eff_pol_n": 0.93,
-   "eff_pol_p": 0.93,
+   "eff_pol_n": 0.9325,
+   "eff_pol_p": 0.9325,
    "mass_per_nucleon": 0.937806471,
    "momentum_per_nucleon_max": 137.5,
    "spin": 1.0

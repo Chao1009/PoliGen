@@ -58,6 +58,14 @@ InclusiveKernel build_kernel(const std::string& ion_name,
   } else {
     opt.target_mass = false;
   }
+  if (block == "kernel_tensor_gamma") {
+    // the EXACT finite-gamma tensor sector, with both higher-twist slots
+    // filled by the dump's scenario shapes (`B3_SCENARIO`, `B4_SCENARIO`)
+    CHECK(!opt.tensor_gamma);   // ... and it is OFF in a default kernel
+    opt.tensor_gamma = true;
+    opt.b3_func = [](double, double, double f1) { return 0.05 * f1; };
+    opt.b4_func = [](double, double, double f1) { return -0.02 * f1; };
+  }
   if (ion_name == "6Li") {
     // b1_func = toy_b1(..., mode="toy"), delta_func = toy_delta_gluon(scale=1e-3)
     opt.b1_func = [](double x, double q2, double f1) {
@@ -66,7 +74,7 @@ InclusiveKernel build_kernel(const std::string& ion_name,
     opt.delta_func = [](double x, double q2, double f1) {
       return toy_delta_gluon(x, q2, f1, 1e-3);
     };
-  } else if (block == "kernel_scenario_rank2") {
+  } else if (block == "kernel_scenario_rank2" || block == "kernel_tensor_gamma") {
     opt.b1_32_func = [](double, double, double f1) { return 0.05 * f1; };
     opt.delta_32_func = [](double, double, double f1) { return -1e-2 * f1; };
   }
@@ -88,6 +96,19 @@ TEST_CASE("reference tables: beams.json") {
     CHECK(PROTON_CONFIG_ENERGIES[i] == c["PROTON_CONFIG_ENERGIES"][i].num());
     CHECK(ELECTRON_ENERGIES[i] == c["ELECTRON_ENERGIES"][i].num());
   }
+  // the 6Li cluster wave function: the two D-state probabilities live in
+  // beams.hpp (as they do in beams.py since 2026-08-29), and the inclusive
+  // eff_pol slots below are LI6_CLUSTER_POLARIZATION/3 built from them
+  CHECK(P_D_LI6 == c["P_D_LI6"].num());
+  CHECK(P_D_DEUTERON == c["P_D_DEUTERON"].num());
+  CHECK_CLOSE(ALPHA_D_VECTOR_POLARIZATION,
+              c["ALPHA_D_VECTOR_POLARIZATION"].num(), kRtol);
+  CHECK_CLOSE(DEUTERON_VECTOR_POLARIZATION,
+              c["DEUTERON_VECTOR_POLARIZATION"].num(), kRtol);
+  CHECK_CLOSE(LI6_CLUSTER_POLARIZATION,
+              c["LI6_CLUSTER_POLARIZATION"].num(), kRtol);
+  CHECK(LI6_NAIVE_ONE_THIRD == c["LI6_NAIVE_ONE_THIRD"].num());
+
   for (const auto& kv : c["NUCLEUS_MASS"].obj()) {
     // keys are "<name>_<A>_<Z>"
     const std::size_t p2 = kv.first.rfind('_');
@@ -263,6 +284,8 @@ TEST_CASE("reference tables: xsec.json") {
   CHECK_CLOSE(GEV2_TO_PB, consts["GEV2_TO_PB"].num(), kRtol);
   CHECK(TENSOR_LL_SIGN == consts["TENSOR_LL_SIGN"].num());
   CHECK(M_NUCLEON == consts["M_NUCLEON"].num());
+  CHECK_CLOSE(LI6_CLUSTER_POLARIZATION,
+              consts["LI6_CLUSTER_POLARIZATION"].num(), kRtol);
 
   std::vector<double> xs, q2s;
   for (const jsonmin::Value& p : doc["grid_points"].arr()) {
@@ -303,6 +326,8 @@ TEST_CASE("reference tables: xsec.json") {
         CHECK_CLOSE_AT(tabs[i].g2, jt["g2"][i].num(), kRtol, 1e-300);
         CHECK_CLOSE_AT(tabs[i].b1, jt["b1"][i].num(), kRtol, 1e-300);
         CHECK_CLOSE_AT(tabs[i].b2, jt["b2"][i].num(), kRtol, 1e-300);
+        CHECK_CLOSE_AT(tabs[i].b3, jt["b3"][i].num(), kRtol, 1e-300);
+        CHECK_CLOSE_AT(tabs[i].b4, jt["b4"][i].num(), kRtol, 1e-300);
         CHECK_CLOSE_AT(tabs[i].delta, jt["delta"][i].num(), kRtol, 1e-300);
       }
 
@@ -380,6 +405,46 @@ TEST_CASE("reference tables: xsec.json") {
                          tm["a_parallel_finite_gamma"][i].num(), kRtol, 1e-300);
           CHECK_CLOSE_AT(a_parallel(tabs[i].g1, tabs[i].f1, y, xs[i], q2s[i]),
                          tm["a_parallel_massless"][i].num(), kRtol, 1e-300);
+        }
+      }
+
+      // --- the exact finite-gamma TENSOR sector (Cosyn, plans/08 D2)
+      if (b.has("tensor_gamma")) {
+        CHECK(kern.tensor_gamma());
+        const jsonmin::Value& tg = b["tensor_gamma"];
+        for (std::size_t i = 0; i < np; ++i) {
+          const double y = q2s[i] / (s * xs[i]);
+          const double g2v = gamma_squared(xs[i], q2s[i]);
+          const std::pair<double, double> cs = theta_q_cos_sin(y, g2v);
+          CHECK_CLOSE(cs.first, tg["cos_theta_q"][i].num(), kRtol);
+          CHECK_CLOSE_AT(cs.second, tg["sin_theta_q"][i].num(), kRtol, 1e-300);
+          const CosynTensorSFs f = cosyn_tensor_sfs(
+              tabs[i].b1, tabs[i].b2, tabs[i].b3, tabs[i].b4, xs[i], g2v);
+          CHECK_CLOSE_AT(f.f_t, tg["F_TLL_T"][i].num(), kRtol, 1e-300);
+          CHECK_CLOSE_AT(f.f_l, tg["F_TLL_L"][i].num(), kRtol, 1e-300);
+          CHECK_CLOSE_AT(f.f_lt, tg["F_TLT"][i].num(), kRtol, 1e-300);
+          CHECK_CLOSE_AT(f.f_tt, tg["F_TTT"][i].num(), kRtol, 1e-300);
+          const std::pair<double, double> fu =
+              cosyn_unpolarized_sfs(tabs[i].f1, tabs[i].f2, xs[i], g2v);
+          CHECK_CLOSE_AT(fu.first, tg["F_UU_T"][i].num(), kRtol, 1e-300);
+          CHECK_CLOSE_AT(fu.second, tg["F_UU_L"][i].num(), kRtol, 1e-300);
+        }
+        for (const jsonmin::Value& hh : tg["harmonics"].arr()) {
+          EventSpinState st;
+          st.lam_e = 0;
+          st.pe = 0.0;
+          st.j = kern.ion().spin;
+          st.m = hh["m"].num();
+          st.theta_s = hh["theta_s"].num();
+          st.phi_s = hh["phi_s"].num();
+          for (std::size_t i = 0; i < np; ++i) {
+            const double y = q2s[i] / (s * xs[i]);
+            const TensorHarmonics h =
+                kern.tensor_harmonics_gamma(tabs[i], xs[i], q2s[i], y, st);
+            CHECK_CLOSE_AT(h.h0, hh["h0"][i].num(), kRtol, 1e-300);
+            CHECK_CLOSE_AT(h.h1, hh["h1"][i].num(), kRtol, 1e-300);
+            CHECK_CLOSE_AT(h.h2, hh["h2"][i].num(), kRtol, 1e-300);
+          }
         }
       }
     }

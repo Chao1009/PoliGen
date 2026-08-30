@@ -258,7 +258,8 @@ doc("spin.json",
 # 2. xsec.json
 # ===========================================================================
 
-def kernel_amplitude_dump(kern, ion, s, points, axes, ms, with_target_mass=False):
+def kernel_amplitude_dump(kern, ion, s, points, axes, ms, with_target_mass=False,
+                          with_tensor_gamma=False):
     xs = np.array([p[0] for p in points])
     q2s = np.array([p[1] for p in points])
     ys = q2s / (s * xs)
@@ -333,7 +334,54 @@ def kernel_amplitude_dump(kern, ion, s, points, axes, ms, with_target_mass=False
             "a_parallel_massless": asym.a_parallel(t["g1"], t["f1"], ys, xs,
                                                     q2s).tolist(),
         }
+
+    if with_tensor_gamma:
+        # The EXACT finite-gamma tensor sector (Cosyn Eqs. 9/10/14/16/17/24,
+        # plans/08 D2).  The kernel-level amplitudes above already carry it
+        # (this kernel was built with tensor_gamma=True); what is dumped here
+        # in addition are the three pieces it is assembled from, so that a
+        # port can be located rather than only compared:
+        #   theta_q          Eq. (24), the rest-frame photon-beam angle
+        #   cosyn_tensor_sfs Eqs. (17a)-(17e) on the block's own b1..b4
+        #   cosyn_unpol_sfs  Eq. (16)
+        #   harmonics        (h0, h1, h2) per (axis, m)
+        gamma2 = xsec.gamma_squared(xs, q2s)
+        cq, sq = xsec.theta_q_cos_sin(ys, gamma2)
+        f_t, f_l, f_lt, f_tt = xsec.cosyn_tensor_sfs(
+            t["b1"], t["b2"], t["b3"], t["b4"], xs, gamma2)
+        fu_t, fu_l = xsec.cosyn_unpolarized_sfs(t["f1"], t["f2"], xs, gamma2)
+        harm = []
+        for theta_s, phi_s in axes:
+            for m in ms:
+                state = xsec.EventSpinState(0, 0.0, ion.spin, m,
+                                            theta_s=theta_s, phi_s=phi_s)
+                h0, h1, h2 = kern._tensor_harmonics_gamma(t, xs, q2s, ys,
+                                                          state)
+                harm.append({
+                    "m": m, "theta_s": theta_s, "phi_s": phi_s,
+                    "h0": np.broadcast_to(h0, xs.shape).tolist(),
+                    "h1": np.broadcast_to(h1, xs.shape).tolist(),
+                    "h2": np.broadcast_to(h2, xs.shape).tolist(),
+                })
+        out["tensor_gamma"] = {
+            "cos_theta_q": np.broadcast_to(cq, xs.shape).tolist(),
+            "sin_theta_q": np.broadcast_to(sq, xs.shape).tolist(),
+            "F_TLL_T": np.broadcast_to(f_t, xs.shape).tolist(),
+            "F_TLL_L": np.broadcast_to(f_l, xs.shape).tolist(),
+            "F_TLT": np.broadcast_to(f_lt, xs.shape).tolist(),
+            "F_TTT": np.broadcast_to(f_tt, xs.shape).tolist(),
+            "F_UU_T": np.broadcast_to(fu_t, xs.shape).tolist(),
+            "F_UU_L": np.broadcast_to(fu_l, xs.shape).tolist(),
+            "harmonics": harm,
+        }
     return out
+
+
+# The higher-twist tensor slots the `kernel_tensor_gamma` blocks are built
+# with.  b3 and b4 are UNMEASURED; these are scenario shapes chosen only so
+# that both slots reach the kernel and neither cancels the other.
+B3_SCENARIO = "b3_func = 0.05 * f1"
+B4_SCENARIO = "b4_func = -0.02 * f1"
 
 
 def build_xsec():
@@ -348,6 +396,7 @@ def build_xsec():
             "ALPHA_EM": structure.ALPHA_EM,
             "GEV2_TO_PB": structure.GEV2_TO_PB,
             "TENSOR_LL_SIGN": asym.TENSOR_LL_SIGN,
+            "LI6_CLUSTER_POLARIZATION": beams.LI6_CLUSTER_POLARIZATION,
             "M_NUCLEON": xsec.M_NUCLEON,
             "ions": {
                 ion.name: {
@@ -393,6 +442,8 @@ def build_xsec():
 
         b1_func = lambda x, q2, f1: polarized.toy_b1(x, q2, f1, mode="toy")  # noqa: E731
         delta_func = lambda x, q2, f1: polarized.toy_delta_gluon(x, q2, f1, scale=1e-3)  # noqa: E731
+        b3_func = lambda x, q2, f1: 0.05 * f1  # noqa: E731
+        b4_func = lambda x, q2, f1: -0.02 * f1  # noqa: E731
 
         entry = {
             "beam_config": {"electron_energy": config.electron_energy,
@@ -413,6 +464,18 @@ def build_xsec():
                                            target_mass=True)
             entry["kernel_default_target_mass"] = kernel_amplitude_dump(
                 kern_tm, ion, s, XQ2_POINTS, AXES, ms, with_target_mass=True)
+            # the EXACT finite-gamma tensor sector, off by default
+            kern_tg = xsec.InclusiveKernel(ion, b1_func=b1_func,
+                                           delta_func=delta_func,
+                                           b3_func=b3_func, b4_func=b4_func,
+                                           tensor_gamma=True,
+                                           target_mass=False)
+            entry["kernel_tensor_gamma"] = kernel_amplitude_dump(
+                kern_tg, ion, s, XQ2_POINTS, AXES, ms,
+                with_tensor_gamma=True)
+            entry["kernel_tensor_gamma"]["toy_formulas"] = {
+                "b3_func": B3_SCENARIO, "b4_func": B4_SCENARIO,
+            }
         else:
             # rank-0/1 default kernel: rank-2 (b1_32/delta_32) default to
             # zero, exactly as InclusiveKernel documents for spin 3/2.
@@ -435,6 +498,21 @@ def build_xsec():
                 "b1_32_func": "0.05 * f1",
                 "delta_32_func": "-1e-2 * f1",
             }
+            # the finite-gamma tensor sector on the spin-3/2 rank-2 scenario,
+            # which also exercises the b3/b4 slots on a J = 3/2 alignment
+            kern2g = xsec.InclusiveKernel(ion, b1_32_func=b1_32,
+                                          delta_32_func=delta_32,
+                                          b3_func=b3_func, b4_func=b4_func,
+                                          tensor_gamma=True,
+                                          target_mass=False)
+            entry["kernel_tensor_gamma"] = kernel_amplitude_dump(
+                kern2g, ion, s, XQ2_POINTS, AXES, ms,
+                with_tensor_gamma=True)
+            entry["kernel_tensor_gamma"]["toy_formulas"] = {
+                "b1_32_func": "0.05 * f1",
+                "delta_32_func": "-1e-2 * f1",
+                "b3_func": B3_SCENARIO, "b4_func": B4_SCENARIO,
+            }
         out["results"][ion_name] = entry
     return out
 
@@ -446,7 +524,11 @@ doc("xsec.json",
     "on TOY structure functions only.\n\n"
     "`constants`: `structure.ALPHA_EM` (structure.py:21, =1/137.036),\n"
     "`structure.GEV2_TO_PB` (structure.py:38), `asymmetries.TENSOR_LL_SIGN`\n"
-    "(asymmetries.py:41, =+1.0), `xsec.M_NUCLEON` (xsec.py:79, =0.9383 GeV,\n"
+    "(=-1.0 since 2026-08-29: the LITERATURE convention, Cosyn et al. Eq. 27\n"
+    "/ HERMES, A_zz = -(2/3) b1/F1), `beams.LI6_CLUSTER_POLARIZATION`\n"
+    "(=0.81123, the whole-nucleus 6Li vector polarization of the cluster\n"
+    "picture, from which beams.LI6's per-nucleon slots are a third each),\n"
+    "`asymmetries.M_NUCLEON` (=0.9383 GeV,\n"
     "the FREE-nucleon mass used in gamma^2 = 4 M^2 x^2/Q^2), and per-ion\n"
     "`beams.Ion` fields (A, Z, N=A-Z, spin, eff_pol_p, eff_pol_n,\n"
     "mass_per_nucleon) for `beams.LI6`/`beams.LI7` (beams.py:197,199).\n\n"
@@ -490,6 +572,17 @@ doc("xsec.json",
     "    grid_points[i]).  `dsigma_unpol` is `InclusiveKernel.dsigma_unpol`\n"
     "    (xsec.py:383), i.e. `structure.dsigma_dx_dq2` (structure.py:341) on\n"
     "    the per-nucleon F2.\n"
+    "  * (tensor_gamma variant only) `tensor_gamma`: the pieces of the EXACT\n"
+    "    finite-gamma tensor sector (Cosyn et al. Eqs. 9/10/14/16/17/24,\n"
+    "    plans/08 D2) -- `xsec.theta_q_cos_sin` (Eq. 24),\n"
+    "    `xsec.cosyn_tensor_sfs` (Eqs. 17a-17e, on the block's own b1..b4),\n"
+    "    `xsec.cosyn_unpolarized_sfs` (Eq. 16), and the (h0, h1, h2)\n"
+    "    harmonics `InclusiveKernel._tensor_harmonics_gamma` returns for\n"
+    "    every (axis, m).  Those blocks are dumped from a kernel built with\n"
+    "    `tensor_gamma=True` and both higher-twist slots filled\n"
+    "    (b3_func=0.05*f1, b4_func=-0.02*f1 -- SCENARIO shapes, b3 and b4\n"
+    "    are unmeasured), so their `amplitudes` carry the exact b-sector\n"
+    "    while every other block carries the massless one.\n"
     "  * (target_mass variant only) `target_mass`: `xsec.gamma_squared`\n"
     "    (xsec.py:118), `xsec.epsilon_gamma` (xsec.py:129),\n"
     "    `xsec.depolarization_gamma` (xsec.py:136), `xsec.eta_gamma`\n"
@@ -516,6 +609,16 @@ def build_beams():
         "ELECTRON_ENERGIES": list(beams.ELECTRON_ENERGIES),
         "NUCLEUS_MASS": {"%s_%d_%d" % k: v
                          for k, v in beams.NUCLEUS_MASS.items()},
+        # the 6Li cluster wave function -- ONE source of truth for the
+        # inclusive effective polarization below and for the tagged S/D
+        # interference of `polligen.tagged`, which re-exports these two
+        # (beams.py, author decision 2026-08-29 / plans/04 #6)
+        "P_D_LI6": beams.P_D_LI6,
+        "P_D_DEUTERON": beams.P_D_DEUTERON,
+        "ALPHA_D_VECTOR_POLARIZATION": beams.ALPHA_D_VECTOR_POLARIZATION,
+        "DEUTERON_VECTOR_POLARIZATION": beams.DEUTERON_VECTOR_POLARIZATION,
+        "LI6_CLUSTER_POLARIZATION": beams.LI6_CLUSTER_POLARIZATION,
+        "LI6_NAIVE_ONE_THIRD": beams.LI6_NAIVE_ONE_THIRD,
     }, "ions": {}, "configs": {}}
 
     for name, ion in beams.IONS.items():

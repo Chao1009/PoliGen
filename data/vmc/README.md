@@ -78,6 +78,46 @@ fetch dates recorded here are 2026-08-29 (this session); the *crawl* dates
 are late May / mid-June 2025 as shown in each timestamp. Verified plain-text
 (no HTML wrapper) after download.
 
+## `momenta/` — the cluster MOMENTUM DISTRIBUTIONS (fetched 2026-08-29, second pass)
+
+The `overlap_old/` files above are 2004 AV18+UIX **amplitudes**.  The site's
+`momenta/` directory carries a *newer, independent* family: cluster relative
+**momentum distributions** rho_L(K) from AV18+UX VMC runs, with far better
+statistics and — for 6Li — an explicit S/D split.  These are the files
+`docs/open_items/vmc_reconciliation.md` settles on as the production input for
+the sampler's n(k).  Fetched the same way (ANL 403s behind Cloudflare; Wayback
+`id_` raw form serves the original bytes):
+
+    curl "http://archive.org/wayback/available?url=www.phy.anl.gov/theory/research/momenta/li6_ad1.momentum"
+    curl -o li6_ad1.momentum "http://web.archive.org/web/20250606203105id_/https://www.phy.anl.gov/theory/research/momenta/li6_ad1.momentum"
+
+| file | channel | Hamiltonian / date / samples | printed normalization | Wayback snapshot |
+|---|---|---|---|---|
+| `momenta/li6_ad1.momentum` | **6Li(1+) → α + d**, total RHOKA **and** an S/D split block (RHOKA0, RHOKA2) with 1σ MC errors, K = 0–5 fm⁻¹ step 0.1 | AV18+UX, 22-Mar-14, VMC 1M samples | `4π∫ρK²dK/(2π)³` = 0.81971 total, 0.80362 S, 0.015861 D → **P_D = 0.01935** | `web.archive.org/web/20250606203105/...` |
+| `momenta/li7_at3.momentum` | **7Li(3/2⁻) ground state → α + t**, single P wave (RHOKAT), 1σ MC errors, K = 0–5 fm⁻¹ | AV18+UX, 12-Apr-24, VMC 500k samples | 1.0084 = S_αt | `.../20250606203213/...` |
+| `momenta/li7_at1.momentum` | **7Li(1/2⁻) FIRST EXCITED state → α + t** (kept as the control that `li7.at`'s `Aat11` column is *not* this state) | AV18+UX, 12-Apr-24, VMC 500k samples | 0.98683 | `.../20250606203222/...` |
+| `momenta/momenta_index.html` | the directory listing itself, for the file inventory and the page's own wording | crawled 29-May-25 | — | `.../20250529231014/...` |
+
+Format: a title line, a samples line, a legend, one or more
+`4*PI*TOTINT(RHO*K**2:K)/(2*PI)**3 = <S>` normalization lines, then blocks
+introduced by a `****  *****...` rule with columns `K RHO DRHO` (and
+`K RHO0 DRHO0 RHO2 DRHO2` for the 6Li split block).  K is in fm⁻¹, ρ in fm³.
+
+**Relation to the `overlap_old` amplitudes** (both directions verified in
+`validation/vmc_reconcile.py`): `rho_L(K) = A_L²(K)/(4π)`, so both families
+give the same `S = (2π)⁻³∫k²A²dk`.  Recomputed: `overlap_old` li6.ad gives
+0.85463 vs the momentum file's 0.81971, li7.at gives 1.06034 vs 1.00840 —
+agreement at the few-percent level expected from UIX/2004 vs UX/2024, not a
+convention mismatch.  Node positions agree bin-for-bin (6Li S node
+0.678 fm⁻¹, D node 2.25 fm⁻¹, 7Li P node 1.12 fm⁻¹).
+
+**What each family is good for.**  The momentum files carry |ψ_L|² only — a
+density has no phase — so they cannot supply the **relative S–D sign** that
+the tensor observables need.  The `overlap_old` files carry signed
+amplitudes in both r and k and do supply it.  `VmcRadial` therefore takes the
+magnitude from `momenta/` and the sign from `overlap_old/`; see
+`docs/CONVENTIONS.md`.
+
 ## Not found / not applicable
 
 - **3H → p + nn**: no such file anywhere on the site. It isn't a two-cluster

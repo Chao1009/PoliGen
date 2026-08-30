@@ -1,0 +1,873 @@
+<html>
+<head>
+<title>Single-Nucleon Momentum Distributions</title>
+</head>
+<h1>Single-Nucleon Momentum Distributions</h1>
+<h2><a href="../momenta2/norfolk.html">Two-Nucleon Momentum Distributions</a></h2>
+<p>
+<center>
+<img width=550 src="animation.gif">
+</center>
+<p>
+This web page presents single-nucleon momentum distributions calculated for
+a variety of nuclei in the range A=2-12.
+<font color="red">Corresponding two-nucleon momentum distributions can be found
+<a href="../momenta2/norfolk.html">here</a></font>.
+These are from variational Monte Carlo calculations (VMC) using either the
+Argonne v18 two-nucleon and Urbana X three-nucleon potentials (AV18+UX)
+or one of the Norfolk Δ-full chiral effective field theory interactions: 
+NV2+3-Ia, -Ia*, -Ib*, -IIa*, -IIb*.
+<p>
+Original density and momentum distribution results for AV18+UX were reported
+in:<br>
+<a href="http://prc.aps.org/abstract/PRC/v89/i2/e024305">
+Wiringa, <i>et al.</i>, Phys. Rev. C <b>89</b>, 024305 (2014)</a>.
+<p>
+The results with Norfolk chiral EFT interactions are reported in:<br>
+<a href="https://journals.aps.org/prc/abstract/10.1103/PhysRevC.107.014314">
+Piarulli, <i>et al.</i>, Phys. Rev C <b>107</b>, 014314 (2023)</a>.
+<p>
+<font color=red>Please cite the above papers when using results from these pages.</font>
+<!--
+(Urbana X is intermediate between the Urbana IX and Illinois-7 models;
+it has the form of UIX supplemented with a two-pion S-wave piece,
+while the strengths of its terms are taken from the IL7 model.
+It does NOT have the three-pion-ring term of IL7.)
+-->
+<p>
+These VMC wave functions are the starting trial functions for a
+number of recent Green's function Monte Carlo (GFMC) calculations:<br>
+<a href="http://prc.aps.org/abstract/PRC/v84/i2/e024319">
+Brida, <i>et al.</i>, Phys. Rev. C <b>84</b>, 024319 (2011)</a>; <br>
+<a href="http://prc.aps.org/abstract/PRC/v86/i1/e014312">
+McCutchan, <i>et al.</i>, Phys. Rev. C <b>86</b>, 024315 (2012)</a>; <br>
+<a href="http://prc.aps.org/abstract/PRC/v87/i3/e035503">
+Pastore, <i>et al.</i>, Phys. Rev. C <b>87</b>, 035503 (2013)</a>; <br>
+<a href="http://prl.aps.org/abstract/PRL/v111/i6/e062502">
+Datar, <i>et al.</i>, Phys. Rev. Lett. <b>111</b>, 062502 (2013)</a>; <br>
+<a href="http://prc.aps.org/abstract/PRC/v90/i4/e024321">
+Pastore, <i>et al.</i>, Phys. Rev. C <b>90</b>, 024321 (2014)</a>.
+<p>
+More details of the wave function construction can be found in <br>
+<a href="http://prc.aps.org/abstract/PRC/v43/i4/p1585_1">
+Wiringa, Phys. Rev. C <b>43</b>, 1585 (1991)</a> for A=3,4;<br>
+<a href="http://prc.aps.org/abstract/PRC/v56/i4/p1720_1">
+Pudliner, <i>et al.</i>, Phys. Rev. C <b>56</b>, 1720 (1997)</a> for A=6,7;<br>
+<a href="http://prc.aps.org/abstract/PRC/v62/i1/e014001">
+Wiringa, <i>et al.</i>, Phys. Rev. C <b>62</b>, 014001 (2000)</a> for A=8;<br>
+<a href="http://prc.aps.org/abstract/PRC/v66/i4/e044310">
+Pieper, <i>et al.</i>, Phys. Rev. C <b>70</b>, 044310 (2002)</a> for A=9,10.
+<p>
+<font color="magenta">
+An excellent overall review of quantum Monte Carlo methods for nuclei
+can be found at:<br>
+<a href="https://journals.aps.org/rmp/abstract/10.1103/RevModPhys.87.1067">
+Carlson, <i>et al.</i>, Rev. Mod. Phys. <b>87</b>, 1067 (2015)</a>
+<font color="black">
+<p>
+<font color="red">
+The largest nuclei are evaluated using the cluster VMC (CVMC) method.</font>
+<p>
+The CVMC method is described in <br>
+<a href="https://journals.aps.org/prc/abstract/10.1103/PhysRevC.46.1741">
+Pieper, <i>et al.</i>, Phys. Rev. C <b>46</b>, 1741 (1992)</a> for A=16 with AV1
+4+UVII<br>
+<a href="https://journals.aps.org/prc/abstract/10.1103/PhysRevC.96.024326">
+Lonardoni, <i>et al.</i>, Phys. Rev. C <b>96</b>, 024326 (2017)</a> for A=16,40 with AV18+UIX.
+<p>
+The Norfolk interactions are described and used in the following papers:<br>
+<a href="https://journals.aps.org/prc/abstract/10.1103/PhysRevC.94.054007">
+Piarulli, <i>et al.</i>, Phys. Rev. C <b>94</b>, 054007 (2016)</a>.<br>
+<a href="https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.120.052503">
+Piarulli, <i>et al.</i>, Phys. Rev. Lett. <b>120</b>, 052503 (2018)</a>.<br>
+<a href="https://journals.aps.org/prc/abstract/10.1103/PhysRevC.98.044003">
+Baroni, <i>et al.</i>, Phys. Rev. C <b>98</b>, 044003 (2018)</a>.<br>
+<a href="https://journals.aps.org/prc/abstract/10.1103/PhysRevC.99.034005">
+Schiavilla, <i>et al.</i>, Phys. Rev. C <b>99</b>, 034005 (2019)</a>.<br>
+<p>
+Momentum distributions are provided for neutron spin-down, neutron
+spin-up, proton spin-down, and proton spin-up cases, for the M=J state.
+<font color="red">The single-nucleon densities corresponding to 
+these wave functions are given</font> <a href="../density/norfolk.html">here</a>
+
+<p>
+Following are files that tabulate the proton and neutron momentum distributions
+along with figures to give an overall view of the distributions.
+The normalization is chosen such that:
+<p>
+<center>
+A<sub>NS</sub> =
+1/(2&pi;)<sup>3</sup> &int; d<sup>3</sup>k &rho;<sub>NS</sub>(k)
+</center>
+<p>
+where NS denotes proton or neutron, spin up or down, and 
+A<sub>NS</sub> is the total number (out of A) nucleons with 
+the given nucleon-spin projection.
+Where proton and neutron momentum distributions are the same, as in T=0
+nuclei, we give only one set, and similarly, if spin-up and spin-down 
+projections are the same, as in 0+ states, we give totals only.
+The kinetic energy from these distributions is also given.
+<p>
+
+<table>
+<tr><td>
+<b><sup>2</sup>H(1+)</b><br>
+<font color="red">AV18</font><br>
+<a href="h2.mom.pdf">Figure</a><br>
+<a href="h2.momentum">Table</a>
+</td><td>
+<b><sup>2</sup>H(1+)</b><br>
+<font color="red">NV2-Ia</font><br>
+<a href="norfolk/h2_ia.mom.pdf">Figure</a><br>
+<a href="norfolk/h2_ia.momentum">Table</a>
+</td><td>
+<b><sup>2</sup>H(1+)</b><br>
+<font color="red">NV2-Ib</font><br>
+<a href="norfolk/h2_ib.mom.pdf">Figure</a><br>
+<a href="norfolk/h2_ib.momentum">Table</a>
+</td><td>
+<b><sup>2</sup>H(1+)</b><br>
+<font color="red">NV2-IIa</font><br>
+<a href="norfolk/h2_iia.mom.pdf">Figure</a><br>
+<a href="norfolk/h2_iia.momentum">Table</a>
+</td><td>
+<b><sup>2</sup>H(1+)</b><br>
+<font color="red">NV2-IIb</font><br>
+<a href="norfolk/h2_iib.mom.pdf">Figure</a><br>
+<a href="norfolk/h2_iib.momentum">Table</a>
+</td>
+
+<tr><td>
+<b><sup>3</sup>H(1/2+)</b><br>
+<font color="red">AV18+UX</font><br>
+<a href="h3.mom1.pdf">Figure 1</a><br>
+<a href="h3.mom3.pdf">Figure 2</a><br>
+<a href="h3.mom2.pdf">Figure 3</a><br>
+<a href="h3.momentum">Table</a><br>
+<a href="h3_dn.momentum">Table (dn)</a>
+</td><td>
+<b><sup>3</sup>H(1/2+)</b><br>
+<font color="red">NV2+3-Ia</font><br>
+<a href="norfolk/h3_ia.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/h3_ia.rhok.pdf">Figure 2</a><br>
+<a href="norfolk/h3_ia.rhokdn.pdf">Figure 3</a><br>
+<a href="norfolk/h3_ia.momenta">Table</a><br>
+<a href="norfolk/h3_ia.momdn">Table (dn)</a>
+</td><td>
+<b><sup>3</sup>H(1/2+)</b><br>
+<font color="red">NV2+3-Ia*</font><br>
+<a href="norfolk/h3_ias.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/h3_ias.rhok.pdf">Figure 2</a><br>
+<a href="norfolk/h3_ias.momenta">Table</a><br>
+<br>
+<br>
+</td><td>
+<b><sup>3</sup>H(1/2+)</b><br>
+<font color="red">NV2+3-Ib*</font><br>
+<a href="norfolk/h3_ibs.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/h3_ibs.rhok.pdf">Figure 2</a><br>
+<a href="norfolk/h3_ibs.momenta">Table</a><br>
+<br>
+<br>
+</td><td>
+<b><sup>3</sup>H(1/2+)</b><br>
+<font color="red">NV2+3-IIa*</font><br>
+<a href="norfolk/h3_iias.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/h3_iias.rhok.pdf">Figure 2</a><br>
+<a href="norfolk/h3_iias.momenta">Table</a><br>
+<br>
+<br>
+</td><td>
+<b><sup>3</sup>H(1/2+)</b><br>
+<font color="red">NV2+3-IIb*</font><br>
+<a href="norfolk/h3_iibs.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/h3_iibs.rhok.pdf">Figure 2</a><br>
+<a href="norfolk/h3_iibs.momenta">Table</a><br>
+<br>
+<br>
+</td>
+
+<tr><td></td>
+<td>
+<b><sup>3</sup>He(1/2+)</b><br>
+<font color="red">AV18+UX</font><br>
+<a href="he3.mom1.pdf">Figure 1</a><br>
+<a href="he3.mom3.pdf">Figure 2</a><br>
+<a href="he3.mom2.pdf">Figure 3</a><br>
+<a href="he3.momentum">Table</a><br>
+<a href="he3_dp.momentum">Table (dp)</a>
+</td><td>
+<b><sup>3</sup>He(1/2+)</b><br>
+<font color="red">NV2+3-Ia</font><br>
+<a href="norfolk/he3_ia.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/he3_ia.rhok.pdf">Figure 2</a><br>
+<a href="norfolk/he3_ia.rhokdp.pdf">Figure 3</a><br>
+<a href="norfolk/he3_ia.momenta">Table</a><br>
+<a href="norfolk/he3_ia.momdp">Table (dn)</a>
+</td><td>
+<b><sup>3</sup>He(1/2+)</b><br>
+<font color="red">NV2+3-Ia*</font><br>
+<a href="norfolk/he3_ias.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/he3_ias.rhok.pdf">Figure 2</a><br>
+<a href="norfolk/he3_ias.momenta">Table</a><br>
+<br>
+<br>
+</td><td>
+<b><sup>3</sup>He(1/2+)</b><br>
+<font color="red">NV2+3-Ib*</font><br>
+<a href="norfolk/he3_ibs.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/he3_ibs.rhok.pdf">Figure 2</a><br>
+<a href="norfolk/he3_ibs.momenta">Table</a><br>
+<br>
+<br>
+</td><td>
+<b><sup>3</sup>He(1/2+)</b><br>
+<font color="red">NV2+3-IIa*</font><br>
+<a href="norfolk/he3_iias.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/he3_iias.rhok.pdf">Figure 2</a><br>
+<a href="norfolk/he3_iias.momenta">Table</a><br>
+<br>
+<br>
+</td><td>
+<b><sup>3</sup>He(1/2+)</b><br>
+<font color="red">NV2+3-IIb*</font><br>
+<a href="norfolk/he3_iibs.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/he3_iibs.rhok.pdf">Figure 2</a><br>
+<a href="norfolk/he3_iibs.momenta">Table</a><br>
+<br>
+<br>
+</td>
+
+<tr><td></td>
+<td>
+<b><sup>4</sup>He(0+)</b><br>
+<font color="red">AV18+UX</font><br>
+<a href="he4.mom.pdf">Figure 1</a><br>
+<a href="he4.mom2.pdf">Figure 2</a><br>
+<a href="he4.momentum">Table</a><br>
+<a href="he4_dd.momentum">Table (tp+dd)</a>
+</td><td>
+<b><sup>4</sup>He(0+)</b><br>
+<font color="red">AV18+UIX</font><br>
+<a href="he4_uix.mom.pdf">Figure</a><br>
+<a href="he4_uix.momentum">Table</a><br>
+<br>
+<br>
+</td><td>
+<b><sup>4</sup>He(0+)</b><br>
+<font color="red">AV18</font><br>
+<a href="he4_v18.mom.pdf">Figure</a><br>
+<a href="he4_v18.momentum">Table</a><br>
+<br>
+<br>
+</td><td>
+<b><sup>4</sup>He(0+)</b><br>
+<font color="red">NV2+3-Ia</font><br>
+<a href="norfolk/he4_ia.rhok.pdf">Figure</a><br>
+<a href="norfolk/he4_ia.rhoktp.pdf">Figure 2</a><br>
+<a href="norfolk/he4_ia.momenta">Table</a><br>
+<a href="norfolk/he4_ia.momtp">Table (tp+dd)</a>
+</td><td>
+<b><sup>4</sup>He(0+)</b><br>
+<font color="red">NV2+3-Ia*</font><br>
+<a href="norfolk/he4_ias.rhok.pdf">Figure</a><br>
+<a href="norfolk/he4_ias.momenta">Table</a><br>
+<br>
+<br>
+</td><td>
+<b><sup>4</sup>He(0+)</b><br>
+<font color="red">NV2+3-Ib*</font><br>
+<a href="norfolk/he4_ibs.rhok.pdf">Figure</a><br>
+<a href="norfolk/he4_ibs.momenta">Table</a><br>
+<br>
+<br>
+</td><td>
+<b><sup>4</sup>He(0+)</b><br>
+<font color="red">NV2+3-IIa*</font><br>
+<a href="norfolk/he4_iias.rhok.pdf">Figure</a><br>
+<a href="norfolk/he4_iias.momenta">Table</a><br>
+<br>
+<br>
+</td><td>
+<b><sup>4</sup>He(0+)</b><br>
+<font color="red">NV2+3-IIb*</font><br>
+<a href="norfolk/he4_iibs.rhok.pdf">Figure</a><br>
+<a href="norfolk/he4_iibs.momenta">Table</a><br>
+<br>
+<br>
+</td>
+
+<tr><td></td>
+<td>
+<b><sup>6</sup>He(0+)</b><br>
+<font color="red">AV18+UX</font><br>
+<a href="he6.mom1.pdf">Figure 1</a><br>
+<a href="he6.mom2.pdf">Figure 2</a><br>
+<a href="he6.momentum">Table</a>
+</td><td>
+<b><sup>6</sup>He(0+)</b><br>
+<font color="red">NV2+3-Ia</font><br>
+<a href="norfolk/he6_ia.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/he6_ia.rhok.pdf">Figure 2</a><br>
+<a href="norfolk/he6_ia.momenta">Table</a><br>
+</td><td>
+<b><sup>6</sup>He(0+)</b><br>
+<font color="red">NV2+3-Ia*</font><br>
+<a href="norfolk/he6_ias.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/he6_ias.rhok.pdf">Figure 2</a><br>
+<a href="norfolk/he6_ias.momenta">Table</a><br>
+</td><td>
+<b><sup>6</sup>He(0+)</b><br>
+<font color="red">NV2+3-Ib*</font><br>
+<a href="norfolk/he6_ibs.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/he6_ibs.rhok.pdf">Figure 2</a><br>
+<a href="norfolk/he6_ibs.momenta">Table</a><br>
+</td><td>
+<b><sup>6</sup>He(0+)</b><br>
+<font color="red">NV2+3-IIa*</font><br>
+<a href="norfolk/he6_iias.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/he6_iias.rhok.pdf">Figure 2</a><br>
+<a href="norfolk/he6_iias.momenta">Table</a><br>
+</td><td>
+<b><sup>6</sup>He(0+)</b><br>
+<font color="red">NV2+3-IIb*</font><br>
+<a href="norfolk/he6_iibs.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/he6_iibs.rhok.pdf">Figure 2</a><br>
+<a href="norfolk/he6_iibs.momenta">Table</a><br>
+</td>
+
+<tr>
+<td></td>
+<td></td>
+<td>
+<b><sup>6</sup>Li(1+)</b><br>
+<font color="red">AV18+UX</font><br>
+<a href="li6_kp_1.pdf">Figure 1</a><br>
+<a href="li6_kpS_1.pdf">Figure 2</a><br>
+<a href="li6_kad_1.pdf">Figure 3</a><br>
+<a href="li6_kpS_1.table">Table</a><br>
+<a href="li6_ad1.momentum">Table (&alpha;d)</a>
+</td><td>
+<b><sup>6</sup>Li(3+)</b><br>
+<font color="red">AV18+UX</font><br>
+<a href="li6_kp_3.pdf">Figure 1</a><br>
+<a href="li6_kpS_3.pdf">Figure 2</a><br>
+<a href="li6_kad_3.pdf">Figure 3</a><br>
+<a href="li6_kpS_3.table">Table</a><br>
+<a href="li6_ad3.momentum">Table (&alpha;d)</a>
+</td><td>
+<b><sup>6</sup>Li(1+)</b><br>
+<font color="red">NV2+3-Ia</font><br>
+<a href="norfolk/li6_ia.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/li6_ia.rhok.pdf">Figure 2</a><br>
+<a href="norfolk/li6_ia.rhokad.pdf">Figure 3</a><br>
+<a href="norfolk/li6_ia.momenta">Table</a><br>
+<a href="norfolk/li6_ia.rhokad">Table (&alpha;d)</a><br>
+</td><td>
+<b><sup>6</sup>Li(1+)</b><br>
+<font color="red">NV2+3-Ia*</font><br>
+<a href="norfolk/li6_ias.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/li6_ias.rhok.pdf">Figure 2</a><br>
+<br>
+<a href="norfolk/li6_ias.momenta">Table</a><br>
+<br>
+</td><td>
+<b><sup>6</sup>Li(1+)</b><br>
+<font color="red">NV2+3-Ib*</font><br>
+<a href="norfolk/li6_ibs.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/li6_ibs.rhok.pdf">Figure 2</a><br>
+<br>
+<a href="norfolk/li6_ibs.momenta">Table</a><br>
+<br>
+</td><td>
+<b><sup>6</sup>Li(1+)</b><br>
+<font color="red">NV2+3-IIa*</font><br>
+<a href="norfolk/li6_iias.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/li6_iias.rhok.pdf">Figure 2</a><br>
+<br>
+<a href="norfolk/li6_iias.momenta">Table</a><br>
+<br>
+</td><td>
+<b><sup>6</sup>Li(1+)</b><br>
+<font color="red">NV2+3-IIb*</font><br>
+<a href="norfolk/li6_iibs.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/li6_iibs.rhok.pdf">Figure 2</a><br>
+<br>
+<a href="norfolk/li6_iibs.momenta">Table</a><br>
+<br>
+</td>
+
+<tr>
+<td></td>
+<td></td>
+<td>
+<b><sup>7</sup>Li(3/2-)</b><br>
+<font color="red">AV18+UX</font><br>
+<a href="li7.mom1_3.pdf">Figure 1</a><br>
+<a href="li7.mom2_3.pdf">Figure 2</a><br>
+<a href="li7.mom3_3.pdf">Figure 3</a><br>
+<a href="li7_3.momentum">Table</a><br>
+<a href="li7_at3.momentum">Table (&alpha;t)</a>
+</td><td>
+<b><sup>7</sup>Li(1/2-)</b><br>
+<font color="red">AV18+UX</font><br>
+<a href="li7.mom1_1.pdf">Figure 1</a><br>
+<a href="li7.mom2_1.pdf">Figure 2</a><br>
+<a href="li7.mom3_1.pdf">Figure 3</a><br>
+<a href="li7_1.momentum">Table</a><br>
+<a href="li7_at1.momentum">Table (&alpha;t)</a>
+</td><td>
+<b><sup>7</sup>Li(7/2-)</b><br>
+<font color="red">AV18+UX</font><br>
+<a href="li7.mom1_7.pdf">Figure 1</a><br>
+<a href="li7.mom2_7.pdf">Figure 2</a><br>
+<a href="li7.mom3_7.pdf">Figure 3</a><br>
+<a href="li7_7.momentum">Table</a><br>
+<a href="li7_at7.momentum">Table (&alpha;t)</a>
+</td><td>
+<b><sup>7</sup>Li(5/2-)</b><br>
+<font color="red">AV18+UX</font><br>
+<a href="li7.mom1_5.pdf">Figure 1</a><br>
+<a href="li7.mom2_5.pdf">Figure 2</a><br>
+<a href="li7.mom3_5.pdf">Figure 3</a><br>
+<a href="li7_5.momentum">Table</a><br>
+<a href="li7_at5.momentum">Table (&alpha;t)</a>
+</td><td>
+<b><sup>7</sup>Li(5/2-)_2</b><br>
+<font color="red">AV18+UX</font><br>
+<a href="li7.mom1_5x.pdf">Figure 1</a><br>
+<a href="li7.mom2_5x.pdf">Figure 2</a><br>
+<a href="li7.mom3_5x.pdf">Figure 3</a><br>
+<a href="li7_5x.momentum">Table</a><br>
+<a href="li7_at5x.momentum">Table (&alpha;t)</a>
+</td><td>
+<b><sup>7</sup>Li(3/2-)</b><br>
+<font color="red">NV2+3-Ia</font><br>
+<a href="norfolk/li7_ia.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/li7_ia.rhok.pdf">Figure 2</a><br>
+<a href="norfolk/li7_ia.rhokat.pdf">Figure 3</a><br>
+<a href="norfolk/li7_ia.momenta">Table</a><br>
+<a href="norfolk/li7_ia.rhokat">Table (&alpha;t)</a><br>
+</td><td>
+<b><sup>7</sup>Li(3/2-)</b><br>
+<font color="red">NV2+3-Ia*</font><br>
+<a href="norfolk/li7_ias.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/li7_ias.rhok.pdf">Figure 2</a><br>
+<a href="norfolk/li7_ias.momenta">Table</a><br>
+<br>
+<br>
+</td><td>
+<b><sup>7</sup>Li(3/2-)</b><br>
+<font color="red">NV2+3-Ib*</font><br>
+<a href="norfolk/li7_ibs.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/li7_ibs.rhok.pdf">Figure 2</a><br>
+<a href="norfolk/li7_ibs.momenta">Table</a><br>
+<br>
+<br>
+</td><td>
+<b><sup>7</sup>Li(3/2-)</b><br>
+<font color="red">NV2+3-IIa*</font><br>
+<a href="norfolk/li7_iias.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/li7_iias.rhok.pdf">Figure 2</a><br>
+<a href="norfolk/li7_iias.momenta">Table</a><br>
+<br>
+<br>
+</td><td>
+<b><sup>7</sup>Li(3/2-)</b><br>
+<font color="red">NV2+3-IIb*</font><br>
+<a href="norfolk/li7_iibs.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/li7_iibs.rhok.pdf">Figure 2</a><br>
+<a href="norfolk/li7_iibs.momenta">Table</a><br>
+<br>
+<br>
+</td>
+
+
+<tr>
+<td></td>
+<td>
+<b><sup>8</sup>He(0+)</b><br>
+<font color="red">AV18+UX</font><br>
+<a href="he8.mom1.pdf">Figure 1</a><br>
+<a href="he8.mom2.pdf">Figure 2</a><br>
+<a href="he8.momentum">Table</a>
+</td><td>
+<b><sup>8</sup>He(0+)</b><br>
+<font color="red">NV2+3-Ia</font><br>
+<a href="norfolk/he8_ia.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/he8_ia.rhok.pdf">Figure 2</a><br>
+<a href="norfolk/he8_ia.momenta">Table</a><br>
+</td><td>
+<b><sup>8</sup>He(0+)</b><br>
+<font color="red">NV2+3-Ia*</font><br>
+<a href="norfolk/he8_ias.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/he8_ias.rhok.pdf">Figure 2</a><br>
+<a href="norfolk/he8_ias.momenta">Table</a><br>
+</td><td>
+<b><sup>8</sup>He(0+)</b><br>
+<font color="red">NV2+3-Ib*</font><br>
+<a href="norfolk/he8_ibs.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/he8_ibs.rhok.pdf">Figure 2</a><br>
+<a href="norfolk/he8_ibs.momenta">Table</a><br>
+</td><td>
+<b><sup>8</sup>He(0+)</b><br>
+<font color="red">NV2+3-IIa*</font><br>
+<a href="norfolk/he8_iias.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/he8_iias.rhok.pdf">Figure 2</a><br>
+<a href="norfolk/he8_iias.momenta">Table</a><br>
+</td><td>
+<b><sup>8</sup>He(0+)</b><br>
+<font color="red">NV2+3-IIb*</font><br>
+<a href="norfolk/he8_iibs.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/he8_iibs.rhok.pdf">Figure 2</a><br>
+<a href="norfolk/he8_iibs.momenta">Table</a><br>
+</td>
+
+<tr>
+<td></td>
+<td></td>
+<td>
+<b><sup>8</sup>Li(2+)</b><br>
+<font color="red">AV18+UX</font><br>
+<a href="li8.mom1.pdf">Figure 1</a><br>
+<a href="li8.mom2.pdf">Figure 2</a><br>
+<a href="li8.mom3.pdf">Figure 3</a><br>
+<a href="li8.momentum">Table</a>
+</td><td>
+<b><sup>8</sup>Li(2+)</b><br>
+<font color="red">NV2+3-Ia</font><br>
+<a href="norfolk/li8_ia.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/li8_ia.rhok.pdf">Figure 2</a><br>
+<a href="norfolk/li8_ia.rhoks.pdf">Figure 2</a><br>
+<a href="norfolk/li8_ia.momenta">Table</a><br>
+</td><td>
+<b><sup>8</sup>Li(2+)</b><br>
+<font color="red">NV2+3-Ia*</font><br>
+<a href="norfolk/li8_ias.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/li8_ias.rhok.pdf">Figure 2</a><br>
+<a href="norfolk/li8_ias.rhoks.pdf">Figure 2</a><br>
+<a href="norfolk/li8_ias.momenta">Table</a><br>
+</td><td>
+<b><sup>8</sup>Li(2+)</b><br>
+<font color="red">NV2+3-Ib*</font><br>
+<a href="norfolk/li8_ibs.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/li8_ibs.rhok.pdf">Figure 2</a><br>
+<a href="norfolk/li8_ibs.rhoks.pdf">Figure 2</a><br>
+<a href="norfolk/li8_ibs.momenta">Table</a><br>
+</td><td>
+<b><sup>8</sup>Li(2+)</b><br>
+<font color="red">NV2+3-IIa*</font><br>
+<a href="norfolk/li8_iias.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/li8_iias.rhok.pdf">Figure 2</a><br>
+<a href="norfolk/li8_iias.rhoks.pdf">Figure 2</a><br>
+<a href="norfolk/li8_iias.momenta">Table</a><br>
+</td><td>
+<b><sup>8</sup>Li(2+)</b><br>
+<font color="red">NV2+3-IIb*</font><br>
+<a href="norfolk/li8_iibs.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/li8_iibs.rhok.pdf">Figure 2</a><br>
+<a href="norfolk/li8_iibs.rhoks.pdf">Figure 2</a><br>
+<a href="norfolk/li8_iibs.momenta">Table</a><br>
+</td><td>
+</td><td>
+<b><sup>8</sup>B(2+)</b><br>
+<font color="red">AV18+UX</font><br>
+<a href="b8.mom1.pdf">Figure 1</a><br>
+<a href="b8.mom2.pdf">Figure 2</a><br>
+<a href="b8.mom3.pdf">Figure 3</a><br>
+<a href="b8.momentum">Table</a>
+</td>
+
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td>
+<b><sup>8</sup>Be(0+)</b><br>
+<font color="red">AV18+UX</font><br>
+<a href="be8.mom1_0.pdf">Figure 1</a><br>
+<a href="be8.mom2_0.pdf">Figure 2</a><br>
+<a href="be8_0.momentum">Table</a><br>
+<a href="be8_aa0.momentum">Table (&alpha;&alpha;)</a>
+</td><td>
+<b><sup>8</sup>Be(2+)</b><br>
+<font color="red">AV18+UX</font><br>
+<a href="be8.mom1_2.pdf">Figure 1</a><br>
+<a href="be8.mom2_2.pdf">Figure 2</a><br>
+<a href="be8_2.momentum">Table</a><br>
+<a href="be8_aa2.momentum">Table (&alpha;&alpha;)</a>
+</td><td>
+<b><sup>8</sup>Be(4+)</b><br>
+<font color="red">AV18+UX</font><br>
+<a href="be8.mom1_4.pdf">Figure 1</a><br>
+<a href="be8.mom2_4.pdf">Figure 2</a><br>
+<a href="be8_4.momentum">Table</a><br>
+<a href="be8_aa4.momentum">Table (&alpha;&alpha;)</a>
+</td><td>
+<b><sup>8</sup>Be(0+)</b><br>
+<font color="red">NV2+3-Ia</font><br>
+<a href="norfolk/be8_ia.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/be8_ia.rhokaa.pdf">Figure 2</a><br>
+<a href="norfolk/be8_ia.momenta">Table</a><br>
+<a href="norfolk/be8_ia.rhokaa">Table (&alpha;&alpha;)</a><br>
+</td><td>
+<b><sup>8</sup>Be(0+)</b><br>
+<font color="red">NV2+3-Ia*</font><br>
+<a href="norfolk/be8_ias.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/be8_ias.rhok.pdf">Figure 2</a><br>
+<a href="norfolk/be8_ias.momenta">Table</a><br>
+<br>
+</td><td>
+<b><sup>8</sup>Be(0+)</b><br>
+<font color="red">NV2+3-IIb*</font><br>
+<a href="norfolk/be8_iibs.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/be8_iibs.rhok.pdf">Figure 2</a><br>
+<a href="norfolk/be8_iibs.momenta">Table</a><br>
+<br>
+</td>
+
+<tr>
+<td></td>
+<td></td>
+<td>
+<b><sup>9</sup>Li(3/2-)</b><br>
+<font color="red">AV18+UX</font><br>
+<a href="li9_3p.rhokl.pdf">Figure 1</a><br>
+<a href="li9_3p.rhok.pdf">Figure 2</a><br>
+<a href="li9_3p.momenta">Table</a>
+</td><td>
+<b><sup>9</sup>Li(3/2-)</b><br>
+<font color="red">NV2+3-Ia</font><br>
+<a href="norfolk/li9_ia_3n.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/li9_ia_3n.rhok.pdf">Figure 2</a><br>
+<a href="norfolk/li9_ia_3n.momenta">Table</a><br>
+</td><td>
+<b><sup>9</sup>Li(3/2-)</b><br>
+<font color="red">NV2+3-Ia*</font><br>
+<a href="norfolk/li9_ias_3n.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/li9_ias_3n.rhok.pdf">Figure 2</a><br>
+<a href="norfolk/li9_ias_3n.momenta">Table</a><br>
+</td><td>
+<b><sup>9</sup>Li(3/2-)</b><br>
+<font color="red">NV2+3-IIb*</font><br>
+<a href="norfolk/li9_iibs_3n.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/li9_iibs_3n.rhok.pdf">Figure 2</a><br>
+<a href="norfolk/li9_iibs_3n.momenta">Table</a><br>
+</td>
+
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td>
+<b><sup>9</sup>Be(3/2-)</b><br>
+<font color="red">AV18+UX</font><br>
+<a href="be9.mom1.pdf">Figure 1</a><br>
+<a href="be9.mom2.pdf">Figure 2</a><br>
+<a href="be9.momentum">Table</a>
+</td><td>
+<b><sup>9</sup>Be(3/2-)</b><br>
+<font color="red">NV2+3-Ia</font><br>
+<a href="norfolk/be9_ia.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/be9_ia.rhok.pdf">Figure 2</a><br>
+<a href="norfolk/be9_ia.momenta">Table</a><br>
+</td><td>
+<b><sup>9</sup>Be(3/2-)</b><br>
+<font color="red">NV2+3-Ia*</font><br>
+<a href="norfolk/be9_ias.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/be9_ias.rhok.pdf">Figure 2</a><br>
+<a href="norfolk/be9_ias.momenta">Table</a><br>
+</td><td>
+<b><sup>9</sup>Be(3/2-)</b><br>
+<font color="red">NV2+3-Ib*</font><br>
+<a href="norfolk/be9_ibs.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/be9_ibs.rhok.pdf">Figure 2</a><br>
+<a href="norfolk/be9_ibs.momenta">Table</a><br>
+</td><td>
+<b><sup>9</sup>Be(3/2-)</b><br>
+<font color="red">NV2+3-IIa*</font><br>
+<a href="norfolk/be9_iias.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/be9_iias.rhok.pdf">Figure 2</a><br>
+<a href="norfolk/be9_iias.momenta">Table</a><br>
+</td><td>
+<b><sup>9</sup>Be(3/2-)</b><br>
+<font color="red">NV2+3-IIb*</font><br>
+<a href="norfolk/be9_iibs.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/be9_iibs.rhok.pdf">Figure 2</a><br>
+<a href="norfolk/be9_iibs.momenta">Table</a><br>
+</td>
+
+<tr>
+<td></td>
+<td>
+<b><sup>10</sup>He(0+)</b><br>
+<font color="red">AV18+UX</font><br>
+<a href="he10.mom1.pdf">Figure 1</a><br>
+<a href="he10.mom2.pdf">Figure 2</a><br>
+<a href="he10.momentum">Table</a>
+</td>
+<td></td>
+<td>
+<b><sup>10</sup>Be(0+)</b><br>
+<font color="red">AV18+UX</font><br>
+<a href="be10_0p.mom1.pdf">Figure 1</a><br>
+<a href="be10_0p.mom2.pdf">Figure 2</a><br>
+<a href="be10_0p.momentum">Table</a>
+</td><td>
+<b><sup>10</sup>Be(0+)</b><br>
+<font color=red>NV2+3-Ia*</font><br>
+<a href="norfolk/be10_ias.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/be10_ias.rhok.pdf">Figure 2</a><br>
+<a href="norfolk/be10_ias.momentum">Table</a>
+</td><td>
+<b><sup>10</sup>Be(0+)</b><br>
+<font color=red>NV2+3-IIb*</font><br>
+<a href="norfolk/be10_iibs.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/be10_iibs.rhok.pdf">Figure 2</a><br>
+<a href="norfolk/be10_iibs.momentum">Table</a>
+</td><td>
+<b><sup>10</sup>B(3+)</b><br>
+<font color="red">AV18+UX</font><br>
+<a href="b10_3p.mom2.pdf">Figure 1</a><br>
+<a href="b10_3p.mom1.pdf">Figure 2</a><br>
+<a href="b10_3p.momentum">Table</a>
+</td><td>
+<b><sup>10</sup>B(3+)</b><br>
+<font color=red>NV2+3-Ia</font><br>
+<a href="norfolk/b10_ia.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/b10_ia.rhok.pdf">Figure 2</a><br>
+<a href="norfolk/b10_ia.momentum">Table</a>
+</td><td>
+<b><sup>10</sup>B(3+)</b><br>
+<font color=red>NV2+3-Ia*</font><br>
+<a href="norfolk/b10_ias.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/b10_ias.rhok.pdf">Figure 2</a><br>
+<a href="norfolk/b10_ias.momentum">Table</a>
+</td><td>
+<b><sup>10</sup>B(3+)</b><br>
+<font color=red>NV2+3-IIb*</font><br>
+<a href="norfolk/b10_iibs.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/b10_iibs.rhok.pdf">Figure 2</a><br>
+<a href="norfolk/b10_iibs.momentum">Table</a>
+</td>
+
+<tr>
+<td></td>
+<td></td>
+<td>
+<b><sup>11</sup>Li(3/2-)</b><br>
+<font color="red">AV18+UX</font><br>
+<a href="li11.mom1.pdf">Figure 1</a><br>
+<a href="li11.mom2.pdf">Figure 2</a><br>
+<a href="li11.momentum">Table</a>
+</td>
+<td></td>
+<td>
+<b><sup>11</sup>B(3/2-)</b><br>
+<font color="red">AV18+UX</font><br>
+<a href="b11_3p.rhokl.pdf">Figure 1</a><br>
+<a href="b11_3p.rhok.pdf">Figure 2</a><br>
+<a href="b11_3p.momentum">Table</a>
+</td><td>
+<b><sup>11</sup>B(3/2-)</b><br>
+<font color=red>NV2+3-Ia*</font><br>
+<a href="norfolk/b11_ias.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/b11_ias.rhok.pdf">Figure 2</a><br>
+<a href="norfolk/b11_ias.momentum">Table</a>
+</td><td>
+<b><sup>11</sup>B(3/2-)</b><br>
+<font color=red>NV2+3-IIb*</font><br>
+<a href="norfolk/b11_iibs.rhokl.pdf">Figure 1</a><br>
+<a href="norfolk/b11_iibs.rhok.pdf">Figure 2</a><br>
+<a href="norfolk/b11_iibs.momentum">Table</a>
+</td>
+
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td>
+<b><sup>12</sup>Be(0+)</b><br>
+<font color="red">AV18+UX</font><br>
+<a href="be12.rhokl.pdf">Figure 1</a><br>
+<a href="be12.rhok.pdf">Figure 2</a><br>
+<a href="be12.momentum">Table</a>
+</td>
+<td></td>
+<td>
+<b><sup>12</sup>C(0+)</b><br>
+<font color="red">AV18+UX</font><br>
+<a href="c12.mom1.pdf">Figure</a><br>
+<a href="c12.momentum">Table</a>
+<br>
+</td><td>
+<b><sup>12</sup>C(0+)</b><br>
+<font color="red">AV18+UIX</font><br>
+<a href="c12c.av18uix.mom1.pdf">Figure</a><br>
+<a href="c12c.av18uix.momentum">Table</a>
+<br>
+</td><td>
+<b><sup>12</sup>C(0+)</b><br>
+<font color="red">NV2+3-Ia*</font><br>
+<a href="norfolk/c12_ias.rhok.pdf">Figure</a><br>
+<a href="norfolk/c12_ias.momenta">Table</a>
+<br>
+</td><td>
+<b><sup>12</sup>C(0+)</b><br>
+<font color="red">NV2+3-IIb*</font><br>
+<a href="norfolk/c12_iibs.rhok.pdf">Figure</a><br>
+<a href="norfolk/c12_iibs.momenta">Table</a>
+<br>
+</td>
+
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>
+<b><sup>16</sup>O(0+)</b><br>
+<font color=red>CVMC</font><br>
+<font color=red>AV18</font><br>
+<a href="o16_v18.mom1.pdf">Figure</a><br>
+<a href="o16_v18.momentum">Table</a>
+</td>
+<td>
+<b><sup>16</sup>O(0+)</b><br>
+<font color=red>CVMC</font><br>
+<font color=red>AV18+UIX</font><br>
+<a href="o16.mom1.pdf">Figure</a><br>
+<a href="o16.momentum">Table</a>
+</td>
+
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>
+<b><sup>40</sup>Ca(0+)</b><br>
+<font color=red>CVMC</font><br>
+<font color=red>AV18</font><br>
+<a href="ca40_v18.mom1.pdf">Figure</a><br>
+<a href="ca40_v18.momentum">Table</a>
+</td>
+<td>
+<b><sup>40</sup>Ca(0+)</b><br>
+<font color=red>CVMC</font><br>
+<font color=red>AV18+UIX</font><br>
+<a href="ca40.mom1.pdf">Figure</a><br>
+<a href="ca40.momentum">Table</a>
+</td>
+
+</table>
+
+<p>
+<i>Robert B. Wiringa<br>
+Last updated July 26, 2024
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/vcd15cbe7772f49c399c6a5babf22c1241717689176015" integrity="sha512-ZpsOmlRQV6y907TI0dKBHq9Md29nnaEIPlkf84rnaERnq6zvWvPUqr2ft8M1aS28oN72PdrCzSjY4U6VaAw1EQ==" data-cf-beacon='{"rayId":"9479a9f9dd2b1597","serverTiming":{"name":{"cfExtPri":true,"cfEdge":true,"cfOrigin":true,"cfL4":true,"cfSpeedBrain":true,"cfCacheStatus":true}},"version":"2025.4.0-1-g37f21b1","token":"d9bcb0f152664f708f21dc015e560761"}' crossorigin="anonymous"></script>

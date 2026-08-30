@@ -49,8 +49,8 @@ behind a Cloudflare challenge). Findings:
   every Roman-Pot acceptance.
 - Consequence for the physics case: the ⁶Li α-tag acceptance is entirely a
   p_T-tail measurement, so the published tag fractions and the tagged A_zz
-  curves must be re-run on VMC; the β-band of plans/04 #15 does not bracket
-  the truth.
+  curves must be re-run on VMC; no single β reproduces the VMC shape (node +
+  window-dependent tail), so the β band should be retired rather than widened.
 
 ## 2. Chain gate — passed
 

@@ -128,6 +128,12 @@ scripts, docs, reference dumps.
 
 ## 6. Open items after day 1
 
+*Updated 2026-08-29 evening: every item below was investigated — see
+`docs/OPEN_ITEMS_SOLUTIONS.md` for the ranked solutions. Closed since: VMC cluster
+wave functions (implemented), the ePIC chain gate (passed), tensor sign and ⁶Li
+polarization (decided by sources, awaiting the author), coherent-T2 and triton
+designs (prototyped), FSI model chosen.*
+
 - **T1 tier: DONE** (`breakup.hpp` / `src/core/breakup.cpp`, default on the three
   tagged channels through `PipelineConfig::tier`). The struck cluster is resolved into
   a struck nucleon + on-shell partner spectator(s), so

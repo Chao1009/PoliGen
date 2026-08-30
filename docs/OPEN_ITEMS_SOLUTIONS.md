@@ -7,7 +7,7 @@ the recommended solution, effort, and status. Ordered by leverage.
 
 | # | item | verdict | effort | status |
 |---|---|---|---|---|
-| 1 | VMC α+d / α+t cluster wave functions (plans/04 #15) | **closed** — ANL AV18 VMC tables exist (overlaps 2004; momentum distributions 2024), fetched to `data/vmc/` | 1–2 d | backend being implemented |
+| 1 | VMC α+d / α+t cluster wave functions (plans/04 #15) | **closed & implemented** — ANL AV18 VMC tables (overlaps 2004; momentum distributions 2024) in `data/vmc/`, `VmcRadial` backend, `--cluster-wave vmc` | done | published tag fractions must be re-run |
 | 2 | ePIC chain gate (HepMC3 → abconv → npsim) | **passed** — 10/10 events through `npsim` directly and via `abconv -p ip6_hiacc_100x10` | done | one cosmetic writer fix (electron generated_mass) |
 | 3 | Tensor sign `TENSOR_LL_SIGN` (plans/08 D1) | **decided by literature: −1** (Cosyn Eq. 27, HERMES Eq. 6, HJM derivation, POLRAD Eqs. 9/10 all give A_zz = −(2/3) b₁/F₁) | 1 line + test | author to confirm; unblocks D2 |
 | 4 | ⁶Li/⁷Li effective polarizations (plans/04 #6) | **closed** — 1/3 vs 0.81 was a convention mismatch; VMC (Wiringa 2014 Table I, Piarulli 2023) gives whole-nucleus P_p = P_n = 0.85 ± 0.03 (⁶Li), 0.87 / −0.03 (⁷Li) | 0.5 d | author to confirm |
@@ -35,9 +35,18 @@ behind a Cloudflare challenge). Findings:
 - The k-space density has a Pauli node (α–d 2S relative state) at k ≈ 0.15–0.2 GeV
   that no nodeless Hulthén form carries; VMC has *more* strength than Hulthén
   β = 0.30 in the 0.2–0.35 GeV Roman-Pot window and much less above 0.45 GeV.
-- The two threads' ⁷Li tail numbers are mutually inconsistent (one Hulthén
-  evaluation is wrong); a reconciliation script and the `VmcRadial` backend are
-  being produced (`validation/vmc_reconcile.py`, `docs/open_items/vmc_reconciliation.md`).
+- Reconciled (`validation/vmc_reconcile.py`, `docs/open_items/vmc_reconciliation.md`):
+  the "β band biased low" claim in `physics_literature.md` is withdrawn — it evaluated
+  the S-wave Hulthén for the P-wave ⁷Li channel. Against the right form VMC α+t is
+  softer than every β in the far tail; ⁶Li VMC is harder at 0.2–0.3 GeV (P(k>0.2)
+  0.148 → 0.241) and softer above 0.45. Both ANL file families agree bin-for-bin;
+  production input = `momenta/` magnitudes + `overlap_old/` S–D sign.
+- **Implemented**: `VmcRadial` backend, `ClusterWaveSource::VmcAV18`
+  (`--cluster-wave vmc`); default stays Hulthén. Measured at 10×99.5: ⁶Li α tag
+  0.0249 → **0.0348** (YR high-acceptance, ×1.40), 0.253 → 0.249 (tagging optics);
+  ⁷Li 0.973 → 0.998. Tagged A_zz^tag(k) roughly halves (P_D 0.087 → 0.019 plus shape);
+  the S–D interference sign flips below the S node at 0.134 GeV, currently outside
+  every Roman-Pot acceptance.
 - Consequence for the physics case: the ⁶Li α-tag acceptance is entirely a
   p_T-tail measurement, so the published tag fractions and the tagged A_zz
   curves must be re-run on VMC; the β-band of plans/04 #15 does not bracket

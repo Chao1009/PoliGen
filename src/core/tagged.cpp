@@ -6,7 +6,9 @@
 #include <stdexcept>
 
 #include "lipolgen/constants.hpp"
+#include "lipolgen/fsi.hpp"
 #include "lipolgen/numerics.hpp"
+#include "lipolgen/sampler.hpp"   // w2_from_xq2: the ONE W2(x, Q2) definition
 #include "lipolgen/spin.hpp"
 
 namespace lipolgen {
@@ -32,6 +34,23 @@ std::size_t cell_index(const std::vector<double>& grid, double v) {
   if (ins == 0) return 0;
   const std::size_t i = ins - 1;
   return i > n - 2 ? n - 2 : i;
+}
+
+/// The `Channel` label of a tagged `ClusterChannel` -- used by `fill_event`
+/// (the record label) and `apply_fsi` (the FSI channel guard), so the two
+/// cannot disagree.
+Channel channel_enum_of(const ClusterChannel& base) {
+  if (base.beam_A == 6) {
+    return base.spectator == "alpha" ? Channel::TaggedLi6Alpha
+                                     : Channel::TaggedLi6D;
+  }
+  if (base.beam_A == 7) {
+    return base.spectator == "alpha" ? Channel::TaggedLi7Alpha
+                                     : Channel::TaggedLi7T;
+  }
+  if (base.beam_A == 3) return Channel::TaggedHe3P;
+  return base.spectator == "p" ? Channel::TaggedDeuteronP
+                               : Channel::TaggedDeuteronN;
 }
 
 }  // namespace
@@ -670,6 +689,30 @@ std::vector<double> TaggedSampler::rate_cdf(const IonFill& fill) const {
   return r;
 }
 
+void TaggedSampler::set_fsi(std::shared_ptr<const FsiWeight> fsi) {
+  fsi_ = std::move(fsi);
+}
+
+void TaggedSampler::apply_fsi(TaggedEvent& te) const {
+  // A pure function of the DRAWN kinematics: no RNG is consumed, so the
+  // event stream, its counter-based determinism and thread safety are
+  // exactly what they are without an FSI model.  The weight never moves a
+  // four-vector (fsi.hpp: FSI IS A WEIGHT, NEVER A SHIFT).
+  if (!fsi_) return;
+  const ClusterChannel& base = model_->channel().base;
+  FsiKinematics kin;
+  kin.k = te.k;
+  kin.cos_theta_k = te.cos_theta_k;
+  kin.phi_k = te.phi_k;
+  kin.w = std::sqrt(std::fmax(w2_from_xq2(te.x, te.q2), 0.0));
+  kin.q2 = te.q2;
+  kin.x = te.x;
+  kin.spectator_z = base.spectator_Z;
+  kin.spectator_a = base.spectator_A;
+  kin.channel = channel_enum_of(base);
+  te.weight = fsi_->weight(kin);
+}
+
 TaggedEvent TaggedSampler::sample_one(const IonFill& fill,
                                       const std::vector<double>& cdf,
                                       Rng& rng) const {
@@ -704,6 +747,7 @@ TaggedEvent TaggedSampler::sample_one(const IonFill& fill,
     te.phi = phi[0];
     te.cell = dis_cell[0];
   }
+  apply_fsi(te);   // after the DIS draw: the W ramp reads (x, Q2)
   return te;
 }
 
@@ -755,6 +799,7 @@ std::vector<TaggedEvent> TaggedSampler::sample_category(const IonFill& fill,
         te.phi = phi[i];
         te.cell = dis_cell[i];
       }
+      apply_fsi(te);
       out.push_back(te);
     }
   }
@@ -816,18 +861,7 @@ void TaggedSampler::fill_event(Event& ev, const TaggedEvent& te) const {
   ev.kin.phi_spec = te.lab.phi_spec;
   ev.spin.m_ion = te.m_ion;
   ev.spin.m_struck = te.m_struck;
-  if (base.beam_A == 6) {
-    ev.channel = base.spectator == "alpha" ? Channel::TaggedLi6Alpha
-                                           : Channel::TaggedLi6D;
-  } else if (base.beam_A == 7) {
-    ev.channel = base.spectator == "alpha" ? Channel::TaggedLi7Alpha
-                                           : Channel::TaggedLi7T;
-  } else if (base.beam_A == 3) {
-    ev.channel = Channel::TaggedHe3P;
-  } else {
-    ev.channel = base.spectator == "p" ? Channel::TaggedDeuteronP
-                                       : Channel::TaggedDeuteronN;
-  }
+  ev.channel = channel_enum_of(base);
 }
 
 }  // namespace lipolgen

@@ -31,6 +31,7 @@
 
 #include <cstddef>
 #include <map>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -41,6 +42,13 @@
 #include "lipolgen/spectator.hpp"
 
 namespace lipolgen {
+
+// FSI enters this header as a FORWARD declaration only: `fsi.hpp` includes
+// `tagged.hpp` (the weight is built from a `TaggedChannel` / `TaggedModel`),
+// so including it back here would be a cycle.  The sampler holds the weight
+// through a shared_ptr and calls it through the abstract interface, which
+// needs no complete type at this point.
+class FsiWeight;
 
 // P_D_LI6 and P_D_DEUTERON are NOT defined here.  Since 2026-08-29 they live
 // in `beams.hpp` (included above), which is where `polli_fastsim.beams` keeps
@@ -353,6 +361,10 @@ struct TaggedEvent {
   double k = 0.0, cos_theta_k = 0.0, phi_k = 0.0;
   SpectatorLab lab;
   int route = kRouteLost;
+  /// FSI/IA weight of the drawn spectator (`TaggedSampler::set_fsi`); 1.0 --
+  /// today's plane-wave impulse approximation -- when no FSI model is set.
+  /// A WEIGHT, never a shift: no four-vector moves with it (fsi.hpp).
+  double weight = 1.0;
 };
 
 /// Spin-correlated (e', spectator) events for one tagged channel.
@@ -399,6 +411,16 @@ class TaggedSampler {
   /// Normalized cumulative of `rates`, for `sample_one`.
   std::vector<double> rate_cdf(const IonFill& fill) const;
 
+  /// Attach an FSI model: every subsequent draw carries
+  /// `TaggedEvent::weight = fsi->weight(kin)` for its own (k, cos theta_k,
+  /// phi_k, W, Q2, x).  Null detaches (weights back to 1, the PWIA).  The
+  /// weight is a PURE FUNCTION of the drawn kinematics -- no RNG is consumed
+  /// -- so the event stream and its counter-based determinism are untouched.
+  /// Call it before generation starts: it is not synchronized against
+  /// concurrent `sample_one` calls.
+  void set_fsi(std::shared_ptr<const FsiWeight> fsi);
+  const std::shared_ptr<const FsiWeight>& fsi() const { return fsi_; }
+
   /// ADD the spectator and the struck cluster to an event whose beams and e'
   /// are already set, and fill the tagging block of `Event::kin`
   /// (k, cos_theta_k, phi_k, alpha_s, pt_s) and the struck-cluster spin label.
@@ -408,12 +430,16 @@ class TaggedSampler {
   void fill_event(Event& ev, const TaggedEvent& te) const;
 
  private:
+  /// Fill `te.weight` from `fsi_` (no-op when none is set).
+  void apply_fsi(TaggedEvent& te) const;
+
   const TaggedModel* model_;
   double p_u_;
   KinematicsSource* dis_;
   Optics optics_;
   std::string pot_config_;
   std::vector<double> ms_ion_;   ///< m_values(j_ion), hoisted out of the loop
+  std::shared_ptr<const FsiWeight> fsi_;   ///< null = PWIA, weights all 1
 };
 
 /// PDG code of a nuclide: 10-digit ion code 10LZZZAAAI, with the proton and

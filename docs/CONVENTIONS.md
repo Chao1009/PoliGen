@@ -153,6 +153,41 @@
   what keeps the Cosyn–Weiss tensor gate on the analytic path.
   Reconciliation, provenance and every number:
   `docs/open_items/vmc_reconciliation.md`, `data/vmc/README.md`.
+- **Triton spectral function.** `TritonSfChoice::Hulthen` is the DEFAULT
+  everywhere and keeps the sequential two-body triton decay of `breakup.hpp`
+  bit-compatible with every published ⁷Li number.  `TritonSfChoice::CiofiSimula`
+  (CLI `--triton-sf ciofi-simula`) replaces it, on the ⁷Li α tag only, with
+  the Ciofi degli Atti–Simula spectral function (`triton_sf.hpp`).
+  Provenance, all transcribed and none refit: n₀(k) is CS PRC 53 (1996) 1689
+  Eq. (74) with Table A.1 (A = 2, 3, 4 carried as data — the same numbers
+  BeAGLE's `DT_KFERMI` holds, checked column for column against the paper);
+  n₁(k) is Eq. (76) for A = 3 and Eq. (75)/Table A.3 for A = 4; k in fm⁻¹ is
+  converted at ħc = `HBARC_GEV_FM` = 0.19733 GeV·fm — a `constants.hpp`
+  single definition since 2026-09-01, with `coherent.hpp`'s `GEV_PER_FM_INV`
+  now an alias of it.  S₀ = ∫dk k²n₀ = 0.6525 is the ³He(e,e′p)d
+  spectroscopic factor (the literature's ~2/3), S₀ + S₁ closes on 1 to
+  3.4 × 10⁻⁴ untuned, and the 2-body/3-body branching is the RATIO
+  n₀/(n₀ + n₁) at the event's own k, never an assumed constant.  Table A.1's
+  A = 3 column is the ³He **proton** distribution; under the isospin mirror
+  ³He ↔ ³H it is the triton's struck-**neutron** distribution and the bound
+  remnant of the mirror is the same deuteron (BeAGLE branches on A alone with
+  no mirror argument).  The continuum pair is split at its own virtual-state
+  pole: nn at `KAPPA_NN_VIRTUAL` = ħc/|a_nn| = 10.44 MeV (a_nn = −18.9 fm),
+  pn at `KAPPA_PN_SINGLET` = ħc/|a_pn| = 8.31 MeV (a_pn = −23.74 fm, the
+  ¹S₀ channel — the ³S₁ pn channel IS the bound deuteron and is the other
+  branch); both constants live in `triton_sf.hpp`, one definition each.
+  **The BeAGLE n₀-only caveat**: `DT_KFERMI` renormalizes its A = 3 and A = 4
+  tables — the n₀ piece ALONE — to unity, silently dropping the 34.7 %
+  (A = 3) / 20.0 % (A = 4) correlated continuum: its high-k tails there are
+  too soft by construction and it has no three-body breakup channel to put
+  that strength in.  LiPolGen does not renormalize n₀; it adds n₁ and lets
+  the deficit BE the branching.  `sample()` consumes a fixed 6 uniforms on
+  every branch (the breakup branch a fixed 9), so the stream position never
+  depends on which channel came out.  The `Pipeline` constructs the
+  `CiofiSimulaTriton` itself at the run's own `cluster_beta`, so the
+  continuum pair's q-shape and every other radial form share one β.
+  Full derivation and every measured number: the `triton_sf.hpp` header and
+  `tests/test_triton_sf.cpp`.
 - **Where data files live at run time.** `data_dir()` (`cluster.hpp`) is
   `$LIPOLGEN_DATA_DIR` when set and non-empty, else the compiled-in
   `LIPOLGEN_DATA_DIR_DEFAULT`, which CMake sets to `${CMAKE_SOURCE_DIR}/data`.

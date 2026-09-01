@@ -221,6 +221,48 @@ made with — every T0 quantity is bit-identical between the two apart from the
 Naming the struck nucleon is also what makes the **T2 chain conserve with no
 caller-side hook** (§6, `docs/T2_CHAIN.md` §1a).
 
+### Triton spectral function: sequential Hulthén (default) or Ciofi–Simula
+
+```cpp
+cfg.triton_sf = TritonSfChoice::CiofiSimula;    // default: Hulthen
+```
+```bash
+python -m lipolgen.cli --channel tagged-7Li-alpha --triton-sf ciofi-simula --events 400000
+```
+```python
+cfg = lipolgen.make_config(channel="tagged-7Li-alpha", events=400000,
+                           triton_sf="ciofi-simula")  # or "hulthen" (default)
+```
+
+`hulthen` keeps the sequential two-body triton decay of the table above
+bit-for-bit.  `ciofi-simula` replaces it, on the **⁷Li α tag only**, with the
+Ciofi degli Atti–Simula spectral function (`triton_sf.hpp`): the struck
+neutron's momentum is drawn from n₀(k) + n₁(k) and the **branching between a
+bound deuteron remnant and a (p n) continuum remnant is the k-dependent ratio
+n₀/(n₀ + n₁)** — never an assumed constant — whose k-integral is the
+³He(e,e′p)d spectroscopic factor S₀ = 0.6525.  Three channels instead of two:
+
+| channel | weight | remnant | measured fraction |
+|---|---|---|---|
+| struck n → n + d | n₀/(n₀+n₁) | bound d, E = 0 | 65.3 % of struck n |
+| struck n → n + (pn) | n₁/(n₀+n₁) | continuum at the pn ¹S₀ pole, 8.31 MeV | 34.7 % of struck n — **the channel the sequential model does not have** |
+| struck p → p + (nn) | always | continuum at the nn pole, 10.44 MeV | every struck p |
+
+⟨k⟩ moves from 133 MeV (n + d) / 145 MeV (p + nn) sequential to 102 MeV on
+the bound channel and 126 MeV over all struck neutrons.  The species stays
+`Z F2p : N F2n`, the impulse-approximation rule is unchanged (partners on
+shell, struck nucleon absorbs the difference — conservation is untouched:
+whole-record closure < 1e-9 through T1 **and** the T2 PYTHIA chain, both
+options, `tests/test_triton_sf.cpp` / `tests/test_t2.cpp`), and `sample()`
+consumes a fixed six uniforms on every branch so the stream stays aligned
+whichever channel comes out.  The `Pipeline` builds the `CiofiSimulaTriton`
+itself at the run's own `--cluster-beta`; a C++ caller who sets
+`cfg.breakup.triton_sf` directly (e.g. a `CiofiSimulaOptions` with
+`n1_scale`, `proton_n1_only`, or a future Faddeev table behind
+`TritonSpectralFunction`) keeps their own object.  Coefficient provenance —
+CS PRC 53 (1996) 1689, Eq. (74)/(76), Tables A.1/A.3 — and the BeAGLE
+n₀-only caveat: `docs/CONVENTIONS.md` and the `triton_sf.hpp` header.
+
 ## 4. Coherent ⁶Li
 
 ```cpp

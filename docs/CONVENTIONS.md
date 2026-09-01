@@ -188,6 +188,33 @@
   continuum pair's q-shape and every other radial form share one β.
   Full derivation and every measured number: the `triton_sf.hpp` header and
   `tests/test_triton_sf.cpp`.
+- **Spectator FSI.** `PipelineConfig::fsi = PipelineFsi::Off` is the DEFAULT:
+  every tagged number is the plane-wave impulse approximation bit for bit
+  unless a run turns the Glauber weight on.  Three rules when it is on
+  (`fsi.hpp`, `tests/test_fsi.cpp`):
+  (1) **FSI is a WEIGHT, never a shift** — the rescattering multiplies
+  `Event::weight` (the FSI/IA density ratio at the drawn (k, cos θ_k)) and
+  moves NO four-vector; the spectator is the measurement, and the tagged
+  record of an FSI-on run is bit-identical to the FSI-off run.
+  (2) **The weight is SPIN INDEPENDENT by construction** — numerator and
+  denominator are m-summed, so it is the unpolarized-shape distortion, which
+  is what the literature supports (Cosyn–Weiss VI C leaves the spin
+  dependence open).  Quote its effect as an **unpolarized-shape systematic of
+  the tagged spectrum, never as a correction to A_zz**.
+  (3) **σ_XN is a BAND, 20–40 mb, never one number** — 40 mb (the default,
+  `--fsi-sigma-mb`) is the free hadron, 20 mb the formation-length end; run
+  both.  The survival probability (∫w dΓ/∫dΓ ≈ 0.52 at 40 mb on the ⁶Li α
+  tag) is logged by the run summary and exposed as
+  `Pipeline::fsi_weight()->survival()`.  Variant (a) `GlauberCluster`
+  shadows σ_Xα over the α's own profile (131.0 mb at σ_XN = 40, not
+  4 × 40); variant (b) `GlauberNucleon` is the unshadowed A σ_XN = 160 mb
+  single-scattering bracket — a POINTWISE low-k bracket, not an integrated
+  one (its survival lands above (a)'s; `fsi.hpp` header).  The weight table
+  is built on a (k_z, k_T) grid — a deliberate deviation from the design
+  note's literal (k, cos θ_k): the eikonal kernel transfers k_T only, so the
+  table is smooth and even in k_z there — and read per event by bilinear
+  interpolation, consuming no randomness, so stream discipline and
+  event-index determinism are untouched.
 - **Where data files live at run time.** `data_dir()` (`cluster.hpp`) is
   `$LIPOLGEN_DATA_DIR` when set and non-empty, else the compiled-in
   `LIPOLGEN_DATA_DIR_DEFAULT`, which CMake sets to `${CMAKE_SOURCE_DIR}/data`.

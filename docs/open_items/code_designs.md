@@ -144,6 +144,17 @@ Signatures are in `interfaces_sketch.hpp` §2. The design:
 
 # 3. FSI on the spectator α/d
 
+> **STATUS 2026-09-01: IMPLEMENTED.** `include/lipolgen/fsi.hpp` +
+> `src/core/fsi.cpp` (`GlauberFsiWeight`), wired through
+> `TaggedSampler::set_fsi` → `Event::weight`, `PipelineConfig::fsi` /
+> `fsi_sigma_mb`, CLI `--fsi` / `--fsi-sigma-mb`, Python bindings, and
+> `tests/test_fsi.cpp` (the table below is reproduced to ≤ 3.3e-3; the
+> production S+D row is pinned next to it).  One deliberate deviation: the
+> construction grid is (k_z, k_T), not (k, cos θ_k) — the eikonal kernel is a
+> function of k_T alone, so the table is smooth there; the per-event read is
+> bilinear as specified.  User docs: docs/USAGE.md §3, docs/CONVENTIONS.md
+> ("Spectator FSI").
+
 ## The formula
 
 Cosyn–Weiss transplanted to X–α, in the form you asked for. The Glauber statement `Ψ_FSI(b) = ψ(b)[1 − Γ(b)]` is a convolution in momentum space:

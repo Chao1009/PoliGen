@@ -263,6 +263,60 @@ itself at the run's own `--cluster-beta`; a C++ caller who sets
 CS PRC 53 (1996) 1689, Eq. (74)/(76), Tables A.1/A.3 — and the BeAGLE
 n₀-only caveat: `docs/CONVENTIONS.md` and the `triton_sf.hpp` header.
 
+### FSI of the DIS debris with the spectator — a weight, never a shift
+
+```cpp
+cfg.fsi = PipelineFsi::GlauberCluster;     // default: Off = today's PWIA
+cfg.fsi_sigma_mb = 40.0;                   // band 20–40 mb; run BOTH ends
+```
+```bash
+python -m lipolgen.cli --channel tagged-alpha --fsi glauber-cluster \
+                       --fsi-sigma-mb 40 --events 400000
+```
+```python
+cfg = lipolgen.make_config(channel="tagged-alpha", events=400000,
+                           fsi="glauber-cluster", fsi_sigma_mb=40.0)
+```
+
+The eikonal (Cosyn–Weiss/Glauber) rescattering of the hadronic debris X on
+the tagged cluster, applied as a **multiplicative `Event::weight`** — the
+FSI/IA density ratio at the drawn (k, cos θ_k), built once at setup
+(`GlauberFsiWeight`, `fsi.hpp`) on a (k_z, k_T) grid — the kernel transfers
+transverse momentum only, so the table is smooth and even in k_z there; a
+spec-literal (k, cos θ_k) grid would tabulate the same function on skewed
+axes — and read per event by bilinear interpolation.  Costs ~0.2 s at setup
+and nothing measurable per event; no RNG is consumed, so an FSI-on run is
+**bit-identical to the FSI-off run in every four-vector** and only the
+weight column moves (`tests/test_fsi.cpp` proves this event by event).
+
+Three rules, from the header, in order of importance:
+
+* **A weight, never a shift.** The spectator four-vector is the measurement;
+  moving it would break the "never recoil-correct the light spectator" rule
+  and the whole-nucleus balance. `Off` is the plane-wave impulse
+  approximation bit for bit.
+* **Spin independent by construction.** The weight is the m-summed
+  (unpolarized) shape distortion; nothing constrains the spin dependence of
+  the rescattering (Cosyn–Weiss VI C, open question). Quote it as an
+  **unpolarized-shape systematic, never as a correction to A_zz**.
+* **Band σ_XN over 20–40 mb; never quote one row alone.** 40 mb is the free
+  hadron; at EIC formation lengths the 20 mb row is arguably the realistic
+  one. `--fsi-sigma-mb` sets the row; run both ends as the systematic.
+
+The run summary logs the survival probability (∫w dΓ/∫dΓ, what
+`weight_normalised` divides by — the distortion is ~73 % absorptive, so it is
+well below 1 and that is physical): 0.520 at 40 mb, 0.671 at 20 mb on the
+⁶Li α tag (S+D). `glauber-cluster` (the default variant) shadows the X–α
+cross section over the α's own Gaussian profile — σ_Xα = 131.0 mb at
+σ_XN = 40, B_α = 27.2 GeV⁻², σ_el/σ_tot = 0.269 vs the measured α-p 0.258 —
+while `glauber-nucleon` is the **unshadowed A·σ_XN = 160 mb single-scattering
+limit**: more absorptive point by point at low k, though its integrated
+survival lands *above* the cluster variant's (the unshadowed quadratic gain
+term feeds strength back into the tag; `fsi.hpp` header, pinned in
+`tests/test_fsi.cpp`). The weight reaches HepMC3 `weights()[0]` and the npz
+`weight` column with no further wiring; `Pipeline::fsi_weight()` exposes the
+model (`survival()`, `sigma_eff_mb`, the profile) for printing.
+
 ## 4. Coherent ⁶Li
 
 ```cpp

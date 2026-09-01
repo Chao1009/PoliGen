@@ -44,6 +44,12 @@ inline constexpr double ALPHA_EM = 1.0 / 137.036;
 /// (hbar c)^2 in GeV^2 * pb.
 inline constexpr double GEV2_TO_PB = 0.3894e9;
 
+/// hbar c [GeV fm]: THE one conversion between fm^-1 and GeV (0.19733, the
+/// value BeAGLE and the Ciofi degli Atti-Simula transcription carry).  Single
+/// definition; `coherent.hpp`'s `GEV_PER_FM_INV` is an alias of it and
+/// `triton_sf.hpp` converts the CS coefficients with it.
+inline constexpr double HBARC_GEV_FM = 0.19733;
+
 /// Per-nucleon target mass used for gamma = 2 M x / Q (`polligen.xsec`).
 /// FREE-nucleon mass, because x is per-nucleon; the bound-nucleon mass
 /// would move gamma^2 by 1.0 %.

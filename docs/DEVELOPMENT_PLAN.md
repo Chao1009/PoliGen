@@ -182,9 +182,20 @@ gated at rtol 1e-12 against regenerated `validation/reference/*.json`
   (d vs nn) is crude and flagged** (plans/05 risk table) — a sequential two-body decay
   at the AME2020 separation energies with an isotropic S-wave relative direction and
   the unbound nn split at its virtual-state pole, no Faddeev/AV18 three-body
-  correlation and no tensor structure. **No FSI** of any fragment, on any channel.
-- **Coherent T2**: no coherent-diffractive final-state model; the hadronizer is refused
-  on the coherent channel by default (`hadronize_coherent` opt-in reproduces v0).
+  correlation and no tensor structure. **No FSI moves any fragment's four-vector,
+  on any channel** — since 2026-09-01 the tagged channels carry the Glauber
+  spectator FSI as an optional per-event **weight** (`PipelineConfig::fsi`, off by
+  default; `fsi.hpp`, `docs/USAGE.md` §3): it distorts the tagged spectator's
+  spectrum statistically but never a vector, and the breakup fragments' own
+  rescattering stays open.
+- **Coherent T2 — closed 2026-08-30**: the coherent channel hadronizes by default
+  through the γ*–Pomeron tier (`docs/PYTHIA_BRIDGE.md` §12): a third PYTHIA instance
+  on a Pomeron beam (`Beams:idA = 990`) runs the same surrogate with `W² → M_X²` and
+  `ζ = β` exactly, so the whole record conserves (worst 4.8e-14 relative, charge
+  exact, veto 0 at M_X ≥ 1.4 GeV). The old refusal and its `hadronize_coherent`
+  opt-in are gone; the knob is `PythiaBridgeOptions::coherent_t2 = {Pomeron, Off}`.
+  Still open in the coherent sector: no exclusive-VM channel below M_X = 1.2 GeV,
+  and `PDF:PomSet` (default 6) is the tier's largest systematic.
 - **Physics inputs still external** (unchanged from plans/04): VMC α+d / α+t overlaps,
   spin-3/2 rank-2 basis, b₁ for A > 2, coherent amplitude for polarized A > 2,
   tensor-sector radiative corrections, polarized nuclear PDFs. All are `Backend`s.

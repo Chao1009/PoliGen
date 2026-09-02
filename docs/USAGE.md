@@ -360,15 +360,22 @@ carries `kin.x_pom`, `kin.beta_pom = x/x_P` and `kin.m_x2`; the nucleus loses
 [0.979, 1.000] — inside the near-beam band, where it has to be to be tagged at
 all. Cells that cannot fit `m_x_min` below `x_pom_max` carry no coherent rate.
 
-**Two things throw at setup rather than biting later.** `coherent_t_max` beyond
+**One thing throws at setup rather than biting later.** `coherent_t_max` beyond
 the range where `1 + c₂ cos 2(φ_t − φ_S)` stays positive (0.245 GeV² at
 P_zz = −2, 0.495 at P_zz = +1) is refused — `CoherentScenario::positivity_margin`
-is the coherent twin of `InclusiveKernel::positivity_margin`. And a
-`PipelineConfig::hadronizer` on this channel is refused outright: a coherent
-event names no struck nucleon and no struck cluster, so `PythiaBridge` v0 falls
-through to its inclusive branch and invents a nucleon outside the balance,
-losing `P_ion (1 − 1/A)` of four-momentum and `Z − 1` of charge. Set
-`cfg.hadronize_coherent = true` only to reproduce that known gap deliberately.
+is the coherent twin of `InclusiveKernel::positivity_margin`.
+
+**A hadronizer on this channel is an ordinary configuration** (since
+2026-08-30; the old refusal and its `hadronize_coherent` opt-in are gone).
+The record names its own T2 target — `Role::Pomeron`,
+`P_IP = P_ion − P_recoil` — and `PythiaBridge` hadronizes the γ*–Pomeron
+system on a PYTHIA Pomeron beam (`Beams:idA = 990`) through the same
+surrogate as every other channel, so the whole record conserves exactly
+(`docs/PYTHIA_BRIDGE.md` §12). The knobs sit on the bridge, not the pipeline:
+`PythiaBridgeOptions::coherent_t2 = {Pomeron, Off}` (Off skips the third
+PYTHIA instance and leaves coherent records at T0, still conserving), plus
+`pom_set` / `pom_rescale` for the Pomeron PDF; on the command line,
+`--coherent-t2 pomeron|off`, `--pom-set`, `--pom-rescale`.
 
 ## 5. Far-forward routing
 

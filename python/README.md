@@ -327,6 +327,11 @@ present in `InclusiveSampler.sample_n()`'s dict and absent from
 --events N | --lumi PB       exclusive
 --seed --run --pz --pzz --pe --rel-lumi-offset
 --cluster-beta --p-d --inclusive-b1
+--triton-sf hulthen|ciofi-simula
+                             triton spectral function of the 7Li alpha tag's
+                             T1 ('hulthen' default, bit-compatible; 'ciofi-
+                             simula' adds the k-dependent d/nn branching and
+                             the a(pn) continuum channel)
 --coherent-f0 --coherent-slope-b --coherent-amp
 --nthreads N                 forced to 1 with --hadronize
 --hadronize                  run the T2 (PYTHIA 8) tier

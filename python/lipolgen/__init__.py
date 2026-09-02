@@ -42,8 +42,8 @@ from .export import (inclusive_dict, tagged_dict, hfs_sample,  # noqa: F401
 
 __all__ = [n for n in dir(_lipolgen) if not n.startswith("_")] + [
     "export", "inclusive_dict", "tagged_dict", "hfs_sample", "write_hfs_npz",
-    "write_columns_npz", "CHANNELS", "PLANS", "make_config", "make_plan",
-    "make_pipeline", "run", "__version__",
+    "write_columns_npz", "CHANNELS", "PLANS", "TRITON_SFS",
+    "make_config", "make_plan", "make_pipeline", "run", "__version__",
 ]
 
 # --------------------------------------------------------------- name tables
@@ -79,6 +79,17 @@ CLUSTER_WAVES = {
     "vmc": _lipolgen.ClusterWaveSource.VmcAV18,
 }
 
+#: triton spectral functions of the 7Li alpha tag's T1 breakup.  "hulthen" is
+#: the DEFAULT (the sequential two-body decay, bit-compatible with every
+#: published 7Li number); "ciofi-simula" swaps in the Ciofi degli Atti-Simula
+#: n0 + n1 spectral function (`triton_sf.hpp`, docs/CONVENTIONS.md): the
+#: k-dependent n0/(n0+n1) branching integrating to S0 = 0.6525 and the third
+#: channel (struck n -> a (p n) continuum) the sequential model does not have.
+TRITON_SFS = {
+    "hulthen": _lipolgen.TritonSfChoice.Hulthen,
+    "ciofi-simula": _lipolgen.TritonSfChoice.CiofiSimula,
+}
+
 #: Run-plan names accepted on the command line (aliases included).
 PLANS = ("tensor-thirds", "azz", "helicity-flip", "apar", "transverse-tensor",
          "cos2phi", "tensor-flip", "flip")
@@ -100,7 +111,7 @@ def make_config(isotope="6Li", config=1, channel="inclusive", events=0,
                 scenario=None, grid=None, n_sigma=10.0, pot_config="",
                 inclusive_b1=None, with_virtual_photon=True,
                 apply_optics_lumi_fraction=None,
-                cluster_wave=None):
+                cluster_wave=None, triton_sf=None):
     """A `PipelineConfig` from plain values (the CLI's own constructor).
 
     `channel` is a key of `CHANNELS`; `optics` a key of `OPTICS`.  The isotope
@@ -110,6 +121,11 @@ def make_config(isotope="6Li", config=1, channel="inclusive", events=0,
     key of `CLUSTER_WAVES` ("hulthen", the default, or "vmc") or a
     `ClusterWaveSource` directly; "vmc" replaces the lithium alpha-tag radial
     forms with the ANL VMC tables and then ignores `cluster_beta` / `p_d`.
+    `triton_sf` is a key of `TRITON_SFS` ("hulthen", the default, or
+    "ciofi-simula") or a `TritonSfChoice` directly; "ciofi-simula" replaces
+    the 7Li alpha tag's sequential triton breakup with the three-channel
+    Ciofi degli Atti-Simula spectral function, built by the Pipeline at the
+    run's own `cluster_beta`.
     """
     if channel not in CHANNELS:
         raise ValueError("unknown channel %r; know %s"
@@ -141,6 +157,14 @@ def make_config(isotope="6Li", config=1, channel="inclusive", events=0,
     if cluster_wave is not None:
         cfg.cluster_wave = CLUSTER_WAVES[cluster_wave] \
             if cluster_wave in CLUSTER_WAVES else cluster_wave
+    if triton_sf is not None:
+        if isinstance(triton_sf, str):
+            if triton_sf not in TRITON_SFS:
+                raise ValueError("unknown triton_sf %r; know %s"
+                                 % (triton_sf, ", ".join(sorted(TRITON_SFS))))
+            cfg.triton_sf = TRITON_SFS[triton_sf]
+        else:
+            cfg.triton_sf = triton_sf
     if scenario is not None:
         cfg.scenario = scenario
     if grid is not None:

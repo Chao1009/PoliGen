@@ -32,8 +32,8 @@ import numpy as np
 
 from . import _lipolgen as _l
 from . import export
-from . import (CHANNELS, CLUSTER_WAVES, OPTICS, PLANS, ion_spin,
-               make_config, make_plan)
+from . import (CHANNELS, CLUSTER_WAVES, OPTICS, PLANS, TRITON_SFS,
+               ion_spin, make_config, make_plan)
 
 
 def _load_config_file(path):
@@ -93,6 +93,13 @@ def build_parser():
                    help="cluster radial forms: 'hulthen' (default, "
                         "bit-compatible) or 'vmc' (ANL VMC tables; ignores "
                         "--cluster-beta and --p-d on the lithium alpha tags)")
+    p.add_argument("--triton-sf", choices=sorted(TRITON_SFS), default=None,
+                   help="triton spectral function of the 7Li alpha tag's T1 "
+                        "breakup: 'hulthen' (default, the sequential "
+                        "two-body decay, bit-compatible) or 'ciofi-simula' "
+                        "(the Ciofi degli Atti-Simula n0 + n1 model: "
+                        "k-dependent n0/(n0+n1) branching and the third "
+                        "channel, struck n -> a (p n) continuum)")
     p.add_argument("--inclusive-b1", action="store_true", default=None,
                    help="put an inclusive b1 in the struck cluster's kernel")
     p.add_argument("--coherent-f0", type=float, default=None)
@@ -132,7 +139,7 @@ DEFAULTS = dict(isotope="6Li", config=1, channel="inclusive",
                 rel_lumi_offset=0.0, nthreads=1, hadronize=False,
                 quiet=False,
                 hepmc=None, npz=None, hfs_npz=None, cluster_beta=None,
-                p_d=None, cluster_wave="hulthen",
+                p_d=None, cluster_wave="hulthen", triton_sf="hulthen",
                 coherent_t2="pomeron", pom_set=6, pom_rescale=1.0,
                 inclusive_b1=False, coherent=None)
 
@@ -174,6 +181,7 @@ def main(argv=None):
                       lumi_pb=opts["lumi"], seed=opts["seed"], run=opts["run"],
                       optics=opts["optics"], cluster_beta=opts["cluster_beta"],
                       p_d=opts["p_d"], cluster_wave=opts["cluster_wave"],
+                      triton_sf=opts["triton_sf"],
                       inclusive_b1=opts["inclusive_b1"],
                       coherent=opts["coherent"])
     plan = make_plan(opts["plan"], j=ion_spin(cfg.isotope), pz=opts["pz"],

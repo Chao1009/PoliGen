@@ -55,6 +55,7 @@
 #include "lipolgen/spectator.hpp"
 #include "lipolgen/spin.hpp"
 #include "lipolgen/tagged.hpp"
+#include "lipolgen/triton_sf.hpp"
 #include "lipolgen/xsec.hpp"
 
 #ifndef LIPOLGEN_HAVE_LHAPDF
@@ -2077,6 +2078,63 @@ static void bind_pipeline(py::module_& m) {
       .value("Triton", ClusterSpecies::Triton);
   m.def("cluster_species", &cluster_species, py::arg("z"), py::arg("a"));
   m.attr("KAPPA_NN_VIRTUAL") = KAPPA_NN_VIRTUAL;
+  m.attr("KAPPA_PN_SINGLET") = KAPPA_PN_SINGLET;
+
+  // ---- the triton spectral function (triton_sf.hpp) ----------------------
+  py::enum_<TritonChannel>(m, "TritonChannel",
+      "Which of the triton's three breakup channels a draw came out in.")
+      .value("NeutronD", TritonChannel::NeutronD)
+      .value("NeutronPnCont", TritonChannel::NeutronPnCont)
+      .value("ProtonNnCont", TritonChannel::ProtonNnCont);
+  m.def("triton_channel_name", &triton_channel_name, py::arg("c"));
+
+  py::enum_<TritonSfChoice>(m, "TritonSfChoice",
+      "Spectral function of the 7Li alpha tag's T1 triton breakup: Hulthen "
+      "(default, the sequential two-body decay, bit-compatible) or "
+      "CiofiSimula (the three-channel Ciofi degli Atti-Simula model built by "
+      "the Pipeline at the run's own cluster_beta).")
+      .value("Hulthen", TritonSfChoice::Hulthen)
+      .value("CiofiSimula", TritonSfChoice::CiofiSimula);
+
+  py::class_<CiofiSimulaOptions>(m, "CiofiSimulaOptions",
+      "Configuration of CiofiSimulaTriton.  Everything here is a documented "
+      "CHOICE; the transcribed CS coefficients are not options "
+      "(triton_sf.hpp).")
+      .def(py::init<>())
+      .def_readwrite("k_max", &CiofiSimulaOptions::k_max)
+      .def_readwrite("n_grid", &CiofiSimulaOptions::n_grid)
+      .def_readwrite("q_max", &CiofiSimulaOptions::q_max)
+      .def_readwrite("beta", &CiofiSimulaOptions::beta)
+      .def_readwrite("kappa_nn", &CiofiSimulaOptions::kappa_nn)
+      .def_readwrite("kappa_pn", &CiofiSimulaOptions::kappa_pn)
+      .def_readwrite("n1_scale", &CiofiSimulaOptions::n1_scale)
+      .def_readwrite("proton_n1_only", &CiofiSimulaOptions::proton_n1_only);
+
+  py::class_<TritonSpectralFunction,
+             std::shared_ptr<TritonSpectralFunction>>(m,
+      "TritonSpectralFunction",
+      "The triton spectral-function interface S_N(k, E) (triton_sf.hpp); "
+      "CiofiSimulaTriton is the analytic implementation.")
+      .def("n_of_k", &TritonSpectralFunction::n_of_k, py::arg("k"),
+           py::arg("pdg"))
+      .def("p_two_body", &TritonSpectralFunction::p_two_body, py::arg("k"),
+           py::arg("pdg"))
+      .def("e_rel_density", &TritonSpectralFunction::e_rel_density,
+           py::arg("k"), py::arg("e_rel"), py::arg("pdg"))
+      .def("e_max", &TritonSpectralFunction::e_max, py::arg("pdg"));
+
+  py::class_<CiofiSimulaTriton, TritonSpectralFunction,
+             std::shared_ptr<CiofiSimulaTriton>>(m, "CiofiSimulaTriton",
+      "Ciofi degli Atti-Simula (PRC 53 (1996) 1689) triton spectral "
+      "function: n_0/n_1 as transcribed, the 2-body/3-body split from their "
+      "RATIO, the continuum pair split at its own virtual-state pole.")
+      .def(py::init<CiofiSimulaOptions>(),
+           py::arg("opt") = CiofiSimulaOptions())
+      .def_property_readonly("options", &CiofiSimulaTriton::options)
+      .def_property_readonly("s0", &CiofiSimulaTriton::s0)
+      .def_property_readonly("s1", &CiofiSimulaTriton::s1)
+      .def("n0_cs", &CiofiSimulaTriton::n0_cs, py::arg("k_gev"))
+      .def("n1_cs", &CiofiSimulaTriton::n1_cs, py::arg("k_gev"));
 
   py::class_<BreakupOptions>(m, "BreakupOptions",
       "Configuration of the T1 cluster breakup.  `beta` and `f2` are "
@@ -2095,6 +2153,13 @@ static void bind_pipeline(py::module_& m) {
           },
           [](BreakupOptions& o, std::shared_ptr<UnpolSF> f) {
             o.f2 = std::move(f);
+          })
+      .def_property("triton_sf",
+          [](const BreakupOptions& o) {
+            return std::const_pointer_cast<TritonSpectralFunction>(o.triton_sf);
+          },
+          [](BreakupOptions& o, std::shared_ptr<TritonSpectralFunction> t) {
+            o.triton_sf = std::move(t);
           });
 
   py::enum_<OpticsChoice>(m, "OpticsChoice")
@@ -2155,6 +2220,11 @@ static void bind_pipeline(py::module_& m) {
                      "default (the struck cluster is resolved into a nucleon "
                      "plus partner spectators).")
       .def_readwrite("breakup", &PipelineConfig::breakup)
+      .def_readwrite("triton_sf", &PipelineConfig::triton_sf,
+                     "TritonSfChoice for the 7Li alpha tag's T1 triton "
+                     "breakup; Hulthen by default (bit-compatible), "
+                     "CiofiSimula swaps in the three-channel spectral "
+                     "function built at the run's own cluster_beta.")
       .def_readwrite("coherent", &PipelineConfig::coherent)
       .def_readwrite("coherent_t_max", &PipelineConfig::coherent_t_max)
       .def_readwrite("coherent_xpom", &PipelineConfig::coherent_xpom)

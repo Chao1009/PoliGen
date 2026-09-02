@@ -271,6 +271,26 @@ Optics optics_for(OpticsChoice choice, const std::string& ion_name,
 /// no struck cluster to resolve.
 enum class Tier : std::uint8_t { T0, T1 };
 
+/// Which spectral function the 7Li alpha tag's T1 triton breakup draws from
+/// (`PipelineConfig::triton_sf`; CLI `--triton-sf {hulthen,ciofi-simula}`).
+///
+///   Hulthen      the DEFAULT: the sequential two-body Hulthen decay of
+///                `breakup.hpp`, bit-for-bit what every published 7Li number
+///                was made with;
+///   CiofiSimula  the Ciofi degli Atti-Simula spectral function of
+///                `triton_sf.hpp` -- the k-dependent n_0/(n_0 + n_1)
+///                branching and the THIRD channel (struck n -> a (p n)
+///                continuum) the sequential model has no room for.  The
+///                `Pipeline` constructor builds the `CiofiSimulaTriton`
+///                ITSELF, at the run's own `cluster_beta` and the breakup's
+///                own `k_max`, so the continuum pair's q-shape and every
+///                other radial form share ONE beta (docs/CONVENTIONS.md: no
+///                physics number is defined twice).
+///
+/// Ignored on every non-triton species, and ignored entirely when a C++
+/// caller has already put an object in `BreakupOptions::triton_sf`.
+enum class TritonSfChoice : std::uint8_t { Hulthen, CiofiSimula };
+
 /// The T2 hand-off.  Called once per finished T0 event with the event's own
 /// counter-based stream, AFTER every T0 particle (including the off-shell
 /// struck cluster and the spectator) is in place.  Deliberately the signature
@@ -350,6 +370,12 @@ struct PipelineConfig {
   /// `cluster_beta` and the struck cluster's own unpolarized backend, so the
   /// three draws that share them cannot disagree.
   BreakupOptions breakup;
+  /// Triton spectral function of the 7Li alpha tag's T1 breakup
+  /// (`TritonSfChoice` above; the model itself is `triton_sf.hpp`).
+  /// `CiofiSimula` makes the constructor fill `breakup.triton_sf` with a
+  /// `CiofiSimulaTriton` built at the run's own `cluster_beta` unless the
+  /// caller already set one.
+  TritonSfChoice triton_sf = TritonSfChoice::Hulthen;
   HadronizerHook hadronizer;
   // C4 -- CLOSED 2026-08-30.  `hadronize_coherent`, the opt-in that let a
   // hadronizer run on the coherent channel through the broken inclusive

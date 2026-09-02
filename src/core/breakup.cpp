@@ -127,6 +127,7 @@ ClusterBreakup::ClusterBreakup(BreakupOptions opt) : opt_(std::move(opt)) {
   f2_ = opt_.f2 ? opt_.f2
                 : std::static_pointer_cast<const UnpolSF>(
                       std::make_shared<const ToyF2>());
+  tsf_ = opt_.triton_sf;   // null = the sequential triton branch, bit for bit
 
   // --- the deuteron's own wave function, S + D at P_D_DEUTERON ------------
   dmodel_ = std::unique_ptr<TaggedModel>(new TaggedModel(
@@ -183,6 +184,8 @@ bool ClusterBreakup::resolve(const BreakupInput& in, Rng& rng,
   out.partners.clear();
   out.k = out.cos_theta_k = out.phi_k = out.q_nn = 0.0;
   out.m_remnant = 0.0;
+  out.e_rel = 0.0;
+  out.channel = TritonChannel::NeutronD;
 
   if (!(in.p_cluster.e > 0.0)) return false;
 
@@ -265,6 +268,58 @@ bool ClusterBreakup::resolve(const BreakupInput& in, Rng& rng,
     out.struck.pdg = struck_p ? 2212 : 2112;
     out.struck.charge = struck_p ? 1.0 : 0.0;
     out.struck.pol = 2.0 * m1;
+  } else if (tsf_) {
+    // ---- the triton, the SPECTRAL-FUNCTION branch (see breakup.hpp) -----
+    //
+    // Exactly nine uniforms, whatever the channel: six inside `sample()`, two
+    // for the pair's own direction and one for the polarization label.  The
+    // two direction uniforms are drawn even when the remnant is the bound
+    // deuteron and there is no pair to point -- that is the whole point.
+    const TritonDraw d = tsf_->sample(proton_fraction(in.x, in.q2, 1, 3), rng);
+    out.channel = d.channel;
+    out.k = d.k;
+    out.cos_theta_k = d.cos_theta_k;
+    out.phi_k = d.phi_k;
+    out.q_nn = d.q_pair;
+    out.e_rel = d.e_rel;
+    out.m_remnant = d.m_remnant;
+
+    // The remnant cannot be given more energy than the off-shell cluster has:
+    // the struck nucleon would come out with E < 0 and the record would be
+    // nonsense.  The CS distribution puts 3.3e-5 of its strength above the
+    // 1.2 GeV grid ceiling and the cluster carries ~2.8 GeV, so this is a
+    // guard, not a physics cut -- but the caller REDRAWS rather than clipping,
+    // which is the library's rule for an unusable draw.
+    const double e_rem = std::sqrt(d.m_remnant * d.m_remnant + d.k * d.k);
+    if (!(e_rem < m_x)) return false;
+
+    const Vec4 rem_rest = on_shell(d.m_remnant, d.k, d.cos_theta_k, d.phi_k);
+    const Vec4 rem = from_rest_of(rem_rest, in.p_cluster, m_x);
+
+    double cq = 0.0, pq = 0.0;
+    isotropic(rng, &cq, &pq);          // consumed on EVERY channel
+
+    if (d.channel == TritonChannel::NeutronD) {
+      out.partners.push_back(make_fragment(1, 2, rem));
+    } else {
+      // Back to back in the pair's OWN rest frame: the pn pair's two masses
+      // differ, so the two on-shell energies do too, but the three-momenta
+      // still cancel and M = sum sqrt(m_i^2 + q^2) exactly.
+      const bool nn = (d.channel == TritonChannel::ProtonNnCont);
+      const int z1 = nn ? 0 : 1;
+      const double m1 = nn ? m_n : m_p;
+      const Vec4 a_rest = on_shell(m1, d.q_pair, cq, pq);
+      const Vec4 b_rest = on_shell(m_n, d.q_pair, -cq, pq + kPi);
+      out.partners.push_back(
+          make_fragment(z1, 1, from_rest_of(a_rest, rem, d.m_remnant)));
+      out.partners.push_back(
+          make_fragment(0, 1, from_rest_of(b_rest, rem, d.m_remnant)));
+    }
+
+    out.struck.pdg = d.struck_proton ? 2212 : 2112;
+    out.struck.charge = d.struck_proton ? 1.0 : 0.0;
+    out.struck.pol = sample_pol(
+        2.0 * in.m_s * (d.struck_proton ? in.eff_pol_p : in.eff_pol_n), rng);
   } else {
     // ---- the triton, the crude branch (see breakup.hpp) -----------------
     const bool struck_p = rng.uniform() < proton_fraction(in.x, in.q2, 1, 3);
@@ -293,11 +348,13 @@ bool ClusterBreakup::resolve(const BreakupInput& in, Rng& rng,
       const Vec4 n2_rest = on_shell(m_n, out.q_nn, -cq, pq + kPi);
       out.partners.push_back(make_fragment(0, 1, from_rest_of(n1_rest, rem, m_rem)));
       out.partners.push_back(make_fragment(0, 1, from_rest_of(n2_rest, rem, m_rem)));
+      out.channel = TritonChannel::ProtonNnCont;
       out.struck.pdg = 2212;
       out.struck.charge = 1.0;
       out.struck.pol = sample_pol(2.0 * in.m_s * in.eff_pol_p, rng);
     } else {
       out.partners.push_back(make_fragment(1, 2, rem));
+      out.channel = TritonChannel::NeutronD;
       out.struck.pdg = 2112;
       out.struck.charge = 0.0;
       out.struck.pol = sample_pol(2.0 * in.m_s * in.eff_pol_n, rng);

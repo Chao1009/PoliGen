@@ -296,3 +296,87 @@ def test_tensor_gamma_is_off_by_default_and_reversible():
     # one reads them
     t = massless.tables(x, q2)
     assert t.b3 == 0.0 and t.b4 == 0.0
+
+
+# ------------------------------------------------ the triton spectral function
+
+
+def test_triton_sf_bindings_round_trip():
+    """The `TritonSfChoice` knob, the `BreakupOptions.triton_sf` slot and the
+    `CiofiSimulaTriton` object itself are all reachable from Python."""
+    cfg = lg.PipelineConfig()
+    assert cfg.triton_sf == lg.TritonSfChoice.Hulthen           # the default
+    cfg.triton_sf = lg.TritonSfChoice.CiofiSimula
+    assert cfg.triton_sf == lg.TritonSfChoice.CiofiSimula
+    assert lg.make_config(channel="tagged-7Li-alpha", events=10).triton_sf \
+        == lg.TritonSfChoice.Hulthen
+    assert lg.make_config(channel="tagged-7Li-alpha", events=10,
+                          triton_sf="ciofi-simula").triton_sf \
+        == lg.TritonSfChoice.CiofiSimula
+    with pytest.raises(ValueError):
+        lg.make_config(triton_sf="faddeev")
+
+    sf = lg.CiofiSimulaTriton(lg.CiofiSimulaOptions())
+    # S_0 = 0.6525 is the 3He(e,e'p)d spectroscopic factor; the CS Eq. (28)
+    # sum closes on 1 untuned (test_triton_sf.cpp measures all of this at
+    # full precision; here the binding is what is under test).
+    assert sf.s0 == pytest.approx(0.6525, rel=1e-3)
+    assert sf.s0 + sf.s1 == pytest.approx(1.0, abs=5e-4)
+    # no bound nn exists, so a struck proton's two-body weight is exactly 0,
+    # and a struck neutron's is the n_0/(n_0 + n_1) ratio
+    assert sf.p_two_body(0.1, 2212) == 0.0
+    assert sf.p_two_body(0.1, 2112) == \
+        sf.n0_cs(0.1) / (sf.n0_cs(0.1) + sf.n1_cs(0.1))
+    assert lg.KAPPA_PN_SINGLET == pytest.approx(0.0083122, rel=1e-9)
+    assert lg.triton_channel_name(lg.TritonChannel.NeutronPnCont) == "n+(pn)"
+
+    bo = lg.BreakupOptions()
+    assert bo.triton_sf is None          # null = the sequential model, bit
+    bo.triton_sf = sf                    # for bit; non-null = spectral fn
+    assert bo.triton_sf.p_two_body(0.2, 2212) == 0.0
+
+
+def _li7_t1_events(triton_sf, n=200):
+    cfg = lg.make_config(channel="tagged-7Li-alpha", events=n, seed=7,
+                         optics="tagging", triton_sf=triton_sf)
+    p = lg.Pipeline(cfg, lg.helicity_flip_plan(1.5, 0.7, 0.7))
+    return [p.event(i) for i in range(n)]
+
+
+def test_triton_sf_pipeline_conserves_with_both_options():
+    """A small tagged-7Li T1 run per option: per-event whole-record closure,
+    same-seed determinism, different records between the two models, and the
+    n + (pn) third channel only on ciofi-simula."""
+    ciofi = _li7_t1_events("ciofi-simula")
+    hulthen = _li7_t1_events("hulthen")
+    for evs in (ciofi, hulthen):
+        for ev in evs:
+            r = lg.momentum_residual(ev)
+            assert max(abs(r.e), abs(r.px), abs(r.py), abs(r.pz)) < 1e-9
+            assert lg.charge_residual(ev) == 0.0
+
+    def struck_pz(evs):
+        return [[q for q in ev.particles
+                 if q.role == lg.Role.StruckNucleon][0].p.pz for ev in evs]
+
+    # determinism: rebuilding the same config gives the identical records
+    assert struck_pz(_li7_t1_events("ciofi-simula")) == struck_pz(ciofi)
+    # a different triton model gives different records (same T0 kinematics,
+    # different breakup draws)
+    same = sum(a == b for a, b in zip(struck_pz(ciofi), struck_pz(hulthen)))
+    assert same < len(ciofi) // 10
+
+    def n_pn_events(evs):
+        n = 0
+        for ev in evs:
+            pn = [q for q in ev.particles
+                  if q.role == lg.Role.StruckNucleon][0]
+            partners = [q.pdg for q in ev.particles
+                        if q.role == lg.Role.PartnerSpectator]
+            if pn.pdg == 2112 and len(partners) == 2:
+                assert partners.count(2212) == 1   # one p + one n
+                n += 1
+        return n
+
+    assert n_pn_events(ciofi) > 0        # the channel the sequential model
+    assert n_pn_events(hulthen) == 0     # has no room for

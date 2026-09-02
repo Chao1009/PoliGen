@@ -50,7 +50,47 @@
 ///     +-1 helicity label (LHEF SPINUP), not the expectation value.
 ///
 /// ---------------------------------------------------------------------------
-/// THE TRITON (7Li alpha tag) -- CRUDE AND FLAGGED (plans/05 step 5.D:
+/// THE TRITON (7Li alpha tag).  TWO models, selected by
+/// `BreakupOptions::triton_sf`:
+///
+///   null (the DEFAULT)  the sequential two-body Hulthen decay below, kept
+///                       bit-for-bit;
+///   non-null            the spectral function of `triton_sf.hpp`, which adds
+///                       the THIRD channel the sequential model has no room
+///                       for (struck n -> a (p n) CONTINUUM remnant) and takes
+///                       its branching from Ciofi degli Atti-Simula's own
+///                       n_0/(n_0 + n_1) rather than from a separation energy.
+///
+/// The spectral-function branch, in full:
+///
+///   * the species is drawn Z F2p : N F2n at the event's own (x, Q2) --
+///     UNCHANGED, `proton_fraction` is still the one rule, and the breakup
+///     hands the fraction to `TritonSpectralFunction::sample` rather than the
+///     other way round, because the species draw is a structure-function
+///     statement and the spectral function has no F2 backend;
+///   * struck n -> d (bound, E = 0) with weight n_0/(n_0 + n_1);
+///   * struck n -> (p n) continuum with weight n_1/(n_0 + n_1);
+///   * struck p -> (n n) continuum always;
+///   * the continuum pair is split back to back in its OWN rest frame at a
+///     relative momentum drawn from the virtual-state Hulthen form -- the same
+///     one this file already used for nn, at the nn pole for an nn pair and at
+///     the pn 1S0 pole for a pn pair;
+///   * the impulse-approximation rule is UNCHANGED (partners on shell, struck
+///     nucleon absorbs the difference), so conservation is untouched;
+///   * RNG STREAM DISCIPLINE: the branch consumes exactly
+///     `TritonSpectralFunction::kUniformsPerSample` + 3 uniforms whatever the
+///     channel -- six inside `sample()`, two for the pair's own direction
+///     (drawn even when the remnant is the bound d and there is no pair) and
+///     one for the polarization label.  The sequential model below does NOT
+///     have that property (it consumes 5 or 8), which is one of the reasons
+///     the new branch is a separate path rather than a patch.
+///
+/// The one number the whole split rests on, and where it came from, is at the
+/// top of `triton_sf.hpp`.  Measured against the sequential model: <k> goes
+/// from 133 MeV (t* -> n + d) / 145 MeV (t* -> p + nn) to 126 MeV over all
+/// struck nucleons and 102 MeV on the bound-remnant channel alone.
+///
+/// THE SEQUENTIAL MODEL (the default) -- CRUDE AND FLAGGED (plans/05 step 5.D:
 /// "t* remnant -> d or nn per the triton wave function -- crude, flagged").
 ///
 /// A sequential two-body breakup with the triton's own AME2020 separation
@@ -82,8 +122,12 @@
 ///
 /// ---------------------------------------------------------------------------
 /// STILL OPEN.  No final-state interaction of any fragment (no FSI, no
-/// nuclear transparency, no formation time); the triton remnant realism above;
-/// and no D-wave / tensor structure in the triton breakup (it is isotropic).
+/// nuclear transparency, no formation time); no D-wave / tensor structure in
+/// either triton branch (both are isotropic in the relative direction); and
+/// the spectral-function branch factorises S_N(k, E) into n(k) times a
+/// k-INDEPENDENT pair excitation, which a Faddeev/AV18 S(k, E) table would
+/// not (`TritonSpectralFunction` is the interface such a table would enter
+/// through).
 
 #include <cstdint>
 #include <memory>
@@ -96,12 +140,13 @@
 #include "lipolgen/sf.hpp"
 #include "lipolgen/spectator.hpp"
 #include "lipolgen/tagged.hpp"
+#include "lipolgen/triton_sf.hpp"
 
 namespace lipolgen {
 
-/// nn virtual-state pole momentum [GeV]: 1/|a_nn| with a_nn = -18.9 fm.
-/// The single definition of the scale the unbound nn remnant is split at.
-inline constexpr double KAPPA_NN_VIRTUAL = 0.0104399;
+// `KAPPA_NN_VIRTUAL` -- the nn virtual-state pole this file splits the
+// unbound nn remnant at -- moved to `triton_sf.hpp` on 2026-08-30 so that it
+// and the pn 1S0 pole sit together; the name is still reachable from here.
 
 /// What the struck cluster of a tagged channel is made of.
 enum class ClusterSpecies : std::uint8_t {
@@ -135,9 +180,17 @@ struct BreakupResult {
   double k = 0.0;                   ///< internal relative momentum [GeV]
   double cos_theta_k = 0.0;         ///< its polar cosine in the P_X rest frame
   double phi_k = 0.0;
-  double q_nn = 0.0;                ///< nn relative momentum [GeV] (t* -> p+nn)
+  double q_nn = 0.0;                ///< the continuum pair's relative momentum
+                                    ///< [GeV]; nn on both paths, pn only on
+                                    ///< the spectral-function one
   double m_remnant = 0.0;           ///< invariant mass of the partner system
   double virtuality = 0.0;          ///< p_N,struck^2 - M_NUCLEON^2 [GeV^2]
+  /// Which triton channel came out.  Meaningful only for
+  /// `ClusterSpecies::Triton`; on the sequential path it is `NeutronD` or
+  /// `ProtonNnCont` and never `NeutronPnCont`, which is the channel that
+  /// model does not have.
+  TritonChannel channel = TritonChannel::NeutronD;
+  double e_rel = 0.0;               ///< excitation of the remnant pair [GeV]
 };
 
 /// Configuration of the breakup model.  Everything here is a documented
@@ -153,6 +206,11 @@ struct BreakupOptions {
   /// library's `ToyF2`; hand it the struck cluster's own kernel backend so the
   /// two draws stay consistent (docs/CONVENTIONS.md).
   std::shared_ptr<const UnpolSF> f2;
+  /// The triton's spectral function.  NULL -- the default -- keeps the
+  /// sequential Hulthen breakup above, bit for bit; a `CiofiSimulaTriton`
+  /// replaces it with the three-channel model (`triton_sf.hpp`).  Ignored on
+  /// every non-triton species.
+  std::shared_ptr<const TritonSpectralFunction> triton_sf;
 };
 
 /// Struck cluster -> struck nucleon + partner spectator(s).
@@ -168,6 +226,8 @@ class ClusterBreakup {
   /// The deuteron's own `TaggedModel` -- the internal wave function the
   /// `ClusterSpecies::Deuteron` branch draws from.
   const TaggedModel& deuteron_model() const { return *dmodel_; }
+  /// The triton spectral function in force, or null on the sequential path.
+  const TritonSpectralFunction* triton_sf() const { return tsf_.get(); }
 
   /// P(proton struck) = Z F2p / (Z F2p + N F2n) at (x, Q2); the flat Z/A when
   /// the backend is not positive there.
@@ -186,6 +246,7 @@ class ClusterBreakup {
 
   BreakupOptions opt_;
   std::shared_ptr<const UnpolSF> f2_;
+  std::shared_ptr<const TritonSpectralFunction> tsf_;
   std::unique_ptr<TaggedModel> dmodel_;
   /// P(m_sc | m_S) of the deuteron model, keyed by 2*m_S + 2 (m_S = +1, 0, -1).
   std::vector<std::vector<double>> dpop_;

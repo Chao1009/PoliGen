@@ -333,6 +333,49 @@ TEST_CASE("T2 chain: tagged at T1, whole-record balance with NO caller-side "
   }
 }
 
+TEST_CASE("T2 chain: tagged 7Li-alpha at T1 with --triton-sf ciofi-simula -- "
+          "the spec's 'conservation T1+T2 1e-9 both options'") {
+  // The tagged TEST_CASE above already covers the Hulthen default; this is
+  // the SAME chain with the Ciofi degli Atti-Simula spectral function
+  // (triton_sf.hpp), whose third channel (struck n -> a (p n) continuum)
+  // the sequential model does not have.  The whole-record balance must not
+  // care which model resolved the triton.
+  PipelineConfig cfg;
+  cfg.channel = PipelineChannel::TaggedLi7Alpha;
+  cfg.isotope = channel_isotope(cfg.channel);
+  cfg.beam_config = 1;
+  cfg.n_events = kN;
+  cfg.seed = kSeed;
+  cfg.optics_choice = OpticsChoice::Tagging;
+  cfg.triton_sf = TritonSfChoice::CiofiSimula;   // the one line under test
+  REQUIRE(cfg.tier == Tier::T1);
+
+  const BeamConfig bc =
+      default_configs(cfg.isotope)[static_cast<std::size_t>(cfg.beam_config)];
+  PythiaBridge bridge(bc, bridge_opts(kSeed + 31));
+
+  ChainStats st;
+  run_channel(cfg, helicity_flip_plan(1.5, 0.7, 0.7), bridge, Role::Spectator,
+              &st);
+
+  MESSAGE("tagged 7Li-alpha (T1, ciofi-simula): " << st.n_ok << "/"
+          << st.n_attempted << " hadronized, worst 4p rel " << st.worst_p_rel
+          << ", worst charge " << st.worst_q << ", worst Sum(E-pz) exact "
+          << st.worst_empz_exact << " GeV, worst Sum(E-pz) truth rel "
+          << st.worst_empz_truth_rel << ", worst pT " << st.worst_pt
+          << " GeV, " << st.secs << " s -> "
+          << (st.secs > 0 ? st.n_ok / st.secs : 0.0) << " ev/s");
+  CHECK(st.n_attempted == kN);
+  CHECK(st.n_ok >= kN - kN / 20);
+  CHECK(st.n_untouched_fail == 0);
+  CHECK(st.n_electron_fail == 0);
+  CHECK(st.worst_p_rel < 1e-9);
+  CHECK(st.worst_q == 0.0);
+  CHECK(st.worst_empz_exact < 1e-6);
+  CHECK(st.worst_empz_truth_rel < 0.2);
+  CHECK(st.worst_pt < 1e-8);
+}
+
 TEST_CASE("T2 chain: coherent 6Li -- the gamma*-Pomeron tier, 300 events, "
           "whole-record balance") {
   PipelineConfig cfg;

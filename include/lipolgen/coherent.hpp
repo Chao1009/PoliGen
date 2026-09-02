@@ -22,6 +22,7 @@
 #include <string>
 #include <vector>
 
+#include "lipolgen/constants.hpp"
 #include "lipolgen/event.hpp"
 #include "lipolgen/rng.hpp"
 #include "lipolgen/spectator.hpp"
@@ -33,8 +34,9 @@ namespace lipolgen {
 /// FOUR-VECTOR uses `nuclear_mass(3, 6)`, the AME2020 nuclear mass the rest of
 /// the library boosts with.
 inline constexpr double M_LI6_DOC = 5.6015;
-/// hbar c [GeV fm], as `coherent.GEV_PER_FM_INV`.
-inline constexpr double GEV_PER_FM_INV = 0.19733;
+/// hbar c [GeV fm], as `coherent.GEV_PER_FM_INV` -- an alias of the single
+/// definition `HBARC_GEV_FM` (constants.hpp, since 2026-09-01).
+inline constexpr double GEV_PER_FM_INV = HBARC_GEV_FM;
 /// One-sided rate-weighting model systematic on `a2_tagged`.
 inline constexpr double RATE_WEIGHT_SYST = 0.73;
 

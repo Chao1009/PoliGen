@@ -11,6 +11,7 @@
 #include "lipolgen/constants.hpp"
 #include "lipolgen/sf.hpp"
 #include "lipolgen/spin.hpp"
+#include "lipolgen/triton_sf.hpp"
 
 namespace lipolgen {
 namespace {
@@ -513,6 +514,17 @@ Pipeline::Pipeline(PipelineConfig config, RunPlan plan)
       // (docs/CONVENTIONS.md: no physics number is defined twice).
       bo.beta = cfg_.cluster_beta;
       if (!bo.f2) bo.f2 = dis_sampler_->kernel().nuclear_f2().base();
+      // --triton-sf ciofi-simula: the spectral function is built HERE, at
+      // the run's own `cluster_beta` and the breakup's own `k_max`, so the
+      // continuum pair's q-shape shares the one beta everything else in the
+      // run is made with -- the same rule as the two lines above.  A C++
+      // caller who already put an object in `breakup.triton_sf` keeps it.
+      if (cfg_.triton_sf == TritonSfChoice::CiofiSimula && !bo.triton_sf) {
+        CiofiSimulaOptions tso;
+        tso.beta = cfg_.cluster_beta;
+        tso.k_max = bo.k_max;
+        bo.triton_sf = std::make_shared<const CiofiSimulaTriton>(tso);
+      }
       breakup_.reset(new ClusterBreakup(bo));
     }
   } else {

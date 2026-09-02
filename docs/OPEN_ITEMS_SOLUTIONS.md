@@ -7,8 +7,8 @@ the recommended solution, effort, and status. Ordered by leverage.
 
 | # | item | verdict | effort | status |
 |---|---|---|---|---|
-| 1 | VMC α+d / α+t cluster wave functions (plans/04 #15) | **closed & implemented** — ANL AV18 VMC tables (overlaps 2004; momentum distributions 2024) in `data/vmc/`, `VmcRadial` backend, `--cluster-wave vmc` | done | published tag fractions must be re-run |
-| 2 | ePIC chain gate (HepMC3 → abconv → npsim) | **passed** — 10/10 events through `npsim` directly and via `abconv -p ip6_hiacc_100x10` | done | one cosmetic writer fix (electron generated_mass) |
+| 1 | VMC α+d / α+t cluster wave functions (plans/04 #15) | **closed & implemented** — ANL AV18 VMC tables (overlaps 2004; momentum distributions 2024) in `data/vmc/`, `VmcRadial` backend, `--cluster-wave vmc` | done | re-run on VMC at 5×41, 10×100, 18×275 (USAGE cluster-wave section; vmc_reconciliation.md "Impact on the tagged pipeline"); β band retired |
+| 2 | ePIC chain gate (HepMC3 → abconv → npsim) | **passed** — 10/10 events through `npsim` directly and via `abconv -p ip6_hiacc_100x10` | done | writer fix in (m_e written as generated_mass; pinned by tests) |
 | 3 | Tensor sign `TENSOR_LL_SIGN` (plans/08 D1) | **decided by literature: −1** (Cosyn Eq. 27, HERMES Eq. 6, HJM derivation, POLRAD Eqs. 9/10 all give A_zz = −(2/3) b₁/F₁) | 1 line + test | author to confirm; unblocks D2 |
 | 4 | ⁶Li/⁷Li effective polarizations (plans/04 #6) | **closed** — 1/3 vs 0.81 was a convention mismatch; VMC (Wiringa 2014 Table I, Piarulli 2023) gives whole-nucleus P_p = P_n = 0.85 ± 0.03 (⁶Li), 0.87 / −0.03 (⁷Li) | 0.5 d | author to confirm |
 | 5 | Coherent T2 final state | **implemented 2026-09-01** — γ*–Pomeron tier is the default coherent T2 (`CoherentT2::{Pomeron, Off}`, `docs/PYTHIA_BRIDGE.md` §12); ζ = β exact, 300-event chain conserves to 2.8e-14, M_had = M_X to 2.3e-11, veto 0 at M_X ≥ 1.4 GeV | done | `--coherent-t2`, `--pom-set` |
@@ -49,8 +49,20 @@ behind a Cloudflare challenge). Findings:
   every Roman-Pot acceptance.
 - Consequence for the physics case: the ⁶Li α-tag acceptance is entirely a
   p_T-tail measurement, so the published tag fractions and the tagged A_zz
-  curves must be re-run on VMC; no single β reproduces the VMC shape (node +
-  window-dependent tail), so the β band should be retired rather than widened.
+  curves were re-run on VMC (`validation/vmc_tag_fractions.py`,
+  `docs/open_items/vmc_reconciliation.md` "Impact on the tagged pipeline",
+  `docs/USAGE.md`): ⁶Li tag fraction 0.0249 → 0.0348 (YR high-acceptance),
+  0.2530 → 0.2485 (tagging optics); ⁷Li 0.9730 → 0.9981; ⁶Li A_zz^tag at
+  k = 0.20 GeV +0.845 → +0.452; P_D 0.0867 → 0.01935. Because no single β
+  reproduces the VMC shape (Pauli node + window-dependent tail), the Hulthén
+  β band is retired as the cluster-wave systematic rather than widened — the
+  `--cluster-beta` knob itself stays (Hulthén is still the default radial
+  form), but the quoted systematic is now the VMC-vs-Hulthén difference
+  shown above, not a scan over β. Confirmed at the other two reference
+  configurations (`validation/vmc_tag_fractions.py --configs 0,1,2`,
+  `docs/USAGE.md`): the ⁶Li YR high-acceptance tag fraction moves
+  0.0286 → 0.0365 at 5×41 and 0.0266 → 0.0349 at 18×275, so the
+  Hulthén→VMC shift is not a single-energy artifact.
 
 ## 2. Chain gate — passed
 
@@ -60,6 +72,11 @@ spectator status 1); `abconv -p 1` cannot decode a ⁶Li ion (per-nucleon energy
 0), `abconv -p ip6_hiacc_100x10` works and its output also runs through npsim.
 EDM4hep `MCParticles` carry the full role chain. Cosmetic: write m_e = 0.511 MeV
 as the electron `generated_mass` to silence DD4hep's ppm energy fix-ups.
+
+**Done (2026-09-02)**: `src/hepmc/hepmc_writer.cpp` writes
+`generated_mass = 0.51099895e-3` GeV for any massless electron (`|pdg| == 11`,
+`p.mass == 0.0`); every other particle's generated mass is unchanged. Pinned
+by a test in the doctest suite.
 
 ## 3–4. Conventions now decided by sources
 

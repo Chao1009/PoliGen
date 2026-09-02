@@ -178,6 +178,23 @@ in `docs/open_items/vmc_reconciliation.md`):
 | ⁷Li tag fraction, YR high-acceptance | 0.9730 | 0.9981 |
 | ⁶Li A_zz^tag at k = 0.20 GeV | +0.845 | +0.452 |
 
+**Roman-Pot tag fractions, Hulthén β = 0.30 vs VMC, at the three configurations
+(40000 events, seed 20260829):** `validation/vmc_tag_fractions.py --events
+40000 --configs 0,1,2` (5×41-class, 10×100-class, 18×275-class nominal design
+points; 18×275 rigidity-caps ⁷Li's ion energy below ⁶Li's, so it is quoted
+separately per isotope).
+
+| isotope | optics | 5 × 40.8 GeV/u Hulthén | VMC | 10 × 99.5 GeV/u Hulthén | VMC | 18 × 137.5/117.9 GeV/u Hulthén | VMC |
+|---|---|---|---|---|---|---|---|
+| ⁶Li | YR high-acceptance | 0.0286 | 0.0365 | 0.0249 | 0.0348 | 0.0266 | 0.0349 |
+| ⁶Li | tagging optics | 0.3410 | 0.3175 | 0.2530 | 0.2485 | 0.3115 | 0.2905 |
+| ⁷Li | YR high-acceptance | 0.9660 | 0.9981 | 0.9730 | 0.9981 | 0.9787 | 0.9981 |
+| ⁷Li | tagging optics | 0.9805 | 0.9993 | 0.9927 | 0.9992 | 0.9941 | 0.9992 |
+
+The cluster-wave systematic is quoted as the difference between a
+`--cluster-wave hulthen` run and a `--cluster-wave vmc` run; the Hulthén β
+band is retired as a systematic (the `--cluster-beta` knob stays).
+
 Reach the tables directly when you want them: `VmcRadial`,
 `vmc_from_overlap_k`, `vmc_from_overlap_r` (a Fourier–Bessel transform of an
 r-space overlap, for the r-only tables) and `vmc_from_momentum` are all bound

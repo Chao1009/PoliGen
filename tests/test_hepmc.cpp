@@ -130,6 +130,100 @@ Event make_synthetic_event() {
   return ev;
 }
 
+// Minimal event pinning the writer's electron generated-mass rule
+// (hepmc_writer.cpp): a |pdg|==11 particle with Particle::mass == 0.0 is
+// written with generated_mass = the PDG electron mass; every other particle
+// (massive electrons included) keeps its own Particle::mass verbatim.
+Event make_electron_mass_rule_event() {
+  Event ev;
+  ev.number = 7;
+  ev.channel = Channel::Inclusive;
+  ev.weight = 1.0;
+  ev.xsec_pb = 1.0;
+  ev.xsec_err_pb = 0.1;
+
+  // Beam electron, built massless (the core's standard DIS convention, per
+  // the comment in hepmc_writer.cpp) with E == |p| exactly on-shell.
+  Particle beam_e;
+  beam_e.pdg = 11;
+  beam_e.status = Status::Beam;
+  beam_e.role = Role::BeamElectron;
+  {
+    const double p_e = 10.0;
+    beam_e.p = {p_e, 0.0, 0.0, -p_e};
+  }
+  beam_e.mass = 0.0;
+  beam_e.charge = -1.0;
+
+  Particle beam_ion;
+  beam_ion.pdg = 1000030060;
+  beam_ion.status = Status::Beam;
+  beam_ion.role = Role::BeamIon;
+  {
+    const double p_ion = 6.0 * 99.5;  // 6Li, 99.5 GeV/u
+    beam_ion.p = {std::sqrt(p_ion * p_ion + kLi6Mass * kLi6Mass), 0.0, 0.0, p_ion};
+  }
+  beam_ion.mass = kLi6Mass;
+  beam_ion.charge = 3.0;
+
+  // Scattered electron, also built massless with E == |p|: the writer must
+  // rewrite generated_mass for this one too.
+  Particle escat;
+  escat.pdg = 11;
+  escat.status = Status::Final;
+  escat.role = Role::ScatteredElectron;
+  {
+    const double px = 1.5, py = 0.5, pz = -7.8;
+    escat.p = {std::sqrt(px * px + py * py + pz * pz), px, py, pz};
+  }
+  escat.mass = 0.0;
+  escat.charge = -1.0;
+
+  // A deliberately massive |pdg|==11 particle: Particle::mass != 0.0, so the
+  // rule must leave it alone and keep exactly this mass.
+  Particle massive_electron;
+  massive_electron.pdg = 11;
+  massive_electron.status = Status::Final;
+  massive_electron.role = Role::Other;
+  {
+    const double px = 0.2, py = 0.1, pz = 3.0;
+    massive_electron.p = {std::sqrt(px * px + py * py + pz * pz + kElectronMass * kElectronMass),
+                           px, py, pz};
+  }
+  massive_electron.mass = kElectronMass;
+  massive_electron.charge = -1.0;
+
+  // A non-electron built massless (photon): the rule is keyed on |pdg| == 11
+  // so this must keep generated_mass == 0, not get the PDG-mass rewrite.
+  Particle gamma;
+  gamma.pdg = 22;
+  gamma.status = Status::Intermediate;
+  gamma.role = Role::VirtualPhoton;
+  {
+    const double px = 0.05, py = -0.05, pz = 1.0;
+    gamma.p = {std::sqrt(px * px + py * py + pz * pz), px, py, pz};
+  }
+  gamma.mass = 0.0;
+
+  // A massless POSITRON: the rule is keyed on |pdg| == 11, so pdg == -11
+  // must get the PDG-mass rewrite exactly like the electrons.
+  Particle positron;
+  positron.pdg = -11;
+  positron.status = Status::Final;
+  positron.role = Role::Other;
+  {
+    const double px = -0.3, py = 0.4, pz = 2.0;
+    positron.p = {std::sqrt(px * px + py * py + pz * pz), px, py, pz};
+  }
+  positron.mass = 0.0;
+  positron.charge = 1.0;
+
+  // mother1/mother2 left at -1: every non-beam particle hangs directly off
+  // the primary vertex, which is all this test's mass-rule check needs.
+  ev.particles = {beam_e, beam_ion, escat, massive_electron, gamma, positron};
+  return ev;
+}
+
 std::filesystem::path temp_hepmc_path(const std::string& name) {
   return std::filesystem::temp_directory_path() / name;
 }
@@ -281,4 +375,66 @@ TEST_CASE("HepMC3Writer::close is idempotent and write-after-close throws") {
   CHECK_NOTHROW(writer.close());
   CHECK_THROWS_AS(writer.write(make_synthetic_event()), std::runtime_error);
   std::filesystem::remove(path);
+}
+
+TEST_CASE("HepMC3Writer writes the PDG mass as the generated mass of a massless electron") {
+  constexpr double kPdgElectronMass = 0.51099895e-3;
+
+  const Event ev = make_electron_mass_rule_event();
+  const auto path = temp_hepmc_path("lipolgen_test_hepmc_electron_mass_rule.hepmc");
+
+  {
+    HepMC3Writer writer(path.string());
+    writer.write(ev);
+    writer.close();
+  }
+
+  HepMC3::ReaderAscii reader(path.string());
+  HepMC3::GenEvent read_ev(HepMC3::Units::GEV, HepMC3::Units::MM);
+  REQUIRE(reader.read_event(read_ev));
+  REQUIRE_FALSE(reader.failed());
+  reader.close();
+  std::filesystem::remove(path);
+
+  const auto& p = read_ev.particles();
+  REQUIRE(p.size() == ev.particles.size());
+  REQUIRE(p.size() == 6);
+
+  SUBCASE("massless electrons and positrons (Particle::mass == 0.0) are written with generated_mass == PDG electron mass") {
+    // indices 0 (beam e), 2 (scattered e) and 5 (positron, pdg -11), all
+    // built with mass == 0.0: the rule is keyed on |pdg| == 11.
+    for (std::size_t i : {std::size_t{0}, std::size_t{2}, std::size_t{5}}) {
+      CAPTURE(i);
+      CHECK(std::abs(p[i]->pid()) == 11);
+      CHECK(ev.particles[i].mass == 0.0);
+      CHECK(p[i]->generated_mass() ==
+            doctest::Approx(kPdgElectronMass).epsilon(1e-12));
+    }
+  }
+
+  SUBCASE("a massive electron (Particle::mass == 0.000511) keeps its own mass, untouched by the rule") {
+    CHECK(std::abs(p[3]->pid()) == 11);
+    CHECK(ev.particles[3].mass == doctest::Approx(kElectronMass));
+    CHECK(p[3]->generated_mass() == doctest::Approx(kElectronMass).epsilon(kTol));
+  }
+
+  SUBCASE("a non-electron with Particle::mass == 0.0 (photon) keeps mass 0, not the PDG rewrite") {
+    CHECK(p[4]->pid() == 22);
+    CHECK(ev.particles[4].mass == 0.0);
+    CHECK(p[4]->generated_mass() == doctest::Approx(0.0).epsilon(kTol));
+  }
+
+  SUBCASE("the mass rule does not touch any particle's written four-momentum (E, p bit-identical)") {
+    // Exact `==` (not Approx) is deliberate: HepMC3::WriterAscii's default
+    // precision (16 digits after the point in %e format) round-trips an IEEE
+    // double exactly, so any difference here would be a write-side change.
+    for (std::size_t i = 0; i < ev.particles.size(); ++i) {
+      CAPTURE(i);
+      const HepMC3::FourVector& mom = p[i]->momentum();
+      CHECK(mom.px() == ev.particles[i].p.px);
+      CHECK(mom.py() == ev.particles[i].p.py);
+      CHECK(mom.pz() == ev.particles[i].p.pz);
+      CHECK(mom.e() == ev.particles[i].p.e);
+    }
+  }
 }

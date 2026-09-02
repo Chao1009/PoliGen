@@ -86,7 +86,11 @@ head-on frame convention of `docs/CONVENTIONS.md`.
 
 - **`Particle::mass`** is written via `GenParticle::set_generated_mass`, so
   it round-trips independently of any small numerical mismatch between the
-  stored 4-vector and the physical on-shell mass.
+  stored 4-vector and the physical on-shell mass. One exception: a massless
+  electron (`|pdg| == 11`, `p.mass == 0.0`, the core's standard DIS
+  kinematics) is written with `generated_mass = 0.51099895e-3` GeV (the PDG
+  m_e) instead of 0, so downstream Geant4/DD4hep sees a consistent record
+  and doesn't nudge E by O(10 ppm) to enforce E² − p² ≥ m_e².
 
 - **Role → status/PDG map**, complete, with the tier that writes each row:
 

@@ -44,13 +44,13 @@ def load():
     return lipolgen
 
 
-def tag_fractions(lp, isotope, n_events, seed):
+def tag_fractions(lp, isotope, n_events, seed, config=1):
     """{(optics, wave): (all, main, near-beam)} tag fractions."""
     from lipolgen import export
     out = {}
     for optics in OPTICS:
         for wave in WAVES:
-            cfg = lp.make_config(isotope=isotope, config=1,
+            cfg = lp.make_config(isotope=isotope, config=config,
                                  channel="tagged-alpha", events=n_events,
                                  seed=seed, optics=optics, cluster_wave=wave)
             # tensor-thirds is spin-1 only; 7Li (J = 3/2) needs helicity-flip
@@ -67,6 +67,25 @@ def tag_fractions(lp, isotope, n_events, seed):
                 p.optics.name,
             )
     return out
+
+
+def beam_energies(lp, config):
+    """{isotope: (electron GeV, ion GeV/u)} at one `default_configs` index."""
+    L = lp._lipolgen
+    return {iso: (c.electron_energy, c.ion_momentum_per_nucleon)
+            for iso in ("6Li", "7Li")
+            for c in (L.default_configs(iso)[config],)}
+
+
+def energy_label(energies):
+    """'e x ion = 10 x 99.5 GeV/u', or a per-isotope breakdown when the
+    rigidity cap makes the two isotopes' ion energy differ (config 2)."""
+    vals = set(energies.values())
+    if len(vals) == 1:
+        e, u = next(iter(vals))
+        return f"e x ion = {e:g} x {u:g} GeV/u"
+    return "e x ion: " + ", ".join(
+        f"{iso} {e:g} x {u:g} GeV/u" for iso, (e, u) in energies.items())
 
 
 def li6_variants(lp):
@@ -118,7 +137,12 @@ def main():
     ap.add_argument("--events", type=int, default=60000)
     ap.add_argument("--seed", type=int, default=20260829)
     ap.add_argument("--markdown", type=Path, default=None)
+    ap.add_argument("--configs", type=str, default="1",
+                    help="comma-separated default_configs() indices for the "
+                         "Roman-Pot tag-fraction section, e.g. 0,1,2 "
+                         "(default: 1, the 10 x 99.5 GeV/u point)")
     args = ap.parse_args()
+    configs = [int(c) for c in args.configs.split(",")]
 
     lp = load()
     L = lp._lipolgen
@@ -174,30 +198,39 @@ def main():
                   f"{tail(0.3):11.4f}{tail(0.45):11.4f}{pd_s}")
 
     # ---- tag fractions ---------------------------------------------------
-    print()
-    print("=" * 92)
-    print(f"2.  ROMAN-POT TAG FRACTIONS ({args.events} events, e x ion = "
-          "10 x 99.5 GeV/u, seed %d)" % args.seed)
-    print("=" * 92)
-    tf = {}
-    for iso in ("6Li", "7Li"):
-        tf[iso] = tag_fractions(lp, iso, args.events, args.seed)
-    print(f"{'isotope':<8}{'optics':<22}{'envelope':<26}"
-          f"{'Hulthen b=0.30':>16}{'VMC AV18':>12}{'ratio':>9}")
-    for iso in ("6Li", "7Li"):
-        for optics in OPTICS:
-            h = tf[iso][(optics, "hulthen")]
-            v = tf[iso][(optics, "vmc")]
-            print(f"{iso:<8}{optics:<22}{h[3]:<26}{h[0]:16.4f}{v[0]:12.4f}"
-                  f"{v[0]/max(h[0], 1e-12):9.3f}")
-    print()
-    print("main window / near-beam tail split:")
-    for iso in ("6Li", "7Li"):
-        for optics in OPTICS:
-            for wave in WAVES:
-                a, mn, nb, name = tf[iso][(optics, wave)]
-                print(f"  {iso} {optics:<20} {wave:<8} all {a:.4f} = main "
-                      f"{mn:.4f} + near-beam {nb:.4f}")
+    tf_by_cfg = {}
+    for ci, cfg_idx in enumerate(configs):
+        label = energy_label(beam_energies(lp, cfg_idx))
+        header = "2" if len(configs) == 1 else f"2{chr(ord('a') + ci)}"
+        print()
+        print("=" * 92)
+        print(f"{header}.  ROMAN-POT TAG FRACTIONS ({args.events} events, "
+              f"{label}, seed {args.seed})")
+        print("=" * 92)
+        tf = {}
+        for iso in ("6Li", "7Li"):
+            tf[iso] = tag_fractions(lp, iso, args.events, args.seed,
+                                    config=cfg_idx)
+        tf_by_cfg[cfg_idx] = tf
+        print(f"{'isotope':<8}{'optics':<22}{'envelope':<26}"
+              f"{'Hulthen b=0.30':>16}{'VMC AV18':>12}{'ratio':>9}")
+        for iso in ("6Li", "7Li"):
+            for optics in OPTICS:
+                h = tf[iso][(optics, "hulthen")]
+                v = tf[iso][(optics, "vmc")]
+                print(f"{iso:<8}{optics:<22}{h[3]:<26}{h[0]:16.4f}{v[0]:12.4f}"
+                      f"{v[0]/max(h[0], 1e-12):9.3f}")
+        print()
+        print("main window / near-beam tail split:")
+        for iso in ("6Li", "7Li"):
+            for optics in OPTICS:
+                for wave in WAVES:
+                    a, mn, nb, name = tf[iso][(optics, wave)]
+                    print(f"  {iso} {optics:<20} {wave:<8} all {a:.4f} = main "
+                          f"{mn:.4f} + near-beam {nb:.4f}")
+    # write_markdown() documents the 10 x 99.5 GeV/u point only (config 1),
+    # regardless of --configs, so its format stays unchanged bit for bit.
+    tf = tf_by_cfg.get(1, tf_by_cfg[configs[0]])
 
     # ---- A_zz^tag --------------------------------------------------------
     print()

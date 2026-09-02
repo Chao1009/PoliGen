@@ -93,3 +93,19 @@ def test_spin_attributes_are_on_the_event(written):
         names = set(ev.attributes)
     for want in ("spin_J", "spin_M", "P_e", "lam_e", "P_z", "P_zz"):
         assert want in names, (want, sorted(names))
+
+
+def test_electron_generated_mass_is_the_pdg_mass(written):
+    """hepmc_writer.cpp's electron generated-mass rule: the core builds
+    electrons massless (standard DIS kinematics), and the writer records
+    generated_mass = the PDG electron mass for any |pdg| == 11 particle with
+    Particle::mass == 0.0, so downstream readers see an on-shell electron."""
+    _, path = written
+    with pyhepmc.open(path) as f:
+        for i, ev in enumerate(f):
+            if i >= 25:
+                break
+            electrons = [q for q in ev.particles if abs(q.pid) == 11]
+            assert electrons
+            for q in electrons:
+                assert q.generated_mass == pytest.approx(0.51099895e-3, rel=1e-9)

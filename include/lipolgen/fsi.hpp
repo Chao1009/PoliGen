@@ -157,8 +157,12 @@ namespace lipolgen {
 inline constexpr double GEV2_TO_MB = GEV2_TO_PB * 1e-9;
 /// GeV^-2 per mb.  2.5680.
 inline constexpr double MB_TO_GEV2 = 1.0 / GEV2_TO_MB;
-/// hbar c [GeV fm].  Consistent with `GEV2_TO_PB` to 3e-5.
-inline constexpr double HBAR_C_GEV_FM = 0.1973269804;
+/// hbar c [GeV fm].  Alias of the library-wide single definition
+/// `HBARC_GEV_FM` (constants.hpp, docs/CONVENTIONS.md).  The prototype
+/// (fsi_alpha.py) carried CODATA 0.1973269804; the 3e-5 relative difference
+/// moves every profile integral by ~2e-4 absolute, far inside the 2e-3
+/// tolerances `tests/test_fsi.cpp` pins the prototype table at.
+inline constexpr double HBAR_C_GEV_FM = HBARC_GEV_FM;
 /// fm^2 per mb.
 inline constexpr double MB_TO_FM2 = 0.1;
 

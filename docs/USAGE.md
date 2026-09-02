@@ -328,7 +328,7 @@ cfg.coherent.f0      = 0.04;     // band 0.02 - 0.08     (SCENARIO)
 cfg.coherent.slope_b = 50.0;     // band 40 - 60 GeV^-2  (SCENARIO)
 cfg.coherent.amp     = 0.01;     // flat cos2phi at P_zz = 1, band 3e-3 - 1e-2
 cfg.coherent_t_max   = COHERENT_T_MAX_DEFAULT;   // 0.2; larger THROWS (below)
-cfg.coherent_xpom.m_x_min   = 1.0;   // smallest diffractive mass [GeV]
+cfg.coherent_xpom.m_x_min   = 1.2;   // smallest diffractive mass [GeV]
 cfg.coherent_xpom.x_pom_max = 0.1;   // upper edge of the diffractive region
 cfg.optics_choice = OpticsChoice::Tagging;   // the YR envelope tags nothing
 Pipeline p(cfg, tensor_thirds_plan(0.7, 0.6));
@@ -350,8 +350,11 @@ neutral diffractive system X carrying the remainder.
 
 **The pomeron.** `CoherentXpomModel` draws the per-nucleon fraction
 `x_P = (M_X² + Q²)/(W² + Q²)` log-uniformly on `[x_P(M_X,min), x_pom_max]`, so
-every event carries a diffractive mass of at least `m_x_min` (1 GeV, above the
-vector-meson region). The recoil is then **solved**, not approximated:
+every event carries a diffractive mass of at least `m_x_min`
+(`COHERENT_MX_MIN_DEFAULT` = 1.2 GeV, above the ρ/ω/φ region — the exclusive
+vector-meson channel is a different process, deliberately not generated;
+`coherent.hpp` documents the choice and the hadronization veto table behind
+it). The recoil is then **solved**, not approximated:
 `(k + P_ion − k′ − P_recoil)² = M_X²` with `P_recoil² = M_A²` and
 `p_T = √|t|` is a quadratic in the recoil's light-cone plus momentum, so the
 balance closes to rounding and X is timelike by construction. The record

@@ -75,8 +75,11 @@ head-on frame convention of `docs/CONVENTIONS.md`.
   when the event also carries real T2 hadrons (`Role::Hadron`, status 1) as
   its actual final state, X still appears (for provenance/bookkeeping) but
   is never double-counted as final. The virtual photon (`Role::VirtualPhoton`)
-  is likewise expected to arrive already marked `Status::Intermediate` by the
-  producer; documentation-only status-3 particles like it and X don't
+  and the coherent channel's Pomeron (`Role::Pomeron`, PDG 990,
+  `P_IP = P_ion − P_recoil`, spacelike, so its `mass` follows the photon's
+  convention and is written negative, `−√|t|`) are likewise expected to
+  arrive already marked `Status::Intermediate` by the
+  producer; documentation-only status-3 particles like them and X don't
   contribute to `Event::total_final()` and shouldn't be summed a second time
   when checking overall 4-momentum conservation on the HepMC3 side — see the
   "conservation" note below.
@@ -97,6 +100,7 @@ head-on frame convention of `docs/CONVENTIONS.md`.
   | `StruckCluster` | 3 | 10-digit ion of the cluster (2212/2112 when the "cluster" is one nucleon) | T0 |
   | `StruckNucleon` | 3 | 2212 / 2112 | T0 (inclusive) / **T1** (tagged) |
   | `IntactRecoil` | 1 | 10-digit ion | T0 (coherent) |
+  | `Pomeron` | 3 | 990 | T0 (coherent) |
   | `HadronicX` | forced 3 | 92 | T0 |
   | `Hadron` | 1 | PYTHIA's | T2 |
 

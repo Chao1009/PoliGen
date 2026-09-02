@@ -146,6 +146,25 @@ ev = lg.run(channel="coherent", isotope="6Li", events=300_000, seed=1,
 print("<|t|> =", ev["t"].mean(), " ~ 1/B =", 1 / 50.0)
 ```
 
+**Spectator FSI as a weight** (tagged channels; docs/USAGE.md §3, `fsi.hpp`):
+`fsi="glauber-cluster"` (or `"glauber-nucleon"`, CLI `--fsi` /
+`--fsi-sigma-mb`) multiplies the Glauber FSI/IA ratio into the `weight`
+column — and into HepMC3 `weights()[0]` — while every four-vector stays
+**bit-identical** to the default `fsi="off"` PWIA run: the FSI is a weight,
+never a shift, and it is spin independent by construction, so quote its
+effect as an unpolarized-shape systematic, never as a correction to A_zz.
+σ_XN is a **band**, 20–40 mb — run both ends, never one row alone.  The run
+summary logs the survival probability (~0.52 at 40 mb on the ⁶Li α tag), and
+`pipeline.fsi_weight` exposes the model (`survival()`, `sigma_eff_mb`,
+`sigma_cluster_mb` — 131.0 mb at σ_XN = 40 after Glauber shadowing).
+
+```python
+ev = lg.run(channel="tagged-alpha", events=400_000, seed=1,
+            fsi="glauber-cluster", fsi_sigma_mb=40.0)
+print("survival", ev["pipeline"].fsi_weight.survival(),
+      "<w>", ev["weight"].mean())      # the two agree
+```
+
 ### Re-routing one sample at several optics (§5)
 
 The route is recomputed from the record, never stored on it:
@@ -332,6 +351,11 @@ present in `InclusiveSampler.sample_n()`'s dict and absent from
                              T1 ('hulthen' default, bit-compatible; 'ciofi-
                              simula' adds the k-dependent d/nn branching and
                              the a(pn) continuum channel)
+--fsi off|glauber-cluster|glauber-nucleon
+                             spectator FSI as a per-event WEIGHT on
+                             Event.weight, never a shift (tagged channels)
+--fsi-sigma-mb X             sigma_XN [mb] of the FSI weight; run both ends
+                             of the 20-40 band as a systematic
 --coherent-f0 --coherent-slope-b --coherent-amp
 --nthreads N                 forced to 1 with --hadronize
 --hadronize                  run the T2 (PYTHIA 8) tier

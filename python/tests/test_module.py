@@ -380,3 +380,99 @@ def test_triton_sf_pipeline_conserves_with_both_options():
 
     assert n_pn_events(ciofi) > 0        # the channel the sequential model
     assert n_pn_events(hulthen) == 0     # has no room for
+
+
+# ------------------------------------------------------------ the FSI weight
+
+
+def test_fsi_weight_reproduces_the_pinned_table_point():
+    """GlauberFsiWeight on the production S+D 6Li alpha channel: the k = 0.10,
+    theta = 0 row (the pure-S prototype rows are pinned in tests/test_fsi.cpp),
+    the shadowed profile, and the wrong-spectator guard."""
+    f = lg.GlauberFsiWeight(lg.li6_alpha_channel())
+    kin = lg.FsiKinematics(k=0.10, cos_theta_k=1.0)
+    assert f.weight(kin) == pytest.approx(0.617, abs=5e-3)
+    # Glauber shadowing: sigma_Xalpha = 131.0 mb, NOT 4 x 40 = 160
+    assert f.sigma_cluster_mb(40.0) == pytest.approx(131.0, abs=0.1)
+    assert 0.0 < f.survival() < 1.0
+    assert f.weight_normalised(kin) == pytest.approx(
+        f.weight(kin) / f.survival(), rel=1e-12)
+    # a weight built for the alpha must not distort another spectator
+    wrong = lg.FsiKinematics(k=0.10, cos_theta_k=1.0,
+                             spectator_z=1, spectator_a=2)
+    assert f.weight(wrong) == 1.0
+
+
+def test_fsi_pipeline_weights_are_a_weight_never_a_shift():
+    """FSI on vs off: bit-identical kinematics, only Event.weight moves, and
+    its mean estimates the logged survival probability."""
+    unpol = lg.SpinCategory("unpol", 1.0, [1 / 3, 1 / 3, 1 / 3])
+    plan = lg.RunPlan([unpol])
+    on = lg.Pipeline(lg.make_config(channel="tagged-alpha", events=4000,
+                                    fsi="glauber-cluster"), plan)
+    off = lg.Pipeline(lg.make_config(channel="tagged-alpha", events=4000),
+                      plan)
+    assert off.fsi_weight is None
+    fw = on.fsi_weight
+    assert fw is not None
+    assert fw.sigma_eff_mb(0.0) == 40.0
+    con, coff = on.generate(0, False, 1), off.generate(0, False, 1)
+    # the weight moved NOTHING: every drawn quantity is bit-identical
+    for col in ("k", "cos_theta_k", "x", "q2", "alpha_s", "pt_s", "route"):
+        assert (con[col] == coff[col]).all(), col
+    assert (coff["weight"] == 1.0).all()
+    w = con["weight"]
+    assert (w >= 0.0).all()
+    assert (w != 1.0).all()
+    assert w.mean() == pytest.approx(fw.survival(), abs=0.02)
+
+
+def test_fsi_band_discipline_and_the_channel_guard():
+    """sigma_XN = 20 mb absorbs less than 40 mb, and the config refuses FSI
+    off the tagged channels."""
+    cfg20 = lg.make_config(channel="tagged-alpha", events=10, fsi=
+                           "glauber-cluster", fsi_sigma_mb=20.0)
+    assert cfg20.fsi_sigma_mb == 20.0
+    with pytest.raises(RuntimeError):
+        lg.make_config(channel="inclusive", events=10, fsi="glauber-cluster")
+    with pytest.raises(RuntimeError):
+        lg.make_config(channel="coherent", events=10, fsi="glauber-nucleon")
+
+
+def test_fsi_weight_reaches_the_npz_export(tmp_path):
+    unpol = lg.SpinCategory("unpol", 1.0, [1 / 3, 1 / 3, 1 / 3])
+    p = lg.Pipeline(lg.make_config(channel="tagged-alpha", events=200,
+                                   fsi="glauber-cluster"), lg.RunPlan([unpol]))
+    cols = p.generate(0, False, 1)
+    path = str(tmp_path / "fsi.npz")
+    lg.write_columns_npz(cols, path)
+    d = np.load(path, allow_pickle=True)
+    assert (d["weight"] != 1.0).all()
+    assert (d["weight"] == cols["weight"]).all()
+
+
+@pytest.mark.skipif(not lg.HAVE_HEPMC3, reason="no HepMC3 writer")
+def test_fsi_weight_reaches_hepmc_weights0(tmp_path):
+    unpol = lg.SpinCategory("unpol", 1.0, [1 / 3, 1 / 3, 1 / 3])
+    p = lg.Pipeline(lg.make_config(channel="tagged-alpha", events=5,
+                                   fsi="glauber-cluster"), lg.RunPlan([unpol]))
+    path = str(tmp_path / "fsi.hepmc")
+    events = [p.event(i) for i in range(5)]
+    with lg.HepMC3Writer(path) as w:
+        for ev in events:
+            w.write(ev)
+    # Asciiv3: the per-event weight vector is the "W" record (the run-info
+    # header carries a "W nominal" names line -- skip the non-numeric one)
+    def _num(tok):
+        try:
+            float(tok)
+            return True
+        except ValueError:
+            return False
+    wlines = [ln.split() for ln in open(path)
+              if (ln.startswith("W ") or ln.startswith("W\t"))
+              and _num(ln.split()[1])]
+    assert len(wlines) == 5
+    for ev, ln in zip(events, wlines):
+        assert ev.weight != 1.0
+        assert float(ln[1]) == pytest.approx(ev.weight, rel=1e-9)

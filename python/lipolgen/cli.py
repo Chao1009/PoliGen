@@ -32,8 +32,9 @@ import numpy as np
 
 from . import _lipolgen as _l
 from . import export
-from . import (CHANNELS, CLUSTER_WAVES, OPTICS, PLANS, TRITON_SFS,
-               ion_spin, make_config, make_plan)
+from . import (CHANNELS, CLUSTER_WAVES, FSI, OPTICS, PLANS, TRITON_SFS,
+               ion_spin,
+               make_config, make_plan)
 
 
 def _load_config_file(path):
@@ -100,6 +101,18 @@ def build_parser():
                         "(the Ciofi degli Atti-Simula n0 + n1 model: "
                         "k-dependent n0/(n0+n1) branching and the third "
                         "channel, struck n -> a (p n) continuum)")
+    p.add_argument("--fsi", choices=sorted(FSI), default=None,
+                   help="FSI of the DIS debris with the tagged spectator, as "
+                        "a per-event WEIGHT on Event.weight (never a shift): "
+                        "'off' (default, the plane-wave impulse "
+                        "approximation), 'glauber-cluster' (coherent "
+                        "X-cluster amplitude, Glauber-shadowed) or "
+                        "'glauber-nucleon' (unshadowed A*sigma_XN single-"
+                        "scattering bracket).  Tagged channels only")
+    p.add_argument("--fsi-sigma-mb", type=float, default=None,
+                   help="sigma_XN [mb] the FSI weight is built at; 40 = free "
+                        "hadron.  The documented band is 20-40 mb: run BOTH "
+                        "ends as a systematic, never pin one row alone")
     p.add_argument("--inclusive-b1", action="store_true", default=None,
                    help="put an inclusive b1 in the struck cluster's kernel")
     p.add_argument("--coherent-f0", type=float, default=None)
@@ -140,6 +153,7 @@ DEFAULTS = dict(isotope="6Li", config=1, channel="inclusive",
                 quiet=False,
                 hepmc=None, npz=None, hfs_npz=None, cluster_beta=None,
                 p_d=None, cluster_wave="hulthen", triton_sf="hulthen",
+                fsi="off", fsi_sigma_mb=40.0,
                 coherent_t2="pomeron", pom_set=6, pom_rescale=1.0,
                 inclusive_b1=False, coherent=None)
 
@@ -182,6 +196,7 @@ def main(argv=None):
                       optics=opts["optics"], cluster_beta=opts["cluster_beta"],
                       p_d=opts["p_d"], cluster_wave=opts["cluster_wave"],
                       triton_sf=opts["triton_sf"],
+                      fsi=opts["fsi"], fsi_sigma_mb=opts["fsi_sigma_mb"],
                       inclusive_b1=opts["inclusive_b1"],
                       coherent=opts["coherent"])
     plan = make_plan(opts["plan"], j=ion_spin(cfg.isotope), pz=opts["pz"],
@@ -218,6 +233,13 @@ def main(argv=None):
     for name, sig, cnt in zip([c.name for c in plan.categories],
                               p.sigma_per_category_pb(), p.counts()):
         say("    %-10s sigma = %12.6g pb   N = %d" % (name, sig, cnt))
+    if p.fsi_weight is not None:
+        fw = p.fsi_weight
+        say("  FSI %s: sigma_XN = %g mb (band 20-40; never quote one row "
+            "alone), sigma_X%s = %.1f mb, survival = %.4f"
+            % (_l.pipeline_fsi_name(cfg.fsi), fw.sigma_eff_mb(0.0),
+               p.tagged_channel.base.spectator,
+               fw.sigma_cluster_mb(fw.sigma_eff_mb(0.0)), fw.survival()))
 
     # Events are only materialized when something needs the records: the HFS
     # exporter always, HepMC only when the T2 tier is on (regenerating a

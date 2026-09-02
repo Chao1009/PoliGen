@@ -42,7 +42,7 @@ from .export import (inclusive_dict, tagged_dict, hfs_sample,  # noqa: F401
 
 __all__ = [n for n in dir(_lipolgen) if not n.startswith("_")] + [
     "export", "inclusive_dict", "tagged_dict", "hfs_sample", "write_hfs_npz",
-    "write_columns_npz", "CHANNELS", "PLANS", "TRITON_SFS",
+    "write_columns_npz", "CHANNELS", "PLANS", "TRITON_SFS", "FSI",
     "make_config", "make_plan", "make_pipeline", "run", "__version__",
 ]
 
@@ -90,6 +90,18 @@ TRITON_SFS = {
     "ciofi-simula": _lipolgen.TritonSfChoice.CiofiSimula,
 }
 
+#: FSI weight models accepted on the command line.  "off" (the default) is
+#: today's plane-wave impulse approximation bit for bit; the other two apply
+#: the Glauber FSI/IA WEIGHT to Event.weight (never a shift of any
+#: four-vector; spin independent by construction -- see fsi.hpp).  Quote the
+#: effect as an unpolarized-shape systematic, never as a correction to A_zz,
+#: and BAND sigma_XN over 20-40 mb rather than quoting one row alone.
+FSI = {
+    "off": _lipolgen.PipelineFsi.Off,
+    "glauber-cluster": _lipolgen.PipelineFsi.GlauberCluster,
+    "glauber-nucleon": _lipolgen.PipelineFsi.GlauberNucleon,
+}
+
 #: Run-plan names accepted on the command line (aliases included).
 PLANS = ("tensor-thirds", "azz", "helicity-flip", "apar", "transverse-tensor",
          "cos2phi", "tensor-flip", "flip")
@@ -111,7 +123,8 @@ def make_config(isotope="6Li", config=1, channel="inclusive", events=0,
                 scenario=None, grid=None, n_sigma=10.0, pot_config="",
                 inclusive_b1=None, with_virtual_photon=True,
                 apply_optics_lumi_fraction=None,
-                cluster_wave=None, triton_sf=None):
+                cluster_wave=None, triton_sf=None,
+                fsi=None, fsi_sigma_mb=None):
     """A `PipelineConfig` from plain values (the CLI's own constructor).
 
     `channel` is a key of `CHANNELS`; `optics` a key of `OPTICS`.  The isotope
@@ -126,6 +139,11 @@ def make_config(isotope="6Li", config=1, channel="inclusive", events=0,
     the 7Li alpha tag's sequential triton breakup with the three-channel
     Ciofi degli Atti-Simula spectral function, built by the Pipeline at the
     run's own `cluster_beta`.
+    `fsi` is a key of `FSI` ("off", the default, "glauber-cluster" or
+    "glauber-nucleon") or a `PipelineFsi` directly, and `fsi_sigma_mb` the
+    sigma_XN it is built at (40 = free hadron; band 20-40 mb -- run both
+    ends, never quote one row alone).  Tagged channels only; the FSI enters
+    as a per-event weight on `Event.weight` and moves no four-vector.
     """
     if channel not in CHANNELS:
         raise ValueError("unknown channel %r; know %s"
@@ -165,6 +183,16 @@ def make_config(isotope="6Li", config=1, channel="inclusive", events=0,
             cfg.triton_sf = TRITON_SFS[triton_sf]
         else:
             cfg.triton_sf = triton_sf
+    if fsi is not None:
+        if isinstance(fsi, str):
+            if fsi not in FSI:
+                raise ValueError("unknown fsi %r; know %s"
+                                 % (fsi, ", ".join(sorted(FSI))))
+            cfg.fsi = FSI[fsi]
+        else:
+            cfg.fsi = fsi
+    if fsi_sigma_mb is not None:
+        cfg.fsi_sigma_mb = float(fsi_sigma_mb)
     if scenario is not None:
         cfg.scenario = scenario
     if grid is not None:

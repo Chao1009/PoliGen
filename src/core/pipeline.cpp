@@ -325,6 +325,16 @@ void PipelineConfig::validate() const {
                              pipeline_channel_name(channel) + " needs isotope " +
                              want + ", got " + isotope);
   }
+  if (fsi != PipelineFsi::Off && !is_tagged(channel)) {
+    throw std::runtime_error(
+        std::string("PipelineConfig: fsi = ") + pipeline_fsi_name(fsi) +
+        " needs a tagged channel (the weight is a distortion of the tagged "
+        "spectator's spectrum; " + pipeline_channel_name(channel) +
+        " has no tagged spectator)");
+  }
+  if (!(fsi_sigma_mb >= 0.0)) {
+    throw std::runtime_error("PipelineConfig: fsi_sigma_mb must be >= 0");
+  }
   scenario.validate();
 }
 
@@ -455,6 +465,20 @@ Pipeline::Pipeline(PipelineConfig config, RunPlan plan)
     dis_sampler_ = dis_source_->sampler_ptr();
     tsampler_.reset(new TaggedSampler(*model_, p_u, dis_source_.get(), optics_,
                                       pot_config_));
+
+    // FSI as a per-event weight (fsi.hpp).  Built from the MODEL so the
+    // normalization grid -- and with it P_L -- is bit-for-bit the sampler's
+    // own; every draw then carries `TaggedEvent::weight`, which `make_tagged`
+    // multiplies into `Event::weight`.  Off = today's PWIA, bit for bit.
+    if (cfg_.fsi != PipelineFsi::Off) {
+      GlauberFsiOptions fopt;
+      fopt.variant = cfg_.fsi == PipelineFsi::GlauberNucleon
+                         ? FsiVariant::GlauberNucleon
+                         : FsiVariant::GlauberCluster;
+      fopt.sigma_xn_mb = cfg_.fsi_sigma_mb;
+      fsi_ = std::make_shared<GlauberFsiWeight>(*model_, fopt);
+      tsampler_->set_fsi(fsi_);
+    }
 
     // Warm every cache the event loop reads.  `TaggedModel`'s amplitude,
     // density and cell-CDF maps are `mutable` and NOT mutex-protected, so
@@ -832,6 +856,13 @@ void Pipeline::make_tagged(std::size_t k, std::uint64_t local,
   // P_X = P_ion - p_spec, the tagging block of `kin` and the struck-cluster
   // spin label; also sets `Event::channel`.
   tsampler_->fill_event(ev, te);
+
+  // FSI as a per-event WEIGHT and nothing else (fsi.hpp) -- the exact mirror
+  // of the coherent channel's `ev.weight *= ce.weight`.  1.0 when
+  // `PipelineConfig::fsi` is Off.  Inside the redraw loop is right:
+  // `ev.reset()` restores weight = 1, so a redrawn event carries its OWN
+  // spectator's weight, never a stale one.
+  ev.weight *= te.weight;
 
   const int i_spec = find_role(ev, Role::Spectator);
   const int i_clus = find_role(ev, Role::StruckCluster);

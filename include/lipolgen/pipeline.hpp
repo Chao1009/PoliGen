@@ -84,6 +84,7 @@
 #include "lipolgen/breakup.hpp"
 #include "lipolgen/coherent.hpp"
 #include "lipolgen/event.hpp"
+#include "lipolgen/fsi.hpp"
 #include "lipolgen/generator.hpp"
 #include "lipolgen/sampler.hpp"
 #include "lipolgen/spectator.hpp"
@@ -345,6 +346,17 @@ struct PipelineConfig {
   /// table, the deuteron IS the cluster.
   ClusterWaveSource cluster_wave = ClusterWaveSource::Hulthen;
   StruckClusterOptions struck;         ///< struck-cluster DIS options
+  /// Final-state interaction of the DIS debris X with the tagged spectator,
+  /// as a PER-EVENT WEIGHT on `Event::weight` (never a shift of any
+  /// four-vector; spin independent by construction -- see fsi.hpp).  `Off`
+  /// (the default) is today's plane-wave impulse approximation bit for bit.
+  /// Tagged channels only: `validate()` refuses it elsewhere.
+  PipelineFsi fsi = PipelineFsi::Off;
+  /// sigma_XN [mb] the FSI weight is built at.  40 = free hadron; the
+  /// documented BAND is 20-40 mb and the 20 mb end is arguably the realistic
+  /// one at EIC formation lengths.  BAND it (run both ends as a systematic);
+  /// never quote one row alone (fsi.hpp).
+  double fsi_sigma_mb = 40.0;
 
   // --- coherent channel ---------------------------------------------------
   CoherentScenario coherent;
@@ -479,6 +491,10 @@ class Pipeline {
   /// The T1 cluster-breakup model; null outside the tagged channels or when
   /// the run is configured at `Tier::T0`.
   const ClusterBreakup* breakup() const { return breakup_.get(); }
+  /// The FSI weight model of the run; null when `PipelineConfig::fsi` is
+  /// `Off`.  Expose it so a run can print what it used (`sigma_eff_mb`,
+  /// `survival`, the profile numbers).
+  const GlauberFsiWeight* fsi_weight() const { return fsi_.get(); }
   /// The tier this run actually writes (`Tier::T0` on channels with no
   /// struck cluster, whatever the configuration says).
   Tier tier() const { return tier_; }
@@ -586,6 +602,7 @@ class Pipeline {
   std::shared_ptr<TaggedModel> model_;
   std::shared_ptr<InclusiveKinematicsSource> dis_source_;
   std::unique_ptr<TaggedSampler> tsampler_;
+  std::shared_ptr<GlauberFsiWeight> fsi_;   ///< null when cfg_.fsi == Off
   std::unique_ptr<ClusterBreakup> breakup_;
   Tier tier_ = Tier::T0;
   ClusterSpecies cluster_species_ = ClusterSpecies::Nucleon;

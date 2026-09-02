@@ -46,6 +46,7 @@
 #include "lipolgen/coherent.hpp"
 #include "lipolgen/constants.hpp"
 #include "lipolgen/event.hpp"
+#include "lipolgen/fsi.hpp"
 #include "lipolgen/generator.hpp"
 #include "lipolgen/numerics.hpp"
 #include "lipolgen/pipeline.hpp"
@@ -535,6 +536,7 @@ static void bind_bookkeeping(py::module_& m);
 static void bind_sampler(py::module_& m);
 static void bind_spectator(py::module_& m);
 static void bind_tagged(py::module_& m);
+static void bind_fsi(py::module_& m);
 static void bind_coherent(py::module_& m);
 static void bind_pipeline(py::module_& m);
 static void bind_io(py::module_& m);
@@ -605,6 +607,7 @@ PYBIND11_MODULE(_lipolgen, m) {
   bind_sampler(m);
   bind_spectator(m);
   bind_tagged(m);
+  bind_fsi(m);
   bind_coherent(m);
   bind_pipeline(m);
   bind_io(m);
@@ -1987,9 +1990,143 @@ static void bind_tagged(py::module_& m) {
       .def_readonly("cos_theta_k", &TaggedEvent::cos_theta_k)
       .def_readonly("phi_k", &TaggedEvent::phi_k)
       .def_readonly("lab", &TaggedEvent::lab)
-      .def_readonly("route", &TaggedEvent::route);
+      .def_readonly("route", &TaggedEvent::route)
+      .def_readonly("weight", &TaggedEvent::weight);
 
   m.def("nuclide_pdg", &nuclide_pdg, py::arg("z"), py::arg("a"));
+}
+
+// -------------------------------------------------------------------- fsi
+
+static void bind_fsi(py::module_& m) {
+  m.attr("GEV2_TO_MB") = GEV2_TO_MB;
+  m.def("cluster_point_a2_fm2", &cluster_point_a2_fm2, py::arg("z"),
+        py::arg("a"),
+        "a^2 [fm^2] of the Gaussian point-nucleon density of a spectator "
+        "cluster (alpha: 0.700).");
+
+  py::enum_<FsiVariant>(m, "FsiVariant",
+      "Which X-cluster profile the FSI weight is built from (fsi.hpp).")
+      .value("GlauberCluster", FsiVariant::GlauberCluster)
+      .value("GlauberNucleon", FsiVariant::GlauberNucleon);
+
+  py::enum_<PipelineFsi>(m, "PipelineFsi",
+      "PipelineConfig.fsi: FSI weight model of a run.  Off = today's "
+      "plane-wave impulse approximation, bit for bit.")
+      .value("Off", PipelineFsi::Off)
+      .value("GlauberCluster", PipelineFsi::GlauberCluster)
+      .value("GlauberNucleon", PipelineFsi::GlauberNucleon);
+  m.def("pipeline_fsi_name", &pipeline_fsi_name, py::arg("fsi"));
+
+  py::class_<GlauberFsiOptions>(m, "GlauberFsiOptions")
+      .def(py::init<>())
+      .def_readwrite("variant", &GlauberFsiOptions::variant)
+      .def_readwrite("sigma_xn_mb", &GlauberFsiOptions::sigma_xn_mb,
+                     "sigma_XN [mb].  40 = free hadron; documented BAND "
+                     "20-40, band it, never quote one row alone.")
+      .def_readwrite("eps", &GlauberFsiOptions::eps)
+      .def_readwrite("b_xn", &GlauberFsiOptions::b_xn)
+      .def_readwrite("elastic_gain", &GlauberFsiOptions::elastic_gain)
+      .def_readwrite("formation_ramp", &GlauberFsiOptions::formation_ramp)
+      .def_readwrite("ramp_w_lo", &GlauberFsiOptions::ramp_w_lo)
+      .def_readwrite("ramp_sigma_lo_mb", &GlauberFsiOptions::ramp_sigma_lo_mb)
+      .def_readwrite("ramp_w_hi", &GlauberFsiOptions::ramp_w_hi)
+      .def_readwrite("ramp_sigma_hi_mb", &GlauberFsiOptions::ramp_sigma_hi_mb)
+      .def_readwrite("n_sigma_grid", &GlauberFsiOptions::n_sigma_grid)
+      .def_readwrite("k_max", &GlauberFsiOptions::k_max)
+      .def_readwrite("n_kz", &GlauberFsiOptions::n_kz)
+      .def_readwrite("n_kt", &GlauberFsiOptions::n_kt)
+      .def_readwrite("w_max", &GlauberFsiOptions::w_max);
+
+  py::class_<FsiKinematics>(m, "FsiKinematics",
+      "Everything the FSI weight may depend on: (k, cos_theta_k, phi_k) in "
+      "the ion rest frame, (w, q2, x) for the sigma_XN(W) ramp, the "
+      "spectator (Z, A) and the channel label the guard checks.")
+      .def(py::init([](double k, double cos_theta_k, double phi_k, double w,
+                       double q2, double x, int spectator_z, int spectator_a,
+                       Channel channel) {
+        FsiKinematics kin;
+        kin.k = k;
+        kin.cos_theta_k = cos_theta_k;
+        kin.phi_k = phi_k;
+        kin.w = w;
+        kin.q2 = q2;
+        kin.x = x;
+        kin.spectator_z = spectator_z;
+        kin.spectator_a = spectator_a;
+        kin.channel = channel;
+        return kin;
+      }), py::arg("k") = 0.0, py::arg("cos_theta_k") = 0.0,
+          py::arg("phi_k") = 0.0, py::arg("w") = 0.0, py::arg("q2") = 0.0,
+          py::arg("x") = 0.0, py::arg("spectator_z") = 2,
+          py::arg("spectator_a") = 4,
+          py::arg("channel") = Channel::Inclusive)
+      .def_readwrite("k", &FsiKinematics::k)
+      .def_readwrite("cos_theta_k", &FsiKinematics::cos_theta_k)
+      .def_readwrite("phi_k", &FsiKinematics::phi_k)
+      .def_readwrite("w", &FsiKinematics::w)
+      .def_readwrite("q2", &FsiKinematics::q2)
+      .def_readwrite("x", &FsiKinematics::x)
+      .def_readwrite("spectator_z", &FsiKinematics::spectator_z)
+      .def_readwrite("spectator_a", &FsiKinematics::spectator_a)
+      .def_readwrite("channel", &FsiKinematics::channel);
+
+  py::class_<FsiWeight, std::shared_ptr<FsiWeight>>(m, "FsiWeight",
+      "FSI as a per-event weight -- NEVER a shift of any four-vector "
+      "(fsi.hpp).  Abstract; see GlauberFsiWeight.")
+      .def("weight", &FsiWeight::weight, py::arg("kin"))
+      .def("weight_normalised", &FsiWeight::weight_normalised, py::arg("kin"))
+      .def("sigma_eff_mb", &FsiWeight::sigma_eff_mb, py::arg("w"));
+
+  py::class_<GlauberFsiWeight, FsiWeight, std::shared_ptr<GlauberFsiWeight>>(
+      m, "GlauberFsiWeight",
+      "Cosyn-Weiss / Glauber FSI on the tagged spectator cluster, spin "
+      "independent by construction.  Immutable after construction and "
+      "thread-safe.  Quote it as an unpolarized-shape SYSTEMATIC, never as "
+      "a correction to A_zz.")
+      .def(py::init<TaggedChannel, GlauberFsiOptions>(), py::arg("channel"),
+           py::arg("options") = GlauberFsiOptions())
+      .def(py::init<const TaggedModel&, GlauberFsiOptions>(),
+           py::arg("model"), py::arg("options") = GlauberFsiOptions())
+      .def_property_readonly("options", &GlauberFsiWeight::options)
+      .def_property_readonly("channel", &GlauberFsiWeight::channel)
+      .def("sigma_cluster_mb", &GlauberFsiWeight::sigma_cluster_mb,
+           py::arg("sigma_xn_mb"))
+      .def("sigma_cluster_el_mb", &GlauberFsiWeight::sigma_cluster_el_mb,
+           py::arg("sigma_xn_mb"))
+      .def("slope_cluster_gev2", &GlauberFsiWeight::slope_cluster_gev2,
+           py::arg("sigma_xn_mb"))
+      .def("gtilde", &GlauberFsiWeight::gtilde, py::arg("q_gev"),
+           py::arg("sigma_xn_mb"))
+      .def("gamma_profile", &GlauberFsiWeight::gamma_profile, py::arg("b_fm"),
+           py::arg("sigma_xn_mb"))
+      .def("survival", &GlauberFsiWeight::survival, py::arg("w") = 0.0,
+           "The tagged-cluster survival probability int w dGamma / int "
+           "dGamma; what weight_normalised divides by.  LOG IT.")
+      .def("clipped_grid_fraction", &GlauberFsiWeight::clipped_grid_fraction)
+      .def("sigma_ladder", [](const GlauberFsiWeight& f) {
+        return copy_array(f.sigma_ladder());
+      })
+      .def("grid", [](const GlauberFsiWeight& f, std::size_t i) {
+        return copy_array(f.grid(i));
+      }, py::arg("i") = 0,
+         "The raw (n_kz * n_kt) weight table of ladder point i, row-major.");
+
+  // A direct TaggedSampler, so an analysis can draw weighted tagged events
+  // without a Pipeline.  Minimal surface: construct on a model (kept alive),
+  // attach an FSI model, draw a category.
+  py::class_<TaggedSampler>(m, "TaggedSampler",
+      "Spin-correlated (e', spectator) draws for one tagged channel.  The "
+      "pipeline builds its own; this direct binding is for wave-function / "
+      "FSI studies (no DIS source, so x/q2/y stay 0).")
+      .def(py::init<const TaggedModel&, double>(), py::arg("model"),
+           py::arg("p_per_nucleon"), py::keep_alive<1, 2>())
+      .def("set_fsi", &TaggedSampler::set_fsi, py::arg("fsi"),
+           "Attach an FsiWeight: every subsequent draw carries "
+           "TaggedEvent.weight.  None detaches (weights back to 1).")
+      .def("sample_category", &TaggedSampler::sample_category, py::arg("fill"),
+           py::arg("n"), py::arg("rng"))
+      .def("sigma_tot_pb", &TaggedSampler::sigma_tot_pb, py::arg("fill"));
 }
 
 // ---------------------------------------------------------------- coherent
@@ -2225,6 +2362,15 @@ static void bind_pipeline(py::module_& m) {
                      "breakup; Hulthen by default (bit-compatible), "
                      "CiofiSimula swaps in the three-channel spectral "
                      "function built at the run's own cluster_beta.")
+      .def_readwrite("fsi", &PipelineConfig::fsi,
+                     "PipelineFsi: FSI of the DIS debris with the tagged "
+                     "spectator, as a per-event WEIGHT on Event.weight (never "
+                     "a shift).  Off by default = today's PWIA bit for bit; "
+                     "tagged channels only.")
+      .def_readwrite("fsi_sigma_mb", &PipelineConfig::fsi_sigma_mb,
+                     "sigma_XN [mb] the FSI weight is built at.  40 = free "
+                     "hadron; the documented band is 20-40 mb -- band it, "
+                     "never quote one row alone.")
       .def_readwrite("coherent", &PipelineConfig::coherent)
       .def_readwrite("coherent_t_max", &PipelineConfig::coherent_t_max)
       .def_readwrite("coherent_xpom", &PipelineConfig::coherent_xpom)
@@ -2274,6 +2420,11 @@ static void bind_pipeline(py::module_& m) {
       .def_property_readonly("tier", &Pipeline::tier,
                              "The tier this run actually writes (Tier.T0 on "
                              "channels with no struck cluster).")
+      .def_property_readonly("fsi_weight", &Pipeline::fsi_weight,
+                             py::return_value_policy::reference_internal,
+                             "The run's FSI weight model (GlauberFsiWeight), "
+                             "or None when PipelineConfig.fsi is Off -- "
+                             "print its sigma_eff_mb and survival().")
       .def("sigma_per_category_pb", [](const Pipeline& p) {
         return copy_array(p.sigma_per_category_pb());
       })

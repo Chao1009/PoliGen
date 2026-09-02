@@ -164,18 +164,25 @@ and `tools/fullsim/README.md` (read-only references for this file):
    the whole-cluster workaround are gone from `generate_full` and
    `test_t2.cpp`, and the bridge's cluster branch is deprecated. What remains
    OPEN inside T1 is physics, not bookkeeping:
-   * **FSI.** No final-state interaction of any fragment with any other, no
-     nuclear transparency, no formation-time physics. The partners are put on
-     shell and never touched again.
-   * **Triton remnant realism.** `t* -> n + d` / `t* -> p + (nn)` is a
-     sequential two-body model with the AME2020 separation energies and an
-     isotropic S-wave relative direction, and the unbound nn pair is split at
-     its virtual-state pole `1/|a_nn|` = 10.44 MeV. plans/05 5.D asked for
-     exactly this ("crude, flagged"); a Faddeev/AV18 three-body triton wave
-     function with a correlated (p, n, n) momentum distribution is the
-     replacement. Conservation does not depend on it -- the struck nucleon
-     absorbs the whole difference -- so what the crudeness costs is the
-     SHAPE of the partner spectra.
+   * **FSI.** No final-state interaction MOVES any fragment's four-vector,
+     ever. Since 2026-09-01 the tagged channels carry the optional Glauber
+     spectator-FSI **weight** (`PipelineConfig::fsi`, `--fsi`; `fsi.hpp`):
+     it distorts the tagged spectrum statistically through `Event::weight`
+     but the partners are still put on shell and never touched again, and
+     the DIS debris' own rescattering, nuclear transparency and
+     formation-time physics stay open.
+   * **Triton remnant realism.** The default `t* -> n + d` / `t* -> p + (nn)`
+     is a sequential two-body model with the AME2020 separation energies and
+     an isotropic S-wave relative direction, and the unbound nn pair is split
+     at its virtual-state pole `1/|a_nn|` = 10.44 MeV. plans/05 5.D asked for
+     exactly this ("crude, flagged"). Since 2026-09-01 the opt-in
+     `--triton-sf ciofi-simula` (`triton_sf.hpp`, `docs/USAGE.md`) swaps in
+     the three-channel Ciofi degli Atti-Simula spectral function (k-dependent
+     n0/(n0+n1) branching, the struck n -> (p n) continuum); a Faddeev/AV18
+     three-body triton wave function with a correlated (p, n, n) momentum
+     distribution remains the full replacement. Conservation does not depend
+     on any of it -- the struck nucleon absorbs the whole difference -- so
+     what the crudeness costs is the SHAPE of the partner spectra.
    * **No tensor structure in the triton breakup** (it is isotropic), where
      the deuteron's D wave is fully correlated with m_S.
 3. **CLOSED (2026-08-30) -- coherent T2.** The gap named in the previous

@@ -130,10 +130,13 @@ scripts, docs, reference dumps.
 
 ## 6. Open items after day 1
 
-*Updated 2026-08-30: every item below was investigated — see
-`docs/OPEN_ITEMS_SOLUTIONS.md` for the ranked solutions. Closed since: VMC cluster
-wave functions (implemented), the ePIC chain gate (passed), coherent-T2 and triton
-designs (prototyped), FSI model chosen.*
+*Updated 2026-09-02: every item below was investigated — see
+`docs/OPEN_ITEMS_SOLUTIONS.md` for the ranked solutions and the
+implemented-with-numbers status of rows 5–7. Closed since: VMC cluster wave
+functions (implemented), the ePIC chain gate (passed), coherent T2
+(implemented — the γ*–Pomeron tier, `docs/PYTHIA_BRIDGE.md` §12), the
+Ciofi–Simula triton spectral function (implemented, `--triton-sf`), the
+Glauber spectator-FSI weight (implemented, `--fsi`).*
 
 **Run-15/16 sync, 2026-08-30 (the Python moved after the port was made;
 `PolarizedLithiumSim` `bb636b5..568ff40`).** Everything below is ported and
@@ -179,10 +182,14 @@ gated at rtol 1e-12 against regenerated `validation/reference/*.json`
 - **T1 breakup realism** (what stays open inside it): the deuteron internal wave
   function is Hulthén S+D at P_D = 0.045 with the full m_S angular correlation, which
   is as good as the cluster model gets without VMC overlaps; the **triton remnant
-  (d vs nn) is crude and flagged** (plans/05 risk table) — a sequential two-body decay
-  at the AME2020 separation energies with an isotropic S-wave relative direction and
-  the unbound nn split at its virtual-state pole, no Faddeev/AV18 three-body
-  correlation and no tensor structure. **No FSI moves any fragment's four-vector,
+  default is the crude, flagged sequential model** (plans/05 risk table) — a
+  sequential two-body decay at the AME2020 separation energies with an isotropic
+  S-wave relative direction and the unbound nn split at its virtual-state pole, no
+  Faddeev/AV18 three-body correlation and no tensor structure — and since
+  2026-09-01 the opt-in `--triton-sf ciofi-simula` (`PipelineConfig::triton_sf`,
+  `triton_sf.hpp`) replaces it with the three-channel Ciofi–Simula spectral
+  function: k-dependent n₀/(n₀+n₁) branching (S₀ = 0.6525) and the
+  struck-n → (p n) continuum channel the sequential model has no room for. **No FSI moves any fragment's four-vector,
   on any channel** — since 2026-09-01 the tagged channels carry the Glauber
   spectator FSI as an optional per-event **weight** (`PipelineConfig::fsi`, off by
   default; `fsi.hpp`, `docs/USAGE.md` §3): it distorts the tagged spectator's

@@ -11,9 +11,9 @@ the recommended solution, effort, and status. Ordered by leverage.
 | 2 | ePIC chain gate (HepMC3 → abconv → npsim) | **passed** — 10/10 events through `npsim` directly and via `abconv -p ip6_hiacc_100x10` | done | one cosmetic writer fix (electron generated_mass) |
 | 3 | Tensor sign `TENSOR_LL_SIGN` (plans/08 D1) | **decided by literature: −1** (Cosyn Eq. 27, HERMES Eq. 6, HJM derivation, POLRAD Eqs. 9/10 all give A_zz = −(2/3) b₁/F₁) | 1 line + test | author to confirm; unblocks D2 |
 | 4 | ⁶Li/⁷Li effective polarizations (plans/04 #6) | **closed** — 1/3 vs 0.81 was a convention mismatch; VMC (Wiringa 2014 Table I, Piarulli 2023) gives whole-nucleus P_p = P_n = 0.85 ± 0.03 (⁶Li), 0.87 / −0.03 (⁷Li) | 0.5 d | author to confirm |
-| 5 | Coherent T2 final state | **solved in design** — PYTHIA accepts a Pomeron beam (id 990) through `LHAup`; γ*–IP → X reuses the whole bridge with ζ = β exactly; prototype: Q = 0, M_had = M_X, 40k ev/s | 2–3 d | prototype `pom_dis.cc` |
-| 6 | Triton remnant (t* → N + …) | **solved in design** — Ciofi–Simula A=3 n₀(k) from BeAGLE; its norm 0.653 *is* the two-body/three-body split; current Hulthén is 2.7–5.5× too hard at 0.2–0.3 GeV | 2 d | prototype `nk_triton.py` |
-| 7 | Spectator FSI (plans/04 #16) | **model chosen** — Glauber rescattering weight, per-nucleon product (Ciofi–Kaptari) with measured σ_tot(αp) = 121.5 mb, σ_el = 31.4 mb, B = 31 GeV⁻²; enters as a weight, never a momentum shift | 5–8 d | prototype `fsi_alpha.py` |
+| 5 | Coherent T2 final state | **implemented 2026-09-01** — γ*–Pomeron tier is the default coherent T2 (`CoherentT2::{Pomeron, Off}`, `docs/PYTHIA_BRIDGE.md` §12); ζ = β exact, 300-event chain conserves to 2.8e-14, M_had = M_X to 2.3e-11, veto 0 at M_X ≥ 1.4 GeV | done | `--coherent-t2`, `--pom-set` |
+| 6 | Triton remnant (t* → N + …) | **implemented 2026-09-01** — `triton_sf.hpp` CS n₀+n₁ model, S₀ = 0.6525 untuned, third channel n → (pn); opt-in `--triton-sf ciofi-simula`, sequential Hulthén stays the default bit for bit | done | numbers in §6 below |
+| 7 | Spectator FSI (plans/04 #16) | **implemented 2026-09-01** — `GlauberFsiWeight` per-event weight on `Event::weight` (`--fsi`, tagged channels; never a momentum shift); σ_Xα = 131.0 mb at σ_XN = 40, band 20–40 mb mandatory | done | numbers in §7 below |
 | 8 | Spin-3/2 SF basis (plans/04 #14) | **exists** — Jaffe–Manohar NPB 321 (1989); explicit J=3/2 functions arXiv:2209.12161 Eqs. 19a–d; rank-≤2 truncation is *exact* for unpolarized-beam inclusive observables | 5–10 d note | theory note |
 | 9 | Tensor-sector RC (plans/04 #10) | **formulas exist** — POLRAD 2.0 tensor sector + elastic tail; Gakh–Shekhovtsova (uncited); precedent E12-13-011: 1.5 % | 5–8 d | band adoptable |
 | 10 | b₁ for A > 2 (plans/04 #9) | **first-mover** — nothing exists; three-term α–d convolution on the Cosyn–Dong–Kumano–Sargsian kernel; 100 % band mandatory (⁶Li quadrupole puzzle) | 10–15 d | design only |
@@ -86,6 +86,22 @@ Raise `COHERENT_MX_MIN_DEFAULT` to 1.2 GeV; below it, an exclusive-VM channel
 (ρ, φ, J/ψ) is a separate Phase-2 item. Fallback: hand-filled qq̄ string with
 `ProcessLevel:all = off` (130k ev/s, 1e-15 conservation).
 
+**IMPLEMENTED (2026-09-01), measured.** The design above is the shipped tier
+(`docs/PYTHIA_BRIDGE.md` §12): `make_coherent` writes `Role::Pomeron`
+(P_IP = P_ion − P_recoil, pdg 990, status 3), the bridge's third instance
+(`Beams:idA = 990`, behind `PythiaBridgeOptions::coherent_t2`) hadronizes it
+with W² → M_X², ζ = β verified exact to 10 digits, flavour drawn
+e_q² × f_q(β, Q²) from `PDF:PomSet` (default 6) with the e_q² fallback. Both
+predicted traps were hit and closed (antiquark colour-tag orientation;
+quark-free LO grids → `q2_pdf_min` floor). 300-event chain: conservation
+2.8e-14 relative, charge exact, recoil untouched, M_had = M_X to 2.3e-11,
+veto 0 at M_X ≥ 1.4 GeV (the measured veto table sits in `coherent.hpp` and
+set `COHERENT_MX_MIN_DEFAULT = 1.2`). One extra find: PYTHIA closes the
+meson-like Pomeron-beam record on the electron beam's massive light-cone
+minus — a constant Δ(m²) = −3.9e-6 GeV² the baryon-beam remnant path absorbs —
+so the surrogate is built at a compensated w2_sur, keeping the mass-repair
+rescale at ~1e-11. `PDF:PomSet` remains the tier's largest systematic.
+
 ## 6. Triton remnant — Ciofi–Simula A = 3
 
 BeAGLE's `DT_KFERMI` carries n₀(k) = Σᵢ Aᵢ e^{−Bᵢk²}/(1+Cᵢk²)² with the CS
@@ -95,6 +111,20 @@ Design: `TritonSpectralFunction` backend with k-dependent branching
 p₂(k) = n₀/(n₀+n₁), a third channel (struck n → (pn) continuum, absent today),
 fixed uniform consumption per draw. Also recorded: BeAGLE renormalizes n₀ to 1 and
 therefore drops the 35 % continuum for A = 3 (its tail is too soft by construction).
+
+**IMPLEMENTED (2026-09-01), measured** (`triton_sf.hpp` / `triton_sf.cpp`,
+opt-in via `BreakupOptions::triton_sf` / `PipelineConfig::triton_sf` /
+`--triton-sf ciofi-simula`; the sequential Hulthén model stays the default
+bit for bit). S₀ = 0.652548 untuned against the CS 0.6525; n₀ tail
+P(k > 0.1/0.2/0.3/0.45 GeV) = 0.4267 / 0.06276 / 0.009621 / 0.002365 (all at
+the transcription's own digits); sampled bound fraction 0.6524 at 10⁵ draws;
+⟨k⟩ = 102 MeV on the bound-d channel, 126 MeV over all struck nucleons
+(sequential model: 133/145). The (pn) continuum pair splits at the pn ¹S₀
+pole `KAPPA_PN_SINGLET` beside the nn one; sample() consumes exactly 6
+uniforms whatever the branch and the breakup exactly 9, verified empirically.
+The Pipeline builds the model itself at the run's own `cluster_beta`, so no
+physics number is defined twice. T1+T2 chain with the hadronizer on
+conserves < 1e-9 on both options (`tests/test_t2.cpp`).
 
 ## 7. FSI — weight, not a shift
 
@@ -106,6 +136,23 @@ input and must be banded (the 20 mb row is arguably realistic at EIC). Use σ_to
 in the absorptive term and σ_el in the gain term (74 % of α rescatterings destroy
 the tag). Hook: `FsiWeight` interface on `TaggedSampler`, multiplied into
 `Event::weight`; null = today's PWIA bit-for-bit.
+
+**IMPLEMENTED (2026-09-01), measured** (`fsi.hpp` / `fsi.cpp`,
+`TaggedSampler::set_fsi` → `TaggedEvent::weight` → `Event::weight`;
+`PipelineConfig::fsi` / `--fsi {off,glauber-cluster,glauber-nucleon}` +
+`--fsi-sigma-mb`, tagged channels only, `validate()` refuses it elsewhere).
+Profile numbers at σ_XN = 40 mb: σ_Xα = 131.0 mb (Glauber-shadowed, not
+4 × 40), σ_el = 35.2 mb, B_α = 27.2 GeV⁻²; at 20 mb: 72.5 mb. The pinned
+FSI/IA table reproduces the `fsi_alpha.py` prototype to ≤ 3.3e-3 (0.787 at
+k = 0.02; 0.607/0.381 at k = 0.10, θ = 0/90°; 0.398 at 0.20; the 20 mb row
+0.877/0.844/0.764), production S+D channel 0.617 at k = 0.10, θ = 0;
+survival 0.517 (cluster) / 0.582 (nucleon variant) on the ⁶Li α tag at
+40 mb. Exact θ → π−θ symmetry, ratio → 1 as σ → 0, the wrong-spectator
+guard, the ⁷Li P-wave channel and the σ_XN(W) formation ramp are all in
+`tests/test_fsi.cpp`; the weight reaches HepMC3 `weights()[0]` and the npz
+`weight` column, and every four-vector stays bit-identical to the PWIA run.
+Quote it as an unpolarized-shape systematic banded over 20–40 mb, never as
+a correction to A_zz.
 
 ## 8–10. Theory notes
 

@@ -14,8 +14,8 @@ License: **GPL-3.0-or-later** (`LICENSE`).
 | channel | final state | physics |
 |---|---|---|
 | `inclusive` | e′ + struck nucleon (p/n ∝ Z F₂ᵖ : N F₂ⁿ) + X | HJM spin-1 / spin-3/2 master formula: F₁, F₂, R, g₁, g₂^WW, b₁, b₂, Δ (cos 2φ gluonometry); E143 finite-γ A∥ (default); exact finite-γ tensor kernel (Cosyn 2025, `tensor_gamma`, off by default) |
-| `tagged-6Li-alpha`, `tagged-7Li-alpha`, `tagged-d-p` | + spectator fragment (α / α / p) with the **spin ⊗ cluster-wave-function** correlation; T1 breakup of the struck cluster (d → N + N, t → N + d/nn) | two-cluster light-front impulse approximation; radial forms: Hulthén S/P/D (default) or **ANL VMC AV18** α+d, α+t tables (`--cluster-wave vmc`) |
-| `coherent` | e′ + intact ⁶Li recoil + X | scenario f_coh(x)·e^{−B|t|} with deformation + gluon-transversity cos 2φ; x_P sampled with a physical M_X |
+| `tagged-6Li-alpha`, `tagged-7Li-alpha`, `tagged-d-p` | + spectator fragment (α / α / p) with the **spin ⊗ cluster-wave-function** correlation; T1 breakup of the struck cluster (d → N + N, t → N + d/nn, or the three-channel **Ciofi–Simula** spectral function via `--triton-sf ciofi-simula`) | two-cluster light-front impulse approximation; radial forms: Hulthén S/P/D (default) or **ANL VMC AV18** α+d, α+t tables (`--cluster-wave vmc`); optional **Glauber spectator-FSI weight** (`--fsi`, a weight on `Event::weight`, never a momentum shift) |
+| `coherent` | e′ + intact ⁶Li recoil + X | scenario f_coh(x)·e^{−B|t|} with deformation + gluon-transversity cos 2φ; x_P sampled with a physical M_X ≥ 1.2 GeV; T2 hadronizes γ*–Pomeron on a PYTHIA Pomeron beam (id 990, `--coherent-t2`) |
 
 Every event carries its spin labels (λ_e, M, m_S, axis, P_z, P_zz, category,
 run, bunch); run plans mirror `polligen.bookkeeping` (helicity flip, tensor
@@ -24,9 +24,9 @@ Tier **T2** adds the PYTHIA hadronic final state on the *actual* Fermi-smeared,
 off-shell struck nucleon (a (W², Q²)-matched surrogate γ*N event Lorentz-mapped
 onto the physical target — conservation to 1e-13).
 
-## Status (2026-08-30)
+## Status (2026-09-02)
 
-- 252 doctest cases / 15.2 M assertions and 136 pytest cases pass.
+- 275 doctest cases / 16.0 M assertions and 145 pytest cases pass.
 - Kernel, ρ-moments, tagged densities, spectator boosts, coherent scenario and
   bookkeeping agree with `polligen` (run 16, tensor sign to the literature
   convention) at **rtol 1e-12** against `validation/reference/*.json`.
@@ -37,9 +37,11 @@ onto the physical target — conservation to 1e-13).
   2.3 M; +PYTHIA 33–44 k ev/s; HepMC3 writing ~7 k ev/s; Python columnar ~5×10⁵ ev/s.
 - Independent adversarial review (`docs/code_review_2026-08-29.md`): all findings fixed.
 
-Open items, with explored solutions and prototypes: `docs/OPEN_ITEMS_SOLUTIONS.md`
-(coherent T2 via a PYTHIA Pomeron beam, Ciofi–Simula triton spectral function,
-Glauber FSI weight, spin-3/2 finite-γ note, b₁(⁶Li) convolution, tensor RC band).
+Open items, with explored solutions and prototypes: `docs/OPEN_ITEMS_SOLUTIONS.md`.
+Rows 5–7 are now **implemented with measured numbers** (coherent T2 via a PYTHIA
+Pomeron beam, `--coherent-t2`; the Ciofi–Simula triton spectral function,
+`--triton-sf`; the Glauber spectator-FSI weight, `--fsi`); still open: the
+spin-3/2 finite-γ note, the b₁(⁶Li) convolution, the tensor RC band.
 
 ## Build
 

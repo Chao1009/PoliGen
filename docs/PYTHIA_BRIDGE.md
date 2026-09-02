@@ -509,14 +509,25 @@ found on the prototype:
 1. **Colour-tag orientation follows the initiator's sign**: an incoming
    antiquark needs `(0, tag)`, not `(tag, 0)`.  Wrong orientation is a ~50 %
    silent veto rate.  `LhaupDis` was already sign-correct.
-2. **At Q² ≈ 1 GeV², β < 0.1 the LO Pomeron grid has literally no quarks**
-   (gluon momentum fraction 1.000), so every `e_q² x f_q` weight is zero and
-   the event would be vetoed for a bookkeeping reason.  The `q2_pdf_min`
-   floor is the first line of defence; the second is a fallback to the bare
-   charge weights `e_q²` (the flavour-democratic limit of the same formula) —
+2. **At small β the LO Pomeron grid has literally no quarks until
+   Q² ≈ 1.5–1.75 GeV²** (gluon momentum fraction 1.000 below the edge), and
+   the default `q2_pdf_min = 1.0` clamp sits *below* it — so this is not a
+   corner: a **default coherent run takes the fallback on ~20 % of its
+   events** (measured 86/400 at config 1, Q² from 1.00 up to 1.59 GeV²).
+   Every `e_q² x f_q` weight is zero there and the event would be vetoed for
+   a bookkeeping reason, so the sampler falls back to the bare charge
+   weights `e_q²` (the flavour-democratic limit of the same formula) — over
+   the **light flavours only**: the H1 LO grids carry no charm or bottom at
+   *any* (β, Q²), so `e_q² · f_q` gives the heavy flavours zero weight
+   everywhere and the democratic limit must not resurrect them.  (Before
+   that restriction the fallback reused the DIS offer list — `include_charm`
+   defaults to true — and ~7 % of a default coherent sample came out
+   charm-initiated with zero PDF support, every event on the fallback.)
    PYTHIA's backward evolution then still finds the gluon.  Counted in
-   `PythiaBridgeStats::n_pom_flavour_fallback`; non-zero means the run sits
-   on the edge of the grid.
+   `PythiaBridgeStats::n_pom_flavour_fallback`; a non-zero count is
+   *routine* whenever the Q² window reaches below the grid's quark-support
+   edge, and raising `q2_pdf_min` to ≈ 1.75 removes the fallback at the
+   cost of clamping every flavour weight to that Q².
 
 ### The M_X floor and the veto table
 

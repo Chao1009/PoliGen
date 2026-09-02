@@ -585,18 +585,31 @@ bool PythiaBridge::Impl::run(Event& ev, Rng& rng) {
   double tot = 0.0;
   for (int i = 0; i < nfl; ++i) tot += wgt[i];
   if (!(tot > 0.0)) {
-    // The second trap of the coherent prototype: at Q^2 = 1, beta < 0.1 the
-    // LO Pomeron grid has LITERALLY NO QUARKS (gluon momentum fraction
-    // 1.000), so every e_q^2 x f_q weight is zero and the event would be
-    // vetoed for a bookkeeping reason rather than a physical one.  The
-    // `q2_pdf_min` floor above is the first line of defence; this is the
-    // second: fall back to the bare charge weights e_q^2, which is the
-    // flavour-democratic limit of the same formula.  PYTHIA's own backward
-    // evolution then still finds the gluon.  Counted, so a run sitting on the
-    // edge of the grid is visible.
+    // The second trap of the coherent prototype: at small beta the LO
+    // Pomeron grid (PDF:PomSet = 6) has LITERALLY NO QUARKS (gluon momentum
+    // fraction 1.000) until Q^2 ~ 1.5-1.75 GeV^2, and the default
+    // `q2_pdf_min` = 1.0 clamp sits BELOW that edge -- so this is not a
+    // corner case: a default coherent run takes this branch on ~20 % of its
+    // events (measured 86/400 at config 1, Q^2 up to 1.59 GeV^2).  Every
+    // e_q^2 x f_q weight is zero there and the event would be vetoed for a
+    // bookkeeping reason rather than a physical one, so fall back to the
+    // bare charge weights e_q^2 -- the flavour-democratic limit of the same
+    // formula -- over the LIGHT flavours ONLY.  The H1 LO grids carry no
+    // charm or bottom at ANY (beta, Q^2) (xf == 0 identically), so
+    // e_q^2 x f_q gives the heavy flavours zero weight everywhere and the
+    // democratic limit must not resurrect them: before this restriction ~7 %
+    // of a default coherent sample came out charm-initiated -- open-charm
+    // diffractive final states with zero PDF support, every one on this
+    // branch (the prototype's pool, pom_dis.cc, was light-only).  PYTHIA's
+    // own backward evolution then still finds the gluon.  Counted, so the
+    // fallback share of a run is visible.
     if (id_n == 990 && nfl > 0) {
+      for (int i = 0; i < nfl; ++i) {
+        wgt[i] = (std::abs(ids[i]) <= 3) ? eq2s[i] : 0.0;
+        tot += wgt[i];
+      }
+      if (!(tot > 0.0)) { ++stats.n_failed; return false; }
       ++stats.n_pom_flavour_fallback;
-      for (int i = 0; i < nfl; ++i) { wgt[i] = eq2s[i]; tot += wgt[i]; }
     } else {
       ++stats.n_failed;
       return false;

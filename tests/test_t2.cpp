@@ -20,25 +20,27 @@
 //    cluster's own net charge.  Both are gone; the test below runs the
 //    plain `bridge.hadronize` binding.
 //
-//  * COHERENT.  A coherent event carries neither `Role::StruckNucleon` nor
-//    `Role::StruckCluster` (the diffractive system X is not a struck
-//    nucleon), so `hadronize()` silently falls back to "a nucleon at rest
-//    in the ion frame" -- the ordinary INCLUSIVE fallback.  That fallback
-//    nucleon has nothing to do with the true momentum transfer to the
-//    recoil (P_ion - P_recoil is small and largely transverse; the
-//    fallback carries the full per-nucleon longitudinal momentum p_u), so
-//    the call succeeds mechanically (no crash, no excess vetoes) but the
-//    whole-record balance is badly broken: measured worst relative
-//    4-momentum residual 0.164, charge wrong on 144/300 events.  There is
-//    no public hook that lets a caller supply the coherent target's
-//    four-vector (unlike the tagged case), so this is reported here rather
-//    than patched around: PythiaBridge v0 has no representation of a
-//    coherent-diffractive final state.  The coherent test below therefore
-//    verifies everything that DOES hold (the call succeeds, the
-//    DIS-surrogate HFS identities against the fallback target it actually
-//    used, the recoil is untouched, exactly one final electron,
-//    determinism) and reports -- without asserting at the tight tolerance
-//    -- the whole-record residual, with a loose regression guard.
+//  * COHERENT -- CLOSED by the gamma*-Pomeron tier (2026-08-30).  A
+//    coherent event now carries `Role::Pomeron` (P_IP = P_ion - P_recoil,
+//    written by `Pipeline::make_coherent`), which the bridge hadronizes on
+//    a THIRD PYTHIA instance whose beam A is PYTHIA's Pomeron
+//    (`Beams:idA = 990`) through the same surrogate + frame map as every
+//    other channel (docs/PYTHIA_BRIDGE.md sec. 12).  The coherent tests
+//    below therefore ASSERT at the same tight tolerances as the DIS tiers
+//    -- whole-record 4-momentum 1e-9 relative, charge exact, M_had = M_X
+//    to 1e-6 -- plus the tier's own guarantees: the intact recoil is never
+//    touched, veto rate 0 at M_X >= 1.4 GeV, the light-only e_q^2 flavour
+//    fallback below the LO Pomeron grid's quark-support edge, determinism,
+//    and CoherentT2::Off degrading to a still-conserving T0 record.
+//
+//    For the record, what this replaced: a coherent event carried neither
+//    `Role::StruckNucleon` nor `Role::StruckCluster`, so `hadronize()`
+//    silently fell back to "a nucleon at rest in the ion frame" -- a
+//    target unrelated to the true P_ion - P_recoil -- and the whole-record
+//    balance was badly broken (worst relative 4-momentum residual 0.164,
+//    charge wrong on 144/300 events) with no public hook to supply the
+//    coherent target.  The v0 test could only report that residual under a
+//    loose regression guard; that guard is gone.
 #ifdef LIPOLGEN_HAVE_PYTHIA8
 
 #include <algorithm>
@@ -541,88 +543,125 @@ TEST_CASE("T2 chain: coherent 6Li -- CoherentT2::Off leaves the record at T0") {
   CHECK(worst_q == 0.0);
 }
 
-TEST_CASE("T2 chain: coherent e_q^2 flavour fallback -- Q^2 on the grid "
-          "floor, beta < 0.1, where the LO Pomeron set has no quarks") {
-  // The second trap of the coherent prototype: at Q^2 = 1 GeV^2 (the
-  // q2_pdf_min floor) and small beta the H1 2006 Fit B LO grid
-  // (PDF:PomSet = 6) is pure gluon -- every e_q^2 x f_q(beta, Q^2) weight is
-  // zero -- so without the e_q^2 fallback the event would be vetoed for a
-  // bookkeeping reason, not a physical one.  Build the coherent record by
-  // hand at exactly that corner (Q^2 = 1, M_X = 10 => beta = 1/101) and
-  // check the bridge (a) hadronizes it, (b) counts the fallback, (c) still
-  // reproduces M_X.
+TEST_CASE("T2 chain: coherent e_q^2 flavour fallback -- small beta below the "
+          "LO Pomeron grid's quark-support edge (Q^2 <~ 1.5), light-only") {
+  // The second trap of the coherent prototype: at small beta the H1 2006
+  // Fit B LO grid (PDF:PomSet = 6) is pure gluon until Q^2 ~ 1.5-1.75 GeV^2
+  // -- every e_q^2 x f_q(beta, Q^2) weight is zero, and the default
+  // q2_pdf_min = 1.0 clamp sits BELOW that edge, so a default coherent run
+  // takes the e_q^2 fallback on ~20 % of its events (not just at Q^2 = 1
+  // exactly).  Build the coherent record by hand in that region and check
+  // the bridge (a) hadronizes it, (b) counts the fallback, (c) still
+  // reproduces M_X, and (d) NEVER initiates a heavy flavour there: the H1
+  // LO grids carry no charm at ANY (beta, Q^2), so e_q^2 x f_q gives charm
+  // zero weight everywhere and the democratic fallback must not resurrect
+  // it.  (d) is the regression guard for the bug where the fallback reused
+  // the DIS offer list -- include_charm defaults to true -- and ~7 % of a
+  // default coherent sample came out charm-initiated with zero PDF support.
   const BeamConfig bc = default_configs("6Li")[1];
   PythiaBridge bridge(bc, bridge_opts(kSeed + 9));
 
   const double e_e = bc.electron_energy;
-  const double q2 = 1.0, mx = 10.0;
-
-  // Scattered electron, massless: k.k' = Q^2/2  ->  E' + k'_z = Q^2/(2 E_e).
-  const double ep = 8.0;
-  const double kz = q2 / (2.0 * e_e) - ep;
-  const double kt = std::sqrt(ep * ep - kz * kz);
-  const Vec4 k{e_e, 0.0, 0.0, -e_e};
-  const Vec4 kp{ep, kt, 0.0, kz};
-  const Vec4 q = k - kp;
-  REQUIRE(std::fabs(-q.m2() - q2) < 1e-9);
-
-  // The Pomeron: P_IP = eta * P_ion + a transverse kick, with eta the exact
-  // positive root of (q + P_IP)^2 = M_X^2 -- the identity
-  // `Pipeline::make_coherent` guarantees on a real record.  pt = 0.2 makes
-  // P_IP spacelike (P_IP^2 = eta^2 M_A^2 - pt^2 < 0), like a real one.
   const double m_ion = bc.ion.mass();
   const double pz_ion = bc.ion_momentum_per_nucleon * bc.ion.A;
   const Vec4 p_ion{std::sqrt(pz_ion * pz_ion + m_ion * m_ion), 0.0, 0.0, pz_ion};
-  const double pt_ip = 0.2;
-  // eta^2 M_A^2 + 2 eta (q.e E_A - q.pz p_A) + (q^2 - pt^2 - 2 q.px pt - M_X^2) = 0
-  const double qa = m_ion * m_ion;
-  const double qb = 2.0 * (q.e * p_ion.e - q.pz * p_ion.pz);
-  const double qc = q.m2() - pt_ip * pt_ip - 2.0 * q.px * pt_ip - mx * mx;
-  const double eta = (-qb + std::sqrt(qb * qb - 4.0 * qa * qc)) / (2.0 * qa);
-  REQUIRE(eta > 0.0);
-  REQUIRE(eta < 0.2);
-  const Vec4 p_ip{eta * p_ion.e, pt_ip, 0.0, eta * p_ion.pz};
-  REQUIRE(std::fabs((q + p_ip).m2() - mx * mx) < 1e-6);
-  REQUIRE(p_ip.m2() < 0.0);                 // spacelike, like the real thing
 
-  Event ev;
-  ev.channel = Channel::CoherentLi6;
-  ev.kin.q2 = q2;
-  ev.kin.m_x2 = mx * mx;
-  Particle pb;
-  pb.pdg = 11; pb.status = Status::Beam; pb.role = Role::BeamElectron;
-  pb.p = k; pb.charge = -1.0;
-  ev.particles.push_back(pb);
-  Particle pi;
-  pi.pdg = 1000030060; pi.status = Status::Beam; pi.role = Role::BeamIon;
-  pi.p = p_ion; pi.mass = m_ion; pi.charge = 3.0;
-  ev.particles.push_back(pi);
-  Particle pe;
-  pe.pdg = 11; pe.status = Status::Final; pe.role = Role::ScatteredElectron;
-  pe.p = kp; pe.charge = -1.0;
-  ev.particles.push_back(pe);
-  Particle pomeron;
-  pomeron.pdg = 990; pomeron.status = Status::Intermediate;
-  pomeron.role = Role::Pomeron; pomeron.p = p_ip;
-  pomeron.mass = -std::sqrt(-p_ip.m2()); pomeron.charge = 0.0;
-  ev.particles.push_back(pomeron);
+  // A coherent record at (Q^2, M_X), built exactly the way
+  // `Pipeline::make_coherent` guarantees: (q + P_IP)^2 = M_X^2, P_IP
+  // spacelike.
+  auto make_corner_event = [&](double q2, double mx) {
+    // Scattered electron, massless: k.k' = Q^2/2  ->  E' + k'_z = Q^2/(2 E_e).
+    const double ep = 8.0;
+    const double kz = q2 / (2.0 * e_e) - ep;
+    const double kt = std::sqrt(ep * ep - kz * kz);
+    const Vec4 k{e_e, 0.0, 0.0, -e_e};
+    const Vec4 kp{ep, kt, 0.0, kz};
+    const Vec4 q = k - kp;
+    REQUIRE(std::fabs(-q.m2() - q2) < 1e-9);
 
-  Rng rng(kSeed + 9, 1, 0, 0);
-  const bool ok = bridge.hadronize(ev, rng);
-  CHECK(ok);
-  CHECK(bridge.stats().n_pom_flavour_fallback > 0);   // (b): the corner fired
-  CHECK(bridge.stats().n_pomeron == 1);
-  // (c): the hadrons ARE the drawn M_X, fallback or not.
-  Vec4 had;
-  double q_had = 0.0;
-  for (const auto& pp : ev.particles) {
-    if (pp.role == Role::Hadron && pp.status == Status::Final) {
-      had = had + pp.p;
-      q_had += pp.charge;
+    // The Pomeron: P_IP = eta * P_ion + a transverse kick, with eta the exact
+    // positive root of (q + P_IP)^2 = M_X^2.  pt = 0.2 makes P_IP spacelike
+    // (P_IP^2 = eta^2 M_A^2 - pt^2 < 0), like a real one.
+    const double pt_ip = 0.2;
+    // eta^2 M_A^2 + 2 eta (q.e E_A - q.pz p_A) + (q^2 - pt^2 - 2 q.px pt - M_X^2) = 0
+    const double qa = m_ion * m_ion;
+    const double qb = 2.0 * (q.e * p_ion.e - q.pz * p_ion.pz);
+    const double qc = q.m2() - pt_ip * pt_ip - 2.0 * q.px * pt_ip - mx * mx;
+    const double eta = (-qb + std::sqrt(qb * qb - 4.0 * qa * qc)) / (2.0 * qa);
+    REQUIRE(eta > 0.0);
+    REQUIRE(eta < 0.2);
+    const Vec4 p_ip{eta * p_ion.e, pt_ip, 0.0, eta * p_ion.pz};
+    REQUIRE(std::fabs((q + p_ip).m2() - mx * mx) < 1e-6);
+    REQUIRE(p_ip.m2() < 0.0);               // spacelike, like the real thing
+
+    Event ev;
+    ev.channel = Channel::CoherentLi6;
+    ev.kin.q2 = q2;
+    ev.kin.m_x2 = mx * mx;
+    Particle pb;
+    pb.pdg = 11; pb.status = Status::Beam; pb.role = Role::BeamElectron;
+    pb.p = k; pb.charge = -1.0;
+    ev.particles.push_back(pb);
+    Particle pi;
+    pi.pdg = 1000030060; pi.status = Status::Beam; pi.role = Role::BeamIon;
+    pi.p = p_ion; pi.mass = m_ion; pi.charge = 3.0;
+    ev.particles.push_back(pi);
+    Particle pe;
+    pe.pdg = 11; pe.status = Status::Final; pe.role = Role::ScatteredElectron;
+    pe.p = kp; pe.charge = -1.0;
+    ev.particles.push_back(pe);
+    Particle pomeron;
+    pomeron.pdg = 990; pomeron.status = Status::Intermediate;
+    pomeron.role = Role::Pomeron; pomeron.p = p_ip;
+    pomeron.mass = -std::sqrt(-p_ip.m2()); pomeron.charge = 0.0;
+    ev.particles.push_back(pomeron);
+    return ev;
+  };
+
+  {
+    const double mx = 10.0;
+    Event ev = make_corner_event(1.0, mx);
+    Rng rng(kSeed + 9, 1, 0, 0);
+    const bool ok = bridge.hadronize(ev, rng);
+    CHECK(ok);
+    CHECK(bridge.stats().n_pom_flavour_fallback > 0);   // (b): the corner fired
+    CHECK(bridge.stats().n_pomeron == 1);
+    // (c): the hadrons ARE the drawn M_X, fallback or not.
+    Vec4 had;
+    double q_had = 0.0;
+    for (const auto& pp : ev.particles) {
+      if (pp.role == Role::Hadron && pp.status == Status::Final) {
+        had = had + pp.p;
+        q_had += pp.charge;
+      }
+    }
+    CHECK(std::fabs(std::sqrt(had.m2()) - mx) / mx < 1e-6);
+    CHECK(q_had == 0.0);                    // gamma* + Pomeron is neutral
+  }
+
+  // (d): the fallback pool is LIGHT-ONLY, across the whole quarkless region,
+  // not just at the q2_pdf_min floor.  Before the light-only restriction the
+  // charm share of one fallback draw was 8/20 (e_q^2 weights with c + cbar
+  // in the pool), so 60 events miss it with probability 0.6^60 ~ 5e-14 even
+  // if the seed moves.
+  const std::uint64_t fb_before = bridge.stats().n_pom_flavour_fallback;
+  int n_events = 0;
+  const struct { double q2, mx; } corners[] = {{1.0, 10.0}, {1.4, 12.0}};
+  for (const auto& c : corners) {
+    for (int i = 0; i < 30; ++i) {
+      Event ev = make_corner_event(c.q2, c.mx);
+      Rng rng(kSeed + 9, 2, static_cast<std::uint64_t>(n_events), 0);
+      REQUIRE(bridge.hadronize(ev, rng));   // M_X >> 1.4: veto rate is 0
+      ++n_events;
+      const int idq = bridge.last_quark_id();
+      CHECK(std::abs(idq) <= 3);            // no charm/bottom off a pure-gluon grid
+      CHECK(idq != 0);
     }
   }
-  CHECK(std::fabs(std::sqrt(had.m2()) - mx) / mx < 1e-6);
-  CHECK(q_had == 0.0);                      // gamma* + Pomeron is neutral
+  // Every one of those events sat below the grid's quark-support edge, so
+  // every one took the fallback -- ~20 % of a DEFAULT coherent run does.
+  CHECK(bridge.stats().n_pom_flavour_fallback ==
+        fb_before + static_cast<std::uint64_t>(n_events));
 }
 
 // ---------------------------------------------------------------------------

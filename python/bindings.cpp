@@ -2607,8 +2607,10 @@ static void bind_io(py::module_& m) {
       .def_readonly("n_pom_flavour_fallback",
                     &PythiaBridgeStats::n_pom_flavour_fallback,
                     "Coherent events whose Pomeron-PDF flavour weights were "
-                    "all zero (no quarks on the LO grid) and fell back to the "
-                    "bare e_q^2 charge weights.")
+                    "all zero (the LO grid is pure gluon at small beta below "
+                    "Q^2 ~ 1.5-1.75) and fell back to the bare e_q^2 charge "
+                    "weights over the light flavours only; ~20% of a default "
+                    "coherent run, so non-zero is routine.")
       .def_readonly("n_flavour_dropped",
                     &PythiaBridgeStats::n_flavour_dropped)
       .def_readonly("n_cluster_fallback",

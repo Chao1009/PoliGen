@@ -452,7 +452,9 @@ its own implicit-target fallback never fires on a `Pipeline` event. Driving the
 bridge directly without one falls back to
 `NucleonChoice::ByStructureFunctions`, which applies the same rule on
 `PythiaBridgeOptions::f2_source` — hand it the kernel's own backend to keep the
-two draws consistent. The **coherent** channel is refused (§4).
+two draws consistent. A **coherent** event carries `Role::Pomeron` instead of
+a struck nucleon and hadronizes on the bridge's third, Pomeron-beam instance
+(§4; `docs/PYTHIA_BRIDGE.md` §12).
 
 The hard-process flavour is offered with probability `e_q² x f_q(ζ_q, Q²)` at
 each flavour's OWN `ζ_q = (Q² + m_q²)/(P_A⁺ q̃⁻)`, and a flavour whose ζ_q has

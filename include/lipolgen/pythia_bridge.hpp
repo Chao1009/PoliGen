@@ -247,9 +247,15 @@ struct PythiaBridgeStats {
   std::uint64_t n_pomeron = 0;
   /// Coherent events whose flavour weights e_q^2 x f_q(beta, Q^2) all came
   /// out zero because the LO Pomeron grid has literally no quarks there
-  /// (gluon fraction 1.000 at Q^2 = 1, beta < 0.1), so the sampler fell back
-  /// to the bare charge weights e_q^2.  Non-zero means the run is sitting on
-  /// the edge of the grid; raise `q2_pdf_min`.
+  /// (gluon fraction 1.000 at small beta until Q^2 ~ 1.5-1.75 GeV^2, which
+  /// is ABOVE the default `q2_pdf_min` = 1.0 clamp), so the sampler fell
+  /// back to the bare charge weights e_q^2 over the LIGHT flavours only
+  /// (the H1 LO grids carry no charm/bottom anywhere, so the democratic
+  /// limit keeps them at zero).  A DEFAULT coherent run sits on this branch
+  /// for ~20 % of its events -- non-zero is routine whenever the Q^2 window
+  /// reaches below the grid's quark-support edge, not a misconfiguration;
+  /// raising `q2_pdf_min` to ~1.75 removes the fallback at the cost of
+  /// clamping every flavour weight to that Q^2.
   std::uint64_t n_pom_flavour_fallback = 0;
   /// Events that took the DEPRECATED `Role::StruckCluster` branch -- i.e.
   /// arrived with no `Role::StruckNucleon`.  Non-zero on a `Pipeline` run

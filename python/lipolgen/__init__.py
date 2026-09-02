@@ -99,7 +99,7 @@ def make_config(isotope="6Li", config=1, channel="inclusive", events=0,
                 poisson=True, cluster_beta=None, p_d=None, coherent=None,
                 scenario=None, grid=None, n_sigma=10.0, pot_config="",
                 inclusive_b1=None, with_virtual_photon=True,
-                hadronize_coherent=None, apply_optics_lumi_fraction=None,
+                apply_optics_lumi_fraction=None,
                 cluster_wave=None):
     """A `PipelineConfig` from plain values (the CLI's own constructor).
 
@@ -145,11 +145,6 @@ def make_config(isotope="6Li", config=1, channel="inclusive", events=0,
         cfg.scenario = scenario
     if grid is not None:
         cfg.grid = grid
-    if hadronize_coherent is not None:
-        # The C++ refuses a hadronizer on the coherent channel (C4): PythiaBridge
-        # v0 has no coherent-diffractive target and would invent a nucleon that
-        # is not in the record's balance.  This is the deliberate escape hatch.
-        cfg.hadronize_coherent = bool(hadronize_coherent)
     if apply_optics_lumi_fraction is not None:
         cfg.apply_optics_lumi_fraction = bool(apply_optics_lumi_fraction)
     if inclusive_b1 is not None:

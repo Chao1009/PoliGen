@@ -281,11 +281,22 @@ lg.EMC_BASELINE_DEFAULT  # EmcBaseline.Epps21 -- the unpolarized baseline the
                          # polarized-EMC transfer is referenced to
 ```
 
-A hadronizer on the **coherent** channel is refused by `PipelineConfig.validate()`:
-`PythiaBridge` v0 has no coherent-diffractive target, so it would invent a
-nucleon that is not in the record's balance and the event would lose
-four-momentum and charge. Set `hadronize_coherent=True` (or
-`--hadronize-coherent`) to reproduce that known-broken behaviour on purpose.
+A hadronizer on the **coherent** channel is an ordinary configuration since
+2026-08-30. The record names its own T2 target — `Role.Pomeron`, the
+four-vector `P_IP = P_ion − P_recoil` — and `PythiaBridge` hadronizes it on a
+PYTHIA Pomeron beam (`Beams:idA = 990`), so the whole record conserves. The
+knobs are on the bridge, not the pipeline:
+
+```python
+o = lg.PythiaBridgeOptions()
+o.coherent_t2 = lg.CoherentT2.Pomeron   # default; .Off skips the 3rd instance
+o.pom_set     = 6                       # PDF:PomSet, H1 2006 Fit B LO
+o.pom_rescale = 1.0                     # PDF:PomRescale
+```
+
+`PipelineConfig.hadronize_coherent` and `--hadronize-coherent` are **gone**
+together with the broken fallback they gated.  On the command line the three
+knobs above are `--coherent-t2 pomeron|off`, `--pom-set` and `--pom-rescale`.
 
 ### The one polligen key with no pipeline equivalent
 
@@ -319,8 +330,13 @@ present in `InclusiveSampler.sample_n()`'s dict and absent from
 --coherent-f0 --coherent-slope-b --coherent-amp
 --nthreads N                 forced to 1 with --hadronize
 --hadronize                  run the T2 (PYTHIA 8) tier
---hadronize-coherent         allow --hadronize on the coherent channel, which
-                             the core refuses by default (C4)
+--coherent-t2 pomeron|off    what --hadronize does with a coherent event:
+                             'pomeron' (default) runs the gamma*-Pomeron tier,
+                             'off' skips the third PYTHIA instance (T0 record,
+                             still conserving)
+--pom-set N                  PDF:PomSet of the coherent tier (6 = H1 2006
+                             Fit B LO, PYTHIA's own default)
+--pom-rescale X              PDF:PomRescale (recorded for reproducibility)
 --npz FILE                   the columnar sample
 --hfs-npz FILE               polligen HFSSample (needs --hadronize)
 --hepmc FILE                 HepMC3 Asciiv3

@@ -351,18 +351,15 @@ struct PipelineConfig {
   /// three draws that share them cannot disagree.
   BreakupOptions breakup;
   HadronizerHook hadronizer;
-  /// C4.  Let `hadronizer` run on the COHERENT channel.  Default FALSE, and
-  /// `validate()` REFUSES the combination unless it is set.
-  ///
-  /// A coherent event carries no struck nucleon and no struck cluster -- the
-  /// nucleus is intact and X is a diffractive system -- so `PythiaBridge` v0
-  /// falls through to its inclusive branch and INVENTS a nucleon at rest in
-  /// the ion frame.  That nucleon is not in the record's balance, so the
-  /// hadronized event misses P_ion (1 - 1/A) of four-momentum and Z - 1 of
-  /// charge: measured, a 16 % four-momentum residual and one unit of charge.
-  /// Set this only to reproduce that known-broken behaviour deliberately
-  /// (docs/T2_CHAIN.md); a real coherent-diffractive target is the fix.
-  bool hadronize_coherent = false;
+  // C4 -- CLOSED 2026-08-30.  `hadronize_coherent`, the opt-in that let a
+  // hadronizer run on the coherent channel through the broken inclusive
+  // fallback, IS GONE together with the fallback itself.  A coherent event
+  // now names its own T2 target: `make_coherent` writes the POMERON
+  // P_IP = P_ion - P_recoil (`Role::Pomeron`, status 3), which
+  // `PythiaBridge` hadronizes on a PYTHIA Pomeron beam (id 990) exactly the
+  // way it hadronizes a struck nucleon (docs/PYTHIA_BRIDGE.md sec. 12).  The
+  // whole record conserves; the knob that stayed is
+  // `PythiaBridgeOptions::coherent_t2` = {Pomeron, Off}.
 
   /// C6.  Multiply the luminosity of every category by
   /// `Optics::lumi_fraction` -- the share of the machine luminosity the

@@ -225,6 +225,12 @@ struct PythiaBridge::Impl {
     Pythia8::PDFPtr pdf;
   };
   Inst proton, neutron;
+  /// The COHERENT tier: a POMERON beam (id 990).  PYTHIA counts 990 as a
+  /// hadron (`BeamSetup.cc:869-875`), gives it meson-like beam handling
+  /// (`BeamParticle.cc:178`, so the remnant is a single ANTIQUARK -- colour-
+  /// and charge-neutral against the struck quark) and has a real Pomeron PDF
+  /// for it.  Built only when `coherent_t2 == CoherentT2::Pomeron`.
+  Inst pomeron;
 
   double e_e = 0.0;
 
@@ -256,16 +262,17 @@ struct PythiaBridge::Impl {
   }
 
   Inst* inst_for(int pdg) {
+    if (pdg == 990) return pomeron.py ? &pomeron : nullptr;
     if (pdg == 2112) return neutron.py ? &neutron : nullptr;
     return proton.py ? &proton : nullptr;
   }
 
-  void configure(Pythia8::Pythia& py);
+  void configure(Pythia8::Pythia& py, bool is_pomeron);
   void build(Inst& inst, int id_beam);
   bool run(Event& ev, Rng& rng);
 };
 
-void PythiaBridge::Impl::configure(Pythia8::Pythia& py) {
+void PythiaBridge::Impl::configure(Pythia8::Pythia& py, bool is_pomeron) {
   applied.clear();
   auto set = [&](const std::string& s) {
     applied.push_back(s);
@@ -310,6 +317,17 @@ void PythiaBridge::Impl::configure(Pythia8::Pythia& py) {
   set("Next:numberShowProcess = " + std::string(opt.verbosity > 1 ? "1" : "0"));
   set("Next:numberShowEvent = " + std::string(opt.verbosity > 1 ? "1" : "0"));
   if (opt.verbosity < 1) set("Print:quiet = on");
+  // The Pomeron parton densities.  6 (H1 2006 Fit B, LO) is PYTHIA's own
+  // default and the only LO Q^2-dependent set; it is set explicitly so the
+  // record of what was run is complete and a PYTHIA default change cannot
+  // silently move the coherent flavour draw.  On the nucleon instances these
+  // two lines would be inert, so they are simply not applied there.
+  if (is_pomeron) {
+    set("PDF:PomSet = " + std::to_string(opt.pom_set));
+    char buf[64];
+    std::snprintf(buf, sizeof(buf), "PDF:PomRescale = %.10g", opt.pom_rescale);
+    set(std::string(buf));
+  }
   for (const auto& s : opt.settings) set(s);
 }
 
@@ -327,13 +345,16 @@ void PythiaBridge::Impl::build(Inst& inst, int id_beam) {
                                               opt.verbosity > 0);
   inst.py->setRndmEnginePtr(engine);
   inst.py->setLHAupPtr(inst.lha);
-  configure(*inst.py);
+  configure(*inst.py, id_beam == 990);
   if (!inst.py->init())
     throw std::runtime_error("PythiaBridge: pythia.init() failed for beam id " +
                              std::to_string(id_beam));
   inst.m_a = inst.py->particleData.m0(id_beam);
   if (inst.e_a <= inst.m_a)
     throw std::runtime_error("PythiaBridge: beam energy below the nucleon mass");
+  // m_0(990) = 0 exactly, which is what makes the coherent zeta come out at
+  // beta = Q^2/(M_X^2 + Q^2) with no approximation (docs/PYTHIA_BRIDGE.md
+  // sec. 12): with P_A^2 = 0, P_A^+ qtil^- = 2 qtil.P_A = M_X^2 + Q^2.
   inst.p_a = std::sqrt(inst.e_a * inst.e_a - inst.m_a * inst.m_a);
   inst.pdf = inst.py->getPDFPtr(id_beam);
   if (!inst.pdf || !inst.pdf->isSetup())
@@ -357,7 +378,20 @@ bool PythiaBridge::Impl::run(Event& ev, Rng& rng) {
   Vec4 p_n;
   int id_n = 2212;
   bool implicit = false;
-  if (const Particle* pn = ev.find(Role::StruckNucleon)) {
+  if (const Particle* pip = ev.find(Role::Pomeron)) {
+    // COHERENT.  `Pipeline::make_coherent` wrote P_IP = P_ion - P_recoil, so
+    // q + P_IP IS the diffractive system X and (q + P_IP)^2 = M_X^2 exactly.
+    // Everything below then runs unchanged: the surrogate is built at
+    // (M_X^2, Q^2) on the POMERON beam instead of (W^2, Q^2) on a nucleon
+    // one, and the frame map carries the result onto this X.  Nothing is
+    // appended for the target -- the record already names it.
+    //
+    // P_IP is SPACELIKE (P_IP^2 = t < 0, a few times 1e-2 GeV^2), which
+    // `dis_parton_fraction` handles by construction and the frame map never
+    // touches; only (q + P_IP)^2 enters.
+    p_n = pip->p;
+    id_n = 990;
+  } else if (const Particle* pn = ev.find(Role::StruckNucleon)) {
     p_n = pn->p;
     id_n = (pn->pdg == 2112) ? 2112 : 2212;
   } else if (const Particle* pc = ev.find(Role::StruckCluster)) {
@@ -432,7 +466,13 @@ bool PythiaBridge::Impl::run(Event& ev, Rng& rng) {
     implicit = true;
   }
   Inst* inst = inst_for(id_n);
-  if (!inst) { ++stats.n_failed; return false; }
+  if (!inst) {
+    // The only way here is a coherent event with `coherent_t2 == Off` (or a
+    // neutron with `with_neutron_instance = false`): no instance, no
+    // hadronization, the record stays at T0 and still conserves.
+    ++stats.n_failed;
+    return false;
+  }
 
   // ---- physical invariants -------------------------------------------
   const Vec4 q = k - kp;
@@ -441,7 +481,32 @@ bool PythiaBridge::Impl::run(Event& ev, Rng& rng) {
   const double w2 = h_want.m2();
   if (!(q2 > 0.0) || !(w2 > 0.0)) { ++stats.n_failed; return false; }
   const double w = std::sqrt(w2);
-  if (w < inst->m_a + 0.15) { ++stats.n_failed; return false; }
+  // The POMERON instance needs a compensated surrogate target.  PYTHIA
+  // reconstructs beam B (the electron) at its PHYSICAL mass even though the
+  // surrogate hands it over exactly massless, and on a MESON-LIKE beam A
+  // (the single-antiquark Pomeron remnant, with no longitudinal freedom) the
+  // record closes on the lepton side's MASSIVE light-cone minus: every event
+  // comes back short by exactly
+  //     Delta(E - pz) = -m_e^2 / (2 E_e)
+  // on the hadronic system, i.e. an invariant-mass-squared deficit
+  //     Delta(m^2) = -(m_e^2 / (2 E_e)) * (E_h + pz_h)
+  //                = -(m_e^2 / (2 E_e)) * (2 E_A - Q^2 / (2 E_e)).
+  // Measured on 300 coherent events at config 1: -3.896e-6 GeV^2, CONSTANT
+  // to 0.15 % across all M_X and matching this formula to 4 significant
+  // digits (the residual spread is its Q^2 term).  A BARYON beam absorbs the
+  // same discrepancy in its composite remnant (nucleon-branch residual
+  // ~1e-12, no compensation needed).  So on the id 990 branch the surrogate
+  // is built at w2 + |Delta(m^2)| while the rescale below still targets the
+  // PHYSICAL w: PYTHIA's delivered system then lands on w^2 to ~1e-12
+  // instead of carrying a fixed absolute deficit that near-threshold
+  // (M_X ~ 1.2 GeV, few heavy hadrons) kinematics amplify into
+  // |lambda - 1| ~ 6e-6.
+  double w2_sur = w2;
+  if (id_n == 990) {
+    const double me = inst->py->particleData.m0(11);
+    w2_sur += (me * me / (2.0 * e_e)) * (2.0 * inst->e_a - q2 / (2.0 * e_e));
+  }
+  if (std::sqrt(w2_sur) < inst->m_a + 0.15) { ++stats.n_failed; return false; }
   // A first, massless-quark solve, only to reject kinematics with no root at
   // all; it is redone with the chosen quark's mass once the flavour is known.
   double xi_p = 0.0;
@@ -451,7 +516,7 @@ bool PythiaBridge::Impl::run(Event& ev, Rng& rng) {
   const double e_a = inst->e_a, p_a = inst->p_a, m_a = inst->m_a;
   const Vec4 kb{e_e, 0.0, 0.0, -e_e};
   const double pdotk = e_e * (e_a + p_a);
-  const double btil = 0.5 * (w2 - m_a * m_a + q2);
+  const double btil = 0.5 * (w2_sur - m_a * m_a + q2);
   const double acc = q2 / (2.0 * e_e);
   const double etil = (pdotk - btil + p_a * acc) / (e_a + p_a);
   const double kztil = acc - etil;
@@ -493,9 +558,10 @@ bool PythiaBridge::Impl::run(Event& ev, Rng& rng) {
   const double q2pdf = std::max(q2, opt.q2_pdf_min);
   int ids[10];
   double cum[10];
+  double wgt[10];
+  double eq2s[10];
   double zetas[10];
   int nfl = 0;
-  double tot = 0.0;
   auto offer = [&](int id) {
     const int a = std::abs(id);
     const double mq = (a == 4 || a == 5) ? inst->py->particleData.m0(a) : 0.0;
@@ -506,9 +572,9 @@ bool PythiaBridge::Impl::run(Event& ev, Rng& rng) {
     }
     const double eq = quark_charge(id);
     const double xf = inst->pdf->xf(id, z, q2pdf);
-    tot += eq * eq * std::max(0.0, xf);
     ids[nfl] = id;
-    cum[nfl] = tot;
+    eq2s[nfl] = eq * eq;
+    wgt[nfl] = eq * eq * std::max(0.0, xf);
     zetas[nfl] = z;
     ++nfl;
   };
@@ -516,7 +582,30 @@ bool PythiaBridge::Impl::run(Event& ev, Rng& rng) {
   if (opt.include_strange) { offer(3); offer(-3); }
   if (opt.include_charm) { offer(4); offer(-4); }
   if (opt.include_bottom) { offer(5); offer(-5); }
-  if (!(tot > 0.0)) { ++stats.n_failed; return false; }
+  double tot = 0.0;
+  for (int i = 0; i < nfl; ++i) tot += wgt[i];
+  if (!(tot > 0.0)) {
+    // The second trap of the coherent prototype: at Q^2 = 1, beta < 0.1 the
+    // LO Pomeron grid has LITERALLY NO QUARKS (gluon momentum fraction
+    // 1.000), so every e_q^2 x f_q weight is zero and the event would be
+    // vetoed for a bookkeeping reason rather than a physical one.  The
+    // `q2_pdf_min` floor above is the first line of defence; this is the
+    // second: fall back to the bare charge weights e_q^2, which is the
+    // flavour-democratic limit of the same formula.  PYTHIA's own backward
+    // evolution then still finds the gluon.  Counted, so a run sitting on the
+    // edge of the grid is visible.
+    if (id_n == 990 && nfl > 0) {
+      ++stats.n_pom_flavour_fallback;
+      for (int i = 0; i < nfl; ++i) { wgt[i] = eq2s[i]; tot += wgt[i]; }
+    } else {
+      ++stats.n_failed;
+      return false;
+    }
+  }
+  {
+    double acc_w = 0.0;
+    for (int i = 0; i < nfl; ++i) { acc_w += wgt[i]; cum[i] = acc_w; }
+  }
 
   // ---- hand it to PYTHIA, retrying with a new flavour on a veto ------
   const double spin_e = (ev.spin.lam_e != 0) ? static_cast<double>(ev.spin.lam_e)
@@ -614,10 +703,14 @@ bool PythiaBridge::Impl::run(Event& ev, Rng& rng) {
 
   // ---- map the hadronic system onto the physical one -----------------
   // The surrogate and the physical event share (W^2, Q^2), so this is a pure
-  // Lorentz transformation up to the O(1e-5) wobble PYTHIA introduces via
-  // LesHouches:matchInOut and primordial kT; the residual is taken out by a
-  // common momentum rescale in the rest frame, which leaves every mass and
-  // every charge untouched.
+  // Lorentz transformation up to PYTHIA-side bookkeeping residuals; a common
+  // momentum rescale in the rest frame takes those out, leaving every mass
+  // and every charge untouched.  On the NUCLEON instances the residual is
+  // the numerical floor (measured max |lambda - 1| ~ 1e-13); on the POMERON
+  // instance it would be the constant electron-beam-mass deficit documented
+  // at the w2_sur compensation above -- amplified near the M_X floor, where
+  // d(Sum E)/d lambda = Sum p_i^2/E_i is small -- which is exactly why that
+  // compensation exists.  With it, the Pomeron branch sits at ~1e-11 too.
   const Vec4 q_pyth = kb - from_p8(pev[i_lep_final].p());
   const Triad tp = make_triad(h_pyth, q_pyth, kb);
   const Triad tw = make_triad(h_want, q, k);
@@ -692,7 +785,9 @@ bool PythiaBridge::Impl::run(Event& ev, Rng& rng) {
   xi_pythia = zeta;
   xi_phys = xi_p;
   quark_id = id_q;
-  if (id_n == 2212) ++stats.n_proton; else ++stats.n_neutron;
+  if (id_n == 990) ++stats.n_pomeron;
+  else if (id_n == 2212) ++stats.n_proton;
+  else ++stats.n_neutron;
   stats.sum_w2 += w2;
   ++stats.n_ok;
   return true;
@@ -716,6 +811,14 @@ PythiaBridge::PythiaBridge(const BeamConfig& beams, PythiaBridgeOptions opt)
   impl_->engine = std::make_shared<RngEngine>(impl_->opt.seed);
   impl_->build(impl_->proton, 2212);
   if (impl_->opt.with_neutron_instance) impl_->build(impl_->neutron, 2112);
+  // `applied_settings()` returns the LAST-BUILT instance's list.  The
+  // Pomeron instance is built last so that, when it exists (the default),
+  // the list is the fullest one -- the nucleon settings plus the two
+  // `PDF:Pom*` lines.  With `coherent_t2 == Off` the list is the last
+  // nucleon instance's and carries no `PDF:Pom*` line, correctly: no
+  // instance those settings were applied to exists.
+  if (impl_->opt.coherent_t2 == CoherentT2::Pomeron)
+    impl_->build(impl_->pomeron, 990);
 }
 
 PythiaBridge::~PythiaBridge() = default;

@@ -50,13 +50,31 @@ inline constexpr double COHERENT_T_MAX_DEFAULT = 0.2;
 
 /// Smallest diffractive mass M_X of the coherent channel [GeV].
 ///
-/// 1.0 GeV: above the vector-meson region (rho 0.775, omega 0.783, phi 1.019
-/// are exclusive channels this inclusive-diffractive scenario does not
-/// describe) and above the two-pion threshold by a wide margin, so every
-/// event carries a hadronic system PYTHIA could in principle fragment.  It is
-/// a SCENARIO cut, not a measured threshold, and it is the knob
-/// `CoherentXpomModel::m_x_min`.
-inline constexpr double COHERENT_MX_MIN_DEFAULT = 1.0;
+/// **1.2 since 2026-08-30, raised from 1.0 by the T2 coherent tier.**  The
+/// number is now a MEASURED one, not only a scenario choice: the coherent T2
+/// path (docs/PYTHIA_BRIDGE.md sec. 12) hands the gamma*-Pomeron system to
+/// PYTHIA as an ordinary DIS-like string, and PYTHIA's own hadronization
+/// vetoes it when there is not enough mass to make two hadrons out of the
+/// struck quark and the Pomeron remnant antiquark.  The veto rate measured on
+/// the prototype (Q^2 = 5 GeV^2, 2000 events per point, PomSet 6) is
+///
+///     M_X   0.8    1.0    1.2    1.4    >= 1.5
+///     veto  0.75   0.29   0.06   0.00   0.00
+///
+/// so 1.2 is where the channel starts costing essentially nothing and 1.4 is
+/// where it costs exactly nothing.  1.2 keeps the rate and leaves the
+/// residual few-% veto visible in `PythiaBridgeStats::n_failed` rather than
+/// hiding it.
+///
+/// Below it NOTHING IS GENERATED: the coherent channel simply carries no rate
+/// there.  That window (M_X < 1.2, i.e. the rho 0.775 / omega 0.783 /
+/// phi 1.019 region) is the EXCLUSIVE VECTOR-MESON channel -- a genuinely
+/// different process with its own t-slope, spin-density matrix and decay,
+/// not a low-mass limit of this one.  It is Phase 2
+/// (docs/open_items/code_designs.md sec. 1, option (c)).
+///
+/// It stays the knob `CoherentXpomModel::m_x_min`.
+inline constexpr double COHERENT_MX_MIN_DEFAULT = 1.2;
 
 /// Coherent |F(t)|^2 t-slope B [GeV^-2] for a Gaussian density:
 /// F(t) = exp(-R_rms^2 |t|/6) -> |F|^2 = exp(-B|t|), B = R_rms^2/3.

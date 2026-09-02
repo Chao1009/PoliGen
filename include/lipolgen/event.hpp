@@ -32,6 +32,7 @@ enum class Role : std::uint8_t {
   HadronicX,        // T0 pseudo-particle carrying the whole hadronic final state
   Hadron,           // T2 PYTHIA final-state particle
   IntactRecoil,     // coherent channel: the ground-state nucleus
+  Pomeron,          // coherent channel: P_IP = P_ion - P_recoil, the T2 target
   Other
 };
 

@@ -140,6 +140,22 @@ enum class NucleonChoice : std::uint8_t {
   Neutron
 };
 
+/// What the bridge does with a COHERENT event -- one carrying a
+/// `Role::Pomeron` particle written by `Pipeline::make_coherent`.
+enum class CoherentT2 : std::uint8_t {
+  /// THE DEFAULT.  Build a third PYTHIA instance on a POMERON beam
+  /// (`Beams:idA = 990`) and run the gamma*-Pomeron system through exactly
+  /// the same surrogate + Lorentz map as the gamma*-nucleon one.
+  /// docs/PYTHIA_BRIDGE.md sec. 12.
+  Pomeron,
+  /// Do not build the instance; `hadronize()` returns false on a coherent
+  /// event and leaves the record at T0 (the `Role::HadronicX`
+  /// pseudo-particle stays `Status::Final` and still carries the whole
+  /// hadronic system, so the record still conserves).  Saves the third
+  /// `init()` for a run that never touches the coherent channel.
+  Off
+};
+
 struct PythiaBridgeOptions {
   /// PYTHIA's own `Random:seed` (used only for the fallback stream: the
   /// per-event randomness is driven by the `Rng` handed to `hadronize`).
@@ -179,6 +195,28 @@ struct PythiaBridgeOptions {
   /// the initialisation cost when only protons are hadronized.
   bool with_neutron_instance = true;
 
+  // --- the coherent (gamma*-Pomeron) tier -------------------------------
+
+  /// Whether the third, POMERON-beam instance is built at all.
+  CoherentT2 coherent_t2 = CoherentT2::Pomeron;
+
+  /// PYTHIA's `PDF:PomSet`, the Pomeron parton densities the flavour sampler
+  /// reads and PYTHIA's backward evolution starts from.  **6 is PYTHIA
+  /// 8.317's own default** (H1 2006 Fit B, LO) and the only LO
+  /// Q^2-dependent set in the list, which is what a Monte Carlo wants; 1 is
+  /// the Q^2-independent toy, 3/4/5/7/8 are NLO fits.  Exposed because it is
+  /// the single largest model choice of the coherent T2 tier: at
+  /// M_X = 5 GeV, Q^2 = 5 GeV^2 the Pomeron is 87 % gluon on set 6, and a
+  /// different set moves both that fraction and the beta shape.
+  int pom_set = 6;
+  /// PYTHIA's `PDF:PomRescale`, the overall normalization of the H1/ACTW
+  /// Pomeron sets (their momentum sum is arbitrary).  It cancels out of the
+  /// bridge's flavour draw, which is normalized per event, and PYTHIA uses it
+  /// only inside its own diffractive machinery -- so this is here for
+  /// completeness and reproducibility, not because it changes anything the
+  /// bridge produces.  1.0 is PYTHIA's default.
+  double pom_rescale = 1.0;
+
   /// Default choice of the struck nucleon when the event carries no
   /// `Role::StruckNucleon`.
   ///
@@ -205,6 +243,14 @@ struct PythiaBridgeStats {
   /// `pythia.next()` retry every time it was picked.
   std::uint64_t n_flavour_dropped = 0;
   std::uint64_t n_proton = 0, n_neutron = 0;
+  /// Coherent events hadronized off the Pomeron beam (`Role::Pomeron`).
+  std::uint64_t n_pomeron = 0;
+  /// Coherent events whose flavour weights e_q^2 x f_q(beta, Q^2) all came
+  /// out zero because the LO Pomeron grid has literally no quarks there
+  /// (gluon fraction 1.000 at Q^2 = 1, beta < 0.1), so the sampler fell back
+  /// to the bare charge weights e_q^2.  Non-zero means the run is sitting on
+  /// the edge of the grid; raise `q2_pdf_min`.
+  std::uint64_t n_pom_flavour_fallback = 0;
   /// Events that took the DEPRECATED `Role::StruckCluster` branch -- i.e.
   /// arrived with no `Role::StruckNucleon`.  Non-zero on a `Pipeline` run
   /// means the run is at `Tier::T0`, and the whole record does not conserve
@@ -254,8 +300,9 @@ class PythiaBridge {
   /// Shower and hadronize the event in place.
   ///
   /// Reads: `Role::ScatteredElectron` (mandatory), `Role::BeamElectron`
-  /// (mandatory), and a target -- `Role::StruckNucleon`, else
-  /// `Role::StruckCluster`, else the inclusive fallback P_ion/A.
+  /// (mandatory), and a target -- `Role::Pomeron` (the coherent channel),
+  /// else `Role::StruckNucleon`, else `Role::StruckCluster`, else the
+  /// inclusive fallback P_ion/A.
   /// `Role::Spectator` / `Role::PartnerSpectator` particles are never
   /// touched and never recoil-corrected (the BeAGLE light-nucleus rule).
   ///
@@ -271,7 +318,8 @@ class PythiaBridge {
   /// The hadrons produced by the last successful `hadronize` call.
   const std::vector<Particle>& last_hadrons() const;
 
-  /// The struck-nucleon four-vector and PDG id used by the last call.
+  /// The target four-vector and PDG id used by the last call: the struck
+  /// nucleon (2212/2112), or the Pomeron (990) on a coherent event.
   const Vec4& last_struck_nucleon() const;
   int last_struck_nucleon_pdg() const;
   /// The light-cone fraction handed to PYTHIA and the physical xi of the

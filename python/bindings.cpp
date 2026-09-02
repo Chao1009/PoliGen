@@ -662,6 +662,7 @@ static void bind_event(py::module_& m) {
       .value("HadronicX", Role::HadronicX)
       .value("Hadron", Role::Hadron)
       .value("IntactRecoil", Role::IntactRecoil)
+      .value("Pomeron", Role::Pomeron)
       .value("Other", Role::Other);
 
   py::enum_<Channel>(m, "Channel")
@@ -2157,7 +2158,6 @@ static void bind_pipeline(py::module_& m) {
       .def_readwrite("coherent", &PipelineConfig::coherent)
       .def_readwrite("coherent_t_max", &PipelineConfig::coherent_t_max)
       .def_readwrite("coherent_xpom", &PipelineConfig::coherent_xpom)
-      .def_readwrite("hadronize_coherent", &PipelineConfig::hadronize_coherent)
       .def_readwrite("apply_optics_lumi_fraction",
                      &PipelineConfig::apply_optics_lumi_fraction)
       .def_readwrite("coherent_weighted_azimuth",
@@ -2338,6 +2338,10 @@ static void bind_io(py::module_& m) {
   m.def("hfs_sigma_empz_exact", &hfs_sigma_empz_exact, py::arg("k"),
         py::arg("p_n"), py::arg("k_out"));
 
+  py::enum_<CoherentT2>(m, "CoherentT2")
+      .value("Pomeron", CoherentT2::Pomeron)
+      .value("Off", CoherentT2::Off);
+
   py::enum_<NucleonChoice>(m, "NucleonChoice")
       .value("ByZN", NucleonChoice::ByZN)
       .value("Proton", NucleonChoice::Proton)
@@ -2356,6 +2360,17 @@ static void bind_io(py::module_& m) {
       .def_readwrite("q2_pdf_min", &PythiaBridgeOptions::q2_pdf_min)
       .def_readwrite("with_neutron_instance",
                      &PythiaBridgeOptions::with_neutron_instance)
+      .def_readwrite("coherent_t2", &PythiaBridgeOptions::coherent_t2,
+                     "CoherentT2.Pomeron (default) builds the third, "
+                     "Pomeron-beam (id 990) PYTHIA instance that hadronizes "
+                     "the coherent channel; CoherentT2.Off skips it and "
+                     "hadronize() then returns False on a coherent event.")
+      .def_readwrite("pom_set", &PythiaBridgeOptions::pom_set,
+                     "PYTHIA PDF:PomSet -- the Pomeron parton densities "
+                     "(6 = H1 2006 Fit B LO, PYTHIA's own default).")
+      .def_readwrite("pom_rescale", &PythiaBridgeOptions::pom_rescale,
+                     "PYTHIA PDF:PomRescale; cancels out of the bridge's own "
+                     "per-event flavour draw.")
       .def_readwrite("nucleon_choice", &PythiaBridgeOptions::nucleon_choice);
 
   py::class_<PythiaBridgeStats>(m, "PythiaBridgeStats")
@@ -2366,6 +2381,13 @@ static void bind_io(py::module_& m) {
       .def_readonly("n_no_surrogate", &PythiaBridgeStats::n_no_surrogate)
       .def_readonly("n_proton", &PythiaBridgeStats::n_proton)
       .def_readonly("n_neutron", &PythiaBridgeStats::n_neutron)
+      .def_readonly("n_pomeron", &PythiaBridgeStats::n_pomeron,
+                    "Coherent events hadronized off the Pomeron beam.")
+      .def_readonly("n_pom_flavour_fallback",
+                    &PythiaBridgeStats::n_pom_flavour_fallback,
+                    "Coherent events whose Pomeron-PDF flavour weights were "
+                    "all zero (no quarks on the LO grid) and fell back to the "
+                    "bare e_q^2 charge weights.")
       .def_readonly("n_flavour_dropped",
                     &PythiaBridgeStats::n_flavour_dropped)
       .def_readonly("n_cluster_fallback",

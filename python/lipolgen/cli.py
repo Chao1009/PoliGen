@@ -102,11 +102,21 @@ def build_parser():
                    help="generation threads (forced to 1 with --hadronize)")
     p.add_argument("--hadronize", action="store_true", default=None,
                    help="run the T2 (PYTHIA 8) tier on every event")
-    p.add_argument("--hadronize-coherent", action="store_true", default=None,
-                   help="allow --hadronize on the coherent channel, which the "
-                        "core refuses by default (C4): PythiaBridge v0 has no "
-                        "coherent-diffractive target and the hadronized event "
-                        "loses four-momentum and charge")
+    p.add_argument("--coherent-t2", choices=("pomeron", "off"), default=None,
+                   help="what --hadronize does with a coherent event: "
+                        "'pomeron' (default) hadronizes the gamma*-Pomeron "
+                        "system on a PYTHIA Pomeron beam (Beams:idA = 990); "
+                        "'off' skips the third PYTHIA instance and leaves "
+                        "coherent records at T0 (still conserving)")
+    p.add_argument("--pom-set", type=int, default=None,
+                   help="PYTHIA PDF:PomSet, the Pomeron parton densities of "
+                        "the coherent T2 tier (6 = H1 2006 Fit B LO, "
+                        "PYTHIA's own default)")
+    p.add_argument("--pom-rescale", type=float, default=None,
+                   help="PYTHIA PDF:PomRescale, the overall Pomeron-PDF "
+                        "normalization (cancels out of the bridge's "
+                        "per-event flavour draw; recorded for "
+                        "reproducibility)")
     p.add_argument("--hepmc", default=None, help="HepMC3 Asciiv3 output file")
     p.add_argument("--npz", default=None, help="columnar .npz output file")
     p.add_argument("--hfs-npz", default=None,
@@ -120,10 +130,11 @@ DEFAULTS = dict(isotope="6Li", config=1, channel="inclusive",
                 plan="tensor-thirds", events=100000, lumi=0.0, seed=20260713,
                 run=1, optics="yr-high-acceptance", pz=0.7, pzz=0.6, pe=0.7,
                 rel_lumi_offset=0.0, nthreads=1, hadronize=False,
-                hadronize_coherent=False, quiet=False,
+                quiet=False,
                 hepmc=None, npz=None, hfs_npz=None, cluster_beta=None,
-                p_d=None, cluster_wave="hulthen", inclusive_b1=False,
-                coherent=None)
+                p_d=None, cluster_wave="hulthen",
+                coherent_t2="pomeron", pom_set=6, pom_rescale=1.0,
+                inclusive_b1=False, coherent=None)
 
 
 def resolve(argv=None):
@@ -164,8 +175,7 @@ def main(argv=None):
                       optics=opts["optics"], cluster_beta=opts["cluster_beta"],
                       p_d=opts["p_d"], cluster_wave=opts["cluster_wave"],
                       inclusive_b1=opts["inclusive_b1"],
-                      coherent=opts["coherent"],
-                      hadronize_coherent=opts["hadronize_coherent"])
+                      coherent=opts["coherent"])
     plan = make_plan(opts["plan"], j=ion_spin(cfg.isotope), pz=opts["pz"],
                      pzz=opts["pzz"], pe=opts["pe"],
                      rel_lumi_offset=opts["rel_lumi_offset"])
@@ -177,7 +187,12 @@ def main(argv=None):
             raise SystemExit("this build has no PYTHIA 8 tier")
         beams = _l.default_configs(cfg.isotope)[cfg.beam_config]
         t0 = time.time()
-        bridge = _l.PythiaBridge(beams, _l.PythiaBridgeOptions())
+        popts = _l.PythiaBridgeOptions()
+        popts.coherent_t2 = (_l.CoherentT2.Off if opts["coherent_t2"] == "off"
+                             else _l.CoherentT2.Pomeron)
+        popts.pom_set = int(opts["pom_set"])
+        popts.pom_rescale = float(opts["pom_rescale"])
+        bridge = _l.PythiaBridge(beams, popts)
         say("PYTHIA 8 bridge ready in %.1f s" % (time.time() - t0))
         _l.set_pythia_hadronizer(cfg, bridge)
         nthreads = 1                      # PythiaBridge is not re-entrant

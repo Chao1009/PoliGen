@@ -995,11 +995,14 @@ TEST_CASE("coherent: the azimuthal weight is positive over the whole t range") {
   CHECK(t_hi <= COHERENT_T_MAX_DEFAULT);
 }
 
-// C4.  `Pipeline::event` called `cfg_.hadronizer` on EVERY channel, coherent
-// included.  A coherent event carries neither a struck nucleon nor a struck
-// cluster, so PythiaBridge falls through to its inclusive branch and invents
-// a nucleon that is not in the record's balance.
-TEST_CASE("pipeline: the hadronizer hook is refused on the coherent channel") {
+// C4, CLOSED 2026-08-30.  `Pipeline::event` calls `cfg_.hadronizer` on EVERY
+// channel, coherent included -- and that is now correct: `make_coherent`
+// writes the POMERON P_IP = P_ion - P_recoil (`Role::Pomeron`), which is the
+// coherent channel's own T2 target, so the bridge no longer falls through to
+// its inclusive branch.  The refusal and the `hadronize_coherent` escape
+// hatch are gone with the fallback they gated.
+TEST_CASE("pipeline: the hadronizer hook fires on every channel, coherent "
+          "included (C4 closed)") {
   struct Row { PipelineChannel ch; const char* iso; int plan; bool coherent; };
   const Row rows[] = {
       {PipelineChannel::Inclusive, "6Li", 0, false},
@@ -1021,19 +1024,15 @@ TEST_CASE("pipeline: the hadronizer hook is refused on the coherent channel") {
     cfg.hadronizer = [&calls](Event&, Rng&) { ++calls; };
 
     if (row.coherent) {
-      // refused at configuration time, before a single event is built
-      CHECK_THROWS_AS(Pipeline(cfg, tensor_thirds_plan(kPZ, kPZZ)),
-                      std::runtime_error);
-      CHECK(calls == 0);
-      // ... and the escape hatch is explicit and documented
-      cfg.hadronize_coherent = true;
-      const Pipeline opt_in(cfg, tensor_thirds_plan(kPZ, kPZZ));
-      opt_in.for_each([](const Event&) {});
-      CHECK(calls == opt_in.size());
+      // C4, closed 2026-08-30: the coherent channel names its own T2 target
+      // (Role::Pomeron), so a hadronizer on it is an ordinary configuration.
+      const Pipeline coh(cfg, tensor_thirds_plan(kPZ, kPZZ));
+      coh.for_each([](const Event&) {});
+      CHECK(calls == coh.size());
+      CHECK(calls > 0);
       // no hook at all is always fine
       PipelineConfig plain = cfg;
       plain.hadronizer = nullptr;
-      plain.hadronize_coherent = false;
       CHECK_NOTHROW(Pipeline(plain, tensor_thirds_plan(kPZ, kPZZ)));
     } else {
       const Pipeline p(cfg, tensor_thirds_plan(kPZ, kPZZ));

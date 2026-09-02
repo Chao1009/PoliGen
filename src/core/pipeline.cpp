@@ -318,18 +318,6 @@ void PipelineConfig::validate() const {
   if (!(lumi_pb > 0.0) && n_events == 0) {
     throw std::runtime_error("PipelineConfig: set either lumi_pb or n_events");
   }
-  if (hadronizer && channel == PipelineChannel::CoherentLi6 &&
-      !hadronize_coherent) {
-    throw std::runtime_error(
-        "PipelineConfig: a hadronizer on the COHERENT channel is refused "
-        "(C4).  A coherent event carries no struck nucleon and no struck "
-        "cluster, so PythiaBridge v0 falls through to its inclusive branch "
-        "and invents a nucleon at rest in the ion frame; that nucleon is not "
-        "in the record's balance, so the hadronized event loses "
-        "P_ion (1 - 1/A) of four-momentum and Z - 1 of charge.  Set "
-        "hadronize_coherent to reproduce that known-broken behaviour "
-        "deliberately.");
-  }
   const std::string want = channel_isotope(channel);
   if (!want.empty() && want != isotope) {
     throw std::runtime_error(std::string("PipelineConfig: channel ") +
@@ -963,9 +951,37 @@ void Pipeline::make_coherent(std::size_t k, std::uint64_t local,
   const int i_rec = find_role(ev, Role::IntactRecoil);
   const Particle& rec = ev.particles[static_cast<std::size_t>(i_rec)];
   fill_fragment_lab(ev, rec, beams_.ion.A, beams_.ion_momentum_per_nucleon);
+  // COPIED, not aliased: the push_back below may reallocate `ev.particles`
+  // and leave `rec` dangling.
+  const Vec4 p_rec = rec.p;
+
+  // 4. the POMERON, P_IP = P_ion - P_recoil.  This is the T2 target of the
+  // coherent channel and the exact analogue of `Role::StruckNucleon` on the
+  // other channels: q + P_IP is the diffractive system X, so
+  // (q + P_IP)^2 = M_X^2 identically and `PythiaBridge` can run its ordinary
+  // (W^2, Q^2)-matched surrogate on a PYTHIA Pomeron beam (id 990) with
+  // W^2 -> M_X^2 (docs/PYTHIA_BRIDGE.md sec. 12).  Documentation-only,
+  // `Status::Intermediate`: it is not final state and never enters the
+  // whole-record sum.
+  //
+  // It is SPACELIKE -- P_IP^2 = t < 0 -- so its `mass` follows the virtual
+  // photon's convention above and is written NEGATIVE, -sqrt(|t|).
+  {
+    Particle ip;
+    ip.pdg = 990;
+    ip.status = Status::Intermediate;
+    ip.role = Role::Pomeron;
+    ip.p = beam_ion_ - p_rec;
+    ip.mass = -std::sqrt(std::max(-ip.p.m2(), 0.0));
+    ip.charge = 0.0;
+    ip.mother1 = 1;                       // the beam ion emitted it
+    ev.particles.push_back(ip);
+  }
+  const int i_pom = find_role(ev, Role::Pomeron);
+
   // WHOLE-NUCLEUS balance: X = k + P_ion - k' - P_recoil; the diffractive
   // system is neutral.
-  add_hadronic_x(ev, (beam_e_ + beam_ion_) - esc.p - rec.p, 0.0, 1);
+  add_hadronic_x(ev, (beam_e_ + beam_ion_) - esc.p - p_rec, 0.0, i_pom);
 }
 
 Vec4 Pipeline::gen_scattered_electron(double x, double y, double phi) const {

@@ -167,16 +167,41 @@ def test_coherent_xpom_model_is_invertible():
     assert all(x_pom * (1 - 1e-12) <= d <= xp.x_pom_max for d in draws)
 
 
-def test_a_hadronizer_on_the_coherent_channel_is_refused():
-    """C4: PythiaBridge v0 has no coherent-diffractive target, so the config
-    refuses the pair rather than losing four-momentum silently."""
+def test_a_hadronizer_on_the_coherent_channel_is_accepted():
+    """C4, closed 2026-08-30.  The coherent channel names its own T2 target
+    (`Role.Pomeron`, P_IP = P_ion - P_recoil), so a hadronizer on it is an
+    ordinary configuration -- no refusal, no `hadronize_coherent` escape
+    hatch, and no `PipelineConfig` attribute of that name any more."""
     cfg = lg.make_config(channel="coherent", events=10)
-    assert cfg.hadronize_coherent is False
+    assert not hasattr(cfg, "hadronize_coherent")
     cfg.hadronizer = lambda ev, rng: None
-    with pytest.raises(RuntimeError, match="COHERENT"):
-        cfg.validate()
-    cfg.hadronize_coherent = True          # the deliberate escape hatch
     cfg.validate()
+
+
+def test_the_coherent_record_carries_a_pomeron():
+    cfg = lg.make_config(channel="coherent", events=8)
+    p = lg.Pipeline(cfg, lg.tensor_thirds_plan(0.7, 0.6))
+    ev = p.event(0)
+    ip = [q for q in ev.particles if q.role == lg.Role.Pomeron]
+    assert len(ip) == 1
+    assert ip[0].pdg == 990
+    assert ip[0].charge == 0.0
+    assert ip[0].status == lg.Status.Intermediate
+    rec = [q for q in ev.particles if q.role == lg.Role.IntactRecoil][0]
+    ion = ev.particles[1]
+    for c in ("e", "px", "py", "pz"):
+        assert getattr(ip[0].p, c) == pytest.approx(
+            getattr(ion.p, c) - getattr(rec.p, c), abs=1e-9)
+
+
+@pytest.mark.skipif(not lg.HAVE_PYTHIA8, reason="no PYTHIA 8 tier")
+def test_the_coherent_t2_options_are_bound():
+    o = lg.PythiaBridgeOptions()
+    assert o.coherent_t2 == lg.CoherentT2.Pomeron
+    assert o.pom_set == 6
+    assert o.pom_rescale == 1.0
+    o.coherent_t2 = lg.CoherentT2.Off
+    assert o.coherent_t2 == lg.CoherentT2.Off
 
 
 def test_optics_luminosity_factor_is_reachable():

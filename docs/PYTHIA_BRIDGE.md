@@ -255,7 +255,8 @@ never touched — no recoil correction, the BeAGLE light-nucleus rule
 
 | the event contains | what the bridge uses |
 |---|---|
-| `Role::StruckNucleon` | its four-vector and pdg, as given (may be off shell and moving) — **the only branch a `Pipeline` event ever takes** |
+| `Role::Pomeron` | **checked first**: the coherent channel's T2 target, `P_IP = P_ion − P_recoil` on the POMERON beam instance (id 990) — §12 |
+| `Role::StruckNucleon` | its four-vector and pdg, as given (may be off shell and moving) — **the only branch a non-coherent `Pipeline` event ever takes** |
 | `Role::StruckCluster` | **DEPRECATED** (2026-08-30, superseded by the T1 tier).  `p_cluster/A_c` on shell, flavour `Z_c : N_c`, no Fermi smearing, and **nothing carries the rest of the cluster**, so the whole record does not conserve: 0.186 relative and one charge unit wrong on half the events.  Warns once per bridge and counts into `PythiaBridgeStats::n_cluster_fallback`.  `set_nucleon_in_cluster(...)` still overrides it. |
 | neither (inclusive T0) | a nucleon at rest in the ion rest frame, `p_N = P_ion/A`, on shell at the FREE `M_NUCLEON` (docs/CONVENTIONS.md).  Flavour `Z F2p : N F2n` by default (`NucleonChoice::ByStructureFunctions`), forced with `NucleonChoice::Proton/Neutron`, or replaced entirely with `set_nucleon_chooser(...)`. |
 
@@ -326,6 +327,12 @@ Print:quiet = on                    (verbosity 0 only)
 - `LesHouches:setLeptonMass = 0` keeps the outgoing lepton exactly massless as
   handed over; the default (1) reassigns `m_e` and shuffles the difference
   onto the struck quark.
+- **The POMERON instance (§12) additionally applies**
+  `PDF:PomSet = <pom_set>` and `PDF:PomRescale = <pom_rescale>` (defaults
+  6 / 1.0 — PYTHIA's own), before the user's `settings`.  They are not
+  applied on the nucleon instances, where they would be inert;
+  `applied_settings()` returns the last-built instance's list, which is the
+  Pomeron's (the fullest) whenever `coherent_t2 == CoherentT2::Pomeron`.
 - `Beams:allowMomentumSpread` is **not** used, for the reason in §1.
 - **No `PhaseSpace:*` setting is applied, and none would do anything.**  The
   hard process arrives through `LHAup`, so `PhaseSpace:Q2Min`,
@@ -447,4 +454,137 @@ test asserts only |ratio − 1| < 20 %.
 | `src/pythia/lhaup_dis.hpp` | internal: the `LHAup` subclass and the `RndmEngine` that routes PYTHIA's randomness through `lipolgen::Rng` |
 | `src/pythia/pythia_bridge.cpp` | the surrogate, the flavour sampler, the frame map |
 | `tests/test_pythia.cpp` | 7 doctest cases; the head-on convention, the ξ solve, 200 events each on p and n, a Fermi-moving off-shell target, determinism, the target-choice hooks, and the stock-PYTHIA multiplicity comparison |
+| `tests/test_t2.cpp` | the full Pipeline → bridge → HepMC3 chain per channel, including the coherent γ*–Pomeron cases of §12 |
 | `examples/hadronize_example.cpp` | N synthetic events → HepMC3 + timing + bookkeeping |
+
+---
+
+## 12. The coherent tier: a γ*–Pomeron beam (`Beams:idA = 990`)
+
+Since 2026-08-30 a **coherent** event — `e + ⁶Li → e′ + X + ⁶Li(g.s.)`,
+carrying a `Role::Pomeron` particle written by `Pipeline::make_coherent` — is
+hadronized by the same surrogate + frame map as everything else, on a
+**third PYTHIA instance** whose beam A is PYTHIA's Pomeron
+(`Beams:idA = 990`).  Design: `docs/open_items/code_designs.md` §1, option
+(a′); prototype `docs/open_items/prototypes/pom_dis.cc`.
+
+Why this works at all: PYTHIA's internal hard diffraction
+(`Diffraction:doHard`) cannot be driven externally and is structurally off
+for a virtual photon, but **990 is a legal user beam**: `BeamSetup.cc:869-875`
+counts it as a hadron, `BeamParticle.cc:178` gives it meson-like beam
+handling — so the beam remnant is a **single antiquark**, automatically
+colour- and charge-neutral against the struck quark — and `getPDFPtr(990)`
+returns a real Pomeron PDF.
+
+### The identification is exact, not an analogy
+
+| DIS bridge (§1–5) | coherent bridge |
+|---|---|
+| target `p_N`, id 2212/2112 | `P_IP = P_ion − P_recoil`, id **990** |
+| `W² = (q + p_N)²` | `M_X² = (q + P_IP)²` — exact, because `make_coherent` *solved* the recoil against this identity |
+| `ξ = x_Bj` | `ζ = β = Q²/(M_X² + Q²)` — **exact** (below) |
+| beam remnant = diquark | beam remnant = antiquark, neutral |
+
+`P_IP` is **spacelike** (`P_IP² = t < 0`, a few 10⁻² GeV²), which
+`dis_parton_fraction` handles by construction and the frame map never touches;
+only `(q + P_IP)²` enters.  Everything in §1–5 — the surrogate, the LHA
+record, the frame map, the conservation argument — carries over verbatim with
+`W² → M_X²`.
+
+**ζ = β exactly.**  PYTHIA's `m0(990) = 0`, so the surrogate Pomeron beam is
+massless and `P_A⁺ q̃⁻ = 2 q̃·P_A = M_X² + Q²` with no mass term; the massless
+mass-shell solve of §2 then gives `ζ = Q²/(M_X² + Q²) = β` identically
+(verified numerically to 10 digits).  Each heavy flavour is still weighted
+and produced **at its own** `ζ_q = (Q² + m_q²)/(M_X² + Q²)` (P2 of §3).
+
+### The flavour draw, and the two silent traps
+
+Flavour ∝ `e_q² · x f_q(ζ_q, max(Q², q2_pdf_min))` on PYTHIA's own Pomeron
+PDF (`PDF:PomSet`, default **6** = H1 2006 Fit B LO — PYTHIA's own default,
+and the only LO Q²-dependent set; `PDF:PomRescale` is exposed for
+completeness but cancels out of the per-event-normalized draw).
+`PythiaBridgeOptions::pom_set` / `pom_rescale`.  Two traps, both silent, both
+found on the prototype:
+
+1. **Colour-tag orientation follows the initiator's sign**: an incoming
+   antiquark needs `(0, tag)`, not `(tag, 0)`.  Wrong orientation is a ~50 %
+   silent veto rate.  `LhaupDis` was already sign-correct.
+2. **At Q² ≈ 1 GeV², β < 0.1 the LO Pomeron grid has literally no quarks**
+   (gluon momentum fraction 1.000), so every `e_q² x f_q` weight is zero and
+   the event would be vetoed for a bookkeeping reason.  The `q2_pdf_min`
+   floor is the first line of defence; the second is a fallback to the bare
+   charge weights `e_q²` (the flavour-democratic limit of the same formula) —
+   PYTHIA's backward evolution then still finds the gluon.  Counted in
+   `PythiaBridgeStats::n_pom_flavour_fallback`; non-zero means the run sits
+   on the edge of the grid.
+
+### The M_X floor and the veto table
+
+PYTHIA's hadronization vetoes a γ*–Pomeron string with too little mass for
+two hadrons.  Measured on the prototype (Q² = 5 GeV², 2000 events/point,
+PomSet 6):
+
+    M_X    0.8    1.0    1.2    1.4    ≥ 1.5
+    veto   0.75   0.29   0.06   0.00   0.00
+
+hence `COHERENT_MX_MIN_DEFAULT` was **raised from 1.0 to 1.2 GeV**
+(`coherent.hpp`); the region below belongs to exclusive vector mesons, a
+separate channel.  The T2 chain test re-measures the table per run and pins
+veto = 0 at `M_X ≥ 1.4`.
+
+### `CoherentT2::{Pomeron, Off}`
+
+`PythiaBridgeOptions::coherent_t2 = CoherentT2::Pomeron` (default) builds the
+third instance; `CoherentT2::Off` skips its `init()` and `hadronize()` then
+returns **false** on a coherent event, leaving the record at T0 — the
+`Role::HadronicX` pseudo-particle stays `Status::Final` and carries the whole
+system, so the record still conserves exactly.  Turning the tier off costs
+fidelity, never conservation.  On a successful coherent `hadronize()` the
+`HadronicX` is demoted to `Status::Intermediate` as usual, the
+`Role::IntactRecoil` nucleus is never touched, and CLI twins exist as
+`--coherent-t2 pomeron|off`, `--pom-set`, `--pom-rescale`.
+
+### The electron-beam-mass shift, and the compensated surrogate
+
+One PYTHIA-side bookkeeping subtlety is specific to the meson-like beam.
+PYTHIA reconstructs beam B (the electron) at its **physical mass** even
+though the surrogate hands it over exactly massless
+(`LesHouches:setLeptonMass = 0` keeps the *outgoing* lepton massless, not the
+beam).  A **baryon** beam A absorbs the discrepancy in its composite remnant
+(residual ~10⁻¹²), but the meson-like Pomeron beam — a single-antiquark
+remnant with no longitudinal freedom — closes the record on the lepton side's
+massive light-cone minus instead: every event comes back short by exactly
+
+    Δ(E − p_z) = −m_e²/(2E_e)   ⇒   Δ(m²) = −(m_e²/(2E_e)) (2E_A − Q²/(2E_e))
+
+on the hadronic system.  Measured: −3.896 × 10⁻⁶ GeV², **constant to 0.15 %
+over 300 events**, matching the formula to 4 significant digits.  Harmless
+for conservation (the frame map's rescale λ repairs it exactly), but near the
+1.2 GeV M_X floor the repair is amplified — `d(ΣE)/dλ = Σp_i²/E_i` is small
+for a few soft heavy hadrons — to |λ − 1| ≈ 6 × 10⁻⁶.  **The fix** (in
+`Impl::run`): on the id 990 branch the surrogate is built at the compensated
+target `W²_sur = M_X² + |Δ(m²)|` while the rescale still targets the physical
+`M_X`; PYTHIA's delivered system then lands on `M_X²` to ~10⁻¹² and the
+measured coherent `max_rescale_dev` is **6.7 × 10⁻¹²** — the same 10⁻⁶
+tolerance as the nucleon tiers, with five orders of headroom.  (The
+alternative — `11:m0 = 0` in the Pomeron instance's particle data — also
+removes the offset but would touch every e⁺e⁻-producing decay in the
+hadronic system, e.g. π⁰ Dalitz, so the surrogate-side compensation is the
+one implemented; the constant encodes PYTHIA 8.317's observed closure rule
+and is re-measured by the test on every run.)
+
+### Measured, 300 coherent events at config 1 (10 × 99.5 GeV/u)
+
+| quantity | value |
+|---|---|
+| hadronized | 300/300 |
+| worst whole-nucleus 4-momentum residual (rel) | 4.8 × 10⁻¹⁴ |
+| worst charge residual | 0 (exact) |
+| worst \|M_had − M_X\|/M_X | 2.3 × 10⁻¹¹ |
+| worst \|λ − 1\| | 6.7 × 10⁻¹² |
+| veto at M_X ≥ 1.4 GeV | 0 |
+| intact recoil | bit-identical before/after |
+
+The chain is deterministic (byte-identical HepMC3 across identical-seed
+runs), and the pdg-990 Pomeron line survives the HepMC3 round trip at status
+3 with mass `−√|t|` (the virtual photon's spacelike-mass convention).

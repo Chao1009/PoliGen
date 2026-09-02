@@ -40,7 +40,8 @@ the order each tier appended them.
 | `VirtualPhoton` | `Intermediate` (3) | T0 | documentation only (optional) |
 | `Spectator` | `Final` (1) | T0 (tagged) | the tagged cluster; outgoing, **never read or written by the bridge** -- bit-identical before/after `hadronize()` |
 | `PartnerSpectator` | `Final` (1) | **T1 (tagged)** | the struck cluster's non-struck nucleon(s) / bound remnant; same "never touched" guarantee |
-| `IntactRecoil` | `Final` (1) | T0 (coherent) | outgoing; same "never touched" guarantee |
+| `IntactRecoil` | `Final` (1) | T0 (coherent) | outgoing; same "never touched" guarantee -- bit-identical through a coherent `hadronize()` |
+| `Pomeron` (pdg 990) | `Intermediate` (3) | T0 (coherent) | documentation: the coherent channel's T2 target, `P_IP = P_ion - P_recoil`, spacelike with mass written `-sqrt|t|`; `hadronize()` reads it FIRST and runs the gamma*-Pomeron tier on it (`docs/PYTHIA_BRIDGE.md` §12) |
 | `HadronicX` (pdg 92) | `Final` -> **demoted to `Intermediate` (3) by `hadronize()`** | T0 | documentation only once real hadrons exist, so a status-1 sum is never double-counted |
 | `StruckNucleon` | `Intermediate` (3) | T0 (inclusive) / **T1 (tagged)**, or appended by `hadronize()` when the target was implicit | documentation: what nucleon 4-vector/pdg actually went into PYTHIA.  Off shell on a tagged event (it is P_X minus the partners) and carrying a +-1 `pol` label |
 | `StruckCluster` | `Intermediate` (3) | T0 (tagged) | documentation; at T1 it equals the struck nucleon plus every partner spectator, exactly |
@@ -177,27 +178,31 @@ and `tools/fullsim/README.md` (read-only references for this file):
      SHAPE of the partner spectra.
    * **No tensor structure in the triton breakup** (it is isotropic), where
      the deuteron's D wave is fully correlated with m_S.
-3. **Coherent: PythiaBridge v0 has no coherent-diffractive target at all.**
-   A coherent event carries neither `Role::StruckNucleon` nor
-   `Role::StruckCluster` (the diffractive system X is not a struck
-   nucleon), so `hadronize()` always takes the plain inclusive fallback --
-   a nucleon at rest in the ion frame -- which has nothing to do with the
-   true (small, largely transverse) momentum transfer `P_ion - P_recoil`.
-   The call succeeds mechanically (no crash, no excess vetoes: 300/300 in
-   the measurement here) and the bridge's own internal HFS identities hold
-   to the numerical floor (they are exact relative to *whatever* target it
-   used), but whole-record momentum is off by **~16% and charge is wrong on
-   about half of events**. Unlike the tagged case, **no public hook lets a
-   caller supply the coherent target's four-vector** (`StruckNucleon`
-   resolution is the bridge's first-priority branch, but nothing in
-   `Pipeline::make_coherent` writes one, and there is no
-   `NucleonInCoherent`-shaped extension point). This is reported here
-   rather than worked around: it needs either a new public hook on
-   `PythiaBridge` or, more fundamentally, a diffractive-dissociation model
-   (Pomeron-exchange PYTHIA machinery, not the DIS-surrogate this bridge
-   implements) -- both out of this file's scope (`src/` is owned
-   elsewhere). `generate_full --channel coherent` prints the residual
-   plainly rather than hiding it.
+3. **CLOSED (2026-08-30) -- coherent T2.** The gap named in the previous
+   revision ("PythiaBridge v0 has no coherent-diffractive target at all";
+   the inclusive fallback broke whole-record momentum by ~16% and charge on
+   about half of events) is closed by the **gamma*-Pomeron tier**
+   (`docs/PYTHIA_BRIDGE.md` §12, design `docs/open_items/code_designs.md`
+   §1 option a'): `Pipeline::make_coherent` writes the T2 target itself --
+   `Role::Pomeron`, `P_IP = P_ion - P_recoil`, pdg 990, status 3 -- and
+   `PythiaBridge` hadronizes the gamma*-Pomeron system on a third PYTHIA
+   instance (`Beams:idA = 990`, meson-like beam, antiquark remnant) through
+   the same surrogate + frame map, with `W^2 -> M_X^2` and `zeta = beta`
+   exactly. The old refusal (`hadronize_coherent`) is gone; the knob that
+   replaced it is `PythiaBridgeOptions::coherent_t2 = {Pomeron, Off}` (CLI
+   `--coherent-t2 pomeron|off`). Measured over 300 events (`test_t2.cpp`):
+   300/300 hadronized, worst whole-nucleus 4p residual 4.8e-14 relative,
+   charge exactly 0, |M_had - M_X|/M_X <= 2.3e-11, the intact recoil
+   bit-identical, PYTHIA veto 0 at M_X >= 1.4 GeV (the M_X floor is 1.2,
+   raised for exactly this tier), byte-identical HepMC3 across
+   identical-seed runs. With `CoherentT2::Off` the bridge refuses every
+   coherent event and the T0 record still closes exactly -- the
+   `Role::HadronicX` pseudo-particle stays `Status::Final` and carries the
+   whole system, so turning the tier off costs fidelity, never
+   conservation. What remains open is physics, not bookkeeping: no
+   exclusive-vector-meson channel below M_X = 1.2 GeV (design §1 option c,
+   phase 2), and the Pomeron-PDF model choice (`PDF:PomSet`, default 6 = H1
+   2006 Fit B LO) is the tier's largest systematic.
 4. **CLOSED (2026-08-30) -- the "no surrogate" tail.** It was ~12 % for
    7Li-alpha and ~5-7 % for 6Li with the whole-cluster hook, because a whole
    off-shell cluster fed to the surrogate exceeded

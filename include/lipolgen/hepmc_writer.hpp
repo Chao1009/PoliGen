@@ -10,6 +10,13 @@
 #include <memory>
 #include <string>
 
+// Defined PUBLIC on the lipolgen_core CMake target from project()'s VERSION
+// (CMakeLists.txt) -- the fallback below only matters for a translation
+// unit that includes this header without linking lipolgen_core at all.
+#ifndef LIPOLGEN_VERSION
+#define LIPOLGEN_VERSION "0.0.0"
+#endif
+
 namespace lipolgen {
 
 enum class HepMC3Format {
@@ -22,7 +29,7 @@ class HepMC3Writer {
   explicit HepMC3Writer(const std::string& filename,
                          HepMC3Format format = HepMC3Format::Asciiv3,
                          std::string generator_name = "LiPolGen",
-                         std::string generator_version = "0.1.0");
+                         std::string generator_version = LIPOLGEN_VERSION);
   ~HepMC3Writer();
 
   HepMC3Writer(const HepMC3Writer&) = delete;

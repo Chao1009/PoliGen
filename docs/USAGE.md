@@ -8,6 +8,47 @@ source env.sh
 cmake -S . -B build && cmake --build build -j8 && ./build/lipolgen_tests
 ```
 
+### Installing the Python package with pip
+
+The in-tree build above is what `env.sh` and every example on this page
+assume. If you just want `import lipolgen` in some other virtualenv, without
+sourcing `env.sh` or touching `build/`, use the `pyproject.toml`
+(scikit-build-core) instead:
+
+```bash
+LIPOLGEN_DEPS_PREFIX=/path/to/deps/install pip install -e /path/to/LiPolGen
+```
+
+`LIPOLGEN_DEPS_PREFIX` (HepMC3/LHAPDF/PYTHIA8, same meaning as in `env.sh`)
+can also be passed as `--config-settings=cmake.define.LIPOLGEN_DEPS_PREFIX=...`;
+the environment variable is a convenience CMakeLists.txt reads itself when
+the CMake cache variable is not already set. Two of the three dependencies
+still need their own data at run time even once the module is installed —
+export these the same way `env.sh` does, since `pip install` does not:
+
+```bash
+export PYTHIA8DATA=$LIPOLGEN_DEPS_PREFIX/share/Pythia8/xmldoc
+export LHAPDF_DATA_PATH=$LIPOLGEN_DEPS_PREFIX/share/LHAPDF
+```
+
+(LiPolGen's own `data/vmc` tables are small enough that the wheel vendors
+them directly, so no third variable is needed for those — see
+`data_dir()`/`$LIPOLGEN_DATA_DIR` in `include/lipolgen/cluster.hpp`.)
+
+**Portability caveat.** The extension's RPATH is baked in at build time as
+`$ORIGIN` (LiPolGen's own libraries, shipped alongside it in the wheel) plus
+the literal `LIPOLGEN_DEPS_PREFIX` path (HepMC3/PYTHIA8/LHAPDF, NOT shipped
+in the wheel) — so a wheel built this way only runs on the machine it was
+built on, at that same path. Making it relocatable means running
+[`auditwheel repair`](https://github.com/pypa/auditwheel) after `pip wheel`,
+which vendors HepMC3/PYTHIA8/LHAPDF's shared libraries into the wheel itself
+and rewrites the RPATHs to be `$ORIGIN`-relative — standard practice for
+compiled-extension PyPI wheels, but note it turns the wheel into a genuine
+combined/linked work with all three (GPL-2-or-later, GPL-3.0, GPL-3.0), so
+whoever redistributes an `auditwheel`-repaired wheel is redistributing under
+GPL-3.0-or-later terms for the combination, regardless of LiPolGen's own
+license header (see `docs/OPEN_ITEMS_SOLUTIONS.md` §12–13 and §C).
+
 ## 1. The shape of a run
 
 A run is **one `PipelineConfig` + one `RunPlan`**.

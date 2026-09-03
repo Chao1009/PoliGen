@@ -1,0 +1,88 @@
+[build-system]
+requires = ["scikit-build-core>=0.9", "pybind11>=2.10"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "lipolgen"
+# Single source of truth is CMakeLists.txt's `project(LiPolGen VERSION ...)`;
+# see [tool.scikit-build.metadata.version] below, which reads it with a
+# regex instead of the version being retyped (and able to drift) here.
+dynamic = ["version"]
+description = "Doubly polarized e + 6Li / 7Li DIS event generator (C++ core, pybind11 bindings)"
+readme = "README.md"
+license = "GPL-3.0-or-later"
+requires-python = ">=3.9"
+dependencies = [
+    "numpy>=1.20",
+]
+
+[project.optional-dependencies]
+# pyhepmc lets Python code read/write the HepMC3 files LiPolGen's C++
+# `LiPolGenHepMC` writer produces; it is not needed to build or run the
+# generator itself.
+hepmc = ["pyhepmc"]
+# lipolgen/cli.py imports `yaml` for `--config-file`; without it that one
+# flag is unavailable but everything else (including `import lipolgen`)
+# works fine -- see the `yaml` extra below for installing it standalone.
+yaml = ["pyyaml"]
+test = ["pytest", "pyyaml"]
+
+[project.scripts]
+# A pip-installed console entry point mirroring the in-tree flow's generated
+# `build/lipolgen-run` shim (both just run `python -m lipolgen.cli`).
+lipolgen-run = "lipolgen.cli:main"
+
+[tool.scikit-build]
+minimum-version = "build-system.requires"
+
+# The pure-Python half of the package; the compiled `_lipolgen` extension and
+# LiPolGen's own bridge libraries are added next to it by the `install()`
+# rules in CMakeLists.txt (see the "wheel packaging" section there).
+wheel.packages = ["python/lipolgen"]
+
+# Tests are C++-only (doctest, `build/lipolgen_tests`) and irrelevant to a
+# Python build; skip them to save build time.  `LIPOLGEN_BUILD_TESTS` is the
+# option CMakeLists.txt already declares for this -- no new option needed.
+cmake.args = ["-DLIPOLGEN_BUILD_TESTS=OFF"]
+
+# Build outside the repo's own `build/` (the in-tree CMake flow's directory,
+# `cmake -S . -B build`) so the two never collide or fight over CMakeCache.
+# A dot-prefixed, repo-local cache dir (gitignored) is the scikit-build-core
+# convention for this -- see https://scikit-build-core.readthedocs.io -- and
+# keeps working the same for every developer, unlike hardcoding a path under
+# this machine's /tmp scratch would.
+build-dir = ".skbuild/{wheel_tag}"
+
+[tool.scikit-build.editable]
+# `pip install -e .` in "redirect" mode installs CMake's actual output --
+# the compiled `_lipolgen*.so` extension, LiPolGen's own bridge libraries,
+# and data/ (see the install() rules in CMakeLists.txt) -- into this venv's
+# site-packages/lipolgen/ like a normal install would.  Only the *pure*-
+# Python half is redirected: an import hook sends `import lipolgen.*` for
+# the `.py` files back to `python/lipolgen` in the source tree, so editing
+# those takes effect with no reinstall.  The compiled half is NOT redirected
+# and does go stale after a C++ edit -- there is no "straight from build-dir"
+# import path for it.  `rebuild` stays at its default (off): scikit-build-
+# core's build tools (ninja, cmake) are only guaranteed present inside the
+# *build* isolation environment pip made for the install itself, not in the
+# target environment doing the importing afterwards, so an on-import rebuild
+# is not reliable here -- re-run `pip install -e .` after editing C++
+# sources to refresh the site-packages copy.
+mode = "redirect"
+
+[tool.scikit-build.metadata.version]
+provider = "scikit_build_core.metadata.regex"
+input = "CMakeLists.txt"
+regex = 'project\(LiPolGen\s+VERSION\s+(?P<value>[0-9]+\.[0-9]+\.[0-9]+)'
+
+# ---------------------------------------------------------------------------
+# Passing the dependency prefix (HepMC3 / LHAPDF / PYTHIA8; see env.sh):
+#
+#   pip install -e . --config-settings=cmake.define.LIPOLGEN_DEPS_PREFIX=/path/to/deps/install
+#
+# or, as a convenience, export LIPOLGEN_DEPS_PREFIX and skip the
+# --config-settings entirely -- CMakeLists.txt reads the environment variable
+# itself when the CMake cache variable of the same name is not already set
+# (by the command above, or by a stale build-dir from a previous configure).
+# See docs/USAGE.md and README's Build section.
+# ---------------------------------------------------------------------------

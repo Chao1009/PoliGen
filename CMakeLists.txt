@@ -14,9 +14,45 @@ option(LIPOLGEN_WITH_PYTHIA  "Build the PYTHIA 8 hadronization tier (T2)"     ON
 option(LIPOLGEN_WITH_PYTHON  "Build the pybind11 Python module"               ON)
 option(LIPOLGEN_BUILD_TESTS  "Build doctest unit tests"                       ON)
 
-# Default dependency prefix: ../deps/install (see env.sh)
-set(LIPOLGEN_DEPS_PREFIX "${CMAKE_SOURCE_DIR}/../deps/install" CACHE PATH "Prefix with HepMC3/LHAPDF/PYTHIA8")
+# Default dependency prefix: ../deps/install (see env.sh), or $LIPOLGEN_DEPS_PREFIX
+# from the environment when the cache variable has not already been set by
+# -DLIPOLGEN_DEPS_PREFIX=... / --config-settings=cmake.define.LIPOLGEN_DEPS_PREFIX=...
+# (either of those pre-seeds the cache before this file runs, so this branch
+# is skipped and the explicit value always wins).
+if(NOT DEFINED CACHE{LIPOLGEN_DEPS_PREFIX} AND DEFINED ENV{LIPOLGEN_DEPS_PREFIX})
+  set(LIPOLGEN_DEPS_PREFIX "$ENV{LIPOLGEN_DEPS_PREFIX}" CACHE PATH "Prefix with HepMC3/LHAPDF/PYTHIA8")
+else()
+  set(LIPOLGEN_DEPS_PREFIX "${CMAKE_SOURCE_DIR}/../deps/install" CACHE PATH "Prefix with HepMC3/LHAPDF/PYTHIA8")
+endif()
 list(APPEND CMAKE_PREFIX_PATH "${LIPOLGEN_DEPS_PREFIX}")
+
+# ---------------------------------------------------------------- RPATH
+# Wheel packaging only (`pip install`/`pip wheel`, SKBUILD).  Both
+# CMAKE_INSTALL_RPATH and CMAKE_INSTALL_RPATH_USE_LINK_PATH must stay inside
+# this `if(SKBUILD)` guard: CMake pads a target's BUILD-tree RUNPATH with
+# empty (":") entries at configure time for every target that has an
+# install() rule, once CMAKE_INSTALL_RPATH is set at all -- regardless of
+# whether an install step ever actually runs -- so setting them
+# unconditionally would put CWD-lookup entries into `build/libLiPolGenCore.so`
+# and friends even for the in-tree, non-SKBUILD flow.  Keeping them under
+# SKBUILD means the non-SKBUILD configure has no INSTALL_RPATH at all, so
+# `build/lipolgen_tests` and `build/python` keep CMake's untouched default
+# build-tree RPATH, exactly as before this packaging support existed.
+# $ORIGIN lets an installed `_lipolgen*.so` find LiPolGen's own bridge
+# libraries installed alongside it; the deps prefix covers libHepMC3/
+# libpythia8/libLHAPDF, which are not shipped in the wheel (see docs/USAGE.md).
+if(SKBUILD)
+  set(CMAKE_INSTALL_RPATH "$ORIGIN:${LIPOLGEN_DEPS_PREFIX}/lib")
+  set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+  # Belt-and-suspenders for the editable/"redirect" build: make the
+  # build-dir copies (under `.skbuild/`) carry the same RPATH as the
+  # installed ones too, so they stay independently loadable (e.g. for
+  # debugging straight out of the build dir) rather than relying solely on
+  # install-time rewriting.  The copy actually imported by `import lipolgen`
+  # after `pip install -e .` is the one under site-packages/lipolgen/,
+  # written by the install() rules below -- this flag does not affect that.
+  set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
+endif()
 
 # ---------------------------------------------------------------- core library
 file(GLOB LIPOLGEN_CORE_SOURCES CONFIGURE_DEPENDS src/core/*.cpp)
@@ -26,6 +62,14 @@ target_include_directories(lipolgen_core PUBLIC
   $<INSTALL_INTERFACE:include>)
 target_compile_options(lipolgen_core PRIVATE -Wall -Wextra -Wshadow -O2)
 set_target_properties(lipolgen_core PROPERTIES OUTPUT_NAME LiPolGenCore)
+
+# Single source of truth for the version string seen at runtime (Python
+# `__version__`, HepMC3 GenRunInfo tool version, ...): CMake's own
+# project(LiPolGen VERSION ...) above, not retyped anywhere downstream.
+# PUBLIC so it propagates to every target that links lipolgen_core
+# (lipolgen_lhapdf/hepmc/pythia, _lipolgen).
+target_compile_definitions(lipolgen_core PUBLIC
+  LIPOLGEN_VERSION="${PROJECT_VERSION}")
 
 # Where the packaged data tree (VMC tables, ...) lives.  `cluster.cpp`'s
 # `data_dir()` prefers $LIPOLGEN_DATA_DIR at RUNTIME and falls back to this,
@@ -181,9 +225,46 @@ endif()
 
 # ---------------------------------------------------------------- install
 include(GNUInstallDirs)
-install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-foreach(t lipolgen_core lipolgen_lhapdf lipolgen_hepmc lipolgen_pythia)
-  if(TARGET ${t})
-    install(TARGETS ${t} LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+if(SKBUILD)
+  # Wheel packaging (`pip install`/`pip wheel`, scikit-build-core): the
+  # extension module and LiPolGen's own shared libraries go ONCE into the
+  # "lipolgen" package directory, next to each other and next to the
+  # pure-Python files `wheel.packages` (pyproject.toml) already copies there
+  # -- that is what makes the plain `$ORIGIN` RPATH above sufficient.  (An
+  # earlier prototype installed the core libs a second time under a
+  # top-level `lib/`, which just duplicated every .so in the wheel for no
+  # benefit; don't repeat that here.)
+  foreach(t _lipolgen lipolgen_core lipolgen_lhapdf lipolgen_hepmc lipolgen_pythia)
+    if(TARGET ${t})
+      install(TARGETS ${t} LIBRARY DESTINATION lipolgen)
+    endif()
+  endforeach()
+
+  # VMC data tables (~1.1 MB): small enough to vendor, so a wheel installed
+  # on a machine with no LiPolGen checkout still finds them.  `python/
+  # lipolgen/__init__.py` points $LIPOLGEN_DATA_DIR at this directory
+  # whenever it exists and the caller has not already set the variable.
+  # PYTHIA8's xmldoc and LHAPDF's grids are NOT vendored here -- both are
+  # much larger and already resolve from the deps prefix at run time with no
+  # help from LiPolGen (see docs/USAGE.md); LiPolGen has no data of its own
+  # in that category.
+  #
+  # In an editable ("redirect") install this copy is dead weight: __init__.py
+  # is redirected to python/lipolgen in the source tree, whose data_dir()
+  # then resolves against the SOURCE tree (which already has data/ right
+  # there), never against this site-packages copy. Harmless, just ~1.1 MB
+  # unused per editable install -- not worth branching on SKBUILD_STATE for.
+  if(EXISTS "${CMAKE_SOURCE_DIR}/data")
+    install(DIRECTORY "${CMAKE_SOURCE_DIR}/data/" DESTINATION lipolgen/data)
   endif()
-endforeach()
+else()
+  # Conventional `cmake --install [--prefix ...]`: headers and shared
+  # libraries at their usual locations.  Unused by, and unaffected by, both
+  # the in-tree build/test flow and the wheel packaging above.
+  install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+  foreach(t lipolgen_core lipolgen_lhapdf lipolgen_hepmc lipolgen_pythia)
+    if(TARGET ${t})
+      install(TARGETS ${t} LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+    endif()
+  endforeach()
+endif()

@@ -9,7 +9,20 @@ import lipolgen as lg
 
 
 def test_import_and_version():
-    assert lg.__version__ == "0.1.0"
+    # Not pinned to a literal: the version comes from CMakeLists.txt's
+    # project() VERSION (single source of truth, see LIPOLGEN_VERSION) and
+    # would otherwise drift out of sync with a hardcoded expectation here.
+    # When the package is actually installed (wheel or `pip install -e .`),
+    # cross-check against the METADATA version scikit-build-core derived
+    # from the same source, so the two are verified consistent.
+    assert lg.__version__
+    try:
+        import importlib.metadata as importlib_metadata
+        installed_version = importlib_metadata.version("lipolgen")
+    except Exception:
+        installed_version = None
+    if installed_version is not None:
+        assert lg.__version__ == installed_version
     assert lg._lipolgen.HAVE_HEPMC3 in (True, False)
 
 

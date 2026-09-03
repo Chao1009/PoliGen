@@ -32,6 +32,23 @@ to a sample:
 (`inclusive_dict`, `tagged_dict`, `write_hfs_npz`).
 """
 
+# If a wheel-packaged copy of data/vmc lives next to this file (see the
+# `install(DIRECTORY ... DESTINATION lipolgen/data)` rule in CMakeLists.txt)
+# and the caller has not already pointed $LIPOLGEN_DATA_DIR somewhere,
+# prefer it.  `_lipolgen.data_dir()` reads the environment once, lazily, on
+# first use (src/core/cluster.cpp), so this only has to run before that --
+# doing it here, before the extension is even imported, is early enough.
+# In-tree builds (`build/python/lipolgen/`) never have a `data/` sibling, so
+# this is a no-op there and the compiled-in `$CMAKE_SOURCE_DIR/data` default
+# keeps resolving exactly as before.
+import os as _os
+
+if not _os.environ.get("LIPOLGEN_DATA_DIR"):
+    _pkg_data = _os.path.join(_os.path.dirname(__file__), "data")
+    if _os.path.isdir(_pkg_data):
+        _os.environ["LIPOLGEN_DATA_DIR"] = _pkg_data
+    del _pkg_data
+
 from ._lipolgen import *          # noqa: F401,F403
 from . import _lipolgen           # noqa: F401
 from ._lipolgen import __version__

@@ -6,3 +6,7 @@ __pycache__/
 *.hepmc
 *.hepmc3
 *.npz
+.skbuild/
+*.egg-info/
+wheelhouse/
+dist/

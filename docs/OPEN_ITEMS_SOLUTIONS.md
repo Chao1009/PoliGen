@@ -18,7 +18,7 @@ the recommended solution, effort, and status. Ordered by leverage.
 | 9 | Tensor-sector RC (plans/04 #10) | **formulas exist** — POLRAD 2.0 tensor sector + elastic tail; Gakh–Shekhovtsova (uncited); precedent E12-13-011: 1.5 % | 5–8 d | band adoptable |
 | 10 | b₁ for A > 2 (plans/04 #9) | **first-mover** — nothing exists; three-term α–d convolution on the Cosyn–Dong–Kumano–Sargsian kernel; 100 % band mandatory (⁶Li quadrupole puzzle) | 10–15 d | design only |
 | 11 | Coherent ⁶Li amplitude (plans/04 #18) | **route changed** — Sartre ruled out (hard-coded nuclei, no polarization axis); use eSTARlight for unpolarized rates (1 d) and `hejajama/subnucleondiffraction` (code of arXiv:2408.13213) with an α+d configuration sampler for the tensor cos 2φ | 1 d / 10–15 d / collab | Mäntysaari-group ask |
-| 12 | Packaging | scikit-build-core `pip install -e .` works (96 s); portable wheel needs `auditwheel` + GPL-3 terms | 1 d | prototype in scratchpad |
+| 12 | Packaging | **implemented 2026-09-02** — `pyproject.toml` (scikit-build-core) in-tree, `pip install -e .` works (66 s); one copy of each `.so` in `lipolgen/`, `$ORIGIN`+deps-prefix RPATH, data/vmc vendored; portable wheel still needs `auditwheel` + GPL-3 terms | done | see §12–13 below |
 | 13 | License | **GPL-3.0-or-later** (forced by HepMC3/LHAPDF; matches MCnet norms) | 0 | author to confirm |
 
 ## 1. Cluster wave functions — the biggest physics correction
@@ -201,9 +201,82 @@ and a background at Q² > 0.
 
 ## 12–13. Engineering
 
-- `pyproject.toml` + scikit-build-core builds and installs in 96 s with
-  `--config-settings=cmake.define.LIPOLGEN_DEPS_PREFIX=…`; RPATH is absolute
-  (non-relocatable); a shippable wheel needs `auditwheel` vendoring and, with
-  it, GPL-3 distribution terms; data (xmldoc, LHAPDF grids) not vendored.
+- **In-tree now** (2026-09-02; the prototype in `engineering.md` §B was
+  redone for real, prototype files themselves are gone): `pyproject.toml`
+  (`[build-system] requires = ["scikit-build-core>=0.9", "pybind11>=2.10"]` —
+  CMakeLists.txt's own pybind11 discovery is `find_package(pybind11 CONFIG)`
+  via `python -m pybind11 --cmakedir`, no vendored copy, so this is the only
+  pybind11 declaration and it is what the isolated build env installs).
+  `[project].version` is `dynamic`, read out of CMakeLists.txt's
+  `project(LiPolGen VERSION 0.1.0 ...)` by
+  `scikit_build_core.metadata.regex` — CMake's `project()` version is the
+  one source of truth, not retyped in `pyproject.toml`.
+- `wheel.packages = ["python/lipolgen"]`; `cmake.args =
+  ["-DLIPOLGEN_BUILD_TESTS=OFF"]` (the option already existed, no new CMake
+  option added); `build-dir = ".skbuild/{wheel_tag}"` (repo-local, gitignored,
+  never the in-tree `build/`); `editable.mode = "redirect"` (`rebuild` left
+  at its default/off — scikit-build-core's ninja/cmake are only guaranteed
+  present in pip's *build*-isolation env, not in the venv doing the
+  importing afterwards, so on-import rebuild is not reliable there).
+  `LIPOLGEN_DEPS_PREFIX` honoured both via
+  `--config-settings=cmake.define.LIPOLGEN_DEPS_PREFIX=…` (scikit-build-core,
+  no extra wiring needed) and, as a convenience, from the environment
+  (`CMakeLists.txt`: `if(NOT DEFINED CACHE{LIPOLGEN_DEPS_PREFIX} AND DEFINED
+  ENV{LIPOLGEN_DEPS_PREFIX}) …`).
+- `CMakeLists.txt`: `install()` is now branched on `SKBUILD`. The `SKBUILD`
+  branch installs `_lipolgen` and all four `lipolgen_*` bridge libraries into
+  **one** destination, `lipolgen/` (the package dir `wheel.packages` also
+  populates) — the prototype's `lib/` + `lipolgen/` duplication is gone, one
+  copy of each `.so`, confirmed via `python -m zipfile -l` on a built wheel.
+  The non-`SKBUILD` branch keeps the previous `include/` +
+  `${CMAKE_INSTALL_LIBDIR}` install for conventional `cmake --install
+  --prefix …` use, untouched. `CMAKE_INSTALL_RPATH = "$ORIGIN:
+  ${LIPOLGEN_DEPS_PREFIX}/lib"`, `CMAKE_INSTALL_RPATH_USE_LINK_PATH=TRUE` and
+  `CMAKE_BUILD_WITH_INSTALL_RPATH=TRUE` all live inside `if(SKBUILD)` —
+  **not** unconditional. That guard is load-bearing, not cosmetic: CMake
+  pads a target's BUILD-tree RUNPATH with empty (`:`) entries at configure
+  time for any target with an `install()` rule once `CMAKE_INSTALL_RPATH` is
+  set at all, regardless of whether an install step ever runs, so setting it
+  outside `if(SKBUILD)` — as an earlier revision briefly did — put
+  CWD-lookup RUNPATH entries into `build/libLiPolGenCore.so` and the other
+  in-tree `.so`s even though the in-tree flow never installs anything. With
+  the fix, the non-`SKBUILD` configure sets no `CMAKE_INSTALL_RPATH` at all,
+  so `build/lipolgen_tests` and the in-tree `build/python` module keep
+  CMake's default build-tree RPATH exactly as before this packaging support
+  existed (`readelf -d build/libLiPolGenCore.so` shows no RUNPATH entry, as
+  at HEAD pre-packaging). `readelf -d` on the built wheel's `.so`s confirms
+  `RUNPATH: $ORIGIN:<deps>/lib`; `ldd` (with `LD_LIBRARY_PATH` unset)
+  resolves `libHepMC3.so.4`/`libpythia8.so`/`libLHAPDF.so` from the deps
+  prefix alone.
+- Data: `data/vmc` (1.1 MB) is installed to `lipolgen/data` inside the wheel
+  under the `SKBUILD` branch; `python/lipolgen/__init__.py` points
+  `$LIPOLGEN_DATA_DIR` at it when that env var is unset and the directory
+  exists next to the installed module (no-op for the in-tree build, whose
+  `build/python/lipolgen/` never has a `data/` sibling, so the compiled-in
+  `$CMAKE_SOURCE_DIR/data` default keeps resolving exactly as before).
+  PYTHIA8's `xmldoc` and LHAPDF's grids are **not** vendored (much larger,
+  own licensing questions for the LHAPDF grids) — documented in
+  `docs/USAGE.md` as coming from `$LIPOLGEN_DEPS_PREFIX` via
+  `PYTHIA8DATA`/`LHAPDF_DATA_PATH`, same as `env.sh`.
+- **Gate, measured 2026-09-02** (fresh venv, `numpy`+`pytest`+`pyhepmc`, all
+  installed cleanly from PyPI):
+  - `pip install -e .` with `LIPOLGEN_DEPS_PREFIX=…`: **66 s**, wheel
+    `lipolgen-0.1.0-cp311-cp311-linux_x86_64.whl`.
+  - From `/tmp` (no `env.sh`, no `PYTHONPATH`, only `PYTHIA8DATA`/
+    `LHAPDF_DATA_PATH` exported): `import lipolgen; lipolgen.ion_spin('6Li')`
+    → `1.0`; `python -m pytest python/tests -q` with the new
+    `LIPOLGEN_TESTS_USE_INSTALLED=1` opt-out (`conftest.py`, default
+    behaviour unchanged) → 144 passed, 2 skipped (missing optional `yaml`/
+    `scipy` in the minimal venv — unrelated to packaging).
+  - `pip wheel . --no-deps` + `python -m zipfile -l`: one `_lipolgen*.so`
+    and one each of the four `libLiPolGen*.so`, all under `lipolgen/`, no
+    duplicates.
+  - In-tree flow re-verified bit for bit after all of the above:
+    `build/lipolgen_tests` 276/276, `pytest python/tests` 146 passed.
+- Portable wheel still needs `auditwheel repair` to vendor
+  HepMC3/PYTHIA8/LHAPDF and rewrite RPATHs `$ORIGIN`-relative; documented in
+  `docs/USAGE.md` together with the GPL-3 consequence of doing so (see §C in
+  `engineering.md` and §13 below).
 - License: GPL-3.0-or-later for LiPolGen's own code (the linked combination is
   GPL-3 regardless; permissive headers would mislead; MCnet-consistent).
+  `pyproject.toml`'s `license = "GPL-3.0-or-later"` (SPDX string) matches.

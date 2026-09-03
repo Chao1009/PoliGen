@@ -385,7 +385,7 @@ py::dict columns_to_dict(Columns& c, const Pipeline& p, std::uint64_t n) {
 
   py::dict meta;
   meta["generator"] = "LiPolGen";
-  meta["version"] = "0.1.0";
+  meta["version"] = LIPOLGEN_VERSION;
   meta["channel"] = pipeline_channel_name(p.config().channel);
   meta["isotope"] = p.config().isotope;
   meta["beam_config"] = p.config().beam_config;
@@ -543,7 +543,7 @@ static void bind_io(py::module_& m);
 
 PYBIND11_MODULE(_lipolgen, m) {
   m.doc() = "LiPolGen: doubly polarized e + 6Li / 7Li DIS event generator";
-  m.attr("__version__") = "0.1.0";
+  m.attr("__version__") = LIPOLGEN_VERSION;
 
   m.attr("HAVE_LHAPDF") = static_cast<bool>(LIPOLGEN_HAVE_LHAPDF);
   m.attr("HAVE_HEPMC3") = static_cast<bool>(LIPOLGEN_HAVE_HEPMC3);
@@ -2514,7 +2514,7 @@ static void bind_io(py::module_& m) {
                     std::string>(),
            py::arg("filename"), py::arg("format") = HepMC3Format::Asciiv3,
            py::arg("generator_name") = "LiPolGen",
-           py::arg("generator_version") = "0.1.0")
+           py::arg("generator_version") = LIPOLGEN_VERSION)
       .def("write", &HepMC3Writer::write, py::arg("event"))
       .def("close", &HepMC3Writer::close)
       .def("__enter__", [](HepMC3Writer& w) { return &w; },

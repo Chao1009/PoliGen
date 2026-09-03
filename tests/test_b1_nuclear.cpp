@@ -16,11 +16,13 @@
 //      binary (only LIPOLGEN_REFERENCE_DIR is compiled in, not the source
 //      directory); it lives in python/tests/test_b1_model.py as P4.
 
+#include <algorithm>
 #include <cmath>
 #include <fstream>
 #include <stdexcept>
 #include <memory>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "check_close.hpp"
@@ -91,10 +93,29 @@ const DeuteronConvolutionB1& gate_k1() {
   return d;
 }
 
-/// x*b1 on `xs`, evaluated once per point; the returned lambda is a lookup.
-std::vector<double> xb1_on(const TensorSF& sf, const std::vector<double>& xs) {
+/// x*b1 on `xs` at the DEFAULT (finite-|q|) `DeuteronConvolutionB1`, one
+/// evaluation per grid point, spread over threads.  One object PER THREAD:
+/// the model is deterministic and every result is a pure function of the
+/// constructor arguments (T8 pins two independently built objects
+/// bit-identical), but a single object is NOT shareable across threads -- its
+/// one-deep density cache (`qd_`/`q_x_`/`q_q2_`, src/core/b1_nuclear.cpp) is
+/// mutable per-object state that every new x invalidates.  Same values as the
+/// sequential scan over `gate()`, bit for bit; measured 72 s -> 12 s on 8
+/// threads, which is half of the whole suite's wall clock.
+std::vector<double> xb1_on_gate_threaded(const std::vector<double>& xs) {
+  const unsigned nt =
+      std::min(8u, std::max(1u, std::thread::hardware_concurrency()));
   std::vector<double> v(xs.size());
-  for (std::size_t i = 0; i < xs.size(); ++i) v[i] = xs[i] * sf.b1(xs[i], kQ2, 0.0);
+  std::vector<std::thread> pool;
+  pool.reserve(nt);
+  for (unsigned t = 0; t < nt; ++t) {
+    pool.emplace_back([&, t] {
+      const DeuteronConvolutionB1 d;
+      for (std::size_t i = t; i < xs.size(); i += nt)
+        v[i] = xs[i] * d.b1(xs[i], kQ2, 0.0);
+    });
+  }
+  for (std::thread& th : pool) th.join();
   return v;
 }
 const Li6ConvolutionB1& li6() {
@@ -420,12 +441,14 @@ TEST_CASE("b1_nuclear T1 gate layer 3: CDKS Fig. 4 (G3a hard, G3b/G3c recorded)"
   CHECK_CLOSE(ref.xb1_max, 1.08521e-3, 1e-4);
   CHECK_CLOSE(ref.integral_b1, 4.5920e-4, 1e-4);
 
-  const DeuteronConvolutionB1& d = gate();
   const std::vector<double> xs = linspace(0.01, 1.59, 300);
   // ONE evaluation per grid point, shared by the landmarks, the peak scan and
   // G3b: the default is the finite-|q| delta-function, which rebuilds the
-  // light-cone densities at every x (see `gate()`).
-  const std::vector<double> xb1 = xb1_on(d, xs);
+  // light-cone densities at every x (see `gate()`).  300 of those is the
+  // single most expensive case in the whole suite, so the scan is threaded --
+  // one object per thread, identical values (see `xb1_on_gate_threaded`).
+  // `gate()` itself stays the object of the checklist tests below.
+  const std::vector<double> xb1 = xb1_on_gate_threaded(xs);
   const auto at = [&](double x) {
     const std::size_t i = static_cast<std::size_t>(
         std::lower_bound(xs.begin(), xs.end(), x - 1e-12) - xs.begin());
@@ -585,6 +608,12 @@ TEST_CASE("b1_nuclear T1 gate checklist item 0/1/2: kappa, target mass, R") {
 // ===================================================================== T2
 TEST_CASE("b1_nuclear T2: quadrature convergence") {
   REQUIRE(have(kFdeut));
+  // A BLOCKING GATE THAT SILENTLY SKIPS IS NOT A BLOCKING GATE (the header's
+  // departure (i)).  The 6Li clause at the bottom is the one number the
+  // default y grid can get wrong without any other test seeing it, so it must
+  // not pass vacuously when the VMC tables are absent.
+  REQUIRE(have(kLi6Momentum));
+  REQUIRE(have(kLi6Overlap));
   const FdeutTable t = read_fdeut_k(kFdeut);
   const ClusterPartialWave p0 = ClusterPartialWave::from_uw(t.k_gev, t.u, 0);
   const ClusterPartialWave p2 = ClusterPartialWave::from_uw(t.k_gev, t.w, 2);
@@ -613,25 +642,35 @@ TEST_CASE("b1_nuclear T2: quadrature convergence") {
     // y_min it does not: it is a SUPPORT truncation (see G0e), so what is
     // asserted here is that refinement does not make it worse and that the
     // raw norm converges onto the G1c moment identity.
-    LightConeDensities::Options q = o.quad;
-    q.renormalize = false;
-    const LightConeDensities raw(p0, p2, kin, q);
-    const std::vector<double>& yy = raw.y_grid();
-    std::vector<double> a(yy.size());
-    double mx = 0.0;
-    for (std::size_t i = 0; i < yy.size(); ++i) {
-      a[i] = raw.delta_t_f(yy[i]);
-      mx = std::max(mx, std::fabs(a[i]));
+    //
+    // TWO LEVELS ONLY (f = 1, 2).  The un-renormalised densities have to be
+    // built a SECOND time here -- `dd`'s own are renormalised, and `norm()`
+    // reports the post-scale value -- and that second build costs 0.24 / 0.96
+    // / 3.84 s at f = 1 / 2 / 4.  The "refinement does not make it worse"
+    // clause is a comparison between consecutive levels and the spline pin is
+    // level-independent, so both survive on {1, 2} and the f = 4 rebuild buys
+    // nothing but 3.8 s.  f = 4 still runs the b1 convergence checks above.
+    if (f <= 2) {
+      LightConeDensities::Options q = o.quad;
+      q.renormalize = false;
+      const LightConeDensities raw(p0, p2, kin, q);
+      const std::vector<double>& yy = raw.y_grid();
+      std::vector<double> a(yy.size());
+      double mx = 0.0;
+      for (std::size_t i = 0; i < yy.size(); ++i) {
+        a[i] = raw.delta_t_f(yy[i]);
+        mx = std::max(mx, std::fabs(a[i]));
+      }
+      const double z = std::fabs(trapezoid(a, yy)) / mx;
+      MESSAGE("T2 x" << f << ": raw norm = " << raw.norm()
+                     << ", |int dT f|/max = " << z);
+      CHECK(z < 2e-4);
+      if (f > 1) CHECK(z < prev_zero * 1.5);
+      prev_zero = z;
+      // The only clause of T2 that can see an interpolation bias: refining
+      // the y/k grids cannot fix the TABLE spacing, so this pins the spline.
+      CHECK_CLOSE(raw.norm(), 0.98707, 1e-3);
     }
-    const double z = std::fabs(trapezoid(a, yy)) / mx;
-    MESSAGE("T2 x" << f << ": raw norm = " << raw.norm()
-                   << ", |int dT f|/max = " << z);
-    CHECK(z < 2e-4);
-    if (f > 1) CHECK(z < prev_zero * 1.5);
-    prev_zero = z;
-    // The only clause of T2 that can see an interpolation bias: refining the
-    // y/k grids cannot fix the TABLE spacing, so this pins the spline.
-    CHECK_CLOSE(raw.norm(), 0.98707, 1e-3);
   }
 
   // ---- n_k PARITY.  The inner k integral is composite Simpson, which needs
@@ -663,7 +702,7 @@ TEST_CASE("b1_nuclear T2: quadrature convergence") {
   //      rtol 3e-2).  On the design's 600/2400/800 it was 2.3 % high at
   //      x = 0.10; on the 2400/2400/3200 default it is within 1.2e-3 of the
   //      x4-refined value, which is what this pins.
-  if (have(kLi6Momentum) && have(kLi6Overlap)) {
+  {
     const Li6ConvolutionB1& m = li6();
     Li6ConvolutionOptions o4;
     o4.quad.n_y_low *= 4;
@@ -975,6 +1014,10 @@ TEST_CASE("b1_nuclear T12: the VMC spread, documented not explained") {
 
 // ===================================================================== T13
 TEST_CASE("b1_nuclear T13: CDKS Eq. (22) is NOT f1_from_f2") {
+  // REQUIRE, not skip (the header's departure (i)): the second half of this
+  // case is the check that `f1a` did not sneak back into the kernel, and it
+  // must not pass vacuously when the VMC tables are absent.
+  REQUIRE(have(kLi6Momentum));
   const ToyF2 toy;
   for (double x : {0.1, 0.3, 0.5, 0.8}) {
     for (double q2 : {1.5, 2.5, 10.0}) {
@@ -988,7 +1031,7 @@ TEST_CASE("b1_nuclear T13: CDKS Eq. (22) is NOT f1_from_f2") {
   CHECK_CLOSE(1.0 + gamma_squared(0.8, kQ2), 1.90, 1e-2);
   // ... and the kernel's own F1_d is that same factor above NuclearF2::f1a/2,
   // which is the check that f1a did not sneak back in.
-  if (have(kLi6Momentum)) {
+  {
     const Li6ConvolutionB1& m = li6();
     const auto unp = std::make_shared<const ToyF2>();
     const NuclearF2 nd(DEUTERON(), unp, nullptr, nullptr);

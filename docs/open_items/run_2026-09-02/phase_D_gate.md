@@ -272,8 +272,9 @@ null means `r_sigma_lt`, the kernel's own toy R, for consistency with
 difference is the +1.6 % peak and the 0.392 → 0.365 second zero measured just
 above, i.e. *not* cosmetic but far inside the 100 % band. It is stated in
 `docs/USAGE.md` §2a and `OPEN_ITEMS_SOLUTIONS.md` §10; whether the ⁶Li default
-should become `r1998` is a physics decision, not a bug, and it is on the
-close-out list.
+should become `r1998` is a physics decision, not a bug, and it is an **open
+follow-up, not decided in the 2026-09-03 close-out** (`OPEN_ITEMS_SOLUTIONS.md`
+§10 item 4).
 
 ### 3. Per nucleon vs per deuteron — RESOLVED, not re-litigated
 

@@ -94,6 +94,16 @@ const std::vector<MantysaariRow>& mantysaari_a2_deuteron();
 /// Scenario parameters for coherent diffractive e+6Li (SCENARIO).
 struct CoherentScenario {
   /// Coherent fraction of the DIS rate at x -> 0; band {0.02, 0.08}.
+  ///
+  /// A SCENARIO, not a determination.  eSTARlight (2026-09-02,
+  /// docs/open_items/run_2026-09-02/estarlight_li6.md sec. 5) bounds it from
+  /// BELOW only: exclusive J/psi inside this channel's M_X >= 1.2 GeV window
+  /// gives sigma/sigma_incl = 1.0e-3, 40x under f0 = 0.04, and exclusive
+  /// J/psi is a small part of coherent diffraction there.  The all-exclusive-
+  /// VM figure 3.0e-2 is NOT an upper bound on f0: ~90 % of it is rho0, with
+  /// phi, and both sit BELOW the M_X floor.  Determining f0 needs a coherent
+  /// diffractive-DIS calculation (a coherent-A analogue of the H1/ZEUS
+  /// diffractive PDFs), which exists in neither eSTARlight nor Sartre.
   double f0 = 0.04;
   /// Coherence falloff scale in x.
   double x_coh = 0.01;

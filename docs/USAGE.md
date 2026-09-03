@@ -47,7 +47,7 @@ compiled-extension PyPI wheels, but note it turns the wheel into a genuine
 combined/linked work with all three (GPL-2-or-later, GPL-3.0, GPL-3.0), so
 whoever redistributes an `auditwheel`-repaired wheel is redistributing under
 GPL-3.0-or-later terms for the combination, regardless of LiPolGen's own
-license header (see `docs/OPEN_ITEMS_SOLUTIONS.md` §12–13 and §C).
+license header (see `docs/OPEN_ITEMS_SOLUTIONS.md` §12–13 and `docs/open_items/engineering.md` §C).
 
 ## 1. The shape of a run
 
@@ -227,8 +227,9 @@ fit, because that is what CDKS used and the A = 2 gate exists to reproduce
 ⁶Li backend runs with.** Measured on the gate (κ = 1, like for like): switching
 r1998 → r_sigma_lt moves the second zero from 0.392 to 0.365, i.e. *away* from
 the digitized 0.457, and the peak up by 1.6 %. Far inside the 100 % band, but
-not cosmetic; whether the ⁶Li default should become `r1998` is on the close-out
-list (`phase_D_gate.md` checklist item 2).
+not cosmetic; whether the ⁶Li default should become `r1998` is an **open
+follow-up, not decided in the 2026-09-03 close-out** (`phase_D_gate.md`
+checklist item 2; `OPEN_ITEMS_SOLUTIONS.md` §10 item 4).
 
 ### The mandatory 100 % band — never quote a single row
 
@@ -236,12 +237,15 @@ list (`phase_D_gate.md` checklist item 2).
 `li6-convolution`, and the whole `cdks` b₁; `miller` is deliberately untouched,
 because those numbers are the published ones). The rationale is a measurement:
 
-> **Q(⁶Li) = −0.0806(6) fm²** against **Q_d = +0.2859(3) fm²** — the α–d
+> **Q(⁶Li) = −0.0818(17) fm²** against **Q_d = +0.2859(3) fm²** — the α–d
 > relative D wave enters the closest measured observable with the **opposite
 > sign** to the deuteron's own D state and very nearly cancels it.
-> *(Q(⁶Li): Pyykkö, Mol. Phys. **106** (2008) 1965, whose ⁶Li entry is the
+> *(Q(⁶Li) is the repository's single copy, `LI6_QUADRUPOLE_FM2` in
+> `include/lipolgen/rc.hpp`: TUNL's A = 6 evaluation, 1998CE04. Pyykkö's
+> compilation, Mol. Phys. **106** (2008) 1965, gives −0.0806(6) fm² from the
 > molecular-beam measurement of Cederberg et al., Phys. Rev. A **57** (1998)
-> 2539. Q_d: Bishop & Cheung, Phys. Rev. A **20** (1979) 381.)*
+> 2539 — 1.5 % away, and nothing here depends on the choice. Q_d: Bishop &
+> Cheung, Phys. Rev. A **20** (1979) 381.)*
 
 The two are different operators (charge quadrupole vs light-cone momentum
 alignment) so the cancellation need not carry over, and the sign flip **is real
@@ -794,14 +798,25 @@ nothing is ever refused so a channel scan need not special-case `--rc`):
 
 **Two things the "full" in that table does not say.**
 
-* **On ⁷Li the band is reachable only from the API.** `--rc tensor-band`
+* **On ⁷Li the CLI reaches the band only at `--pe 0`.** `--rc tensor-band`
   needs an **unpolarised beam** (`RcModel` throws on any category with
-  `λ_e·P_e ≠ 0` — the whole `A_zz` programme assumes one), and every `J = 3/2`
-  plan the CLI can build is either a helicity plan (`apar`, `helicity-flip`:
-  refused by `RcModel`) or a spin-1 tensor plan (`azz`, `tensor-thirds`,
-  `transverse-tensor`, `cos2phi`, `tensor-flip`: refused by `Pipeline` with
-  "run-plan spin 1.0 != channel ion spin"). All eight were checked. Build the
-  plan by hand instead:
+  `λ_e·P_e ≠ 0` — the whole `A_zz` programme assumes one). The one CLI route
+  is therefore
+
+  ```bash
+  lipolgen-run --isotope 7Li --channel tagged-7Li-alpha \
+               --plan helicity-flip --pe 0 --rc tensor-band --events 300
+  ```
+
+  where `λ_e·P_e = 0` satisfies the check and the run writes
+  `rc_tensor_lo`/`rc_tensor_hi`/`rc_tail`. **Every other CLI plan is
+  refused**: the helicity plans (`apar`, `helicity-flip`) at `P_e ≠ 0` by
+  `RcModel`, and the spin-1 tensor plans (`azz`, `tensor-thirds`,
+  `transverse-tensor`, `cos2phi`, `tensor-flip`) by `Pipeline` with "run-plan
+  spin 1.0 != channel ion spin". All eight were checked. An explicit
+  (P_z, T) `J = 3/2` fill — a *polarised* ⁷Li target with an unpolarised beam,
+  which is what the physics case actually wants — still needs the API, because
+  no CLI plan builds one:
 
   ```python
   cats = [_l.SpinCategory("m32", 1.5, [0.5, 0.0, 0.0, 0.5]),
@@ -811,8 +826,9 @@ nothing is ever refused so a channel scan need not special-case `--rc`):
                                     rc="tensor-band"), plan)
   ```
 
-  (`python/tests/test_rc.py` runs exactly this and re-checks that no CLI plan
-  gets there, so the claim cannot rot.)
+  (`python/tests/test_rc.py` runs exactly this, asserts that
+  `helicity-flip` at `pe = 0` **does** build a working band, and re-checks
+  that every CLI plan at `P_e ≠ 0` is refused — so the claim cannot rot.)
 * **On the tagged channels the band is CLAMPED, and it has to be.**
   `τ_tag = 1 − n̄(k,c)/n_M(k,c)` is unbounded: wherever the event's own
   `n_M` is near a node of the M-dependent spectator density — the ⁶Li `M = 0`
@@ -1062,8 +1078,11 @@ variant in `docs/open_items/run_2026-09-02/phase_G_numbers.md`):
 | asymptotic η (D/S, Whittaker-divided) | −0.0482 (measured −0.025 ± 0.006 ± 0.010) |
 
 **The caveats, which the CLI prints on every run and the sidecar stamps.**
-The α+d truncation reproduces the ⁶Li point radius to ≈ 4 % (2.539 fm
-against the measured 2.4655 fm) but **overshoots Q(⁶Li) by a factor ≈ 7.5**:
+The α+d truncation reproduces the ⁶Li point radius to **3 %** — r_rms
+2.5386 fm against the measured 2.4655 fm (`LI6_R2_POINT_FM2`), and 4 % above
+the VMC `li6.density` value 2.4433 fm (`LI6_R_POINT_VMC_FM`), which is the
+number `match_li6_radius` targets — but **overshoots Q(⁶Li) by a factor
+≈ 7.5**:
 Q_charge = −0.615 fm² (model range −0.615…−0.730 across the three α–d
 sources) against the measured −0.0818 fm² and GFMC AV18+IL7's −0.20(6) fm².
 Always quote `quadrupole_band_fm2()`, never one number, and never derive a

@@ -991,6 +991,13 @@ TEST_CASE("T8(b): the CARBON line -- the explicit Z^2 pins the charge") {
         const double x_a = x * PROTON_MASS / m_c;
         CHECK_CLOSE(polrad_sigma_el_u(ff, x_a, y, s_a, m_c, n),
                     eq38_sigma_u_c(z, ff, x_a, y, s_a, m_c, n), 1e-12);
+        // THE SECOND CLAUSE OF THE DESIGN'S T9: sigma_q's integrand is
+        // IDENTICALLY ZERO when F_m = F_q = 0.  Every term of Eq. (38)'s
+        // sigma_q carries F_m or F_q (see `eq38_sigma_q_d` above), so the
+        // quadrature sums exact zeros and `== 0.0` is the right assertion --
+        // anything weaker would let a sign or term error leak F_c into the
+        // tensor tail and still pass every gate in this file.
+        CHECK(polrad_sigma_el_t(ff, x_a, y, s_a, m_c, n) == 0.0);
       }
     }
   }
@@ -1351,9 +1358,11 @@ TEST_CASE("T9: the Q_N = 0 Rosenbluth limit of Eq. (38)'s integrand" *
   // with 4/(1+eta_A), NOT 4 eta_A/(1+eta_A).  Im_2's 4 eta_A^2/(1+eta_A),
   // Im_5, Im_7 and Im_8 all check out (polrad_transcription_check.md sec. 7.1).
   //
-  // The v0 half of T9 -- that Eq. (38)'s sigma_u^d integrand IS
-  // A(Q^2) Xt - (2/3)(1+eta) F_m^2 -- is covered by T8(a), which compares the
-  // code's integrand against that expression written literally in this file.
+  // The v0 half of T9 is covered by T8(a) AND T8(b): T8(a) compares the code's
+  // sigma_u^d integrand against A(Q^2) Xt - (2/3)(1+eta) F_m^2 written
+  // literally in this file, and T8(b) pins the design's second clause --
+  // sigma_q's integrand is identically 0 when F_m = F_q = 0 -- on the very
+  // `Spin0FF` object it already builds.
   CHECK(false);
 }
 

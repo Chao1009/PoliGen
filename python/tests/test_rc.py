@@ -128,6 +128,62 @@ def test_npz_columns_on_the_columnar_path(rc_run):
     assert cols["meta"]["rc_weight_names"] == list(export.RC_KEYS)
 
 
+def test_meta_records_every_rc_knob_that_moves_a_column(rc_run):
+    """PROVENANCE: two npz files that differ in any RC knob must differ in
+    `meta`.  The seven numeric knobs were recorded from the start; `scope`,
+    `with_qe_tail`, `tail_model`, `n_eta` and `tail_max` were not, so a
+    `RcScope.TensorAll` / `with_qe_tail = False` run -- both API-reachable,
+    and the QRT is 73-99.9 % of the tail at x >= 0.1 -- was byte-
+    indistinguishable in `meta` from the default one.  Same rule the Miller
+    branch enforces for `b1_band_scale`."""
+    _, cols = rc_run
+    meta = cols["meta"]
+    defaults = _l.RcOptions()
+    assert set(k for k in meta if k.startswith("rc")) == {
+        "rc", "rc_weight_names", "rc_applies", "rc_tail_applies",
+        "rc_exclusion_reason", "rc_ff_provenance",
+        "rc_delta_low_x", "rc_delta_high_x", "rc_fq_scale",
+        "rc_tail_tensor_scale", "rc_qe_suppression", "rc_qe_kf_gev",
+        "rc_band_tau_max",
+        "rc_scope", "rc_with_qe_tail", "rc_tail_model", "rc_n_eta",
+        "rc_tail_max",
+        "rc_clipped_cell_fraction", "rc_clipped_fraction_by_y",
+        "rc_clipped_band_events", "rc_clipped_tail_events",
+        "rc_clipped_band_event_fraction", "rc_clipped_tail_event_fraction",
+    }
+    assert meta["rc_scope"] == "tensor-rate"
+    assert meta["rc_with_qe_tail"] is True
+    assert meta["rc_tail_model"] == "t-peak"
+    assert meta["rc_n_eta"] == defaults.n_eta
+    assert meta["rc_tail_max"] == defaults.tail_max
+
+
+def test_meta_distinguishes_a_tensor_all_no_qe_run(rc_run):
+    """The two knobs the numeric block could not see, each written down."""
+    _, base = rc_run
+    cfg = _cfg("tensor-band")
+    cfg.rc_options.scope = _l.RcScope.TensorAll
+    cfg.rc_options.with_qe_tail = False
+    p = lg.Pipeline(cfg, lg.tensor_thirds_plan(0.0, 0.6))
+    meta = p.generate(0)["meta"]
+    assert meta["rc_scope"] == "tensor-all"
+    assert meta["rc_with_qe_tail"] is False
+    # ... and it really is a different file, not only a different label.
+    assert meta["rc_scope"] != base["meta"]["rc_scope"]
+
+
+def test_m_lepton_is_reserved_and_refused_on_the_shipped_tail():
+    """`RcOptions::m_lepton` is RESERVED for the unimplemented PolradFull
+    tail: nothing in src/core/rc.cpp reads it, so setting it would be a
+    silent no-op that `meta` does not record.  Refused, exactly as
+    `b1_band_scale != 1` is on the Miller branch."""
+    cfg = _cfg("tensor-band")
+    assert cfg.rc_options.m_lepton == _l.RcOptions().m_lepton
+    cfg.rc_options.m_lepton = 0.1056583755          # a muon beam, say
+    with pytest.raises(RuntimeError, match="m_lepton"):
+        lg.Pipeline(cfg, lg.tensor_thirds_plan(0.0, 0.6))
+
+
 def test_npz_columns_on_the_records_path(rc_run):
     # `export.columns_from_events` builds its own dict and does NOT go through
     # the C++ `columns_to_dict`; without its own rule a records-path sample
@@ -258,13 +314,14 @@ def test_tagged_band_applies_but_the_tail_is_exactly_one():
 
 
 def test_7li_tagged_band_is_reachable_from_the_API_and_bounded():
-    """The `--rc tensor-band` band on 7Li -- reachable from the API ONLY.
+    """The `--rc tensor-band` band on 7Li.
 
-    Every J = 3/2 plan the CLI can build is either helicity-flip (lam_e*pe !=
-    0, which RcModel refuses: the whole A_zz programme assumes an unpolarised
-    beam) or spin-1 (which Pipeline refuses against a J = 3/2 channel ion).
-    A hand-built UNPOLARISED J = 3/2 RunPlan gets there, and the band is then
-    bounded exactly as on 6Li -- the unclamped version reached -8.35 here."""
+    From the CLI there is exactly ONE route -- `--plan helicity-flip --pe 0`,
+    where lam_e*pe = 0 satisfies RcModel's unpolarised-beam check; every
+    other CLI plan is refused (helicity plans at pe != 0 by RcModel, spin-1
+    tensor plans by Pipeline against a J = 3/2 channel ion).  An explicit
+    (P_z, T) J = 3/2 fill needs the API, and the band is then bounded exactly
+    as on 6Li -- the unclamped version reached -8.35 here."""
     cats = [_l.SpinCategory("m32", 1.5, [0.5, 0.0, 0.0, 0.5]),
             _l.SpinCategory("m12", 1.5, [0.0, 0.5, 0.5, 0.0])]
     plan = _l.RunPlan(cats, 0.0, 0.0, 0.6)
@@ -280,8 +337,13 @@ def test_7li_tagged_band_is_reachable_from_the_API_and_bounded():
         assert cols[k].min() > 0.0, (k, cols[k].min())
         assert np.all(np.abs(cols[k] - 1.0) <= _l.RC_DELTA_LOW_X + 1e-12)
     assert cols["meta"]["rc_clipped_band_events"] > 0
-    # ... and the CLI really cannot get here: every plan it can build for
-    # J = 3/2 is refused, which is why docs/USAGE.md sec. 7b says so.
+    # THE CLI ROUTE, exactly as USAGE sec. 7b and the --rc help now state it:
+    # helicity-flip at pe = 0 DOES build a working band.
+    zero = lg.Pipeline(cfg, lg.make_plan("helicity-flip", j=1.5, pz=0.7,
+                                         pzz=0.6, pe=0.0))
+    assert zero.rc_model.applies
+    assert np.any(zero.generate(0)["rc_tensor_hi"] != 1.0)
+    # ... and it is the ONLY one: every CLI plan at pe = 0.7 is refused.
     for name in sorted(set(lg.PLANS)):
         try:
             q = lg.make_plan(name, j=1.5, pz=0.7, pzz=0.6, pe=0.7)
@@ -292,8 +354,8 @@ def test_7li_tagged_band_is_reachable_from_the_API_and_bounded():
         except RuntimeError:
             continue                       # refused, as documented
         raise AssertionError(
-            "USAGE sec. 7b claims the CLI cannot reach the 7Li band, but "
-            "--plan %s builds one" % name)
+            "USAGE sec. 7b says every CLI plan at pe != 0 is refused on the "
+            "7Li band, but --plan %s builds one" % name)
 
 
 def test_a_python_subclass_form_factor_survives_the_pipeline():

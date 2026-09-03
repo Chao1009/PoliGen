@@ -24,9 +24,9 @@ Tier **T2** adds the PYTHIA hadronic final state on the *actual* Fermi-smeared,
 off-shell struck nucleon (a (W², Q²)-matched surrogate γ*N event Lorentz-mapped
 onto the physical target — conservation to 1e-13).
 
-## Status (2026-09-02)
+## Status (2026-09-03)
 
-- 275 doctest cases / 16.0 M assertions and 145 pytest cases pass.
+- 363 doctest cases / 17.2 M assertions and 208 pytest cases pass.
 - Kernel, ρ-moments, tagged densities, spectator boosts, coherent scenario and
   bookkeeping agree with `polligen` (run 16, tensor sign to the literature
   convention) at **rtol 1e-12** against `validation/reference/*.json`.
@@ -40,11 +40,28 @@ onto the physical target — conservation to 1e-13).
 Physics channels, models, references and implementing symbols: `docs/PHYSICS_CHANNELS.md`.
 
 Open items, with explored solutions and prototypes: `docs/OPEN_ITEMS_SOLUTIONS.md`.
-Rows 5–7 and 9 are now **implemented with measured numbers** (coherent T2 via a
-PYTHIA Pomeron beam, `--coherent-t2`; the Ciofi–Simula triton spectral function,
-`--triton-sf`; the Glauber spectator-FSI weight, `--fsi`; the tensor-sector
-radiative-correction band and radiative tails, `--rc tensor-band`); still open:
-the b₁(⁶Li) convolution.
+Rows 5–10 and 12 are now **implemented** (coherent T2 via a PYTHIA Pomeron beam,
+`--coherent-t2`; the Ciofi–Simula triton spectral function, `--triton-sf`; the
+Glauber spectator-FSI weight, `--fsi`; the spin-3/2 finite-γ theory note,
+`docs/theory/SPIN32_FINITE_GAMMA.md`; the tensor-sector radiative-correction
+band and radiative tails, `--rc tensor-band`; the four-term α–d convolution for
+b₁(⁶Li), `--b1-model li6-convolution` — opt-in, and flagged in `--help` since its
+A = 2 magnitude gate is still open, see below; and packaging, `pip install -e .`).
+Row 11's coherent-⁶Li amplitude on-ramp gained the eSTARlight unpolarized
+baseline (`docs/open_items/run_2026-09-02/estarlight_li6.md`) and the polarized
+α+d configuration sampler (`cluster_config.hpp`, console script
+`lipolgen-configs`). Still open: the exact elastic radiative tail (Mo–Tsai,
+beyond POLRAD's transcribed t-peak), the tensor cos 2φ dipole-model run with
+the Mäntysaari group, b₁(⁶Li) beyond the α–d picture (the A = 2 convolution
+gate fails its magnitude clause by a factor 2.27–3.68 depending on the
+reference peak — a real nucleon PDF is the identified next step, and no ⁶Li
+number from the backend may be published until it closes), and the polarized
+quasi-elastic tail. Three smaller decisions were deliberately **not** taken in
+the 2026-09-03 close-out and are listed as follow-ups in
+`docs/OPEN_ITEMS_SOLUTIONS.md` §10: whether `Li6ConvolutionOptions` should
+default to `r1998` like the A = 2 gate rather than to `r_sigma_lt`, whether
+`CdksB1` should stop halving the per-nucleon column, and an independent check
+of Miller's own b₁ normalisation.
 
 ## Build
 
@@ -106,13 +123,16 @@ C++: see `docs/USAGE.md` (`Pipeline`, `PipelineConfig`, `PythiaBridge`,
 include/lipolgen/   spin sf xsec asymmetries beams bookkeeping sampler generator
                     spectator cluster tagged coherent breakup pipeline event rng
                     hepmc_writer pythia_bridge lhapdf_sf
+                    rc b1_nuclear cluster_config fsi triton_sf
 src/core src/lhapdf src/hepmc src/pythia
-python/             bindings.cpp, lipolgen/{__init__,export,cli}.py, tests/
+python/             bindings.cpp, lipolgen/{__init__,export,cli,configs}.py, tests/
 tests/              doctest suites (one file per module) + reference-table comparison
 validation/         dump_polligen_reference.py, reference/*.json, VMC reconciliation
 data/vmc/           ANL VMC α+d / α+t overlaps and momentum distributions (provenance in README)
 docs/               DEVELOPMENT_PLAN, CONVENTIONS, USAGE, HEPMC3_CONVENTION, PYTHIA_BRIDGE,
-                    T2_CHAIN, code review, OPEN_ITEMS_SOLUTIONS, surveys/, open_items/
+                    T2_CHAIN, code review, OPEN_ITEMS_SOLUTIONS, PHYSICS_CHANNELS,
+                    theory/ (SPIN32_FINITE_GAMMA), surveys/, open_items/ (design notes,
+                    measured-number tables and gates per run)
 ```
 
 ## Conventions (see `docs/CONVENTIONS.md`)

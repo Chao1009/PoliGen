@@ -13,7 +13,8 @@ P4  no RNG in the kernel -- the grep the doctest binary cannot do, because
 
 THE RULE ALL OF THESE GUARD.  `Li6ConvolutionB1` has NOT passed its A = 2
 magnitude gate (docs/open_items/run_2026-09-02/phase_D_gate.md), and even if
-it had, Q(6Li) = -0.0806(6) fm^2 against Q_d = +0.2859(3) fm^2 says the alpha-d
+it had, Q(6Li) = -0.0818(17) fm^2 (LI6_QUADRUPOLE_FM2, TUNL; Pyykko's
+compilation gives -0.0806(6)) against Q_d = +0.2859(3) fm^2 says the alpha-d
 D wave enters the closest measured observable with the opposite sign to the
 deuteron's and nearly cancels it.  So every number is {0, 1, 2} x b1 and the
 band is not a formality -- which is what P1's meta keys and P3 exist to make
@@ -61,6 +62,19 @@ def _pipeline(**kw):
 @pytest.fixture(scope="module")
 def conv():
     return lg.Li6ConvolutionB1()
+
+
+@pytest.fixture(scope="module")
+def band_pipelines():
+    """The 2 models x 3 band rows P3 needs, built ONCE.
+
+    A `li6-convolution` pipeline costs ~4.9 s to construct, and the two P3
+    tests below between them asked for five of them with two duplicated -- 29
+    of this file's 43 s.  The assertions are unchanged; only the construction
+    is shared."""
+    return {(m, b): _pipeline(model=m, band=b)
+            for m in ("cdks", "li6-convolution")
+            for b in (0.0, 1.0, 2.0)}
 
 
 # ------------------------------------------------------------------- P1
@@ -267,9 +281,9 @@ def test_banded_scales_the_whole_b1(conv):
 # ------------------------------------------------------------------- P3
 
 @pytest.mark.parametrize("model", ["cdks", "li6-convolution"])
-def test_band_leaves_the_spin_blind_rate_bit_identical(model):
-    p0 = _pipeline(model=model, band=0.0)
-    p1 = _pipeline(model=model, band=1.0)
+def test_band_leaves_the_spin_blind_rate_bit_identical(model, band_pipelines):
+    p0 = band_pipelines[(model, 0.0)]
+    p1 = band_pipelines[(model, 1.0)]
     c0 = np.asarray(p0.dis_sampler.cell_xsec_pb)
     c1 = np.asarray(p1.dis_sampler.cell_xsec_pb)
     # `cell_xsec_pb` is the SPIN-BLIND cell cross section: b1 enters only
@@ -278,11 +292,11 @@ def test_band_leaves_the_spin_blind_rate_bit_identical(model):
 
 
 @pytest.mark.parametrize("model", ["cdks", "li6-convolution"])
-def test_band_zero_collapses_the_tensor_categories(model):
-    names = [c.name for c in _pipeline().plan.categories]
-    s0 = np.asarray(_pipeline(model=model, band=0.0).sigma_per_category_pb())
-    s1 = np.asarray(_pipeline(model=model, band=1.0).sigma_per_category_pb())
-    s2 = np.asarray(_pipeline(model=model, band=2.0).sigma_per_category_pb())
+def test_band_zero_collapses_the_tensor_categories(model, band_pipelines):
+    names = [c.name for c in band_pipelines[(model, 1.0)].plan.categories]
+    s0 = np.asarray(band_pipelines[(model, 0.0)].sigma_per_category_pb())
+    s1 = np.asarray(band_pipelines[(model, 1.0)].sigma_per_category_pb())
+    s2 = np.asarray(band_pipelines[(model, 2.0)].sigma_per_category_pb())
     # At band 0 the tensor shift is identically zero, so the three
     # tensor-thirds categories are the same cross section (to summation
     # order); at band 1 the m = 0 category has separated from the m = +-1 pair.

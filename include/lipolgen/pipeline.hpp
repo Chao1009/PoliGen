@@ -479,7 +479,9 @@ struct PipelineConfig {
   /// The MANDATORY 100 % band of design_D_b1_li6.md sec. 4.3: multiplies the
   /// WHOLE b1 of the `Cdks` and `Li6Convolution` backends (all four terms of
   /// the latter).  Run 0 / 1 / 2 and quote the envelope.  Q(6Li) =
-  /// -0.0806(6) fm^2 against Q_d = +0.2859(3) fm^2: the alpha-d relative
+  /// -0.0818(17) fm^2 (`LI6_QUADRUPOLE_FM2`, TUNL A = 6, 1998CE04 -- Pyykko's
+  /// compilation gives -0.0806(6); the repository constant is TUNL's)
+  /// against Q_d = +0.2859(3) fm^2: the alpha-d relative
   /// D wave enters the closest measured observable with the OPPOSITE sign to
   /// the deuteron's own D state and nearly cancels it, so a single row is not
   /// a result.  `Miller`'s numbers are already published and the band is not

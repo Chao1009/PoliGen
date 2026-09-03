@@ -1,5 +1,6 @@
-Snippet for README.md's Build section (not applied there — that file is
-owned by another running job; paste by hand when free):
+Snippet for README.md's Build section. **Applied to `README.md` on
+2026-09-03** (it is now the "Alternatively, `pip install`…" paragraph of the
+Build section); kept here as the record of what was pasted.
 
 ```markdown
 Alternatively, `pip install` the Python package on its own (scikit-build-core;

@@ -489,6 +489,21 @@ py::dict columns_to_dict(Columns& c, const Pipeline& p, std::uint64_t n) {
     meta["rc_qe_suppression"] = rc->options().qe_suppression;
     meta["rc_qe_kf_gev"] = rc->options().qe_kf_gev;
     meta["rc_band_tau_max"] = rc->options().band_tau_max;
+    // The NON-numeric knobs, recorded for the same provenance reason as
+    // `b1_band_scale` above: `scope = TensorAll` and `with_qe_tail = false`
+    // are API-reachable and change EVERY rc_tensor_*/rc_tail column (the QRT
+    // is 73-99.9 % of the tail at x >= 0.1, phase_C_numbers.md), so without
+    // these keys such an npz is indistinguishable in `meta` from a default
+    // run.  `rc_tail_applies` above covers `with_tail` only.
+    meta["rc_scope"] = std::string(
+        rc->options().scope == RcScope::TensorRate ? "tensor-rate"
+                                                   : "tensor-all");
+    meta["rc_with_qe_tail"] = rc->options().with_qe_tail;
+    meta["rc_tail_model"] = std::string(
+        rc->options().tail_model == RcTailModel::TPeak ? "t-peak"
+                                                       : "polrad-full");
+    meta["rc_n_eta"] = rc->options().n_eta;
+    meta["rc_tail_max"] = rc->options().tail_max;
     meta["rc_clipped_cell_fraction"] = rc->clipped_cell_fraction();
     const std::array<double, 3> by_y = rc->clipped_fraction_by_y();
     meta["rc_clipped_fraction_by_y"] =
@@ -2884,10 +2899,14 @@ static void bind_rc(py::module_& m) {
                      "Flat multiplier on F_m -- the eta F_m^2 tensor sector, "
                      "which fq_scale does NOT span.  Run 0.5, 1, 2.")
       .def_readwrite("qe_suppression", &RcOptions::qe_suppression,
-                     "Multiplier on the whole unpolarised quasi-elastic tail, "
-                     "standing in for POLRAD Eq. (44)'s S_E/S_M/S_EM factors, "
-                     "which v0 sets to 1 (the conservative direction for a "
-                     "DILUTION).  Run 0.0 / 0.5 / 1.0.")
+                     "Flat multiplier on the UNPOLARISED quasi-elastic "
+                     "radiative tail, applied ON TOP of the de Forest-"
+                     "Walecka Pauli suppression S(q) that is ON BY DEFAULT "
+                     "at k_F = RC_QE_KF_GEV (`qe_kf_gev` below; 0 disables "
+                     "it).  POLRAD Eq. (44)'s S_E/S_M are that S(q), not "
+                     "this: 1.0 = no EXTRA suppression, the conservative "
+                     "direction for a DILUTION -- the band knob, not the "
+                     "physics.  Run 0.0 / 0.5 / 1.0.")
       .def_readwrite("qe_kf_gev", &RcOptions::qe_kf_gev,
                      "POLRAD Eq. (44)'s S_E/S_M as `ffquas` codes them: the "
                      "de Forest-Walecka Fermi-gas factor "
@@ -2897,7 +2916,13 @@ static void bind_rc(py::module_& m) {
                      "x = 0.01 and 0.87 at x = 0.1, and the QRT is the "
                      "DOMINANT piece of rc_tail.  0 = the unsuppressed edge.")
       .def_readwrite("n_eta", &RcOptions::n_eta)
-      .def_readwrite("m_lepton", &RcOptions::m_lepton)
+      .def_readwrite("m_lepton", &RcOptions::m_lepton,
+                     "RESERVED for tail_model = PolradFull (POLRAD's F_IR and "
+                     "l_m = ln(Q^2/m^2)); UNUSED by the shipped TPeak tail, "
+                     "which has no lepton-mass dependence.  PipelineConfig "
+                     "REFUSES any value other than constants.hpp's "
+                     "M_ELECTRON while tail_model = TPeak, so that a knob "
+                     "that did not run is never recorded as if it had.")
       .def_readwrite("tail_max", &RcOptions::tail_max)
       .def_readwrite("band_tau_max", &RcOptions::band_tau_max,
                      "Ceiling on |tau| the BAND sees (default 1.0).  On the "

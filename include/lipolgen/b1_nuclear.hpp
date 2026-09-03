@@ -64,13 +64,16 @@
 ///     coefficient 1/3 of it and b1_d in place of F1_d, i.e. suppressed by
 ///     b1_d/F1_d ~ 1e-3, about 3e-4 of term (2d).
 ///
-/// THE 100 % BAND IS MANDATORY.  Q(6Li) = -0.0806(6) fm^2 against
+/// THE 100 % BAND IS MANDATORY.  Q(6Li) = -0.0818(17) fm^2 against
 /// Q_d = +0.2859(3) fm^2: the alpha-d relative D wave enters the closest
 /// measured observable with the OPPOSITE sign to the deuteron's own D state
-/// and nearly cancels it.  (Q(6Li): Pyykko, Mol. Phys. 106 (2008) 1965, whose
-/// 6Li entry is the molecular-beam measurement of Cederberg et al., Phys.
-/// Rev. A 57 (1998) 2539; Q_d: Bishop and Cheung, Phys. Rev. A 20 (1979)
-/// 381.)  Never quote a single row: every published number is {0, 1, 2} x b1
+/// and nearly cancels it.  (Q(6Li): the repository's single copy is
+/// `LI6_QUADRUPOLE_FM2` in rc.hpp, TUNL's A = 6 evaluation, 1998CE04.
+/// Pyykko's compilation, Mol. Phys. 106 (2008) 1965, quotes -0.0806(6) fm^2
+/// from the molecular-beam measurement of Cederberg et al., Phys. Rev. A 57
+/// (1998) 2539 -- a 1.5 % difference that changes nothing here.  Q_d: Bishop
+/// and Cheung, Phys. Rev. A 20 (1979) 381.)
+/// Never quote a single row: every published number is {0, 1, 2} x b1
 /// (`banded`).
 ///
 /// NO RNG anywhere, and every result is a pure function of the constructor

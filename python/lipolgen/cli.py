@@ -123,8 +123,11 @@ def build_parser():
                         "quasi-elastic radiative tails).  Never a momentum "
                         "shift; never on Event.weight.  NEEDS AN UNPOLARISED "
                         "BEAM (lam_e*pe = 0) -- the whole A_zz programme "
-                        "assumes one -- so on 7Li no --plan this CLI can "
-                        "build reaches it and the band is API-only there "
+                        "assumes one -- so on 7Li the ONLY CLI route to the "
+                        "band is '--plan helicity-flip --pe 0'; every other "
+                        "CLI plan is refused (helicity plans at pe != 0 by "
+                        "RcModel, spin-1 tensor plans by Pipeline), and an "
+                        "explicit (P_z, T) J = 3/2 fill still needs the API "
                         "(USAGE sec. 7b).  rc_tail is the t-PEAK ONLY: a "
                         "LOWER BOUND on the dilution, validated for 6Li at "
                         "Q^2 >= 20 GeV^2 and low by ~4x at fixed-target "
@@ -146,10 +149,14 @@ def build_parser():
                         "eta*F_m^2 tensor sector, which --rc-fq-scale does "
                         "NOT span (default 1.0; run 0.5 and 2.0)")
     p.add_argument("--rc-qe-suppression", type=float, default=None,
-                   help="multiplier on the UNPOLARISED quasi-elastic "
-                        "radiative tail, standing in for POLRAD Eq. (44)'s "
-                        "S_E/S_M/S_EM factors (default 1.0 = no suppression, "
-                        "the conservative direction; run 0.0 and 0.5)")
+                   help="flat multiplier on the UNPOLARISED quasi-elastic "
+                        "radiative tail, applied ON TOP of the de Forest-"
+                        "Walecka Pauli suppression S(q), which is already on "
+                        "by default at 6Li's measured k_F = RC_QE_KF_GEV "
+                        "(RcOptions.qe_kf_gev, API only; 0 disables it).  "
+                        "This flag is the band knob, not the physics: "
+                        "default 1.0 = no EXTRA suppression, the "
+                        "conservative direction; run 0.0 / 0.5 / 1.0")
     p.add_argument("--inclusive-b1", action="store_true", default=None,
                    help="put an inclusive b1 in the struck cluster's kernel")
     p.add_argument("--b1-model", choices=sorted(B1_MODELS), default=None,
@@ -178,7 +185,9 @@ def build_parser():
     p.add_argument("--b1-band-scale", type=float, default=None,
                    help="the MANDATORY 100 %% band on --b1-model cdks and "
                         "li6-convolution: multiplies the WHOLE b1.  "
-                        "Q(6Li) = -0.0806(6) fm^2 against Q_d = +0.2859(3) "
+                        "Q(6Li) = -0.0818(17) fm^2 (LI6_QUADRUPOLE_FM2, "
+                        "TUNL; Pyykko's compilation gives -0.0806(6)) "
+                        "against Q_d = +0.2859(3) "
                         "fm^2 -- the alpha-d D wave enters the closest "
                         "measured observable with the OPPOSITE sign to the "
                         "deuteron's and nearly cancels it.  RUN 0 / 1 / 2 and "

@@ -1,6 +1,7 @@
 """The module imports, and the bound surface is the one docs/USAGE.md uses."""
 
 import os
+import re
 
 import numpy as np
 import pytest
@@ -8,14 +9,21 @@ import pytest
 import lipolgen as lg
 
 
-def test_import_and_version():
+def test_import_and_version(repo_root):
     # Not pinned to a literal: the version comes from CMakeLists.txt's
     # project() VERSION (single source of truth, see LIPOLGEN_VERSION) and
     # would otherwise drift out of sync with a hardcoded expectation here.
-    # When the package is actually installed (wheel or `pip install -e .`),
-    # cross-check against the METADATA version scikit-build-core derived
-    # from the same source, so the two are verified consistent.
-    assert lg.__version__
+    # "Single source" is a claim, so it is VERIFIED rather than assumed: the
+    # compiled-in string is checked for shape AND against that source, which
+    # is the check that runs in the in-tree flow (where importlib.metadata
+    # knows nothing).  When the package IS installed (wheel or
+    # `pip install -e .`), the METADATA version scikit-build-core derived from
+    # the same source is cross-checked too.
+    assert re.fullmatch(r"\d+\.\d+\.\d+", lg.__version__), lg.__version__
+    with open(os.path.join(repo_root, "CMakeLists.txt")) as fh:
+        m = re.search(r"project\(\s*LiPolGen\s+VERSION\s+([0-9.]+)", fh.read())
+    assert m, "CMakeLists.txt has no project(LiPolGen VERSION ...)"
+    assert lg.__version__ == m.group(1)
     try:
         import importlib.metadata as importlib_metadata
         installed_version = importlib_metadata.version("lipolgen")

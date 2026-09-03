@@ -5,7 +5,12 @@
 structure-function basis (rank-2 and rank-3)") and `docs/OPEN_ITEMS_SOLUTIONS.md`
 row 8. Audience: the LiPolGen authors and a theory co-author.
 No code is changed by this note; every statement about the generator carries a
-`file:line` that was read to write it.
+`file:line` that was read to write it. Those references were **re-resolved by
+hand on 2026-09-03**, after the Phase E code comments shifted several of them.
+`docs/theory/` is outside `validation/check_physics_channels_links.py`'s reach
+(that gate reads `docs/PHYSICS_CHANNELS.md` only), so they are not
+machine-checked: treat a `file:line` here as a pointer to a symbol, and grep for
+the symbol if the line does not look right.
 
 Conventions of this note: `M` is the free nucleon mass (per-nucleon Bjorken `x`,
 `include/lipolgen/asymmetries.hpp:56-60`); `J` is the ion spin; `m` a projection
@@ -24,9 +29,9 @@ scalar `Q_NN(m) = [3m² − J(J+1)]/3` geometry (`include/lipolgen/xsec.hpp:22-2
 `src/core/xsec.cpp:167-172`), the same `b1 + (1−y)/(xy²) b2` kernel and the same
 optional exact finite-γ Cosyn kernel (`include/lipolgen/xsec.hpp:203-216`), fed
 through the dedicated J = 3/2 slots `b1_32_func / b2_32_func / delta_32_func`
-(`include/lipolgen/xsec.hpp:217`, dispatched at `src/core/xsec.cpp:107-117`); the
+(`include/lipolgen/xsec.hpp:217-225`, dispatched at `src/core/xsec.cpp:107-117`); the
 rank-3 (octupole) sector is computed in the spin bookkeeping
-(`include/lipolgen/spin.hpp:93-94`, `src/core/spin.cpp:244-257`) but never
+(`include/lipolgen/spin.hpp:93-101`, `src/core/spin.cpp:244-257`) but never
 reaches the cross section. This note establishes two things. **(a)** The
 rank-≤2 truncation is *exact*, not an approximation, for every inclusive
 observable measured with an **unpolarized lepton beam** — A_zz, the cos 2φ
@@ -139,14 +144,16 @@ So Q_NN is the same object for J = 1 and J = 3/2 — but T is not: T ≡ P_zz fo
 J = 1 and T ≡ Q_NN for J = 3/2. That asymmetry is a live trap for anyone reading
 `AxisMoments::tensor` across the two isotopes, and the two example CLIs are
 already caught in it. For the hand-built `--plan pure` fill (the stretched
-state, §2.4) `examples/generate_tagged.cpp:123` records `pzz_true = 1.0`, while
-`examples/generate_full.cpp:133` records `pzz_true = (spin1 ? 1.0 : 0.0)`, i.e.
+state, §2.4) `examples/generate_tagged.cpp:123` recorded `pzz_true = 1.0`, while
+`examples/generate_full.cpp` recorded `pzz_true = (spin1 ? 1.0 : 0.0)`, i.e.
 **0 for ⁷Li** — although `moments_along_axis(1.5, {1,0,0,0}).tensor = +1`. The
-two CLIs therefore disagree about the recorded rank-2 moment of the *same* fill;
-`generate_full.cpp:133` is the wrong one and should record `1.0` for J = 3/2 as
-`generate_tagged.cpp:123` already does. No cross section moves (the plan runs at
-`lam_e = 0` and the kernel reads `state.m`, not the plan's bookkeeping), but any
-analysis that divides by `measured_pzz` does.
+two CLIs therefore disagreed about the recorded rank-2 moment of the *same*
+fill, and `generate_full` was the wrong one. **Fixed 2026-09-03 (commit
+0961c60): both CLIs now write `j >= 1.0 ? 1.0 : 0.0`** — `generate_tagged.cpp:123`
+and `examples/generate_full.cpp:135` — so a J = 3/2 pure fill records T = 1. No
+cross section moved (the plan runs at `lam_e = 0` and the kernel reads
+`state.m`, not the plan's bookkeeping), but any analysis that divides by
+`measured_pzz` did.
 
 The exact map from moments to populations is a 4×4 linear solve,
 `spin32_populations(pz, t, o)` (`src/core/spin.cpp:304-322`), whose rows are
@@ -245,11 +252,11 @@ Three consequences for the run plans:
 * **The explicit-P_zz branch silently sets R₃ = 0.** `helicity_flip_plan` with
   `use_explicit_pzz = true` calls `spin32_populations(pz, opt.pzz)`
   (`src/core/bookkeeping.cpp:88`) and the third argument defaults to `o = 0.0`
-  (`include/lipolgen/spin.hpp:110-111`). That is a *choice of fill*, not a
+  (`include/lipolgen/spin.hpp:117-118`). That is a *choice of fill*, not a
   property of the physics. No C++ example CLI parses a `--pzz` flag, so the
   branch is unreachable from *them*; the Python API does expose it
   (`HelicityFlipOptions.use_explicit_pzz` and `.pzz`,
-  `python/bindings.cpp:1394-1395`), so a Python caller who sets `pzz` gets
+  `python/bindings.cpp:1796-1797`), so a Python caller who sets `pzz` gets
   R₃ = 0 silently today. If the rank-3 sector is ever switched on,
   `HelicityFlipOptions` needs an explicit `o` alongside `pzz` — and `RunPlan`
   needs somewhere to record it (§6.1).
@@ -953,19 +960,19 @@ This section is a design sketch, not an instruction; nothing here is implemented
 
 | where | add |
 |---|---|
-| `InclusiveKernel::Options` (`include/lipolgen/xsec.hpp:196-225`) | `SFFunc3 g1_rank3_func, g2_rank3_func;` and `bool rank3 = false;` — off by default, for the same reason `tensor_gamma` is (`include/lipolgen/xsec.hpp:203-216`): switching it on moves a published number with nothing on the analysis side to meet it |
+| `InclusiveKernel::Options` (`include/lipolgen/xsec.hpp:196-232`) | `SFFunc3 g1_rank3_func, g2_rank3_func;` and `bool rank3 = false;` — off by default, for the same reason `tensor_gamma` is (`include/lipolgen/xsec.hpp:203-216`): switching it on moves a published number with nothing on the analysis side to meet it |
 | `SFTables` (`include/lipolgen/xsec.hpp:130-144`) | `double g1_rank3 = 0.0, g2_rank3 = 0.0;` filled in `tables()` only for `ion().spin == 1.5`, in the same branch as the `_32` slots (`src/core/xsec.cpp:107-117`) |
 | `Amplitudes` (`include/lipolgen/xsec.hpp:154-159`) | `double a3 = 0.0;` — required by (43). `density()` and `positivity_margin()` (`src/core/xsec.cpp:282-289`) take it as one more term, but **`density_min` (`src/core/xsec.cpp:43-52`) changes algorithm, not just signature**: today it is an exact minimiser of a quadratic in c = cos φ′; with cos 3φ′ = 4c³ − 3c the stationary condition becomes a *cubic* in c, so it needs a cubic root solve (or a guarded grid scan over c ∈ [−1, 1] plus a Newton polish, with the endpoints kept) |
 | `InclusiveSampler::StateTables` (`include/lipolgen/sampler.hpp:207-214`) | `a3` and `a3n` vectors; `bound` becomes `1 + \|a1n\| + \|a2n\| + \|a3n\|`; `margin` from the new `density_min`. All of it is filled at `src/core/sampler.cpp:233-239` |
 | the per-event φ draw (`src/core/sampler.cpp:385-395`) | the accept–reject test is literally `u < 1 + a1n cos φ′ + a2n cos 2φ′` with `u` drawn against `bound`; both gain the cos 3φ′ term |
 | `InclusiveSampler::effective_modulation` (`src/core/sampler.cpp:304-321`) | a third numerator accumulator and an `a3` field on `EffectiveModulation` |
 | the per-category φ density (`src/core/sampler.cpp:479-481`) and `phi_histogram_pseudo` (`src/core/sampler.cpp:525-530`) | both evaluate `1 + w_avg + a1 cos φ′ + a2 cos 2φ′` by hand; the second also calls `density_min(a1, a2)` |
-| `InclusiveKernel` | `double octupole_moments(double m) const` returning `(m³ − (41/20)m)/0.3` for spin 3/2 and `0.0` otherwise, the exact analogue of `tensor_moments` (`src/core/xsec.cpp:167-172`) and consistent with `src/core/spin.cpp:244-257`. **Plural, mirroring `tensor_moments`**: a member named `octupole_moment` would hide the free function `lipolgen::octupole_moment(const CplxMatrix&, double)` (`include/lipolgen/spin.hpp:94`) inside the class scope |
+| `InclusiveKernel` | `double octupole_moments(double m) const` returning `(m³ − (41/20)m)/0.3` for spin 3/2 and `0.0` otherwise, the exact analogue of `tensor_moments` (`src/core/xsec.cpp:167-172`) and consistent with `src/core/spin.cpp:244-257`. **Plural, mirroring `tensor_moments`**: a member named `octupole_moment` would hide the free function `lipolgen::octupole_moment(const CplxMatrix&, double)` (`include/lipolgen/spin.hpp:101`) inside the class scope |
 | `HelicityFlipOptions` (`include/lipolgen/bookkeeping.hpp:136-146`) | an explicit `o` beside `pzz`, since the explicit branch silently sets R₃ = 0 today (`src/core/bookkeeping.cpp:88`) |
 | `RunPlan` (`include/lipolgen/bookkeeping.hpp:88-128`) | **there is nowhere to record R₃ today.** The class carries `pe/pz/pzz` true + measured only, and `helicity_flip_plan` records just `.tensor` (`src/core/bookkeeping.cpp:101-103`), so the `HelicityFlipOptions::o` above has no destination. Add `o_true_` / `measured_o_`, recorded from `moments_along_axis(j, pops).octupole`, and give the smear block (`src/core/bookkeeping.cpp:32-40`) a policy — noting §2.4 that **there is no rank-3 polarimeter**, so the honest default is *not* a fourth `rng.normal()` draw but R₃ taken from the fill model (14) with its own systematic |
-| `python/bindings.cpp:1284-1286` | the two new `Options` members, beside the existing `b1_32_func` / `b2_32_func` / `delta_32_func` |
-| `python/bindings.cpp:1245-1255` | the `Amplitudes` binding gains `a3` — and this is a **breaking** change, not an addition: its `__iter__` and `__repr__` are a fixed 3-tuple, so every Python caller doing `w, a1, a2 = amps` breaks the day `a3` appears |
-| `python/bindings.cpp:1545-1547` | the `state_tables` dict export gains `a3`, `a3n` |
+| `python/bindings.cpp:1686-1688` | the two new `Options` members, beside the existing `b1_32_func` / `b2_32_func` / `delta_32_func` |
+| `python/bindings.cpp:1646-1655` | the `Amplitudes` binding gains `a3` — and this is a **breaking** change, not an addition: its `__iter__` and `__repr__` are a fixed 3-tuple, so every Python caller doing `w, a1, a2 = amps` breaks the day `a3` appears |
+| `python/bindings.cpp:1949-1950` | the `state_tables` dict export gains `a3`, `a3n` |
 
 Naming: **use `g1_rank3`, never `g2`**, for [6]'s fourth function (§3.3); the
 name `g2` is already taken in `SFTables` by the twist-3 nucleon g2
@@ -985,7 +992,7 @@ vector term is, and structured like `tensor_harmonics_gamma`
 the one place where the obvious guess is wrong, and getting it wrong is silent.
 `tensor_gamma` is the **b-sector (rank-2)** switch and defaults to *false*
 (`include/lipolgen/xsec.hpp:203-216`). The **vector** sector's finite-γ switch is
-`target_mass`, which defaults to **true** (`include/lipolgen/xsec.hpp:223`, with
+`target_mass`, which defaults to **true** (`include/lipolgen/xsec.hpp:231`, with
 the rationale at `:182-185`) and routes `a_parallel` to `a_parallel_exact` =
 D_γ(A₁ + η A₂) with a Wandzura–Wilczek g2 table (`src/core/xsec.cpp:144-151`,
 `:123-130`). By (42) the rank-3 block is the rank-3 *copy* of that A₁/A₂
@@ -1001,7 +1008,7 @@ decomposition, so it must follow the same switch:
   **zero as the stated default** until someone computes one, plus a
   `g2_rank3_scale` mirroring `g2_scale` so the twist-3 sensitivity can be
   measured the way the vector one already is
-  (`include/lipolgen/xsec.hpp:187-190`, members at `:218-220`).
+  (`include/lipolgen/xsec.hpp:187-190`, members at `:226-228`).
 
 Gating the rank-3 block on `tensor_gamma` instead would, at the code's own
 defaults, run the vector sector at finite γ while its rank-3 partner ran

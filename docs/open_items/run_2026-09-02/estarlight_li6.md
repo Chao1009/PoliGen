@@ -363,9 +363,11 @@ So:
   onto f0 only through the assumed 1/(1+(x/x_coh)²) shape.
 
 **Recommendation:** leave `f0 = 0.04` and its {0.02, 0.08} band as a scenario,
-and record in `coherent.hpp` that eSTARlight brackets it from below at
-1.0 × 10⁻³ (exclusive J/ψ) and from above at 3.0 × 10⁻² (all exclusive VMs) but
-does not determine it.  Determining f0 needs a coherent *diffractive-DIS*
+and record in `coherent.hpp` that eSTARlight bounds it **from below only**, at
+1.0 × 10⁻³ (exclusive J/ψ, the one channel inside the M_X ≥ 1.2 GeV window).
+The all-exclusive-VM figure 3.0 × 10⁻² is **not** an upper bound: ~90 % of it
+is ρ⁰, which with φ sits below that floor.  *(Done 2026-09-03: the comment is
+on `CoherentScenario::f0`.)*  Determining f0 needs a coherent *diffractive-DIS*
 calculation (a coherent-A analogue of the H1/ZEUS diffractive PDFs), which is
 neither eSTARlight nor Sartre; it is the same gap `physics_literature.md` §11
 identifies.  `slope_b`, by contrast, is now settled (§4).
@@ -377,7 +379,8 @@ identifies.  `slope_b`, by contrast, is now settled (§4).
 1. **No clustering.**  eSTARlight has one spherically symmetric density per
    nucleus.  The α + d structure that carries the entire physics case for ⁶Li is
    absent, so nothing here bears on the α-tagged channel, on S/D interference,
-   or on the near-null quadrupole moment Q(⁶Li) = −0.0806 fm².
+   or on the near-null quadrupole moment Q(⁶Li) = −0.0818(17) fm²
+   (`LI6_QUADRUPOLE_FM2`, TUNL; Pyykkö's compilation gives −0.0806(6)).
 2. **Gaussian density → no diffractive structure.**  §2c.  There are no
    secondary lobes and no first minimum, so these |t| distributions must not be
    used as an imaging baseline where lobe positions matter

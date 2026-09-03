@@ -402,6 +402,19 @@ void PipelineConfig::validate() const {
           "PipelineConfig: rc tail_model PolradFull is not implemented "
           "(design_C_tensor_rc.md section 1.4.6)");
     }
+    // A KNOB THAT DID NOT RUN MAY NOT BE RECORDED AS IF IT HAD -- the same
+    // rule the Miller branch enforces for `b1_band_scale` below.  `m_lepton`
+    // is RESERVED for `RcTailModel::PolradFull` (F_IR, l_m); the shipped
+    // `TPeak` transcription carries no lepton mass at all, so setting it
+    // would be a silent no-op that the npz `meta` does not record.
+    if (rc_options.tail_model == RcTailModel::TPeak &&
+        rc_options.m_lepton != M_ELECTRON) {
+      throw std::runtime_error(
+          "PipelineConfig: rc_options.m_lepton is RESERVED for tail_model = "
+          "PolradFull (POLRAD's F_IR and l_m); the shipped TPeak tail has no "
+          "lepton-mass dependence, so setting it would record a variation "
+          "that did not run -- leave it at constants.hpp's M_ELECTRON");
+    }
     // DESIGN vs CODE: sec. 3.2's snippet also loops over `plan.categories()`
     // here to refuse a polarised beam.  `PipelineConfig` has no run plan --
     // `RunPlan` is the Pipeline's SECOND constructor argument, not a config

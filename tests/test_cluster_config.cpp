@@ -183,10 +183,30 @@ TEST_CASE("T1 (G1) through theta_lm and clebsch_gordan IS Eqs. (7)-(8)") {
       CHECK_CLOSE(cluster_density(p[0], p[1], 0, c), g3_m0(p[0], p[1], c), 1e-14);
     }
   }
-  // (G1) has no phi dependence and is normalized: sum over m of the density
-  // integrates to 3 with unit radial norms.
-  const ClusterConfigSampler& s = default_sampler();
-  CHECK_CLOSE(s.rho_np(2.0, 0.3, 1.0), s.rho_np(2.0, 0.3, 1.0), 1e-15);
+  // (G1) HAS NO PHI DEPENDENCE -- structurally: `cluster_density` and
+  // `ClusterConfigSampler::rho_np` take (u, v, m, cos theta) and no azimuth
+  // at all, so there is nothing to assert about phi.  What IS assertable, and
+  // what the normalisation claim actually says, is the angular integral:
+  // int dOmega G(u, v, m, c) = u^2 + v^2 for EACH m -- the (1 - 3c^2)
+  // interference integrates to zero -- so the sum over m is 3(u^2 + v^2), and
+  // 3 at unit radial norms.  The integrand is a quadratic in c, so the
+  // composite midpoint rule below is good to ~1e-7.
+  for (const auto& p : pairs) {
+    double total = 0.0;
+    for (int m : {1, 0, -1}) {
+      double acc = 0.0;
+      const int n = 2000;
+      for (int i = 0; i < n; ++i) {
+        const double c = -1.0 + (i + 0.5) * 2.0 / n;
+        acc += cluster_density(p[0], p[1], m, c);
+      }
+      acc *= 2.0 * kPi * 2.0 / n;          // int dphi dc, phi trivial
+      CAPTURE(m);
+      CHECK_CLOSE(acc, p[0] * p[0] + p[1] * p[1], 1e-6);
+      total += acc;
+    }
+    CHECK_CLOSE(total, 3.0 * (p[0] * p[0] + p[1] * p[1]), 1e-6);
+  }
 }
 
 // -------------------------------------------------------------------- T2, T3

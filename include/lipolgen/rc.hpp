@@ -684,7 +684,17 @@ struct RcOptions {
   double qe_kf_gev = RC_QE_KF_GEV;
   /// eta_A quadrature of Eq. (38): Gauss-Legendre nodes in ln(eta_A).
   int    n_eta       = 128;
-  double m_lepton    = M_ELECTRON;     ///< constants.hpp -- NOT a second literal
+  /// RESERVED for `RcTailModel::PolradFull`; UNUSED by the shipped `TPeak`.
+  /// POLRAD's infrared factor F_IR and l_m = ln(Q^2/m^2) need the LEPTON
+  /// mass, but Eqs. (37)-(39), (43) as transcribed here carry none of it, so
+  /// nothing in src/core/rc.cpp reads this field.  A knob that did not run
+  /// may not be recorded as if it had (the same rule
+  /// `PipelineConfig::validate()` enforces for `b1_band_scale` on the Miller
+  /// branch), so validate() REFUSES `m_lepton != M_ELECTRON` while
+  /// `tail_model == TPeak` rather than let a Python caller set it and get a
+  /// silent no-op that the npz `meta` does not record.  From constants.hpp --
+  /// NOT a second literal.
+  double m_lepton    = M_ELECTRON;
   /// Ceiling on the returned tail ratio, mirroring `GlauberFsiOptions::w_max`:
   /// a Monte-Carlo weight must be bounded, and the clipped fraction is
   /// reported rather than hidden -- globally AND per y-band, because

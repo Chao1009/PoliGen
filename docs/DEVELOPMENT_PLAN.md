@@ -66,7 +66,10 @@ Rules:
 
 Explicitly out of scope for v0.1 (documented interfaces left): FSI, tensor-sector
 radiative corrections, FLUKA-grade evaporation, ⁷Li coherent scenario, polarized
-lepton QED radiation (PYTHIA dipole-recoil limitation).
+lepton QED radiation (PYTHIA dipole-recoil limitation). *(That is the v0.1 scope
+as of 2026-08-30; FSI and the RC weight family have landed since, both **opt-in**
+— `--fsi glauber-cluster|glauber-nucleon` and `--rc tensor-band` — and neither
+changes a default run. See §6.)*
 
 ## 3. Work breakdown and agent assignment
 
@@ -129,6 +132,22 @@ scripts, docs, reference dumps.
   convention, plans/04 #17).
 
 ## 6. Open items after day 1
+
+*Updated 2026-09-03: six more deliverables landed — see
+`docs/OPEN_ITEMS_SOLUTIONS.md` for the full write-ups. Closed since: the
+physics-channels reference document (`docs/PHYSICS_CHANNELS.md`, gated by
+`validation/check_physics_channels_links.py`); the tensor-sector
+radiative-correction band (`include/lipolgen/rc.hpp`, `src/core/rc.cpp`,
+`--rc tensor-band`); the spin-3/2 finite-γ theory note
+(`docs/theory/SPIN32_FINITE_GAMMA.md`); packaging (`pyproject.toml` with
+scikit-build-core, `pip install -e .`); the eSTARlight unpolarized coherent
+⁶Li baseline (`docs/open_items/run_2026-09-02/estarlight_li6.md`) and the
+polarized ⁶Li α+d configuration sampler (`include/lipolgen/cluster_config.hpp`,
+console script `lipolgen-configs`). Landed but NOT closed: the four-term α–d
+convolution backend for b₁(⁶Li) (`include/lipolgen/b1_nuclear.hpp`,
+`--b1-model li6-convolution`) ships opt-in behind a magnitude-gate warning —
+see the "Physics inputs still external" bullet below and
+`docs/open_items/run_2026-09-02/phase_D_gate.md`.*
 
 *Updated 2026-09-02: every item below was investigated — see
 `docs/OPEN_ITEMS_SOLUTIONS.md` for the ranked solutions and the
@@ -203,9 +222,18 @@ gated at rtol 1e-12 against regenerated `validation/reference/*.json`
   opt-in are gone; the knob is `PythiaBridgeOptions::coherent_t2 = {Pomeron, Off}`.
   Still open in the coherent sector: no exclusive-VM channel below M_X = 1.2 GeV,
   and `PDF:PomSet` (default 6) is the tier's largest systematic.
-- **Physics inputs still external** (unchanged from plans/04): VMC α+d / α+t overlaps,
-  spin-3/2 rank-2 basis, b₁ for A > 2, coherent amplitude for polarized A > 2,
-  tensor-sector radiative corrections, polarized nuclear PDFs. All are `Backend`s.
+- **Physics inputs still external** (updated 2026-09-03 from plans/04): tensor-sector
+  radiative corrections and b₁ for A > 2 have moved from wholly external to
+  opt-in `Backend`s (`--rc tensor-band`; `--b1-model li6-convolution`) — the RC
+  band is unrestricted, while the b₁(⁶Li) convolution still carries a
+  magnitude-gate warning and publishes no ⁶Li number until the gate closes
+  (`docs/open_items/run_2026-09-02/phase_D_gate.md`). The coherent amplitude
+  for polarized A > 2 has a first rung — the eSTARlight unpolarized ⁶Li
+  baseline plus the polarized α+d configuration sampler — but not yet a full
+  polarized coherent amplitude. The spin-3/2 rank-2 basis has its theory note
+  (`docs/theory/SPIN32_FINITE_GAMMA.md`); the rank-3 sector it describes stays
+  off by default, so no code behaviour changed. Still wholly external:
+  polarized nuclear PDFs.
 - **Conventions, all decided**: `TENSOR_LL_SIGN = −1` (plans/08 D1, closed),
   ⁶Li effective polarization = the cluster picture's 0.81123 (plans/04 #6,
   closed; the 0.81–0.85 band whose top is the Wiringa VMC 0.848 is the
@@ -222,5 +250,9 @@ gated at rtol 1e-12 against regenerated `validation/reference/*.json`
   computes the quadrature per point), `miller_b1_q2_scale` /
   `toy_b1(q2_evolve=True)` (off by default in the Python and used only by
   `money_b1.py`), and the figure/report scripts of run 14's addendum.
-- **HepMC3 → abconv → npsim smoke test** not yet run (needs the eic-shell container).
-- Packaging: no `pyproject.toml` yet (PYTHONPATH route via `env.sh`).
+- **HepMC3 → abconv → npsim smoke test: PASSED 2026-09-02** (10/10 events
+  through `npsim` directly and via `abconv`; see `docs/OPEN_ITEMS_SOLUTIONS.md`
+  §2 and the README's ePIC-chain paragraph).
+- **Packaging: DONE 2026-09-02** — `pyproject.toml` / scikit-build-core,
+  `pip install -e .` (`docs/OPEN_ITEMS_SOLUTIONS.md` §12–13; the PYTHONPATH
+  route via `env.sh` still works and is unchanged).

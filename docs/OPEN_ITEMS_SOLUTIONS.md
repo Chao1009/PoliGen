@@ -14,10 +14,10 @@ the recommended solution, effort, and status. Ordered by leverage.
 | 5 | Coherent T2 final state | **implemented 2026-09-01** — γ*–Pomeron tier is the default coherent T2 (`CoherentT2::{Pomeron, Off}`, `docs/PYTHIA_BRIDGE.md` §12); ζ = β exact, 300-event chain conserves to 2.8e-14, M_had = M_X to 2.3e-11, veto 0 at M_X ≥ 1.4 GeV | done | `--coherent-t2`, `--pom-set` |
 | 6 | Triton remnant (t* → N + …) | **implemented 2026-09-01** — `triton_sf.hpp` CS n₀+n₁ model, S₀ = 0.6525 untuned, third channel n → (pn); opt-in `--triton-sf ciofi-simula`, sequential Hulthén stays the default bit for bit | done | numbers in §6 below |
 | 7 | Spectator FSI (plans/04 #16) | **implemented 2026-09-01** — `GlauberFsiWeight` per-event weight on `Event::weight` (`--fsi`, tagged channels; never a momentum shift); σ_Xα = 131.0 mb at σ_XN = 40, band 20–40 mb mandatory | done | numbers in §7 below |
-| 8 | Spin-3/2 SF basis (plans/04 #14) | **exists** — Jaffe–Manohar NPB 321 (1989); explicit J=3/2 functions arXiv:2209.12161 Eqs. 19a–d; rank-≤2 truncation is *exact* for unpolarized-beam inclusive observables | 5–10 d note | theory note |
+| 8 | Spin-3/2 SF basis (plans/04 #14) | **implemented as a theory note** — Jaffe–Manohar NPB 321 (1989); explicit J=3/2 functions arXiv:2209.12161 Eqs. 19a–d; rank-≤2 truncation is *exact* for unpolarized-beam inclusive observables; the finite-γ J = 3/2 decomposition and the full list of code changes needed if the rank-3 sector is ever switched on are written up, with no default behaviour change | done | `docs/theory/SPIN32_FINITE_GAMMA.md` |
 | 9 | Tensor-sector RC (plans/04 #10) | **implemented 2026-09-03** — `rc.hpp`/`rc.cpp`, opt-in `--rc tensor-band`: the two-sided band `rc_tensor_lo`/`rc_tensor_hi` on the tensor part of the rate (δ log-linear, 0.30 at x = 0.01 → 0.015 at x = 0.16) plus `rc_tail`, POLRAD's t-peak elastic tail with its tensor part and the unpolarised quasi-elastic tail. Weight-only, on `Event::rc_weights` and never on `Event::weight`; `--rc off` is byte-identical | done | numbers in §9 below |
 | 10 | b₁ for A > 2 (plans/04 #9) | **implemented 2026-09-03 as an OPT-IN backend, and STILL OPEN** — `b1_nuclear.hpp`/`b1_nuclear.cpp`, `--b1-model li6-convolution`: the **four**-term α–d convolution on the Cosyn–Dong–Kumano–Sargsian kernel (the struck-α orbital term is not optional, it is ≈ 0.5 × the struck-d one). The default stays `Li6B1(MillerB1)`, bit for bit. **The A = 2 validation gate FAILS its magnitude clause** (a factor 2.27 below the digitized CDKS Fig. 4 peak at CDKS Eq. (21)'s δ-function, which the gate now defaults to — 3.68 at Eq. (17)'s κ = 1; the nucleon PDF, the one remaining identified item, closes it to 1.39), so **no ⁶Li number from it may be published** and the item does not close | 10–15 d, ~8 spent | code done, **gate open** — §10 below |
-| 11 | Coherent ⁶Li amplitude (plans/04 #18) | **both halves in-tree** — eSTARlight ⁶Li unpolarized rates/slope (2026-09-02, `estarlight_li6.md`) settle `slope_b = 50 ± 10` GeV⁻² as citable and bracket `f0` one-sided, [1.0e-3, 3.0e-2]; the α+d configuration sampler (2026-09-03, `cluster_config.hpp`, `phase_G_numbers.md`) predicts ⁶Li's tensor a₂ ~10× smaller than the deuteron's and of **opposite sign** | done / done / collab | §11 below; Mäntysaari-group ask drafted, not yet sent |
+| 11 | Coherent ⁶Li amplitude (plans/04 #18) | **both halves in-tree** — eSTARlight ⁶Li unpolarized rates/slope (2026-09-02, `estarlight_li6.md`) settle `slope_b = 50 ± 10` GeV⁻² as citable and put a **lower bound** of 1.0e-3 on `f0` (the all-VM 3.0e-2 is not an upper bound — ρ/φ sit below the M_X floor); both recorded in `coherent.hpp`; the α+d configuration sampler (2026-09-03, `cluster_config.hpp`, `phase_G_numbers.md`) predicts ⁶Li's tensor a₂ ~10× smaller than the deuteron's and of **opposite sign** | done / done / collab | §11 below; Mäntysaari-group ask drafted, not yet sent |
 | 12 | Packaging | **implemented 2026-09-02** — `pyproject.toml` (scikit-build-core) in-tree, `pip install -e .` works (66 s); one copy of each `.so` in `lipolgen/`, `$ORIGIN`+deps-prefix RPATH, data/vmc vendored; portable wheel still needs `auditwheel` + GPL-3 terms | done | see §12–13 below |
 | 13 | License | **GPL-3.0-or-later** (forced by HepMC3/LHAPDF; matches MCnet norms) | 0 | author to confirm |
 
@@ -179,6 +179,13 @@ a correction to A_zz.
   odd-l multipoles unobservable with an unpolarized beam in inclusive DIS, so the
   generator's rank-≤2 truncation is a theorem, not an approximation. Gap: the
   finite-γ inclusive decomposition for J = 3/2 (5–10 d, ideal Cosyn/Weiss co-authorship).
+  → **Written up 2026-09-03 as `docs/theory/SPIN32_FINITE_GAMMA.md`**: the
+  rank-≤2 truncation is proved exact for unpolarised-beam observables (§4), the
+  finite-γ J = 3/2 decomposition is derived there (§5 — two rank-3 structure
+  functions, master formula (46)–(47); the repository's own derivation, still
+  unpublished in the literature, with the Appendix listing every unsourced
+  claim), and §6 lists the code changes if the rank-3 sector is ever switched
+  on. **No code behaviour changed.**
 - Tensor RC: adopt ISR shift (spin-blind) + POLRAD Eq. (A.4) tensor elastic tail
   with VMC ⁶Li form factors (Wiringa–Schiavilla 1998); quote 1.5 % (x ≳ 0.05) and a
   10–30 % band on the tensor part at x ≲ 0.01 (Gakh–Shekhovtsova, uncited).
@@ -201,7 +208,9 @@ a correction to A_zz.
   alignment as the deuteron's — (3c² − 1) is even in k⃗ and the α carries −k⃗ —
   so the **struck-α orbital term (2α) exists and is ≈ 0.5 × the struck-d one
   (2d)**, fixed by counting (4/6 against 2/6) and by the 1/M² of the
-  P₂-weighted density: 2(M_d/M_α)² = 0.5064 against a measured 0.489–0.503.
+  P₂-weighted density: 2(M_d/M_α)² = 0.5064 against a measured **0.494–0.504**
+  (0.489–0.497 on the design's coarser y grid — a quadrature artefact, since
+  fixed by the 2400/2400/3200 default; `phase_D_numbers.md`).
   A regression that silently drops it moves b₁ by ~30 %. The A = 2 validation
   was done and it **fails on magnitude** — see §10.
 
@@ -487,7 +496,8 @@ validated with is not the R the shipped ⁶Li numbers above carry. Measured on
 the gate at κ = 1, like for like: r1998 → r_sigma_lt moves the second zero from
 0.392 to **0.365**, *away* from the digitized 0.457, and the peak up by
 **1.6 %**. Inside the band, not cosmetic; whether the ⁶Li default should become
-`r1998` is on the close-out list.
+`r1998` is an **open follow-up, not decided in the 2026-09-03 close-out**
+(§10's "What has to happen", item 4).
 
 **The truncation is MEASURED, not asserted.** The dropped P₂ and P₄ remainders
 of the D-wave b₁ᵈ weight are **below 6e−5 of term (1) everywhere** (T14) — four
@@ -501,12 +511,14 @@ F₁ᵈ: ~3e−4 of term (2d).
 
 ### Systematics that are stated, not hidden
 
-* **The mandatory 100 % band.** Q(⁶Li) = −0.0806(6) fm² against
+* **The mandatory 100 % band.** Q(⁶Li) = −0.0818(17) fm² against
   Q_d = +0.2859(3) fm²: the α–d D wave enters the closest measured observable
   with the opposite sign to the deuteron's own D state and nearly cancels it.
-  *(Q(⁶Li): Pyykkö, Mol. Phys. **106** (2008) 1965, whose ⁶Li entry is
-  Cederberg et al., Phys. Rev. A **57** (1998) 2539; Q_d: Bishop & Cheung,
-  Phys. Rev. A **20** (1979) 381.)* Every number is `--b1-band-scale 0/1/2`,
+  *(Q(⁶Li) is `LI6_QUADRUPOLE_FM2` in `include/lipolgen/rc.hpp`, TUNL's A = 6
+  evaluation, 1998CE04; Pyykkö's compilation, Mol. Phys. **106** (2008) 1965,
+  gives −0.0806(6) fm² from Cederberg et al., Phys. Rev. A **57** (1998) 2539
+  — the repository constant is TUNL's. Q_d: Bishop & Cheung, Phys. Rev. A
+  **20** (1979) 381.)* Every number is `--b1-band-scale 0/1/2`,
   and `--b1-alpha-d-dwave-weight 0/1/2` is the shape variant reported next to
   it.
 * **±5 % on N_αd, unexplained.** Three tabulations of the α–d spectroscopic
@@ -526,10 +538,11 @@ F₁ᵈ: ~3e−4 of term (2d).
   a curve that CDKS Eq. (10)'s explicit 1/A, their text under Eq. (16) and their
   Fig. 6 all say is **already per nucleon**. The new backend reaches the raw
   column through `cdks_b1_raw_per_nucleon()`; the constant is untouched, because
-  every published number carries the current convention. Two close-out items:
-  (a) decide whether `CdksB1` should stop halving; (b) check **Miller's** own
-  normalisation independently — the answer is on the axis of Miller's Fig. 5 and
-  is not assumable from CDKS.
+  every published number carries the current convention. Two **open
+  follow-ups, neither decided in the 2026-09-03 close-out** (items 5 and 6
+  of "What has to happen" below): (a) decide whether `CdksB1` should stop
+  halving; (b) check **Miller's** own normalisation independently — the answer
+  is on the axis of Miller's Fig. 5 and is not assumable from CDKS.
 * **Q6.** `LI6_B1_RANK2_TRANSFER` = 0.921947 is tied to the Hulthén-scenario
   P_D = 0.0867; the VMC value 0.0193549 would give 0.982581. Changing it would
   move every published inclusive tensor number, so it stays — but this backend
@@ -550,8 +563,13 @@ F₁ᵈ: ~3e−4 of term (2d).
    is the only identified item still open at the peak.**
 3. Get a real CD-Bonn u, w instead of the D-state rescaling proxy of item 5.
 4. Decide whether `Li6ConvolutionOptions` should default to `r1998` like the
-   gate rather than to `r_sigma_lt` (checklist item 2).
-5. Only then re-open G3b. **Until it passes, no ⁶Li number ships.**
+   gate rather than to `r_sigma_lt` (checklist item 2). *Not decided in the
+   2026-09-03 close-out.*
+5. Decide whether `CdksB1` should stop halving the per-nucleon column (Q5(a)
+   above). *Not decided in the 2026-09-03 close-out.*
+6. Check **Miller's** own normalisation independently, off the axis of his
+   Fig. 5 (Q5(b) above). *Not done in the 2026-09-03 close-out.*
+7. Only then re-open G3b. **Until it passes, no ⁶Li number ships.**
 
 ## 11. Coherent ⁶Li amplitude
 
@@ -619,9 +637,12 @@ on the part of coherent diffraction eSTARlight's exclusive-VM model can see.
 Determining f0 itself needs a coherent diffractive-DIS calculation (a
 coherent-A analogue of the H1/ZEUS diffractive PDFs) that exists in neither
 eSTARlight nor Sartre; **recommendation: leave `f0 = 0.04` and its {0.02, 0.08}
-band as a scenario**, record eSTARlight's one-sided bracket
-[1.0 × 10⁻³, 3.0 × 10⁻²] in `coherent.hpp`, and do not treat it as a
-determination.
+band as a scenario**, and do not treat eSTARlight's numbers as a
+determination. **Done 2026-09-03**: the comment on `CoherentScenario::f0`
+(`include/lipolgen/coherent.hpp`) now records a **lower bound of 1.0 × 10⁻³**
+(exclusive J/ψ inside the M_X ≥ 1.2 GeV window). The all-VM figure 3.0 × 10⁻²
+is *not* an upper bound on f0 — ~90 % of it is ρ⁰, which with φ sits below that
+floor.
 
 Caveats carried forward unchanged from `estarlight_li6.md` §6: one spherically
 symmetric Gaussian density (no α+d clustering, no polarization axis, no
@@ -691,8 +712,10 @@ choice was made.
 
 **The measured numbers** (default `FitRescaled` source; full table, all
 three sources and the grid-vs-analytic quadrature study in
-`phase_G_numbers.md`): ⟨r²⟩(⁶Li) = **6.4447 fm²** (r_rms 2.5386 fm, 4 % above
-the measured point radius 2.4655 fm); the point-matter quadrupole per
+`phase_G_numbers.md`): ⟨r²⟩(⁶Li) = **6.4447 fm²** (r_rms 2.5386 fm — **3 %**
+above the measured point radius 2.4655 fm, `LI6_R2_POINT_FM2`, and **4 %**
+above the VMC `li6.density` value 2.4433 fm, `LI6_R_POINT_VMC_FM`); the
+point-matter quadrupole per
 substate, Q_matter(m) = (3m² − 2)·[(4/3) Q[R₀,R₂] + 2 Q_d D_T] (eq. (G5)),
 is **Q_matter(±1) = −1.2309 fm²** and **Q_matter(0) = +2.4618 fm²** — the two
 non-zero substates carry opposite sign by construction, and Q_matter(+1)/2 is
@@ -742,7 +765,7 @@ dependence of ⟨A⟩ exactly as in their Fig. 2.
 > of the repository — would you run your existing polarized setup on our ⁶Li
 > configuration tables, or release that branch? Two honest caveats we would
 > want your view on before you spend time: our α+d model reproduces the ⁶Li
-> point radius to 4 % but overshoots Q(⁶Li) by a factor ≈ 7.5 (measured
+> point radius to 3 % but overshoots Q(⁶Li) by a factor ≈ 7.5 (measured
 > −0.0818 fm², our α+d geometry −0.615…−0.730 fm², **GFMC AV18+IL7 −0.20(6) fm²**,
 > Pastore *et al.*, PRC 87, 035503 (2013)), so the tensor amplitude carries a
 > factor-of-several systematic that we would carry explicitly as a band. The
@@ -780,7 +803,8 @@ proposing.
 
 **The rule of this section is unchanged and is now quantified rather than
 repealed: do not derive a tensor input for a published observable from these
-wave functions.** The α+d truncation reproduces the ⁶Li radius to 3–4 % but
+wave functions.** The α+d truncation reproduces the ⁶Li point radius to 3 %
+(4 % against the VMC `li6.density` value) but
 overshoots Q(⁶Li) by **7.5×** (model −0.615…−0.730 fm² against the measured
 −0.0818 and GFMC AV18+IL7's −0.20(6), Pastore *et al.*, PRC 87, 035503
 (2013)). `quadrupole_band_fm2()` returns all three and the writer stamps them;

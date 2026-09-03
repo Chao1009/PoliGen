@@ -59,7 +59,7 @@ from .export import (inclusive_dict, tagged_dict, hfs_sample,  # noqa: F401
 
 __all__ = [n for n in dir(_lipolgen) if not n.startswith("_")] + [
     "export", "inclusive_dict", "tagged_dict", "hfs_sample", "write_hfs_npz",
-    "write_columns_npz", "CHANNELS", "PLANS", "TRITON_SFS", "FSI",
+    "write_columns_npz", "CHANNELS", "PLANS", "TRITON_SFS", "FSI", "RC",
     "make_config", "make_plan", "make_pipeline", "run", "__version__",
 ]
 
@@ -119,6 +119,18 @@ FSI = {
     "glauber-nucleon": _lipolgen.PipelineFsi.GlauberNucleon,
 }
 
+#: RC weight families accepted on the command line.  "off" (the default) is
+#: today bit for bit; "tensor-band" emits rc_tensor_lo / rc_tensor_hi /
+#: rc_tail on Event.rc_weights and on NOTHING else -- never Event.weight,
+#: never a four-vector, never a random number.  The band is a SYSTEMATIC
+#: VARIATION and the tail a BACKGROUND, so an analysis multiplies them in on
+#: purpose; band the knobs (--rc-delta-low-x 0.19 / 0.30, --rc-fq-scale
+#: 0 / 1 / 2, --rc-qe-suppression 0 / 0.5 / 1) and never quote one row alone.
+RC = {
+    "off": _lipolgen.RcMode.Off,
+    "tensor-band": _lipolgen.RcMode.TensorBand,
+}
+
 #: Run-plan names accepted on the command line (aliases included).
 PLANS = ("tensor-thirds", "azz", "helicity-flip", "apar", "transverse-tensor",
          "cos2phi", "tensor-flip", "flip")
@@ -141,7 +153,10 @@ def make_config(isotope="6Li", config=1, channel="inclusive", events=0,
                 inclusive_b1=None, with_virtual_photon=True,
                 apply_optics_lumi_fraction=None,
                 cluster_wave=None, triton_sf=None,
-                fsi=None, fsi_sigma_mb=None):
+                fsi=None, fsi_sigma_mb=None,
+                rc=None, rc_delta_low_x=None, rc_delta_high_x=None,
+                rc_fq_scale=None, rc_tail_tensor_scale=None,
+                rc_qe_suppression=None):
     """A `PipelineConfig` from plain values (the CLI's own constructor).
 
     `channel` is a key of `CHANNELS`; `optics` a key of `OPTICS`.  The isotope
@@ -161,6 +176,11 @@ def make_config(isotope="6Li", config=1, channel="inclusive", events=0,
     sigma_XN it is built at (40 = free hadron; band 20-40 mb -- run both
     ends, never quote one row alone).  Tagged channels only; the FSI enters
     as a per-event weight on `Event.weight` and moves no four-vector.
+    `rc` is a key of `RC` ("off", the default, or "tensor-band") or an
+    `RcMode` directly, and the five `rc_*` knobs write the matching
+    `RcOptions` fields.  The RC weights land on `Event.rc_weights` and on
+    NOTHING else -- never `Event.weight`, never a four-vector, never a random
+    number -- so "off" is today bit for bit.
     """
     if channel not in CHANNELS:
         raise ValueError("unknown channel %r; know %s"
@@ -210,6 +230,31 @@ def make_config(isotope="6Li", config=1, channel="inclusive", events=0,
             cfg.fsi = fsi
     if fsi_sigma_mb is not None:
         cfg.fsi_sigma_mb = float(fsi_sigma_mb)
+    if rc is not None:
+        if isinstance(rc, str):
+            if rc not in RC:
+                raise ValueError("unknown rc %r; know %s"
+                                 % (rc, ", ".join(sorted(RC))))
+            cfg.rc = RC[rc]
+        else:
+            cfg.rc = rc
+    # `RcOptions` is returned BY VALUE from the binding, so every knob has to
+    # be written on one copy and assigned back -- the `cfg.struck` pattern.
+    if any(v is not None for v in (rc_delta_low_x, rc_delta_high_x,
+                                   rc_fq_scale, rc_tail_tensor_scale,
+                                   rc_qe_suppression)):
+        opt = cfg.rc_options
+        if rc_delta_low_x is not None:
+            opt.delta_low_x = float(rc_delta_low_x)
+        if rc_delta_high_x is not None:
+            opt.delta_high_x = float(rc_delta_high_x)
+        if rc_fq_scale is not None:
+            opt.fq_scale = float(rc_fq_scale)
+        if rc_tail_tensor_scale is not None:
+            opt.tail_tensor_scale = float(rc_tail_tensor_scale)
+        if rc_qe_suppression is not None:
+            opt.qe_suppression = float(rc_qe_suppression)
+        cfg.rc_options = opt
     if scenario is not None:
         cfg.scenario = scenario
     if grid is not None:

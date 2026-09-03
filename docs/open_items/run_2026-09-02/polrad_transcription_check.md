@@ -248,20 +248,44 @@ With POLRAD's `y ≡ Q²`, `sx ≡ S_x`, `s ≡ S`: `y/(A·sx) = x/A` and
 * **POLRAD's own `x_A` is `x·m_p/M_A`, not `x/A`.** `conkin` (adgh:747) sets
   `s = snuc*amp/amh`, i.e. `S_A = S·M_A/m_p`, and the tail code uses
   `xa = y/sx = Q²/S_xA` (adgh:8886). For ⁶Li `M_A/(A m_p) = 1.00502`, so
-  `x_A(POLRAD) = x/A × 0.99500` — a **0.5 % offset** from the design's `x/A`,
-  in the same direction and of the same size as the `M_A` vs `A·M_NUCLEON`
-  point the design already makes for `η_A` (§1.4.1, last row). Since design C
-  already insists on `M_A` from `Ion::mass()`, use `x_A = x·m_p/M_A` and
-  `S_A = S·M_A/m_p` for internal consistency; Eq. (21)'s `x/A` is the paper's
-  own rounding of the same thing.
-* **The per-nucleon reduction in the code is `(m_p/M_A) × (1/A)`, not `1/A`.**
-  `apptai` carries `ter = amh/amp = m_p/M_A` for `ita=2` (adgh:8607-8608) *and*
-  the main program divides again by `tara`: `sig = ... + (tai(2)*extai2 +
-  tai(3)*extai3)/tara` (adgh:488-490). Both the elastic and the quasi-elastic
-  tail get the `/tara`. Design §1.4.5 uses a single `1/A`; POLRAD uses
-  `m_p/M_A` for the invariant rescaling and `1/A` for the final normalisation.
-  Net difference for ⁶Li: **0.5 %**, well inside any tail band — but say which
-  one you chose, in `rc.cpp`, in one comment.
+  `x_A(POLRAD) = x/A × 0.99500` — a **0.5 % offset** from the design's `x/A`.
+  > **REVISED 2026-09-03.** POLRAD's map is exact for POLRAD's variables: a
+  > **target at rest**, with the per-nucleon `x` defined against the FREE
+  > NUCLEON mass. LiPolGen's are not those. `beams.cpp` carries the
+  > per-nucleon momentum `p_u = p_A/A`, so `s = 4E_e p_u` and
+  > `S_A = 2k₁·p_A = A·s` and `x_A = Q²/(y S_A) = x/A` — **both exact**, for
+  > *this* library. `src/core/rc.cpp` therefore uses the design's `x_A = x/A`,
+  > `S_A = A·s` and keeps POLRAD's form only as a documented fixed-target
+  > alternative. The difference, `A m_p/M_A = 1.005`, is not negligible on the
+  > tail because it is steep in `x_A` through `t_min`: measured **0.26 % at
+  > `x = 0.01`, 1.4 % at 0.1, 6.7 % at 0.3** on `σ^el_U`.
+* ~~**The per-nucleon reduction in the code is `(m_p/M_A) × (1/A)`, not
+  `1/A`** … Net difference for ⁶Li: **0.5 %**~~
+  > **THIS PARAGRAPH WAS WRONG AND IT CAUSED A FACTOR-6 BUG. REWRITTEN
+  > 2026-09-03.** The two factors are real — `apptai` carries
+  > `ter = amh/amp = m_p/M_A` for `ita=2` (adgh:8607-8608) **and** the main
+  > program divides again by `tara` (adgh:489, 497:
+  > `(tai(2)*extai2+tai(3)*extai3)/tara`), against a Born that is itself per
+  > nucleon (`f2sfun`, adgh:4330-4339) — but the design's §1.4.5 single `1/A`
+  > is **not the same object**: it is the **Jacobian `dx_A/dx`**, not a
+  > per-nucleon division. So POLRAD applies **two** factors where the design
+  > applies **one**, and the difference is
+  >
+  > > **`A · m_p/M_A = 5.97`, NOT 0.5 %.**
+  >
+  > The old "net difference 0.5 %" sentence compared `(m_p/M_A)(1/A)` against
+  > the design's `1/A` as if both were per-nucleon divisions. `rc.cpp`'s first
+  > implementation cited exactly that sentence to justify applying **one**
+  > factor (`per_nucleon = m_p/M_A`), which made `σ^el_U` and `σ^el_T`
+  > **6.00× too large** for ⁶Li (2× for the deuteron) while the QRT, which had
+  > always carried its `/A`, was right — so the ERT : QRT ratio was internally
+  > inconsistent by a factor `A`. §8's Weizsäcker–Williams × Compton identity
+  > settles it independently: **Eq. (38) is the WHOLE-NUCLEUS
+  > `d²σ/(dx_A dy)`**, and the paper's `σ₁^el = (1/A) d²σ/dx_A dy` notation
+  > (polrad2t.tex:579) is loose. The correct per-nucleon factor is
+  > `(1/A)·(dx_A/dx)`, i.e. **`1/A²`** with this library's map — which is what
+  > `src/core/rc.cpp` now applies, and what `tests/test_rc.cpp` T8(a') pins at
+  > 1e-12 together with a gate that the ERT and QRT factors agree.
 * **The upper limit is NOT `∞`.** The paper writes `∫_{η_min}^{∞}`; the code
   integrates `eta1 → eta2` with (adgh:8610-8613, comment at 8610)
   ```fortran
@@ -408,7 +432,7 @@ POLRAD's own to 6 digits on `G_M` and 0.04 % on `G_Q` (POLRAD hard-codes
 | 1 | `σ_u^C` carries `Y₋` | **corrected** | `σ_u^C = (α³/S) Z² **Y₊** ∫_{η_min}^{η_max} (dη_A/η_A) X̃ F²`, `Y₊ = (1+(1−y)²)/(1−y)` |
 | 2 | `X₁`'s linear `−4η_A` | **confirmed** | — (`X₁ = x_A² + 4x_Aη_A − 4η_A`, `X̃ = X₁/(2η_A x_A²)`) |
 | 3 | `(3/4)x²` / `(4/3)η_A F_q` in `σ_q^d` | **confirmed** | — (design's block is correct; the *PDF* has them swapped) |
-| 4 | Eq. (18) `1/A²` right, `1/A` left; `x_A = x/A` | **confirmed** | — (plus three refinements: `x_A = x m_p/M_A`, per-nucleon factor `(m_p/M_A)(1/A)`, exact `η` limits — §4) |
+| 4 | Eq. (18) `1/A²` right, `1/A` left; `x_A = x/A` | **confirmed** | — (refinements, as REVISED 2026-09-03: LiPolGen keeps `x_A = x/A`, `S_A = A s` — both exact for its collider variables; the per-nucleon factor is **`1/A²`**, i.e. `(1/A)×Jacobian`, and the old "`(m_p/M_A)(1/A)` differs by 0.5 %" line was wrong by `A m_p/M_A = 5.97`; exact `η` limits — §4, §8b) |
 | 5 | `Q_N/6` in Eq. (37); `Q_N=0` Rosenbluth limit of (A.4) | **confirmed** | — (`ℑ₁\|₀ = B/2`, `ℑ₂\|₀ = A`; `F_c(0)=Z`, `F_m(0)=(M_A/m_p)μ_A/μ_N`, `F_q(0)=M_A²Q_A`) |
 
 ---
@@ -526,6 +550,76 @@ cannot remove them. A literal transcription of Eq. (38) gives `σ^el_U < 0` and
   unpolarised one, which is a second reason §1.4.5 must carry `σ^el_T`
   separately rather than as a scale factor on `σ^el_U`.
 
+### 8b. The derivation that fixes BOTH the sign and the whole-nucleus normalisation (added 2026-09-03)
+
+The sign flag above was closed by inspection ("a tail cannot remove events").
+There is a stronger statement available, and it also settles §4's per-nucleon
+question, so it is recorded here rather than left to the next reader.
+
+**The t-peak IS Weizsäcker–Williams × Compton.** At small photon virtuality the
+nucleus radiates an equivalent photon flux
+
+```
+  dn = (Z^2 alpha / pi) (dz/z) (dt/t) (1 - t_min/t) F^2(t)          [ z << 1 ]
+```
+
+and the lepton Compton-scatters off it with
+
+```
+  d sigma / d t^  =  (2 pi alpha^2 / s^^2) [ (1 + (1-y)^2)/(1-y) ]  =  (2 pi alpha^2/s^^2) Y_+ .
+```
+
+Folding the two with `dz dQ^2 = x_A S_A dx_A dy` gives the **whole-nucleus**
+
+```
+  d^2 sigma / (dx_A dy)  =  (2 alpha^3 Z^2 / (x_A^2 S_A)) Y_+
+                            INT (d eta / eta) (1 - eta_min/eta) F^2(4 M_A^2 eta) .
+```
+
+Evaluated numerically against `polrad_sigma_el_u` for a **spin-0 Gaussian** at
+eight `(Z, x, y)` points, the ratio to `−`Eq. (38) is **exactly `(1 − x_A)`**
+(0.99917 at `x_A = 8.3e−4`, 0.99167 at `8.3e−3`) — the `O(x_A)` difference being
+the exact-vs-ultrarelativistic `η` limits and the `X̃` bracket's own `x_A`
+dependence. Two conclusions, both used by `src/core/rc.cpp`:
+
+1. **The leading minus is real.** Eq. (38) as printed integrates a manifestly
+   negative `X̃`; the WW × Compton form is manifestly positive. `rc.cpp` applies
+   Eq. (18)'s minus and `tests/test_rc.cpp` T8(0) gates it.
+2. **Eq. (38) is the WHOLE-NUCLEUS `d²σ/(dx_A dy)` — there is no `1/A` in it.**
+   The paper's `σ₁^el = (1/A) d²σ/dx_A dy` (polrad2t.tex:579) is loose notation,
+   and POLRAD's own FORTRAN confirms it by applying **two** reductions to the
+   same `∫elu`: `ter = m_p/M_A` in `apptai` (adgh:8607-8620) *and* `/tara` in
+   the main program (adgh:489, 497), against a per-nucleon Born. §4's third
+   refinement, which said the two conventions "differ by 0.5 %", is corrected
+   in place: they differ by **`A m_p/M_A = 5.97`**, and design §1.4.5's single
+   `1/A` is a **Jacobian**, not a per-nucleon division. The per-nucleon tail is
+   `(1/A)·(dx_A/dx)·[Eq. (38)]`, i.e. **`[Eq. (38)]/A²`** with `x_A = x/A`.
+
+**Design §1.4.5 and §1.4.6 are marked CORRECTED** for this: §1.4.5's "the
+per-nucleon tail is `(1/A)·[Eq. (38)]`" needs the second `1/A`, and §1.4.6's
+reading of Eq. (18)'s left-hand `1/A` as "already the per-nucleon-normalised
+object" is what made the single factor look sufficient.
+
+### 8c. A second flag, of the same kind: the t-peak is not always the tail (added 2026-09-03)
+
+§0 already warns that the `approx` decks are "not a routinely exercised" path.
+`tests/test_rc.cpp` T8(c) now measures POLRAD §2.1.3 B's *"contributions of s−
+and p−peaks are suppressed"* with an independent leading-log construction:
+
+| target, point | `t / (t + s + p)`, elastic | quasi-elastic |
+|---|---|---|
+| ⁶Li, EIC config 1, `Q² ≥ 20 GeV²` | **> 0.999** | **> 0.96** |
+| ⁶Li, EIC config 1, `x = 0.01, y = 0.1` (`Q² = 4`) | > 0.999 | **0.23** |
+| deuteron, `E = 27.6`, `x = 0.012, y = 0.85` (`Q² = 0.53`) | 0.65 | **0.17** |
+| proton, `E = 10`, `x = 0.3, Q² = 2` | — | **0.037** |
+
+So POLRAD's sentence is right **where the nuclear form factor is dead at the
+s-peak's `t ≈ z Q²`** and badly wrong where it is not. For ⁶Li at EIC `Q²` the
+t-peak really is the whole tail; at fixed-target `Q²`, and for the *nucleon*
+form factors of the quasi-elastic tail, it is not. `rc_tail` is a **lower
+bound**, and `rc.hpp`'s `RcTailModel::TPeak` comment, the run banner and
+`USAGE.md` §7b all say so.
+
 ---
 
 ## 9. What to change in `design_C_tensor_rc.md`
@@ -537,8 +631,12 @@ cannot remove them. A literal transcription of Eq. (38) gives `σ^el_U < 0` and
    flag 3 but note the PDF renders the two fractions *swapped*.
 4. **§1.4.2 integration limits:** `INT eta_m … INF` → the exact `(eta1, eta2)`
    of adgh:8611-8613, with `η_min(u.r.)` retained as a cross-check (§4).
-5. **§1.4.1 nuclear-map row:** `x_A = x/A` → `x_A = x·m_p/M_A` (= `x/A` to 0.5 %
-   for ⁶Li), citing `conkin` adgh:747; same for the `1/A` in §1.4.5.
+5. ~~**§1.4.1 nuclear-map row:** `x_A = x/A` → `x_A = x·m_p/M_A`~~ **WITHDRAWN
+   2026-09-03.** `x_A = x/A` and `S_A = A·s` are EXACT for this library's
+   collider variables (`beams.cpp`'s per-nucleon `p_u = p_A/A`), and POLRAD's
+   `x·m_p/M_A` is exact only for its own fixed-target ones. Keep the design's
+   map. **§1.4.5's `1/A` is a Jacobian and needs a SECOND `1/A`** — the
+   per-nucleon tail is `[Eq. (38)]/A²`; see §4's revised third bullet and §8b.
 6. **§1.4.6 `ℑ^el_6`:** drop the spurious `η_A` (§7.1).
 7. **§5:** add **T8(0)**, the tail-sign gate (§8); note that **T8(b)** cannot be
    diffed against `elu` because POLRAD's `approx` carbon branch omits `Z²` (§7.2).

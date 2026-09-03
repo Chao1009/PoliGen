@@ -199,6 +199,37 @@ does not warn about mismatched run-info objects:
   one that established the run's registered names still round-trips its
   values correctly by index — it just isn't fully reachable by name through
   `GenRunInfo::weight_index`.
+- **Radiative-correction weights** (`rc.hpp`, opt-in `--rc tensor-band`):
+  `Event::rc_weights` is a row-major `(n_slot × 3)` block with
+  `n_slot = 1 + spin_weights.size()`, and its names are **appended after** the
+  spin block:
+
+  ```
+  nominal | spin_weight_1..N | rc_tensor_lo rc_tensor_hi rc_tail
+                             | rc_tensor_lo_1 rc_tensor_hi_1 rc_tail_1 | ...
+  ```
+
+  Slot 0 (the unsuffixed triple) is the event's **own pure spin state**;
+  slot `1 + k` is spin category `k`'s population mixture. The per-event vector
+  is `1 + spin_weights.size() + rc_weights.size()` long, in exactly that
+  order.
+
+  **The rule is APPEND, NEVER INSERT.** `"nominal"` stays at index 0 and every
+  existing `spin_weight_k` keeps its index, so no downstream reader breaks
+  when RC is switched on.
+
+  **`Event::rc_weights` is EMPTY when the run has `--rc off`** (the default),
+  and then no `rc_*` name is registered and no extra weight value is written:
+  such a file is **byte-identical** to one written before `rc.hpp` existed.
+  That is a gated property, not an aspiration —
+  `tests/test_hepmc.cpp` (T15, T15b) and `tests/test_rc_pipeline.cpp` (T6)
+  assert it.
+
+  **These weights are NOT corrections to `nominal`.** `rc_tensor_lo` /
+  `rc_tensor_hi` are the two edges of a *systematic band* on the tensor part
+  of the rate and `rc_tail` is a radiative-tail *background*; an analysis
+  multiplies one in on purpose (`w = nominal * rc_tensor_hi`). Summing or
+  averaging them with `nominal` is meaningless.
 
 ## Why not omit the primary vertex here
 

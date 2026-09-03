@@ -43,7 +43,27 @@
 /// So `rc_tail` is an UNPOLARISED DILUTION with a small tensor correction on
 /// top, not "a tensor background": for 6Li the tensor fraction of the elastic
 /// tail is ~ 10 % of the deuteron's, because what sets it is Q_A/Z, and
-/// Q(6Li)/Q(d) = 0.29 against Z = 3 (design_C_tensor_rc.md sec. 2.1).
+/// Q(6Li)/Q(d) = 0.29 against Z = 3 (design_C_tensor_rc.md sec. 2.1).  It is
+/// also QUASI-ELASTIC-DOMINATED at every x >~ 0.03 (sigma^q_U/sigma^el_U =
+/// 0.28 / 2.7 / 1000 at x = 0.01 / 0.1 / 0.3), which is why `qe_kf_gev` and
+/// `qe_suppression` are the tail's dominant knobs.
+///
+/// AND IT IS A LOWER BOUND.  `rc_tail` is the t-PEAK ALONE (RcTailModel::
+/// TPeak).  T8(c) in tests/test_rc.cpp measures the leading-log s- and
+/// p-peaks of the same observable independently: they are negligible for 6Li
+/// at EIC Q^2 >= 20 GeV^2 (POLRAD sec. 2.1.3 B confirmed WHERE THIS GENERATOR
+/// RUNS) and they are NOT elsewhere -- at the HERMES deuteron point the
+/// t-peak is 23 % of the leading-log total, and at the Q^2 ~ 4 GeV^2 corner
+/// of the generator window the quasi-elastic s-peak is already 3.3x it.
+/// Never quote `rc_tail` as "the" radiative tail, and never port it to
+/// fixed-target kinematics without the s-/p-peaks.
+///
+/// PER-NUCLEON, and the factor is 1/A^2.  Eq. (38) is the WHOLE-NUCLEUS
+/// d^2 sigma/(dx_A dy) (Weizsacker-Williams x Compton reproduces it with no
+/// 1/A in it, and POLRAD's FORTRAN applies BOTH `ter = m_p/M_A` in `apptai`
+/// and `/tara` in the main program), so per nucleon is (1/A) x the Jacobian
+/// dx_A/dx = 1/A.  See src/core/rc.cpp's "PER-NUCLEON REDUCTION" block and
+/// polrad_transcription_check.md sec. 8b.
 ///
 /// ---------------------------------------------------------------------------
 /// THE ONE DEFINITION OF "THE TENSOR PART OF AN EVENT".
@@ -102,11 +122,21 @@
 ///   * Everything cited is DEUTERON.  Whether the deuteron's fractional RC
 ///     transfers to 6Li is untested, and is the largest unquantified
 ///     assumption in the band.
+///   * On the TAGGED channels tau_tag = 1 - nbar/n_M is UNBOUNDED at the nodes
+///     of the M-dependent spectator density, and `RcOptions::band_tau_max`
+///     CLAMPS it there rather than publishing negative band edges.  The clamp
+///     is a CHOICE; n_M -> 0 is exactly where the fractional-rescale ansatz
+///     breaks down (the tensor part of the density cancels the unpolarised
+///     part), and the clipped fraction is reported per run and per event
+///     (`Event::rc_clipped`) rather than hidden.
+///   * `rc_tail` is the t-PEAK ONLY and is therefore a LOWER BOUND on the
+///     dilution -- see the RcTailModel::TPeak comment and T8(c).
 ///
 /// Design: docs/open_items/run_2026-09-02/design_C_tensor_rc.md.
 
 #include <array>
 #include <cstddef>
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -147,6 +177,34 @@ inline constexpr double RC_DELTA_LOW_X            = 0.30;
 /// occurs at x = 0.45 where HERMES says RC is negligible.
 inline constexpr double RC_DELTA_LOW_X_OPTIMISTIC = 0.19;
 inline constexpr double RC_X_LOW                  = 0.01;
+
+/// The ceiling on |tau| the BAND is allowed to see, i.e. `RcOptions::
+/// band_tau_max`'s default.  1.0 means "the band never varies more than the
+/// whole tensor part of the event", which keeps both edges w_+- = 1 +- delta
+/// tau inside [1 - delta, 1 + delta] and therefore STRICTLY POSITIVE for any
+/// delta < 1.  It is a CHOICE, and it bites only on the tagged channels: there
+/// tau_tag = 1 - nbar/n_M diverges wherever the event's own n_M(k, c) is near
+/// a node (the 6Li M = 0 density has them), and without the clamp a 20 k-event
+/// tagged-alpha run produces rc_tensor_hi down to -1.8 (7Li: -8.3).  A
+/// Monte-Carlo weight must be bounded -- the same rule `RcOptions::tail_max`
+/// applies to the tail.
+inline constexpr double RC_BAND_TAU_MAX = 1.0;
+
+/// The tail tables' hard y ceiling.  The t-peak carries
+/// Y_+ = [1 + (1-y)^2]/(1-y) ~ 1/(1-y), which diverges as y -> 1; the tables
+/// stop here and `RcModel`'s constructor REFUSES a scenario whose y_max is
+/// above it, rather than letting `tail_ratio_at` throw out of the event loop
+/// on the first event past the edge.
+inline constexpr double RC_TAIL_Y_CEILING = 0.9995;
+
+/// Fermi momentum of 6Li, E. J. Moniz et al., PRL 26 (1971) 445 (the
+/// quasi-elastic e-A scaling fit; POLRAD's own target block carries 0.221 for
+/// C and 0.164 for 3He, adgh:696-714).  It is `RcOptions::qe_kf_gev`'s
+/// default and drives the de Forest-Walecka Pauli suppression S(q) of the
+/// QUASI-ELASTIC tail -- which is NOT a small choice: the t-peak reaches down
+/// to t_min ~ (x M_N)^2, so at x <= 0.1 most of the QRT integral sits below
+/// 2 k_F.  Set it to 0 to recover POLRAD Eq. (44) at S_E = S_M = 1.
+inline constexpr double RC_QE_KF_GEV = 0.169;
 
 /// The band half-width delta(x): log-linear interpolation between the two
 /// anchors, clamped outside them.
@@ -418,6 +476,110 @@ EtaLimits polrad_eta_limits(double x_a, double y, double s_a, double m_a);
 /// Kept as the T8 cross-check on `polrad_eta_limits`.
 double polrad_eta_min_ur(double x_a);
 
+// ------------------------------------------ the Eq. (38) t-peak quadratures
+//
+// PUBLIC, and not private helpers of `RcModel`, for one reason: design sec. 5
+// T8 gates them against a LITERAL transcription of Eq. (38) written IN
+// `tests/test_rc.cpp` at 1e-10.  That gate is what catches a missing A = 6, a
+// swapped (3/4) <-> (4/3), or a dropped Q_N/6 -- none of which any tolerance
+// test on `w_tail` would see -- and it can only be written if the test can
+// drive the same quadrature with its own integrand.
+
+/// POLRAD's t-peak quadrature, Eq. (38), written ONCE:
+///
+///   sigma = - (alpha^3 / S_A) Y_+(y) INT_lo^hi (d eta_A / eta_A)
+///                                       integrand(eta_A, Xt, X_1)
+///
+///   X_1 = x_A^2 + 4 x_A eta_A - 4 eta_A      (POLRAD Eq. (39); the last term
+///                                             is LINEAR in eta_A -- CONFIRMED
+///                                             against polrad2t.tex:936 and
+///                                             adgh:8887/8930/8980)
+///   Xt  = X_1 / (2 eta_A x_A^2)
+///   Y_+ = (1 + (1-y)^2) / (1 - y)
+///
+/// TWO THINGS THAT ARE NOT IN EQ. (38) AS PRINTED, both from
+/// docs/open_items/run_2026-09-02/polrad_transcription_check.md:
+///
+///   * THE LEADING MINUS (check sec. 8).  X_1 is decreasing in eta_A and
+///     vanishes at the ultrarelativistic eta_min, so Xt < 0 over essentially
+///     the whole range and Eq. (38) as printed returns a NEGATIVE sigma_u --
+///     a tail that REMOVES events from the DIS bin.  Eq. (18) (polrad2t.tex
+///     line 580) carries an explicit leading minus that the ultrarelativistic
+///     Eq. (38) does not print; with it, sigma^el_U > 0 and w_tail >= 1.
+///     T8(0) is the gate.
+///   * Y_+ EVERYWHERE (check sec. 1).  The paper prints Y_- on sigma_u^C
+///     (polrad2t.tex:928); POLRAD's own `apptai` applies Y_+ to every
+///     UNPOLARISED and every TENSOR entry and Y_- only to the vector one
+///     (adgh:8614-8648).  Y_- = y(2-y)/(1-y) vanishes as y -> 0, which an
+///     unpolarised cross section cannot.  The printed Y_- is a typo.
+///
+/// The integrand is passed `(eta_A, Xt, X_1)` because Eq. (38)'s sigma_q^d
+/// needs all three.  Result in GeV^-2 (it is a d^2 sigma / dx_A dy), PER
+/// NUCLEUS in the sense of Eq. (18)'s left-hand side -- i.e. it already
+/// carries Eq. (18)'s own 1/A; see `RcModel`'s per-nucleon comment.
+///
+/// The quadrature is COMPOSITE Gauss-Legendre in ln(eta_A) -- `n_eta` nodes in
+/// panels of 8 -- because the integrand lives in the few e-folds of ln(eta_A)
+/// where the form factor is alive while the kinematic range spans fifteen.
+double polrad_tpeak_quadrature(
+    const std::function<double(double eta, double xt, double x1)>& integrand,
+    double x_a, double y, double s_a, EtaLimits lim, int n_eta = 128);
+
+/// POLRAD Eq. (38) `sigma_u^d` -- the UNPOLARISED elastic tail of a SPIN-1
+/// nucleus, in nuclear invariants, GeV^-2:
+///
+///   integrand = ( F_c^2 + (8/9) eta_A^2 F_q^2 + (2/3) eta_A F_m^2 ) Xt
+///               - (2/3) (1 + eta_A) F_m^2
+///
+/// = `Xt Im^el_2|_{Q_N=0} - Im^el_1|_{Q_N=0}/eta_A` (check sec. 1's master
+/// formula), so a spin-0 nucleus (F_m = F_q = 0, F_c = Z F) reduces it to
+/// `Z^2 F^2 Xt` -- the Eq. (38) carbon line, with the CORRECTED Y_+.  That is
+/// T8(b), and it is why there is no separate spin-0 entry point.
+double polrad_sigma_el_u(const Spin1ElasticFF& ff, double x_a, double y,
+                         double s_a, double m_a, int n_eta = 128);
+
+/// POLRAD Eq. (38) `sigma_q^d` -- the QUADRUPOLARISED elastic tail, the
+/// partner Eq. (37) carries as `Q_N/6 * sigma_q^A`.  In nuclear invariants,
+/// GeV^-2.  The two fractions are `(3/4) x_A^2` inside the Xt bracket and
+/// `(4/3) eta_A F_q` in the last line -- CONFIRMED against polrad2t.tex:915-926
+/// and adgh:8985-8987; the PDF renders them SWAPPED, so never transcribe this
+/// from the PDF.
+///
+/// It is a SEPARATE TABLE from `polrad_sigma_el_u` and never a scale factor on
+/// it: `sigma_q/sigma_u` changes SIGN between x = 0.05 and x = 0.20
+/// (check sec. 8: +0.106, +0.064, -0.117 at three deuteron points).
+double polrad_sigma_el_t(const Spin1ElasticFF& ff, double x_a, double y,
+                         double s_a, double m_a, int n_eta = 128);
+
+/// POLRAD Eq. (44), the UNPOLARISED quasi-elastic tail at S_E = S_M = S_EM = 1:
+///
+///   sigma_u^q(A) = Z sigma_u^p[G_E^p, G_M^p] + N sigma_u^p[G_E^n, G_M^n]
+///
+/// with `sigma_u^p` the spin-1/2 line of Eq. (38) in NUCLEON invariants
+/// (M -> m_N, x_A -> x, S_A -> s) and Eq. (40) / Eq. (A.5):
+///
+///   integrand = (G_E^2 + eta G_M^2)/(1 + eta) * Xt - G_M^2
+///             = (F_1^2 + eta F_2^2) Xt - (F_1 + F_2)^2 .
+///
+/// `kf_gev > 0` turns on POLRAD Eq. (44)'s S_E/S_M -- the de Forest-Walecka
+/// Fermi-gas Pauli suppression `ffquas` (adgh:5605-5613) codes as
+///     S(q) = (3/4)(q/k_F) - (1/16)(q/k_F)^3   (q < 2 k_F),   1 otherwise
+/// at the elastic-vertex three-momentum transfer q^2 = t(1 + eta).  Since the
+/// integrand is a combination of G_E^2 and G_M^2 alone (no G_E G_M
+/// interference), S_E = S_M = S multiplies it as a whole.  `kf_gev = 0` (this
+/// function's default, NOT `RcOptions`') is the unsuppressed S = 1 form.
+///
+/// PER NUCLEUS (the Z and N multiplicities are in it); `RcModel` divides by A.
+/// The POLARISED quasi-elastic tail is NOT here and is not implemented at all
+/// -- Z.-L. Zhou et al., PRL 82 (1999) 687.
+double polrad_sigma_qe_u(int z, int n, double x, double y, double s,
+                         double m_n, int n_eta = 128, double kf_gev = 0.0);
+
+/// The de Forest-Walecka Fermi-gas Pauli suppression factor, exposed so a test
+/// and a plot can see it: S(q) = (3/4)u - u^3/16 for u = q/k_F < 2, else 1.
+/// Continuous at u = 2 (3/2 - 1/2 = 1) and 0 at q = 0.
+double pauli_suppression(double q_gev, double kf_gev);
+
 // ------------------------------------------------------------- the model
 
 enum class RcMode : int {
@@ -429,13 +591,25 @@ enum class RcMode : int {
 /// documented upgrade path (design_C_tensor_rc.md sec. 1.4.6).
 enum class RcTailModel : int {
   TPeak      = 0,   ///< DEFAULT: POLRAD Eqs. (37)-(39), (43) -- one eta_A
-                    ///< integral.  POLRAD sec. 2.1.3 B: for a TAIL the t-peak
-                    ///< is the leading contribution and the s-/p-peaks are
-                    ///< SUPPRESSED, so this is not an approximation to the
-                    ///< collinear limit -- it is the dominant piece.  (The
-                    ///< s-peak sits at t ~ (1-y)Q^2, where 6Li's charge form
-                    ///< factor is long dead; the t-peak reaches down to
-                    ///< t_min = M_A^2 x_A^2/(1-x_A) ~= (x M_N)^2, inside it.)
+                    ///< integral.  IT IS ONE PEAK OF THE ELASTIC TAIL AND ITS
+                    ///< ABSOLUTE NORMALISATION IS NOT VALIDATED AGAINST ANY
+                    ///< EXTERNAL EXACT TAIL.  POLRAD sec. 2.1.3 B asserts the
+                    ///< s- and p-peaks are SUPPRESSED for a tail (the s-peak
+                    ///< sits at t ~ (1-y)Q^2, where 6Li's charge form factor
+                    ///< is long dead, while the t-peak reaches down to
+                    ///< t_min = M_A^2 x_A^2/(1-x_A) ~= (x M_N)^2, inside it),
+                    ///< but that is ONE SENTENCE about a `approx` code path
+                    ///< that is compiled OUT of the shipped POLRAD build
+                    ///< (polrad20.cra:12,17), returns a NEGATIVE tail as
+                    ///< printed, and carried an uncaught Y_- typo and a
+                    ///< missing Z^2.  Measured against it here (T8(c), the
+                    ///< leading-log s-peak): the s-peak is NOT negligible for
+                    ///< a deuteron, whose form factor is still alive at
+                    ///< t ~ 0.15 GeV^2, and the t-peak alone is LOW against
+                    ///< HERMES's quoted "almost 50 % of the statistics in the
+                    ///< lowest-x bin" radiative background.  Treat `rc_tail`
+                    ///< as a LOWER BOUND on the dilution, band it, and never
+                    ///< quote it as "the" radiative tail.
   PolradFull = 1,   ///< Eq. (18) + Appendix B + Eq. (A.4).  NOT IMPLEMENTED.
 };
 const char* rc_mode_name(RcMode m);          ///< "off", "tensor-band"
@@ -483,10 +657,19 @@ struct RcOptions {
   double fq_scale = 1.0;
   /// Flat multiplier on F_m -- the eta F_m^2 tensor sector.  Same rules.
   double tail_tensor_scale = 1.0;
-  /// Flat multiplier on the whole quasi-elastic tail, standing in for POLRAD
-  /// Eq. (44)'s S_E/S_M/S_EM suppression factors, which v0 sets to 1 (the
-  /// conservative direction for a DILUTION).  Run 0.0 / 0.5 / 1.0.
+  /// Flat multiplier on the whole quasi-elastic tail, ON TOP of the
+  /// `qe_kf_gev` Pauli suppression below -- the band knob, not the physics.
+  /// Run 0.0 / 0.5 / 1.0.
   double qe_suppression = 1.0;
+  /// POLRAD Eq. (44)'s S_E/S_M, as `ffquas` codes them: the de Forest-Walecka
+  /// Fermi-gas factor S(q) = (3/4)(q/k_F) - (q/k_F)^3/16 below q = 2 k_F.
+  /// DEFAULT ON, at 6Li's measured k_F (`RC_QE_KF_GEV`, Moniz et al.).  This
+  /// is not a small choice: after the per-nucleon fix the QRT is the DOMINANT
+  /// piece of `rc_tail` at every x, and the t-peak reaches down to
+  /// t_min ~ (x M_N)^2, so at x <~ 0.1 most of its integral sits below 2 k_F.
+  /// Set to 0 for the unsuppressed S = 1 edge (which v0 shipped as its
+  /// default and which overstates the QRT there).
+  double qe_kf_gev = RC_QE_KF_GEV;
   /// eta_A quadrature of Eq. (38): Gauss-Legendre nodes in ln(eta_A).
   int    n_eta       = 128;
   double m_lepton    = M_ELECTRON;     ///< constants.hpp -- NOT a second literal
@@ -496,14 +679,34 @@ struct RcOptions {
   /// Y_+ = [1 + (1-y)^2]/(1-y) ~ 1/(1-y) makes the y -> 1 edge the only place
   /// it bites.
   double tail_max    = 10.0;
+  /// Ceiling on |tau| the BAND sees, the same discipline `tail_max` applies to
+  /// the tail.  On the TAGGED channels tau_tag = 1 - nbar(k,c)/n_M(k,c) is
+  /// UNBOUNDED -- it diverges wherever the event's own n_M is near a node of
+  /// the M-dependent spectator density, which the 6Li M = 0 density has -- and
+  /// without this the published band edges go NEGATIVE (measured: rc_tensor_hi
+  /// down to -1.79 on 6Li tagged-alpha, -8.35 on 7Li, 0.1-0.4 % of events).
+  /// n_M -> 0 is exactly where the fractional-rescale ansatz breaks down: the
+  /// tensor part of the density cancels the unpolarised part there, so "delta
+  /// times the tensor fraction" stops being a small variation.  The clamp is a
+  /// CHOICE, the clipped events are counted (`Event::rc_clipped`,
+  /// `meta["rc_clipped_band_event_fraction"]`), and the right long-run answer
+  /// is probably a tagged band reformulated on the M-averaged density.
+  double band_tau_max = RC_BAND_TAU_MAX;
 };
 
-/// One event's RC weight triple.
+/// One event's RC weight triple, plus the two "this event hit a ceiling" flags
+/// (`Event::rc_clipped` carries them into the record and the npz meta).
 struct RcWeights {
   double lo   = 1.0;   ///< "rc_tensor_lo"  = 1 - delta(x) * tau
   double hi   = 1.0;   ///< "rc_tensor_hi"  = 1 + delta(x) * tau
   double tail = 1.0;   ///< "rc_tail"       = 1 + sigma_tail / sigma_Born
+  bool band_clipped = false;   ///< |tau| hit `RcOptions::band_tau_max`
+  bool tail_clipped = false;   ///< the tail ratio hit `RcOptions::tail_max`
 };
+
+/// `Event::rc_clipped` bits.
+inline constexpr unsigned kRcClipTail = 1u;
+inline constexpr unsigned kRcClipBand = 2u;
 
 inline constexpr std::size_t kRcWeightCount = 3;
 /// "rc_tensor_lo" | "rc_tensor_hi" | "rc_tail" for i = 0, 1, 2.  THROWS for
@@ -593,26 +796,70 @@ class RcModel {
   ///   ev.kin.k, ev.kin.cos_theta_k            (tagged only)
   ///   ev.spin.j, ev.spin.m_ion, ev.spin.m_struck,
   ///   ev.spin.lam_e, ev.spin.pe, ev.spin.theta_s, ev.spin.phi_s
+  ///
+  /// UNCLAMPED, on purpose: this is the DIAGNOSTIC that T1/T2 gate the closed
+  /// form against, and `RcOptions::band_tau_max` is applied where the published
+  /// weight is made (`weights()`), not here.  On a tagged channel it is
+  /// unbounded -- see `RcOptions::band_tau_max`.
   double tensor_fraction(const Event& ev) const;
   /// ... for spin category `k` of the run plan (weighted mode).  This is the
   /// category's POPULATION MIXTURE, sum_m p_m W_m, mirroring
   /// `InclusiveSampler::weights_for` -- NOT a pure state.  It equals
   /// `tensor_fraction(ev)` only when category k's population vector is pure.
+  /// Also UNCLAMPED.
   double tensor_fraction(const Event& ev, std::size_t k) const;
 
   /// sigma_tail / sigma_Born at accepted cell `c` and tensor degree `q_n`
   /// (q_n = P_zz^eff = 3 Q_NN P_2(cos theta_S); POLRAD's Q_N, which Eq. (37)
   /// carries as Q_N/6 -- dropping that 1/6 inflates the tensor tail sixfold
-  /// and no unpolarised test sees it).
+  /// and no unpolarised test sees it):
+  ///
+  ///   [ sigma^el_U + (q_n/6) sigma^el_T + kappa_qe sigma^q_U ]
+  ///   ---------------------------------------------------------
+  ///                 x * s * dsigma_unpol(x, Q2, s)
+  ///
+  /// `sigma_Born` here is the UNPOLARISED Born -- the library's own
+  /// `InclusiveKernel::dsigma_unpol` and never a second definition of it
+  /// (T7).  Design sec. 1.4.5's `(1 + w_avg)` denominator is NOT in this
+  /// ratio and IS in `weights()`, which divides by the event's own density.
+  /// Two reasons: this signature has no spin state to take `w_avg` from, and
+  /// keeping it out makes the ratio EXACTLY LINEAR in `q_n`, which is what
+  /// lets T14 assert POLRAD Eq. (43) (`sigma_q,perp = -1/2 sigma_q,par`) at
+  /// 1e-12 instead of to a tolerance the unpolarised piece would set.
+  ///
+  /// Clipped at `RcOptions::tail_max`; `clipped_cell_fraction()` reports how
+  /// often, globally and per y-band.
   double tail_ratio(int cell, double q_n) const;
   /// The same at an ARBITRARY (x, Q2), by interpolation of the tables --
   /// public so a test is not hostage to which cells the sampler accepted.
-  /// Throws outside the table's (x, Q2) support.
-  double tail_ratio_at(double x, double q2, double q_n) const;
-  /// The three precomputed tables, for plotting and for the T8 gates.
+  /// Throws outside the table's (x, y) support.  `clipped`, when non-null, is
+  /// set to whether `RcOptions::tail_max` bit on THIS call -- the node-level
+  /// `clipped_cell_fraction()` is a different quantity (nodes are not
+  /// event-weighted) and the two must never be quoted for each other.
+  double tail_ratio_at(double x, double q2, double q_n,
+                       bool* clipped = nullptr) const;
+  /// The three precomputed tables, for plotting and for the T8 gates.  They
+  /// are PER NUCLEON and in GeV^-2, over the (`table_x`, `table_y`) node grid
+  /// in row-major (n_x x n_y) order.
   const std::vector<double>& sigma_tail_u() const { return sigma_u_; }
   const std::vector<double>& sigma_tail_t() const { return sigma_t_; }
   const std::vector<double>& sigma_tail_qe() const { return sigma_qe_; }
+  /// The node grid the three tables live on: x, and y = Q^2/(x s).  The
+  /// SECOND axis is y and not Q^2 because the tail carries
+  /// Y_+ = [1 + (1-y)^2]/(1-y), which diverges as 1/(1-y): interpolating in y
+  /// puts the design's refinement rows (y in {0.9, 0.95, 0.97, 0.98, 0.985})
+  /// on the axis that actually needs them, where in (ln x, ln Q^2) they would
+  /// be diagonal lines and not rows at all.
+  const std::vector<double>& table_x() const { return node_x_; }
+  const std::vector<double>& table_y() const { return node_y_; }
+
+  /// The three tail pieces at an ARBITRARY (x, Q2), PER NUCLEON and in
+  /// GeV^-2, straight from the quadrature -- no table, no interpolation.
+  /// This is what the tables are built from and what T8's gates compare
+  /// against, so that the per-nucleon reduction and the nuclear map are
+  /// gated separately from the integrands (which `polrad_sigma_el_*` gate).
+  struct TailTriple { double u = 0.0, t = 0.0, qe = 0.0; };
+  TailTriple tail_sigma_at(double x, double q2) const;
   /// Fraction of table nodes that hit `RcOptions::tail_max`, globally and per
   /// y-band (y < 0.5, 0.5-0.9, > 0.9).  LOG ALL FOUR: the tail grows like
   /// Y_+ ~ 1/(1-y), so a clipped edge hides inside a small global number.
@@ -633,8 +880,21 @@ class RcModel {
   // POLRAD Eq. (38): three one-dimensional eta_A quadratures at one (x, Q2)
   // -- sigma_u^A, sigma_q^A (the Q_N/6 partner) and the Eq. (44) QRT.
   void build_tail_tables();
-  struct TailTriple { double u, t, qe; };
-  TailTriple ert_at(double x, double q2) const;
+  /// The per-nucleon Born d^2 sigma/(dx dy) [pb] the tail is a fraction of:
+  /// `x * s * dsigma_unpol(x, Q2, s)`, i.e. the library's OWN unpolarised
+  /// Born and never a second definition of it (T7).
+  double born_pb_at(double x, double q2) const;
+  /// The `StateTables` of one PURE spin state, resolved in the constructor;
+  /// throws when the state is not one the run plan carries.
+  const InclusiveSampler::StateTables* state_of(const SpinLabels& sp) const;
+  /// The rank-2 alignment degree Q_N = P_zz^eff = 3 Q_NN P_2(cos theta_S) of
+  /// one pure state, through the library's own `tensor_moments`.
+  double q_n_of(double m, double theta_s) const;
+  /// tau on a Tagged* channel: 1 - nbar(k, c)/n_M(k, c) (design sec. 1.5.1).
+  double tagged_tau(const Event& ev, const std::vector<double>* pops) const;
+  /// tau clipped to +-`RcOptions::band_tau_max`, which is what the published
+  /// band edges are built from; sets `*clipped` when the clamp bit.
+  double clamp_tau(double tau, bool* clipped) const;
 
   RcMode mode_ = RcMode::Off;
   RcOptions opt_;
@@ -649,9 +909,11 @@ class RcModel {
   std::string exclusion_reason_;
   // Resolved ONCE in the constructor: [category k][projection index m].
   std::vector<std::vector<const InclusiveSampler::StateTables*>> states_;
-  // The tail tables, over the (ln x, ln Q2) nodes of `node_x_` x `node_q2_`.
-  std::vector<double> node_x_, node_q2_;
-  std::vector<double> sigma_u_, sigma_t_, sigma_qe_;
+  // The tail tables, over the (ln x, ln y) nodes of `node_x_` x `node_y_`.
+  std::vector<double> node_x_, node_y_;
+  std::vector<double> sigma_u_, sigma_t_, sigma_qe_, born_pb_;
+  std::vector<double> m_val_;   ///< m_values(plan J), hoisted out of the loop
+  double s_ = 0.0;              ///< the sampler's per-nucleon s
   double clipped_ = 0.0;
   std::array<double, 3> clipped_by_y_{{0.0, 0.0, 0.0}};
 };

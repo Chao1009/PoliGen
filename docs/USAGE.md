@@ -545,6 +545,187 @@ ev.kin.spec_kx; ev.kin.spec_ky; ev.kin.spec_kz;   // rest-frame, lab-oriented
 ev.kin.phi_spec;    // LAB azimuth -- NOT kin.phi, which is the DIS azimuth
 ```
 
+## 7b. Radiative corrections — a band and a background, never a shift
+
+```cpp
+cfg.rc = PipelineRc::TensorBand;             // default: Off = today, bit for bit
+cfg.rc_options.delta_low_x = 0.30;           // band it: run 0.19 as well
+cfg.rc_options.fq_scale = 1.0;               // band it: run 0.0 and 2.0
+cfg.rc_options.qe_suppression = 1.0;         // band it: run 0.0 and 0.5
+```
+```bash
+python -m lipolgen.cli --rc tensor-band --events 400000
+python -m lipolgen.cli --rc tensor-band --rc-delta-low-x 0.19 --events 400000
+```
+```python
+cfg = lipolgen.make_config(events=400000, rc="tensor-band",
+                           rc_delta_low_x=0.30, rc_fq_scale=1.0,
+                           rc_qe_suppression=1.0)
+lo, hi, tail = lipolgen.export.rc_columns(pipeline.generate(0))
+```
+
+`--rc tensor-band` (`rc.hpp`, opt-in, default off) adds **three weights per
+event** and changes nothing else:
+
+| weight | what it is |
+|---|---|
+| `rc_tensor_lo` = 1 − δ(x)·τ | the **low** edge of a two-sided systematic band on the *tensor part alone* of the event's rate |
+| `rc_tensor_hi` = 1 + δ(x)·τ | the **high** edge of the same band |
+| `rc_tail` = 1 + σ_tail/σ_Born | the ⁶Li **radiative-tail background**: the elastic tail (with its small tensor part) plus the *unpolarised* quasi-elastic tail |
+
+with `τ = W_tensor/W` the rank-2 fraction of the event's own density —
+`(P_zz/2)A_zz / [1 + (P_zz/2)A_zz]` at θ_S = 0 — and δ(x) log-linear between
+two anchors, `δ = 0.30` at `x = 0.01` and `δ = 0.015` at `x = 0.16`, clamped
+outside them.
+
+**They are NOT on `Event::weight`.** FSI multiplies the nominal weight
+because FSI is a *correction to the model*; these are not. The band is a
+*systematic variation* and the tail is a *background*, and both must leave
+the Born sample alone. They travel in `Event::rc_weights` under their own
+HepMC3 names and their own npz columns, and an analysis multiplies one in on
+purpose:
+
+```python
+w_hi = cols["weight"] * cols["rc_tensor_hi"]     # the +delta edge
+w_bg = cols["weight"] * cols["rc_tail"]          # Born + radiative tails
+```
+
+`rc_tensor_lo + rc_tensor_hi == 2.0` bit-for-bit on every event: they are the
+two **signs** of one δ, not two different band edges.
+
+**No four-vector moves and no random number is consumed**, so an
+`--rc tensor-band` run is bit-for-bit an `--rc off` run in every particle,
+every kinematic label, `Event::weight` and the RNG stream — proved event by
+event, and file by file, in `tests/test_rc_pipeline.cpp` (T6) and
+`python/tests/test_rc.py`. The structural guarantee is that
+`RcModel::fill(Event&) const` takes no `Rng&`. With `--rc off` the npz key
+set and the HepMC3 weight names are **exactly** today's, so an `--rc off`
+file is byte-identical to one written before `rc.hpp` existed.
+
+**Per channel** (`RcModel::applies()` decides; the run prints why, and
+nothing is ever refused so a channel scan need not special-case `--rc`):
+
+| channel | band | tail | why |
+|---|---|---|---|
+| inclusive | full, at every θ_S | full, at every θ_S | the home case |
+| every `Tagged*` | full (τ from the cluster density), **clamped** | **≡ 1** | the elastic recoil sits at x_L = 1, inside the 10σ beam envelope, so the tag itself vetoes it |
+| coherent ⁶Li | **≡ 1** | **≡ 1** | its tensor dependence is entirely azimuthal, and **no RC treatment exists for a φ-dependent tensor observable**; the elastic point (M_X = 0) is already outside the channel |
+
+**Two things the "full" in that table does not say.**
+
+* **On ⁷Li the band is reachable only from the API.** `--rc tensor-band`
+  needs an **unpolarised beam** (`RcModel` throws on any category with
+  `λ_e·P_e ≠ 0` — the whole `A_zz` programme assumes one), and every `J = 3/2`
+  plan the CLI can build is either a helicity plan (`apar`, `helicity-flip`:
+  refused by `RcModel`) or a spin-1 tensor plan (`azz`, `tensor-thirds`,
+  `transverse-tensor`, `cos2phi`, `tensor-flip`: refused by `Pipeline` with
+  "run-plan spin 1.0 != channel ion spin"). All eight were checked. Build the
+  plan by hand instead:
+
+  ```python
+  cats = [_l.SpinCategory("m32", 1.5, [0.5, 0.0, 0.0, 0.5]),
+          _l.SpinCategory("m12", 1.5, [0.0, 0.5, 0.5, 0.0])]
+  plan = _l.RunPlan(cats, 0.0, 0.0, 0.6)          # unpolarised beam, J = 3/2
+  p = lipolgen.Pipeline(make_config(isotope="7Li", channel="tagged-alpha",
+                                    rc="tensor-band"), plan)
+  ```
+
+  (`python/tests/test_rc.py` runs exactly this and re-checks that no CLI plan
+  gets there, so the claim cannot rot.)
+* **On the tagged channels the band is CLAMPED, and it has to be.**
+  `τ_tag = 1 − n̄(k,c)/n_M(k,c)` is unbounded: wherever the event's own
+  `n_M` is near a node of the M-dependent spectator density — the ⁶Li `M = 0`
+  density has them — the ratio blows up (measured **|τ| up to 30.7**).
+  Unclamped, a 20 k-event tagged-alpha run published `rc_tensor_hi` down to
+  **−1.79** (⁷Li: **−8.35**), i.e. **negative weights in the npz**.
+  `RcOptions::band_tau_max` (default 1.0) holds every published edge inside
+  `[1 − δ, 1 + δ]`; the clipped fraction is **0.6 % of ⁶Li tagged-alpha
+  events and 2.6 % of ⁷Li**, is printed by the run and lands in
+  `meta["rc_clipped_band_event_fraction"]` and per event in
+  `Event.rc_clipped`. `n_M → 0` is exactly where "rescale the tensor part by
+  δ" stops meaning anything, so the clamp is a **choice**, not a fix.
+
+**The mandatory band runs — the 20–40 mb rule of `--fsi-sigma-mb`, applied
+here.** Never quote one row alone. Run each knob at both/all its ends and
+quote the lo/hi envelope on `A_zz`:
+
+| knob | rows to run | what it prices |
+|---|---|---|
+| `--rc-delta-low-x` | **0.19 and 0.30** | 0.30 is the conservative end of Gakh–Shekhovtsova's 10–30 %; 0.19 is the residual HERMES actually achieved at its lowest-x bin |
+| `--rc-fq-scale` | **0, 1, 2** | ±100 % on the ⁶Li quadrupole form factor. σ^el_T is **quadratic** in it, so this band must be **RUN, never rescaled** from one row — the two edges are not symmetric about the nominal, and at `x = 0.01, Q² = 5` they even bracket a **sign change** of ΔA_zz |
+| `--rc-tail-tensor-scale` | **0.5, 1, 2** | the η·F_m² tensor sector, which `--rc-fq-scale` does **not** span |
+| `--rc-qe-suppression` | **0, 0.5, 1** | a flat multiplier on the quasi-elastic tail, **on top of** the Pauli suppression below. `rc_tail` is quasi-elastic-**dominated** at every `x ≳ 0.03` (73 % of the tail at `x = 0.1`, **99.9 %** at `x = 0.30`), so 0 is never a small variation |
+| `RcOptions::qe_kf_gev` (API) | **0.169 (default), 0.221, 0** | POLRAD Eq. (44)'s `S_E`/`S_M`, the de Forest–Walecka Fermi-gas factor `S(q) = (3/4)(q/k_F) − (q/k_F)³/16` below `q = 2k_F`, exactly as POLRAD's `ffquas` codes it. **On by default** at ⁶Li's measured `k_F` (Moniz *et al.*, PRL **26** (1971) 445). It cuts the QRT to **0.47** at `x = 0.01` and **0.87** at `x = 0.1`; `0` is the unsuppressed edge v0 shipped |
+
+At `x = 0.01, Q² = 5 GeV²` (config 1, `--plan tensor-thirds --pzz 0.6`) the
+band is by far the largest of these: half-width `4.4e−04` on `A_zz` at
+δ_low = 0.30 (`2.8e−04` at 0.19), against `8.0e−07` from the whole `fq_scale`
+band and `3.5e−07` from the entire tail. **The band — the unapplied
+lepton-vertex correction — is what `--rc tensor-band` is for; the tail is a
+bookkeeping item at EIC energies and the headline at a fixed target.** Every
+number is in `docs/OPEN_ITEMS_SOLUTIONS.md` §9.
+
+**Honest flags, to repeat wherever any of this is quoted:**
+
+* `δ_low = 0.30` is the **size of a correction this generator does not
+  apply**, taken as a 1σ band — *not* a measured residual. Its source
+  (Gakh–Shekhovtsova, [hep-ph/0403262](https://arxiv.org/abs/hep-ph/0403262))
+  has **zero INSPIRE citations**.
+* Everything cited is **deuteron**. Whether the deuteron's *fractional* RC
+  transfers to ⁶Li is untested, and is the largest unquantified assumption
+  in the band.
+* The ⁶Li form-factor shape parameters are **unfitted starting values**, not
+  a fit (the elastic data are not in this repository in machine-readable
+  form). The *normalisations* are the **measured** moments — `μ = +0.822047
+  μ_N`, `Q = −0.0818 fm²` — and never VMC, whose `Q(⁶Li) = −0.23(9) fm²` is
+  3× the measured one.
+* **No RC calculation exists for a tagged tensor asymmetry**, so the tagged
+  band is a defensible but **uncited extrapolation**; and none exists for any
+  φ-dependent tensor observable at any axis, which is why the `Δ` cos 2φ
+  sector and the coherent channel carry no band at all.
+* The **polarised** quasi-elastic tail is not priced at all (Z.-L. Zhou
+  *et al.*, PRL **82** (1999) 687).
+* **`rc_tail` is ONE PEAK of the elastic and quasi-elastic tails — the
+  t-peak — and its absolute normalisation is not validated against any exact
+  tail.** It is a **lower bound on the dilution**. POLRAD §2.1.3 B asserts the
+  s- and p-peaks are suppressed for a tail; `tests/test_rc.cpp` T8(c) measures
+  that with an independent leading-log construction and finds it true **where
+  this generator runs** (> 99 % of the total for ⁶Li at `Q² ≥ 20 GeV²`, because
+  the ⁶Li charge form factor is dead by `t ≈ 0.25 GeV²` while the s-peak sits
+  at `t ≈ zQ²`) and **false elsewhere**: at the HERMES deuteron point
+  (`x = 0.012`, `y = 0.85`, `Q² = 0.53`) the t-peak is only **23 %** of the
+  leading-log total — low by a factor 4.4 — and at the low-`Q²` corner of the
+  generator window (`Q² ≈ 4 GeV²`) the quasi-elastic s-peak is already 3.3×
+  the t-peak. Do not port `rc_tail` to fixed-target kinematics without the
+  s-/p-peaks.
+* At θ_S ≠ 0 the tail is the **φ-integrated** one applied to a density that
+  carries cos φ′ and cos 2φ′ modulations: it dilutes the φ-*averaged* rate
+  correctly and the φ-*differential* rate only on average. Bin in φ at a
+  non-longitudinal axis and `rc_tail` is a bin-integrated correction, not a
+  per-φ one.
+
+The run banner prints the band at two x values and, **only on a channel where
+the tail actually applies**, the form factor in use with its provenance, the
+clipped tail-**node** fraction globally and per y-band, and the t-peak caveat
+above; on a channel where the tail is off it prints the exclusion reason once
+instead of three times. After generation it prints the clipped **event**
+counts for the tail and the band — a different quantity from the node
+fractions, since nodes are not event-weighted — and both land in the npz as
+`meta["rc_clipped_tail_event_fraction"]` / `..._band_event_fraction"]`, with
+the per-event bits on `Event.rc_clipped` (`1` = tail, `2` = band). At the
+current defaults **nothing clips on the tail** (the pre-2026-09-03 numbers,
+1.71 % of nodes and 21.95 % of the `y > 0.9` ones, were an artefact of the
+factor-6 per-nucleon error) and 0.6–2.6 % of tagged events clip on the band.
+`Pipeline::rc_model()` (Python: `p.rc_model`) exposes `delta(x)`,
+`tail_ratio_at(x, q2, q_n)`, `tail_sigma_at(x, q2)`, `ff_provenance`,
+`clipped_fraction_by_y` and the three raw tail tables for plotting.
+
+Cost: **0.106 s** at setup (the η_A quadratures over a 101 × 77 node grid) and
+**≈ 14 %** of the inclusive event rate (575 k → 495 k ev/s single core on this
+machine — the same measurement `OPEN_ITEMS_SOLUTIONS.md` §9 and
+`phase_C_numbers.md` §8.3 quote; the *ratio* is the number to carry, the
+absolute rates are machine-dependent).
+
 ## 8. Command-line generators
 
 ```bash

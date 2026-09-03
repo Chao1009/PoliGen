@@ -1,6 +1,7 @@
 #include "lipolgen/hepmc_writer.hpp"
 
 #include "lipolgen/constants.hpp"
+#include "lipolgen/rc.hpp"
 #include <cstdlib>
 
 #include <HepMC3/Attribute.h>
@@ -75,6 +76,18 @@ struct HepMC3Writer::Impl {
     for (std::size_t i = 0; i < ev.spin_weights.size(); ++i) {
       names.push_back("spin_weight_" + std::to_string(i + 1));
     }
+    // rc.hpp: APPENDED after the spin block so that "nominal" stays index 0
+    // and every existing spin_weight_k keeps its index -- append, never
+    // insert (docs/HEPMC3_CONVENTION.md).  `Event::rc_weights` is EMPTY when
+    // the run has `--rc off`, so such a file is byte-identical to today's.
+    // The block is row-major (n_slot x kRcWeightCount): slot 0 is the event's
+    // own pure spin state, slot 1 + k is spin category k.
+    const std::size_t n_slot = ev.rc_weights.size() / kRcWeightCount;
+    for (std::size_t s = 0; s < n_slot; ++s) {
+      for (std::size_t i = 0; i < kRcWeightCount; ++i) {
+        names.push_back(rc_weight_name(i, s));
+      }
+    }
     run_info->set_weight_names(names);
   }
 };
@@ -113,10 +126,16 @@ void HepMC3Writer::write(const Event& ev) {
   // relying on GenEvent::set_run_info's default fill) so the vector is
   // correctly sized even if this event's spin_weights count differs from
   // the one that established the GenRunInfo names.
-  genevt.weights().assign(1 + ev.spin_weights.size(), 1.0);
+  genevt.weights().assign(1 + ev.spin_weights.size() + ev.rc_weights.size(),
+                          1.0);
   genevt.weights()[0] = ev.weight;
   for (std::size_t i = 0; i < ev.spin_weights.size(); ++i) {
     genevt.weights()[i + 1] = ev.spin_weights[i];
+  }
+  // rc.hpp, in the same order `ensure_run_info` named them.
+  const std::size_t rc_off = 1 + ev.spin_weights.size();
+  for (std::size_t i = 0; i < ev.rc_weights.size(); ++i) {
+    genevt.weights()[rc_off + i] = ev.rc_weights[i];
   }
 
   const std::size_t n = ev.particles.size();

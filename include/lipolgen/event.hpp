@@ -102,6 +102,34 @@ struct Event {
   Channel channel = Channel::Inclusive;
   double weight = 1.0;                 // 1 for unweighted
   std::vector<double> spin_weights;    // weighted mode: one weight per spin category (may be empty)
+  /// Opt-in radiative-correction weights (rc.hpp), row-major
+  /// (n_slot x kRcWeightCount) with n_slot = 1 + spin_weights.size(): entry
+  /// `slot * kRcWeightCount + i` is `rc_weight_name(i, slot)`, so
+  /// `rc_weights[0..2]` is always slot 0 = (rc_tensor_lo, rc_tensor_hi,
+  /// rc_tail) of the event's OWN, PURE spin state m, and slot 1+k is spin
+  /// category k's population MIXTURE sum_m p_m W_m, mirroring
+  /// `InclusiveSampler::weights_for`.  The two agree only when category k's
+  /// population vector is pure -- on the tensor-thirds plan (P_zz = 0.6
+  /// mixtures) they do not, and P_zz differs by category, so the band
+  /// coefficient does too.
+  ///
+  /// (SLOT-MAJOR, i.e. the order design_C_tensor_rc.md sec. 4.1's
+  /// `for slot { for i { names.push_back(rc_weight_name(i, slot)) } }` and
+  /// sec. 4.2's "rc_weights[0..2] (slot 0)" both require.  Sec. 3.2 calls the
+  /// same block "(kRcWeightCount x n_slot)"; that phrase contradicts its own
+  /// sec. 4 and the layout here is the one the bindings need.)
+  ///
+  /// EMPTY when `PipelineConfig::rc` is Off -- and then the HepMC3 weight
+  /// vector and the npz are bit-for-bit what they are today.
+  std::vector<double> rc_weights;
+  /// Which RC ceilings SLOT 0 hit on this event: bit `kRcClipTail` (rc.hpp)
+  /// when the tail ratio hit `RcOptions::tail_max`, bit `kRcClipBand` when
+  /// |tau| hit `RcOptions::band_tau_max`.  0 when RC is off, when neither
+  /// bit, and when the model does not apply.  It exists because the
+  /// NODE-level `RcModel::clipped_cell_fraction()` is a different quantity --
+  /// nodes are not event-weighted -- and an analysis reading the npz could
+  /// not otherwise tell which events were clipped.
+  unsigned rc_clipped = 0;
   double xsec_pb = 0, xsec_err_pb = 0; // running estimate of the generated cross section
   SpinLabels spin;
   Kinematics kin;

@@ -15,7 +15,7 @@ the recommended solution, effort, and status. Ordered by leverage.
 | 6 | Triton remnant (t* → N + …) | **implemented 2026-09-01** — `triton_sf.hpp` CS n₀+n₁ model, S₀ = 0.6525 untuned, third channel n → (pn); opt-in `--triton-sf ciofi-simula`, sequential Hulthén stays the default bit for bit | done | numbers in §6 below |
 | 7 | Spectator FSI (plans/04 #16) | **implemented 2026-09-01** — `GlauberFsiWeight` per-event weight on `Event::weight` (`--fsi`, tagged channels; never a momentum shift); σ_Xα = 131.0 mb at σ_XN = 40, band 20–40 mb mandatory | done | numbers in §7 below |
 | 8 | Spin-3/2 SF basis (plans/04 #14) | **exists** — Jaffe–Manohar NPB 321 (1989); explicit J=3/2 functions arXiv:2209.12161 Eqs. 19a–d; rank-≤2 truncation is *exact* for unpolarized-beam inclusive observables | 5–10 d note | theory note |
-| 9 | Tensor-sector RC (plans/04 #10) | **formulas exist** — POLRAD 2.0 tensor sector + elastic tail; Gakh–Shekhovtsova (uncited); precedent E12-13-011: 1.5 % | 5–8 d | band adoptable |
+| 9 | Tensor-sector RC (plans/04 #10) | **implemented 2026-09-03** — `rc.hpp`/`rc.cpp`, opt-in `--rc tensor-band`: the two-sided band `rc_tensor_lo`/`rc_tensor_hi` on the tensor part of the rate (δ log-linear, 0.30 at x = 0.01 → 0.015 at x = 0.16) plus `rc_tail`, POLRAD's t-peak elastic tail with its tensor part and the unpolarised quasi-elastic tail. Weight-only, on `Event::rc_weights` and never on `Event::weight`; `--rc off` is byte-identical | done | numbers in §9 below |
 | 10 | b₁ for A > 2 (plans/04 #9) | **first-mover** — nothing exists; three-term α–d convolution on the Cosyn–Dong–Kumano–Sargsian kernel; 100 % band mandatory (⁶Li quadrupole puzzle) | 10–15 d | design only |
 | 11 | Coherent ⁶Li amplitude (plans/04 #18) | **route changed** — Sartre ruled out (hard-coded nuclei, no polarization axis); use eSTARlight for unpolarized rates (1 d) and `hejajama/subnucleondiffraction` (code of arXiv:2408.13213) with an α+d configuration sampler for the tensor cos 2φ | 1 d / 10–15 d / collab | Mäntysaari-group ask |
 | 12 | Packaging | **implemented 2026-09-02** — `pyproject.toml` (scikit-build-core) in-tree, `pip install -e .` works (66 s); one copy of each `.so` in `lipolgen/`, `$ORIGIN`+deps-prefix RPATH, data/vmc vendored; portable wheel still needs `auditwheel` + GPL-3 terms | done | see §12–13 below |
@@ -182,9 +182,163 @@ a correction to A_zz.
 - Tensor RC: adopt ISR shift (spin-blind) + POLRAD Eq. (A.4) tensor elastic tail
   with VMC ⁶Li form factors (Wiringa–Schiavilla 1998); quote 1.5 % (x ≳ 0.05) and a
   10–30 % band on the tensor part at x ≲ 0.01 (Gakh–Shekhovtsova, uncited).
+  → **Implemented as §9, with three deliberate departures from this note**: the
+  ISR *shift* is **not** applied (it would cost an extra uniform per event and
+  break the "RC moves nothing" invariant — its residual is what the band
+  prices); the tail is built on POLRAD's **t-peak closed forms Eqs. (37)–(39),
+  (43)**, not the Eq. (A.4)/Appendix-B machinery, because POLRAD §2.1.3 B says
+  the s- and p-peaks are *suppressed* for a tail; and the ⁶Li form-factor
+  **normalisations are the measured moments, not VMC** (whose Q(⁶Li) is 3× the
+  measured one). The 1.5 % anchor also moved to x = 0.16, E12-13-011's own
+  lower kinematic edge.
 - b₁(⁶Li): three-term α–d convolution (embedded deuteron b₁ ⊗ f_{d/Li}(z), α–d
   D-wave term with F₁ᵈ, CG depolarization); validate on A = 2 (Cosyn Figs. 4/5)
   first; 100 % band.
+
+## 9. Tensor-sector RC — a band and a background, never a shift
+
+**IMPLEMENTED (2026-09-03), measured** (`include/lipolgen/rc.hpp`,
+`src/core/rc.cpp`; `PipelineConfig::rc` / `--rc {off,tensor-band}` plus
+`--rc-delta-low-x`, `--rc-delta-high-x`, `--rc-fq-scale`,
+`--rc-tail-tensor-scale`, `--rc-qe-suppression`; `docs/USAGE.md` §7b; the raw
+run in `docs/open_items/run_2026-09-02/phase_C_numbers.md`).
+
+> **Revised 2026-09-03 after review.** Every tail number below was
+> regenerated: the elastic tail's per-nucleon reduction was **6× too large**
+> (Eq. (38) is the whole-nucleus `d²σ/dx_A dy`, so the factor is `1/A²` and not
+> `m_p/M_A`), the quasi-elastic **Pauli suppression `S(q)` is now on by
+> default** (design Q9, closed), the nuclear map moved to this library's exact
+> `x_A = x/A`, and the band is now **clamped** (`RcOptions::band_tau_max`)
+> because `tau_tag` diverges at the nodes of the tagged spectator density and
+> was publishing negative weights.
+
+Three weights per event — `rc_tensor_lo = 1 − δ(x)τ`,
+`rc_tensor_hi = 1 + δ(x)τ`, `rc_tail = 1 + σ_tail/σ_Born` — on
+`Event::rc_weights` and **never** on `Event::weight`: the band is a systematic
+variation and the tail a background, so neither may touch the Born sample.
+No four-vector moves, no RNG is consumed (`RcModel::fill` takes no `Rng&`),
+and an `--rc off` npz and HepMC3 file are **byte-identical** to what the same
+seed wrote before `rc.hpp` existed. Applies on every channel except coherent
+⁶Li (a φ-dependent tensor observable — nothing to cite); the tail is
+identically 1 on the tagged channels, where the tag itself vetoes the elastic
+recoil at x_L = 1.
+
+**Configuration for every number below.** ⁶Li, `--config 1`
+(s per nucleon = 3980 GeV²), `--channel inclusive`,
+`--plan tensor-thirds --pzz 0.6`, θ_S = 0, defaults, `n_eta = 128`, tail node
+grid 101 × 77 in (ln x, ln y).
+
+**The band, at P_zz = +1, Q² = 5 GeV²** (`w_lo + w_hi == 2.0` bit-for-bit):
+
+| x | δ(x) | A_zz | τ | `w_hi − 1` |
+|---|---|---|---|---|
+| 0.010 | 0.30000 | −1.4735e−03 | −7.3728e−04 | −2.2119e−04 |
+| 0.063 | 0.11081 | −4.2848e−03 | −2.1470e−03 | **−2.3790e−04** |
+| 0.100 | 0.06331 | −4.9751e−03 | −2.4937e−03 | −1.5789e−04 |
+| 0.160 | 0.01500 | −4.1666e−03 | −2.0876e−03 | −3.1315e−05 |
+| 0.300 | 0.01500 | −1.5852e−04 | −7.9268e−05 | −1.1890e−06 |
+
+The band **peaks near x = 0.063, not at the lowest x**: δ(x) is still rising
+there while |A_zz| has not yet fallen. The largest RC systematic on `A_zz`
+sits in the *middle* of the low-x range.
+
+**The tails, `w_tail − 1`** (elastic + unpolarised quasi-elastic, as a
+fraction of the Born, at m = ±1):
+
+| x | Q² = 2 | Q² = 5 | Q² = 10 |
+|---|---|---|---|
+| 0.01 | 8.9654e−05 | 5.18398e−04 | 2.14577e−03 |
+| 0.10 | 2.18453e−07 | 1.32298e−06 | 5.19642e−06 |
+| 0.30 | — (y < 0.004) | 6.8624e−08 | 2.72302e−07 |
+
+**and the headline that is not what a fixed-target intuition expects:** at EIC
+collider kinematics these cells sit at small y (`y = Q²/(x s)`), where
+`Y₊ = [1+(1−y)²]/(1−y) ≈ 2`. The radiative-tail dilution is therefore **five
+to eight orders of magnitude smaller than at HERMES**. The same model run at
+HERMES-like y gives 1.8 % at y = 0.5 and 33 % at y = 0.9. **`rc_tail` is a
+small effect at the EIC and a large one at a fixed target, and the difference
+is entirely `Y₊` and the Born's 1/Q⁴.**
+
+**And `rc_tail` is a LOWER BOUND: it is the t-peak ALONE.** T8(c)
+(`tests/test_rc.cpp`) now measures the leading-log s-/p-peaks of the same
+observable with an independent Weizsäcker–Williams × elastic construction.
+POLRAD §2.1.3 B's "the s- and p-peaks are suppressed" holds **where this
+generator runs** — > 99 % of the total for ⁶Li at Q² ≥ 20 GeV² — and fails
+elsewhere: at the HERMES deuteron point (x = 0.012, y = 0.85, Q² = 0.53) the
+t-peak is only **23 %** of the total, low by a factor **4.4**, and at the
+low-Q² corner of the generator window (Q² ≈ 4 GeV²) the quasi-elastic s-peak
+is already 3.3× the t-peak. Never quote `rc_tail` as "the" radiative tail.
+
+**The derived quantities that settle three design estimates:**
+
+| x | Q² | (1/6)σ^el_T/σ^el_U | σ^q_U/σ^el_U (S(q) on / S = 1) | ΔA_zz (tail) |
+|---|---|---|---|---|
+| 0.01 | 5 | −5.0943e−04 | 0.28237 / 0.5981 | +3.5167e−07 |
+| 0.10 | 5 | +1.5595e−04 | 2.7475 / 3.164 | +6.6751e−09 |
+| 0.30 | 5 | +1.3287e−02 | **1000.2** / 1000.2 | +1.2665e−11 |
+
+1. **The tensor fraction of the elastic tail changes SIGN with x** (−5.1e−04
+   at x = 0.01, +1.3e−02 at x = 0.30), which is why `σ^el_T` is a separate
+   table and never a scale factor on `σ^el_U`.
+2. **`σ^q_U/σ^el_U` runs 0.28 → 2.75 → 1000** over x = 0.01 → 0.30 (0.60 →
+   3.16 → 1000 with the Pauli suppression off). The design's "30–70 % of the
+   ERT" estimate is right only at the bottom of the range: **`rc_tail` is
+   quasi-elastic-dominated at every x ≳ 0.03** (22 % of the tail at x = 0.01,
+   73 % at 0.1, **99.9 %** at 0.30), so `--rc-qe-suppression` and
+   `RcOptions::qe_kf_gev` are the dominant tail knobs almost everywhere.
+3. **The tail is not the leading RC systematic at the EIC.** ΔA_zz from the
+   whole tail is 3.5e−07 at x = 0.01, Q² = 5, against a **band half-width of
+   4.4e−04** — a factor 1300.
+
+**Run-level:**
+
+| quantity | value |
+|---|---|
+| `RcModel` construction (101 × 77 nodes, `n_eta = 128`) | **0.106 s** — the `Pipeline` setup difference, median of 7. ONE number, shared with `phase_C_numbers.md` §8.3 and `USAGE.md` §7b; the earlier 0.16 s / 0.134 s pair is withdrawn. |
+| inclusive throughput, `--rc off` → `--rc tensor-band` (1 core, end to end) | 574 852 → 495 017 ev/s (**−13.9 %**), same build and machine as the row above |
+| clipped tail nodes at `tail_max = 10`, global / y < 0.5 / 0.5–0.9 / y > 0.9 | **0 / 0 / 0 / 0** (was 1.71 % / 0 / 0 / 21.95 % before the per-nucleon fix) |
+| clipped EVENTS — tail / band, default 2000-event inclusive run | **0 / 0** (`meta["rc_clipped_tail_event_fraction"]`, `..._band_...`; a DIFFERENT quantity from the node fractions — nodes are not event-weighted) |
+| clipped EVENTS on the BAND, 20 k tagged-alpha | **0.62 %** (⁶Li), **2.6 %** (⁷Li). `tau_tag` reaches 30.7 at the M = 0 density nodes; `band_tau_max = 1` holds every edge in [0.7, 1.3] instead of the −1.79 / −8.35 v0 published. |
+| δ(A_zz) at x = 0.01, Q² = 5 from the band, δ_low = 0.19 vs 0.30 | 2.7996e−04 vs **4.4204e−04** |
+| … from `fq_scale` 0 vs 2 | ΔA_zz +7.54154e−07 → −4.9925e−08, spread 8.041e−07 |
+| … from `tail_tensor_scale` 0.5 vs 2 | +3.59193e−07 → +3.23118e−07, spread 3.61e−08 |
+| … from `qe_suppression` 0 vs 1 | +1.83644e−07 → +3.51674e−07, spread 1.680e−07 |
+| … from `qe_kf_gev` 0 (S = 1) vs 0.169 | +5.39491e−07 → +3.51674e−07, spread 1.878e−07 |
+
+**The `fq_scale` band changes the SIGN of ΔA_zz** and is not symmetric about
+the nominal — σ^el_T is *quadratic* in F_q. That is why it must be **RUN**
+(0, 1, 2) and never rescaled from one row, and why T12 fits a quadratic
+through three runs instead of asserting linearity. **Nothing clips on the tail
+any more** — dividing the elastic tail by the missing A = 6 removed the whole
+21.95 % that used to sit in the `y > 0.9` band — but the four node fractions,
+the two per-event fractions and `Event.rc_clipped` are all still reported,
+because `Y₊ ~ 1/(1−y)` is still where a wider `y` window would bite. What does
+clip is the **band on the tagged channels**, 0.6–2.6 % of events, where
+`tau_tag = 1 − n̄/n_M` diverges at the nodes of `n_M`.
+
+**Honest flags, mandatory wherever any of this is quoted.** `δ_low = 0.30` is
+the **size of a correction this generator does not apply**, taken as a 1σ
+band; its source (Gakh–Shekhovtsova, hep-ph/0403262) has **zero INSPIRE
+citations**. `RC_DELTA_LOW_X_OPTIMISTIC = 0.19` is HERMES's *measured*
+fractional residual at its lowest-x bin (2×10⁻³ on A_zz = −1.06×10⁻²).
+Everything cited is **deuteron** — whether the deuteron's fractional RC
+transfers to ⁶Li is the largest unquantified assumption here. The ⁶Li
+form-factor shape parameters `(a, α, q₀) = (1.9069 fm, 0.13822,
+3.0999 fm⁻¹)` and `(q_z, b) = (1.30 fm⁻¹, 1.85 fm)` are **unfitted starting
+values** (the Suelzle–Yearian–Crannell and Li–Sick–Whitney–Yearian elastic
+data are not in this repository in machine-readable form — **Q1 and Q10 stay
+open**); their *normalisations* are the **measured** moments (μ = +0.822047
+μ_N, Q = −0.0818 fm², TUNL A = 6) and never VMC, whose Q(⁶Li) = −0.23(9) fm²
+is 3× the measured one. **No RC calculation exists for a tagged tensor
+asymmetry** (the tagged band is an uncited extrapolation) and none for any
+φ-dependent tensor observable at any axis. The **polarised** quasi-elastic
+tail is not priced at all (Zhou *et al.*, PRL **82** (1999) 687), and at
+x = 0.30 the tail is **99.9 %** quasi-elastic. **`rc_tail` is the t-peak only
+and is a LOWER BOUND** (T8(c): fine for ⁶Li at Q² ≥ 20 GeV², low by 4.4× at
+the HERMES deuteron point). The **tagged band is clamped** at
+`|τ| ≤ band_tau_max = 1`, which is a *choice*: `n_M → 0` is exactly where the
+fractional-rescale ansatz breaks down, and the clipped fraction is reported
+rather than hidden.
 
 ## 11. Coherent ⁶Li amplitude
 

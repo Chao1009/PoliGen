@@ -86,6 +86,7 @@
 #include "lipolgen/event.hpp"
 #include "lipolgen/fsi.hpp"
 #include "lipolgen/generator.hpp"
+#include "lipolgen/rc.hpp"
 #include "lipolgen/sampler.hpp"
 #include "lipolgen/spectator.hpp"
 #include "lipolgen/tagged.hpp"
@@ -357,6 +358,19 @@ struct PipelineConfig {
   /// one at EIC formation lengths.  BAND it (run both ends as a systematic);
   /// never quote one row alone (fsi.hpp).
   double fsi_sigma_mb = 40.0;
+  /// Tensor-sector radiative corrections as OPT-IN, WEIGHT-ONLY families
+  /// (rc.hpp): the band `rc_tensor_lo`/`rc_tensor_hi` on the tensor part of
+  /// the rate, and the 6Li radiative tails `rc_tail` (elastic + unpolarised
+  /// quasi-elastic).  They go on `Event::rc_weights` and NOT on
+  /// `Event::weight` -- a systematic variation and a background, not a
+  /// correction -- so `Off` (the default) is today bit for bit, in every
+  /// four-vector, in `Event::weight` and in the RNG stream.  Applies on every
+  /// channel except `CoherentLi6`; the tail is additionally identically 1 on
+  /// the tagged channels (design_C_tensor_rc.md sec. 1.5).  `validate()` does
+  /// NOT refuse the coherent channel -- `RcModel::applies()` decides and the
+  /// run prints why, so a channel scan need not special-case `--rc`.
+  PipelineRc rc = PipelineRc::Off;
+  RcOptions  rc_options;          ///< knobs ONLY -- there is no mode on it
 
   // --- coherent channel ---------------------------------------------------
   CoherentScenario coherent;
@@ -495,6 +509,10 @@ class Pipeline {
   /// `Off`.  Expose it so a run can print what it used (`sigma_eff_mb`,
   /// `survival`, the profile numbers).
   const GlauberFsiWeight* fsi_weight() const { return fsi_.get(); }
+  /// The RC weight model of the run; null when `PipelineConfig::rc` is `Off`.
+  /// Expose it so a run can print the band, the form-factor provenance and
+  /// the clipped fractions (rc.hpp).
+  const RcModel* rc_model() const { return rc_.get(); }
   /// The tier this run actually writes (`Tier::T0` on channels with no
   /// struck cluster, whatever the configuration says).
   Tier tier() const { return tier_; }
@@ -613,6 +631,10 @@ class Pipeline {
   std::vector<std::unique_ptr<CoherentSampler>> csampler_;
   std::vector<double> coh_cdf_;     ///< over accepted cells, normalized
   double sigma_coh_pb_ = 0.0;
+
+  // rc (rc.hpp) -- built on EVERY channel, so it lives outside the tagged and
+  // coherent blocks above.  Null when cfg_.rc == Off.
+  std::shared_ptr<RcModel> rc_;
 
   // beams / bookkeeping
   Vec4 beam_e_, beam_ion_;

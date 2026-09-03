@@ -40,10 +40,11 @@ onto the physical target — conservation to 1e-13).
 Physics channels, models, references and implementing symbols: `docs/PHYSICS_CHANNELS.md`.
 
 Open items, with explored solutions and prototypes: `docs/OPEN_ITEMS_SOLUTIONS.md`.
-Rows 5–7 are now **implemented with measured numbers** (coherent T2 via a PYTHIA
-Pomeron beam, `--coherent-t2`; the Ciofi–Simula triton spectral function,
-`--triton-sf`; the Glauber spectator-FSI weight, `--fsi`); still open: the
-spin-3/2 finite-γ note, the b₁(⁶Li) convolution, the tensor RC band.
+Rows 5–7 and 9 are now **implemented with measured numbers** (coherent T2 via a
+PYTHIA Pomeron beam, `--coherent-t2`; the Ciofi–Simula triton spectral function,
+`--triton-sf`; the Glauber spectator-FSI weight, `--fsi`; the tensor-sector
+radiative-correction band and radiative tails, `--rc tensor-band`); still open:
+the b₁(⁶Li) convolution.
 
 ## Build
 

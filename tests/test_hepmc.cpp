@@ -5,6 +5,7 @@
 #include "doctest.h"
 #include "lipolgen/event.hpp"
 #include "lipolgen/hepmc_writer.hpp"
+#include "lipolgen/rc.hpp"
 
 #include <HepMC3/Attribute.h>
 #include <HepMC3/GenCrossSection.h>
@@ -17,6 +18,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 using namespace lipolgen;
 using HepMC3::DoubleAttribute;
@@ -437,4 +439,86 @@ TEST_CASE("HepMC3Writer writes the PDG mass as the generated mass of a massless 
       CHECK(mom.e() == ev.particles[i].p.e);
     }
   }
+}
+
+// --------------------------------------------------------------- rc.hpp
+
+TEST_CASE("T15: the rc.hpp weight block is APPENDED, and round-trips") {
+  // A SEPARATE fixture event on purpose: `make_synthetic_event()` is shared
+  // with the round-trip case above, whose two `weights().size()` REQUIREs are
+  // written against `1 + spin_weights.size()`.  Adding `rc_weights` there
+  // would turn them red for no physics reason (design_C_tensor_rc.md T15).
+  Event ev = make_synthetic_event();
+  REQUIRE(ev.spin_weights.size() == 4);
+  // Slot 0 (the event's own pure state) + one slot per spin category, in the
+  // row-major (n_slot x kRcWeightCount) order `Event::rc_weights` documents.
+  ev.rc_weights = {0.990, 1.010, 1.0300,     // slot 0
+                   0.991, 1.009, 1.0301,     // category 1
+                   0.992, 1.008, 1.0302,     // category 2
+                   0.993, 1.007, 1.0303,     // category 3
+                   0.994, 1.006, 1.0304};    // category 4
+  REQUIRE(ev.rc_weights.size() == kRcWeightCount * 5);
+
+  const auto path = temp_hepmc_path("lipolgen_test_hepmc_rc.hepmc");
+  {
+    HepMC3Writer writer(path.string());
+    writer.write(ev);
+    writer.close();
+  }
+  HepMC3::ReaderAscii reader(path.string());
+  HepMC3::GenEvent read_ev(HepMC3::Units::GEV, HepMC3::Units::MM);
+  REQUIRE(reader.read_event(read_ev));
+  REQUIRE_FALSE(reader.failed());
+  reader.close();
+  std::filesystem::remove(path);
+
+  REQUIRE(read_ev.run_info() != nullptr);
+  const auto& names = read_ev.run_info()->weight_names();
+  const std::vector<std::string> want = {
+      "nominal",       "spin_weight_1", "spin_weight_2", "spin_weight_3",
+      "spin_weight_4", "rc_tensor_lo",  "rc_tensor_hi",  "rc_tail",
+      "rc_tensor_lo_1", "rc_tensor_hi_1", "rc_tail_1",
+      "rc_tensor_lo_2", "rc_tensor_hi_2", "rc_tail_2",
+      "rc_tensor_lo_3", "rc_tensor_hi_3", "rc_tail_3",
+      "rc_tensor_lo_4", "rc_tensor_hi_4", "rc_tail_4"};
+  REQUIRE(names.size() == want.size());
+  for (std::size_t i = 0; i < want.size(); ++i) CHECK(names[i] == want[i]);
+
+  // "nominal" keeps index 0 and every spin_weight_k keeps its index: the RC
+  // block is APPENDED, never inserted (docs/HEPMC3_CONVENTION.md).
+  REQUIRE(read_ev.weights().size() ==
+          1 + ev.spin_weights.size() + ev.rc_weights.size());
+  CHECK(read_ev.weights()[0] == doctest::Approx(ev.weight).epsilon(1e-12));
+  for (std::size_t i = 0; i < ev.spin_weights.size(); ++i) {
+    CHECK(read_ev.weights()[i + 1] ==
+          doctest::Approx(ev.spin_weights[i]).epsilon(1e-12));
+  }
+  const std::size_t off = 1 + ev.spin_weights.size();
+  for (std::size_t i = 0; i < ev.rc_weights.size(); ++i) {
+    CHECK(read_ev.weights()[off + i] ==
+          doctest::Approx(ev.rc_weights[i]).epsilon(1e-12));
+  }
+}
+
+TEST_CASE("T15b: --rc off writes exactly today's weight names") {
+  // The bit-for-bit half: an event whose `rc_weights` is empty (which is what
+  // `Event::reset` leaves and what an `--rc off` run produces) must name
+  // nothing new at all.
+  const Event ev = make_synthetic_event();
+  REQUIRE(ev.rc_weights.empty());
+  const auto path = temp_hepmc_path("lipolgen_test_hepmc_rc_off.hepmc");
+  {
+    HepMC3Writer writer(path.string());
+    writer.write(ev);
+    writer.close();
+  }
+  HepMC3::ReaderAscii reader(path.string());
+  HepMC3::GenEvent read_ev(HepMC3::Units::GEV, HepMC3::Units::MM);
+  REQUIRE(reader.read_event(read_ev));
+  reader.close();
+  std::filesystem::remove(path);
+  REQUIRE(read_ev.run_info() != nullptr);
+  CHECK(read_ev.run_info()->weight_names().size() ==
+        1 + ev.spin_weights.size());
+  CHECK(read_ev.weights().size() == 1 + ev.spin_weights.size());
 }

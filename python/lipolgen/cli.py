@@ -32,7 +32,7 @@ import numpy as np
 
 from . import _lipolgen as _l
 from . import export
-from . import (CHANNELS, CLUSTER_WAVES, FSI, OPTICS, PLANS, TRITON_SFS,
+from . import (CHANNELS, CLUSTER_WAVES, FSI, OPTICS, PLANS, RC, TRITON_SFS,
                ion_spin,
                make_config, make_plan)
 
@@ -113,6 +113,42 @@ def build_parser():
                    help="sigma_XN [mb] the FSI weight is built at; 40 = free "
                         "hadron.  The documented band is 20-40 mb: run BOTH "
                         "ends as a systematic, never pin one row alone")
+    p.add_argument("--rc", choices=sorted(RC), default=None,
+                   help="tensor-sector radiative corrections as OPT-IN "
+                        "WEIGHTS (rc.hpp): 'off' (default) is today bit for "
+                        "bit; 'tensor-band' adds rc_tensor_lo/rc_tensor_hi "
+                        "(the band on the tensor part of the rate) and "
+                        "rc_tail (the 6Li elastic + unpolarised "
+                        "quasi-elastic radiative tails).  Never a momentum "
+                        "shift; never on Event.weight.  NEEDS AN UNPOLARISED "
+                        "BEAM (lam_e*pe = 0) -- the whole A_zz programme "
+                        "assumes one -- so on 7Li no --plan this CLI can "
+                        "build reaches it and the band is API-only there "
+                        "(USAGE sec. 7b).  rc_tail is the t-PEAK ONLY: a "
+                        "LOWER BOUND on the dilution, validated for 6Li at "
+                        "Q^2 >= 20 GeV^2 and low by ~4x at fixed-target "
+                        "kinematics")
+    p.add_argument("--rc-delta-low-x", type=float, default=None,
+                   help="the low-x band edge (default 0.30, the conservative "
+                        "end of Gakh-Shekhovtsova's UNCITED 10-30 %%; 0.19 is "
+                        "the residual HERMES actually achieved). BAND IT: "
+                        "run both, never quote one row alone")
+    p.add_argument("--rc-delta-high-x", type=float, default=None,
+                   help="the high-x band edge (default 0.015, E12-13-011)")
+    p.add_argument("--rc-fq-scale", type=float, default=None,
+                   help="+-100 %% systematic on the 6Li quadrupole form "
+                        "factor.  The tensor tail is QUADRATIC in it, so the "
+                        "band must be RUN (0.0, 1.0, 2.0), never rescaled "
+                        "from one run")
+    p.add_argument("--rc-tail-tensor-scale", type=float, default=None,
+                   help="multiplier on the 6Li MAGNETIC form factor -- the "
+                        "eta*F_m^2 tensor sector, which --rc-fq-scale does "
+                        "NOT span (default 1.0; run 0.5 and 2.0)")
+    p.add_argument("--rc-qe-suppression", type=float, default=None,
+                   help="multiplier on the UNPOLARISED quasi-elastic "
+                        "radiative tail, standing in for POLRAD Eq. (44)'s "
+                        "S_E/S_M/S_EM factors (default 1.0 = no suppression, "
+                        "the conservative direction; run 0.0 and 0.5)")
     p.add_argument("--inclusive-b1", action="store_true", default=None,
                    help="put an inclusive b1 in the struck cluster's kernel")
     p.add_argument("--coherent-f0", type=float, default=None)
@@ -154,6 +190,13 @@ DEFAULTS = dict(isotope="6Li", config=1, channel="inclusive",
                 hepmc=None, npz=None, hfs_npz=None, cluster_beta=None,
                 p_d=None, cluster_wave="hulthen", triton_sf="hulthen",
                 fsi="off", fsi_sigma_mb=40.0,
+                # CONVENTIONS.md "no physics number defined twice": the band
+                # anchors live in rc.hpp and are exported, so read them rather
+                # than retyping 0.30 / 0.015 here.
+                rc="off", rc_delta_low_x=_l.RC_DELTA_LOW_X,
+                rc_delta_high_x=_l.RC_DELTA_HIGH_X,
+                rc_fq_scale=1.0, rc_tail_tensor_scale=1.0,
+                rc_qe_suppression=1.0,
                 coherent_t2="pomeron", pom_set=6, pom_rescale=1.0,
                 inclusive_b1=False, coherent=None)
 
@@ -197,6 +240,12 @@ def main(argv=None):
                       p_d=opts["p_d"], cluster_wave=opts["cluster_wave"],
                       triton_sf=opts["triton_sf"],
                       fsi=opts["fsi"], fsi_sigma_mb=opts["fsi_sigma_mb"],
+                      rc=opts["rc"],
+                      rc_delta_low_x=opts["rc_delta_low_x"],
+                      rc_delta_high_x=opts["rc_delta_high_x"],
+                      rc_fq_scale=opts["rc_fq_scale"],
+                      rc_tail_tensor_scale=opts["rc_tail_tensor_scale"],
+                      rc_qe_suppression=opts["rc_qe_suppression"],
                       inclusive_b1=opts["inclusive_b1"],
                       coherent=opts["coherent"])
     plan = make_plan(opts["plan"], j=ion_spin(cfg.isotope), pz=opts["pz"],
@@ -240,6 +289,43 @@ def main(argv=None):
             % (_l.pipeline_fsi_name(cfg.fsi), fw.sigma_eff_mb(0.0),
                p.tagged_channel.base.spectator,
                fw.sigma_cluster_mb(fw.sigma_eff_mb(0.0)), fw.survival()))
+    if p.rc_model is not None:
+        r = p.rc_model
+        say("  RC %s: delta(x) = %.4g at x=0.01, %.4g at x=0.1; band %s; "
+            "tail %s"
+            % (_l.rc_mode_name(cfg.rc), r.delta(0.01), r.delta(0.1),
+               "on" if r.applies else "OFF",
+               "on" if r.tail_applies else "OFF"))
+        # Print the exclusion reason ONCE, and only the lines that describe
+        # what the run actually did: `ff_provenance` embeds the same reason
+        # when no form factor was built, and the tail statistics are
+        # meaningless on a channel with no tail.
+        if not (r.applies and r.tail_applies):
+            say("     %s" % r.exclusion_reason)
+        if r.tail_applies:
+            say("     6Li FF: %s" % r.ff_provenance)
+            say("     clipped %.3g%% of tail NODES (by y-band %.3g / %.3g / "
+                "%.3g%%; the y > 0.9 one is where Y+ ~ 1/(1-y) bites)"
+                % ((100.0 * r.clipped_cell_fraction,)
+                   + tuple(100.0 * f for f in r.clipped_fraction_by_y)))
+            say("     tails: elastic + UNPOLARISED quasi-elastic (Eq. 44, "
+                "Pauli S(q) at k_F = %.3g GeV x %.2g); the POLARISED QE tail "
+                "is NOT priced (Zhou et al., PRL 82 (1999) 687)"
+                % (cfg.rc_options.qe_kf_gev, cfg.rc_options.qe_suppression))
+            say("     the tail is the t-PEAK ONLY (POLRAD Eqs. 37-39): its "
+                "absolute normalisation is NOT validated against an exact "
+                "tail.  Measured (test_rc.cpp T8(c)) against the leading-log "
+                "s-/p-peaks: > 99 % of the total for 6Li at Q^2 >= 20 "
+                "GeV^2, but only 23 % at the HERMES deuteron point.  Read "
+                "rc_tail as a LOWER BOUND on the dilution.")
+        if r.applies:
+            say("     the weights are on Event.rc_weights and NOT on "
+                "Event.weight: a systematic variation and a background, not "
+                "a correction.")
+            say("     Gakh-Shekhovtsova hep-ph/0403262 has ZERO INSPIRE "
+                "citations: band it (--rc-delta-low-x 0.19 / 0.30, "
+                "--rc-fq-scale 0 / 1 / 2, --rc-qe-suppression 0 / 0.5 / 1), "
+                "never quote one row alone.")
 
     # Events are only materialized when something needs the records: the HFS
     # exporter always, HepMC only when the T2 tier is on (regenerating a
@@ -253,6 +339,17 @@ def main(argv=None):
     n = int(cols["x"].size)
     say("  generated %d events in %.3f s = %.4g ev/s (%d thread%s)"
         % (n, dt, n / max(dt, 1e-12), nthreads, "" if nthreads == 1 else "s"))
+    if p.rc_model is not None and p.rc_model.applies:
+        # EVENT-level clipping, which the node fractions above are not: nodes
+        # are not event-weighted, and the node statistic is computed at
+        # q_n = 0 while the per-event clip carries the (q_n/6) tensor term.
+        m = cols["meta"]
+        say("     RC clipped %d / %d events on the tail (%.3g%%) and %d "
+            "(%.3g%%) on the band (Event.rc_clipped carries the bits)"
+            % (m["rc_clipped_tail_events"], n,
+               100.0 * m["rc_clipped_tail_event_fraction"],
+               m["rc_clipped_band_events"],
+               100.0 * m["rc_clipped_band_event_fraction"]))
     if bridge is not None:
         st = bridge.stats
         say("  PYTHIA: %d ok, %d failed, %d retries" %

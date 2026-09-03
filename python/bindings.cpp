@@ -180,6 +180,15 @@ struct Columns {
   std::vector<double> struck_pol, struck_virtuality;
   std::vector<std::int64_t> number, lam_e, category_index, route;
   std::vector<std::int64_t> cell, n_partner, struck_pdg;
+  /// rc.hpp, slot 0 (the event's own pure spin state).  Sized only when the
+  /// run has RC on -- `columns_to_dict` then emits three keys that an
+  /// `--rc off` npz does not have at all.
+  std::vector<double> rc_lo, rc_hi, rc_tail;
+  /// `Event::rc_clipped`, per event: bit kRcClipTail | bit kRcClipBand.
+  /// Preallocated so worker threads write disjoint rows with no locking; the
+  /// two run-level fractions in `meta` are reduced from it afterwards.
+  std::vector<std::uint8_t> rc_clip;
+  bool with_rc = false;
 
   void resize(std::size_t n) {
     for (auto* v : {&x, &q2, &y, &phi, &w2, &nu, &s, &weight, &m_ion,
@@ -195,6 +204,14 @@ struct Columns {
     cell.assign(n, -1);
     n_partner.assign(n, 0);
     struck_pdg.assign(n, 0);
+    if (with_rc) {
+      // 1.0 is the right fill: it is what every RC weight means when the
+      // model does not apply (the coherent channel, a tagged tail).
+      rc_lo.assign(n, 1.0);
+      rc_hi.assign(n, 1.0);
+      rc_tail.assign(n, 1.0);
+      rc_clip.assign(n, 0);
+    }
   }
 };
 
@@ -226,6 +243,14 @@ void fill_row(Columns& c, std::size_t i, const Event& ev, const Pipeline& p,
   c.number[i] = static_cast<std::int64_t>(ev.number);
   c.lam_e[i] = ev.spin.lam_e;
   c.cell[i] = ev.kin.cell;
+  // rc.hpp, slot 0.  Untouched (and left at 1.0) when the run had --rc off,
+  // in which case these three vectors are empty and never reach the dict.
+  if (c.with_rc && ev.rc_weights.size() >= kRcWeightCount) {
+    c.rc_lo[i] = ev.rc_weights[0];
+    c.rc_hi[i] = ev.rc_weights[1];
+    c.rc_tail[i] = ev.rc_weights[2];
+    c.rc_clip[i] = static_cast<std::uint8_t>(ev.rc_clipped);
+  }
 
   // The T1 block: the struck nucleon and how many partner spectators came
   // out of the cluster with it (0 for a channel whose struck object already
@@ -373,6 +398,16 @@ py::dict columns_to_dict(Columns& c, const Pipeline& p, std::uint64_t n) {
   d["struck_pdg"] = move_array(std::move(c.struck_pdg));
   d["struck_pol"] = move_array(std::move(c.struck_pol));
   d["struck_virtuality"] = move_array(std::move(c.struck_virtuality));
+  // rc.hpp: the three RC columns exist ONLY when the run had RC on, so an
+  // `--rc off` npz carries exactly today's key set and the reference gates do
+  // not have to move.  `export.columns_from_events` applies the same rule on
+  // the records path -- both paths or neither, or `export.rc_columns` would
+  // silently return ones for a run that had RC on.
+  if (c.with_rc) {
+    d["rc_tensor_lo"] = move_array(std::move(c.rc_lo));
+    d["rc_tensor_hi"] = move_array(std::move(c.rc_hi));
+    d["rc_tail"] = move_array(std::move(c.rc_tail));
+  }
 
   py::list names;
   for (const SpinCategory& cat : p.plan().categories()) names.append(cat.name);
@@ -404,6 +439,48 @@ py::dict columns_to_dict(Columns& c, const Pipeline& p, std::uint64_t n) {
   meta["optics"] = p.optics().name;
   meta["pot_config"] = p.pot_config();
   meta["frame"] = "head-on: ion +z, electron -z; per-nucleon x, y, Q2";
+  // rc.hpp -- the WHOLE block, `meta["rc"]` included, is emitted only when
+  // the run has RC on, so an `--rc off` npz is byte-identical to today's and
+  // not merely key-compatible with it (T6).
+  if (const RcModel* rc = p.rc_model()) {
+    meta["rc"] = rc_mode_name(p.config().rc);
+    py::list rc_names;
+    for (std::size_t i = 0; i < kRcWeightCount; ++i)
+      rc_names.append(rc_weight_name(i, 0));
+    meta["rc_weight_names"] = rc_names;
+    meta["rc_applies"] = rc->applies();
+    meta["rc_tail_applies"] = rc->tail_applies();
+    meta["rc_exclusion_reason"] = rc->exclusion_reason();
+    meta["rc_ff_provenance"] = rc->ff_provenance();
+    meta["rc_delta_low_x"] = rc->options().delta_low_x;
+    meta["rc_delta_high_x"] = rc->options().delta_high_x;
+    meta["rc_fq_scale"] = rc->options().fq_scale;
+    meta["rc_tail_tensor_scale"] = rc->options().tail_tensor_scale;
+    meta["rc_qe_suppression"] = rc->options().qe_suppression;
+    meta["rc_qe_kf_gev"] = rc->options().qe_kf_gev;
+    meta["rc_band_tau_max"] = rc->options().band_tau_max;
+    meta["rc_clipped_cell_fraction"] = rc->clipped_cell_fraction();
+    const std::array<double, 3> by_y = rc->clipped_fraction_by_y();
+    meta["rc_clipped_fraction_by_y"] =
+        std::vector<double>(by_y.begin(), by_y.end());
+    // ... and the EVENT-level clipping, which is a DIFFERENT quantity: the
+    // node fractions above are not event-weighted, and the node statistic is
+    // computed at q_n = 0 while the per-event clip carries the (q_n/6) tensor
+    // term.  In the default 2000-event inclusive run the tail ceiling IS hit
+    // by real events while the global node fraction reads 1.7 %.
+    std::size_t n_band = 0, n_tail = 0;
+    for (std::size_t i = 0; i < c.rc_clip.size() && i < n; ++i) {
+      if (c.rc_clip[i] & kRcClipBand) ++n_band;
+      if (c.rc_clip[i] & kRcClipTail) ++n_tail;
+    }
+    const double denom = (n > 0) ? static_cast<double>(n) : 1.0;
+    meta["rc_clipped_band_events"] = n_band;
+    meta["rc_clipped_tail_events"] = n_tail;
+    meta["rc_clipped_band_event_fraction"] =
+        static_cast<double>(n_band) / denom;
+    meta["rc_clipped_tail_event_fraction"] =
+        static_cast<double>(n_tail) / denom;
+  }
   d["meta"] = meta;
   return d;
 }
@@ -412,6 +489,7 @@ py::object pipeline_generate(const Pipeline& p, std::uint64_t n, bool events,
                              unsigned nthreads, std::size_t chunk) {
   if (n == 0 || n > p.size()) n = p.size();
   Columns cols;
+  cols.with_rc = p.rc_model() != nullptr;
   cols.resize(static_cast<std::size_t>(n));
   // category index is cheap and needs no event: recover it from the index
   for (std::uint64_t i = 0; i < n; ++i)
@@ -537,6 +615,7 @@ static void bind_sampler(py::module_& m);
 static void bind_spectator(py::module_& m);
 static void bind_tagged(py::module_& m);
 static void bind_fsi(py::module_& m);
+static void bind_rc(py::module_& m);
 static void bind_coherent(py::module_& m);
 static void bind_pipeline(py::module_& m);
 static void bind_io(py::module_& m);
@@ -608,6 +687,7 @@ PYBIND11_MODULE(_lipolgen, m) {
   bind_spectator(m);
   bind_tagged(m);
   bind_fsi(m);
+  bind_rc(m);
   bind_coherent(m);
   bind_pipeline(m);
   bind_io(m);
@@ -753,6 +833,20 @@ static void bind_event(py::module_& m) {
       .def_readonly("channel", &Event::channel)
       .def_readonly("weight", &Event::weight)
       .def_readonly("spin_weights", &Event::spin_weights)
+      .def_readonly("rc_weights", &Event::rc_weights,
+                    "rc.hpp's opt-in RC weight block, row-major "
+                    "(n_slot x 3) with n_slot = 1 + len(spin_weights): "
+                    "[0:3] is (rc_tensor_lo, rc_tensor_hi, rc_tail) of the "
+                    "event's OWN pure spin state, slot 1+k is spin category "
+                    "k's population mixture.  EMPTY when the run had "
+                    "--rc off, and then nothing downstream changes.")
+      .def_readonly("rc_clipped", &Event::rc_clipped,
+                    "Which RC ceilings SLOT 0 hit: bit 1 = the tail hit "
+                    "RcOptions.tail_max, bit 2 = |tau| hit "
+                    "RcOptions.band_tau_max.  0 with --rc off.  The npz "
+                    "carries the run-level fractions as "
+                    "meta['rc_clipped_tail_event_fraction'] and "
+                    "meta['rc_clipped_band_event_fraction'].")
       .def_readonly("xsec_pb", &Event::xsec_pb)
       .def_readonly("xsec_err_pb", &Event::xsec_err_pb)
       .def_readonly("spin", &Event::spin)
@@ -2129,6 +2223,314 @@ static void bind_fsi(py::module_& m) {
       .def("sigma_tot_pb", &TaggedSampler::sigma_tot_pb, py::arg("fill"));
 }
 
+// ---------------------------------------------------------------------- rc
+
+/// pybind11 trampoline so an analysis can supply its OWN 6Li elastic form
+/// factors (a digitisation, a new calculation) without touching the library:
+/// `RcOptions.ff` takes any `Spin1ElasticFF`, and this makes a Python subclass
+/// one.  It is `shared_ptr`-held because `RcModel` keeps a
+/// `shared_ptr<const Spin1ElasticFF>`.
+class PySpin1ElasticFF : public Spin1ElasticFF {
+ public:
+  using Spin1ElasticFF::Spin1ElasticFF;
+  double fc(double t) const override {
+    PYBIND11_OVERRIDE_PURE(double, Spin1ElasticFF, fc, t);
+  }
+  double fm(double t) const override {
+    PYBIND11_OVERRIDE_PURE(double, Spin1ElasticFF, fm, t);
+  }
+  double fq(double t) const override {
+    PYBIND11_OVERRIDE_PURE(double, Spin1ElasticFF, fq, t);
+  }
+  std::string provenance() const override {
+    PYBIND11_OVERRIDE_PURE(std::string, Spin1ElasticFF, provenance, );
+  }
+};
+
+static void bind_rc(py::module_& m) {
+  m.attr("RC_DELTA_HIGH_X") = RC_DELTA_HIGH_X;
+  m.attr("RC_X_HIGH") = RC_X_HIGH;
+  m.attr("RC_DELTA_LOW_X") = RC_DELTA_LOW_X;
+  m.attr("RC_DELTA_LOW_X_OPTIMISTIC") = RC_DELTA_LOW_X_OPTIMISTIC;
+  m.attr("RC_X_LOW") = RC_X_LOW;
+  m.attr("RC_BAND_TAU_MAX") = RC_BAND_TAU_MAX;
+  m.attr("RC_TAIL_Y_CEILING") = RC_TAIL_Y_CEILING;
+  m.attr("RC_QE_KF_GEV") = RC_QE_KF_GEV;
+  m.attr("kRcWeightCount") = kRcWeightCount;
+
+  py::enum_<RcMode>(m, "RcMode",
+      "PipelineConfig.rc: the RC weight family.  Off (the default) is today "
+      "bit for bit; TensorBand adds rc_tensor_lo / rc_tensor_hi (the band on "
+      "the tensor part of the rate) and rc_tail (the 6Li radiative tails).")
+      .value("Off", RcMode::Off)
+      .value("TensorBand", RcMode::TensorBand);
+
+  py::enum_<RcTailModel>(m, "RcTailModel",
+      "Which tail formulation.  v0 ships TPeak only (POLRAD Eqs. (37)-(39), "
+      "(43)); PolradFull is the documented upgrade path and is refused.")
+      .value("TPeak", RcTailModel::TPeak)
+      .value("PolradFull", RcTailModel::PolradFull);
+
+  py::enum_<RcScope>(m, "RcScope",
+      "Which rank-2 terms the band rescales.  TensorRate (the default) is the "
+      "b1..b4 sector POLRAD and Gakh-Shekhovtsova actually compute; TensorAll "
+      "also takes the Delta cos 2phi term, for which NO RC calculation exists "
+      "at all -- for PRICING the omission, never for correcting it.")
+      .value("TensorRate", RcScope::TensorRate)
+      .value("TensorAll", RcScope::TensorAll);
+
+  m.def("rc_mode_name", &rc_mode_name, py::arg("mode"),
+        "\"off\" | \"tensor-band\".");
+  m.def("pipeline_rc_name", &pipeline_rc_name, py::arg("rc"));
+  m.def("rc_weight_name",
+        [](std::size_t i, std::size_t slot) { return rc_weight_name(i, slot); },
+        py::arg("i"), py::arg("slot") = 0,
+        "The HepMC3 / npz name of RC weight i in slot `slot`: "
+        "rc_weight_name(2, 0) == 'rc_tail', rc_weight_name(2, 3) == "
+        "'rc_tail_3'.");
+  m.def("rc_delta", &rc_delta, py::arg("x"),
+        py::arg("delta_high") = RC_DELTA_HIGH_X,
+        py::arg("delta_low") = RC_DELTA_LOW_X,
+        py::arg("x_high") = RC_X_HIGH, py::arg("x_low") = RC_X_LOW,
+        "The band half-width delta(x): log-linear between the two anchors, "
+        "clamped outside them, monotone non-increasing.  delta_low = 0.30 is "
+        "the SIZE of a correction this generator does not apply (Gakh-"
+        "Shekhovtsova hep-ph/0403262, ZERO INSPIRE citations), taken as a "
+        "1-sigma band; 0.19 is HERMES's measured fractional residual at its "
+        "lowest-x bin.  BAND IT: run both, never quote one row alone.");
+
+  py::class_<RcOptions>(m, "RcOptions",
+      "The RC knobs.  NOTE there is no `mode` here: PipelineConfig.rc is the "
+      "single source of truth and RcModel takes it as a constructor "
+      "argument.")
+      .def(py::init<>())
+      .def_readwrite("scope", &RcOptions::scope)
+      .def_readwrite("delta_high_x", &RcOptions::delta_high_x)
+      .def_readwrite("x_high", &RcOptions::x_high)
+      .def_readwrite("delta_low_x", &RcOptions::delta_low_x,
+                     "0.30 default (the conservative end of the uncited "
+                     "10-30 %); 0.19 = 'as good as HERMES actually achieved'.")
+      .def_readwrite("x_low", &RcOptions::x_low)
+      .def_readwrite("with_tail", &RcOptions::with_tail)
+      .def_readwrite("with_qe_tail", &RcOptions::with_qe_tail,
+                     "The UNPOLARISED quasi-elastic tail (POLRAD Eq. (44)).  "
+                     "Its A_zz is ~0, so it DILUTES A_zz just as the "
+                     "unpolarised elastic tail does; HERMES subtracted both.  "
+                     "Turning it off prices the elastic tail alone and MUST "
+                     "be labelled so.")
+      .def_readwrite("tail_model", &RcOptions::tail_model)
+      // NOT `def_readwrite`.  `RcOptions::ff` is a shared_ptr<const
+      // Spin1ElasticFF>, so assigning a PYTHON SUBCLASS through a plain
+      // readwrite stores only the C++ trampoline and drops the Python object
+      // as soon as the caller's last reference goes: the next `fc()` call
+      // then throws `Tried to call pure virtual function`.  Store an ALIASING
+      // shared_ptr whose control block owns a py::object, so the Python half
+      // of the trampoline lives exactly as long as the C++ half.
+      .def_property("ff",
+                    [](const RcOptions& o) { return o.ff; },
+                    [](RcOptions& o, py::object obj) {
+                      if (obj.is_none()) { o.ff.reset(); return; }
+                      std::shared_ptr<Spin1ElasticFF> sp =
+                          obj.cast<std::shared_ptr<Spin1ElasticFF>>();
+                      std::shared_ptr<py::object> keep =
+                          std::make_shared<py::object>(obj);
+                      o.ff = std::shared_ptr<const Spin1ElasticFF>(keep,
+                                                                   sp.get());
+                    },
+                    "A Spin1ElasticFF to use instead of the built-in "
+                    "HoSpin1FF; None takes the default.  fq_scale and "
+                    "tail_tensor_scale are then IGNORED (they are applied "
+                    "when RcModel builds its own form factor).  A PYTHON "
+                    "SUBCLASS is kept alive by this assignment -- you do not "
+                    "have to hold your own reference.")
+      .def_readwrite("fq_scale", &RcOptions::fq_scale,
+                     "The +-100 % 6Li quadrupole band.  sigma^el_T is "
+                     "QUADRATIC in it, so RUN it (0, 1, 2) -- never rescale "
+                     "one run.")
+      .def_readwrite("tail_tensor_scale", &RcOptions::tail_tensor_scale,
+                     "Flat multiplier on F_m -- the eta F_m^2 tensor sector, "
+                     "which fq_scale does NOT span.  Run 0.5, 1, 2.")
+      .def_readwrite("qe_suppression", &RcOptions::qe_suppression,
+                     "Multiplier on the whole unpolarised quasi-elastic tail, "
+                     "standing in for POLRAD Eq. (44)'s S_E/S_M/S_EM factors, "
+                     "which v0 sets to 1 (the conservative direction for a "
+                     "DILUTION).  Run 0.0 / 0.5 / 1.0.")
+      .def_readwrite("qe_kf_gev", &RcOptions::qe_kf_gev,
+                     "POLRAD Eq. (44)'s S_E/S_M as `ffquas` codes them: the "
+                     "de Forest-Walecka Fermi-gas factor "
+                     "S(q) = (3/4)(q/k_F) - (q/k_F)^3/16 below q = 2 k_F.  "
+                     "DEFAULT ON at 6Li's measured k_F = 0.169 GeV (Moniz et "
+                     "al., PRL 26 (1971) 445).  It cuts the QRT to 0.47 at "
+                     "x = 0.01 and 0.87 at x = 0.1, and the QRT is the "
+                     "DOMINANT piece of rc_tail.  0 = the unsuppressed edge.")
+      .def_readwrite("n_eta", &RcOptions::n_eta)
+      .def_readwrite("m_lepton", &RcOptions::m_lepton)
+      .def_readwrite("tail_max", &RcOptions::tail_max)
+      .def_readwrite("band_tau_max", &RcOptions::band_tau_max,
+                     "Ceiling on |tau| the BAND sees (default 1.0).  On the "
+                     "TAGGED channels tau_tag = 1 - nbar/n_M is UNBOUNDED at "
+                     "the nodes of the M-dependent spectator density and "
+                     "without this the band edges go NEGATIVE.  With 1.0 "
+                     "every edge stays in [1 - delta, 1 + delta].");
+
+  py::class_<RcWeights>(m, "RcWeights",
+      "One event's RC weight triple: lo = 1 - delta(x) tau, "
+      "hi = 1 + delta(x) tau, tail = 1 + sigma_tail/sigma_Born.")
+      .def(py::init<>())
+      .def_readwrite("lo", &RcWeights::lo)
+      .def_readwrite("hi", &RcWeights::hi)
+      .def_readwrite("tail", &RcWeights::tail)
+      .def_readonly("band_clipped", &RcWeights::band_clipped,
+                    "|tau| hit RcOptions.band_tau_max on this event.")
+      .def_readonly("tail_clipped", &RcWeights::tail_clipped,
+                    "The tail ratio hit RcOptions.tail_max on this event.  "
+                    "NOT the same quantity as RcModel.clipped_cell_fraction, "
+                    "which counts TABLE NODES and is not event-weighted.")
+      .def("__repr__", [](const RcWeights& w) {
+        char b[192];
+        std::snprintf(b, sizeof b,
+                      "RcWeights(lo=%.8g, hi=%.8g, tail=%.8g, band_clipped=%d,"
+                      " tail_clipped=%d)",
+                      w.lo, w.hi, w.tail, static_cast<int>(w.band_clipped),
+                      static_cast<int>(w.tail_clipped));
+        return std::string(b);
+      });
+
+  py::class_<NucleonFF>(m, "NucleonFF")
+      .def_readonly("ge_p", &NucleonFF::ge_p)
+      .def_readonly("gm_p", &NucleonFF::gm_p)
+      .def_readonly("ge_n", &NucleonFF::ge_n)
+      .def_readonly("gm_n", &NucleonFF::gm_n);
+  m.def("nucleon_ff", &nucleon_ff, py::arg("t_gev2"),
+        "Dipole G_E^p, G_M^p, G_M^n plus Galster's G_E^n (5 %).");
+
+  py::class_<Spin1ElasticFF, PySpin1ElasticFF,
+             std::shared_ptr<Spin1ElasticFF>>(m, "Spin1ElasticFF",
+      "POLRAD Eq. (A.4)'s (F_c, F_m, F_q) at the elastic-vertex t [GeV^2], in "
+      "the Rosenbluth normalisation F_c(0) = Z, F_m(0) = (M_A/m_p) mu_A/mu_N, "
+      "F_q(0) = M_A^2 Q_A.  Subclass it in Python to supply your own.")
+      .def(py::init<>())
+      .def("fc", &Spin1ElasticFF::fc, py::arg("t_gev2"))
+      .def("fm", &Spin1ElasticFF::fm, py::arg("t_gev2"))
+      .def("fq", &Spin1ElasticFF::fq, py::arg("t_gev2"))
+      .def("provenance", &Spin1ElasticFF::provenance);
+
+  py::class_<HoSpin1FFOptions>(m, "HoSpin1FFOptions",
+      "Every 0.0 means 'take it from the Ion' -- HoSpin1FF.for_ion fills "
+      "them.  There are NO ion-specific defaults, so a 7Li run cannot "
+      "silently get 6Li form factors.")
+      .def(py::init<>())
+      .def_readwrite("a_fm", &HoSpin1FFOptions::a_fm)
+      .def_readwrite("alpha", &HoSpin1FFOptions::alpha)
+      .def_readwrite("z", &HoSpin1FFOptions::z)
+      .def_readwrite("m_a_gev", &HoSpin1FFOptions::m_a_gev)
+      .def_readwrite("mu_n", &HoSpin1FFOptions::mu_n)
+      .def_readwrite("q_fm2", &HoSpin1FFOptions::q_fm2)
+      .def_readwrite("fm_qz_fm", &HoSpin1FFOptions::fm_qz_fm)
+      .def_readwrite("fm_b_fm", &HoSpin1FFOptions::fm_b_fm)
+      .def_readwrite("fq_scale", &HoSpin1FFOptions::fq_scale)
+      .def_readwrite("tail_tensor_scale",
+                     &HoSpin1FFOptions::tail_tensor_scale)
+      .def_readwrite("fold_nucleon", &HoSpin1FFOptions::fold_nucleon);
+
+  py::class_<HoSpin1FF, Spin1ElasticFF, std::shared_ptr<HoSpin1FF>>(
+      m, "HoSpin1FF",
+      "The v0 6Li model: a harmonic-oscillator point-nucleon shape for C0/C2, "
+      "its own two-parameter shape for the magnetic one, normalised on the "
+      "MEASURED moments (NOT on VMC -- WS98's Q(6Li) = -0.23(9) fm^2 is 3x "
+      "the measured -0.0818).  The shape parameters are UNFITTED STARTING "
+      "VALUES; see the provenance string.")
+      .def_static("for_ion", &HoSpin1FF::for_ion, py::arg("ion"),
+                  py::arg("options") = HoSpin1FFOptions(),
+                  "THROWS for any ion with no measured-moment block (today: "
+                  "everything but 6Li).")
+      .def_property_readonly("options", &HoSpin1FF::options);
+
+  py::class_<TabulatedSpin1FF, Spin1ElasticFF,
+             std::shared_ptr<TabulatedSpin1FF>>(m, "TabulatedSpin1FF",
+      "A digitised (q, F_C0, F_C2, F_M1) table under data/ff/, log-linear in "
+      "q and refusing to extrapolate.  No 6Li table ships with the library -- "
+      "this is the hook for one.")
+      .def_static("from_data_dir", &TabulatedSpin1FF::from_data_dir,
+                  py::arg("relative"), py::arg("norm") = HoSpin1FFOptions());
+
+  py::class_<RcModel, std::shared_ptr<RcModel>>(m, "RcModel",
+      "The tensor-sector RC weight family.  IMMUTABLE after construction and "
+      "safe to share between threads.  A Pipeline builds its own; read it "
+      "back with Pipeline.rc_model.")
+      .def_property_readonly("options", &RcModel::options)
+      .def_property_readonly("mode", &RcModel::mode)
+      .def_property_readonly("ff_provenance", &RcModel::ff_provenance,
+                             "What form factor the run actually used -- PRINT "
+                             "IT.")
+      .def_property_readonly("applies", &RcModel::applies)
+      .def_property_readonly("tail_applies", &RcModel::tail_applies,
+                             "TRUE at every theta_S: the tail is emitted at "
+                             "any axis through P_zz^eff = 3 Q_NN "
+                             "P_2(cos theta_S) (POLRAD Eq. (43)).")
+      .def_property_readonly("exclusion_reason", &RcModel::exclusion_reason)
+      .def("delta", &RcModel::delta, py::arg("x"))
+      .def("tensor_fraction",
+           (double (RcModel::*)(const Event&) const) &RcModel::tensor_fraction,
+           py::arg("event"))
+      .def("tensor_fraction",
+           (double (RcModel::*)(const Event&, std::size_t) const)
+               &RcModel::tensor_fraction,
+           py::arg("event"), py::arg("category"))
+      .def("tail_ratio", &RcModel::tail_ratio, py::arg("cell"), py::arg("q_n"))
+      .def("tail_ratio_at",
+           [](const RcModel& r, double x, double q2, double q_n) {
+             return r.tail_ratio_at(x, q2, q_n);
+           },
+           py::arg("x"), py::arg("q2"), py::arg("q_n"),
+           "sigma_tail/sigma_Born at an arbitrary (x, Q2).  q_n is POLRAD's "
+           "Q_N = P_zz^eff = 3 Q_NN P_2(cos theta_S); Eq. (37) carries it as "
+           "Q_N/6.")
+      .def("weights",
+           (RcWeights (RcModel::*)(const Event&) const) &RcModel::weights,
+           py::arg("event"), "Slot 0: the event's own PURE spin state.")
+      .def("weights",
+           (RcWeights (RcModel::*)(const Event&, std::size_t) const)
+               &RcModel::weights,
+           py::arg("event"), py::arg("category"),
+           "Slot 1 + k: spin category k's population MIXTURE, mirroring "
+           "InclusiveSampler.weights_for.  It equals slot 0 only when the "
+           "category's population vector is pure.")
+      .def_property_readonly("clipped_cell_fraction",
+                             &RcModel::clipped_cell_fraction)
+      .def_property_readonly("clipped_fraction_by_y",
+                             [](const RcModel& r) {
+                               const std::array<double, 3> v =
+                                   r.clipped_fraction_by_y();
+                               return std::vector<double>(v.begin(), v.end());
+                             },
+                             "Clipped node fraction in the three y bands "
+                             "(y < 0.5, 0.5-0.9, > 0.9).  LOG ALL FOUR: the "
+                             "tail grows like Y_+ ~ 1/(1-y), so a clipped "
+                             "edge hides inside a small global number.")
+      .def_property_readonly("table_x", [](const RcModel& r) {
+        return copy_array(r.table_x());
+      })
+      .def_property_readonly("table_y", [](const RcModel& r) {
+        return copy_array(r.table_y());
+      })
+      .def_property_readonly("sigma_tail_u", [](const RcModel& r) {
+        return copy_array(r.sigma_tail_u());
+      })
+      .def_property_readonly("sigma_tail_t", [](const RcModel& r) {
+        return copy_array(r.sigma_tail_t());
+      })
+      .def_property_readonly("sigma_tail_qe", [](const RcModel& r) {
+        return copy_array(r.sigma_tail_qe());
+      })
+      .def("tail_sigma_at", [](const RcModel& r, double x, double q2) {
+        const RcModel::TailTriple t = r.tail_sigma_at(x, q2);
+        return py::make_tuple(t.u, t.t, t.qe);
+      }, py::arg("x"), py::arg("q2"),
+         "(sigma^el_U, sigma^el_T, sigma^q_U) per nucleon [GeV^-2], straight "
+         "from the quadrature -- no table, no interpolation.");
+}
+
 // ---------------------------------------------------------------- coherent
 
 static void bind_coherent(py::module_& m) {
@@ -2371,6 +2773,15 @@ static void bind_pipeline(py::module_& m) {
                      "sigma_XN [mb] the FSI weight is built at.  40 = free "
                      "hadron; the documented band is 20-40 mb -- band it, "
                      "never quote one row alone.")
+      .def_readwrite("rc", &PipelineConfig::rc,
+                     "RcMode: tensor-sector radiative corrections as OPT-IN, "
+                     "WEIGHT-ONLY families (rc.hpp).  They land on "
+                     "Event.rc_weights and on NOTHING else -- never "
+                     "Event.weight, never a four-vector, never a random "
+                     "number -- so Off (the default) is today bit for bit.")
+      .def_readwrite("rc_options", &PipelineConfig::rc_options,
+                     "RcOptions: the RC knobs.  There is NO mode on it -- "
+                     "PipelineConfig.rc is the single source of truth.")
       .def_readwrite("coherent", &PipelineConfig::coherent)
       .def_readwrite("coherent_t_max", &PipelineConfig::coherent_t_max)
       .def_readwrite("coherent_xpom", &PipelineConfig::coherent_xpom)
@@ -2425,6 +2836,12 @@ static void bind_pipeline(py::module_& m) {
                              "The run's FSI weight model (GlauberFsiWeight), "
                              "or None when PipelineConfig.fsi is Off -- "
                              "print its sigma_eff_mb and survival().")
+      .def_property_readonly("rc_model", &Pipeline::rc_model,
+                             py::return_value_policy::reference_internal,
+                             "The run's RC weight model (RcModel), or None "
+                             "when PipelineConfig.rc is Off.  Print its "
+                             "delta(x), ff_provenance and "
+                             "clipped_fraction_by_y.")
       .def("sigma_per_category_pb", [](const Pipeline& p) {
         return copy_array(p.sigma_per_category_pb());
       })

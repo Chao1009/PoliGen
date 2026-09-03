@@ -427,11 +427,25 @@ with `σ_u^p` the first line of Eq. (38) (in nucleon invariants: `M → M_N`,
 `x_A → x`, `η_min = x²/(4(1−x))`, i.e. the **same** `t_min = (x M_N)²`), and
 `(Z, N) = (3, 3)` for ⁶Li.
 
-**v0 takes `S_e = S_m = S_em = 1`** (no Pauli suppression) and exposes
+~~**v0 takes `S_e = S_m = S_em = 1`** (no Pauli suppression) and exposes
 `RcOptions::qe_suppression` as a flat multiplier on the whole QRT, to be run at
-`0.0 / 0.5 / 1.0` as a band. This overestimates the QRT at low `Q²`, which is
-the conservative direction for a *dilution*. Implementing POLRAD's actual peak
-prescription is listed as **Q9**.
+`0.0 / 0.5 / 1.0` as a band.~~
+
+> **Q9 CLOSED 2026-09-03.** `S = 1` stopped being a small choice the moment the
+> per-nucleon factor was fixed: the QRT is then **0.6× / 3.2× / 1000×** the ERT
+> at `x = 0.01 / 0.1 / 0.3`, i.e. `rc_tail` is quasi-elastic-**dominated**
+> everywhere. `src/core/rc.cpp` now implements `S_E = S_M = S(q)` exactly as
+> POLRAD's `ffquas` codes it (adgh:5605-5613), the de Forest–Walecka Fermi-gas
+> factor `S(q) = (3/4)(q/k_F) − (q/k_F)³/16` below `q = 2k_F`, at the
+> elastic-vertex three-momentum transfer `q² = t(1 + η)`, with
+> `RcOptions::qe_kf_gev = 0.169 GeV` (⁶Li, Moniz et al., PRL **26** (1971) 445)
+> as the **default**. Measured `QRT(S)/QRT(1)`: **0.472** (`k_F = 0.169`) /
+> 0.405 (0.221) at `x = 0.01`, **0.868** / 0.783 at `x = 0.1`, **1.000** /
+> 0.990 at `x = 0.3` — so the old default was 15–60 % high on the tail's
+> dominant piece at `x ≤ 0.1`. `qe_suppression` survives as the flat band knob
+> *around* it (run `0.0 / 0.5 / 1.0`), and `qe_kf_gev = 0` recovers the old
+> `S = 1` edge. `S_EM` never enters: the Eq. (38) spin-½ integrand is a
+> combination of `G_E²` and `G_M²` alone.
 
 **The polarised QRT stays at zero**, citing Z.-L. Zhou et al. (§1.0). That is
 the one place the *tensor* part of the tail is knowingly incomplete, and it is
@@ -504,6 +518,27 @@ nucleus in `x_A = x/A` with `S_A = A·s`, and
 ```
 
 so the per-nucleon tail is `(1/A)·[Eq. (38) evaluated at (x_A, y, S_A, M_A)]`.
+
+> **CORRECTED 2026-09-03 (physics review).** The line above is **half of the
+> answer and shipping it alone was a factor-`A` bug.** `(1/A) d²σ/(dx_A dy)` is
+> the **Jacobian** `dx_A/dx`; it converts the *whole-nucleus* rate in `x_A` to
+> the *whole-nucleus* rate in `x`. Going per **nucleon** needs a **second**
+> `1/A`. Eq. (38) is the whole-nucleus `d²σ/(dx_A dy)` — the paper's
+> `σ₁^el = (1/A) d²σ/dx_A dy` (polrad2t.tex:579) is loose notation, POLRAD's
+> FORTRAN applies **both** `ter = m_p/M_A` (`apptai`, adgh:8607-8620) **and**
+> `/tara` (main, adgh:489, 497), and a Weizsäcker–Williams × Compton
+> construction reproduces `−`Eq. (38) with **no** `1/A` in it
+> (`polrad_transcription_check.md` §8b). So
+>
+> > **per-nucleon tail = `(1/A) · (dx_A/dx) · [Eq. (38)] = [Eq. (38)] / A²`**
+>
+> with this document's own map `x_A = x/A`. `src/core/rc.cpp` applies `1/A²`
+> and `tests/test_rc.cpp` T8(a') pins it at 1e-12, together with a gate that
+> the elastic and quasi-elastic per-nucleon factors agree (v0 shipped
+> `m_p/M_A` on the elastic tail and `1/A` on the quasi-elastic one, which was
+> 6.00× too large on the former and internally inconsistent between them).
+> `polrad_transcription_check.md` §4's "net difference 0.5 %" sentence, which
+> the implementer cited to justify the single factor, is corrected in place.
 Both numerator and denominator are then per nucleon, in **pb** after the
 library's own `GEV2_TO_PB`. **A missing factor `A = 6` here is exactly the kind
 of error a loosely specified 5 % test would absorb into a compensating
@@ -556,7 +591,14 @@ choice is auditable). Eq. (18) as printed on POLRAD p. 7:
 ```
 
 **The prefactor is `1/A²` on the RIGHT and `1/A` on the LEFT** — not "`1/A` on
-both sides" as the first draft printed and as Q2 described it. Compare Eq. (19)
+both sides" as the first draft printed and as Q2 described it.
+
+> **CORRECTED 2026-09-03.** What follows below — *"`σ₁^el` is already
+> `(1/A)d²σ/dx_A dy`, i.e. already the per-nucleon-normalised object"* — is
+> the reading that made §1.4.5's single `1/A` look sufficient, and it is
+> **wrong**: the left-hand `1/A` is the `dx_A/dx` Jacobian, not a per-nucleon
+> division, and Eq. (38) (which is what v0 actually ships) carries neither.
+> See §1.4.5's correction box and `polrad_transcription_check.md` §8b. Compare Eq. (19)
 (the QRT) and Eq. (20), which carry `α³y/A`, with no square. The two are
 consistent with §1.4.5's per-nucleon reduction: `σ₁^el` is *already*
 `(1/A)d²σ/dx_A dy`, i.e. already the per-nucleon-normalised object, and the

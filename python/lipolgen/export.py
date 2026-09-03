@@ -47,13 +47,19 @@ from . import _lipolgen as _l
 
 __all__ = ["inclusive_dict", "tagged_dict", "columns_from_events",
            "hfs_sample", "write_hfs_npz", "write_columns_npz",
-           "load_hfs_npz"]
+           "load_hfs_npz", "RC_KEYS", "rc_columns"]
 
 #: `polligen.sample.InclusiveSampler.sample_category` keys.
 INCLUSIVE_KEYS = ("x", "q2", "y", "phi", "m", "cell", "category", "lam_e")
 
 #: The tier-T1 columns (`breakup.hpp`); LiPolGen additions, not polligen keys.
 T1_KEYS = ("n_partner", "struck_pdg", "struck_pol", "struck_virtuality")
+
+#: rc.hpp's weight columns.  PRESENT ONLY when the run had `--rc` on -- an
+#: `--rc off` sample carries exactly today's key set, on both the columnar and
+#: the `Event`-record path.  They are NOT in `INCLUSIVE_KEYS` / `TAGGED_KEYS`:
+#: those are polligen schemas and do not move.
+RC_KEYS = ("rc_tensor_lo", "rc_tensor_hi", "rc_tail")
 
 #: `polligen.tagged.TaggedSampler.sample_category` keys.
 TAGGED_KEYS = ("x", "q2", "y", "phi", "m_ion", "m_struck", "k", "cos_theta_k",
@@ -99,6 +105,14 @@ def columns_from_events(events, optics=None, pot_config="18x275"):
     out["cell"] = np.full(n, -1, dtype=np.int64)
     out["n_partner"] = np.zeros(n, dtype=np.int64)
     out["struck_pdg"] = np.zeros(n, dtype=np.int64)
+    # rc.hpp: the three RC columns exist only when the events carry them, i.e.
+    # only when the run had `--rc` on.  The C++ columnar path
+    # (`bindings.cpp::columns_to_dict`) applies the SAME rule; missing it here
+    # would make `rc_columns` hand back ones for a run that had RC on.
+    with_rc = bool(events) and len(events[0].rc_weights) >= len(RC_KEYS)
+    if with_rc:
+        for key in RC_KEYS:
+            out[key] = np.ones(n)
     cats = []
     for i, ev in enumerate(events):
         kin, spin = ev.kin, ev.spin
@@ -113,6 +127,11 @@ def columns_from_events(events, optics=None, pot_config="18x275"):
             out[k][i] = getattr(spin, k)
         out["lam_e"][i] = spin.lam_e
         out["number"][i] = ev.number
+        if with_rc:
+            # Slot 0 -- the event's own PURE spin state.
+            rw = ev.rc_weights
+            for j, key in enumerate(RC_KEYS):
+                out[key][i] = rw[j]
         cats.append(spin.category)
         e1 = ev.find(_l.Role.ScatteredElectron)
         if e1 is not None:
@@ -150,6 +169,29 @@ def columns_from_events(events, optics=None, pot_config="18x275"):
     out["category"] = np.asarray(cats)
     out["category_names"] = sorted(set(cats))
     return out
+
+
+def rc_columns(columns):
+    """`(rc_tensor_lo, rc_tensor_hi, rc_tail)` arrays from a sample.
+
+    Exactly 1.0 everywhere when the run had `--rc off` (the three keys are then
+    absent by design, so an analysis can multiply them in unconditionally).
+    Accepts either the columnar dict `Pipeline.generate()` returns or a
+    sequence of `Event` records.
+
+    THE WEIGHTS ARE NOT ON `weight`.  `rc_tensor_lo` / `rc_tensor_hi` are a
+    two-sided SYSTEMATIC BAND on the tensor part of the rate and `rc_tail` is
+    a radiative-tail BACKGROUND; an analysis multiplies them in on purpose:
+
+        w_hi = columns["weight"] * hi        # the +delta edge
+        w_bg = columns["weight"] * tail      # Born + radiative tails
+
+    Never quote one band edge alone (`docs/USAGE.md`).
+    """
+    cols = _columns(columns)
+    n = len(cols["x"])
+    return tuple(np.asarray(cols[k]) if k in cols else np.ones(n)
+                 for k in RC_KEYS)
 
 
 def _pdg_mass_number(pdg):

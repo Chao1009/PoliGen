@@ -215,6 +215,53 @@
   table is smooth and even in k_z there — and read per event by bilinear
   interpolation, consuming no randomness, so stream discipline and
   event-index determinism are untouched.
+- **The WEIGHT-FAMILY rule — which weight a new effect goes on.** There are
+  now two kinds of per-event weight in the library and they are NOT
+  interchangeable:
+  (1) A **correction to the model** multiplies `Event::weight`. FSI is the
+  only one: the plane-wave impulse approximation is *wrong* and the Glauber
+  ratio *fixes* it, so the nominal sample must carry it.
+  (2) A **systematic variation** or a **background** goes in its own named
+  weight family, never on `Event::weight`. The RC band
+  (`rc_tensor_lo`/`rc_tensor_hi`) is a variation and `rc_tail` is a
+  background; both leave the Born sample alone and an analysis multiplies one
+  in on purpose. They travel in `Event::rc_weights`, appear under their own
+  HepMC3 names (APPENDED after `nominal` and every `spin_weight_k`, so no
+  existing index moves — `docs/HEPMC3_CONVENTION.md`) and their own npz
+  columns, and those columns exist **only when the family is on**, on BOTH
+  the C++ columnar path and `export.columns_from_events`.
+  A new family must also **consume no randomness and move no four-vector**,
+  so that switching it on is bit-for-bit invisible everywhere else — the
+  structural form of that promise is a `fill(Event&) const` that takes no
+  `Rng&` (`rc.hpp`), and the runtime one is a test that compares two
+  pipelines' hadronizer-hook draw logs with `==`
+  (`tests/test_rc_pipeline.cpp`, T6).
+- **Tensor-sector RC band anchors.** `PipelineConfig::rc = PipelineRc::Off` is
+  the DEFAULT and is today bit for bit, down to the bytes of an `--rc off`
+  npz and HepMC3 file. When it is on, `rc_delta` interpolates log-linearly in
+  x between two anchors that are **not the same kind of object**, and the
+  distinction is the choice:
+  (a) `RC_DELTA_HIGH_X = 0.015` at `RC_X_HIGH = 0.16` is a quoted
+  **uncertainty** (JLab E12-13-011 / PR12-13-011; x = 0.16 is that
+  experiment's own lower kinematic edge, arXiv:2506.04506 p. 8 — the proposal
+  itself is unpublished, so cite it by page or drop the anchor).
+  (b) `RC_DELTA_LOW_X = 0.30` at `RC_X_LOW = 0.01` is the **size of a
+  correction this generator does not apply**, taken as a 1σ band — the
+  conservative end of Gakh–Shekhovtsova's (hep-ph/0403262, **zero INSPIRE
+  citations**) 10–30 %. It is NOT a measured residual.
+  (c) `RC_DELTA_LOW_X_OPTIMISTIC = 0.19` IS a measured residual: HERMES's own
+  fractional RC systematic at its lowest-x bin (2×10⁻³ on A_zz = −1.06×10⁻²,
+  hep-ex/0506018 Table II). **Run 0.19 and 0.30 both; never quote one row
+  alone**, exactly as with the FSI σ_XN band.
+  (d) The ⁶Li elastic form-factor **normalisations are the MEASURED moments**
+  — `LI6_MU_N = +0.8220473 μ_N`, `LI6_QUADRUPOLE_FM2 = −0.0818 fm²` (TUNL
+  A = 6) — and never VMC: Wiringa–Schiavilla's Q(⁶Li) = −0.23(9) fm² is 3×
+  the measured one, and `OPEN_ITEMS_SOLUTIONS.md` §5's standing instruction
+  forbids deriving a ⁶Li tensor input from those wave functions. Their
+  *shapes* are unfitted starting values and are banded by `--rc-fq-scale`
+  (0/1/2 — σ^el_T is QUADRATIC in it, so RUN the band, never rescale one row)
+  and `--rc-tail-tensor-scale` (0.5/1/2, the η F_m² sector `fq_scale` does
+  not span).
 - **Where data files live at run time.** `data_dir()` (`cluster.hpp`) is
   `$LIPOLGEN_DATA_DIR` when set and non-empty, else the compiled-in
   `LIPOLGEN_DATA_DIR_DEFAULT`, which CMake sets to `${CMAKE_SOURCE_DIR}/data`.

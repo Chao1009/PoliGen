@@ -22,6 +22,8 @@ void Event::reset() {
   channel = Channel::Inclusive;
   weight = 1.0;
   spin_weights.clear();
+  rc_weights.clear();   // rc.hpp; capacity kept, like spin_weights
+  rc_clipped = 0;
   xsec_pb = 0.0;
   xsec_err_pb = 0.0;
   kin = Kinematics();

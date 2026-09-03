@@ -309,6 +309,20 @@ Optics optics_for(OpticsChoice choice, const std::string& ion_name,
   throw std::runtime_error("optics_for: OpticsChoice::Custom has no table");
 }
 
+// rc.hpp is keyed on `Channel` (event.hpp) and CANNOT include pipeline.hpp --
+// pipeline.hpp includes rc.hpp for `PipelineRc` and `RcOptions`.  So the
+// 5 -> 9 widening happens here, once (design_C_tensor_rc.md sec. 3.3).
+static Channel event_channel_of(PipelineChannel c) {
+  switch (c) {
+    case PipelineChannel::Inclusive:       return Channel::Inclusive;
+    case PipelineChannel::TaggedLi6Alpha:  return Channel::TaggedLi6Alpha;
+    case PipelineChannel::TaggedLi7Alpha:  return Channel::TaggedLi7Alpha;
+    case PipelineChannel::TaggedDeuteronP: return Channel::TaggedDeuteronP;
+    case PipelineChannel::CoherentLi6:     return Channel::CoherentLi6;
+  }
+  throw std::runtime_error("event_channel_of: unhandled PipelineChannel");
+}
+
 void PipelineConfig::validate() const {
   if (beam_config < 0 || beam_config > 2) {
     throw std::runtime_error("PipelineConfig: beam_config must be 0, 1 or 2");
@@ -334,6 +348,41 @@ void PipelineConfig::validate() const {
   }
   if (!(fsi_sigma_mb >= 0.0)) {
     throw std::runtime_error("PipelineConfig: fsi_sigma_mb must be >= 0");
+  }
+  // rc.hpp.  NOTE what is deliberately NOT here: a channel refusal.  Unlike
+  // FSI, `--rc` is legal on every channel -- `RcModel::applies()` returns
+  // false on `CoherentLi6`, the weights are exactly 1.0 and the run PRINTS
+  // the reason, so a scan over channels does not have to special-case it
+  // (design_C_tensor_rc.md sec. 1.5.3, sec. 3.2).
+  if (rc != PipelineRc::Off) {
+    if (!(rc_options.delta_low_x >= 0.0 && rc_options.delta_high_x >= 0.0)) {
+      throw std::runtime_error("PipelineConfig: rc delta must be >= 0");
+    }
+    if (!(rc_options.x_low > 0.0 && rc_options.x_high > rc_options.x_low)) {
+      throw std::runtime_error(
+          "PipelineConfig: rc needs 0 < x_low < x_high (the band anchors)");
+    }
+    if (rc_options.n_eta < 8) {
+      throw std::runtime_error("PipelineConfig: rc n_eta must be >= 8");
+    }
+    if (!(rc_options.fq_scale >= 0.0 && rc_options.tail_tensor_scale >= 0.0 &&
+          rc_options.qe_suppression >= 0.0)) {
+      throw std::runtime_error(
+          "PipelineConfig: rc fq_scale / tail_tensor_scale / qe_suppression "
+          "must be >= 0");
+    }
+    if (rc_options.tail_model != RcTailModel::TPeak) {
+      throw std::runtime_error(
+          "PipelineConfig: rc tail_model PolradFull is not implemented "
+          "(design_C_tensor_rc.md section 1.4.6)");
+    }
+    // DESIGN vs CODE: sec. 3.2's snippet also loops over `plan.categories()`
+    // here to refuse a polarised beam.  `PipelineConfig` has no run plan --
+    // `RunPlan` is the Pipeline's SECOND constructor argument, not a config
+    // field -- so that loop cannot live in this function.  `RcModel`'s own
+    // constructor makes exactly that check (rc.cpp, "--rc assumes an
+    // UNPOLARISED beam"), which is the single source of truth the header
+    // already promises; the run therefore still throws, one frame later.
   }
   scenario.validate();
 }
@@ -616,6 +665,26 @@ Pipeline::Pipeline(PipelineConfig config, RunPlan plan)
       csampler_.back()->set_t_max(cfg_.coherent_t_max);
       csampler_.back()->set_weighted_azimuth(cfg_.coherent_weighted_azimuth);
       sigma_[k] = sigma_coh_pb_;
+    }
+  }
+
+  // --- rc (rc.hpp) --------------------------------------------------------
+  // ANCHOR: this sits AFTER the channel if/else chain (tagged / Inclusive /
+  // CoherentLi6) and BEFORE `// --- beams ---`, because that is the first
+  // point at which `dis_sampler_`, `model_` and `plan_` are resolved on EVERY
+  // channel.  It cannot go beside the FSI block: that block is INSIDE
+  // `if (is_tagged(cfg_.channel))`, and on the inclusive and coherent channels
+  // `dis_sampler_` is not assigned until the non-tagged else-branch -- building
+  // `RcModel` there would dereference a null sampler on the channel this
+  // design calls the home case.
+  if (cfg_.rc != PipelineRc::Off) {
+    const Channel rc_channel = event_channel_of(cfg_.channel);
+    if (model_) {
+      rc_ = std::make_shared<RcModel>(cfg_.rc, cfg_.rc_options, dis_sampler_,
+                                      plan_, rc_channel, beams_.ion, model_);
+    } else {
+      rc_ = std::make_shared<RcModel>(cfg_.rc, cfg_.rc_options, dis_sampler_,
+                                      plan_, rc_channel, beams_.ion);
     }
   }
 
@@ -1050,6 +1119,16 @@ void Pipeline::event(std::uint64_t index, Event& out) const {
       make_tagged(k, local, index, rng, out);
       break;
   }
+  // rc.hpp: the tensor-sector RC weight family.  A PURE FUNCTION of the
+  // FINISHED record and of tables built in the constructor -- it consumes no
+  // random number, moves no four-vector and does not touch `Event::weight`,
+  // which is exactly what makes `--rc tensor-band` bit-for-bit identical to
+  // `--rc off` in every one of those (T6).  Null when `PipelineConfig::rc` is
+  // Off, and then `Event::rc_weights` stays empty (`Event::reset` cleared it).
+  // It sits AFTER the switch because RC applies on every channel, and BEFORE
+  // the hadronizer so that a T2 event carries the same weights a T0 one does.
+  if (rc_) rc_->fill(out);
+
   if (cfg_.hadronizer) cfg_.hadronizer(out, rng);
 }
 

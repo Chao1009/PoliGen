@@ -214,7 +214,15 @@ class InclusiveKernel {
     /// tensor number by O(gamma^2) with nothing on the analysis side to meet
     /// it.
     bool tensor_gamma = false;
-    SFFunc3 b1_32_func, b2_32_func, delta_32_func;  ///< spin-3/2 rank-2 slots
+    /// Spin-3/2 rank-2 slots.  They take the HJM/Cosyn-sign b1 (the same
+    /// F1^(m) = F1 - Q_NN b1 relation `TENSOR_LL_SIGN` pins for spin 1), which
+    /// is MINUS the b1 of arXiv:2209.12161 Eq. (19b).  There is deliberately
+    /// no rank-3 (octupole) slot: its leading-twist function `g1_rank3`
+    /// (2209.12161 Eq. (19d), renamed from their g2) multiplies the beam
+    /// helicity only, so the rank-<=2 truncation is exact for every
+    /// unpolarized-beam observable -- docs/theory/SPIN32_FINITE_GAMMA.md
+    /// secs. 3-6 give the map, the theorem and the insertion points.
+    SFFunc3 b1_32_func, b2_32_func, delta_32_func;
     G2Mode g2_mode = G2Mode::kWandzuraWilczek;
     /// Multiplies g2 (the WW table, or nothing when `g2_mode` is kZero).
     double g2_scale = 1.0;

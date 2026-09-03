@@ -85,6 +85,11 @@ RunPlan helicity_flip_plan(double j, double pz, double pe,
   } else if (std::fabs(j - 1.0) < 1e-9) {
     pops = to_vec(spin1_populations(pz, opt.pzz));
   } else if (std::fabs(j - 1.5) < 1e-9) {
+    // Fixes (P_z, T) and leaves the octupole moment R_3 at its default 0,
+    // whereas the max-entropy ladder above carries R_3 != 0 for every P_z
+    // (docs/theory/SPIN32_FINITE_GAMMA.md sec. 2.4).  R_3 reaches only
+    // beam-helicity-odd observables (sec. 4), so no unpolarized-beam number
+    // depends on which of the two a 7Li run uses.
     pops = to_vec(spin32_populations(pz, opt.pzz));
   } else if (std::fabs(j - 0.5) < 1e-9) {
     pops = {(1.0 + pz) / 2.0, (1.0 - pz) / 2.0};

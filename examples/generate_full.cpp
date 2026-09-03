@@ -128,8 +128,11 @@ RunPlan plan_of(const std::string& name, double j, const Scenario& sc,
   if (name == "pure") {
     std::vector<double> pops(static_cast<std::size_t>(2 * j + 1.5), 0.0);
     pops[0] = 1.0;  // stretched state M = +J
+    // The stretched state has rank-2 moment T = +1 for ANY J >= 1 (7Li
+    // |3/2,+3/2> included: <3Jz^2 - J(J+1)>/3 = (27/4 - 15/4)/3 = 1), exactly
+    // as generate_tagged.cpp records; only a spin-1/2 fill has none.
     return RunPlan({SpinCategory("pure", j, pops, 0, 0.0, 0.0, 0.0, 1.0)}, 0.0,
-                   1.0, spin1 ? 1.0 : 0.0);
+                   1.0, j >= 1.0 ? 1.0 : 0.0);
   }
   if (!spin1) {
     usage(argv0, "--plan " + name + " is spin-1 only (6Li); 7Li needs "

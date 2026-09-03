@@ -91,6 +91,13 @@ std::array<double, 3> vector_polarization(const CplxMatrix& rho, double j);
 double tensor_polarization(const CplxMatrix& rho, double j);
 
 /// Normalized rank-3 moment for J=3/2: <Jz^3 - (41/20) Jz>/(3/10).
+/// This is the octupole moment R_3 of docs/theory/SPIN32_FINITE_GAMMA.md
+/// (sec. 2): the pure states |3/2, +-3/2> give +-1 and |3/2, +-1/2> give -+3,
+/// so a fill's R_3 lies in [-3, +3], not [-1, +1].  Its leading-twist partner
+/// structure function is the rank-3 octupole partner of g1 -- called g2 in
+/// arXiv:2209.12161 Eq. (19d) and named `g1_rank3` here to keep it apart from
+/// the twist-3 nucleon g2 -- which multiplies the BEAM helicity only, so no
+/// unpolarized-beam observable of the generator depends on R_3 (sec. 4).
 double octupole_moment(const CplxMatrix& rho, double j = 1.5);
 
 /// (vector, tensor[, octupole]) moments of p_m along its own axis.

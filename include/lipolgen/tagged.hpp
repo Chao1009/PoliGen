@@ -68,8 +68,23 @@ class FsiWeight;
 // values below are the files' OWN printed normalizations
 // `4*PI*TOTINT(RHO*K**2:K)/(2*PI)**3`, not a re-integration.
 
-/// alpha-d D-state probability, VMC: 0.015861 / (0.80362 + 0.015861).
-inline constexpr double VMC_P_D_LI6 = 0.015861 / (0.80362 + 0.015861);
+/// alpha-d SPECTROSCOPIC FACTOR N_ad of 6Li, built from the momentum file's
+/// OWN printed per-wave normalizations (S = 0.80362, D = 0.015861 --
+/// `read_anl_momentum_norms(data_path(VMC_LI6_MOMENTUM))[1] + [2]`).  ONE home
+/// for N_ad: `VMC_P_D_LI6` below is expressed through it, so the two cannot
+/// drift apart.
+///
+/// This is NOT `VMC_S_ALPHA_D_LI6` (0.81971), which is the file's own TOTAL
+/// block and a third, independently quoted number; P_D must be S_2/N with the
+/// SAME N, so the two are deliberately not unified.  Published cross-checks
+/// span 5 %: Wiringa et al., PRC 89 (2014) 024305 sec. III quote
+/// 0.846 + 0.017 = 0.863, and the 2004 overlap file `li6.ad` prints 0.856.
+/// The spread is carried as a stated systematic, not explained
+/// (docs/open_items/run_2026-09-02/design_D_b1_li6.md section 2.1).
+inline constexpr double VMC_N_ALPHA_D_LI6 = 0.80362 + 0.015861;
+/// alpha-d D-state probability, VMC: 0.015861 / VMC_N_ALPHA_D_LI6.  Value
+/// unchanged (bit-for-bit) by being written through the constant above.
+inline constexpr double VMC_P_D_LI6 = 0.015861 / VMC_N_ALPHA_D_LI6;
 /// alpha-d spectroscopic factor S_ad of 6Li (the file's total block).
 inline constexpr double VMC_S_ALPHA_D_LI6 = 0.81971;
 /// alpha-t spectroscopic factor S_at of the 7Li 3/2- GROUND state.

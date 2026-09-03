@@ -20,8 +20,19 @@
   "tagged.json",
   "spectator.json",
   "coherent.json",
-  "bookkeeping.json"
+  "bookkeeping.json",
+  "b1_default_li6.json"
  ],
  "generator": "LiPolGen/validation/dump_polligen_reference.py",
+ "generators": {
+  "b1_default_li6.json": "LiPolGen/validation/dump_b1_default_li6.py",
+  "beams.json": "LiPolGen/validation/dump_polligen_reference.py",
+  "bookkeeping.json": "LiPolGen/validation/dump_polligen_reference.py",
+  "coherent.json": "LiPolGen/validation/dump_polligen_reference.py",
+  "spectator.json": "LiPolGen/validation/dump_polligen_reference.py",
+  "spin.json": "LiPolGen/validation/dump_polligen_reference.py",
+  "tagged.json": "LiPolGen/validation/dump_polligen_reference.py",
+  "xsec.json": "LiPolGen/validation/dump_polligen_reference.py"
+ },
  "polligen_version": "0.1.0"
 }

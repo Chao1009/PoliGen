@@ -108,6 +108,47 @@
   proton baseline, so the fit cancels and the ratio is the nuclear
   modification alone; against CT18NLO it was 0.02979, 4.2 % shallower.  On
   that baseline the two transferred camps are CBT 0.5322 and TMT 0.2113.
+- **α–d spectroscopic factor N_αd.** ONE home: `VMC_N_ALPHA_D_LI6` =
+  0.80362 + 0.015861 = **0.819481** in **`tagged.hpp`**, the ANL momentum
+  file's own two printed norms, and `VMC_P_D_LI6` is now *expressed through it*
+  (`0.015861 / VMC_N_ALPHA_D_LI6`) rather than repeating them — the file's
+  S- and D-wave norms are defined once.  It is a CHOICE and it carries a stated
+  **±5 %** systematic: three tabulations span that (0.819481 from the 2014
+  `li6_ad1.momentum`, 0.856 from the 2004 `li6.ad`, 0.863 from Wiringa et al.,
+  PRC 89 (2014) 024305), entries 1 and 3 being the same year and Hamiltonian
+  family, so the spread is not a version difference anyone can name.  It is a
+  knob (`Li6ConvolutionOptions::norm_target`), and the default reading is the
+  conservative one: the 18 % of ⁶Li that is not α+d gets b₁ = 0.
+  `VMC_S_ALPHA_D_LI6` = 0.81971 is the file's *total* block and is a THIRD,
+  different value — do not "unify" them; P_D must be S₂/N with the same N.
+- **The b₁ convolution's δ-function — and the two objects default the OTHER WAY
+  from each other, on purpose.**  `DeuteronConvolutionB1::Options::
+  finite_q_delta` defaults to **TRUE** (since 2026-09-03), i.e. CDKS Eq. (21)'s
+  κ = |q⃗|/ν = √(1 + γ²); `Li6ConvolutionOptions::finite_q_delta` defaults to
+  **FALSE**, i.e. Eq. (17)'s κ = 1 as printed.  **Both are CHOICES, not
+  derivations**, and the asymmetry is the point: Eq. (21) is CDKS's exact
+  definition (their Eq. (18), of which Eq. (17) is the "≃"), and the A = 2
+  object exists to reproduce *their* figure, where κ is worth a factor
+  **1.57–1.69** at x ≥ 0.5 and **1.97** on ∫b₁ dx — quoting the gate at κ = 1
+  overstated its deficit as a factor 3.68 instead of 2.27.  In ⁶Li the same
+  switch is worth only −1 % to +7 % (the term κ multiplies is the small orbital
+  one), so there the κ = 1 form is kept: it is what makes f(y) a function of y
+  alone, one cached table reused at every x, against a 0.24 s density rebuild
+  per x.  Measured both ways in
+  `docs/open_items/run_2026-09-02/phase_D_gate.md` checklist item 0.
+  **R differs between the two as well**: the gate defaults to `r1998` (CDKS's
+  SLAC world fit) and `Li6ConvolutionOptions` to `r_sigma_lt` (the kernel's own
+  toy R, for consistency with `InclusiveKernel`'s F₁) — worth the 0.392 → 0.365
+  second zero and +1.6 % on the peak, and stated in `docs/USAGE.md` §2a.
+  The same file records the quadrature choices: the inner k integral is
+  **Simpson**, not `numerics.hpp::trapezoid`, because b₁ at small x is a
+  three-decade cancellation of the exact ∫δ_T f dy = 0 and the trapezoid's
+  endpoint bias survives it (22 % at x = 0.05 and n_k = 2001) — so `n_k` must be
+  ODD and an even value is bumped at construction rather than silently falling
+  back to the trapezoid.  Every y-grid integral stays on `trapezoid`, on a
+  **2400 / 2400 / 3200** three-segment grid (the design's 600 / 2400 / 800 was
+  2.3 % out on the struck-deuteron orbital term at x = 0.1, because that
+  constituent's z-width scales with M_α/M_d = 1.987).
 - **Coherent |t| range.** `COHERENT_T_MAX_DEFAULT = 0.2 GeV²`.  The cos 2φ
   coefficient is linear and unbounded in |t| and crosses −1 at |t| = 0.245 for
   P_zz = −2, so a larger range makes the azimuthal weight negative;

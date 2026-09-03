@@ -8,6 +8,7 @@
 #include <thread>
 #include <utility>
 
+#include "lipolgen/b1_nuclear.hpp"
 #include "lipolgen/constants.hpp"
 #include "lipolgen/sf.hpp"
 #include "lipolgen/spin.hpp"
@@ -215,6 +216,22 @@ std::shared_ptr<const InclusiveKernel> struck_cluster_kernel(
     const TaggedChannel& channel, const StruckClusterOptions& opt) {
   InclusiveKernel::Options o;
   if (opt.inclusive_b1) {
+    // DELIBERATELY `toy_b1` AND NOTHING ELSE -- there is no `B1Model` here,
+    // and design_D_b1_li6.md sec. 4.1 decided there must not be one.
+    // `Li6ConvolutionB1` models the b1 of the WHOLE 6Li as seen INCLUSIVELY:
+    // the z-smearing of its embedded-deuteron term and the orbital alignment
+    // of its alpha-d D-wave terms are both properties of the alpha-d relative
+    // motion.  On a tagged channel `TaggedSampler` already draws the alpha-d
+    // momentum AND its m-dependent angular correlation from n_M(k, k_hat)
+    // (tagged.hpp), so that same wave function is in the event weight
+    // already -- which is the double counting `inclusive_b1` warns about
+    // just above.  Putting the convolution backend here would count it
+    // THREE times (the sampler's k_hat correlation, the orbital term, and
+    // the z-smearing of the same density).  The guard is
+    // `PipelineConfig::validate()`, which is the only route from the CLI; a
+    // caller who hand-builds an `InclusiveKernel` and feeds it to a tagged
+    // sampler is out of the library's reach, exactly as they are today for
+    // any other hand-built kernel.
     o.b1_func = [](double x, double q2, double f1) {
       return toy_b1(x, q2, f1);
     };
@@ -250,6 +267,15 @@ const char* pipeline_channel_name(PipelineChannel c) {
     case PipelineChannel::TaggedLi7Alpha:  return "tagged-7Li-alpha";
     case PipelineChannel::TaggedDeuteronP: return "tagged-d-p";
     case PipelineChannel::CoherentLi6:     return "coherent-6Li";
+  }
+  return "unknown";
+}
+
+const char* b1_model_name(B1Model m) {
+  switch (m) {
+    case B1Model::Miller:         return "miller";
+    case B1Model::Cdks:           return "cdks";
+    case B1Model::Li6Convolution: return "li6-convolution";
   }
   return "unknown";
 }
@@ -384,15 +410,142 @@ void PipelineConfig::validate() const {
     // UNPOLARISED beam"), which is the single source of truth the header
     // already promises; the run therefore still throws, one frame later.
   }
+  // design_D_b1_li6.md sec. 4.1/4.2.  The rule KEYS ON THE ISOTOPE, not on
+  // the spin: the inclusive channel accepts isotope == "d", which is spin 1,
+  // so a spin test would let a deuteron beam run with
+  // `--b1-model li6-convolution` and silently apply the 6Li alpha-d
+  // convolution -- N_ad, the alpha-d densities, the 2/6 and 4/6 counting
+  // factors -- to a deuteron.
+  //
+  // The two knobs are checked for EVERY model, not only inside the non-Miller
+  // branch: `--b1-band-scale -1 --b1-model miller` used to pass because the
+  // range check sat inside the branch.
+  if (!(b1_band_scale >= 0.0)) {
+    throw std::runtime_error("PipelineConfig: b1_band_scale must be >= 0");
+  }
+  if (!(b1_alpha_d_dwave_weight >= 0.0)) {
+    throw std::runtime_error(
+        "PipelineConfig: b1_alpha_d_dwave_weight must be >= 0");
+  }
+  if (b1_model == B1Model::Miller) {
+    // A KNOB THAT DID NOT RUN MAY NOT BE RECORDED AS IF IT HAD.  Neither
+    // scale reaches the Miller branch of `default_inclusive_kernel` -- the
+    // band is deliberately not applied to the published numbers and the
+    // alpha-d weight belongs to `Li6ConvolutionB1` -- but the npz/HFS `meta`
+    // records both unconditionally, so a run with either set would claim a
+    // variation it never made.  Refusing is the same rule as the
+    // kernel/flag conflict below (design 4.2's provenance promise).
+    if (b1_band_scale != 1.0 || b1_alpha_d_dwave_weight != 1.0) {
+      throw std::runtime_error(
+          "PipelineConfig: --b1-band-scale / --b1-alpha-d-dwave-weight do not "
+          "apply to b1_model = miller (the band is deliberately not applied "
+          "to the published numbers, and the alpha-d D-wave knob belongs to "
+          "li6-convolution), so setting either would record a variation that "
+          "did not run -- drop them, or choose another b1_model");
+    }
+  } else {
+    // Everything below is the rule for BOTH opt-in models.  `Cdks` goes
+    // through `Li6B1`, i.e. the 6Li rank-2 transfer (2/6 x
+    // LI6_B1_RANK2_TRANSFER), exactly as `Li6Convolution` does, so
+    // "inclusive only, 6Li only" is as true of it as of the convolution --
+    // and on any other channel or isotope `default_inclusive_kernel` never
+    // fills the b1 slot from the flag at all, while the metadata would still
+    // say it did.
+    if (kernel) {
+      throw std::runtime_error(
+          std::string("PipelineConfig: b1_model = ") + b1_model_name(b1_model) +
+          " with a caller-supplied kernel: the kernel wins and the flag would "
+          "be silently ignored, so the two are refused together (drop one)");
+    }
+    if (channel != PipelineChannel::Inclusive) {
+      throw std::runtime_error(
+          std::string("PipelineConfig: b1_model = ") + b1_model_name(b1_model) +
+          " needs the inclusive channel, got " +
+          pipeline_channel_name(channel) +
+          " (on a tagged channel the alpha-d density is already in the event "
+          "weight; on the coherent channel the tensor signal is in the recoil "
+          "azimuth and the inclusive b1 is not folded in at all -- either way "
+          "the flag would not reach the rate but WOULD reach the metadata)");
+    }
+    if (isotope == "d") {
+      throw std::runtime_error(
+          std::string("PipelineConfig: b1_model = ") + b1_model_name(b1_model) +
+          " is 6Li ONLY, got isotope d -- the deuteron is spin 1 too, but "
+          "both opt-in models carry the 6Li rank-2 transfer (li6-convolution "
+          "the alpha-d densities, N_ad and the 2/6 and 4/6 counting factors; "
+          "cdks the Li6B1 2/6 transfer).  For the A = 2 kernel use "
+          "DeuteronConvolutionB1 directly (b1_nuclear.hpp); that is the "
+          "validation gate, not a beam species");
+    }
+    if (isotope != "6Li") {
+      throw std::runtime_error(
+          std::string("PipelineConfig: b1_model = ") + b1_model_name(b1_model) +
+          " is 6Li ONLY, got isotope " + isotope +
+          (isotope == "7Li"
+               ? " -- spin 3/2 has no rank-2 input here (the 7Li rank-2 slots "
+                 "are empty by design; there is no published b1 for it)"
+               : ""));
+    }
+    if (b1_model == B1Model::Cdks && b1_alpha_d_dwave_weight != 1.0) {
+      throw std::runtime_error(
+          "PipelineConfig: --b1-alpha-d-dwave-weight is a knob on terms (2d) "
+          "and (2a) of li6-convolution; the cdks branch never reads it, so "
+          "setting it with b1_model = cdks would record a variation that did "
+          "not run");
+    }
+  }
   scenario.validate();
 }
 
 std::shared_ptr<const InclusiveKernel> default_inclusive_kernel(const Ion& ion) {
+  return default_inclusive_kernel(ion, B1Model::Miller, 1.0, 1.0);
+}
+
+std::shared_ptr<const InclusiveKernel> default_inclusive_kernel(
+    const Ion& ion, B1Model model, double band_scale, double w_alpha_d) {
   InclusiveKernel::Options opt;
+  // ONE ToyF2, shared: the core must not link LHAPDF (sf.hpp), so an
+  // `LhapdfSF` only ever enters through a caller-supplied `cfg.kernel` or a
+  // validation script.  Naming it here rather than letting `InclusiveKernel`
+  // default it is what lets the `Li6Convolution` branch hand the SAME object
+  // to `Li6ConvolutionOptions::unpol`, so "the kernel's UnpolSF" is literally
+  // one object and not a second ToyF2 that merely looks like it.  ToyF2 is
+  // stateless closed form, so this is bit for bit the old null default
+  // (validation/reference/b1_default_li6.json, T9).
+  const auto f2 = std::make_shared<const ToyF2>();
+  opt.f2_source = f2;
   if (std::fabs(ion.spin - 1.0) < 1e-9) {
-    static const auto li6_b1 =
-        std::make_shared<Li6B1>(std::make_shared<MillerB1>());
-    opt.b1_func = li6_b1->b1_func();
+    if (model == B1Model::Miller) {
+      // UNCHANGED DEFAULT PATH, including the function-local `static`:
+      // `TensorSF::b1_func()` returns a closure capturing raw `this` and
+      // "must not outlive the backend" (sf.hpp), and this is how that
+      // lifetime has always been met here.  `band_scale` is deliberately NOT
+      // applied -- Miller's numbers are the published ones and stay bit for
+      // bit; the band belongs to the two opt-in backends.
+      static const auto li6_b1 =
+          std::make_shared<Li6B1>(std::make_shared<MillerB1>());
+      opt.b1_func = li6_b1->b1_func();
+    } else if (model == B1Model::Cdks) {
+      // NOT a `static`: that would freeze the first band scale for the whole
+      // process, so a `--b1-band-scale 0` run after a `1` run would silently
+      // get the wrong object.  Capturing the shared_ptr BY VALUE in the
+      // closure keeps the backend alive exactly as long as the closure --
+      // which is what `b1_func()`'s raw-`this` capture cannot do.
+      const auto b = std::make_shared<const Li6B1>(std::make_shared<CdksB1>());
+      opt.b1_func = [b, band_scale](double x, double q2, double f1) {
+        return band_scale * b->b1(x, q2, f1);
+      };
+    } else {
+      Li6ConvolutionOptions o;
+      o.w_alpha_d_dwave = w_alpha_d;
+      o.unpol = f2;                       // the kernel's own ToyF2
+      const auto b = std::make_shared<const Li6ConvolutionB1>(std::move(o));
+      opt.b1_func = [b, band_scale](double x, double q2, double f1) {
+        return band_scale * b->b1(x, q2, f1);
+      };
+    }
+    // The Delta slot is the SAME for every `B1Model` -- it is not part of
+    // this choice and must not be dropped on the new branches.
     opt.delta_func = [](double x, double q2, double f1) {
       return toy_delta_gluon(x, q2, f1, 1e-2);
     };
@@ -602,7 +755,11 @@ Pipeline::Pipeline(PipelineConfig config, RunPlan plan)
     }
   } else {
     const Ion& ion = ion_by_name(cfg_.isotope);
-    const auto kernel = cfg_.kernel ? cfg_.kernel : default_inclusive_kernel(ion);
+    const auto kernel = cfg_.kernel
+                            ? cfg_.kernel
+                            : default_inclusive_kernel(
+                                  ion, cfg_.b1_model, cfg_.b1_band_scale,
+                                  cfg_.b1_alpha_d_dwave_weight);
     dis_sampler_ = std::make_shared<InclusiveSampler>(kernel, beams_,
                                                       cfg_.scenario, cfg_.grid);
   }

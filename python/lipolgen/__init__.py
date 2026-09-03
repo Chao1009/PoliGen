@@ -60,6 +60,7 @@ from .export import (inclusive_dict, tagged_dict, hfs_sample,  # noqa: F401
 __all__ = [n for n in dir(_lipolgen) if not n.startswith("_")] + [
     "export", "inclusive_dict", "tagged_dict", "hfs_sample", "write_hfs_npz",
     "write_columns_npz", "CHANNELS", "PLANS", "TRITON_SFS", "FSI", "RC",
+    "B1_MODELS",
     "make_config", "make_plan", "make_pipeline", "run", "__version__",
 ]
 
@@ -131,6 +132,29 @@ RC = {
     "tensor-band": _lipolgen.RcMode.TensorBand,
 }
 
+#: b1 backends of the INCLUSIVE kernel's rank-2 slot (`--b1-model`).
+#: "miller" is the DEFAULT and is bit-for-bit what every published inclusive
+#: tensor number was made with -- Li6B1(MillerB1) through
+#: LI6_B1_RANK2_TRANSFER -- and it IS the run PLAN's "toy": today's default
+#: b1_func is Li6B1(MillerB1), which is what `toy_b1` reaches.  "cdks" is the
+#: same 6Li rank-2 transfer on the other CAMP for b1_d (the digitized CDKS
+#: PRD 95 (2017) 074036 Fig. 4 column: |b1| two orders of magnitude smaller
+#: below x ~ 0.1, COMPARABLE above it -- peak |x b1| 1.67e-4 against Miller's
+#: 4.27e-4 at Q2 = 2.5, and 4x LARGER at x = 0.3 with the opposite sign) --
+#: Miller and CDKS disagree and the library does not adjudicate, so say which
+#: one a plot used.  INCLUSIVE CHANNEL ONLY and 6Li ONLY, like
+#: "li6-convolution".  "li6-convolution" is
+#: b1_nuclear.hpp's four-term alpha-d convolution (design_D_b1_li6.md):
+#: INCLUSIVE CHANNEL ONLY and 6Li ONLY (on a tagged channel the alpha-d
+#: density is already in the event weight), and its A = 2 magnitude gate is
+#: NOT passed -- band every number with --b1-band-scale 0/1/2 and never quote
+#: one row alone.
+B1_MODELS = {
+    "miller": _lipolgen.B1Model.Miller,
+    "cdks": _lipolgen.B1Model.Cdks,
+    "li6-convolution": _lipolgen.B1Model.Li6Convolution,
+}
+
 #: Run-plan names accepted on the command line (aliases included).
 PLANS = ("tensor-thirds", "azz", "helicity-flip", "apar", "transverse-tensor",
          "cos2phi", "tensor-flip", "flip")
@@ -156,7 +180,9 @@ def make_config(isotope="6Li", config=1, channel="inclusive", events=0,
                 fsi=None, fsi_sigma_mb=None,
                 rc=None, rc_delta_low_x=None, rc_delta_high_x=None,
                 rc_fq_scale=None, rc_tail_tensor_scale=None,
-                rc_qe_suppression=None):
+                rc_qe_suppression=None,
+                b1_model=None, b1_band_scale=None,
+                b1_alpha_d_dwave_weight=None):
     """A `PipelineConfig` from plain values (the CLI's own constructor).
 
     `channel` is a key of `CHANNELS`; `optics` a key of `OPTICS`.  The isotope
@@ -181,6 +207,19 @@ def make_config(isotope="6Li", config=1, channel="inclusive", events=0,
     `RcOptions` fields.  The RC weights land on `Event.rc_weights` and on
     NOTHING else -- never `Event.weight`, never a four-vector, never a random
     number -- so "off" is today bit for bit.
+    `b1_model` is a key of `B1_MODELS` ("miller", the default, "cdks" or
+    "li6-convolution") or a `B1Model` directly; it chooses what
+    `default_inclusive_kernel` puts in the INCLUSIVE kernel's rank-2 slot and
+    is ignored when a caller-supplied `kernel` is set (`validate()` refuses
+    that combination for anything but "miller").  Both opt-in backends are
+    INCLUSIVE CHANNEL ONLY and 6Li ONLY -- "cdks" is `Li6B1`'s 6Li rank-2
+    transfer too -- and `validate()` refuses the rest rather than let the
+    metadata record a flag that never reached the rate.  `b1_band_scale` is
+    the MANDATORY 100 % band on those two backends -- run 0 / 1 / 2 and quote
+    the envelope, never a single row -- and `b1_alpha_d_dwave_weight` the
+    shape knob on the alpha-d orbital terms (2d) + (2a) together, read only by
+    "li6-convolution".  A knob that the chosen backend does not read is
+    REFUSED at 1.0-away values, for the same provenance reason.
     """
     if channel not in CHANNELS:
         raise ValueError("unknown channel %r; know %s"
@@ -261,6 +300,18 @@ def make_config(isotope="6Li", config=1, channel="inclusive", events=0,
         cfg.grid = grid
     if apply_optics_lumi_fraction is not None:
         cfg.apply_optics_lumi_fraction = bool(apply_optics_lumi_fraction)
+    if b1_model is not None:
+        if isinstance(b1_model, str):
+            if b1_model not in B1_MODELS:
+                raise ValueError("unknown b1_model %r; know %s"
+                                 % (b1_model, ", ".join(sorted(B1_MODELS))))
+            cfg.b1_model = B1_MODELS[b1_model]
+        else:
+            cfg.b1_model = b1_model
+    if b1_band_scale is not None:
+        cfg.b1_band_scale = float(b1_band_scale)
+    if b1_alpha_d_dwave_weight is not None:
+        cfg.b1_alpha_d_dwave_weight = float(b1_alpha_d_dwave_weight)
     if inclusive_b1 is not None:
         struck = cfg.struck
         struck.inclusive_b1 = bool(inclusive_b1)

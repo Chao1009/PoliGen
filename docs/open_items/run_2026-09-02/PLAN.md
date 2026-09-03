@@ -129,19 +129,44 @@ in the polarization sign; band monotone in x). Opus implements; Fable
 adversarial review of formulas against the transcription; doc section in
 `docs/USAGE.md` and a §9 update in `OPEN_ITEMS_SOLUTIONS.md` with measured numbers.
 
-## Phase D — b₁ for ⁶Li: three-term α–d convolution (item 10)
+## Phase D — b₁ for ⁶Li: **four**-term α–d convolution (item 10)
 
-`b1_nuclear.hpp` (`B1Li6Convolution`): embedded-deuteron term (b₁ᵈ ⊗ f_{d/⁶Li}(z)
+**NAMES, as landed 2026-09-03.** This plan said `B1Li6Convolution` and
+`--b1-model {toy,li6-convolution}`. The design and the code use
+**`Li6ConvolutionB1`** and **`--b1-model {miller,cdks,li6-convolution}`**.
+**`miller` IS this plan's `toy`**: today's default `b1_func` is
+`Li6B1(MillerB1)`, which is what `toy_b1` reaches, so naming it after the camp
+says what it actually is; `cdks` is the second camp that already existed in
+`sf.hpp` and had no flag. One vocabulary, not two.
+
+**AND IT IS FOUR TERMS, NOT THREE.** CDKS Eq. (10) sums the spectral function
+over *constituents*, and one level up that sum runs over {d, α}: the α is J = 0
+so b₁^α ≡ 0, but its light-cone density carries the same (3cos²θ − 1) alignment,
+so the **struck-α orbital term (2α) exists and is ≈ 0.5 × the struck-d one**.
+Dropping it is a 30 % error, not a truncation.
+
+`b1_nuclear.hpp` (`Li6ConvolutionB1`): embedded-deuteron term (b₁ᵈ ⊗ f_{d/⁶Li}(z)
 from the VMC α–d relative momentum distribution, light-front z), the α–d D-wave
-term (P_D(⁶Li) with F₁ᵈ), and the Clebsch–Gordan depolarization; kernel per
-Cosyn–Dong–Kumano–Sargsian (PRD 95 (2017) 074036) as transcribed in
-`physics_literature.md`. Validate on A = 2 first: reproduce the deuteron b₁ shape
-against the Cosyn figures/tables already tabulated in the docs (state which
-numbers were available); then ⁶Li with a mandatory 100 % band (quadrupole
-puzzle). Wire as an opt-in `Backend` for the b₁ slot of the inclusive kernel
-(`--b1-model {toy,li6-convolution}`), keep `toy_b1` default. Opus implements
-in two agents (kernel/convolution; wiring+tests) with Fable design first and
-review after. Measured numbers into `OPEN_ITEMS_SOLUTIONS.md` §10.
+term in **two** pieces (struck d with F₁ᵈ and struck α with F₁^α), and the
+Clebsch–Gordan depolarization; kernel per Cosyn–Dong–Kumano–Sargsian (PRD 95
+(2017) 074036) as transcribed in `physics_literature.md`. Validate on A = 2
+first: reproduce the deuteron b₁ shape against the Cosyn figures/tables already
+tabulated in the docs; then ⁶Li with a mandatory 100 % band (quadrupole puzzle).
+Wire as an opt-in backend for the b₁ slot of the inclusive kernel, keep the
+Miller default. Opus implements in two agents (kernel/convolution;
+wiring+tests) with Fable design first and review after. Measured numbers into
+`OPEN_ITEMS_SOLUTIONS.md` §10.
+
+**OUTCOME: the A = 2 gate PASSES its shape clause and FAILS its magnitude
+clause** (a factor 2.27 below the digitized CDKS Fig. 4 peak at CDKS Eq. (21)'s
+δ-function, which the gate defaults to after the review of 2026-09-03 — 3.68 at
+Eq. (17)'s κ = 1 form; a real nucleon PDF, the one remaining identified item,
+closes it to 1.39).
+Under design §5.4's *Escalation* clause the backend ships opt-in, behind a
+warning in its header and in `--help`, and **no ⁶Li number may be published**:
+item 10 does **not** close. The measured gate is
+`docs/open_items/run_2026-09-02/phase_D_gate.md`, the measured numbers
+`phase_D_numbers.md`, and both are summarised in `OPEN_ITEMS_SOLUTIONS.md` §10.
 
 ## Phase E — Spin-3/2 finite-γ theory note (item 8)
 

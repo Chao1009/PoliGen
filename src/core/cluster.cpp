@@ -213,6 +213,66 @@ std::vector<double> read_anl_momentum_norms(const std::string& path) {
   return out;
 }
 
+FdeutTable read_fdeut_k(const std::string& path) {
+  const std::vector<std::string> lines = split_lines(read_whole(path));
+  // The file carries THREE `k ...` blocks (`k ges gms` at line 10018, the wave
+  // functions at 10221, and the form-factor blocks below); only one names the
+  // wave functions, so key on `u(k)` rather than on the abscissa.
+  std::size_t hdr = lines.size(), ebind_hdr = lines.size();
+  for (std::size_t i = 0; i < lines.size(); ++i) {
+    const std::string s = lstrip(lines[i]);
+    if (hdr == lines.size() && s.rfind("k ", 0) == 0
+        && s.find("u(k)") != std::string::npos) {
+      hdr = i;
+    }
+    if (ebind_hdr == lines.size() && s.rfind("ebind", 0) == 0) ebind_hdr = i;
+  }
+  if (hdr == lines.size()) {
+    throw std::runtime_error("no `k u(k) w(k)` block in " + path);
+  }
+  if (ebind_hdr == lines.size()) {
+    throw std::runtime_error("no `ebind` header in " + path);
+  }
+  FdeutTable t;
+  // `ebind` is printed in MeV on the first numeric line under its header.
+  for (std::size_t i = ebind_hdr + 1; i < lines.size(); ++i) {
+    const std::vector<double> v = split_numbers(lines[i]);
+    if (v.empty()) continue;
+    t.ebind_gev = v[0] * 1e-3;
+    break;
+  }
+  // sqrt(hbar c)^3: the ordinate is in fm^(3/2) and the abscissa in fm^-1, so
+  // BOTH move or the norm shifts by hbar c^3 (see the header).
+  const double scale = 1.0 / (HBARC_GEV_FM * std::sqrt(HBARC_GEV_FM));
+  for (std::size_t i = hdr + 1; i < lines.size(); ++i) {
+    const std::string s = lstrip(lines[i]);
+    std::istringstream probe(s);
+    std::string tok;
+    probe >> tok;
+    if (!is_number_start(tok)) {
+      if (!t.k_gev.empty()) break;
+      continue;
+    }
+    const std::vector<double> v = split_numbers(lines[i]);
+    if (v.size() != 3) {
+      if (!t.k_gev.empty()) break;
+      continue;
+    }
+    t.k_gev.push_back(v[0] * HBARC_GEV_FM);
+    t.u.push_back(v[1] * scale);
+    t.w.push_back(v[2] * scale);
+  }
+  if (t.k_gev.size() < 2) {
+    throw std::runtime_error("empty `k u(k) w(k)` block in " + path);
+  }
+  for (std::size_t i = 1; i < t.k_gev.size(); ++i) {
+    if (!(t.k_gev[i] > t.k_gev[i - 1])) {
+      throw std::runtime_error("fdeut k column is not increasing: " + path);
+    }
+  }
+  return t;
+}
+
 // ----------------------------------------------------------------- VmcRadial
 
 VmcRadial::VmcRadial(std::vector<double> k_gev, std::vector<double> psi, int l,

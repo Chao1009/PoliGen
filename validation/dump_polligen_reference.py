@@ -1244,11 +1244,29 @@ def main():
 
     # write the "could not call" list into every file that had one, plus
     # print a summary; also emit it as its own small manifest.
+    #
+    # MERGE, do not overwrite: `validation/reference/` also holds files this
+    # script does not make -- `b1_default_li6.json` comes from
+    # `dump_b1_default_li6.py` -- and rewriting the manifest wholesale from
+    # `written` silently dropped them (and the `generators` map that says
+    # which script owns which file).  Only this script's own entries are
+    # refreshed; foreign ones are carried through.
+    manifest_path = OUT / "_manifest.json"
+    doc_ = {}
+    if manifest_path.is_file():
+        with open(manifest_path) as fh:
+            doc_ = json.load(fh)
+    mine = [p.name for p in written]
+    files = mine + [f for f in doc_.get("files", []) if f not in mine]
+    gens = dict(doc_.get("generators", {}))
+    for f in mine:
+        gens[f] = "LiPolGen/validation/dump_polligen_reference.py"
     write_json("_manifest.json", {
         "generator": "LiPolGen/validation/dump_polligen_reference.py",
         "polligen_version": polligen.__version__,
         "could_not_call": [{"what": w, "reason": r} for w, r in MISSING],
-        "files": [p.name for p in written],
+        "files": files,
+        "generators": gens,
     })
 
     readme_path = HERE / "README.md"

@@ -293,6 +293,48 @@ enum class Tier : std::uint8_t { T0, T1 };
 /// caller has already put an object in `BreakupOptions::triton_sf`.
 enum class TritonSfChoice : std::uint8_t { Hulthen, CiofiSimula };
 
+/// Which b1 backend fills the INCLUSIVE kernel's rank-2 slot when
+/// `PipelineConfig::kernel` is null (CLI `--b1-model`).
+///
+///   Miller          the DEFAULT, and bit-for-bit what every published
+///                   inclusive tensor number was made with:
+///                   `Li6B1(MillerB1)` through `LI6_B1_RANK2_TRANSFER` and
+///                   `LI6_B1_PER_NUCLEON` (2/6).  This IS the run PLAN's
+///                   "toy": today's default b1_func is `Li6B1(MillerB1)`,
+///                   which is what `toy_b1` reaches.  Pinned at rtol 1e-12
+///                   by `validation/reference/b1_default_li6.json`
+///                   (tests/test_b1_nuclear.cpp T9).
+///   Cdks            the same 6Li rank-2 transfer on the CDKS convolution
+///                   camp (`CdksB1`, the digitized PRD 95 (2017) 074036
+///                   Fig. 4 column): |b1| two orders of magnitude smaller
+///                   than Miller's below x ~ 0.1, COMPARABLE above it (peak
+///                   |x b1| 1.7e-4 against Miller's 4.3e-4 at Q2 = 2.5, and
+///                   4x LARGER at x = 0.3 with the opposite sign), and a
+///                   different sign structure.  Miller (HERMES-like) and
+///                   CDKS (convolution) are different CAMPS for b1_d and the
+///                   library does not adjudicate between them -- say which
+///                   one a plot used.  INCLUSIVE CHANNEL ONLY and 6Li ONLY,
+///                   like `Li6Convolution`: it is `Li6B1`'s 6Li transfer,
+///                   and elsewhere the flag would not reach the rate but
+///                   WOULD reach the metadata (`validate()`).
+///   Li6Convolution  `b1_nuclear.hpp`'s four-term alpha-d convolution
+///                   (`Li6ConvolutionB1`, design_D_b1_li6.md).  INCLUSIVE
+///                   CHANNEL ONLY and 6Li ONLY -- see `validate()`; a spin-1
+///                   test is not enough, because the deuteron is spin-1 too
+///                   and the alpha-d densities, N_ad and the 2/6 and 4/6
+///                   counting factors are all specific to 6Li.  On a TAGGED
+///                   channel the alpha-d density is already in the event
+///                   weight (`StruckClusterOptions::inclusive_b1`), so
+///                   folding this in on top would count the same physics
+///                   three times.
+///
+///   WARNING: `Li6Convolution` has NOT fully passed its A = 2 validation
+///   gate (b1_nuclear.hpp's header block, and
+///   docs/open_items/run_2026-09-02/phase_D_gate.md).  It is opt-in and
+///   band-only: never quote a single row, always {0, 1, 2} x b1.
+enum class B1Model : std::uint8_t { Miller, Cdks, Li6Convolution };
+const char* b1_model_name(B1Model m);
+
 /// The T2 hand-off.  Called once per finished T0 event with the event's own
 /// counter-based stream, AFTER every T0 particle (including the off-shell
 /// struck cluster and the spectator) is in place.  Deliberately the signature
@@ -426,6 +468,32 @@ struct PipelineConfig {
   /// 7-10x.  Ignored in fixed-`n_events` mode, where the count is given.
   bool apply_optics_lumi_fraction = true;
 
+  // --- inclusive b1 backend ------------------------------------------------
+  /// Which b1 backend `default_inclusive_kernel` fills the rank-2 slot with
+  /// (`B1Model` above; CLI `--b1-model`).  `Miller` is the DEFAULT and is
+  /// today bit for bit.  Ignored when `kernel` is non-null -- and `validate()`
+  /// REFUSES that combination for anything but `Miller`, because a
+  /// caller-supplied kernel silently wins over the flag and the two would be
+  /// saying contradictory things.
+  B1Model b1_model = B1Model::Miller;
+  /// The MANDATORY 100 % band of design_D_b1_li6.md sec. 4.3: multiplies the
+  /// WHOLE b1 of the `Cdks` and `Li6Convolution` backends (all four terms of
+  /// the latter).  Run 0 / 1 / 2 and quote the envelope.  Q(6Li) =
+  /// -0.0806(6) fm^2 against Q_d = +0.2859(3) fm^2: the alpha-d relative
+  /// D wave enters the closest measured observable with the OPPOSITE sign to
+  /// the deuteron's own D state and nearly cancels it, so a single row is not
+  /// a result.  `Miller`'s numbers are already published and the band is not
+  /// applied to them, so `validate()` REFUSES anything but 1.0 there rather
+  /// than let the metadata record a variation that did not run.
+  double b1_band_scale = 1.0;
+  /// `Li6ConvolutionOptions::w_alpha_d_dwave`: the knob on terms (2d) AND
+  /// (2a) together -- they are one physical effect (the alpha-d orbital
+  /// alignment) and are scaled as one.  The SHAPE variant of the same worry
+  /// the band expresses; report 0 / 1 / 2 separately from the band.  Read
+  /// ONLY by the `Li6Convolution` branch, so `validate()` refuses anything but
+  /// 1.0 on `Miller` and `Cdks` -- same provenance rule as the band.
+  double b1_alpha_d_dwave_weight = 1.0;
+
   /// Throws std::runtime_error on an inconsistent configuration.
   void validate() const;
 };
@@ -436,6 +504,19 @@ struct PipelineConfig {
 /// anything else (there is no published rank-2 input for 7Li).  Same choice as
 /// `examples/generate_inclusive.cpp`.
 std::shared_ptr<const InclusiveKernel> default_inclusive_kernel(const Ion& ion);
+/// The same with the b1 backend chosen (`PipelineConfig::b1_model` and the two
+/// knobs).  The one-argument form above is exactly
+/// `default_inclusive_kernel(ion, B1Model::Miller, 1.0, 1.0)`, so
+/// `examples/generate_inclusive.cpp` and every existing caller are untouched.
+///
+/// `band_scale` multiplies the whole b1 of the non-Miller backends;
+/// `w_alpha_d` is `Li6ConvolutionOptions::w_alpha_d_dwave`.  The Delta slot is
+/// the SAME on every `B1Model` -- it is not part of this choice.  The
+/// `Li6Convolution` branch shares the kernel's own `ToyF2` with the
+/// convolution's `unpol`, so "the kernel's UnpolSF" is literally one object.
+std::shared_ptr<const InclusiveKernel> default_inclusive_kernel(
+    const Ion& ion, B1Model model, double band_scale = 1.0,
+    double w_alpha_d = 1.0);
 
 // ============================================================ event helpers
 

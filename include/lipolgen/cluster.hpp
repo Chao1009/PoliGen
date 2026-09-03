@@ -68,6 +68,39 @@ std::vector<AnlTable> read_anl_momentum(const std::string& path);
 /// order (total first, then the per-wave ones).
 std::vector<double> read_anl_momentum_norms(const std::string& path);
 
+/// The k-space block of an ANL deuteron wave-function file
+/// (`deuteron/fdeut.av18`) plus the binding energy its own header carries.
+///
+/// UNITS.  `k_gev` is the file's k [fm^-1] times `HBARC_GEV_FM`, and `u`, `w`
+/// are the file's columns divided by `HBARC_GEV_FM^(3/2)`, so that the pair
+/// is in ONE consistent system: integral k^2 (u^2 + w^2) dk = 1 with k in GeV
+/// (0.999976 on the file's own 0.1 fm^-1 grid).  Converting the abscissa
+/// without the fm^(3/2) of the ordinate would leave the norm off by
+/// hbar c^3 = 7.7e-3, which is why the reader does both or neither.
+///
+/// `ebind_gev` is the header's `ebind` (2.224574 MeV -> 2.224574e-3), so the
+/// convolution's epsilon_d has ONE source and no literal is re-typed;
+/// `DEUTERON_P_TAG().separation_energy` = 2.2246e-3 is the same number
+/// rounded (2.6e-5 relative).
+struct FdeutTable {
+  std::vector<double> k_gev;   ///< strictly increasing, 0 .. 20 fm^-1
+  std::vector<double> u;       ///< S-wave phi_0(k) = u(k) >= 0 at low k
+  std::vector<double> w;       ///< D-wave W(k); the CDKS phi_2 is -w
+  double ebind_gev = 0.0;      ///< the header's `ebind` [GeV]
+};
+
+/// Read the `k  u(k)  w(k)` block and the `ebind` header of a `fdeut.*` file.
+///
+/// hbar c.  This reader converts with `HBARC_GEV_FM` (constants.hpp, 0.19733),
+/// which `docs/CONVENTIONS.md` names as THE fm <-> GeV conversion, and so does
+/// everything in `b1_nuclear.cpp`.  Its neighbours in this file
+/// (`vmc_from_overlap_k`, `vmc_from_momentum`) use a file-local
+/// 0.1973269804 instead; the two disagree at 1.5e-5 relative (20 keV at
+/// k = 5 fm^-1), which is a PRE-EXISTING inconsistency recorded here rather
+/// than silently propagated -- it is far inside every tolerance in
+/// docs/open_items/run_2026-09-02/design_D_b1_li6.md section 5.
+FdeutTable read_fdeut_k(const std::string& path);
+
 // ----------------------------------------------------------------- VmcRadial
 
 /// A tabulated, L-specific radial amplitude psi_L(k), linearly interpolated

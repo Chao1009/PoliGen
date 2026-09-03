@@ -16,7 +16,7 @@ the recommended solution, effort, and status. Ordered by leverage.
 | 7 | Spectator FSI (plans/04 #16) | **implemented 2026-09-01** — `GlauberFsiWeight` per-event weight on `Event::weight` (`--fsi`, tagged channels; never a momentum shift); σ_Xα = 131.0 mb at σ_XN = 40, band 20–40 mb mandatory | done | numbers in §7 below |
 | 8 | Spin-3/2 SF basis (plans/04 #14) | **exists** — Jaffe–Manohar NPB 321 (1989); explicit J=3/2 functions arXiv:2209.12161 Eqs. 19a–d; rank-≤2 truncation is *exact* for unpolarized-beam inclusive observables | 5–10 d note | theory note |
 | 9 | Tensor-sector RC (plans/04 #10) | **implemented 2026-09-03** — `rc.hpp`/`rc.cpp`, opt-in `--rc tensor-band`: the two-sided band `rc_tensor_lo`/`rc_tensor_hi` on the tensor part of the rate (δ log-linear, 0.30 at x = 0.01 → 0.015 at x = 0.16) plus `rc_tail`, POLRAD's t-peak elastic tail with its tensor part and the unpolarised quasi-elastic tail. Weight-only, on `Event::rc_weights` and never on `Event::weight`; `--rc off` is byte-identical | done | numbers in §9 below |
-| 10 | b₁ for A > 2 (plans/04 #9) | **first-mover** — nothing exists; three-term α–d convolution on the Cosyn–Dong–Kumano–Sargsian kernel; 100 % band mandatory (⁶Li quadrupole puzzle) | 10–15 d | design only |
+| 10 | b₁ for A > 2 (plans/04 #9) | **implemented 2026-09-03 as an OPT-IN backend, and STILL OPEN** — `b1_nuclear.hpp`/`b1_nuclear.cpp`, `--b1-model li6-convolution`: the **four**-term α–d convolution on the Cosyn–Dong–Kumano–Sargsian kernel (the struck-α orbital term is not optional, it is ≈ 0.5 × the struck-d one). The default stays `Li6B1(MillerB1)`, bit for bit. **The A = 2 validation gate FAILS its magnitude clause** (a factor 2.27 below the digitized CDKS Fig. 4 peak at CDKS Eq. (21)'s δ-function, which the gate now defaults to — 3.68 at Eq. (17)'s κ = 1; the nucleon PDF, the one remaining identified item, closes it to 1.39), so **no ⁶Li number from it may be published** and the item does not close | 10–15 d, ~8 spent | code done, **gate open** — §10 below |
 | 11 | Coherent ⁶Li amplitude (plans/04 #18) | **route changed** — Sartre ruled out (hard-coded nuclei, no polarization axis); use eSTARlight for unpolarized rates (1 d) and `hejajama/subnucleondiffraction` (code of arXiv:2408.13213) with an α+d configuration sampler for the tensor cos 2φ | 1 d / 10–15 d / collab | Mäntysaari-group ask |
 | 12 | Packaging | **implemented 2026-09-02** — `pyproject.toml` (scikit-build-core) in-tree, `pip install -e .` works (66 s); one copy of each `.so` in `lipolgen/`, `$ORIGIN`+deps-prefix RPATH, data/vmc vendored; portable wheel still needs `auditwheel` + GPL-3 terms | done | see §12–13 below |
 | 13 | License | **GPL-3.0-or-later** (forced by HepMC3/LHAPDF; matches MCnet norms) | 0 | author to confirm |
@@ -194,6 +194,16 @@ a correction to A_zz.
 - b₁(⁶Li): three-term α–d convolution (embedded deuteron b₁ ⊗ f_{d/Li}(z), α–d
   D-wave term with F₁ᵈ, CG depolarization); validate on A = 2 (Cosyn Figs. 4/5)
   first; 100 % band.
+  → **Implemented as §10, with one structural correction to this note: it is
+  FOUR terms, not three.** CDKS Eq. (10) sums the spectral function over
+  *constituents*, and one level up that sum runs over {d, α}. The α is J = 0 so
+  b₁^α ≡ 0, but its light-cone density carries the *same* (3cos²θ − 1) orbital
+  alignment as the deuteron's — (3c² − 1) is even in k⃗ and the α carries −k⃗ —
+  so the **struck-α orbital term (2α) exists and is ≈ 0.5 × the struck-d one
+  (2d)**, fixed by counting (4/6 against 2/6) and by the 1/M² of the
+  P₂-weighted density: 2(M_d/M_α)² = 0.5064 against a measured 0.489–0.503.
+  A regression that silently drops it moves b₁ by ~30 %. The A = 2 validation
+  was done and it **fails on magnitude** — see §10.
 
 ## 9. Tensor-sector RC — a band and a background, never a shift
 
@@ -339,6 +349,209 @@ the HERMES deuteron point). The **tagged band is clamped** at
 `|τ| ≤ band_tau_max = 1`, which is a *choice*: `n_M → 0` is exactly where the
 fractional-rescale ansatz breaks down, and the clipped fraction is reported
 rather than hidden.
+
+## 10. b₁ of ⁶Li — a four-term α–d convolution, opt-in, and the gate is NOT passed
+
+**IMPLEMENTED (2026-09-03) AS AN OPT-IN BACKEND, AND THE ITEM STAYS OPEN**
+(`include/lipolgen/b1_nuclear.hpp`, `src/core/b1_nuclear.cpp`;
+`PipelineConfig::b1_model` / `--b1-model {miller,cdks,li6-convolution}` plus
+`--b1-band-scale` and `--b1-alpha-d-dwave-weight`; `docs/USAGE.md` §2a; design
+`docs/open_items/run_2026-09-02/design_D_b1_li6.md`; the measured gate in
+`phase_D_gate.md` and the measured numbers in `phase_D_numbers.md`).
+
+> ### ⚠ READ THIS BEFORE QUOTING ANY NUMBER BELOW
+>
+> Design §5 makes the A = 2 validation gate **blocking**: the same kernel, fed
+> the AV18 deuteron u(k), w(k) instead of the α–d waves, must reproduce the
+> digitized CDKS Fig. 4 before any ⁶Li number is quoted. **It fails clause
+> G3b** — a factor **2.27** low at CDKS Eq. (21)'s δ-function, which is what
+> the gate now defaults to (3.68 at Eq. (17)'s κ = 1 form), with the nucleon
+> PDF the dominant remaining item.
+>
+> Under design §5.4's *Escalation* clause the backend stays in the tree
+> behind its flag with the warning in its header and in `--help`, and **no ⁶Li
+> number from it may be published**. The ⁶Li tables below are recorded so the
+> phase is **reproducible and its regressions catchable** — they are not
+> results, and every one of them additionally carries the mandatory ±100 %
+> band. **Item 10 does not close.**
+
+### What was built
+
+Per nucleon, ⁶Li (design §1.7):
+
+> b₁^{⁶Li}(x,Q²) = (2/6) ∫ (dz/z) { [f_S(z) + w_CG f_D(z)] b₁ᵈ(x/z,Q²)
+>   + w_αd δ_T f_αd(z) F₁ᵈ(x/z,Q²) } + (4/6) w_αd ∫ (dz/z) δ_T f_α(z) F₁^α(x/z,Q²)
+
+with **w_CG = 1/10 exactly** — the Clebsch–Gordan tensor dilution of the
+deuteron inside the L = 2 α–d component, which is the closed form quoted next
+to `LI6_B1_RANK2_TRANSFER` — and w_αd = 1 nominal. The four terms are
+`b1_embedded_s` (1), `b1_alpha_d_dwave_d` (2d), `b1_alpha_d_dwave_alpha` (2α)
+and `b1_cg_dwave` (3); they sum to `b1` to 1e-12 (T7, P2). Inputs: α–d
+magnitudes from `data/vmc/momenta/li6_ad1.momentum`, the S–D **sign structure**
+from `data/vmc/li6_alpha_d/li6.ad`, the deuteron b₁ᵈ from whichever `TensorSF`
+camp the caller injects (default: the **raw** digitized CDKS theory-1 column,
+`cdks_b1_raw_per_nucleon()`), F₁ from **CDKS Eq. (22)**
+`(1 + γ²) F₂/(2x(1+R))` — *not* `NuclearF2::f1a`, which is the massless form
+and differs by 1 + γ² = 1.35 at x = 0.5, Q² = 2.5.
+
+### The A = 2 gate, measured
+
+| clause | result |
+|---|---|
+| G0a–G0g — CG algebra, Eq. (21)'s two coefficients, ∫δ_T f dy = 0, `k_range` against a brute-force scan | **PASS** (exact / 1e-12 / endpoints to the scan step) |
+| G1a–G1f — ∫k²(u²+w²)dk = 0.99998, P_D = 0.05760, ∫f dy = 0.98766 against the moment identity's 0.98707, ⟨y⟩ = 0.99526, y_max = 1.4976, the F₁ᴰ/F₁ᴺ EMC shape | **PASS** |
+| layer 2 — the α–d sign gate | **PASS**: Q(α–d) = **−0.3333 fm²** < 0, and the same code on the deuteron pair returns `fdeut.av18`'s own header qm = 0.269673 as **0.269362** (0.12 %) |
+| **G3a** — exactly two sign changes, positions, peak position | **PASS**: zeros 0.0221 / 0.3774 against 0.0656 / 0.4572 (windows ±0.08 / ±0.10), peak 0.755 against 0.766 (±0.10). **Read the margin**: the low-x zero clears its counting window's edge (x = 0.02) by 0.0021 and, with CT18NLO, drops below the scan floor so the counting clause *fails* — it is not a robust discriminator; the second zero and the peak position are |
+| **G3b** — peak magnitude within a factor 2 | **FAIL**: 4.7748e−4 against the digitized 1.08521e−3, **ratio 0.440**, a factor **2.27 low** (2.9484e−4, ratio 0.272, factor 3.68, at Eq. (17)'s κ = 1) |
+| G3c — Close–Kumano, reported | this kernel +2.1537e−4 (κ = 1: +1.0792e−4); digitized CDKS +4.5920e−4; Miller +5.9147e−3. None is zero; none is enforced |
+
+**The residual is attributed, not dangling.** The §5.4 checklist was worked in
+order with no fudge factor tuned. Starting point: the κ = 1 column, ratio
+0.2717.
+
+| item | measured effect on the peak | direction |
+|---|---|---|
+| 0. finite-\|q⃗\| δ-function, κ = 1 → √(1+γ²) | ×1.620 | closes — **now IN**: the gate's default since 2026-09-03 |
+| 4. nucleon PDF, `ToyF2` → `LhapdfSF("CT18NLO")` | ×1.669 | closes — **still open** |
+| 1. target mass (CDKS Eq. 22, already in) | ×1.49 at x = 0.8 (1.52 at κ = 1) | in |
+| 2. R (`r1998`, CDKS's own; already in **on the gate** — the ⁶Li backend defaults to `r_sigma_lt` instead, see below) | ×0.98 | in |
+| 5. wave function, AV18 → rescaled to P_D = 4.85 % | ×0.88 | **opens** |
+| **the gate's default today** | **ratio 0.440 (factor 2.27)** | **outside G3b** |
+| **with item 4 as well, measured** | **ratio 0.719 (factor 1.39)** | **inside G3b** |
+
+The two are very nearly independent: separately they predict
+0.2717 × 1.669 × 1.620 = 0.735 against the measured 0.7193, a 2 % overlap, so
+there is no third unexplained factor at the peak. With CT18NLO the second zero
+also lands at **0.449** against the digitized 0.457 and the mid-x dip at
+−1.70e−4 against −1.77e−4 — a 4 % agreement where `ToyF2` was a factor 5.7 low.
+**Item 0's default was changed by the review of 2026-09-03 and item 4 was
+not**: Eq. (21) is CDKS's own exact δ-function and Eq. (17) is the "≃" of it
+(design §5.4 item 0: a gate-driven change there "is a finding, not a fudge"),
+while item 4 needs LHAPDF, which the core must not link. `Li6ConvolutionB1`'s
+own `finite_q_delta` stays `false` (A10) — in ⁶Li the switch is worth −1 % to
++7 %. What remains unexplained is the **low-x tail**, where even CT18 + κ gives
+x·b₁(0.10) = −3.8e−5 against the digitized −1.73e−5.
+
+### The ⁶Li numbers — RECORDED, NOT PUBLISHED (see the warning above)
+
+x·b₁ per nucleon, Q² = 2.5 GeV², default options — which include **ToyF2 F₁
+with `r_sigma_lt`**, not the gate's `r1998` (below), and the
+2400 / 2400 / 3200 y grid the review of 2026-09-03 set:
+
+| x | (1) embedded d, S | (3) CG D-wave | (2d) struck d | (2α) struck α | **total** | `Li6B1(MillerB1)` | `Li6B1(CdksB1)` |
+|---|---|---|---|---|---|---|---|
+| 0.05 | +1.5686e−6 | +3.0979e−9 | +1.3838e−6 | +6.9528e−7 | **+3.6507e−6** | +3.6503e−4 | +8.9916e−7 |
+| 0.10 | −4.6926e−6 | −9.2965e−9 | +1.2673e−6 | +6.3805e−7 | **−2.7966e−6** | +4.1222e−4 | −2.6566e−6 |
+| 0.20 | −2.3664e−5 | −4.6736e−8 | +1.6669e−6 | +8.3886e−7 | **−2.1205e−5** | +2.6700e−4 | −1.3491e−5 |
+| 0.30 | −4.4967e−5 | −8.8342e−8 | +2.2133e−6 | +1.1092e−6 | **−4.1732e−5** | +6.7167e−6 | −2.5964e−5 |
+| 0.50 | +4.2448e−5 | +8.5642e−8 | +6.1632e−6 | +3.0422e−6 | **+5.1739e−5** | −1.8650e−4 | +2.2792e−5 |
+
+Reading it:
+
+* **Term (3) is 0.197 % of term (1)** at every x — exactly the CG algebra's
+  0.1 × P_D^{αd}. It is kept because it is free and because it is the analytic
+  bridge to `LI6_B1_RANK2_TRANSFER`, not because it matters numerically.
+* **Terms (2d)+(2α) are 7–133 % of term (1), with the OPPOSITE sign** over the
+  whole window, because the α–d S–D relative sign is opposite to the
+  deuteron's below the S node (66 % of the density). They nearly cancel term (1)
+  at x ≈ 0.1 and dominate below. **This is the ⁶Li quadrupole puzzle showing up
+  in b₁ and it is the quantitative reason the 100 % band is mandatory.**
+* **The struck-α term is half the orbital sector**: (2α)/(2d) = 0.494–0.503
+  against the analytic 2(M_d/M_α)² = 0.5064 (T15). Dropping it is a 30 % error.
+  *(On the design's 600/2400/800 y grid this column read 0.489–0.497 and term
+  (2d) itself was 2.3 % high at x = 0.10 — a quadrature artefact of the struck
+  deuteron's wider z-distribution, fixed by the 2400/2400/3200 default and now
+  guarded by a ⁶Li clause in T2.)*
+* Against the production default `Li6B1(MillerB1)` the new model differs by two
+  orders of magnitude **and by sign**, because Miller (HERMES-like) and CDKS
+  (convolution) are different *camps* for b₁ᵈ — a pre-existing disagreement this
+  work does not resolve. **The default does not change.**
+
+Densities (struck d): raw `norm()` **0.8176766** against the identity
+N_αd⟨E⟩/M_d = 0.817421 (3.1e−4 apart, T3's own tolerance); `mean_y()` =
+⟨z²⟩/⟨z⟩ **0.9997871** (⟨z⟩ ≈ 1, *not* 1/3 — the fair-share normalisation of
+design §1.6 is what makes this literally CDKS Eq. (16) one level up); `p_d()` 0.0193299, `p_d_momentum()` 0.0193516
+against `VMC_P_D_LI6` = 0.0193549 (1.7e−4, the file's own quadrature spread).
+∫b₁ dx over [0.01, 1.2]: **+1.4588e−4**, against `Li6B1(MillerB1)`'s +9.1243e−4
+and `Li6B1(CdksB1)`'s +6.9298e−5. `finite_q_delta` moves ⁶Li's x·b₁ by only
+−1 % to +7 % (against 1.57–1.69 on the A = 2 gate), because in ⁶Li the term κ
+multiplies is the small orbital one — which is why the two objects default
+differently.
+
+**The ⁶Li backend and the gate use different R, and that is a choice, not an
+oversight.** `Li6ConvolutionOptions::r_func` null ⇒ **`r_sigma_lt`** (the
+kernel's own toy R, for consistency with `InclusiveKernel`'s F₁);
+`DeuteronConvolutionB1::Options::r_func` null ⇒ **`r1998`** (CDKS's SLAC world
+fit, because the gate reproduces *their* figure). So the R the gate was
+validated with is not the R the shipped ⁶Li numbers above carry. Measured on
+the gate at κ = 1, like for like: r1998 → r_sigma_lt moves the second zero from
+0.392 to **0.365**, *away* from the digitized 0.457, and the peak up by
+**1.6 %**. Inside the band, not cosmetic; whether the ⁶Li default should become
+`r1998` is on the close-out list.
+
+**The truncation is MEASURED, not asserted.** The dropped P₂ and P₄ remainders
+of the D-wave b₁ᵈ weight are **below 6e−5 of term (1) everywhere** (T14) — four
+orders of magnitude inside the band. The reason is *not* "P_D × 1/10" (the P₄
+coefficient is 15× the isotropic one term (3) keeps): they are small because the
+P₂- and P₄-weighted densities integrate to zero, so they enter only through the
+*curvature* of b₁ᵈ(x/z), and because they multiply b₁ᵈ, not F₁ᵈ. The other
+dropped piece — the S–D interference in the b₁ᵈ sector — is term (2d)'s SD
+structure with coefficient exactly 1/3 of it (G0f, exact) and b₁ᵈ in place of
+F₁ᵈ: ~3e−4 of term (2d).
+
+### Systematics that are stated, not hidden
+
+* **The mandatory 100 % band.** Q(⁶Li) = −0.0806(6) fm² against
+  Q_d = +0.2859(3) fm²: the α–d D wave enters the closest measured observable
+  with the opposite sign to the deuteron's own D state and nearly cancels it.
+  *(Q(⁶Li): Pyykkö, Mol. Phys. **106** (2008) 1965, whose ⁶Li entry is
+  Cederberg et al., Phys. Rev. A **57** (1998) 2539; Q_d: Bishop & Cheung,
+  Phys. Rev. A **20** (1979) 381.)* Every number is `--b1-band-scale 0/1/2`,
+  and `--b1-alpha-d-dwave-weight 0/1/2` is the shape variant reported next to
+  it.
+* **±5 % on N_αd, unexplained.** Three tabulations of the α–d spectroscopic
+  factor span 5 %: **0.819481** (2014 `li6_ad1.momentum`, the default, and now
+  the single home `VMC_N_ALPHA_D_LI6` that `VMC_P_D_LI6` is expressed through),
+  0.856 (2004 `li6.ad`) and 0.863 (Wiringa et al., PRC **89** (2014) 024305
+  §III: 0.846 + 0.017). Entries 1 and 3 are the same year and the same
+  Hamiltonian family, so this is **not** a version difference anyone can name.
+  b₁ is exactly linear in `norm_target`, so it is a flat ±5 % (T12).
+* **Q4 — suppression or renormalisation?** The default gives the 18 % of ⁶Li
+  that is not α+d **b₁ = 0**; `use_spectroscopic_factor = false` renormalises
+  instead and is ×1/N_αd = **1.2203** on the whole answer. Both are defensible,
+  nobody has published either, and the difference is well inside the band.
+* **Q1b, a separate item that this work routed around and did NOT change.**
+  `b1_convolution()` multiplies the raw digitized column by
+  `B1_PER_DEUTERON_TO_PER_NUCLEON = 0.5`, so `CdksB1` is a factor 2 low against
+  a curve that CDKS Eq. (10)'s explicit 1/A, their text under Eq. (16) and their
+  Fig. 6 all say is **already per nucleon**. The new backend reaches the raw
+  column through `cdks_b1_raw_per_nucleon()`; the constant is untouched, because
+  every published number carries the current convention. Two close-out items:
+  (a) decide whether `CdksB1` should stop halving; (b) check **Miller's** own
+  normalisation independently — the answer is on the axis of Miller's Fig. 5 and
+  is not assumable from CDKS.
+* **Q6.** `LI6_B1_RANK2_TRANSFER` = 0.921947 is tied to the Hulthén-scenario
+  P_D = 0.0867; the VMC value 0.0193549 would give 0.982581. Changing it would
+  move every published inclusive tensor number, so it stays — but this backend
+  makes the inconsistency visible (the tagged channel already uses VMC at
+  `--cluster-wave vmc`; the inclusive b₁ never does).
+* **Q8 — there is nothing to validate against for A = 6.** No published b₁
+  exists for any A > 2. The A = 2 gate plus the analytic limits (T5, T6, T7) are
+  the *only* checks there are, which is why the gate is blocking and why the
+  band is not a formality.
+
+### What has to happen before item 10 can close
+
+1. ~~Decide item 0's default~~ — **done, 2026-09-03**: the A = 2 gate is
+   quoted at CDKS Eq. (21)'s δ-function, which is their exact definition; the
+   ⁶Li backend keeps Eq. (17)'s κ = 1, where the switch is worth 1 %.
+2. Get MSTW2008 LO, or the tabulated curves from S. Kumano's group (design Q2),
+   and rerun checklist item 4 with CDKS's own PDF rather than CT18NLO. **This
+   is the only identified item still open at the peak.**
+3. Get a real CD-Bonn u, w instead of the D-state rescaling proxy of item 5.
+4. Decide whether `Li6ConvolutionOptions` should default to `r1998` like the
+   gate rather than to `r_sigma_lt` (checklist item 2).
+5. Only then re-open G3b. **Until it passes, no ⁶Li number ships.**
 
 ## 11. Coherent ⁶Li amplitude
 

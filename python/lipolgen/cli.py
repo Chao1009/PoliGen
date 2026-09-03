@@ -32,7 +32,8 @@ import numpy as np
 
 from . import _lipolgen as _l
 from . import export
-from . import (CHANNELS, CLUSTER_WAVES, FSI, OPTICS, PLANS, RC, TRITON_SFS,
+from . import (B1_MODELS, CHANNELS, CLUSTER_WAVES, FSI, OPTICS, PLANS, RC,
+               TRITON_SFS,
                ion_spin,
                make_config, make_plan)
 
@@ -151,6 +152,56 @@ def build_parser():
                         "the conservative direction; run 0.0 and 0.5)")
     p.add_argument("--inclusive-b1", action="store_true", default=None,
                    help="put an inclusive b1 in the struck cluster's kernel")
+    p.add_argument("--b1-model", choices=sorted(B1_MODELS), default=None,
+                   help="b1 backend of the INCLUSIVE kernel's rank-2 slot: "
+                        "'miller' (default; Li6B1(MillerB1) through "
+                        "LI6_B1_RANK2_TRANSFER -- bit-for-bit what every "
+                        "published inclusive tensor number was made with, and "
+                        "the run PLAN's 'toy'), 'cdks' (the same transfer on "
+                        "the other CAMP for b1_d, the digitized CDKS Fig. 4 "
+                        "column: |b1| two orders of magnitude smaller below "
+                        "x ~ 0.1, comparable above it -- peak |x b1| 1.67e-4 "
+                        "against Miller's 4.27e-4 at Q2 = 2.5, and 4x LARGER "
+                        "at x = 0.3 with the opposite sign) or "
+                        "'li6-convolution' (the four-term alpha-d convolution "
+                        "of b1_nuclear.hpp).  BOTH opt-in models are "
+                        "INCLUSIVE CHANNEL ONLY and 6Li ONLY: on a tagged "
+                        "channel the alpha-d density is already in the event "
+                        "weight, and elsewhere the flag would reach the "
+                        "metadata but not the rate.  WARNING -- "
+                        "li6-convolution has NOT passed its A = 2 magnitude "
+                        "gate (a factor 2.27 below the digitized CDKS "
+                        "deuteron peak at CDKS Eq. (21)'s delta-function, "
+                        "3.68 at Eq. (17)'s kappa = 1 form; the nucleon PDF "
+                        "is the dominant remaining item); it is opt-in and "
+                        "band-only")
+    p.add_argument("--b1-band-scale", type=float, default=None,
+                   help="the MANDATORY 100 %% band on --b1-model cdks and "
+                        "li6-convolution: multiplies the WHOLE b1.  "
+                        "Q(6Li) = -0.0806(6) fm^2 against Q_d = +0.2859(3) "
+                        "fm^2 -- the alpha-d D wave enters the closest "
+                        "measured observable with the OPPOSITE sign to the "
+                        "deuteron's and nearly cancels it.  RUN 0 / 1 / 2 and "
+                        "quote the envelope; never quote one row alone.  "
+                        "REFUSED with --b1-model miller (the band is not "
+                        "applied to the published numbers, so recording it "
+                        "would claim a variation that did not run)")
+    p.add_argument("--b1-alpha-d-dwave-weight", type=float, default=None,
+                   help="knob on the alpha-d orbital terms (2d) AND (2a) of "
+                        "--b1-model li6-convolution -- they are one physical "
+                        "effect and scale together.  The SHAPE variant of the "
+                        "band; report 0 / 1 / 2 separately from it.  REFUSED "
+                        "with miller and cdks, which never read it")
+    p.add_argument("--x-max", type=float, default=None,
+                   help="upper x edge of the acceptance window (default 1.0, "
+                        "Scenario::x_max).  NEEDED by --b1-model cdks and "
+                        "li6-convolution: both carry the CDKS camp's b1_d, a "
+                        "Q2 = 2.5 DIGITIZATION with no Q2 evolution, and in "
+                        "the topmost default cell (x = 0.955) its b1/F1 "
+                        "reaches 3.3 resp. 5.6 -- past the point where "
+                        "1 + w_avg stays positive and the sampler refuses the "
+                        "run.  Use --x-max 0.95.  Miller's b1 is a ratio "
+                        "model and does not need it")
     p.add_argument("--coherent-f0", type=float, default=None)
     p.add_argument("--coherent-slope-b", type=float, default=None)
     p.add_argument("--coherent-amp", type=float, default=None)
@@ -198,7 +249,10 @@ DEFAULTS = dict(isotope="6Li", config=1, channel="inclusive",
                 rc_fq_scale=1.0, rc_tail_tensor_scale=1.0,
                 rc_qe_suppression=1.0,
                 coherent_t2="pomeron", pom_set=6, pom_rescale=1.0,
-                inclusive_b1=False, coherent=None)
+                inclusive_b1=False,
+                b1_model="miller", b1_band_scale=1.0,
+                b1_alpha_d_dwave_weight=1.0, x_max=None,
+                coherent=None)
 
 
 def resolve(argv=None):
@@ -247,7 +301,35 @@ def main(argv=None):
                       rc_tail_tensor_scale=opts["rc_tail_tensor_scale"],
                       rc_qe_suppression=opts["rc_qe_suppression"],
                       inclusive_b1=opts["inclusive_b1"],
+                      b1_model=opts["b1_model"],
+                      b1_band_scale=opts["b1_band_scale"],
+                      b1_alpha_d_dwave_weight=opts["b1_alpha_d_dwave_weight"],
                       coherent=opts["coherent"])
+    if opts["x_max"] is not None:
+        # `Scenario` comes back BY VALUE from the binding, so it is written on
+        # a copy and assigned back -- the `cfg.struck` / `cfg.rc_options`
+        # pattern.  Left alone when the switch is absent, so the default run
+        # is bit for bit.
+        sc = cfg.scenario
+        sc.x_max = float(opts["x_max"])
+        cfg.scenario = sc
+    if (cfg.channel == _l.PipelineChannel.Inclusive
+            and cfg.b1_model != _l.B1Model.Miller
+            and cfg.scenario.x_max > 0.95):
+        # Say WHICH flag fixes it, here, instead of letting the sampler throw
+        # "negative phi-averaged density for m=1 at x = 0.955" three frames
+        # down -- that message names neither --x-max nor the CDKS table, and
+        # `--b1-model cdks` without `--x-max` is otherwise a documented flag
+        # whose plain invocation always fails.  See docs/USAGE.md sec. 2a,
+        # "The top x cell".
+        raise SystemExit(
+            "--b1-model %s needs --x-max 0.95: both opt-in backends carry the "
+            "CDKS camp's b1_d, a Q2 = 2.5 digitization with no Q2 evolution, "
+            "and in the topmost default cell (x = 0.955) b1/F1 reaches 3.3 "
+            "(cdks) resp. 5.6 (li6-convolution) -- past where the "
+            "phi-averaged density 1 + w_avg stays positive, so InclusiveSampler "
+            "refuses the run.  See docs/USAGE.md sec. 2a, 'The top x cell'."
+            % _l.b1_model_name(cfg.b1_model))
     plan = make_plan(opts["plan"], j=ion_spin(cfg.isotope), pz=opts["pz"],
                      pzz=opts["pzz"], pe=opts["pe"],
                      rel_lumi_offset=opts["rel_lumi_offset"])
@@ -282,6 +364,30 @@ def main(argv=None):
     for name, sig, cnt in zip([c.name for c in plan.categories],
                               p.sigma_per_category_pb(), p.counts()):
         say("    %-10s sigma = %12.6g pb   N = %d" % (name, sig, cnt))
+    if (cfg.channel == _l.PipelineChannel.Inclusive
+            and cfg.kernel is None
+            and cfg.b1_model != _l.B1Model.Miller):
+        say("  b1 %s: band scale %g, alpha-d D-wave %g (band 0/1/2; never "
+            "quote one row alone)"
+            % (_l.b1_model_name(cfg.b1_model), cfg.b1_band_scale,
+               cfg.b1_alpha_d_dwave_weight))
+        if cfg.b1_model == _l.B1Model.Li6Convolution:
+            say("     WARNING: the A = 2 validation gate is NOT fully passed "
+                "-- this kernel is a factor 2.27 low at CDKS Eq. (21)'s "
+                "delta-function (3.68 at the Eq. (17) kappa = 1 form); the "
+                "nucleon PDF is the dominant remaining item (x1.67 by the "
+                "CT18NLO proxy; MSTW2008LO, CDKS's own, is not installed).  "
+                "See docs/open_items/run_2026-09-02/phase_D_gate.md; no 6Li "
+                "number from it may be published.")
+            say("     4 terms: (1) embedded d S wave, (2d)+(2a) alpha-d "
+                "D wave (struck d and struck alpha, one physical effect), "
+                "(3) CG depolarization.  N_ad = %.6g suppresses all of them; "
+                "the non-alpha-d 18 %% of 6Li is given b1 = 0."
+                % _l.VMC_N_ALPHA_D_LI6)
+        else:
+            say("     Miller (HERMES-like) and CDKS (convolution) are "
+                "different CAMPS for b1_d; the library does not adjudicate "
+                "between them.  Say which one a plot used.")
     if p.fsi_weight is not None:
         fw = p.fsi_weight
         say("  FSI %s: sigma_XN = %g mb (band 20-40; never quote one row "

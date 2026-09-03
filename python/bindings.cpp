@@ -40,6 +40,7 @@
 #include <vector>
 
 #include "lipolgen/asymmetries.hpp"
+#include "lipolgen/b1_nuclear.hpp"
 #include "lipolgen/beams.hpp"
 #include "lipolgen/bookkeeping.hpp"
 #include "lipolgen/cluster.hpp"
@@ -439,6 +440,18 @@ py::dict columns_to_dict(Columns& c, const Pipeline& p, std::uint64_t n) {
   meta["optics"] = p.optics().name;
   meta["pot_config"] = p.pot_config();
   meta["frame"] = "head-on: ion +z, electron -z; per-nucleon x, y, Q2";
+  // Which b1 backend and which band row made this file (design_D_b1_li6.md
+  // sec. 4.2).  UNCONDITIONAL, unlike the `rc` block below: the band is
+  // produced by re-running with `--b1-band-scale 0/1/2`, and without these
+  // three keys three otherwise identical npz files are indistinguishable --
+  // which is exactly the "never quote a single row" rule failing silently.
+  // On a caller-supplied `cfg.kernel` the flag is not what produced the
+  // numbers, so say so rather than printing a model name that did not run.
+  meta["b1_model"] = p.config().kernel
+                         ? std::string("caller-supplied kernel")
+                         : std::string(b1_model_name(p.config().b1_model));
+  meta["b1_band_scale"] = p.config().b1_band_scale;
+  meta["b1_alpha_d_dwave_weight"] = p.config().b1_alpha_d_dwave_weight;
   // rc.hpp -- the WHOLE block, `meta["rc"]` included, is emitted only when
   // the run has RC on, so an `--rc off` npz is byte-identical to today's and
   // not merely key-compatible with it (T6).
@@ -1183,6 +1196,267 @@ static void bind_sf(py::module_& m) {
         return std::make_shared<Li6B1>(std::move(d), transfer, per_nucleon);
       }), py::arg("deuteron"), py::arg("transfer") = LI6_B1_RANK2_TRANSFER,
           py::arg("per_nucleon") = LI6_B1_PER_NUCLEON);
+
+  // ================================================= b1_nuclear.hpp (design D)
+  // The four-term alpha-d convolution b1 of 6Li and its A = 2 validation gate.
+  // WARNING: the gate is NOT fully passed (G3b, magnitude) -- see the header
+  // block of b1_nuclear.hpp and docs/open_items/run_2026-09-02/phase_D_gate.md.
+  // Opt-in and band-only: never quote a single row.
+  m.def("f1_cdks", &f1_cdks, py::arg("f2"), py::arg("x"), py::arg("q2"),
+        py::arg("r_func") = nullptr,
+        "CDKS Eq. (22) F1 = (1 + gamma^2) F2 / (2 x (1 + R)).  NOT "
+        "`UnpolSF.f1_from_f2` and NOT `NuclearF2.f1a`, which are the massless "
+        "form; the extra factor is 1 + gamma_squared(x, q2) and is 1.90 at "
+        "x = 0.8, Q2 = 2.5.");
+  m.def("cdks_b1_raw_per_nucleon", []() {
+    return std::const_pointer_cast<TensorSF>(cdks_b1_raw_per_nucleon());
+  }, "The RAW digitized CDKS theory-1 column as a TensorSF, WITHOUT "
+     "`B1_PER_DEUTERON_TO_PER_NUCLEON`.  `CdksB1` halves it a second time "
+     "(design 9 Q1/Q1b); that constant is untouched and this routes around "
+     "it.  This is `Li6ConvolutionOptions.deuteron_b1 = None`.");
+
+  py::class_<ClusterPartialWave>(m, "ClusterPartialWave")
+      .def(py::init<>())
+      .def_readwrite("l", &ClusterPartialWave::l)
+      .def_property("k",
+          [](const ClusterPartialWave& w) { return copy_array(w.k); },
+          [](ClusterPartialWave& w, std::vector<double> v) {
+            w.k = std::move(v); w.rebuild();
+          })
+      .def_property("phi",
+          [](const ClusterPartialWave& w) { return copy_array(w.phi); },
+          [](ClusterPartialWave& w, std::vector<double> v) {
+            w.phi = std::move(v); w.rebuild();
+          })
+      .def_readwrite("provenance", &ClusterPartialWave::provenance)
+      .def("__call__", &ClusterPartialWave::operator(), py::arg("k"))
+      .def("norm2", &ClusterPartialWave::norm2)
+      .def("scaled", &ClusterPartialWave::scaled, py::arg("factor"))
+      .def("rebuild", &ClusterPartialWave::rebuild)
+      .def_static("from_uw", &ClusterPartialWave::from_uw, py::arg("k_gev"),
+                  py::arg("uw"), py::arg("l"));
+  m.def("li6_alpha_d_partial_waves", &li6_alpha_d_partial_waves,
+        "(phi_0, phi_2) of the 6Li alpha-d relative motion in the CDKS i^L "
+        "convention: magnitudes from the ANL momentum file, sign structure "
+        "from the overlap file.");
+  m.def("alpha_d_quadrupole_fm2", &alpha_d_quadrupole_fm2, py::arg("phi0"),
+        py::arg("phi2"), py::arg("r_max_fm") = 20.0, py::arg("n_r") = 2000,
+        py::arg("n_k") = 4001,
+        "THE SIGN GATE (design 2.2): the quadrupole moment of the unit-"
+        "normalised relative wave function.  Must be NEGATIVE for alpha-d and "
+        "positive for the deuteron, from the same code path.");
+
+  py::class_<ConvolutionKinematics>(m, "ConvolutionKinematics")
+      .def(py::init<>())
+      .def_readwrite("m_struck", &ConvolutionKinematics::m_struck)
+      .def_readwrite("m_recoil", &ConvolutionKinematics::m_recoil)
+      .def_readwrite("separation", &ConvolutionKinematics::separation)
+      .def_readwrite("kappa", &ConvolutionKinematics::kappa)
+      .def("k_range", [](const ConvolutionKinematics& k, double y)
+                          -> std::optional<std::pair<double, double>> {
+        double lo = 0.0, hi = 0.0;
+        if (!k.k_range(y, &lo, &hi)) return std::nullopt;
+        return std::make_pair(lo, hi);
+      }, py::arg("y"), "(lo, hi) in GeV, or None when the interval is empty.")
+      .def("cos_star", &ConvolutionKinematics::cos_star, py::arg("k"),
+           py::arg("y"))
+      .def("y_max", &ConvolutionKinematics::y_max);
+
+  py::class_<LightConeDensities> lcd(m, "LightConeDensities");
+  py::class_<LightConeDensities::Options>(lcd, "Options")
+      .def(py::init<>())
+      .def_readwrite("n_y_low", &LightConeDensities::Options::n_y_low)
+      .def_readwrite("n_y_mid", &LightConeDensities::Options::n_y_mid)
+      .def_readwrite("n_y_high", &LightConeDensities::Options::n_y_high)
+      .def_readwrite("y_mid_lo", &LightConeDensities::Options::y_mid_lo)
+      .def_readwrite("y_mid_hi", &LightConeDensities::Options::y_mid_hi)
+      .def_readwrite("n_k", &LightConeDensities::Options::n_k,
+                     "k points per y.  MUST BE ODD -- the inner k integral is "
+                     "composite Simpson and an even count would fall back to "
+                     "the trapezoid, which is 22 % low at x = 0.05.  An even "
+                     "value is bumped to the next odd one at construction and "
+                     "`options()` then reports what actually ran.")
+      .def_readwrite("y_min", &LightConeDensities::Options::y_min)
+      .def_readwrite("renormalize", &LightConeDensities::Options::renormalize)
+      .def_readwrite("norm_target", &LightConeDensities::Options::norm_target);
+  lcd.def(py::init<ClusterPartialWave, ClusterPartialWave,
+                   ConvolutionKinematics, LightConeDensities::Options>(),
+          py::arg("phi0"), py::arg("phi2"), py::arg("kin"), py::arg("options"))
+      .def(py::init<ClusterPartialWave, ClusterPartialWave,
+                    ConvolutionKinematics>(),
+           py::arg("phi0"), py::arg("phi2"), py::arg("kin"))
+      .def_static("delta_limit", &LightConeDensities::delta_limit,
+                  py::arg("p_d"), py::arg("norm"))
+      .def("f_s", &LightConeDensities::f_s, py::arg("y"))
+      .def("f_d", &LightConeDensities::f_d, py::arg("y"))
+      .def("f_unpol", &LightConeDensities::f_unpol, py::arg("y"))
+      .def("delta_t_f", &LightConeDensities::delta_t_f, py::arg("y"))
+      .def("delta_t_f_sd", &LightConeDensities::delta_t_f_sd, py::arg("y"))
+      .def("delta_t_f_dd", &LightConeDensities::delta_t_f_dd, py::arg("y"))
+      .def("f_d_p2", &LightConeDensities::f_d_p2, py::arg("y"))
+      .def("f_d_p4", &LightConeDensities::f_d_p4, py::arg("y"))
+      .def("norm", &LightConeDensities::norm)
+      .def("mean_y", &LightConeDensities::mean_y)
+      .def("p_d", &LightConeDensities::p_d)
+      .def("p_d_momentum", &LightConeDensities::p_d_momentum)
+      .def("renormalization", &LightConeDensities::renormalization)
+      .def("y_grid", [](const LightConeDensities& d) {
+        return copy_array(d.y_grid());
+      })
+      .def_property_readonly("kinematics", &LightConeDensities::kinematics)
+      .def_property_readonly("options", &LightConeDensities::options)
+      .def("convolve", &LightConeDensities::convolve, py::arg("dens_at"),
+           py::arg("g"), py::arg("x"), py::arg("x_max_g") = 1.0,
+           py::arg("n") = 4001,
+           "int (dy/y) dens_at(y) g(x/y), starting at x / x_max_g.  "
+           "`x_max_g` is the x above which `g` is ZERO -- 1.0 for a "
+           "free-nucleon F1 (the default), tables.kB1CdksQ2p5().x_max() = "
+           "1.59 for the raw digitized CDKS b1_d column.  Cutting at "
+           "x/y = 1 instead drops 5 % of term (1) at x = 0.95.");
+
+  py::class_<Li6ConvolutionOptions>(m, "Li6ConvolutionOptions")
+      .def(py::init<>())
+      // The two `shared_ptr<const T>` fields go through def_property with a
+      // const_pointer_cast: `def_readwrite` on a shared_ptr<const T> does not
+      // round-trip with the registered shared_ptr<TensorSF> / <UnpolSF>
+      // holders.  Same pattern as `PipelineConfig::kernel`.
+      .def_property("deuteron_b1",
+          [](const Li6ConvolutionOptions& o) {
+            return std::const_pointer_cast<TensorSF>(o.deuteron_b1);
+          },
+          [](Li6ConvolutionOptions& o, std::shared_ptr<TensorSF> v) {
+            o.deuteron_b1 = std::move(v);
+          })
+      .def_property("unpol",
+          [](const Li6ConvolutionOptions& o) {
+            return std::const_pointer_cast<UnpolSF>(o.unpol);
+          },
+          [](Li6ConvolutionOptions& o, std::shared_ptr<UnpolSF> v) {
+            o.unpol = std::move(v);
+          })
+      .def_readwrite("deuteron_b1_x_max",
+                     &Li6ConvolutionOptions::deuteron_b1_x_max,
+                     "The x above which `deuteron_b1` is ZERO (its support, "
+                     "which convolve needs and a TensorSF cannot be asked "
+                     "for).  0 => automatic: 1.59 (the digitized table's own "
+                     "x_max) when deuteron_b1 is None, else 1.0.")
+      .def_readwrite("alpha_f1", &Li6ConvolutionOptions::alpha_f1)
+      .def_readwrite("r_func", &Li6ConvolutionOptions::r_func)
+      .def_readwrite("w_embedded_s", &Li6ConvolutionOptions::w_embedded_s)
+      .def_readwrite("w_alpha_d_dwave",
+                     &Li6ConvolutionOptions::w_alpha_d_dwave)
+      .def_readwrite("w_cg_dwave", &Li6ConvolutionOptions::w_cg_dwave)
+      .def_readwrite("use_spectroscopic_factor",
+                     &Li6ConvolutionOptions::use_spectroscopic_factor)
+      .def_readwrite("norm_target", &Li6ConvolutionOptions::norm_target)
+      .def_readwrite("finite_q_delta", &Li6ConvolutionOptions::finite_q_delta)
+      .def_readwrite("quad", &Li6ConvolutionOptions::quad);
+
+  py::class_<Li6ConvolutionB1, TensorSF, std::shared_ptr<Li6ConvolutionB1>>(
+      m, "Li6ConvolutionB1",
+      "b1 of 6Li per nucleon, four-term alpha-d convolution (CDKS Eqs. 16/17/"
+      "21 one level up).  OPT-IN, and the A = 2 magnitude gate is NOT passed: "
+      "band every number, {0, 1, 2} x b1.")
+      .def(py::init([](Li6ConvolutionOptions o) {
+        return std::make_shared<Li6ConvolutionB1>(std::move(o));
+      }), py::arg("options") = Li6ConvolutionOptions())
+      .def("b1_embedded_s", &Li6ConvolutionB1::b1_embedded_s, py::arg("x"),
+           py::arg("q2"), py::arg("f1") = 0.0)
+      .def("b1_alpha_d_dwave_d", &Li6ConvolutionB1::b1_alpha_d_dwave_d,
+           py::arg("x"), py::arg("q2"), py::arg("f1") = 0.0)
+      .def("b1_alpha_d_dwave_alpha",
+           &Li6ConvolutionB1::b1_alpha_d_dwave_alpha, py::arg("x"),
+           py::arg("q2"), py::arg("f1") = 0.0)
+      .def("b1_cg_dwave", &Li6ConvolutionB1::b1_cg_dwave, py::arg("x"),
+           py::arg("q2"), py::arg("f1") = 0.0)
+      .def("b1_alpha_d_dwave", &Li6ConvolutionB1::b1_alpha_d_dwave,
+           py::arg("x"), py::arg("q2"), py::arg("f1") = 0.0)
+      .def("b1_alpha_d_sd", &Li6ConvolutionB1::b1_alpha_d_sd, py::arg("x"),
+           py::arg("q2"), py::arg("f1") = 0.0)
+      .def("b1_alpha_d_dd", &Li6ConvolutionB1::b1_alpha_d_dd, py::arg("x"),
+           py::arg("q2"), py::arg("f1") = 0.0)
+      .def("b1_cg_dwave_p2_remainder",
+           &Li6ConvolutionB1::b1_cg_dwave_p2_remainder, py::arg("x"),
+           py::arg("q2"), py::arg("f1") = 0.0)
+      .def("b1_cg_dwave_p4_remainder",
+           &Li6ConvolutionB1::b1_cg_dwave_p4_remainder, py::arg("x"),
+           py::arg("q2"), py::arg("f1") = 0.0)
+      .def("banded", [](const Li6ConvolutionB1& b, double scale) {
+        return std::const_pointer_cast<TensorSF>(b.banded(scale));
+      }, py::arg("scale"),
+         "A copy with the WHOLE b1 scaled: the mandatory 100 % band.")
+      .def("band_scale", &Li6ConvolutionB1::band_scale)
+      .def("f1_deuteron", &Li6ConvolutionB1::f1_deuteron, py::arg("x"),
+           py::arg("q2"))
+      .def("f1_alpha", &Li6ConvolutionB1::f1_alpha, py::arg("x"), py::arg("q2"))
+      .def("deuteron_b1", [](const Li6ConvolutionB1& b) {
+        return std::const_pointer_cast<TensorSF>(b.deuteron_b1());
+      })
+      .def("close_kumano_integral", &Li6ConvolutionB1::close_kumano_integral,
+           py::arg("lo") = 0.01, py::arg("hi") = 1.2, py::arg("q2") = 2.5,
+           py::arg("n") = 241)
+      // reference_internal: these return references INTO an object the
+      // shared_ptr owns, so the returned view must keep the parent alive.
+      .def("densities", &Li6ConvolutionB1::densities,
+           py::return_value_policy::reference_internal)
+      .def("densities_alpha", &Li6ConvolutionB1::densities_alpha,
+           py::return_value_policy::reference_internal)
+      .def("options", &Li6ConvolutionB1::options,
+           py::return_value_policy::reference_internal);
+
+  py::class_<DeuteronConvolutionB1, TensorSF,
+             std::shared_ptr<DeuteronConvolutionB1>> dcb1(
+      m, "DeuteronConvolutionB1",
+      "THE A = 2 VALIDATION GATE: the same kernel on the AV18 deuteron u(k), "
+      "w(k) and an isoscalar nucleon F1, to be compared with the digitized "
+      "CDKS Fig. 4 (`tables::kB1CdksQ2p5`).");
+  py::class_<DeuteronConvolutionB1::Options>(dcb1, "Options")
+      .def(py::init<>())
+      .def_readwrite("fdeut_path", &DeuteronConvolutionB1::Options::fdeut_path)
+      .def_property("unpol",
+          [](const DeuteronConvolutionB1::Options& o) {
+            return std::const_pointer_cast<UnpolSF>(o.unpol);
+          },
+          [](DeuteronConvolutionB1::Options& o, std::shared_ptr<UnpolSF> v) {
+            o.unpol = std::move(v);
+          })
+      .def_readwrite("r_func", &DeuteronConvolutionB1::Options::r_func)
+      .def_readwrite("target_mass",
+                     &DeuteronConvolutionB1::Options::target_mass)
+      .def_readwrite("finite_q_delta",
+                     &DeuteronConvolutionB1::Options::finite_q_delta)
+      .def_readwrite("quad", &DeuteronConvolutionB1::Options::quad);
+  dcb1.def(py::init([](DeuteronConvolutionB1::Options o) {
+             return std::make_shared<DeuteronConvolutionB1>(std::move(o));
+           }), py::arg("options") = DeuteronConvolutionB1::Options())
+      .def("b1_sd", &DeuteronConvolutionB1::b1_sd, py::arg("x"), py::arg("q2"),
+           py::arg("f1") = 0.0)
+      .def("b1_dd", &DeuteronConvolutionB1::b1_dd, py::arg("x"), py::arg("q2"),
+           py::arg("f1") = 0.0)
+      .def("f1_nucleon", &DeuteronConvolutionB1::f1_nucleon, py::arg("x"),
+           py::arg("q2"))
+      .def("densities", &DeuteronConvolutionB1::densities,
+           py::return_value_policy::reference_internal)
+      .def("options", &DeuteronConvolutionB1::options,
+           py::return_value_policy::reference_internal);
+
+  py::class_<B1Landmarks>(m, "B1Landmarks")
+      .def(py::init<>())
+      .def_property_readonly("zeros", [](const B1Landmarks& l) {
+        return copy_array(l.zeros);
+      })
+      .def_readonly("zero_slope", &B1Landmarks::zero_slope)
+      .def_readonly("x_min", &B1Landmarks::x_min)
+      .def_readonly("xb1_min", &B1Landmarks::xb1_min)
+      .def_readonly("x_max", &B1Landmarks::x_max)
+      .def_readonly("xb1_max", &B1Landmarks::xb1_max)
+      .def_readonly("integral_b1", &B1Landmarks::integral_b1);
+  m.def("b1_landmarks", &b1_landmarks, py::arg("xb1"), py::arg("x_grid"),
+        "Sign changes (with slope), extrema of x*b1 and int b1 dx -- COMPUTED, "
+        "never typed.");
+  m.def("b1_landmarks_of_table", &b1_landmarks_of_table,
+        "The same, applied to the digitized `tables::kB1CdksQ2p5` raw column, "
+        "so the gate compares like with like.");
 
   py::class_<DeltaVariant>(m, "DeltaVariant")
       .def_readonly("alpha", &DeltaVariant::alpha)
@@ -1959,6 +2233,7 @@ static void bind_tagged(py::module_& m) {
         py::arg("source") = ClusterWaveSource::Hulthen);
   m.def("li7_alpha_channel", &li7_alpha_channel, py::arg("beta") = BETA_DEFAULT,
         py::arg("source") = ClusterWaveSource::Hulthen);
+  m.attr("VMC_N_ALPHA_D_LI6") = VMC_N_ALPHA_D_LI6;
   m.attr("VMC_P_D_LI6") = VMC_P_D_LI6;
   m.attr("VMC_S_ALPHA_D_LI6") = VMC_S_ALPHA_D_LI6;
   m.attr("VMC_S_ALPHA_T_LI7") = VMC_S_ALPHA_T_LI7;
@@ -2635,6 +2910,30 @@ static void bind_pipeline(py::module_& m) {
       .value("Hulthen", TritonSfChoice::Hulthen)
       .value("CiofiSimula", TritonSfChoice::CiofiSimula);
 
+  py::enum_<B1Model>(m, "B1Model",
+      "Which b1 backend `default_inclusive_kernel` fills the INCLUSIVE "
+      "kernel's rank-2 slot with (CLI --b1-model).\n"
+      "  Miller          the DEFAULT and bit-for-bit what every published "
+      "inclusive tensor number was made with: Li6B1(MillerB1) through "
+      "LI6_B1_RANK2_TRANSFER.  This IS the run PLAN's 'toy'.\n"
+      "  Cdks            the same 6Li rank-2 transfer on the CDKS convolution "
+      "camp; |b1| two orders of magnitude smaller below x ~ 0.1, COMPARABLE "
+      "above it (peak |x b1| 1.67e-4 against Miller's 4.27e-4 at Q2 = 2.5, "
+      "and 4x larger at x = 0.3 with the opposite sign), and a different sign "
+      "structure.  Miller and CDKS are different CAMPS -- say which one a "
+      "plot used.  INCLUSIVE CHANNEL ONLY and 6Li ONLY, like Li6Convolution: "
+      "it is Li6B1's 6Li transfer (PipelineConfig.validate refuses the "
+      "rest).\n"
+      "  Li6Convolution  b1_nuclear.hpp's four-term alpha-d convolution.  "
+      "INCLUSIVE CHANNEL ONLY and 6Li ONLY (PipelineConfig.validate refuses "
+      "the rest; on a tagged channel the alpha-d density is already in the "
+      "event weight).  Its A = 2 magnitude gate is NOT passed -- band every "
+      "number with --b1-band-scale 0/1/2.")
+      .value("Miller", B1Model::Miller)
+      .value("Cdks", B1Model::Cdks)
+      .value("Li6Convolution", B1Model::Li6Convolution);
+  m.def("b1_model_name", &b1_model_name, py::arg("model"));
+
   py::class_<CiofiSimulaOptions>(m, "CiofiSimulaOptions",
       "Configuration of CiofiSimulaTriton.  Everything here is a documented "
       "CHOICE; the transcribed CS coefficients are not options "
@@ -2737,6 +3036,21 @@ static void bind_pipeline(py::module_& m) {
           [](PipelineConfig& c, std::shared_ptr<InclusiveKernel> k) {
             c.kernel = std::move(k);
           })
+      .def_readwrite("b1_model", &PipelineConfig::b1_model,
+                     "Inclusive b1 backend (B1Model); Miller is the default "
+                     "and is today bit for bit.  validate() refuses a "
+                     "non-Miller model together with a caller-supplied "
+                     "kernel, and refuses Li6Convolution off the inclusive "
+                     "channel or off 6Li.")
+      .def_readwrite("b1_band_scale", &PipelineConfig::b1_band_scale,
+                     "The MANDATORY 100 % band: multiplies the whole b1 of "
+                     "the Cdks and Li6Convolution backends.  Run 0/1/2 and "
+                     "quote the envelope -- never a single row.")
+      .def_readwrite("b1_alpha_d_dwave_weight",
+                     &PipelineConfig::b1_alpha_d_dwave_weight,
+                     "Li6ConvolutionOptions.w_alpha_d_dwave: the knob on "
+                     "terms (2d) AND (2a) together, the SHAPE variant of the "
+                     "band.")
       .def_readwrite("with_virtual_photon", &PipelineConfig::with_virtual_photon)
       .def_readwrite("seed", &PipelineConfig::seed)
       .def_readwrite("run", &PipelineConfig::run)

@@ -68,6 +68,17 @@ std::vector<AnlTable> read_anl_momentum(const std::string& path);
 /// order (total first, then the per-wave ones).
 std::vector<double> read_anl_momentum_norms(const std::string& path);
 
+/// A plain `x v1 v2 ... vN` table with NO MC-error columns, introduced by the
+/// same `****  *********  *********` column rule `read_anl_momentum` keys on
+/// (`li6_alpha_d/li6.adr.fit`, the `*.rho1` fits).
+///
+/// It exists because `read_anl_momentum` CANNOT read those files: their rows
+/// also carry three numbers, so that reader would silently land the second
+/// VALUE column (`R2LI6FIT`) in `err[0]` and report one wave where there are
+/// two.  `AnlTable::err` is left empty here -- these files print no errors.
+/// Throws if the block is missing or if a row is short of `1 + ncol` numbers.
+AnlTable read_anl_plain(const std::string& path, std::size_t ncol);
+
 /// The k-space block of an ANL deuteron wave-function file
 /// (`deuteron/fdeut.av18`) plus the binding energy its own header carries.
 ///

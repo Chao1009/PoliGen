@@ -1,0 +1,123 @@
+{
+ "generator": "LiPolGen cluster_config",
+ "version": "0.1.0",
+ "git": "b1071b163b09109e2c4249afa775259b314ff69c",
+ "nucleus": "6Li",
+ "A": 6,
+ "Z": 3,
+ "n_config": 100,
+ "m_ion": 1,
+ "axis": {
+  "theta_s": 1.5707963267948966,
+  "phi_s": 0,
+  "frame": "ion rest frame"
+ },
+ "units": "fm",
+ "column_order": [
+  "x",
+  "y",
+  "z"
+ ],
+ "cm_convention": "sum r_i = 0",
+ "rng": {
+  "seed": 1,
+  "run": 0,
+  "stream": "CONFIG",
+  "stream_value": 74007894706503
+ },
+ "inputs": [
+  {
+   "file": "vmc/li6_alpha_d/li6.adr.fit",
+   "bytes": 2909,
+   "used": true,
+   "printed_norm": null,
+   "recomputed_norm": {
+    "integral": 0.8373005077220292,
+    "p_d": 0.025424797037923802
+   },
+   "md5": "306c1de97f561d88529d8dd29db05b38"
+  },
+  {
+   "file": "vmc/li6_alpha_d/li6.ad",
+   "bytes": 23293,
+   "used": true,
+   "printed_norm": {
+    "ndx": 0.856,
+    "s": 0.838,
+    "d": 0.017
+   },
+   "md5": "452ddf07eef2e8751ff69850fc274bbe"
+  },
+  {
+   "file": "vmc/deuteron/fdeut.av18",
+   "bytes": 816110,
+   "used": true,
+   "printed_norm": {
+    "dstate": 0.057599,
+    "qm": 0.269673,
+    "rd": 1.967364
+   },
+   "md5": "7f4a361cd833de83b6a1912f8d86bf58"
+  },
+  {
+   "file": "vmc/density/he4.density",
+   "bytes": 4751,
+   "used": true,
+   "printed_norm": {
+    "norm_4pi": 1.9974,
+    "rms": 1.4404
+   },
+   "md5": "5d717cf0ed642dc7779aef3873e06317"
+  }
+ ],
+ "options": {
+  "alpha_source": "VmcHe4Density",
+  "alpha_d_source": "FitRescaled",
+  "theta_s": 1.5707963267948966,
+  "phi_s": 0,
+  "alpha_cm_inflate": true,
+  "min_nn_separation_fm": 0,
+  "alpha_d_scale": 1,
+  "quadrupole_target_fm2": 0,
+  "quadrupole_dial_s": 1,
+  "exact_coherence": false,
+  "n_r": 512,
+  "n_c": 96,
+  "r_max_fm": 20,
+  "rnp_max_fm": 25
+ },
+ "moments": {
+  "r2_mean_fm2": 6.4446942060555585,
+  "r_rms_fm": 2.538640227770678,
+  "q_matter_fm2": -1.2308965122684135,
+  "delta_perp_fm2": -0.10257470935570112,
+  "eps_b0_equivalent": -0.05062251234900036,
+  "p_d_alpha_d": 0.02011207972877806,
+  "tensor_dilution": 0.9818991282440998,
+  "asymptotic_ds_ratio": -0.04821609036958518,
+  "alpha_s2_fm2": 2.0773851812743733,
+  "alpha_s2_method": "closed form (3/4)<v^2>, exact",
+  "r2_mean_is_approximate": false,
+  "sampled": {
+   "r2_mean_fm2": 6.986386373454494,
+   "r2_sd_fm2": 4.174777426058614,
+   "q_matter_fm2": -6.906203075121357,
+   "q_matter_sd_fm2": 30.207719153184286,
+   "delta_perp_fm2": -0.4410650426459513,
+   "delta_perp_sd_fm2": 3.1880808222459684
+  }
+ },
+ "quadrupole_band_fm2": {
+  "measured": -0.0818,
+  "gfmc_av18_il7": -0.2,
+  "gfmc_av18_il7_err": 0.06,
+  "alpha_d_model": -0.6154482561342067
+ },
+ "caveats": [
+  "Q_charge(model) = -0.6154 fm^2 vs measured -0.0818 (TUNL) and GFMC AV18+IL7",
+  "-0.20 +- 0.06 (Pastore et al., PRC 87, 035503 (2013), arXiv:1212.3375):",
+  "|model/measured| = 7.5. Do NOT quote a tensor number from this sampler without",
+  "the band -- see docs/open_items/run_2026-09-02/design_G_cluster_config.md sec. 2.7",
+  "(sec. 8 for the three alpha-d sources' own Q_charge) and docs/OPEN_ITEMS_SOLUTIONS.md sec. 11."
+ ]
+}

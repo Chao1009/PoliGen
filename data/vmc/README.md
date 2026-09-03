@@ -122,6 +122,17 @@ amplitudes in both r and k and do supply it.  `VmcRadial` therefore takes the
 magnitude from `momenta/` and the sign from `overlap_old/`; see
 `docs/CONVENTIONS.md`.
 
+## `density/` — the ONE-BODY point-nucleon densities (fetched 2026-09-03)
+
+A third family, fetched for `include/lipolgen/cluster_config.hpp`'s alpha core
+and its independent 6Li validation target: `density/he4.density` and
+`density/li6.density` (ANL VMC AV18+UX one-body proton densities, columns
+`R RHORP DRHORP`).  They have their own row-per-file table, URLs, Wayback
+timestamps and md5s in **`data/vmc/density/README.md`** — same format as the
+table above.  Note these are DENSITIES, not overlaps: `bonus_other_clusters/
+he4.dd` and `he4.tp` are two-CLUSTER overlaps of a different decomposition and
+cannot stand in for a one-body density.
+
 ## Not found / not applicable
 
 - **3H → p + nn**: no such file anywhere on the site. It isn't a two-cluster

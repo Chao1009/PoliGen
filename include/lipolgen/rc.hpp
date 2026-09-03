@@ -346,6 +346,18 @@ inline constexpr double LI6_MU_N          = 0.8220473;
 /// 1998), NOT TUNL's; switching to it is a one-constant change and moves
 /// F_q(0) by 1.5 % (-65.914 -> -64.947).
 inline constexpr double LI6_QUADRUPOLE_FM2 = -0.0818;
+/// <r^2>_point(6Li) = 6.0788 fm^2 -> r_point = 2.4655 fm -- the MEASURED
+/// point-nucleon second moment this file already builds `LI6_FF_HO_A_FM` /
+/// `LI6_FF_HO_ALPHA` on (r_ch = 2.589(39) fm, Angeli & Marinova, ADNDT 99
+/// (2013) 69, minus <r^2>_p = 0.7071, plus -<r^2>_n = 0.1155, minus the
+/// Darwin-Foldy 0.033 fm^2), promoted from prose to a NAMED constant because
+/// `cluster_config.hpp` needs it: `eps_b0_equivalent()` divides by
+/// `gaussian_slope(sqrt(LI6_R2_POINT_FM2))` = 52.04 GeV^-2, the MEASURED
+/// slope, so that the number is comparable with `CoherentScenario::slope_b`.
+/// It is exactly the target the (a, alpha) pair above already reproduces --
+/// (3/2) a^2 (2 + 5 alpha)/(2 + 3 alpha) -- so nothing new is asserted here
+/// and no existing number moves.
+inline constexpr double LI6_R2_POINT_FM2 = 6.0788;
 /// Together with `LI6().Z` and `Ion::mass()` these two fix the T11 anchors,
 /// which are DERIVED and never retyped:
 ///   F_c(0) = Z                                          = 3

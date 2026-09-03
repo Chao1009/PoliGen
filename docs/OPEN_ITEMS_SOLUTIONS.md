@@ -17,7 +17,7 @@ the recommended solution, effort, and status. Ordered by leverage.
 | 8 | Spin-3/2 SF basis (plans/04 #14) | **exists** — Jaffe–Manohar NPB 321 (1989); explicit J=3/2 functions arXiv:2209.12161 Eqs. 19a–d; rank-≤2 truncation is *exact* for unpolarized-beam inclusive observables | 5–10 d note | theory note |
 | 9 | Tensor-sector RC (plans/04 #10) | **implemented 2026-09-03** — `rc.hpp`/`rc.cpp`, opt-in `--rc tensor-band`: the two-sided band `rc_tensor_lo`/`rc_tensor_hi` on the tensor part of the rate (δ log-linear, 0.30 at x = 0.01 → 0.015 at x = 0.16) plus `rc_tail`, POLRAD's t-peak elastic tail with its tensor part and the unpolarised quasi-elastic tail. Weight-only, on `Event::rc_weights` and never on `Event::weight`; `--rc off` is byte-identical | done | numbers in §9 below |
 | 10 | b₁ for A > 2 (plans/04 #9) | **implemented 2026-09-03 as an OPT-IN backend, and STILL OPEN** — `b1_nuclear.hpp`/`b1_nuclear.cpp`, `--b1-model li6-convolution`: the **four**-term α–d convolution on the Cosyn–Dong–Kumano–Sargsian kernel (the struck-α orbital term is not optional, it is ≈ 0.5 × the struck-d one). The default stays `Li6B1(MillerB1)`, bit for bit. **The A = 2 validation gate FAILS its magnitude clause** (a factor 2.27 below the digitized CDKS Fig. 4 peak at CDKS Eq. (21)'s δ-function, which the gate now defaults to — 3.68 at Eq. (17)'s κ = 1; the nucleon PDF, the one remaining identified item, closes it to 1.39), so **no ⁶Li number from it may be published** and the item does not close | 10–15 d, ~8 spent | code done, **gate open** — §10 below |
-| 11 | Coherent ⁶Li amplitude (plans/04 #18) | **route changed** — Sartre ruled out (hard-coded nuclei, no polarization axis); use eSTARlight for unpolarized rates (1 d) and `hejajama/subnucleondiffraction` (code of arXiv:2408.13213) with an α+d configuration sampler for the tensor cos 2φ | 1 d / 10–15 d / collab | Mäntysaari-group ask |
+| 11 | Coherent ⁶Li amplitude (plans/04 #18) | **both halves in-tree** — eSTARlight ⁶Li unpolarized rates/slope (2026-09-02, `estarlight_li6.md`) settle `slope_b = 50 ± 10` GeV⁻² as citable and bracket `f0` one-sided, [1.0e-3, 3.0e-2]; the α+d configuration sampler (2026-09-03, `cluster_config.hpp`, `phase_G_numbers.md`) predicts ⁶Li's tensor a₂ ~10× smaller than the deuteron's and of **opposite sign** | done / done / collab | §11 below; Mäntysaari-group ask drafted, not yet sent |
 | 12 | Packaging | **implemented 2026-09-02** — `pyproject.toml` (scikit-build-core) in-tree, `pip install -e .` works (66 s); one copy of each `.so` in `lipolgen/`, `$ORIGIN`+deps-prefix RPATH, data/vmc vendored; portable wheel still needs `auditwheel` + GPL-3 terms | done | see §12–13 below |
 | 13 | License | **GPL-3.0-or-later** (forced by HepMC3/LHAPDF; matches MCnet norms) | 0 | author to confirm |
 
@@ -559,12 +559,234 @@ Sartre: nuclei hard-coded (`Nucleus.cpp` switch, no A = 6), spherical sampling
 (no polarization axis), tables CPU-years (the 2026 speed-up code is unreleased) —
 ruled out. Outdated project claims: 2605.00454 publishes coherent J/ψ down to
 A = 3, 4 with α-clustering; 2511.05638 has e+⁷Li coherent J/ψ |t| distributions
-with tagging efficiency. Path: eSTARlight ⁶Li (1 d) for rates; then an α+d
-configuration sampler (α core from VMC density, p–n pair from AV18 u/w oriented
-by the polarization axis, α–d separation from the VMC momentum distribution)
-grafted into `subnucleondiffraction` (author asks to be contacted). Warn in
-plans/06: photon-polarization cos 2φ (STAR 2204.01625) is a distinct mechanism
-and a background at Q² > 0.
+with tagging efficiency. Path, both halves now **in-tree**: (11.1) eSTARlight
+⁶Li for the unpolarized rate and slope baseline; (11.2) an α+d configuration
+sampler (α core from the VMC density, p–n pair from AV18 u/w oriented by the
+polarization axis, α–d separation from the VMC α–d overlap) whose output grafts
+into `hejajama/subnucleondiffraction` (author asks to be contacted) for the
+tensor cos 2φ. Warn in plans/06: photon-polarization cos 2φ (STAR 2204.01625)
+is a distinct mechanism and a background at Q² > 0.
+
+### 11.1 eSTARlight — the unpolarized rate and slope baseline
+
+**In-tree since 2026-09-02.** eSTARlight (`github.com/eic/estarlight`, commit
+`939b11a24499398392d959db81c7502aeec91046`, same code arXiv:2511.05638 cites)
+runs e+⁶Li today with no code change — `nucleus::init()` has no Z = 3 case, so
+it falls to the generic light-nucleus branch (`_Radius = 1.2·A^{1/3}`, Gaussian
+form factor). Full run log, input files and an adversarial re-check are
+`docs/open_items/run_2026-09-02/estarlight_li6.md`; nothing there was
+committed. 2×10⁵ events per channel, `0.1 < Q² < 100 GeV²` (arXiv:2511.05638's
+own window), e 10 GeV × ⁶Li 99.5 GeV/u:
+
+| channel | σ_coh (default R = 2.1805 fm) | B fitted [GeV⁻²] | σ_coh (measured R = 2.589 fm) | B fitted |
+|---|---|---|---|---|
+| coherent ρ⁰ | **506.4 nb** | 38.6 | 379.5 nb | 54.1 |
+| coherent φ | **30.16 nb** | 39.2 | 22.08 nb | 54.8 |
+| coherent J/ψ | **1.773 nb** | 38.9 | 1.255 nb | 55.0 |
+
+The fitted slope is VM-independent to 1.5 % (there is no VM-dependent slope in
+a coherent Gaussian-form-factor calculation) and reproduces the analytic
+B = R_G²/(3ħc²) to 4 %. The ⁷Li cross-check against arXiv:2511.05638 (identical
+configuration, same commit-era code, same Q² window, same beam) agrees with
+every *shape* statement the paper makes — no diffractive minimum, the |t| slope
+and the Fourier-transform width read off its Figs. 6–7 — but the paper quotes
+no absolute σ, so no number-to-number check is possible.
+
+**Conclusion for `CoherentScenario::slope_b`.** `gaussian_slope(r_rms)` in
+`coherent.cpp` (B = R_rms²/(3ħ²c²)) is algebraically the same object as
+eSTARlight's light-nucleus form factor; only the radius differs. The scenario
+band `slope_b ∈ {40, 60}` GeV⁻² corresponds to R_rms ∈ {2.162, 2.647} fm, which
+brackets almost exactly the two defensible ⁶Li densities — eSTARlight's own
+`1.2·A^{1/3}` (fitted **38.6–39.2**) at the bottom and the Angeli–Marinova
+measured charge radius 2.589 fm (fitted **54.1–55.0**) at the top, i.e. a
+citable **B = 39–55 GeV⁻²** band from simulation rather than a hand-tuned one.
+**`slope_b = 50 ± 10` survives contact with eSTARlight unchanged, and the band
+could be tightened to 45–58 GeV⁻² but there is no reason to** — the ±30 % rate
+swing between the two radii shows the density assumption, not the dynamics, is
+the leading systematic.
+
+**Conclusion for `CoherentScenario::f0`.** eSTARlight generates *exclusive*
+vector-meson production only — M_X is the meson mass exactly, with no
+diffractive continuum — so **it cannot measure f0**, LiPolGen's coherent
+fraction of the DIS rate at x → 0. What it *can* bound: running ⁶Li at
+`MIN_GAMMA_Q2 = 0.7` against `generate_inclusive`'s σ_incl = 592 nb in the same
+window gives σ(ρ+φ+J/ψ)/σ_incl = 3.0 × 10⁻² (all three channels; f0 = 0.04 is
+not refuted at the order-of-magnitude level, but 90 % of this is ρ⁰, which sits
+below LiPolGen's own M_X ≥ 1.2 GeV coherent floor) and
+σ(J/ψ only)/σ_incl = **1.0 × 10⁻³** — the one channel actually inside
+LiPolGen's window, and therefore a genuine **lower bound**, 40× below f0 = 0.04,
+on the part of coherent diffraction eSTARlight's exclusive-VM model can see.
+Determining f0 itself needs a coherent diffractive-DIS calculation (a
+coherent-A analogue of the H1/ZEUS diffractive PDFs) that exists in neither
+eSTARlight nor Sartre; **recommendation: leave `f0 = 0.04` and its {0.02, 0.08}
+band as a scenario**, record eSTARlight's one-sided bracket
+[1.0 × 10⁻³, 3.0 × 10⁻²] in `coherent.hpp`, and do not treat it as a
+determination.
+
+Caveats carried forward unchanged from `estarlight_li6.md` §6: one spherically
+symmetric Gaussian density (no α+d clustering, no polarization axis, no
+diffractive minimum — not an imaging baseline), and no saturation.
+
+### 11.2 The α+d configuration sampler — the tensor cos 2Φ half
+
+**In-tree since 2026-09-03**: `include/lipolgen/cluster_config.hpp` +
+`src/core/cluster_config.cpp`, `lipolgen-configs`,
+`tests/test_cluster_config.cpp`, `python/tests/test_cluster_config.py`, design
+`docs/open_items/run_2026-09-02/design_G_cluster_config.md`, numbers
+`.../phase_G_numbers.md`. **Opt-in and inert**: nothing in the generator calls
+it, `CoherentScenario` is untouched, and its output is a file. It writes
+`he3.dat`-compatible position tables (fm, ion rest frame, c.m. at the origin,
+the polarization axis applied) plus a sidecar carrying the axis, the substate,
+every option and every input table's md5. `docs/USAGE.md` §9 has the CLI,
+the Python API and the output format.
+
+**What it is.** ⁶Li(1⁺) as a rigid α(0⁺) core plus a deuteron with relative
+L = 0, 2 coupled to S = 1: the α's four nucleons come from the ANL VMC ⁴He
+one-body density (recentred so the configuration's own c.m. sits at the
+origin, exactly), the α–d separation R and its orientation from the ANL VMC
+α–d overlap (S+D wave, `li6.ad`/`li6.adr.fit`), and the p–n pair from AV18
+u(r)/w(r) — all three sharing one drawn deuteron projection m_S per
+configuration, so the R̂-to-r̂ correlation the design calls out is kept and
+only the *relative azimuth* of the two is dropped (`tagged.hpp`'s own
+truncation, in r space).
+
+**The three m-state densities.** One (R, cos θ_R) table per (m, m_S) pair —
+nine tables total, the same discipline `TaggedModel::build_amp2` uses in
+k-space — because sampling R̂ from the m_S-*summed* density instead would
+decorrelate it from the deuteron spin a moment test cannot see: for m = +1
+the exact ⟨P₂(cos θ_R)⟩ is −2/7 at m_S = −1 and +1/7 at m_S = 0 —
+reproduced by the sampler's grid to 1e-6 for m_S = −1 and to 2.3e-4 at the
+default 96 cos θ cells for m_S = 0 (1e-6 at n_c = 3072: a midpoint-rule
+residue at the simple zero of |Θ₂¹|², `phase_G_numbers.md` §3) — while an
+m_S-marginal draw would give the m_S-**summed** ⟨P₂⟩ = **−0.0370** in
+*every* branch (the design's own earlier estimate of it is −0.0355), which
+the two conditioned branches sit 46σ and 17σ away from in a
+2×10⁵-configuration test.
+The three substates m = +1, 0, −1 (plus the interleaved unpolarized mix) all
+read the *same* radial tables; only the Clebsch–Gordan recoupling changes.
+
+**The quadrupole puzzle, and how the sampler handles it rather than hides
+it.** This geometry's own point-matter quadrupole overshoots the measured
+one by a factor ≈ 7.5: Q_charge(⁶Li) = **−0.615 fm²** (model range
+−0.615…−0.730 across the three α–d sources) against the measured
+**−0.0818 fm²** (`LI6_QUADRUPOLE_FM2`) and GFMC AV18+IL7's **−0.20(6) fm²**
+(Pastore *et al.*, PRC 87, 035503 (2013)) — an independent-Hamiltonian
+comparison point, not a check on the same tables. The asymptotic α–d D/S
+ratio, correctly divided by the Coulomb Whittaker ratio (which is 3.3 at
+R = 6 fm and 2.6 at R = 8 fm — the naive R₂/R₀ is *not* the asymptotic ratio),
+gives **η = −0.048** against the measured **η = −0.025 ± 0.006 ± 0.010**
+(George & Knutson, PRC 59, 598 (1999)): a real but *moderate* ≈ 2× D-wave
+excess, not the 5–15× a naive ratio suggests — which demotes an ANL
+normalization/phase-convention error as the leading explanation (design O1).
+The sampler does not paper over the gap: `quadrupole_band_fm2()` returns all
+three numbers together and the writer stamps them on every output, and
+**the rule stands — do not derive a published tensor input from this
+geometry alone.** A `quadrupole_target_fm2` **deformation dial** (not a
+wave-function fit) can rescale the α–d D-wave to land the geometry's own
+Q_charge on any target in the reachable range [−0.615, +0.270] fm²; the root
+for the measured Q(⁶Li) is s = 0.4032, which drags P_D(α–d) down to
+3.3 × 10⁻³ from 0.02011 — the dial trades away the natural D-state
+probability to match the tensor moment, and the sidecar always records which
+choice was made.
+
+**The measured numbers** (default `FitRescaled` source; full table, all
+three sources and the grid-vs-analytic quadrature study in
+`phase_G_numbers.md`): ⟨r²⟩(⁶Li) = **6.4447 fm²** (r_rms 2.5386 fm, 4 % above
+the measured point radius 2.4655 fm); the point-matter quadrupole per
+substate, Q_matter(m) = (3m² − 2)·[(4/3) Q[R₀,R₂] + 2 Q_d D_T] (eq. (G5)),
+is **Q_matter(±1) = −1.2309 fm²** and **Q_matter(0) = +2.4618 fm²** — the two
+non-zero substates carry opposite sign by construction, and Q_matter(+1)/2 is
+exactly the Q_charge(+1) quoted above. A 2×10⁵-configuration Monte Carlo
+closure reproduces both to within 5σ of the sampler's own per-configuration
+variance (sampled ⟨r²⟩ = 6.4483 vs 6.4447, 5σ = 0.041; sampled
+Q_matter(+1) = −1.2216 vs −1.2309, 5σ = 0.322), and Σᵢ r⃗ᵢ = 0 to 2.2 × 10⁻¹⁵ fm
+worst component over 20 000 configurations. Feeding Q_matter(+1) through the
+closed-form (G7)+(G8) quadrupole → a₂ map — which reproduces the only
+published polarized coherent calculation, Mäntysaari *et al.*'s digitized
+deuteron a₂, to 8 % at m = ±1 and 8–21 % at m = 0 with **zero free
+parameters** — gives a₂(±1) = **+0.1976** at |t| = 0.3 GeV² for this
+geometry's own (overshot) Q, and **+0.026** for the *measured* Q(⁶Li) — about
+10× smaller than the deuteron's and of the **opposite sign**, because
+Q(⁶Li) < 0 while Q_d > 0. **Timing**: 0.54 µs/config in-process, 1.31 µs/config
+through the `lipolgen-configs` CLI, both well inside the design's < 5 µs/config
+target; a 10⁵-configuration table with its sidecar writes in ≈ 1 s.
+
+**How the graft would consume the table.** The writer emits one line per
+configuration in `he3.dat`'s own layout, in fm, ion rest frame, c.m. at the
+origin, with the polarization axis already applied — so the consumer needs no
+knowledge of our conventions beyond "these are the six nucleon positions."
+Their side then needs the `-configfile/-configid` generalization described
+below. Their Good–Walker loop is unchanged; the amplitude uses only x and y.
+One set per m ∈ {+1, 0, −1} plus one unpolarized set; a₂ comes out of the Φ
+dependence of ⟨A⟩ exactly as in their Fig. 2.
+
+**The exact ask to send the Mäntysaari group** (`design_G_cluster_config.md`
+§10, verbatim):
+
+> We have built an α+d configuration sampler for polarized ⁶Li that emits
+> nucleon-position tables in exactly the format `Nucleons::InitializeTarget`
+> reads for ³He (positions in fm, c.m. at the origin, one configuration per
+> line), with the polarization axis and the substate m = +1, 0, −1 applied and
+> recorded. The α core comes from your ANL VMC/GFMC ⁴He one-body density, the
+> p–n pair from AV18 u(r), w(r) with the full m_S angular correlation (your
+> Eqs. (7)–(8), which we reproduce exactly), and the α–d separation from the
+> ANL VMC α–d overlap with the L = 2 orientation correlated to m through the
+> CG recoupling. Three concrete requests, in increasing size. **(a)** Would you
+> share the ⁴He GFMC nucleon configurations used in arXiv:2605.00454? Our α
+> core is currently an uncorrelated product of one-body densities, which is the
+> weakest part of the sampler and the one part you already have solved.
+> **(b)** Would you accept a ~30-line generalization of the `A == 3` branch to
+> an `-configfile/-configid` option for any A? We can send the patch; it makes
+> the code A-agnostic and removes the 13698-configuration bound. **(c)** The
+> polarized-deuteron machinery of arXiv:2408.13213 is not in any public branch
+> of the repository — would you run your existing polarized setup on our ⁶Li
+> configuration tables, or release that branch? Two honest caveats we would
+> want your view on before you spend time: our α+d model reproduces the ⁶Li
+> point radius to 4 % but overshoots Q(⁶Li) by a factor ≈ 7.5 (measured
+> −0.0818 fm², our α+d geometry −0.615…−0.730 fm², **GFMC AV18+IL7 −0.20(6) fm²**,
+> Pastore *et al.*, PRC 87, 035503 (2013)), so the tensor amplitude carries a
+> factor-of-several systematic that we would carry explicitly as a band. The
+> α–d asymptotic D/S ratio of the overlap we use is η ≈ −0.05 against the
+> measured −0.025(12), so the excess is a real but moderate D-wave effect rather
+> than a convention error. And a closed-form quadrupole → a₂ map that reproduces
+> your published deuteron a₂(m = ±1) to 8 % at every |t| predicts that ⁶Li's
+> a₂ is ~10× smaller than the deuteron's **and of the opposite sign**, because
+> Q(⁶Li) < 0. That sign flip is the interesting measurement and it is also the
+> reason the effect is small — we would rather establish that together, before
+> either side commits person-months.
+
+**What remains open.** The tensor cos 2Φ prediction above (a₂(±1) ≈ +0.026 at
+the measured Q, opposite sign and ~10× smaller than the deuteron's) is a
+closed-form estimate from the geometry's own point-matter quadrupole — **it is
+not yet a coherent-diffraction amplitude from a dipole-model run**, and it
+cannot become one without the actual `subnucleondiffraction` graft (ask (b)
+and (c) above): the Good–Walker amplitude, its Φ-averaging and its own
+statistical and saturation-model uncertainties are not reproduced by
+`a2_from_quadrupole`, which only carries the target's quadrupole moment
+through the deuteron's own published |t| dependence. Also still open, in the
+design's own numbering: **O1** how a moderate (≈2×) D-wave excess and a
+missing ≈15 % non-α+d component together produce the observed 7.5× gap in Q;
+**O2** whether the smoothed `li6.adr.fit` R₂ node near 1.1 fm is a real
+short-range effect or a fit artefact (decides the honest default between
+`FitRescaled` and `OverlapRaw`); **O3** how much an uncorrelated α core (vs.
+GFMC ⁴He configurations with correlations) moves the incoherent/coherent
+split; **O4** the `eps_b0` convention (`coherent.hpp` uses ΔB without
+defining it — a separate, reviewed decision, not taken here); **O5** whether
+the ⁶Li a₂ survives EIC statistics at all and separates from the
+linearly-polarized-photon cos 2φ background (`physics_literature.md`'s
+two-mechanism warning) — answerable today from the numbers above plus a rate
+estimate, and the question that decides whether the collaboration is worth
+proposing.
+
+**The rule of this section is unchanged and is now quantified rather than
+repealed: do not derive a tensor input for a published observable from these
+wave functions.** The α+d truncation reproduces the ⁶Li radius to 3–4 % but
+overshoots Q(⁶Li) by **7.5×** (model −0.615…−0.730 fm² against the measured
+−0.0818 and GFMC AV18+IL7's −0.20(6), Pastore *et al.*, PRC 87, 035503
+(2013)). `quadrupole_band_fm2()` returns all three and the writer stamps them;
+the `quadrupole_target_fm2` dial can put the geometry on the measured Q, but
+it is a **deformation dial, not a wave function**, and the sidecar labels it
+as one.
 
 ## 12–13. Engineering
 

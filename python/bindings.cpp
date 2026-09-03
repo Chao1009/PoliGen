@@ -44,6 +44,7 @@
 #include "lipolgen/beams.hpp"
 #include "lipolgen/bookkeeping.hpp"
 #include "lipolgen/cluster.hpp"
+#include "lipolgen/cluster_config.hpp"
 #include "lipolgen/coherent.hpp"
 #include "lipolgen/constants.hpp"
 #include "lipolgen/event.hpp"
@@ -109,6 +110,22 @@ py::array_t<T> move_array2(std::vector<T>&& v, py::ssize_t ncol) {
   return py::array_t<T>({n, ncol},
                         {static_cast<py::ssize_t>(sizeof(T)) * ncol,
                          static_cast<py::ssize_t>(sizeof(T))},
+                        held->data(), owner);
+}
+
+/// Move a flat std::vector into an (n, d1, d2) numpy array.  `move_array2`
+/// is 2-D only, and `ClusterConfigSet::positions()` is (N, 6, 3).
+template <typename T>
+py::array_t<T> move_array3(std::vector<T>&& v, py::ssize_t d1, py::ssize_t d2) {
+  auto* held = new std::vector<T>(std::move(v));
+  py::capsule owner(held, [](void* p) {
+    delete reinterpret_cast<std::vector<T>*>(p);
+  });
+  const py::ssize_t stride = static_cast<py::ssize_t>(sizeof(T));
+  const py::ssize_t n =
+      d1 * d2 > 0 ? static_cast<py::ssize_t>(held->size()) / (d1 * d2) : 0;
+  return py::array_t<T>({n, d1, d2},
+                        {stride * d1 * d2, stride * d2, stride},
                         held->data(), owner);
 }
 
@@ -627,6 +644,7 @@ static void bind_bookkeeping(py::module_& m);
 static void bind_sampler(py::module_& m);
 static void bind_spectator(py::module_& m);
 static void bind_tagged(py::module_& m);
+static void bind_cluster_config(py::module_& m);
 static void bind_fsi(py::module_& m);
 static void bind_rc(py::module_& m);
 static void bind_coherent(py::module_& m);
@@ -699,6 +717,7 @@ PYBIND11_MODULE(_lipolgen, m) {
   bind_sampler(m);
   bind_spectator(m);
   bind_tagged(m);
+  bind_cluster_config(m);
   bind_fsi(m);
   bind_rc(m);
   bind_coherent(m);
@@ -2366,6 +2385,245 @@ static void bind_tagged(py::module_& m) {
 }
 
 // -------------------------------------------------------------------- fsi
+
+// -------------------------------------------------- cluster_config.hpp (G)
+//
+// OPT-IN AND INERT: nothing in the generator calls this module.  Every option
+// field, every analytic predictor and every constant is bound, and
+// python/tests/test_cluster_config.py exercises them.
+
+static void bind_cluster_config(py::module_& m) {
+  m.attr("CONFIG_STREAM") = py::int_(kConfigStream);
+  m.attr("LI6_R_POINT_VMC_FM") = LI6_R_POINT_VMC_FM;
+  m.attr("LI6_QUADRUPOLE_GFMC_FM2") = LI6_QUADRUPOLE_GFMC_FM2;
+  m.attr("LI6_QUADRUPOLE_GFMC_ERR_FM2") = LI6_QUADRUPOLE_GFMC_ERR_FM2;
+  m.attr("LI6_R2_POINT_FM2") = LI6_R2_POINT_FM2;
+  m.attr("VMC_HE4_DENSITY") = VMC_HE4_DENSITY;
+  m.attr("VMC_LI6_DENSITY") = VMC_LI6_DENSITY;
+  m.attr("VMC_LI6_AD_FIT") = VMC_LI6_AD_FIT;
+  m.attr("VMC_DEUTERON_WAVE") = VMC_DEUTERON_WAVE;
+
+  py::enum_<AlphaCoreSource>(m, "AlphaCoreSource",
+      "Where the alpha core's one-body point-nucleon density comes from.")
+      .value("VmcHe4Density", AlphaCoreSource::VmcHe4Density)
+      .value("Gaussian", AlphaCoreSource::Gaussian);
+
+  py::enum_<AlphaDSource>(m, "AlphaDSource",
+      "Where the alpha-d relative radial functions R_0, R_2 come from.")
+      .value("FitRescaled", AlphaDSource::FitRescaled)
+      .value("FitRaw", AlphaDSource::FitRaw)
+      .value("OverlapRaw", AlphaDSource::OverlapRaw);
+
+  py::enum_<SndConfigFormat>(m, "SndConfigFormat",
+      "he3.dat-compatible (numeric rows only) or '#'-annotated.")
+      .value("He3Compatible", SndConfigFormat::He3Compatible)
+      .value("Annotated", SndConfigFormat::Annotated);
+
+  py::class_<ClusterConfigOptions>(m, "ClusterConfigOptions",
+      "All 13 knobs of the 6Li configuration sampler; every one of them is "
+      "recorded in the writer's sidecar.")
+      .def(py::init<>())
+      .def_readwrite("alpha_source", &ClusterConfigOptions::alpha_source)
+      .def_readwrite("alpha_d_source", &ClusterConfigOptions::alpha_d_source)
+      .def_readwrite("theta_s", &ClusterConfigOptions::theta_s)
+      .def_readwrite("phi_s", &ClusterConfigOptions::phi_s)
+      .def_readwrite("alpha_cm_inflate", &ClusterConfigOptions::alpha_cm_inflate)
+      .def_readwrite("min_nn_separation_fm",
+                     &ClusterConfigOptions::min_nn_separation_fm)
+      .def_readwrite("alpha_d_scale", &ClusterConfigOptions::alpha_d_scale)
+      .def_readwrite("quadrupole_target_fm2",
+                     &ClusterConfigOptions::quadrupole_target_fm2)
+      .def_readwrite("exact_coherence", &ClusterConfigOptions::exact_coherence)
+      .def_readwrite("n_r", &ClusterConfigOptions::n_r)
+      .def_readwrite("n_c", &ClusterConfigOptions::n_c)
+      .def_readwrite("r_max_fm", &ClusterConfigOptions::r_max_fm)
+      .def_readwrite("rnp_max_fm", &ClusterConfigOptions::rnp_max_fm)
+      .def("validate", &ClusterConfigOptions::validate);
+
+  py::class_<NucleonPos>(m, "NucleonPos",
+      "One nucleon: position [fm] in the ion rest frame, isospin (+1 p, -1 n) "
+      "and cluster (0 alpha core, 1 deuteron).")
+      .def_readonly("x", &NucleonPos::x)
+      .def_readonly("y", &NucleonPos::y)
+      .def_readonly("z", &NucleonPos::z)
+      .def_readonly("isospin", &NucleonPos::isospin)
+      .def_readonly("cluster", &NucleonPos::cluster);
+
+  py::class_<ClusterConfig>(m, "ClusterConfig",
+      "One 6Li configuration: six nucleons, c.m. at the origin.")
+      .def_property_readonly("nucleon", [](const ClusterConfig& c) {
+        std::vector<NucleonPos> v(c.nucleon.begin(), c.nucleon.end());
+        return v;
+      })
+      .def_readonly("m_ion", &ClusterConfig::m_ion)
+      .def_readonly("m_s", &ClusterConfig::m_s)
+      .def_readonly("r_ad", &ClusterConfig::r_ad)
+      .def_readonly("r_np", &ClusterConfig::r_np)
+      .def_property_readonly("positions", [](const ClusterConfig& c) {
+        std::vector<double> p;
+        p.reserve(18);
+        for (int i = 0; i < 6; ++i) {
+          p.push_back(c.nucleon[i].x);
+          p.push_back(c.nucleon[i].y);
+          p.push_back(c.nucleon[i].z);
+        }
+        return move_array2(std::move(p), 3);
+      });
+
+  py::class_<ClusterConfigSet>(m, "ClusterConfigSet",
+      "N configurations plus the moments and per-configuration standard "
+      "deviations every Monte Carlo gate is written against.")
+      .def_readonly("config", &ClusterConfigSet::config)
+      .def_readonly("m_ion", &ClusterConfigSet::m_ion)
+      .def_readonly("theta_s", &ClusterConfigSet::theta_s)
+      .def_readonly("phi_s", &ClusterConfigSet::phi_s)
+      .def_readonly("seed", &ClusterConfigSet::seed)
+      .def_readonly("run", &ClusterConfigSet::run)
+      .def_readonly("provenance", &ClusterConfigSet::provenance)
+      .def_readonly("r2_mean_fm2", &ClusterConfigSet::r2_mean_fm2)
+      .def_readonly("q_matter_fm2", &ClusterConfigSet::q_matter_fm2)
+      .def_readonly("delta_perp_fm2", &ClusterConfigSet::delta_perp_fm2)
+      .def_readonly("r2_sd_fm2", &ClusterConfigSet::r2_sd_fm2)
+      .def_readonly("q_matter_sd_fm2", &ClusterConfigSet::q_matter_sd_fm2)
+      .def_readonly("delta_perp_sd_fm2", &ClusterConfigSet::delta_perp_sd_fm2)
+      .def_property_readonly("cm_max", [](const ClusterConfigSet& s) {
+        return s.cm[0];
+      })
+      .def("__len__", [](const ClusterConfigSet& s) { return s.config.size(); })
+      .def_property_readonly("positions", [](const ClusterConfigSet& s) {
+        std::vector<double> p;
+        p.reserve(s.config.size() * 18);
+        for (const ClusterConfig& c : s.config) {
+          for (int i = 0; i < 6; ++i) {
+            p.push_back(c.nucleon[i].x);
+            p.push_back(c.nucleon[i].y);
+            p.push_back(c.nucleon[i].z);
+          }
+        }
+        return move_array3(std::move(p), 6, 3);
+      }, "(N, 6, 3) float64 array of nucleon positions [fm].")
+      .def_property_readonly("isospin", [](const ClusterConfigSet& s) {
+        std::vector<std::int64_t> t;
+        t.reserve(s.config.size() * 6);
+        for (const ClusterConfig& c : s.config) {
+          for (int i = 0; i < 6; ++i) {
+            t.push_back(static_cast<std::int64_t>(c.nucleon[i].isospin));
+          }
+        }
+        return move_array2(std::move(t), 6);
+      }, "(N, 6) int64 array of isospins (+1 proton, -1 neutron).")
+      .def_property_readonly("m_ion_per_config", [](const ClusterConfigSet& s) {
+        std::vector<std::int64_t> v;
+        v.reserve(s.config.size());
+        for (const ClusterConfig& c : s.config) {
+          v.push_back(static_cast<std::int64_t>(c.m_ion));
+        }
+        return move_array(std::move(v));
+      })
+      .def_property_readonly("m_s", [](const ClusterConfigSet& s) {
+        std::vector<double> v;
+        v.reserve(s.config.size());
+        for (const ClusterConfig& c : s.config) v.push_back(c.m_s);
+        return move_array(std::move(v));
+      });
+
+  py::class_<RadialMoments>(m, "RadialMoments",
+      "The (G4)/(G6) functionals of a tabulated radial pair.")
+      .def_readonly("n0", &RadialMoments::n0)
+      .def_readonly("n2", &RadialMoments::n2)
+      .def_readonly("r2", &RadialMoments::r2)
+      .def_readonly("q_int", &RadialMoments::q_int)
+      .def_readonly("q_dd", &RadialMoments::q_dd)
+      .def("norm", &RadialMoments::norm)
+      .def("p_d", &RadialMoments::p_d)
+      .def("quadrupole", &RadialMoments::quadrupole);
+
+  m.def("cluster_amp2", &cluster_amp2, py::arg("f0"), py::arg("f2"),
+        py::arg("m"), py::arg("m_s"), py::arg("c"),
+        "(G1'): one m_S branch of the master angular density.");
+  m.def("cluster_density", &cluster_density, py::arg("f0"), py::arg("f2"),
+        py::arg("m"), py::arg("c"),
+        "(G1): the m_S-summed master angular density.");
+  m.def("radial_moments", &radial_moments, py::arg("x"), py::arg("f0"),
+        py::arg("f2"));
+  m.def("a2_from_quadrupole", &a2_from_quadrupole, py::arg("q_matter_fm2"),
+        py::arg("a"), py::arg("t_abs"), py::arg("m"),
+        "a_2(m) at |t| from the m = +-1 point-matter quadrupole; the m = 0 "
+        "value follows internally from delta_0 = -2 delta_{+-1}.");
+
+  py::class_<ClusterConfigSampler>(m, "ClusterConfigSampler",
+      "Nucleon-position configurations of a polarized 6Li in the alpha + d "
+      "cluster picture.  Immutable after construction, so it is thread safe "
+      "with no lock.  Its tensor output carries a factor-of-several "
+      "wave-function systematic -- always quote quadrupole_band_fm2().")
+      .def(py::init<ClusterConfigOptions>(),
+           py::arg("options") = ClusterConfigOptions{})
+      .def_property_readonly("options", &ClusterConfigSampler::options)
+      .def_property_readonly("provenance", &ClusterConfigSampler::provenance)
+      .def("sample", &ClusterConfigSampler::sample, py::arg("rng"),
+           py::arg("m_ion"))
+      .def("sample_set", &ClusterConfigSampler::sample_set, py::arg("n"),
+           py::arg("m_ion"), py::arg("seed"), py::arg("run") = 0)
+      .def("sample_set_unpolarized",
+           &ClusterConfigSampler::sample_set_unpolarized, py::arg("n"),
+           py::arg("seed"), py::arg("run") = 0)
+      .def("p_d_alpha_d", &ClusterConfigSampler::p_d_alpha_d)
+      .def("s_alpha_d", &ClusterConfigSampler::s_alpha_d)
+      .def("tensor_dilution", &ClusterConfigSampler::tensor_dilution)
+      .def("q_matter_analytic_fm2",
+           &ClusterConfigSampler::q_matter_analytic_fm2, py::arg("m"))
+      .def("q_int_fm2", &ClusterConfigSampler::q_int_fm2)
+      .def("q_dd_fm2", &ClusterConfigSampler::q_dd_fm2)
+      .def("r2_analytic_fm2", &ClusterConfigSampler::r2_analytic_fm2)
+      .def("delta_perp_analytic_fm2",
+           &ClusterConfigSampler::delta_perp_analytic_fm2, py::arg("m"))
+      .def("asymptotic_ds_ratio", &ClusterConfigSampler::asymptotic_ds_ratio)
+      .def("a2_from_geometry", &ClusterConfigSampler::a2_from_geometry,
+           py::arg("t_abs"), py::arg("m"))
+      .def("eps_b0_equivalent", &ClusterConfigSampler::eps_b0_equivalent)
+      .def("match_li6_radius", &ClusterConfigSampler::match_li6_radius,
+           py::arg("target_rms_fm") = LI6_R_POINT_VMC_FM)
+      .def("quadrupole_band_fm2", &ClusterConfigSampler::quadrupole_band_fm2,
+           "{measured, GFMC AV18+IL7, THIS source's} Q_charge [fm^2].")
+      .def("quadrupole_dial_s", &ClusterConfigSampler::quadrupole_dial_s)
+      .def("r2_grid_fm2", &ClusterConfigSampler::r2_grid_fm2)
+      .def("q_matter_grid_fm2", &ClusterConfigSampler::q_matter_grid_fm2,
+           py::arg("m"))
+      .def("p2_alpha_d_grid", &ClusterConfigSampler::p2_alpha_d_grid,
+           py::arg("m"), py::arg("m_s"))
+      .def("p_ms", &ClusterConfigSampler::p_ms, py::arg("m"), py::arg("m_s"))
+      .def("rho_alpha", &ClusterConfigSampler::rho_alpha, py::arg("r_fm"))
+      .def("rho_alpha_recentred", &ClusterConfigSampler::rho_alpha_recentred,
+           py::arg("s_fm"))
+      .def("rho_alpha_d", &ClusterConfigSampler::rho_alpha_d, py::arg("R_fm"),
+           py::arg("c"), py::arg("m"), py::arg("m_s"))
+      .def("rho_alpha_d_summed", &ClusterConfigSampler::rho_alpha_d_summed,
+           py::arg("R_fm"), py::arg("c"), py::arg("m"))
+      .def("rho_np", &ClusterConfigSampler::rho_np, py::arg("r_fm"),
+           py::arg("c"), py::arg("m_s"))
+      .def("r2_alpha_fm2", &ClusterConfigSampler::r2_alpha_fm2)
+      .def("r2_np_fm2", &ClusterConfigSampler::r2_np_fm2)
+      .def("r2_alpha_d_fm2", &ClusterConfigSampler::r2_alpha_d_fm2)
+      .def_property_readonly("alpha_d_grid", [](const ClusterConfigSampler& s) {
+        return copy_array(s.alpha_d_grid());
+      })
+      .def("alpha_d_wave", [](const ClusterConfigSampler& s, int l) {
+        return copy_array(s.alpha_d_wave(l));
+      }, py::arg("l"))
+      .def_property_readonly("np_grid", [](const ClusterConfigSampler& s) {
+        return copy_array(s.np_grid());
+      })
+      .def("np_wave", [](const ClusterConfigSampler& s, int l) {
+        return copy_array(s.np_wave(l));
+      }, py::arg("l"));
+
+  m.def("write_snd_configs", &write_snd_configs, py::arg("set"),
+        py::arg("sampler"), py::arg("path"),
+        py::arg("fmt") = SndConfigFormat::He3Compatible,
+        "Write the configuration table plus its mandatory `.meta.json` "
+        "sidecar; returns the number of rows.  `md5` and `git` are emitted "
+        "as null for lipolgen.configs to fill in.");
+}
 
 static void bind_fsi(py::module_& m) {
   m.attr("GEV2_TO_MB") = GEV2_TO_MB;

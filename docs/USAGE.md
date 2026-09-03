@@ -933,3 +933,156 @@ A `generate_range` buffer costs cache, not allocations, so prefer
 dropped. HepMC3 output is the bottleneck when it is on (~18 k ev/s), and the
 T2 (PYTHIA) tier runs at ~40 k ev/s. Threading helps only when the per-event
 work is heavy; on bare T0/T1 the events are already ~1 µs.
+
+## 9. Polarized ⁶Li configurations for coherent-diffraction codes
+
+`include/lipolgen/cluster_config.hpp` is **opt-in and inert**: nothing in the
+generator calls it, it adds no default and changes no existing number. It
+produces *nucleon-position configurations* of a polarized ⁶Li — N × 6 × (x, y,
+z in fm, isospin) — the input a Good–Walker dipole-model code
+(`hejajama/subnucleondiffraction`, arXiv:2408.13213) averages the coherent
+amplitude over. It is **not** a diffractive amplitude and not a cross
+section; `CoherentScenario` keeps its scenario numbers unchanged, and this
+module is the tensor cos 2Φ half of open item 11 (`OPEN_ITEMS_SOLUTIONS.md`
+§11 has the unpolarized eSTARlight half and the full derivation).
+
+**Physics, in one paragraph.** ⁶Li(1⁺) is a rigid α(0⁺) core plus a deuteron
+with relative L = 0, 2 coupled to S = 1 — the same recoupling `tagged.hpp`
+already implements, read in r space instead of k space. For each ion
+substate m the deuteron projection m_S is drawn first, then (R, cos θ_R)
+from the **m_S-conditioned** table |A_{m_S}(m; R, c)|² (`build_amp2`'s own
+discipline, not the m_S-summed density — `rho_alpha_d_summed` exists for
+plots only and must not be sampled from), then the p–n pair from AV18 u/w
+for that same m_S; the α's four nucleons come from the ANL VMC ⁴He one-body
+density, drawn independently and then recentred so Σ s⃗_i = 0 exactly (worst
+component 2.2e-15 fm over 20 000 configurations). That is the same diagonal
+truncation `tagged.hpp` makes and documents: only the *relative* azimuth of
+R̂ and r̂ is lost, and neither ⟨r²⟩ nor the quadrupole Q is affected by it.
+The three m-state densities differ only through the Clebsch–Gordan
+recoupling C_L(m, m_S) — the same radial tables feed all of m = +1, 0, −1.
+Throughput is 0.54 µs/config in-process and 1.31 µs/config through the CLI
+(1.06 s wall for 10⁵ configurations including a 37 MB write and its md5),
+both against a < 5 µs/config target.
+
+**CLI and Python entry.**
+
+```bash
+./build/lipolgen-configs --m +1 --n 100000 --theta-s 1.5707963 --phi-s 0 \
+    --seed 20260902 --out li6_m+1.dat --moments-json li6_m+1.moments.json
+./build/lipolgen-configs --m unpolarized --n 100000 --out li6_unpol.dat
+```
+
+`--m {+1,0,-1,unpolarized}` (`1` also accepted for `+1`),
+`--alpha-source {vmc,gaussian}`, `--alpha-d-source {fit-rescaled,fit-raw,overlap-raw}`,
+`--alpha-d-scale`, `--match-li6-radius`, `--quadrupole-target`,
+`--min-nn-separation`, `--format {he3,annotated}`. Installed as the console
+script `lipolgen-configs`; `python -m lipolgen.configs` is the same thing.
+From Python:
+
+```python
+import lipolgen as lg
+s = lg.ClusterConfigSampler()                 # transverse axis by default
+st = s.sample_set(100000, m_ion=1, seed=20260902)
+st.positions.shape                            # (100000, 6, 3) float64, fm
+st.isospin.shape                              # (100000, 6) int64
+s.q_matter_analytic_fm2(1), s.eps_b0_equivalent()
+```
+
+**The m-state and axis conventions.** `m_ion` is the ⁶Li substate the
+configuration was drawn for, {+1, 0, −1}, or the interleaved unpolarized mix
+(`sample_set_unpolarized`, reported as m = −2, equal thirds to within one
+count). The quantization axis is `(theta_s, phi_s)` in the ion rest frame,
+applied as R_z(φ_s) R_y(θ_s) — the identical convention `spin.hpp` /
+`tagged.hpp` use for `boost_spectator`. The default is **transverse**,
+θ_s = π/2, because the cos 2Φ signal needs it: with the axis along the beam
+the projected density is azimuthally symmetric and a₂ ≡ 0 for every m — not
+an error, `delta_perp_analytic_fm2` returns exactly 0 for a longitudinal
+axis by construction.
+
+**The output format and where it is consumed.** One line per configuration,
+byte-compatible with `he3.dat`:
+
+    x1 y1 z1 ... x6 y6 z6   t1 ... t6   m
+
+18 coordinates in fm (ion rest frame, c.m. at the origin, the quantization
+axis already applied), six isospins (+1 p, −1 n; nucleons 1–4 are the α core,
+5 the proton and 6 the neutron), then the substate. The consumer —
+`Nucleons::InitializeTarget` in `subnucleondiffraction` — reads only the
+first 3A fields; the rest are invisible to it, exactly as `he3.dat`'s own
+trailing fields are. **No comments** — the upstream reader does a bare
+`ss >> x` per field and a `#` line would silently produce a wrong
+configuration. The metadata therefore lives in the mandatory sidecar
+`<out>.meta.json`: the axis, the substate, seed/run and RNG stream, all 13
+option fields, every input table with its size, md5 and printed
+normalization, the analytic and sampled moments, `quadrupole_dial_s`, and
+the quadrupole band. Each input entry also carries `"used"`, so a run with
+`--alpha-source gaussian` or `--alpha-d-source overlap-raw` says which of
+the four tables it actually read; the caveat block's overshoot factor is
+computed from that run's own band, not restated. With `--format annotated`
+the same JSON is *also* copied into the `.dat` as a `#` header block — but
+that copy is written by C++ before `configs.py` runs, so its `md5`/`git`
+stay `null`: **the sidecar is the authoritative record**. A worked example (100 configurations, m = +1, seed 1)
+is `docs/open_items/run_2026-09-02/example_li6_m1_configs.dat` plus its
+`.meta.json`. Reading the upstream code as it ships today requires the
+`-configfile/-configid` generalization of its `A == 3` branch — see the
+collaboration ask in `OPEN_ITEMS_SOLUTIONS.md` §11.
+
+**The quadrupole dial, and its floor.** `--quadrupole-target` /
+`ClusterConfigOptions::quadrupole_target_fm2` rescales the α–d D-wave
+amplitude by a root s of a quadratic (design (G9)) so that the geometry's
+Q_charge lands on the requested value — **linear in the D amplitude through
+the S–D interference term (95 % of Q), not `sqrt(target/model)`**, which
+misses by 7×. This is a **deformation dial, not a wave function**: it exists
+so a downstream consumer can ask for the measured tensor moment without
+believing the α+d model's own value. The reachable range for the default
+source is s ∈ [0, 1] mapping to Q_charge ∈ **[−0.615, +0.270] fm²** — at
+s = 0 the α–d interference term vanishes and only the deuteron's own
++0.270 fm² survives, at s = 1 the wave functions are unmodified. `validate()`
+**throws** outside that band. The root that reproduces the measured
+Q(⁶Li) = −0.0818 fm² (`LI6_QUADRUPOLE_FM2`) is **s = 0.4032**, closing to
+1e-9, and it drags P_D(α–d) down to 3.3 × 10⁻³ from its natural 0.02011 — a
+reminder that "match the quadrupole" and "keep the natural D-state
+probability" are not simultaneously satisfiable in this model. The writer
+stamps `quadrupole_dial_s` beside the band whether or not the dial is used.
+
+**The numbers** (default `FitRescaled` source; full table and every source
+variant in `docs/open_items/run_2026-09-02/phase_G_numbers.md`):
+
+| quantity | value |
+|---|---|
+| P_D(α–d) | 0.02011 |
+| ⟨R²⟩_αd | 16.9633 fm² (rms 4.1187 fm) |
+| 𝒬[R₀,R₂] | −1.3204 fm² (interference −1.2573, pure-D −0.0631) |
+| ⟨r²⟩(⁶Li) | 6.4447 fm² → r_rms 2.5386 fm |
+| Q_matter(±1) / Q_matter(0) | −1.2309 fm² / +2.4618 fm² |
+| Q_charge(+1) (this geometry) | −0.6154 fm² |
+| δ⊥ per nucleon (transverse axis) | −0.1026 fm² |
+| eps_b0 equivalent (B = 52.04 GeV⁻²) | −0.0506 |
+| a₂(±1) at \|t\| = 0.3 GeV² | +0.1976 |
+| asymptotic η (D/S, Whittaker-divided) | −0.0482 (measured −0.025 ± 0.006 ± 0.010) |
+
+**The caveats, which the CLI prints on every run and the sidecar stamps.**
+The α+d truncation reproduces the ⁶Li point radius to ≈ 4 % (2.539 fm
+against the measured 2.4655 fm) but **overshoots Q(⁶Li) by a factor ≈ 7.5**:
+Q_charge = −0.615 fm² (model range −0.615…−0.730 across the three α–d
+sources) against the measured −0.0818 fm² and GFMC AV18+IL7's −0.20(6) fm².
+Always quote `quadrupole_band_fm2()`, never one number, and never derive a
+published tensor input from these wave functions —
+`docs/OPEN_ITEMS_SOLUTIONS.md` §11's rule stands. The asymptotic D/S ratio η
+says the excess is a real but *moderate* ≈ 2× effect, not the 5–15× a naive
+R₂/R₀ ratio would suggest (§2.1 of `phase_G_numbers.md`). The α core is an
+**uncorrelated** product of one-body densities (`min_nn_separation_fm = 0`
+by default). Switching the hard core on (`--min-nn-separation 0.9`, what
+arXiv:2605.00454 imposes) **moves ⟨r²⟩ by ≈ +2 %** — 6.573 fm² against the
+free 6.445 — because rejection correlates the four s⃗_i and the closed form
+⟨s²⟩ = (3/4)⟨v²⟩ holds only for *independent* draws. The constructor
+therefore measures ⟨s²⟩ once (10⁵ cores on a fixed stream), stamps
+`alpha <s^2> NUMERICAL (hard core)` into the provenance and
+`moments.r2_mean_is_approximate` into the sidecar, and the CLI prints a
+note; `rho_alpha_recentred()` is *not* corrected and remains the
+independent-draw closed form. The exact 5-D joint density with the m_S
+angular coherences restored is `ClusterConfigOptions::exact_coherence`,
+which **throws** — reserved, not implemented, so the approximation is
+visible in the API rather than buried in a comment.
+`docs/open_items/run_2026-09-02/design_G_cluster_config.md` has the physics
+and `phase_G_numbers.md` the reproduced numbers.

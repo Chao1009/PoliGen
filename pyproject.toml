@@ -31,6 +31,9 @@ test = ["pytest", "pyyaml"]
 # A pip-installed console entry point mirroring the in-tree flow's generated
 # `build/lipolgen-run` shim (both just run `python -m lipolgen.cli`).
 lipolgen-run = "lipolgen.cli:main"
+# The Phase G configuration-table writer -- a SEPARATE entry point, not a flag
+# on lipolgen-run: adding subparsers there would change its parse behaviour.
+lipolgen-configs = "lipolgen.configs:main"
 
 [tool.scikit-build]
 minimum-version = "build-system.requires"

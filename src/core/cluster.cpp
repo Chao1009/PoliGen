@@ -201,6 +201,32 @@ std::vector<AnlTable> read_anl_momentum(const std::string& path) {
   return out;
 }
 
+AnlTable read_anl_plain(const std::string& path, std::size_t ncol) {
+  if (ncol == 0) throw std::runtime_error("read_anl_plain: ncol must be >= 1");
+  const std::vector<std::string> lines = split_lines(read_whole(path));
+  AnlTable t;
+  t.col.assign(ncol, {});
+  for (std::size_t i = 0; i < lines.size(); ++i) {
+    // The column rule ` ****  *********  *********` introduces the block --
+    // the same marker `read_anl_momentum` uses.
+    std::string bare;
+    for (char c : lines[i]) {
+      if (!std::isspace(static_cast<unsigned char>(c))) bare.push_back(c);
+    }
+    if (bare.size() < 4 || bare.find_first_not_of('*') != std::string::npos) {
+      continue;
+    }
+    for (std::size_t j = i + 1; j < lines.size(); ++j) {
+      const std::vector<double> v = split_numbers(lines[j]);
+      if (v.size() < 1 + ncol) break;
+      t.x.push_back(v[0]);
+      for (std::size_t c = 0; c < ncol; ++c) t.col[c].push_back(v[1 + c]);
+    }
+    if (!t.x.empty()) return t;
+  }
+  throw std::runtime_error("no plain `x v1 ... vN` block found in " + path);
+}
+
 std::vector<double> read_anl_momentum_norms(const std::string& path) {
   std::vector<double> out;
   for (const std::string& line : split_lines(read_whole(path))) {

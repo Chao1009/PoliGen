@@ -201,6 +201,29 @@ within ~1 h wall clock (skip and record otherwise). (iii) A doc section in
 `docs/OPEN_ITEMS_SOLUTIONS.md` §11 describing the graft into
 `subnucleondiffraction` and the collaboration ask. Opus for (i), Sonnet for (iii).
 
+**NAMES, as landed 2026-09-03 — one correction to this plan's own wording.**
+"α–d separation from the VMC momentum distribution" describes the *k*-space
+table (`VMC_P_D_LI6`, already used by `tagged.hpp`/Phase D); the sampler
+actually implemented reads the **r-space** ANL VMC α–d overlap
+(`li6_alpha_d/li6.ad` and its smoothed fit `li6.adr.fit`,
+`AlphaDSource {FitRescaled (default), FitRaw, OverlapRaw}` — a
+namespace-level enum, selected by the `ClusterConfigOptions::alpha_d_source`
+field) — the two tables print different P_D (0.02011 r-space vs 0.01935
+k-space) and are not interchangeable; `design_G_cluster_config.md` §2.1 (the
+(−i)^L phase) and §3.1 ("Sign trap") explain why r-space is the correct
+choice for a position-space sampler.
+Everything else this plan asked for landed under the design's own names:
+`ClusterConfigOptions` / `ClusterConfigSampler` / `ClusterConfigSet` in
+`include/lipolgen/cluster_config.hpp` + `src/core/cluster_config.cpp`, the
+`lipolgen-configs` console script (`python/lipolgen/configs.py`), 28 + 24 unit
+tests (C++ + Python) covering normalisation, ⟨r²⟩ and Q_matter against the
+analytic (G5)/(G6) formulas, the m_S-conditioned polarization-axis alignment
+(T21), and recentring to Σᵢr⃗ᵢ = 0. (i) and (ii) both landed — eSTARlight
+built and ran offline well inside 1 h — and (iii) is `OPEN_ITEMS_SOLUTIONS.md`
+§11, rewritten in full with both halves' numbers, the verbatim collaboration
+ask, and what remains open. Numbers: `phase_G_numbers.md` (sampler) and
+`estarlight_li6.md` (eSTARlight), both in this directory.
+
 ## Phase H — Close-out
 
 Full suites green; `README.md` status paragraph, `docs/OPEN_ITEMS_SOLUTIONS.md`

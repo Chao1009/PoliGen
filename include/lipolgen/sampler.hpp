@@ -206,6 +206,22 @@ class InclusiveSampler {
   /// Cell-wise (w_avg, a1, a2) plus the sampling tables derived from them.
   struct StateTables {
     std::vector<double> w_avg, a1, a2;   ///< per accepted cell
+    /// The b-sector (tensor RATE) part of the SAME three amplitudes -- what
+    /// the tensor RC band of `rc.hpp` rescales.  Filled by the same
+    /// `build_state` call from `InclusiveKernel::tensor_amplitudes`, so they
+    /// are the rank-2 projection of the very density the sampler drew from
+    /// and cannot drift from it; the sampler itself never reads them.
+    ///
+    /// SCOPE: `RcScope::TensorRate`, i.e. the b1..b4 (T_LL) sector alone,
+    /// INCLUDING its O(gamma^2) `tensor_gamma` re-projection onto cos phi' and
+    /// cos 2phi', but EXCLUDING the Delta (gluon-transversity) cos 2phi term
+    /// that `a2` also carries -- Delta is not in POLRAD's b1..b4 basis and
+    /// nobody has computed RC for a phi-dependent tensor observable.  A
+    /// consumer wanting `RcScope::TensorAll` must add that term itself.
+    ///
+    /// So `a2_tensor <= a2` term by term but `w_tensor` IS the whole tensor
+    /// w_avg: the vector A_par sits in `w_avg` and in nothing else.
+    std::vector<double> w_tensor, a1_tensor, a2_tensor;
     std::vector<double> a1n, a2n;        ///< divided by (1 + w_avg)
     std::vector<double> bound;           ///< 1 + |a1n| + |a2n|
     std::vector<double> cdf;             ///< cumulative sigma*(1 + w_avg)
@@ -290,6 +306,23 @@ class InclusiveSampler {
   /// external unpolarized samples.
   std::vector<double> weights_for(const EventBatch& batch,
                                   const std::vector<SpinCategory>& cats) const;
+
+  /// The TENSOR-only counterpart of `weights_for`: t[i, k] is the rank-2
+  /// (b-sector) part of the SAME density W_k(event_i) that `weights_for`
+  /// returns, cell for cell and population for population -- so the RC band of
+  /// `rc.hpp` is
+  ///
+  ///   w_+- = 1 +- delta(x) * t[i, k] / w[i, k] .
+  ///
+  /// Row-major, `batch.size()` rows by `cats.size()` columns, exactly like
+  /// `weights_for`, and like it a POPULATION MIXTURE sum_m p_m W_m and not a
+  /// pure state.  The `1.0` of `weights_for`'s `(1 + w_avg + ...)` is the
+  /// UNPOLARIZED density and is deliberately absent here.
+  ///
+  /// Scope is `StateTables::w_tensor`'s -- see its docstring: the Delta
+  /// cos 2phi term is NOT in it.
+  std::vector<double> tensor_weights_for(
+      const EventBatch& batch, const std::vector<SpinCategory>& cats) const;
 
  private:
   struct StateKey {

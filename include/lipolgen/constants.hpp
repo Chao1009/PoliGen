@@ -58,6 +58,17 @@ inline constexpr double M_NUCLEON = 0.9383;
 /// Proton mass used by the gamma-matching of `polli_fastsim.beams`.
 inline constexpr double PROTON_MASS = 0.938272088;
 
+/// Electron mass [GeV], the PDG value.  ONE definition, per
+/// docs/CONVENTIONS.md ("no physics number is hard-coded in two places"):
+///   * `src/hepmc/hepmc_writer.cpp` stamps it as the GENERATED mass of an
+///     electron the core builds massless, so that Geant4/DD4hep does not
+///     nudge E by O(10 ppm) to satisfy E^2 - p^2 >= m_e^2;
+///   * `rc.hpp` needs the LEPTON mass -- it is what keeps POLRAD's infrared
+///     factor F_IR finite and what sets l_m = ln(Q^2/m^2).
+/// The literal is unchanged from the one it replaces (tests/test_hepmc.cpp
+/// and python/tests/test_hepmc.py pin the written value).
+inline constexpr double M_ELECTRON = 0.51099895e-3;
+
 /// Ring rigidity cap, expressed as the top proton momentum [GeV].
 inline constexpr double PROTON_TOP_MOMENTUM = 275.0;
 

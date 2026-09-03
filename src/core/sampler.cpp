@@ -203,6 +203,7 @@ const InclusiveSampler::StateTables& InclusiveSampler::build_state(
   const std::size_t n = x_cells_.size();
   StateTables st;
   st.w_avg.resize(n); st.a1.resize(n); st.a2.resize(n);
+  st.w_tensor.resize(n); st.a1_tensor.resize(n); st.a2_tensor.resize(n);
   st.a1n.resize(n); st.a2n.resize(n); st.bound.resize(n); st.cdf.resize(n);
 
   EventSpinState state;
@@ -233,6 +234,16 @@ const InclusiveSampler::StateTables& InclusiveSampler::build_state(
     st.w_avg[i] = amp.w_avg;
     st.a1[i] = amp.a1;
     st.a2[i] = amp.a2;
+    // The rank-2 (b1..b4) part of the SAME amplitudes, for the RC band of
+    // rc.hpp.  Computed here, once per (spin state, cell), so that no consumer
+    // ever has to re-enter the kernel in the event loop -- `tables()` alone is
+    // a 96-point g2^WW quadrature per call at the default `target_mass = true`.
+    // Nothing in the sampler reads these; they change no drawn number.
+    const Amplitudes tam = kernel_->tensor_amplitudes(tables_[i], x_cells_[i],
+                                                      q2_cells_[i], s_, state);
+    st.w_tensor[i] = tam.w_avg;
+    st.a1_tensor[i] = tam.a1;
+    st.a2_tensor[i] = tam.a2;
     st.a1n[i] = amp.a1 / den;
     st.a2n[i] = amp.a2 / den;
     st.bound[i] = 1.0 + std::fabs(st.a1n[i]) + std::fabs(st.a2n[i]);
@@ -479,6 +490,36 @@ std::vector<double> InclusiveSampler::weights_for(
         out[i * nk + k] += p_m * (1.0 + st.w_avg[c] +
                                   st.a1[c] * std::cos(phip) +
                                   st.a2[c] * std::cos(2.0 * phip));
+      }
+    }
+  }
+  return out;
+}
+
+std::vector<double> InclusiveSampler::tensor_weights_for(
+    const EventBatch& batch, const std::vector<SpinCategory>& cats) const {
+  // The exact mirror of `weights_for` above, on the tensor vectors of the same
+  // StateTables and WITHOUT the unpolarized 1.0: t[i, k] is the rank-2 part of
+  // the density w[i, k], so their ratio is the tau the RC band scales.
+  const std::size_t n = batch.size();
+  const std::size_t nk = cats.size();
+  std::vector<double> out(n * nk, 0.0);
+  for (std::size_t k = 0; k < nk; ++k) {
+    const SpinCategory& cat = cats[k];
+    const std::vector<double> ms = m_values(cat.j);
+    if (cat.populations.size() != ms.size()) {
+      throw std::runtime_error("populations must have 2j+1 entries");
+    }
+    for (std::size_t im = 0; im < ms.size(); ++im) {
+      const double p_m = cat.populations[im];
+      if (p_m <= 0.0) continue;
+      const StateTables& st = state_tables(cat, ms[im]);
+      for (std::size_t i = 0; i < n; ++i) {
+        const std::size_t c = static_cast<std::size_t>(batch.cell[i]);
+        const double phip = batch.phi[i] - cat.phi_s;
+        out[i * nk + k] += p_m * (st.w_tensor[c] +
+                                  st.a1_tensor[c] * std::cos(phip) +
+                                  st.a2_tensor[c] * std::cos(2.0 * phip));
       }
     }
   }

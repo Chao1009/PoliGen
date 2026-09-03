@@ -210,9 +210,10 @@ TensorHarmonics InclusiveKernel::tensor_harmonics_gamma(
   return h;
 }
 
-Amplitudes InclusiveKernel::amplitudes(const SFTables& t, double x, double q2,
-                                       double s, const EventSpinState& state,
-                                       bool with_perp) const {
+Amplitudes InclusiveKernel::tensor_amplitudes(const SFTables& t, double x,
+                                              double q2, double s,
+                                              const EventSpinState& state,
+                                              bool with_delta) const {
   // P8.  The rank-2 branch below used to be gated on `state.j` alone while
   // `tensor_moments(state.m)` reads the KERNEL's ion spin, so a mismatched
   // pair would compute the alignment Q_NN for one spin and apply it to a
@@ -229,6 +230,10 @@ Amplitudes InclusiveKernel::amplitudes(const SFTables& t, double x, double q2,
   // exactly zero.  That is the d(e,e'p) control, where the struck cluster is a
   // spin-1/2 NEUTRON but the projection m_S labels the S_c = 1 channel spin --
   // legitimate, and what the Python does.
+  //
+  // The check lives HERE and not in `amplitudes()` because `amplitudes()` is
+  // now defined as this function plus the vector terms and calls it first and
+  // unconditionally, so both entry points refuse the same mismatched pair.
   const double j_ion = ion_.spin;
   if (j_ion >= 1.0 - 1e-9 && std::fabs(state.j - j_ion) > 1e-9) {
     throw std::runtime_error(
@@ -258,16 +263,39 @@ Amplitudes InclusiveKernel::amplitudes(const SFTables& t, double x, double q2,
       const double kern = tensor_kernel(t, x, y);
       out.w_avg = out.w_avg + t_geo * kern / std::max(den, 1e-30);
     }
-    out.a2 = out.a2 + (-(1.0 - y) / (y * y) * qc.second * st * st * t.delta
-                       / std::max(den, 1e-30));
+    // Delta (gluon transversity) is rank 2 as well but is NOT in POLRAD's
+    // b1..b4 basis and nobody has computed RC for a phi-dependent tensor
+    // observable, so `rc.hpp` leaves it out of the band by default
+    // (RcScope::TensorRate) and `with_delta` is what buys it back
+    // (RcScope::TensorAll, for pricing the omission).  `amplitudes()` always
+    // wants it -- it is part of W.
+    if (with_delta) {
+      out.a2 = out.a2 + (-(1.0 - y) / (y * y) * qc.second * st * st * t.delta
+                         / std::max(den, 1e-30));
+    }
   }
+  out.a1 = a1_tensor;
+  return out;
+}
 
+Amplitudes InclusiveKernel::amplitudes(const SFTables& t, double x, double q2,
+                                       double s, const EventSpinState& state,
+                                       bool with_perp) const {
+  // The whole b-sector, in ONE place (`tensor_amplitudes`, which `rc.hpp` and
+  // `InclusiveSampler::StateTables::w_tensor` read as well), plus the vector
+  // terms.  A pure extraction: it moves no number, which the rtol-1e-12
+  // `validation/reference/*.json` gates of tests/test_reference.cpp prove.
+  Amplitudes out = tensor_amplitudes(t, x, q2, s, state, /*with_delta=*/true);
+
+  const double y = q2 / (s * x);
+  const double j = state.j;
+  const double ct = std::cos(state.theta_s);
+  const double st = std::sin(state.theta_s);
   const double helicity = state.lam_e * state.pe;
   const double v = (j > 0.0) ? state.m / j : 0.0;
   if (helicity != 0.0 && v != 0.0) {
     out.w_avg = out.w_avg + helicity * v * ct * a_parallel(t, x, q2, y);
   }
-  out.a1 = a1_tensor;
   if (with_perp && helicity != 0.0 && v != 0.0 && std::fabs(st) > 1e-12) {
     out.a1 = out.a1 + helicity * v * st * a_perp(t, x, q2, y);
   }

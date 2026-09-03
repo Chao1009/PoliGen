@@ -305,6 +305,23 @@ class InclusiveKernel {
                                          double y,
                                          const EventSpinState& state) const;
 
+  /// The b-sector (tensor RATE) contribution to (w_avg, a1, a2) ALONE -- the
+  /// piece the tensor RC band rescales (`rc.hpp`).  Exactly the terms
+  /// `amplitudes()` adds inside its `j >= 1` branch, on whichever path
+  /// `tensor_gamma` selects, with the Delta (gluon-transversity) cos 2phi term
+  /// included only when `with_delta` (`RcScope::TensorAll`).
+  ///
+  /// `amplitudes()` is DEFINED as this plus the vector terms, so the two can
+  /// never drift apart and the RC band's tau = W_tensor/W is the rank-2
+  /// projection of the very density the sampler drew from.  Returns all zeros
+  /// below spin 1 (`tensor_moments` gives (0, 0) and `tables()` leaves
+  /// b1 = b2 = Delta = 0 there).
+  ///
+  /// THROWS on the same spin mismatch `amplitudes()` does -- see below.
+  Amplitudes tensor_amplitudes(const SFTables& t, double x, double q2, double s,
+                               const EventSpinState& state,
+                               bool with_delta = false) const;
+
   /// (w_avg, a_1, a_2).  The VECTOR a_1 is only computed when `with_perp` (it
   /// needs g2); the tensor sector contributes to a_1 as well, but only on the
   /// exact finite-gamma path (`tensor_gamma`, off by default) and only where
@@ -313,7 +330,8 @@ class InclusiveKernel {
   ///
   /// THROWS if `state.j` is not the kernel's own ion spin: the rank-2 branch
   /// is gated on `state.j` but `tensor_moments` reads `ion().spin`, so a
-  /// mismatched pair would silently mix the two (P8).
+  /// mismatched pair would silently mix the two (P8).  The check lives in
+  /// `tensor_amplitudes`, which this calls first and unconditionally.
   Amplitudes amplitudes(const SFTables& t, double x, double q2, double s,
                         const EventSpinState& state,
                         bool with_perp = false) const;

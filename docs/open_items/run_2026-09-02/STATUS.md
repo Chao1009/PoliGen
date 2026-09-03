@@ -14,7 +14,7 @@ the usage-limit reset. **Closed out 2026-09-03.**
 | E spin-3/2 note | DONE | 472a7d4 + 0961c60 | docs/theory/SPIN32_FINITE_GAMMA.md (1195 lines, 2 review passes); g1_rank3/R_3 code comments; generate_full pure-fill pzz_true fixed |
 | F packaging | DONE | 611e40a | pyproject + scikit-build-core; fresh-venv editable install 66 s, wheel 1.31 MB, in-tree flow unchanged; README snippet applied to README.md in Phase H |
 | G coherent 6Li on-ramp | DONE | 6e393aa + 198c846 + a764383 | eSTARlight baseline (6Li J/psi 1.77 nb, slope_b band citable), reviewed sampler design, cluster_config.hpp sampler + lipolgen-configs + OPEN_ITEMS section 11 with the collaboration ask; 361 doctest / 208 pytest |
-| H close-out | DONE | (this commit) | PHYSICS_CHANNELS.md refresh (1031 refs, 0 broken), status docs, whole-diff review + the 26 findings applied. Final: **363 doctest cases / 17 203 863 assertions / 1 skipped** (wall 1:17, down from 2:24 — the b1 A = 2 scan is threaded and T2 no longer rebuilds its densities three times) and **211 pytest** (32 s, down from 43 s). Cron job a07c52e5 deleted. |
+| H close-out | DONE | 66dcda2 | PHYSICS_CHANNELS.md refresh (1031 refs, 0 broken), status docs, whole-diff review + the 26 findings applied. Final: **363 doctest cases / 17 203 863 assertions / 1 skipped** (wall 1:17, down from 2:24 — the b1 A = 2 scan is threaded and T2 no longer rebuilds its densities three times) and **211 pytest** (32 s, down from 43 s). Cron job a07c52e5 deleted. |
 
 States: TODO / IN PROGRESS (with what exists on disk) / DONE (with commit hash).
 

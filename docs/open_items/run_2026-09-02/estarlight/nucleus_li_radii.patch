@@ -1,0 +1,25 @@
+diff --git a/src/nucleus.cpp b/src/nucleus.cpp
+index e83b47d..a080a5f 100644
+--- a/src/nucleus.cpp
++++ b/src/nucleus.cpp
+@@ -111,6 +111,20 @@ void nucleus::init()
+ 		  }
+ 		}
+ 		break;
++	case 3:
++		{
++		  // Lithium: explicit rms charge radii, Angeli & Marinova,
++		  // At. Data Nucl. Data Tables 99 (2013) 69:
++		  //   R_rms(6Li) = 2.589(39) fm, R_rms(7Li) = 2.444(42) fm.
++		  // The Z < 7 branch below reads _Radius as the Gaussian rms
++		  // radius R_G of rho(r) ~ exp(-3r^2/(2 R_G^2)), i.e. exactly
++		  // the rms radius, so these go in unconverted.
++		  if(_A == 6)      _Radius = 2.589;
++		  else if(_A == 7) _Radius = 2.444;
++		  else             _Radius = 1.2*pow(_A, 1. / 3.);
++		  _rho0 = _A;
++		}
++		break;
+ 	default:
+ 		printWarn << "density not defined for projectile with Z = " << _Z << ". using defaults." << endl;
+                 _Radius = 1.2*pow(_A, 1. / 3.);

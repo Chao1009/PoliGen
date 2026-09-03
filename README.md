@@ -37,6 +37,8 @@ onto the physical target — conservation to 1e-13).
   2.3 M; +PYTHIA 33–44 k ev/s; HepMC3 writing ~7 k ev/s; Python columnar ~5×10⁵ ev/s.
 - Independent adversarial review (`docs/code_review_2026-08-29.md`): all findings fixed.
 
+Physics channels, models, references and implementing symbols: `docs/PHYSICS_CHANNELS.md`.
+
 Open items, with explored solutions and prototypes: `docs/OPEN_ITEMS_SOLUTIONS.md`.
 Rows 5–7 are now **implemented with measured numbers** (coherent T2 via a PYTHIA
 Pomeron beam, `--coherent-t2`; the Ciofi–Simula triton spectral function,
@@ -61,6 +63,18 @@ cmake --build build -j8
 CMake options: `LIPOLGEN_WITH_LHAPDF`, `LIPOLGEN_WITH_HEPMC3`,
 `LIPOLGEN_WITH_PYTHIA`, `LIPOLGEN_WITH_PYTHON`, `LIPOLGEN_BUILD_TESTS` (all ON).
 Data tables (`data/vmc`) are found via `LIPOLGEN_DATA_DIR` (default: the source tree).
+
+Alternatively, `pip install` the Python package on its own (scikit-build-core;
+no `env.sh`, no `build/` needed):
+
+```bash
+LIPOLGEN_DEPS_PREFIX=/path/to/deps/install pip install -e .
+```
+
+`PYTHIA8DATA`/`LHAPDF_DATA_PATH` still need exporting at run time (see
+`docs/USAGE.md`); the wheel's RPATH points at this machine's deps prefix, so
+it is not relocatable as-is — `auditwheel repair` fixes that but pulls in
+GPL-3 redistribution terms for the combined work.
 
 ## Use
 

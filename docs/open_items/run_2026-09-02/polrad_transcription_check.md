@@ -473,6 +473,17 @@ This is dead code in v0 (Eq. (A.4) is only evaluated on the `PolradFull` path,
 and T9's `PolradFull` half is `SKIP`-ped) — but it is exactly the kind of error
 that would be invisible until the upgrade path is built, so fix the doc now.
 
+> **APPLIED 2026-09-04 (task B5).** `design_C_tensor_rc.md` §1.4.6 now prints
+> `4/(1 + eta_A)`, with a dated correction box beside it recording what it said
+> before. Re-verified before changing anything: the `\Im ^{el}_{6}` line of
+> `polrad2t.tex` (lines 2705–2706) has no `η_A` in that numerator, the FORTRAN
+> collapse of `ε³(b₂/3 + b₃ + b₄)` reproduces `4/(1+η)` exactly, and the CODE
+> was confirmed **not** to contain the error — it does not contain `ℑ^el_6` at
+> all. `RcTailModel::PolradFull` throws `NOT IMPLEMENTED` (`src/core/rc.cpp`
+> constructor), and what v0 evaluates is Eq. (38) (`polrad_sigma_el_u` and the
+> `σ_q` integrand) plus the `Q_N = 0` Rosenbluth pair (`rosenbluth_spin1`).
+> Document-only defect; no test number moved.
+
 ### 7.2 POLRAD BUG — the `approx` carbon tail is missing `Z²`
 
 `elu`'s carbon branch (adgh:8903-8905) is `elu = xxt*ff**2/eta` with `ffco`
@@ -608,17 +619,79 @@ and p−peaks are suppressed"* with an independent leading-log construction:
 
 | target, point | `t / (t + s + p)`, elastic | quasi-elastic |
 |---|---|---|
-| ⁶Li, EIC config 1, `Q² ≥ 20 GeV²` | **> 0.999** | **> 0.96** |
+| ⁶Li, EIC config 1, `Q² ≥ 20 GeV²`, `y ≤ 0.9` — **per cell**, 1356 cells (CORRECTED 2026-09-04) | **1.0000** (minimum) | **1.6458e−04** (minimum); **275 of the 1356 cells are below 0.96** (282 at the shipped `k_F`) |
+| ⁶Li, EIC config 1, `x = 0.01, y = 0.985` (`Q² = 39`) | > 0.999 | **0.44** |
 | ⁶Li, EIC config 1, `x = 0.01, y = 0.1` (`Q² = 4`) | > 0.999 | **0.23** |
 | deuteron, `E = 27.6`, `x = 0.012, y = 0.85` (`Q² = 0.53`) | 0.65 | **0.17** |
 | proton, `E = 10`, `x = 0.3, Q² = 2` | — | **0.037** |
 
+**Row 1 was rewritten on 2026-09-04 and the old version is withdrawn.** It
+read `> 0.999` / `> 0.96` as if both held over the whole window; the second
+half is false. The **elastic** column survives verbatim and is in fact
+stronger than it looked — ⁶Li's coherent form factor is dead at `Q′² ≈ Q² ≥ 20`,
+so `ll_peaks_spin1` returns essentially nothing there and the minimum of
+`t/(t+s+p)` over all 1356 accepted cells is **1.0000**. The **quasi-elastic**
+column is not a window statement at all: its minimum is **1.6458e−04** (at
+`x = 0.7244`, `y = 0.0070`) and **275** of the 1356 cells sit below 0.96 at
+this section's own `kf_gev = 0` convention, **282** at the shipped
+`k_F = 0.169 GeV`. On the *total* tail, `t/(t+s+p) < 0.99` in **346** of the
+1356. The failures **concentrate** at `y → 0` — 318 of the 331 sit at
+`y < 0.1` — but they are not confined there: 21 of the 346 total-tail
+failures sit at `y ≥ 0.1`, five of them at `y = 0.845–0.892`, i.e. at the
+`y → 1` end as well. (An earlier revision of this paragraph read "the failures
+are at `y → 0`, not at `y → 1`"; that contradicted this document's own
+`y → 1` rows below and is withdrawn, 2026-09-04.) Measured on the 101 × 77 CLI
+grid and set out in `../run_2026-09-03/phase_B_numbers.md` §B2.3(i). It is a
+measurement record, **not** a gated claim: `tests/test_rc.cpp` T8(d)(i) gates
+the combined `tail_ratio` census on the test file's own 40 × 24 sampler
+(45 of 188 there) and never forms `t/(t+s+p)`, so no assertion in the suite
+pins the numbers in this row.
+
 So POLRAD's sentence is right **where the nuclear form factor is dead at the
-s-peak's `t ≈ z Q²`** and badly wrong where it is not. For ⁶Li at EIC `Q²` the
-t-peak really is the whole tail; at fixed-target `Q²`, and for the *nucleon*
-form factors of the quasi-elastic tail, it is not. `rc_tail` is a **lower
-bound**, and `rc.hpp`'s `RcTailModel::TPeak` comment, the run banner and
-`USAGE.md` §7b all say so.
+s-peak's `t ≈ z Q²` and the quasi-elastic nucleon form factor is dead with
+it**, and badly wrong where either one is alive. For ⁶Li at EIC `Q²` the
+t-peak is the whole tail **event-weighted** and **not cell by cell**; at
+fixed-target `Q²`, for the *nucleon* form factors of the quasi-elastic tail,
+at the `y → 1` edge of this generator's own window and — the wider failure —
+all along its `y → 0` edge, it is not.
+
+Every row is at T8(c)'s own convention, the **unsuppressed** quasi-elastic tail
+(`kf_gev = 0`), on both the t-peak and the peaks it is compared with. At the
+shipped Pauli `k_F = 0.169 GeV` the t-peak's own quasi-elastic piece is roughly
+halved and every quasi-elastic entry falls with it — 0.44 → **0.27** in row 2,
+0.23 → **0.12** in row 3 — so these are the *conservative* readings.
+
+**Row 2 is the one added on 2026-09-04 and it narrows the claim.** At
+`y = 0.985` the t-peak carries only **68 %** of the *total* tail (63 % at the
+shipped `k_F`) even though `Q² = 39 GeV² ≥ 20`, because `z_s = (1−y)/(1−x_A y) → 0` drives the elastic
+vertex to `Q′² → 0`, where the form factor is 1 and the Born-like `1/Q′⁴` is
+enormous — the s-peak grows **faster** than the t-peak's own `Y₊ ~ 1/(1−y)`.
+So "the t-peak is > 99 % at `Q² ≥ 20 GeV²`" is an **event-weighted** statement
+and never a per-cell one. It fails at the `y → 1` rows for the reason just
+given, and it fails far more widely at `y → 0`: of the 331 cells in the
+`Q² ≥ 20`, `y ≤ 0.9` window whose two tail models differ by more than 1 %,
+**318 sit at `y < 0.1`** — a different mechanism (the uncancelled soft
+radiator, `D(z_s) ∝ 1/y`, against a t-peak crushed by `t_min ∝ x²` because
+`Q² ≥ 20` forces low `y` to mean high `x`). The `y → 1` edge is the smaller
+exception, not the only one; this paragraph said otherwise until 2026-09-04.
+
+**What changed in the code (B2, 2026-09-04).** The leading-log construction is
+no longer test-local: `ll_radiator`, `rosenbluth_spin1`, `rosenbluth_nucleon`,
+`dsigma_el_dq2`, `ll_peaks_spin1` and `ll_peaks_qe` moved into
+`src/core/rc.cpp`, so T8(c) now measures the **shipped** code path, and
+`RcTailModel::TPeakPlusLL` tabulates them beside the t-peak. The default stays
+`TPeak`, so `rc_tail` is still a **lower bound** unless the run asks otherwise.
+Two things this section must not be read as saying:
+
+* the sum is a **stated model**, not a controlled O(α) expansion — an η_A
+  quadrature plus a single-z leading log is accurate to the worse of the two
+  (~5–10 %), and the radiator's soft `1/(1−z)` is **uncancelled**, so it
+  overshoots as `y → 0`;
+* there is **no tensor s/p peak** in POLRAD and none is invented here, so the
+  s+p enter the unpolarised numerator only and `TPeakPlusLL` **lowers the
+  tensor fraction** of the tail. That fraction is unknown, not zero.
+
+`rc.hpp`'s `RcTailModel` comments, the run banner and `USAGE.md` §7b all say so.
 
 ---
 

@@ -129,9 +129,13 @@ def build_parser():
                         "RcModel, spin-1 tensor plans by Pipeline), and an "
                         "explicit (P_z, T) J = 3/2 fill still needs the API "
                         "(USAGE sec. 7b).  rc_tail is the t-PEAK ONLY: a "
-                        "LOWER BOUND on the dilution, validated for 6Li at "
-                        "Q^2 >= 20 GeV^2 and low by ~4x at fixed-target "
-                        "kinematics")
+                        "LOWER BOUND on the dilution.  For 6Li at "
+                        "Q^2 >= 20 GeV^2, y <= 0.9 it carries the whole tail "
+                        "to +0.61 %% of the EVENT-WEIGHTED mean, but PER "
+                        "CELL 24.4 %% of that window is off by > 1 %% and the "
+                        "worst cell by x6444 (high x, y ~ 0.009); per-cell "
+                        "agreement holds only for 0.15 <= y <= 0.7.  Low by "
+                        "~4x at fixed-target kinematics")
     p.add_argument("--rc-delta-low-x", type=float, default=None,
                    help="the low-x band edge (default 0.30, the conservative "
                         "end of Gakh-Shekhovtsova's UNCITED 10-30 %%; 0.19 is "
@@ -139,11 +143,56 @@ def build_parser():
                         "run both, never quote one row alone")
     p.add_argument("--rc-delta-high-x", type=float, default=None,
                    help="the high-x band edge (default 0.015, E12-13-011)")
+    p.add_argument("--rc-a-transfer-frac", type=float, default=None,
+                   help="price the A = 2 -> A = 6 TRANSFER of the band "
+                        "(design Q8).  EVERY number delta(x) interpolates "
+                        "between is a DEUTERON number -- HERMES's measured "
+                        "low-x residual, Gakh-Shekhovtsova's 10-30 %%, "
+                        "E12-13-011's 1.5 %% -- and no A > 2 tensor RC "
+                        "calculation exists at all.  This adds "
+                        "frac*delta(x) in QUADRATURE, i.e. widens the band by "
+                        "sqrt(1 + frac^2): 0.0 (default) = the shipped band, "
+                        "which ASSUMES the deuteron fraction transfers "
+                        "exactly; 0.5 = known to 50 %% of itself; 1.0 = as "
+                        "uncertain as it is large.  There is no measurement "
+                        "to prefer any of them -- this PRICES the assumption, "
+                        "it does not correct it.  RUN THE EDGES")
     p.add_argument("--rc-fq-scale", type=float, default=None,
                    help="+-100 %% systematic on the 6Li quadrupole form "
                         "factor.  The tensor tail is QUADRATIC in it, so the "
                         "band must be RUN (0.0, 1.0, 2.0), never rescaled "
                         "from one run")
+    p.add_argument("--rc-c0-shape", choices=("ho", "vmc-ft"), default=None,
+                   help="which 6Li C0 (monopole) shape F_c AND F_q share: "
+                        "\"ho\" (default, the unfitted harmonic oscillator "
+                        "every published number was made with) or "
+                        "\"vmc-ft\", the j0 transform of the committed ANL "
+                        "VMC point-proton density at the SAME measured "
+                        "<r^2>_point.  A SHAPE, not a multiplier: RUN BOTH "
+                        "EDGES.  The tensor fraction of the elastic tail at "
+                        "x = 0.1 is +1.6e-4 on one edge and -4.1e-5 on the "
+                        "other, i.e. its sign is a band edge and not a result")
+    p.add_argument("--rc-tail-model", choices=("t-peak", "t-peak+ll"),
+                   default=None,
+                   help="which radiative-tail formulation rc_tail carries: "
+                        "\"t-peak\" (default, bit for bit every published "
+                        "number -- POLRAD Eqs. (37)-(39), (43), the t-peak "
+                        "ALONE and therefore a LOWER BOUND) or "
+                        "\"t-peak+ll\", which adds the leading-log s- and "
+                        "p-peaks to the UNPOLARISED tail.  A STATED MODEL of "
+                        "mixed approximation orders (an eta_A quadrature plus "
+                        "a single-z leading log), accurate to ~5-10 %%, with "
+                        "NO tensor s/p partner -- so it LOWERS the tensor "
+                        "fraction of the tail where it bites.  For 6Li at "
+                        "EIC Q^2 >= 20 GeV^2, y <= 0.9 it moves the "
+                        "EVENT-WEIGHTED mean tail by only +0.61 %%, but it is "
+                        "NOT negligible cell by cell: 331 of that window's "
+                        "1356 accepted cells (24.4 %%, 28.2 %% of its cross "
+                        "section) move by > 1 %% and the worst by x6444, at "
+                        "high x and y ~ 0.009 where the soft 1/(1-z) radiator "
+                        "D(z_s) reaches 11.5 and the model itself breaks "
+                        "down.  A factor ~4 at fixed-target kinematics.  RUN "
+                        "BOTH")
     p.add_argument("--rc-tail-tensor-scale", type=float, default=None,
                    help="multiplier on the 6Li MAGNETIC form factor -- the "
                         "eta*F_m^2 tensor sector, which --rc-fq-scale does "
@@ -157,6 +206,20 @@ def build_parser():
                         "This flag is the band knob, not the physics: "
                         "default 1.0 = no EXTRA suppression, the "
                         "conservative direction; run 0.0 / 0.5 / 1.0")
+    p.add_argument("--rc-qe-tensor-scale", type=float, default=None,
+                   help="price the POLARISED quasi-elastic tail, which is "
+                        "otherwise treated as exactly tensor-blind on the "
+                        "piece that is 73 %% of rc_tail at x = 0.1 and 99.9 "
+                        "%% at x = 0.3.  Default 0.0 = the shipped, "
+                        "bit-for-bit tensor-blind tail.  At 1.0 the "
+                        "quasi-elastic tail is given the ELASTIC tail's own "
+                        "tensor fraction -- a BORROWED magnitude (a coherent "
+                        "nuclear quadrupole fraction on an incoherent nucleon "
+                        "process), NOT a derived bound, and possibly ~1e2 too "
+                        "SMALL at x <= 0.1 because 6Li's elastic tensor "
+                        "fraction is anomalously suppressed for a reason the "
+                        "quasi-elastic piece does not share.  LINEAR, so one "
+                        "run rescales.  Read the magnitude, never the sign")
     p.add_argument("--inclusive-b1", action="store_true", default=None,
                    help="put an inclusive b1 in the struck cluster's kernel")
     p.add_argument("--b1-model", choices=sorted(B1_MODELS), default=None,
@@ -286,8 +349,11 @@ DEFAULTS = dict(isotope="6Li", config=1, channel="inclusive",
                 # than retyping 0.30 / 0.015 here.
                 rc="off", rc_delta_low_x=_l.RC_DELTA_LOW_X,
                 rc_delta_high_x=_l.RC_DELTA_HIGH_X,
+                rc_a_transfer_frac=0.0,
                 rc_fq_scale=1.0, rc_tail_tensor_scale=1.0,
-                rc_qe_suppression=1.0,
+                rc_qe_suppression=1.0, rc_qe_tensor_scale=0.0,
+                rc_c0_shape="ho",
+                rc_tail_model="t-peak",
                 coherent_t2="pomeron", pom_set=6, pom_rescale=1.0,
                 inclusive_b1=False,
                 b1_model="miller", b1_band_scale=1.0,
@@ -420,9 +486,13 @@ def main(argv=None):
                       rc=opts["rc"],
                       rc_delta_low_x=opts["rc_delta_low_x"],
                       rc_delta_high_x=opts["rc_delta_high_x"],
+                      rc_a_transfer_frac=opts["rc_a_transfer_frac"],
                       rc_fq_scale=opts["rc_fq_scale"],
                       rc_tail_tensor_scale=opts["rc_tail_tensor_scale"],
                       rc_qe_suppression=opts["rc_qe_suppression"],
+                      rc_qe_tensor_scale=opts["rc_qe_tensor_scale"],
+                      rc_c0_shape=opts["rc_c0_shape"],
+                      rc_tail_model=opts["rc_tail_model"],
                       inclusive_b1=opts["inclusive_b1"],
                       b1_model=opts["b1_model"],
                       b1_band_scale=opts["b1_band_scale"],
@@ -544,15 +614,48 @@ def main(argv=None):
                 % ((100.0 * r.clipped_cell_fraction,)
                    + tuple(100.0 * f for f in r.clipped_fraction_by_y)))
             say("     tails: elastic + UNPOLARISED quasi-elastic (Eq. 44, "
-                "Pauli S(q) at k_F = %.3g GeV x %.2g); the POLARISED QE tail "
-                "is NOT priced (Zhou et al., PRL 82 (1999) 687)"
+                "Pauli S(q) at k_F = %.3g GeV x %.2g)"
                 % (cfg.rc_options.qe_kf_gev, cfg.rc_options.qe_suppression))
-            say("     the tail is the t-PEAK ONLY (POLRAD Eqs. 37-39): its "
-                "absolute normalisation is NOT validated against an exact "
-                "tail.  Measured (test_rc.cpp T8(c)) against the leading-log "
-                "s-/p-peaks: > 99 % of the total for 6Li at Q^2 >= 20 "
-                "GeV^2, but only 23 % at the HERMES deuteron point.  Read "
-                "rc_tail as a LOWER BOUND on the dilution.")
+            if cfg.rc_options.qe_tensor_scale == 0.0:
+                say("     the POLARISED QE tail is NOT priced (Zhou et al., "
+                    "PRL 82 (1999) 687): rc_tail treats as exactly "
+                    "tensor-blind the piece that is 73 % of it at x = 0.1 "
+                    "and 99.9 % at x = 0.3.  --rc-qe-tensor-scale prices "
+                    "that omission with a borrowed magnitude.")
+            else:
+                say("     the POLARISED QE tail is priced by a STAND-IN at "
+                    "qe_tensor_scale = %.4g: it is given the ELASTIC tail's "
+                    "own tensor fraction, which is a BORROWED magnitude and "
+                    "NOT a derived bound, is possibly ~1e2 too small at "
+                    "x <= 0.1, and whose SIGN is meaningless here.  Quote it "
+                    "as a price tag on an omission, never as the polarised "
+                    "quasi-elastic tail."
+                    % cfg.rc_options.qe_tensor_scale)
+            if r.options.tail_model == _l.RcTailModel.TPeak:
+                say("     the tail is the t-PEAK ONLY (POLRAD Eqs. 37-39): "
+                    "its absolute normalisation is NOT validated against an "
+                    "exact tail.  Measured (test_rc.cpp T8(c), T8(d)) against "
+                    "the leading-log s-/p-peaks, for 6Li at Q^2 >= 20 GeV^2 "
+                    "and y <= 0.9: it carries the EVENT-WEIGHTED mean tail to "
+                    "0.61 %, but PER CELL only to 0.55 % over 0.15 <= y <= "
+                    "0.7 -- 331 of that window's 1356 accepted cells (24.4 %) "
+                    "are off by > 1 % and the worst by a factor 6444, at "
+                    "x = 0.79, y = 0.0088.  It is 62.8 % of the total at the "
+                    "y -> 1 edge (x = 0.01, y = 0.985) and 23 % at the HERMES "
+                    "deuteron point.  Read rc_tail as a LOWER BOUND on the "
+                    "dilution, and run --rc-tail-model t-peak+ll as the other "
+                    "edge.")
+            else:
+                say("     the tail is t-PEAK + the LEADING-LOG s-/p-PEAKS "
+                    "(--rc-tail-model t-peak+ll).  A STATED MODEL of mixed "
+                    "approximation orders -- an eta_A quadrature plus a "
+                    "single-z leading log, accurate to ~5-10 % and with an "
+                    "UNCANCELLED soft 1/(1-z) that overshoots as y -> 0 -- "
+                    "NOT a controlled O(alpha) expansion.  It has NO tensor "
+                    "s/p partner, so it LOWERS the tensor fraction of the "
+                    "tail: the tensor part of those peaks is UNKNOWN, not "
+                    "zero.  This is the UPPER edge of a band whose lower "
+                    "edge is --rc-tail-model t-peak; quote both.")
         if r.applies:
             say("     the weights are on Event.rc_weights and NOT on "
                 "Event.weight: a systematic variation and a background, not "
@@ -561,6 +664,20 @@ def main(argv=None):
                 "citations: band it (--rc-delta-low-x 0.19 / 0.30, "
                 "--rc-fq-scale 0 / 1 / 2, --rc-qe-suppression 0 / 0.5 / 1), "
                 "never quote one row alone.")
+            if cfg.rc_options.a_transfer_frac == 0.0:
+                say("     the A = 2 -> A = 6 TRANSFER of delta(x) is NOT "
+                    "priced (design Q8): every band anchor is a DEUTERON "
+                    "number and no A > 2 tensor RC calculation exists, so "
+                    "this run ASSUMES the deuteron fractional RC transfers "
+                    "to 6Li exactly.  --rc-a-transfer-frac prices it.")
+            else:
+                say("     the A = 2 -> A = 6 transfer of delta(x) is priced "
+                    "at a_transfer_frac = %.4g, i.e. the band is widened by "
+                    "sqrt(1 + f^2) = %.4g.  A PRICE on design Q8, not a "
+                    "correction: there is no A > 2 tensor RC calculation to "
+                    "calibrate it against."
+                    % (cfg.rc_options.a_transfer_frac,
+                       (1.0 + cfg.rc_options.a_transfer_frac ** 2) ** 0.5))
 
     # Events are only materialized when something needs the records: the HFS
     # exporter always, HepMC only when the T2 tier is on (regenerating a

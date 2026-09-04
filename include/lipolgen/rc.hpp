@@ -32,13 +32,21 @@
 ///     DILUTES the measured asymmetry; the tail's own (small) tensor part then
 ///     shifts it back a little.  Implemented as the additive weight `rc_tail`
 ///     from POLRAD's t-peak closed forms, Eqs. (37)-(39) + (43).
-///   sigma^q  the QUASI-ELASTIC tail.  Its POLARISED part is neglected
-///     ("there is no net tensor effect by inclusive scattering on weakly-bound
-///     spin-1/2 objects", Z.-L. Zhou et al. (NIKHEF), PRL 82 (1999) 687).  Its
-///     UNPOLARISED part has A_zz^tail ~ 0, so it does NOT cancel either: it
-///     dilutes A_zz exactly as the unpolarised elastic tail does.  HERMES
-///     (hep-ex/0506018) subtracted BOTH.  Implemented, unpolarised only, via
-///     POLRAD Eq. (44) on the proton elastic tail, folded into `rc_tail`.
+///   sigma^q  the QUASI-ELASTIC tail.  Its UNPOLARISED part has
+///     A_zz^tail ~ 0, so it does NOT cancel: it dilutes A_zz exactly as the
+///     unpolarised elastic tail does.  HERMES (hep-ex/0506018) subtracted
+///     BOTH.  Implemented via POLRAD Eq. (44) on the proton elastic tail,
+///     folded into `rc_tail`.  Its POLARISED part is NOT COMPUTED -- it is
+///     neglected by default ("there is no net tensor effect by inclusive
+///     scattering on weakly-bound spin-1/2 objects", Z.-L. Zhou et al.
+///     (NIKHEF), PRL 82 (1999) 687, a DEUTERON statement, and that paper is
+///     not in this tree) and is priced, opt-in, by the STAND-IN
+///     `RcOptions::qe_tensor_scale`, which lends it the ELASTIC tail's own
+///     tensor fraction.  That stand-in is a borrowed magnitude, not a derived
+///     bound, and it defaults to 0: read the field before quoting it.  The
+///     omission it prices is the largest one left in `rc_tail`, because the
+///     quasi-elastic term is 22 % / 73 % / 99.9 % of the tail at
+///     x = 0.01 / 0.10 / 0.30.
 ///
 /// So `rc_tail` is an UNPOLARISED DILUTION with a small tensor correction on
 /// top, not "a tensor background": for 6Li the tensor fraction of the elastic
@@ -48,15 +56,84 @@
 /// 0.28 / 2.7 / 1000 at x = 0.01 / 0.1 / 0.3), which is why `qe_kf_gev` and
 /// `qe_suppression` are the tail's dominant knobs.
 ///
-/// AND IT IS A LOWER BOUND.  `rc_tail` is the t-PEAK ALONE (RcTailModel::
-/// TPeak).  T8(c) in tests/test_rc.cpp measures the leading-log s- and
-/// p-peaks of the same observable independently: they are negligible for 6Li
-/// at EIC Q^2 >= 20 GeV^2 (POLRAD sec. 2.1.3 B confirmed WHERE THIS GENERATOR
-/// RUNS) and they are NOT elsewhere -- at the HERMES deuteron point the
-/// t-peak is 23 % of the leading-log total, and at the Q^2 ~ 4 GeV^2 corner
-/// of the generator window the quasi-elastic s-peak is already 3.3x it.
-/// Never quote `rc_tail` as "the" radiative tail, and never port it to
-/// fixed-target kinematics without the s-/p-peaks.
+/// AND THE DEFAULT IS A LOWER BOUND, WITH THE OTHER EDGE NOW SHIPPED.
+/// `rc_tail` at the shipped `RcTailModel::TPeak` is the t-PEAK ALONE.  The
+/// leading-log s- and p-peaks of the same observable are `ll_peaks_spin1` /
+/// `ll_peaks_qe` (declared beside `polrad_sigma_qe_u`), and
+/// `RcTailModel::TPeakPlusLL` adds them.  THE TWO ARE A BAND, and neither is
+/// "the" radiative tail:
+///
+///   * `TPeak` is a LOWER BOUND.  It is one peak of a three-peak object.
+///   * `TPeakPlusLL` is a STATED MODEL, not a controlled O(alpha) expansion:
+///     it sums an eta_A quadrature and a single-z collinear leading log, so
+///     it is accurate to the worse of the two (~5-10 %), and its radiator
+///     carries an UNCANCELLED soft 1/(1-z) that overshoots as y -> 0.
+///   * NEITHER carries a tensor s/p peak, because POLRAD supplies none and
+///     this file will not invent one.  `TPeakPlusLL` therefore LOWERS the
+///     tensor FRACTION of the tail: see the enumerator's own comment.
+///
+/// MEASURED (T8(c), T8(d), phase_B_numbers.md sec. B2).  POLRAD sec. 2.1.3 B's
+/// "the s- and p-peaks are suppressed" is TRUE AS AN EVENT-WEIGHTED STATEMENT
+/// ABOUT THIS GENERATOR'S BULK AND FALSE CELL BY CELL.  The two must never be
+/// quoted for each other, so they are written separately:
+///
+///   EVENT-WEIGHTED, AND IT HOLDS.  Over 6Li EIC config 1 restricted to
+///     Q^2 >= 20 GeV^2 and y <= 0.9 (5182 of 200 000 events, seed 1234), the
+///     mean dilution <w_tail - 1> moves 8.48914e-03 -> 8.54072e-03 when the
+///     s-/p-peaks are added: +0.61 %.  Weighting the sampler's own accepted
+///     cells by their cross section instead gives 8.31257e-03 -> 8.35972e-03,
+///     +0.57 %.  A RATE analysis in that window is unaffected at the 1 % level.
+///   PER CELL, AND IT FAILS.  Of the sampler's 3051 accepted cells, 1356 have
+///     Q^2 >= 20 and y <= 0.9, and 331 of THOSE -- 24.4 % of them, 28.2 % of
+///     the window's cross section -- disagree by MORE than 1 %.  The worst is
+///     x6444 at x = 0.7943, y = 0.0088, Q^2 = 27.8, where the t-peak is
+///     0.016 % of the leading-log total.  318 of the 331 sit at y < 0.1.
+///   THE NARROW CLAIM THAT SURVIVES.  At Q^2 >= 20 GeV^2 AND 0.15 <= y <= 0.7
+///     no accepted cell disagrees by more than 0.55 % (660 cells); to y <= 0.8
+///     by more than 0.77 % (725); to y <= 0.9 by more than 2.0 % (781).  BELOW
+///     y = 0.15 THERE IS NO AGREEMENT STATEMENT AT ALL.  The pre-2026-09-04
+///     "0.16 % at y <= 0.7" was read off FOUR table rows, three of them at
+///     y = 0.5 and the fourth at y = 0.7, and it understates even the
+///     y >= 0.15 slice it was meant to cover.
+///
+/// SO THERE ARE TWO BAD CORNERS, NOT ONE, AND THEY HAVE DIFFERENT MECHANISMS:
+///
+///   y -> 1.  The s-peak BEATS Y_+: z_s = (1-y)/(1-x_A y) -> 0 puts the
+///     elastic vertex at Q'^2 = z_s Q^2 -> 0, where the form factor is 1 and
+///     the elastic 1/Q'^4 is enormous.  59 % at x = 0.01, y = 0.985; T8(d)(f).
+///   y -> 0.  The SOFT RADIATOR wins, and it is exactly the uncancelled
+///     1/(1-z) this file already flags.  1 - z_s = y(1-x_A)/(1-x_A y) and
+///     1 - z_p = y(1-x_A), so BOTH peaks sit at z -> 1 and
+///     D(z) -> (2 alpha/pi) ln(Q^2/m_e^2)/[y(1-x_A)] diverges like 1/y.  The
+///     t-peak gets no matching growth -- Y_+ -> 2 as y -> 0 -- and is at the
+///     same time CRUSHED, because Q^2 >= 20 forces x y >= 5.0e-3, so low y
+///     means HIGH x, and the t-peak's own elastic vertex starts at
+///     t_min = M_A^2 x_A^2/(1 - x_A), which grows like x^2: 0.63 GeV^2 at
+///     x = 0.79, where the nucleon dipole G_D^2 = (1 + t/0.71)^-4 is already
+///     down to 0.079 and still falling like 1/t^4.  Along Q^2 = 23.88 the
+///     ratio is 1.0014 / 1.061 / 3.98 / 2244 at x = 0.01 / 0.10 / 0.30 / 0.72,
+///     tracking D(z_s) = 0.082 / 1.36 / 4.39 / 11.5 -- it leaves 1 % exactly
+///     where D(z_s) passes 1, i.e. where ONE EMISSION STOPS BEING THE RIGHT
+///     EXPANSION.  This is a MODEL BREAKDOWN of `TPeakPlusLL`, not evidence
+///     that `TPeak` is low by x6444.  The whole excess there is QUASI-elastic:
+///     6Li's coherent form factor is dead at Q'^2 ~ Q^2 ~ 28 GeV^2 and
+///     `ll_peaks_spin1` returns EXACTLY ZERO.  T8(d)(i).
+///
+/// BOTH TAILS ARE TINY THERE and that is why the event-weighted mean survives:
+/// at the worst cell w_tail - 1 is 4.92e-08 under `TPeak` and 3.17e-04 under
+/// `TPeakPlusLL`.  What does NOT survive is the TENSOR FRACTION of the tail,
+/// which collapses -1.41817e-08 -> -2.20067e-12 (x1.55e-04) at that cell --
+/// below the smallest entry of the tensor table in phase_B_numbers.md sec. B2.1
+/// (2.59e-04, and that one is at Q^2 = 3), INSIDE the Q^2 >= 20 window.  The
+/// ABSOLUTE tensor term is unchanged (both models give -6.975e-16); it is the
+/// denominator that moved.
+///
+/// It is false outright elsewhere too: at the HERMES deuteron point the t-peak
+/// is 23 % of the leading-log total (low by 4.36x), and at the Q^2 ~ 4 GeV^2
+/// corner of the generator window (x = 0.01, y = 0.1) the quasi-elastic s+p is
+/// 3.35x the t-peak unsuppressed and 7.09x at the shipped Pauli k_F.
+/// Never quote one edge alone, and never port `TPeak` to fixed-target
+/// kinematics without the s-/p-peaks.
 ///
 /// PER-NUCLEON, and the factor is 1/A^2.  Eq. (38) is the WHOLE-NUCLEUS
 /// d^2 sigma/(dx_A dy) (Weizsacker-Williams x Compton reproduces it with no
@@ -129,8 +206,16 @@
 ///     breaks down (the tensor part of the density cancels the unpolarised
 ///     part), and the clipped fraction is reported per run and per event
 ///     (`Event::rc_clipped`) rather than hidden.
-///   * `rc_tail` is the t-PEAK ONLY and is therefore a LOWER BOUND on the
-///     dilution -- see the RcTailModel::TPeak comment and T8(c).
+///   * `rc_tail` at the DEFAULT `RcTailModel::TPeak` is the t-PEAK ONLY and
+///     is therefore a LOWER BOUND on the dilution.  `TPeakPlusLL` is the
+///     other edge and is a STATED MODEL of mixed approximation orders with
+///     no tensor s/p partner, so it lowers the tensor fraction -- run the
+///     two as a band and quote neither alone.  THE BAND IS A FEW PER CENT
+///     ONLY IN THE BULK: per cell it is a factor 6444 wide at the
+///     (high x, low y) corner of the Q^2 >= 20 GeV^2 window, and the
+///     "agrees to 0.16 %" sentence that used to stand here was an
+///     EVENT-WEIGHTED statement misread as a per-cell one.  See the header
+///     block's "two bad corners", the RcTailModel comments, T8(c) and T8(d).
 ///
 /// Design: docs/open_items/run_2026-09-02/design_C_tensor_rc.md.
 
@@ -163,8 +248,20 @@ inline constexpr double RC_X_HIGH       = 0.16;
 /// radiative correction changes from 10 % to 30 % as compared with the Born
 /// contribution", said of an unpolarised beam on a tensor-polarised deuteron
 /// -- exactly this configuration -- in HERMES kinematics.  ZERO INSPIRE
-/// CITATIONS: a single unchecked calculation, and its two numbers are the
-/// spread of ONE calculation over Q^2, not two independent edges.
+/// CITATIONS: a single unchecked calculation.
+///
+/// WHAT THE 10 %/30 % PAIR IS -- CORRECTED 2026-09-04.  Measured off the
+/// paper's own arXiv figure arrays (`phase_B_numbers.md` B6.3): the pair is
+/// the TWO ENDS OF ONE PANEL'S x WINDOW AT A SINGLE Q^2 = 0.1 --
+/// |delta| = 0.1133 at x = 0.00966 and 0.2662 at x = 0.00226, with
+/// delta = (dsigma_RC - dsigma_Born)/dsigma_Born -- and the paper's own
+/// sentence scopes them to x, not to Q^2: "In the range of low x
+/// (x ~ 1e-3 - 1e-2) ... changes from 10 % to 30 %".  It is NOT "the spread
+/// of ONE calculation over Q^2, not two independent edges"; that reading was
+/// carried here, in PHYSICS_CHANNELS.md and in design_C_tensor_rc.md until
+/// 2026-09-04 and is WITHDRAWN.  Panel (a) is also the ONLY one of the four
+/// inside the paper's own quoted x range: panel (b) starts at x = 0.01348.
+///
 /// THIS IS A CORRECTION MAGNITUDE, NOT A MEASURED RESIDUAL: taking it as a
 /// 1-sigma band is a CHOICE this generator makes because it does not apply the
 /// correction.  Default = the conservative 0.30 edge, which CONTAINS the 0.10
@@ -176,6 +273,18 @@ inline constexpr double RC_DELTA_LOW_X            = 0.30;
 /// that came from dividing 2e-3 by the RANGE MAXIMUM |A_zz| <= 0.02, which
 /// occurs at x = 0.45 where HERMES says RC is negligible.
 inline constexpr double RC_DELTA_LOW_X_OPTIMISTIC = 0.19;
+/// The x this anchor is ATTACHED to -- and it is NOT where the 0.30 was read.
+/// READ THIS WITH `RC_DELTA_LOW_X`.  0.01 lies ABOVE the top of the only panel
+/// the 10 %/30 % sentence covers (x = 0.00226 - 0.00966 at Q^2 = 0.1), and at
+/// that panel's top the paper's own arrays read |delta| = 0.113.  The 0.266
+/// that rounds to its "30 %" sits at x = 0.00226, a factor 4.3 LOWER in x.
+/// So the real basis of the anchor is "THE PANEL'S LOWEST-x VALUE, CARRIED
+/// UPWARD IN x to 0.01", which is a different thing from "the conservative end
+/// of a Q^2 spread" -- the basis these files asserted until 2026-09-04.  Both
+/// readings happen to be conservative in magnitude (0.30 > 0.266 > 0.113) and
+/// that is the only property the band uses, but the basis is stated here so
+/// nobody re-derives the anchor from the wrong one.  Recorded, NOT changed:
+/// moving the anchor is the author's call, and 0.30 is unchanged.
 inline constexpr double RC_X_LOW                  = 0.01;
 
 /// The ceiling on |tau| the BAND is allowed to see, i.e. `RcOptions::
@@ -253,6 +362,21 @@ class Spin1ElasticFF {
   virtual std::string provenance() const = 0;   ///< printed by the run
 };
 
+/// Which shape the C0 (monopole) sector runs -- `F_c` AND `F_q`, which share
+/// ONE monopole in this model.  It is a BAND, not a refit: see the block
+/// above `LI6_VMC_C0_Q_CUT_FM` for what the two edges are, why a two-parameter
+/// harmonic oscillator cannot be refitted into the other one, and the two
+/// policy overrides reading the VMC density here requires.
+enum class C0Shape {
+  Ho,     ///< the (a, alpha) harmonic oscillator.  THE DEFAULT, and bit for
+          ///< bit what every published number was made with.
+  VmcFt,  ///< the j_0 transform of `data/vmc/density/li6.density`.
+};
+
+/// "ho" | "vmc-ft" -- the npz `meta` key, the CLI spelling and the provenance
+/// string all read this ONE function.
+const char* c0_shape_name(C0Shape s);
+
 /// The v0 6Li model: a two-parameter harmonic-oscillator point-nucleon shape
 /// for the charge and quadrupole multipoles, a separate two-parameter shape
 /// for the magnetic one, all normalised on the MEASURED moments (NOT on VMC --
@@ -298,6 +422,12 @@ struct HoSpin1FFOptions {
   /// Flat multiplier on F_m -- the eta F_m^2 tensor sector, which `fq_scale`
   /// does NOT span.  Run 0.5, 1, 2.
   double tail_tensor_scale = 1.0;
+  /// WHICH C0 SHAPE.  `Ho` is the default and is bit for bit what every
+  /// published number was made with; `VmcFt` is the OTHER EDGE of the
+  /// monopole band and moves `F_c` and `F_q` TOGETHER (they share the
+  /// shape).  Unlike `fq_scale` this is not a multiplier and cannot be
+  /// rescaled out of one run: RUN BOTH EDGES.
+  C0Shape c0_shape = C0Shape::Ho;
   bool   fold_nucleon = true;   ///< multiply by (G_E^p(t) + G_E^n(t)), N = Z
 };
 
@@ -322,6 +452,96 @@ struct HoSpin1FFOptions {
 ///  q_0 = (1/a) sqrt(2(2+3 alpha)/alpha) = 3.0998 fm^-1.)
 inline constexpr double LI6_FF_HO_A_FM   = 1.9069;
 inline constexpr double LI6_FF_HO_ALPHA  = 0.13822;
+
+// ------------------------- the VMC edge of the C0 shape band (C0Shape::VmcFt)
+
+/// `C0Shape::VmcFt` -- the OTHER EDGE of the 6Li monopole, and the reason the
+/// unfitted `(a, alpha)` above is now BANDED rather than left to look settled.
+///
+/// WHAT IT IS.  F_point(q) = SUM rho_p(r) j_0(q s r) r^2 / SUM rho_p(r) r^2
+/// over `data/vmc/density/li6.density` (ANL AV18+UX point-PROTON density,
+/// 200k VMC samples, R = 0.05..20.05 fm step 0.1 -- so the plain sum IS the
+/// midpoint rule on [0, 20.1] fm and the equal bin width cancels in the
+/// ratio).  It is normalised to F(0) = 1 BY CONSTRUCTION, and the radial
+/// rescale
+///     s = sqrt(LI6_R2_POINT_FM2 / <r^2>_table) = 1.008959
+/// is applied so the shape carries the MEASURED <r^2>_point = 6.0788 fm^2
+/// exactly and T11's <r^2>, F_c(0) = 3 and F_q(0) = -65.914 hold on BOTH
+/// edges with no edge-specific tolerance.  The file's own second moment is
+/// <r^2> = 5.9713 fm^2, r = 2.4436 fm (its header prints 2.4433 --
+/// `LI6_R_POINT_VMC_FM`), which MISSES the design target r_point = 2.4655 fm
+/// by 0.9 %; the rescale is exactly what removes that, and it is the ONLY
+/// thing this shape takes from anywhere but the file.
+///
+/// WHY A BAND AND NOT A REFIT.  The two shapes disagree by x2.51 at
+/// q = 2 fm^-1 and x6.15 at q = 2.5 (x6.3 and x37.8 in F^2), and NO
+/// two-parameter harmonic oscillator can reach the VMC values while holding
+/// <r^2>: the HO's fall is exp(-q^2 a^2/4) with `a` fixed by <r^2>, so the
+/// only way to lift q ~ 2.5 is to shrink `a` and break q -> 0.  A refit
+/// therefore means inventing a 3-4 parameter functional form, a new
+/// provenance argument for it, and a rewrite of T11's closed-form
+/// assertions -- against elastic data that are STILL not in this repository
+/// in any machine-readable form (phase_C_numbers.md sec. 8.3, "Q1 stays
+/// open").  Running the two edges prices the same uncertainty and asserts
+/// nothing new.  Q1 STAYS OPEN; this is its price tag, not its answer.
+///
+/// THE HIGH-q CONTINUATION IS ITS OWN MODEL CHOICE.  The t-peak integrand
+/// runs to eta_A = S_x/4M_A^2, i.e. q ~ 278 fm^-1 at x = 0.01 and ~88 fm^-1
+/// at x = 0.10 -- where nobody has data and the VMC table is pure noise: the
+/// transform's own 1-sigma MC error (propagated from the file's DRHORP
+/// column, bins independent) overtakes it at q ~ 4.5 fm^-1 (F/sigma is already
+/// 1.5 at 4.3), and the 0.1 fm grid aliases anyway above the Nyquist
+/// q = pi/dr = 31 fm^-1.  So the direct transform is used only up to
+/// `LI6_VMC_C0_Q_CUT_FM` = 3.0 fm^-1 -- the last
+/// q at which the table is still signal-dominated (F/sigma = 8.3 there,
+/// against 165 at q = 2, 40 at 2.5, 4.7 at 3.5 and 1.5 at 4.3) -- and above
+/// it the shape is CONTINUED as the pure exponential
+///     F(q) = F(q_cut) exp(-lambda (q - q_cut)),
+/// with lambda the transform's own MEAN log-slope over
+/// [`LI6_VMC_C0_Q_MATCH_FM`, `LI6_VMC_C0_Q_CUT_FM`] = [2, 3] fm^-1, the last
+/// decade over which it is signal-dominated: lambda = 3.4048 fm.  This is
+/// continuous in VALUE and NOT in slope, on purpose -- the LOCAL log-slope at
+/// 3.0 fm^-1 is already 2.645 fm and at 3.5 fm^-1 it is 0.77 fm, which is the
+/// noise flattening the tail, not the physics.  Two consequences to state out
+/// loud rather than discover downstream: (i) the continuation is POSITIVE and
+/// monotone, so the VmcFt edge has NO C0 ZERO ANYWHERE and its `F_c`/`F_q`
+/// never change sign, where the Ho edge's both do at q_0 = 3.0999 fm^-1 --
+/// that difference, not the size of the shape, is what moves sigma^el_T; and
+/// (ii) the continued tail is numerically dead (F = 5.7e-14 at q = 10 fm^-1,
+/// below any double the t-peak can notice), so the choice of continuation LAW
+/// is not what moves the numbers -- measured in
+/// `docs/open_items/run_2026-09-03/phase_B_numbers.md` sec. B1 by rerunning
+/// the whole table with q_cut = 2.5 fm^-1 and with a GAUSSIAN continuation.
+///
+/// TWO POLICY OVERRIDES, WRITTEN DOWN RATHER THAN MADE SILENTLY.
+///
+/// (a) `docs/open_items/run_2026-09-02/design_G_cluster_config.md` sec. 3.2
+///     declares `li6.density` "not an input -- it is the independent
+///     validation target" for the assembled alpha-d one-body density (T6,
+///     `tests/test_cluster_config.cpp`).  Reading it HERE makes it an input
+///     to `rc`, so that independence is now PARTIAL and its scope is exactly
+///     this: `cluster_config.cpp` still opens the file nowhere, so T6's
+///     4 % radius discrepancy remains an independent test of the cluster
+///     model; but any statement that compares THIS form factor with a
+///     cluster-model radius is now circular and may not be made.  The
+///     override is deliberate, and this is where it is recorded.
+///
+/// (b) The same file is called too WRONG to set the tensor normalisation
+///     (WS98's Q(6Li) = -0.23(9) fm^2 against the measured -0.0818, a factor
+///     3 -- which is why `LI6_QUADRUPOLE_FM2` and `LI6_MU_N` are MEASURED
+///     moments) and right enough to set the monopole SHAPE.  That tension is
+///     real and the answer is that the two are different multipoles:
+///     `OPEN_ITEMS_SOLUTIONS.md` sec. 5 forbids deriving a 6Li TENSOR / b_1
+///     input from these wave functions, and the quantity that fails by 3x is
+///     the QUADRUPOLE; what is read here is the MONOPOLE -- the l = 0 part of
+///     the same density -- whose own printed normalisation
+///     (4pi INT rho r^2 dr = 2.9991 against Z = 3, 0.03 % low) and second
+///     moment (0.9 % low, and rescaled away above) are right to a fraction of
+///     a percent.  The quadrupole NORMALISATION stays measured on both edges:
+///     `C0Shape` moves F_q's SHAPE and never its q -> 0 limit, which is why
+///     T11's F_q(0) = -65.914 passes unchanged on VmcFt.
+inline constexpr double LI6_VMC_C0_Q_CUT_FM   = 3.0;
+inline constexpr double LI6_VMC_C0_Q_MATCH_FM = 2.0;
 
 /// `F_mag`'s zero and width [fm^-1, fm].  UNFITTED STARTING VALUES -- the fit
 /// itself is the implementer's (T11, and the "fitted (q_z, b) of F_mag against
@@ -582,10 +802,104 @@ double polrad_sigma_el_t(const Spin1ElasticFF& ff, double x_a, double y,
 /// function's default, NOT `RcOptions`') is the unsuppressed S = 1 form.
 ///
 /// PER NUCLEUS (the Z and N multiplicities are in it); `RcModel` divides by A.
-/// The POLARISED quasi-elastic tail is NOT here and is not implemented at all
-/// -- Z.-L. Zhou et al., PRL 82 (1999) 687.
+/// The POLARISED quasi-elastic tail is NOT here and is not computed anywhere:
+/// POLRAD supplies no tensor partner to Eq. (44), and no polarised
+/// quasi-elastic radiative-tail calculation exists for an A = 6 spin-1
+/// nucleus.  It is NEGLECTED by default (Z.-L. Zhou et al., PRL 82 (1999)
+/// 687 -- a deuteron statement, and not in this tree) and PRICED, opt-in and
+/// entirely inside `RcModel::tail_ratio_at`, by the borrowed magnitude
+/// `RcOptions::qe_tensor_scale`.  Nothing in THIS function changes with it.
 double polrad_sigma_qe_u(int z, int n, double x, double y, double s,
                          double m_n, int n_eta = 128, double kf_gev = 0.0);
+
+// ----------------------------------------- the LEADING-LOG s- and p-peaks
+
+/// The Weizsacker-Williams (equivalent-radiator) lepton structure function
+/// D(z) = (alpha/pi) ln(Q^2/m_e^2) (1 + z^2)/(1 - z), the ONE approximation
+/// that separates the s-/p-peaks below from POLRAD's t-peak quadrature.
+///
+/// It is a SINGLE-z LEADING LOG and nothing more: no soft-photon exponent, no
+/// non-log O(alpha) piece, no second emission.  Returns 0 outside z in (0,1)
+/// and at Q^2 <= m_e^2, where ln(Q^2/m_e^2) turns negative and the whole
+/// collinear picture has no meaning -- a negative radiator would be a
+/// negative cross section, not a small one.  That guard is DEFENSIVE and does
+/// not bite in either shipped 6Li scenario (their lowest tail-table nodes are
+/// 6097x and 1.5e4x above m_e^2); a user scenario with y_min below ~6.6e-4
+/// would reach it.
+///
+/// AND ITS SOFT 1/(1-z) IS UNCANCELLED.  Both peaks sit at z -> 1 as y -> 0,
+/// where D(z) diverges: at x = 0.744, y = 0.0071, Q^2 = 21 it is already
+/// 13.5, far outside the regime in which one emission is the right
+/// expansion.  The absolute contribution there is small (w_tail - 1 = 3.7e-4
+/// against 4.5e-8 for the t-peak alone), so it does not distort a run; but
+/// no cutoff is imposed to hide it, and `RcTailModel::TPeakPlusLL` is not
+/// trustworthy in that corner.
+double ll_radiator(double z, double q2);
+
+/// The unpolarised Rosenbluth pair (A, B) of an elastic target, POLRAD
+/// Eq. (A.4) at Q_N = 0, in the normalisation
+/// d sigma/dOmega = sigma_Mott [A + B tan^2(theta/2)].
+struct RosenbluthAB { double a = 0.0, b = 0.0; };
+
+/// Spin 1: A = F_C^2 + (8/9) eta^2 F_Q^2 + (2/3) eta F_M^2,
+///         B = (4/3) eta (1 + eta) F_M^2,  eta = Q^2/4M^2.
+///
+/// NOT a second definition of Eq. (38)'s unpolarised integrand: that integrand
+/// IS `A * Xt - B/(2 eta)` identically, which T8(c) pins at 1e-14 against
+/// `polrad_sigma_el_u`'s own inner expression.  The (A, B) split is the form
+/// the collinear peaks need (they want a cross section at a SHIFTED Q'^2, not
+/// an eta_A integrand) and is written once, here.
+RosenbluthAB rosenbluth_spin1(const Spin1ElasticFF& ff, double q2, double m);
+
+/// Spin 1/2, through the same `nucleon_ff` the quasi-elastic t-peak uses:
+/// A = (G_E^2 + tau G_M^2)/(1 + tau), B = 2 tau G_M^2, tau = Q^2/4m_p^2.
+RosenbluthAB rosenbluth_nucleon(bool proton, double q2);
+
+/// d sigma_el/dQ'^2 = (4 pi alpha^2/Q'^4) [ (y'^2/2) B/(2 eta')
+///                                          + (1 - y' - m^2 y'^2/Q'^2) A ],
+/// with y' = Q'^2/S', eta' = Q'^2/(4 m^2) (elastic F_1 = B/(4 eta), F_2 = A).
+/// Returns 0 where the kinematic factor goes negative, i.e. outside the
+/// elastic band.  T8(c) gates it at 1e-10 against the LABORATORY Rosenbluth
+/// built from sigma_Mott by a different algebraic route.
+double dsigma_el_dq2(const RosenbluthAB& ab, double q2p, double sp, double m);
+
+/// The s- and p-peak pair returned by the two entry points below.  Named, not
+/// a std::pair: this header does not include <utility>, and `TailTriple` /
+/// `NucleonFF` / `EtaLimits` are how everything else here carries a tuple.
+struct LlPeaks { double s = 0.0, p = 0.0; };
+
+/// The LEADING-LOG s- and p-peaks of the elastic radiative tail off a spin-1
+/// nucleus -- WHOLE-NUCLEUS d^2 sigma/(dx_A dy), the same observable and the
+/// same normalisation as `polrad_sigma_el_u`, so the three add.
+///
+///   ISR (s-peak): the incoming lepton radiates, k1 -> z k1, and elasticity
+///   fixes z = (1-y)/(1 - x_A y).  With Q'^2 = z Q^2, S' = z S_A and the
+///   Jacobian |d(Q^2,y)/d(Q'^2,z)| = (1 - x_A y)/z,
+///       d^2 sigma/(dx_A dy) = y S_A D(z) [d sigma_el/dQ'^2] z/(1 - x_A y).
+///   FSR (p-peak): k2 -> k2/z' with z' = 1 - y(1 - x_A), Q'^2 = Q^2/z',
+///   S' = S_A and |J| = z', so the same product with 1/z'.
+///
+/// UNPOLARISED ONLY.  There is no tensor (sigma_t) counterpart here and this
+/// file will not invent one -- see the `RcTailModel::TPeakPlusLL` comment.
+LlPeaks ll_peaks_spin1(const Spin1ElasticFF& ff, double x_a, double y,
+                       double s_a, double m);
+
+/// ... and of the QUASI-ELASTIC tail: Z protons + N neutrons, incoherently,
+/// PER NUCLEUS in NUCLEON invariants (x, s, m_p) -- the same convention as
+/// `polrad_sigma_qe_u`, so those two add directly.
+///
+/// `kf_gev` is the SAME de Forest-Walecka Pauli factor `polrad_sigma_qe_u`
+/// carries, evaluated at each PEAK'S OWN elastic-vertex three-momentum
+/// transfer q'^2 = Q'^2(1 + Q'^2/4m_p^2), and it defaults to 0 (unsuppressed)
+/// for the same reason that function's does.  It is not an extension of
+/// POLRAD Eq. (44) but the same S(q) at the right argument: the two pieces
+/// land in ONE numerator in `RcModel::tail_ratio_at`, and suppressing the
+/// t-peak while leaving the s-/p-peaks bare would be an inconsistency inside
+/// a single sum.  It matters only at the bottom corner -- at the s-peak's own
+/// Q'^2 the factor is 1 for every 6Li EIC node with Q^2 >= 20 GeV^2 and about
+/// 0.90 at (x, y) = (0.001, 0.985) -- and `RcModel` passes `qe_kf_gev`.
+LlPeaks ll_peaks_qe(int z, int n, double x, double y, double s,
+                    double kf_gev = 0.0);
 
 /// The de Forest-Walecka Fermi-gas Pauli suppression factor, exposed so a test
 /// and a plot can see it: S(q) = (3/4)u - u^3/16 for u = q/k_F < 2, else 1.
@@ -623,8 +937,65 @@ enum class RcTailModel : int {
                     ///< as a LOWER BOUND on the dilution, band it, and never
                     ///< quote it as "the" radiative tail.
   PolradFull = 1,   ///< Eq. (18) + Appendix B + Eq. (A.4).  NOT IMPLEMENTED.
+  TPeakPlusLL = 2,  ///< OPT-IN: `TPeak` PLUS the leading-log s- and p-peaks
+                    ///< of `ll_peaks_spin1` / `ll_peaks_qe`, added to the
+                    ///< UNPOLARISED numerator of `tail_ratio_at`.  Read the
+                    ///< three paragraphs below before using it.
+                    ///<
+                    ///< (1) MIXED APPROXIMATION ORDERS, and the sum is a
+                    ///< STATED MODEL and not a controlled expansion.  The
+                    ///< t-peak is POLRAD's eta_A quadrature of Eqs. (37)-(39),
+                    ///< (43) -- exact in the peaking approximation's t
+                    ///< channel, integrated over the whole photon phase space
+                    ///< it covers.  The s-/p-peaks are a SINGLE-z collinear
+                    ///< leading log: one D(z) = (alpha/pi) ln(Q^2/m_e^2)
+                    ///< (1+z^2)/(1-z) at the one z elasticity fixes, with no
+                    ///< soft exponent, no non-log O(alpha) term and no second
+                    ///< emission.  Their sum double-counts nothing (the three
+                    ///< peaks are disjoint regions of the photon angle) but it
+                    ///< is accurate to the WORSE of the two, i.e. to the
+                    ///< leading log, ~ 1/ln(Q^2/m_e^2) ~ 5-10 %.  Quote it as
+                    ///< a model, band it against `TPeak`, and do not claim
+                    ///< O(alpha) completeness for it.  AND THE 5-10 % IS THE
+                    ///< BULK FIGURE: D(z) itself passes 1 at y ~ 0.06 (x ~ 0.1
+                    ///< on the Q^2 = 24 GeV^2 line) and is 11.5 at x = 0.72,
+                    ///< y = 0.0083, so below y ~ 0.15 there is no expansion
+                    ///< parameter left and this model has NO accuracy
+                    ///< statement at all -- see the header block's "two bad
+                    ///< corners" and T8(d)(i).
+                    ///<
+                    ///< (2) THERE IS NO TENSOR s/p PEAK, and this file will
+                    ///< not invent one.  `ll_peaks_spin1` returns the
+                    ///< UNPOLARISED Rosenbluth (A, B) only; POLRAD supplies no
+                    ///< sigma_T counterpart at the s- or p-peak, and deriving
+                    ///< one here would be an uncited second definition of a
+                    ///< physics number (docs/CONVENTIONS.md).  So the s+p
+                    ///< contribution is carried in its OWN columns
+                    ///< (`TailTriple::u_sp`, `::qe_sp`, `sigma_tail_u_sp()`,
+                    ///< `sigma_tail_qe_sp()`), which are added to
+                    ///< `tail_ratio_at`'s numerator and DELIBERATELY KEPT OUT
+                    ///< of its (q_n/6) ratio_t sigma_u tensor term.
+                    ///<
+                    ///< CONSEQUENCE, stated because it is a physics change and
+                    ///< not bookkeeping: switching to `TPeakPlusLL` LOWERS the
+                    ///< tensor FRACTION of the tail wherever the s-/p-peaks
+                    ///< matter, because the denominator grows and the tensor
+                    ///< numerator does not.  That is the honest reading -- the
+                    ///< tensor part of the s-/p-peaks is UNKNOWN, not zero --
+                    ///< and it is why `TPeakPlusLL` is a systematic to run
+                    ///< beside `TPeak`, never a replacement for it.  A run
+                    ///< that needs the tensor tail at fixed-target kinematics
+                    ///< needs Eq. (A.4) at the shifted Q'^2, which is
+                    ///< `PolradFull`'s job and is not implemented.
+                    ///<
+                    ///< (3) NOT THE DEFAULT.  `TPeak` stays the shipped
+                    ///< default so that every published number and every
+                    ///< reference JSON stays bit for bit reproducible.
 };
 const char* rc_mode_name(RcMode m);          ///< "off", "tensor-band"
+/// "t-peak", "polrad-full", "t-peak+ll" -- ONE definition, read by the npz
+/// `meta["rc_tail_model"]` key, by the run banner and by the tests.
+const char* rc_tail_model_name(RcTailModel m);
 
 /// Which part of the rank-2 sector the band rescales.
 enum class RcScope : int {
@@ -651,6 +1022,31 @@ struct RcOptions {
   double x_high       = RC_X_HIGH;
   double delta_low_x  = RC_DELTA_LOW_X;   ///< 0.30 default; 0.19 = "as good as HERMES"
   double x_low        = RC_X_LOW;
+  /// The A = 2 -> A = 6 TRANSFER uncertainty on delta(x), as a FRACTION of
+  /// delta itself, added in quadrature by `RcModel::delta`:
+  ///
+  ///   delta_eff(x) = hypot( delta(x), a_transfer_frac * delta(x) )
+  ///                = delta(x) * sqrt(1 + a_transfer_frac^2)
+  ///
+  /// design_C_tensor_rc.md **Q8**: "no A > 2 tensor RC exists at all --
+  /// everything cited is deuteron", and whether the deuteron's FRACTIONAL RC
+  /// transfers to 6Li "is the largest unquantified assumption in the band".
+  /// Both anchors are deuteron measurements or a deuteron calculation
+  /// (HERMES hep-ex/0506018 at low x, Gakh-Shekhovtsova hep-ph/0403262 for
+  /// the 0.30 size, E12-13-011 for the 1.5 % high-x edge); 6Li enters the
+  /// band only through the form factors and b_1 supplied elsewhere, never
+  /// through delta.  This knob PRICES that transfer and does not correct it.
+  ///
+  /// 0.0 (DEFAULT) = "the deuteron fraction transfers exactly", which is the
+  /// assumption v0 shipped, unstated.  0.5 = "known to 50 % of itself".
+  /// 1.0 = "as uncertain as it is large" (sqrt(2) x wider band).  There is no
+  /// measurement to prefer any of them; the point is that the assumption now
+  /// has a dial and a default that is a CHOICE rather than a silence.
+  /// Multiplicative and delta-proportional on purpose: it must vanish where
+  /// delta does (the E12-13-011 high-x anchor is an A = 2 measurement too, so
+  /// the transfer doubt cannot be larger than the correction it doubts).
+  /// MUST be >= 0; `RcModel`'s constructor refuses a negative value.
+  double a_transfer_frac = 0.0;
 
   // --- the radiative tails ----------------------------------------------
   bool with_tail    = true;   ///< false = band only (a diagnostic run)
@@ -669,10 +1065,102 @@ struct RcOptions {
   double fq_scale = 1.0;
   /// Flat multiplier on F_m -- the eta F_m^2 tensor sector.  Same rules.
   double tail_tensor_scale = 1.0;
+  /// WHICH C0 SHAPE the DEFAULT form factor runs -- `Ho` (bit for bit the
+  /// shipped default) or `VmcFt`.  Here for the same reason `fq_scale` is:
+  /// `make_config(rc_c0_shape=...)` and `--rc-c0-shape` need something to
+  /// set.  IGNORED when `ff` is user-supplied -- the run banner then prints
+  /// THAT object's own provenance, so the npz's `rc_c0_shape` key must be
+  /// read beside `rc_ff_provenance` and not alone.  It is a SHAPE, not a
+  /// multiplier: run both edges, never rescale one.
+  C0Shape c0_shape = C0Shape::Ho;
   /// Flat multiplier on the whole quasi-elastic tail, ON TOP of the
   /// `qe_kf_gev` Pauli suppression below -- the band knob, not the physics.
   /// Run 0.0 / 0.5 / 1.0.
   double qe_suppression = 1.0;
+  /// THE POLARISED QUASI-ELASTIC TAIL -- PRICED BY A STAND-IN, NOT COMPUTED.
+  /// DEFAULT 0.0, which is exactly the tensor-blind quasi-elastic tail the
+  /// shipped code has always carried: with this at 0 not one floating-point
+  /// operation of the default run moved.
+  ///
+  /// WHAT IT DOES.  `tail_ratio_at` adds, to its numerator,
+  ///
+  ///   (q_n/6) * qe_tensor_scale * (sigma^el_T/sigma^el_U) * sigma^q_U
+  ///
+  /// -- multiplied by `qe_suppression` with the rest of the quasi-elastic
+  /// sector, see below.  It hands the QUASI-ELASTIC tail the ELASTIC tail's
+  /// own tensor-to-unpolarised ratio, scaled.  `qe_tensor_scale = 1` is
+  /// therefore the sentence "the quasi-elastic tensor fraction is the
+  /// coherent elastic one".  The term is EXACTLY LINEAR in the scale (unlike
+  /// `fq_scale`, which is quadratic and must be RUN -- T12), so one run at 1
+  /// rescales to any other value and no second run is needed.
+  ///
+  /// WHY IT EXISTS.  The polarised quasi-elastic tail is the largest UNPRICED
+  /// piece of `rc_tail`: after the per-nucleon fix and POLRAD's own Pauli
+  /// factor the quasi-elastic term is 22 % / 73 % / 99.9 % of the tail at
+  /// x = 0.01 / 0.10 / 0.30, and every bit of its tensor dependence is set to
+  /// zero.  Zero is a claim, and it is not a defensible one at 99.9 %.
+  ///
+  /// AND IT IS NOT A DERIVED BOUND.  Say it plainly: no polarised
+  /// quasi-elastic radiative-tail calculation exists for an A = 6 spin-1
+  /// nucleus, POLRAD supplies no tensor partner to Eq. (44), and none is
+  /// derived here.  What the number assumes, where it is conservative, and
+  /// where it fails:
+  ///
+  ///   (1) IT BORROWS A COHERENT QUANTITY FOR AN INCOHERENT PROCESS.
+  ///       `sigma^el_T` is built from F_Q and F_M -- rank-2 properties of the
+  ///       WHOLE 6Li ground-state charge and magnetisation distributions.
+  ///       `sigma^q_U` is an incoherent sum of Z + N NUCLEON elastic tails;
+  ///       its tensor partner would come from the alignment of the nucleon
+  ///       MOMENTUM distribution inside an aligned 6Li (and from the off-shell
+  ///       and Pauli response), a different object with its own Q^2 shape.
+  ///       No step of any derivation connects the two.  This is a magnitude
+  ///       with the right units and the right kinematic weighting, borrowed.
+  ///
+  ///   (2) WHERE IT IS CONSERVATIVE.  It replaces an exact zero on the
+  ///       dominant piece of the tail with a number that is reported, banded
+  ///       and carried in the same (x, y) weighting as everything else in
+  ///       `tail_ratio_at`.  It cannot be quietly wrong in the way a zero can.
+  ///
+  ///   (3) WHERE IT FAILS, AND IN WHICH DIRECTION.  At x <~ 0.1 6Li's elastic
+  ///       tensor fraction is ANOMALOUSLY SMALL, and for a reason the
+  ///       quasi-elastic piece does not share.  MEASURED in this tree at
+  ///       Q^2 = 5 GeV^2, sigma^el_T/sigma^el_U = -3.057e-03 / +9.357e-04 /
+  ///       +7.972e-02 at x = 0.01 / 0.10 / 0.30, against POLRAD's own DEUTERON
+  ///       elastic-tail numbers +0.106 / +0.064 / -0.117 (transcription check
+  ///       sec. 8) -- a factor 35 / 68 at the first two and only 1.5 at the
+  ///       third.  Design sec. 2.1 says why: what sets the fraction is Q_A/Z,
+  ///       and Q(6Li)/Q(d) = 0.29 against Z = 3.  But that near-vanishing 6Li
+  ///       quadrupole is a cancellation in the COHERENT charge distribution,
+  ///       while the alignment of the NUCLEON MOMENTUM distribution -- what a
+  ///       quasi-elastic tensor response would ride on -- is carried by the
+  ///       deuteron-like pair that holds the whole spin and has no reason to
+  ///       inherit it.  So at x <~ 0.1 `qe_tensor_scale = 1` may UNDERSTATE
+  ///       the omission by one to two orders of magnitude, and a run pricing
+  ///       it should quote BOTH 1 and O(1e2) -- one multiplication, since the
+  ///       term is linear.  (The deuteron elastic ratio is itself only a
+  ///       PROXY for a deuteron quasi-elastic one, which nobody has computed
+  ///       either; it bounds nothing, it just says the scale is not 1.)
+  ///
+  ///   (4) THE SIGN IS MEANINGLESS.  `sigma^el_T/sigma^el_U` changes sign with
+  ///       x, and at x = 0.10 its sign is a C0-shape band edge
+  ///       (phase_B_numbers.md sec. B1).  The stand-in inherits that sign and
+  ///       there is no argument that the quasi-elastic tail shares it.  Read
+  ///       the MAGNITUDE.
+  ///
+  ///   (5) IT IS NOT ZHOU et al.  That paper (PRL 82 (1999) 687) is why the
+  ///       polarised quasi-elastic tail is NEGLECTED, is not in this tree, and
+  ///       is a DEUTERON statement.  Nothing here reproduces or contradicts
+  ///       it; it supports "small", never "zero", and "small" has never been
+  ///       quantified for A = 6.
+  ///
+  /// TWO PLUMBING RULES.  It is multiplied by `qe_suppression`, because that
+  /// knob is documented as a flat multiplier on the WHOLE quasi-elastic tail
+  /// and a tensor stand-in whose unpolarised parent has been switched off
+  /// would be a tail with no parent.  And `PipelineConfig::validate()` REFUSES
+  /// a non-zero value when `with_qe_tail == false`, under the same rule that
+  /// governs `m_lepton`: a knob that did not run may not be recorded in the
+  /// npz `meta` as if it had.
+  double qe_tensor_scale = 0.0;
   /// POLRAD Eq. (44)'s S_E/S_M, as `ffquas` codes them: the de Forest-Walecka
   /// Fermi-gas factor S(q) = (3/4)(q/k_F) - (q/k_F)^3/16 below q = 2 k_F.
   /// DEFAULT ON, at 6Li's measured k_F (`RC_QE_KF_GEV`, Moniz et al.).  This
@@ -798,17 +1286,59 @@ class RcModel {
   ///                  which no PipelineChannel builds today) -> band, tail == 1
   ///   CoherentLi6 -> neither; both weights exactly 1.0
   bool applies() const { return applies_; }
-  /// False whenever the tail is identically 1: any tagged channel (the elastic
-  /// recoil sits at x_L = 1, inside the 10-sigma beam envelope, and is vetoed
-  /// by the tag), `with_tail = false`, or `!applies()`.  NOTE it is TRUE at
+  /// False whenever the tail is identically 1: any tagged channel,
+  /// `with_tail = false`, or `!applies()`.  NOTE it is TRUE at
   /// every theta_S -- the tail is emitted at any axis through
   /// P_zz^eff = 3 Q_NN P_2(cos theta_S) (POLRAD Eq. (43); design sec. 1.4.7).
   /// The run PRINTS the reason whenever this is false.
+  ///
+  /// ON A TAGGED CHANNEL IT IS HALF A FACT AND HALF AN OMISSION, and the two
+  /// must not be quoted as one.  The ELASTIC tail is genuinely VETOED: the
+  /// intact ion recoils at x_L = 1, inside the 10-sigma beam-exclusion
+  /// envelope, while the tag looks at x_L ~ A_spec/A_beam -- a property of
+  /// the route classification, not an approximation.  The QUASI-ELASTIC tail
+  /// is NOT vetoed and its absence here is an unpriced background:
+  ///
+  ///   * A quasi-elastic knockout removes ONE nucleon.  The A-1 remnant is
+  ///     UNBOUND for both lithium channels -- 5Li and 5He are RESONANCES above
+  ///     the alpha + N threshold, with no particle-stable state at all -- so it
+  ///     breaks up and its alpha comes
+  ///     out at x_L ~ (4/5)(5/6) = 2/3 -- exactly where the tag looks -- with
+  ///     a p_T spread of the same order as the Fermi motion the tag already
+  ///     accepts.
+  ///   * Sharper still, in the alpha + d picture this generator uses: if the
+  ///     struck nucleon is one of the embedded DEUTERON's two, the alpha is a
+  ///     TRUE SPECTATOR.  Its momentum is untouched by the photon and by the
+  ///     knockout, and its distribution is the same n_M(k, c) the tagged Born
+  ///     is built on.  On the deuteron control the statement is bare: the
+  ///     quasi-elastic tail there IS elastic e-n scattering with a spectator
+  ///     proton, the classic spectator-tagging background.
+  ///   * So the tag does not even suppress it in the RATIO that `rc_tail` is.
+  ///     The spectator density and the Roman-Pot acceptance multiply the tail
+  ///     and the tagged Born alike, and both select the 2-of-6 nucleons inside
+  ///     the deuteron (a nucleon knocked out of the ALPHA destroys the alpha
+  ///     and IS vetoed -- that is the other 4-of-6).  The omitted dilution is
+  ///     of the same ORDER as the inclusive quasi-elastic one, which is
+  ///     22 % / 73 % / 99.9 % of the inclusive tail at x = 0.01 / 0.10 / 0.30.
+  ///
+  /// It is left UNIMPLEMENTED rather than guessed, because it needs a TAGGED
+  /// Born denominator (`RcModel::born_pb_at` is the inclusive one) and the tag
+  /// acceptance folded into POLRAD Eq. (44) -- and, separately, a
+  /// cluster-elastic e + A -> e' + gamma + d + alpha piece that Eq. (44)'s
+  /// free-nucleon sum does not contain at all.  The order-of-magnitude
+  /// argument above is an ARGUMENT, not a computed number; it is written down
+  /// so that `rc_tail == 1` is read as an exclusion and never as a veto.
+  /// design_C_tensor_rc.md Q3, phase_B_numbers.md sec. B4.
   bool tail_applies() const { return tail_applies_; }
   const std::string& exclusion_reason() const { return exclusion_reason_; }
 
   // --- the pieces, exposed so a run and a test can see them --------------
-  double delta(double x) const;                        ///< rc_delta at the run's knobs
+  /// `rc_delta` at the run's knobs, WITH `RcOptions::a_transfer_frac`'s
+  /// A = 2 -> A = 6 transfer term in quadrature.  The model's ONLY call
+  /// site of `rc_delta`, so the transfer term is applied exactly once and
+  /// on every path; at the default 0.0 it returns `rc_delta` unchanged,
+  /// bit for bit.
+  double delta(double x) const;
 
   /// The rank-2 fraction tau of the header block = W_tensor/W, for the event's
   /// OWN spin state.  READS EXACTLY THESE FIELDS, and nothing else, so a test
@@ -836,9 +1366,18 @@ class RcModel {
   /// carries as Q_N/6 -- dropping that 1/6 inflates the tensor tail sixfold
   /// and no unpolarised test sees it):
   ///
-  ///   [ sigma^el_U + (q_n/6) sigma^el_T + kappa_qe sigma^q_U ]
-  ///   ---------------------------------------------------------
+  ///   [ sigma^el_U + (q_n/6) sigma^el_T
+  ///     + sigma^el_U(s+p)
+  ///     + kappa_qe ( sigma^q_U + sigma^q_U(s+p)
+  ///                  + (q_n/6) kappa_qT (sigma^el_T/sigma^el_U) sigma^q_U ) ]
+  ///   ------------------------------------------------------------------------
   ///                 x * s * dsigma_unpol(x, Q2, s)
+  ///
+  /// with `kappa_qe = RcOptions::qe_suppression`, the `(s+p)` columns filled
+  /// only under `RcTailModel::TPeakPlusLL` and carrying NO tensor partner,
+  /// and `kappa_qT = RcOptions::qe_tensor_scale` -- 0 by default, and a
+  /// BORROWED magnitude rather than a computed polarised quasi-elastic tail
+  /// when it is not.  Read that field before quoting a number from it.
   ///
   /// `sigma_Born` here is the UNPOLARISED Born -- the library's own
   /// `InclusiveKernel::dsigma_unpol` and never a second definition of it
@@ -866,6 +1405,10 @@ class RcModel {
   const std::vector<double>& sigma_tail_u() const { return sigma_u_; }
   const std::vector<double>& sigma_tail_t() const { return sigma_t_; }
   const std::vector<double>& sigma_tail_qe() const { return sigma_qe_; }
+  /// The leading-log s+p companions of `sigma_tail_u()` and
+  /// `sigma_tail_qe()`.  All zero unless `tail_model == TPeakPlusLL`.
+  const std::vector<double>& sigma_tail_u_sp() const { return sigma_u_sp_; }
+  const std::vector<double>& sigma_tail_qe_sp() const { return sigma_qe_sp_; }
   /// The node grid the three tables live on: x, and y = Q^2/(x s).  The
   /// SECOND axis is y and not Q^2 because the tail carries
   /// Y_+ = [1 + (1-y)^2]/(1-y), which diverges as 1/(1-y): interpolating in y
@@ -880,7 +1423,18 @@ class RcModel {
   /// This is what the tables are built from and what T8's gates compare
   /// against, so that the per-nucleon reduction and the nuclear map are
   /// gated separately from the integrands (which `polrad_sigma_el_*` gate).
-  struct TailTriple { double u = 0.0, t = 0.0, qe = 0.0; };
+  /// `u`/`t`/`qe` are the t-peak's unpolarised elastic, tensor elastic and
+  /// unpolarised quasi-elastic pieces -- the whole tail under
+  /// `RcTailModel::TPeak`, and the name is historical (it is five wide now).
+  /// `u_sp` and `qe_sp` are the leading-log s+p peaks of the SAME two
+  /// unpolarised observables, filled ONLY under `RcTailModel::TPeakPlusLL`
+  /// and IDENTICALLY ZERO otherwise.  There is no `t_sp`: see the
+  /// `RcTailModel::TPeakPlusLL` comment -- the tensor s/p peak is unknown, not
+  /// zero, and is deliberately absent rather than guessed.
+  struct TailTriple {
+    double u = 0.0, t = 0.0, qe = 0.0;
+    double u_sp = 0.0, qe_sp = 0.0;
+  };
   TailTriple tail_sigma_at(double x, double q2) const;
   /// Fraction of table nodes that hit `RcOptions::tail_max`, globally and per
   /// y-band (y < 0.5, 0.5-0.9, > 0.9).  LOG ALL FOUR: the tail grows like
@@ -934,6 +1488,9 @@ class RcModel {
   // The tail tables, over the (ln x, ln y) nodes of `node_x_` x `node_y_`.
   std::vector<double> node_x_, node_y_;
   std::vector<double> sigma_u_, sigma_t_, sigma_qe_, born_pb_;
+  /// The leading-log s+p tables, same node grid, same units, EMPTY of
+  /// content (all zero) unless `tail_model == TPeakPlusLL`.
+  std::vector<double> sigma_u_sp_, sigma_qe_sp_;
   std::vector<double> m_val_;   ///< m_values(plan J), hoisted out of the loop
   double s_ = 0.0;              ///< the sampler's per-nucleon s
   double clipped_ = 0.0;

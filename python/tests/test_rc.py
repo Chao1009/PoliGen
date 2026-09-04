@@ -49,13 +49,16 @@ def test_rc_name_table():
     assert lg.RC["off"] == _l.RcMode.Off
     assert lg.RC["tensor-band"] == _l.RcMode.TensorBand
     assert "RC" in lg.__all__
+    assert "RC_C0_SHAPES" in lg.__all__ and set(lg.RC_C0_SHAPES) == {"ho",
+                                                                     "vmc-ft"}
 
 
 def test_rc_symbols_are_importable():
     for name in ("RcMode", "RcScope", "RcTailModel", "RcOptions", "RcWeights",
                  "RcModel", "HoSpin1FF", "HoSpin1FFOptions",
                  "TabulatedSpin1FF", "Spin1ElasticFF", "rc_delta",
-                 "rc_mode_name", "rc_weight_name", "nucleon_ff"):
+                 "rc_mode_name", "rc_weight_name", "nucleon_ff",
+                 "C0Shape", "c0_shape_name"):
         assert hasattr(_l, name), name
 
 
@@ -81,15 +84,27 @@ def test_rc_weight_names():
 
 def test_make_config_round_trips_every_knob():
     cfg = _cfg("tensor-band", rc_delta_low_x=0.19, rc_delta_high_x=0.02,
+               rc_a_transfer_frac=0.75,
                rc_fq_scale=2.0, rc_tail_tensor_scale=0.5,
-               rc_qe_suppression=0.0)
+               rc_qe_suppression=0.0, rc_qe_tensor_scale=2.5,
+               rc_c0_shape="vmc-ft")
     assert cfg.rc == _l.RcMode.TensorBand
     o = cfg.rc_options
     assert o.delta_low_x == 0.19
     assert o.delta_high_x == 0.02
+    assert o.a_transfer_frac == 0.75
     assert o.fq_scale == 2.0
     assert o.tail_tensor_scale == 0.5
     assert o.qe_suppression == 0.0
+    assert o.qe_tensor_scale == 2.5
+    # The DEFAULT is 0: the shipped quasi-elastic tail is tensor-blind, and a
+    # borrowed magnitude may not become one by accident.
+    assert _cfg("tensor-band").rc_options.qe_tensor_scale == 0.0
+    assert o.c0_shape == _l.C0Shape.VmcFt
+    # The DEFAULT edge is `Ho`: every published number was made with it.
+    assert _cfg("tensor-band").rc_options.c0_shape == _l.C0Shape.Ho
+    with pytest.raises(ValueError):
+        _cfg("tensor-band", rc_c0_shape="vmc")
     # There is NO mode on RcOptions -- PipelineConfig.rc is the one source.
     assert not hasattr(o, "mode")
     with pytest.raises(ValueError):
@@ -106,6 +121,83 @@ def test_form_factor_anchors_and_refusals():
     # silently get 6Li form factors.
     with pytest.raises(RuntimeError):
         _l.HoSpin1FF.for_ion(_l.ion_by_name("7Li"))
+
+
+def test_c0_shape_band_shares_its_anchors_and_flips_the_tail_sign():
+    """B1: the C0 (monopole) shape is a BAND, and the band is not decorative.
+
+    The two edges are built to agree exactly where the MEASURED input is --
+    F_c(0) = Z, F_q(0) = M_A^2 Q and <r^2>_point = 6.0788 fm^2 -- and to
+    disagree only in the SHAPE, which is the unfitted part.  What that
+    disagreement costs is the sign of the tensor fraction of the elastic tail
+    at x = 0.1, so this test gates both halves: the shared anchors, and the
+    fact that `sigma^el_T` changes sign between the edges (which is why
+    `phase_B_numbers.md` sec. B1 publishes that sign as INDETERMINATE).
+    """
+    ion = _l.ion_by_name("6Li")
+    ho_o, vm_o = _l.HoSpin1FFOptions(), _l.HoSpin1FFOptions()
+    vm_o.c0_shape = _l.C0Shape.VmcFt
+    assert ho_o.c0_shape == _l.C0Shape.Ho          # the default
+    ho, vm = (_l.HoSpin1FF.for_ion(ion, o) for o in (ho_o, vm_o))
+
+    # (i) the MEASURED anchors are identical on both edges.
+    for f in ("fc", "fm", "fq"):
+        assert getattr(vm, f)(0.0) == pytest.approx(getattr(ho, f)(0.0),
+                                                    rel=1e-12)
+    # (ii) <r^2>_point, on the UNFOLDED shape, is the same 6.0788 fm^2.
+    pt_o = [_l.HoSpin1FFOptions(), _l.HoSpin1FFOptions()]
+    pt_o[1].c0_shape = _l.C0Shape.VmcFt
+    for o in pt_o:
+        o.fold_nucleon = False
+        f = _l.HoSpin1FF.for_ion(ion, o)
+        h = 1e-6
+        t = h * _l.HBARC_GEV_FM ** 2
+        slope = (f.fc(t) - f.fc(0.0)) / h
+        assert -6.0 * slope / f.fc(0.0) == pytest.approx(6.0788, rel=1e-4)
+    # (iii) and they disagree by a factor 2.5 in F_point where the tail lives.
+    t2 = (2.0 * _l.HBARC_GEV_FM) ** 2
+    assert vm.fc(t2) / ho.fc(t2) == pytest.approx(2.508, rel=1e-3)
+    # (iv) the Ho edge has a C0 zero at q_0 = 3.0999 fm^-1 and the VmcFt edge
+    # has NONE at any q -- the difference that moves sigma^el_T.
+    t0 = (3.0998 * _l.HBARC_GEV_FM) ** 2
+    assert abs(ho.fc(t0)) < 1e-6 * ho.fc(0.0)
+    assert ho.fc((3.5 * _l.HBARC_GEV_FM) ** 2) < 0.0
+    for q in (3.0, 3.0998, 3.5, 10.0, 88.0):
+        assert vm.fc((q * _l.HBARC_GEV_FM) ** 2) > 0.0
+    # ... and at the very top of the t-peak's reach it UNDERFLOWS to +0, which
+    # is the continuation dying, not a sign change.
+    assert vm.fc((278.0 * _l.HBARC_GEV_FM) ** 2) == 0.0
+    assert "vmc-ft" in vm.provenance() and "NO C0 ZERO" in vm.provenance()
+    assert "C0 shape = ho" in ho.provenance()
+    assert _l.c0_shape_name(_l.C0Shape.VmcFt) == "vmc-ft"
+    # (v) VmcFt is 6Li's OWN density and is REFUSED for any other ion rather
+    # than silently handed over.
+    d = _l.HoSpin1FFOptions()
+    d.a_fm, d.alpha, d.mu_n, d.q_fm2 = 1.0, 0.1, 0.857, 0.2857
+    d.fm_qz_fm, d.fm_b_fm = 1.3, 1.85
+    _l.HoSpin1FF.for_ion(_l.ion_by_name("d"), d)          # legal on Ho
+    d.c0_shape = _l.C0Shape.VmcFt
+    with pytest.raises(RuntimeError):
+        _l.HoSpin1FF.for_ion(_l.ion_by_name("d"), d)
+
+
+def test_c0_shape_reaches_the_tail_and_the_npz_meta():
+    """The knob is plumbed end to end: it reaches `sigma^el_T` through the
+    Pipeline (not only `HoSpin1FF`), it FLIPS ITS SIGN at x = 0.1, and the npz
+    `meta` records which edge ran -- without that key the two files would be
+    indistinguishable."""
+    out = {}
+    for name in ("ho", "vmc-ft"):
+        cfg = _cfg("tensor-band", rc_c0_shape=name)
+        p = lg.Pipeline(cfg, lg.tensor_thirds_plan(0.0, 0.6))
+        out[name] = p.rc_model.tail_sigma_at(0.10, 5.0)
+        assert p.rc_model.options.c0_shape == lg.RC_C0_SHAPES[name]
+        assert ("C0 shape = " + name) in p.rc_model.ff_provenance
+    # sigma^el_U rises by 10 %; sigma^el_T CHANGES SIGN.
+    assert out["vmc-ft"][0] / out["ho"][0] == pytest.approx(1.1043, rel=1e-3)
+    assert out["ho"][1] > 0.0 > out["vmc-ft"][1]
+    # the quasi-elastic tail is untouched: this knob is the ELASTIC shape only
+    assert out["vmc-ft"][2] == pytest.approx(out["ho"][2], rel=1e-12)
 
 
 def test_npz_columns_on_the_columnar_path(rc_run):
@@ -142,8 +234,11 @@ def test_meta_records_every_rc_knob_that_moves_a_column(rc_run):
     assert set(k for k in meta if k.startswith("rc")) == {
         "rc", "rc_weight_names", "rc_applies", "rc_tail_applies",
         "rc_exclusion_reason", "rc_ff_provenance",
-        "rc_delta_low_x", "rc_delta_high_x", "rc_fq_scale",
-        "rc_tail_tensor_scale", "rc_qe_suppression", "rc_qe_kf_gev",
+        "rc_delta_low_x", "rc_delta_high_x", "rc_a_transfer_frac",
+        "rc_fq_scale",
+        "rc_c0_shape",
+        "rc_tail_tensor_scale", "rc_qe_suppression", "rc_qe_tensor_scale",
+        "rc_qe_kf_gev",
         "rc_band_tau_max",
         "rc_scope", "rc_with_qe_tail", "rc_tail_model", "rc_n_eta",
         "rc_tail_max",
@@ -151,6 +246,7 @@ def test_meta_records_every_rc_knob_that_moves_a_column(rc_run):
         "rc_clipped_band_events", "rc_clipped_tail_events",
         "rc_clipped_band_event_fraction", "rc_clipped_tail_event_fraction",
     }
+    assert meta["rc_c0_shape"] == "ho"
     assert meta["rc_scope"] == "tensor-rate"
     assert meta["rc_with_qe_tail"] is True
     assert meta["rc_tail_model"] == "t-peak"
@@ -182,6 +278,188 @@ def test_m_lepton_is_reserved_and_refused_on_the_shipped_tail():
     cfg.rc_options.m_lepton = 0.1056583755          # a muon beam, say
     with pytest.raises(RuntimeError, match="m_lepton"):
         lg.Pipeline(cfg, lg.tensor_thirds_plan(0.0, 0.6))
+
+
+def test_qe_tensor_scale_prices_the_polarised_quasi_elastic_tail(rc_run):
+    """B3.  The polarised quasi-elastic tail is not computed anywhere; the
+    quasi-elastic piece is 73 % of `rc_tail` at x = 0.1 and 99.9 % at x = 0.3
+    and was treated as exactly tensor-blind.  `qe_tensor_scale` lends it the
+    ELASTIC tail's own tensor fraction -- a BORROWED magnitude, not a derived
+    bound (see rc.hpp).  Gated here as a chain, because the default is 0 and
+    a knob whose npz `meta` did not record it would be invisible."""
+    _, base = rc_run
+    assert base["meta"]["rc_qe_tensor_scale"] == 0.0
+    assert _l.RcOptions().qe_tensor_scale == 0.0
+
+    cfg = _cfg("tensor-band", rc_qe_tensor_scale=1.0)
+    p = lg.Pipeline(cfg, lg.tensor_thirds_plan(0.0, 0.6))
+    meta = p.generate(0)["meta"]
+    assert meta["rc_qe_tensor_scale"] == 1.0
+
+    b = lg.Pipeline(_cfg("tensor-band"),
+                    lg.tensor_thirds_plan(0.0, 0.6)).rc_model
+    m = p.rc_model
+    for x in (0.01, 0.10, 0.30):
+        # It carries q_n and NOTHING else: the unpolarised tail is untouched.
+        assert m.tail_ratio_at(x, 5.0, 0.0) == b.tail_ratio_at(x, 5.0, 0.0)
+        # ... and the tensor part moves, in the direction the elastic tensor
+        # fraction points (whose SIGN is a C0-shape band edge -- magnitude
+        # only).
+        d0 = b.tail_ratio_at(x, 5.0, 1.0) - b.tail_ratio_at(x, 5.0, 0.0)
+        d1 = m.tail_ratio_at(x, 5.0, 1.0) - m.tail_ratio_at(x, 5.0, 0.0)
+        assert d1 != d0
+        assert abs(d1) > abs(d0)
+    # EXACTLY LINEAR in the scale -- one run rescales, unlike fq_scale (T12).
+    m2 = lg.Pipeline(_cfg("tensor-band", rc_qe_tensor_scale=2.0),
+                     lg.tensor_thirds_plan(0.0, 0.6)).rc_model
+    for x in (0.01, 0.30):
+        b1 = b.tail_ratio_at(x, 5.0, 1.0)
+        a1 = m.tail_ratio_at(x, 5.0, 1.0) - b1
+        a2 = m2.tail_ratio_at(x, 5.0, 1.0) - b1
+        assert a2 / a1 == pytest.approx(2.0, rel=1e-10)
+
+
+def test_qe_tensor_scale_is_refused_when_the_qe_tail_did_not_run():
+    """The `m_lepton` rule: a knob that did not run may not be recorded as if
+    it had.  `qe_tensor_scale` is a fraction OF Eq. (44)'s sigma^q_U, so with
+    `with_qe_tail = False` there is nothing for it to be a fraction of."""
+    cfg = _cfg("tensor-band", rc_qe_tensor_scale=1.0)
+    cfg.rc_options.with_qe_tail = False
+    with pytest.raises(RuntimeError, match="qe_tensor_scale"):
+        lg.Pipeline(cfg, lg.tensor_thirds_plan(0.0, 0.6))
+    # ... zero with the tail off is fine.
+    ok = _cfg("tensor-band")
+    ok.rc_options.with_qe_tail = False
+    lg.Pipeline(ok, lg.tensor_thirds_plan(0.0, 0.6))
+    # ... and a negative scale is refused like every other >= 0 knob, by
+    # `PipelineConfig::validate()` itself -- `make_config` already calls it.
+    with pytest.raises(RuntimeError, match="qe_tensor_scale"):
+        _cfg("tensor-band", rc_qe_tensor_scale=-1.0)
+
+
+def test_a_transfer_frac_prices_the_A2_to_A6_transfer_of_the_band(rc_run):
+    """B6, design Q8.  `delta(x)` is the DOMINANT RC systematic and every
+    anchor it interpolates between is a DEUTERON number -- HERMES's measured
+    low-x residual, Gakh-Shekhovtsova's 10-30 %, E12-13-011's 1.5 %.  No
+    A > 2 tensor RC calculation exists at all, so the shipped band silently
+    ASSUMES the deuteron fractional RC transfers to 6Li.  `a_transfer_frac`
+    adds that doubt in quadrature: delta_eff = delta * sqrt(1 + f^2)."""
+    _, base = rc_run
+    # The default is 0 and it is RECORDED, so a widened band is never
+    # mistaken in `meta` for the shipped one.
+    assert base["meta"]["rc_a_transfer_frac"] == 0.0
+    assert _l.RcOptions().a_transfer_frac == 0.0
+
+    b = lg.Pipeline(_cfg("tensor-band"),
+                    lg.tensor_thirds_plan(0.0, 0.6)).rc_model
+    xs = (1e-4, 0.005, 0.01, 0.02, 0.05, 0.063, 0.1, 0.16, 0.3, 0.9)
+    # At the default the model's delta IS the published rc_delta, bit for bit.
+    for x in xs:
+        assert b.delta(x) == _l.rc_delta(x)
+
+    for f in (0.5, 1.0, 2.0):
+        cfg = _cfg("tensor-band", rc_a_transfer_frac=f)
+        p = lg.Pipeline(cfg, lg.tensor_thirds_plan(0.0, 0.6))
+        assert p.generate(0)["meta"]["rc_a_transfer_frac"] == f
+        m = p.rc_model
+        k = (1.0 + f * f) ** 0.5
+        for x in xs:
+            assert m.delta(x) == pytest.approx(k * _l.rc_delta(x), rel=1e-14)
+        # It moves the BAND only: the tail is a background and does not see it.
+        for x in (0.01, 0.10, 0.30):
+            for q_n in (0.0, 1.0, -2.0):
+                assert m.tail_ratio_at(x, 5.0, q_n) == \
+                    b.tail_ratio_at(x, 5.0, q_n)
+        # ... and the free function -- the PUBLISHED shape, what T3 gates --
+        # is untouched by any of this.
+        assert _l.rc_delta(0.01) == _l.RC_DELTA_LOW_X
+
+    # A negative fraction is refused rather than squared away by the hypot.
+    with pytest.raises(RuntimeError, match="a_transfer_frac"):
+        _cfg("tensor-band", rc_a_transfer_frac=-0.5)
+
+
+def test_tagged_tail_exclusion_names_the_quasi_elastic_omission():
+    """B4.  `rc_tail == 1` on a tagged channel is HALF a kinematic fact.  The
+    ELASTIC recoil is vetoed (x_L = 1, inside the beam envelope); the
+    QUASI-ELASTIC one is not -- the A-1 remnant is unbound and its alpha lands
+    at x_L ~ 2/3, the tag window itself.  The run has to say both, because an
+    analysis reading `rc_tail == 1` out of the npz would otherwise take it for
+    a veto on the whole tail."""
+    cfg = lg.make_config(isotope="6Li", channel="tagged-alpha", config=1,
+                         events=200, seed=11, rc="tensor-band")
+    p = lg.Pipeline(cfg, lg.tensor_thirds_plan(0.0, 0.6))
+    why = p.rc_model.exclusion_reason
+    assert not p.rc_model.tail_applies
+    for token in ("x_L", "FACT", "OMISSION", "QUASI-elastic", "2/3",
+                  "SPECTATOR"):
+        assert token in why, token
+    # It travels into the npz, where the analysis actually reads it.
+    assert p.generate(0)["meta"]["rc_exclusion_reason"] == why
+
+
+def test_tail_model_knob_is_a_seven_file_chain(rc_run):
+    """`RcTailModel::TPeakPlusLL` -- the OPT-IN leading-log s-/p-peak tail.
+
+    Gated end to end because the knob is a chain and any missing link makes an
+    npz that is indistinguishable from a default run: the enum, `make_config`,
+    the CLI's own choices tuple, the `meta` string, and the numbers actually
+    changing.  The DEFAULT is asserted unchanged in the same test, because
+    that is the whole point of making it opt-in."""
+    assert set(lg.RC_TAIL_MODELS) == {"t-peak", "t-peak+ll"}
+    assert "RC_TAIL_MODELS" in lg.__all__
+    assert lg.RC_TAIL_MODELS["t-peak"] == _l.RcTailModel.TPeak
+    assert lg.RC_TAIL_MODELS["t-peak+ll"] == _l.RcTailModel.TPeakPlusLL
+    # ONE spelling, and it is the C++ one.
+    for name, e in lg.RC_TAIL_MODELS.items():
+        assert _l.rc_tail_model_name(e) == name
+    assert _l.rc_tail_model_name(_l.RcTailModel.PolradFull) == "polrad-full"
+
+    _, base = rc_run
+    assert base["meta"]["rc_tail_model"] == "t-peak"
+
+    cfg = _cfg("tensor-band", rc_tail_model="t-peak+ll")
+    assert cfg.rc_options.tail_model == _l.RcTailModel.TPeakPlusLL
+    p = lg.Pipeline(cfg, lg.tensor_thirds_plan(0.0, 0.6))
+    cols = p.generate(0, True)
+    assert cols["meta"]["rc_tail_model"] == "t-peak+ll"
+
+    # The kinematics are IDENTICAL -- `RcModel::fill` takes no Rng& and the
+    # tail model may not move the random stream (T6's rule).
+    assert np.array_equal(cols["x"], base["x"])
+    assert np.array_equal(cols["q2"], base["q2"])
+    assert np.array_equal(cols["weight"], base["weight"])
+    # ... and the tail is strictly larger, event by event.  Never smaller:
+    # the s- and p-peaks are positive wherever the radiator is defined.
+    assert np.all(cols["rc_tail"] >= base["rc_tail"] - 1e-15)
+    assert cols["rc_tail"].mean() > base["rc_tail"].mean()
+
+    # The three t-peak tables are untouched and the two s+p tables are
+    # non-zero -- and identically zero on the default.
+    m0, m1 = lg.Pipeline(_cfg("tensor-band"),
+                         lg.tensor_thirds_plan(0.0, 0.6)).rc_model, p.rc_model
+    for k in ("sigma_tail_u", "sigma_tail_t", "sigma_tail_qe"):
+        assert np.array_equal(getattr(m1, k), getattr(m0, k))
+    for k in ("sigma_tail_u_sp", "sigma_tail_qe_sp"):
+        assert not np.any(getattr(m0, k))
+        assert np.any(getattr(m1, k))
+    # tail_sigma_at is five wide, and the last two are the s+p peaks.
+    assert len(m1.tail_sigma_at(0.10, 5.0)) == 5
+    assert m0.tail_sigma_at(0.10, 5.0)[3:] == (0.0, 0.0)
+
+    with pytest.raises(ValueError, match="unknown rc_tail_model"):
+        _cfg("tensor-band", rc_tail_model="polrad-full")
+
+    # ... and the last link: the CLI flag, its default, and its refusal of the
+    # unimplemented model.  Without this an npz written by `lipolgen-run`
+    # could not reach the knob at all.
+    from lipolgen import cli
+    assert cli.DEFAULTS["rc_tail_model"] == "t-peak"
+    assert cli.resolve(["--rc", "tensor-band"])["rc_tail_model"] == "t-peak"
+    assert cli.resolve(["--rc", "tensor-band", "--rc-tail-model",
+                        "t-peak+ll"])["rc_tail_model"] == "t-peak+ll"
+    with pytest.raises(SystemExit):
+        cli.resolve(["--rc-tail-model", "polrad-full"])
 
 
 def test_npz_columns_on_the_records_path(rc_run):
@@ -422,7 +700,7 @@ def test_weight_block_shape_is_three_times_one_slot(rc_run):
 
 # ------------------------------------------------------------------- CLI
 
-def test_cli_exposes_the_six_switches():
+def test_cli_exposes_the_rc_switches():
     from lipolgen import cli
     # CONVENTIONS.md "no physics number defined twice": assert against the
     # MODULE CONSTANTS, not against re-typed literals, so a move of the band
@@ -431,13 +709,16 @@ def test_cli_exposes_the_six_switches():
                  ("rc_delta_low_x", _l.RC_DELTA_LOW_X),
                  ("rc_delta_high_x", _l.RC_DELTA_HIGH_X),
                  ("rc_fq_scale", 1.0),
-                 ("rc_tail_tensor_scale", 1.0), ("rc_qe_suppression", 1.0)):
+                 ("rc_tail_tensor_scale", 1.0), ("rc_qe_suppression", 1.0),
+                 ("rc_qe_tensor_scale", 0.0)):
         assert cli.DEFAULTS[k] == v
     opts = cli.resolve(["--rc", "tensor-band", "--rc-delta-low-x", "0.19",
                         "--rc-fq-scale", "2", "--rc-tail-tensor-scale", "0.5",
-                        "--rc-qe-suppression", "0"])
+                        "--rc-qe-suppression", "0",
+                        "--rc-qe-tensor-scale", "1"])
     assert opts["rc"] == "tensor-band"
     assert opts["rc_delta_low_x"] == 0.19
     assert opts["rc_fq_scale"] == 2.0
     assert opts["rc_tail_tensor_scale"] == 0.5
     assert opts["rc_qe_suppression"] == 0.0
+    assert opts["rc_qe_tensor_scale"] == 1.0

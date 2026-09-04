@@ -195,7 +195,10 @@ banner.
   the proposal should cite it **by page** for the 1.5 %, or drop the anchor.
 * **Low x — 10–30 %, a CORRECTION SIZE, not a residual.** **G. I. Gakh,
   O. Shekhovtsova, [arXiv:hep-ph/0403262](https://arxiv.org/abs/hep-ph/0403262),
-  JETP 99 (2004) 898**, §5 text, verbatim: *"In the range of low x
+  JETP 99 (2004) 898**, §4 *Numerical estimations*, text, verbatim
+  (**CORRECTED 2026-09-04**: this said "§5". The arXiv source has four numbered
+  sections plus three appendices, and what the PDF renders as "§5" is
+  Appendix A; `../run_2026-09-03/phase_B_numbers.md` §B6.3(d)): *"In the range of low x
   (x ∼ 10⁻³–10⁻²) the value of radiative correction changes from 10 % to 30 %
   as compared with the Born contribution"*, said of **the spin-dependent part of
   the cross section** for an unpolarised beam on a tensor-polarised deuteron —
@@ -205,9 +208,20 @@ banner.
   `a — 0.1, b — 1, c — 4, d — 10 GeV²` (the earlier draft said two). **Two
   honest flags, to be repeated wherever the number is quoted:** (i) this is a
   single calculation with **zero citations on INSPIRE**, never independently
-  checked or used, and its two numbers are the spread of *one* calculation over
-  Q², not two independent edges; (ii) **10–30 % is how big the correction is,
-  not how well it is known.** Using it as a 1σ band is the *choice* this design
+  checked or used, and its two numbers are — **CORRECTED 2026-09-04**, measured
+  off the paper's own arXiv figure arrays — **the two ends of ONE panel's `x`
+  window at a single `Q² = 0.1`**: `|δ| = 0.1133` at `x = 0.00966` and `0.2662`
+  at `x = 0.00226`, which the sentence quoted just above scopes to **x**
+  ("in the range of low x"), not to `Q²`. They are **not** "the spread of *one*
+  calculation over `Q²`, not two independent edges" — the wording this bullet
+  carried until then, now **withdrawn** — and the consequence is worth its own
+  line: **`δ_low = 0.30` is anchored at `x_low = 0.01`, which lies ABOVE that
+  panel's top `x = 0.00966`, where the paper itself reads `|δ| = 0.113`**; the
+  `0.266` that rounds to "30 %" sits at `x = 0.00226`, a factor **4.3 lower in
+  x**. So the anchor's real basis is *the panel's lowest-`x` value carried
+  upward in `x`*, not *the conservative end of a `Q²` spread*
+  (`../run_2026-09-03/phase_B_numbers.md` §B6.3); (ii) **10–30 % is how big the
+  correction is, not how well it is known.** Using it as a 1σ band is the *choice* this design
   makes — the choice a generator that does not apply the correction has to make
   — and it is deliberately conservative.
 * **What a real experiment's residual actually was.** HERMES
@@ -447,9 +461,30 @@ with `σ_u^p` the first line of Eq. (38) (in nucleon invariants: `M → M_N`,
 > `S = 1` edge. `S_EM` never enters: the Eq. (38) spin-½ integrand is a
 > combination of `G_E²` and `G_M²` alone.
 
-**The polarised QRT stays at zero**, citing Z.-L. Zhou et al. (§1.0). That is
+~~**The polarised QRT stays at zero**, citing Z.-L. Zhou et al. (§1.0). That is
 the one place the *tensor* part of the tail is knowingly incomplete, and it is
-also the smallest part of it.
+also the smallest part of it.~~
+
+> **CORRECTED 2026-09-04 (task B3). "Also the smallest part of it" is
+> REFUTED by this document's own §8.1 measurement.** After the per-nucleon fix
+> and Q9's Pauli factor the quasi-elastic term is **22 % / 73 % / 99.9 %** of
+> `rc_tail` at `x = 0.01 / 0.10 / 0.30` (`σ^q_U/σ^el_U` = 0.28 / 2.75 / 1000).
+> Setting its tensor part to zero is therefore not a small omission but the
+> **largest unpriced piece of the tail**, and the sentence above was written
+> before the piece it dismisses grew by a factor `A = 6`.
+>
+> The polarised QRT is still **not computed** — POLRAD supplies no tensor
+> partner to Eq. (44), and no polarised quasi-elastic radiative-tail
+> calculation exists for an A = 6 spin-1 nucleus — but it is now **priced**,
+> opt-in, by `RcOptions::qe_tensor_scale` (default **0.0**, the shipped
+> tensor-blind tail bit for bit), which lends the quasi-elastic tail the
+> **elastic** tail's own `σ^el_T/σ^el_U`. That is a **borrowed magnitude, not
+> a derived bound**: it puts a *coherent* nuclear quadrupole fraction on an
+> *incoherent* nucleon process, and ⁶Li's elastic tensor fraction is
+> anomalously small for a reason the quasi-elastic piece has no reason to
+> share, so scale = 1 may be ~10² too small at `x ≤ 0.1`. Measured sizes,
+> caveats and the full argument: `rc.hpp`'s `RcOptions::qe_tensor_scale` and
+> `../run_2026-09-03/phase_B_numbers.md` §B3.
 
 **Why this is in the design at all.** The QRT is not a rounding error: its
 nucleon form factors are alive at `t ∼ 1 GeV²` where ⁶Li's `Z² F_c²` is long
@@ -644,10 +679,44 @@ The Eq. (A.4) spin-1 generalised structure functions, transcribed for reference
   Im^el_4 =  (P_N/4) F_m ( (1/2) F_m - F_c - (eta_A/3) F_q )          [ P_L = 0 => unused ]
 
   Im^el_5 = (Q_N/24) F_m^2
-  Im^el_6 = (Q_N/24) ( F_m^2 + (4 eta_A/(1 + eta_A)) ( (eta_A/3) F_q + F_c + eta_A F_m ) F_q )
+  Im^el_6 = (Q_N/24) ( F_m^2 + (4/(1 + eta_A)) ( (eta_A/3) F_q + F_c + eta_A F_m ) F_q )
   Im^el_7 = (Q_N/6) eta_A (1 + eta_A) F_m^2
   Im^el_8 = -(Q_N/6) eta_A F_m ( F_m + 2 F_q )
 ```
+
+> **CORRECTED 2026-09-04 (task B5). `ℑ^el_6` above carried a spurious `η_A` in
+> the `F_q` numerator and has been fixed in place.** What this document printed
+> from 2026-09-02 until now was
+>
+> ```
+>   Im^el_6 = (Q_N/24) ( F_m^2 + (4 eta_A/(1 + eta_A)) ( ... ) F_q )     [ WRONG ]
+> ```
+>
+> The source has `4/(1+η_A)`, not `4η_A/(1+η_A)` — `polrad2t.tex` lines
+> 2705–2706, verbatim:
+>
+> ```tex
+> \Im ^{el}_{6}= {Q_N\over 24} \pmatrix{F_m^{2}
+>     +{4\over 1+\eta_A}({\eta_A\over 3}F_q+F_c+\eta_A F_m)F_q} ,
+> ```
+>
+> and POLRAD's FORTRAN says the same independently. `ℑ₆ = (Q_N/6)ε³(b₂/3+b₃+b₄)`
+> (Eq. (A.3)) with `strf`'s elastic `b₂, b₃, b₄` (adgh:4235-4242) and `ε = 1/(2τ)`:
+> the `f_m²` pieces collapse as `(4/3)τ²[1 − (3τ+2) + (6τ+1)] = 4τ³` and the `f_q`
+> pieces as `(16/9)(τ³/τ₁)[3τF_q + 9F_c + 9τF_m]F_q = (16/3)(τ³/τ₁)(τF_q+3F_c+3τF_m)F_q`,
+> so `ε³(b₂/3+b₃+b₄) = (1/2)[F_m² + (4/(1+η))((η/3)F_q + F_c + ηF_m)F_q]·2M_A²`
+> — the `4/(1+η_A)` of the source, with no second `η_A` anywhere.
+> (`ℑ₂`'s `4η_A²/(1+η_A)` **is** correct as printed; only `ℑ₆` was wrong.)
+>
+> **The CODE never had the error, because the code never had `ℑ^el_6`.**
+> Eq. (A.4) at `Q_N ≠ 0` is evaluated only on the `RcTailModel::PolradFull`
+> path, which `src/core/rc.cpp:933-935` refuses with `NOT IMPLEMENTED`. What
+> v0 ships is Eq. (38) (`polrad_sigma_el_u` / the `σ_q` integrand,
+> `src/core/rc.cpp:258-294`) and the `Q_N = 0` Rosenbluth pair
+> (`rosenbluth_spin1`, `src/core/rc.cpp:377-381`) — both independently checked,
+> neither containing `ℑ₆`. So this was a **document-only** defect, found by
+> `polrad_transcription_check.md` §7.1 and corrected here; nothing in the
+> shipped tail moves, and no test number changes.
 — POLRAD Eq. (A.4). Every `Q_N` appears linearly, so
 `ℑ^el_i(Q_N) = U_i + Q_N T_i` with
 
@@ -827,9 +896,46 @@ route classification, not an approximation.
 assumption there, not a fact.** A quasi-elastic event knocks a nucleon out and
 **can** leave an intact α at `x_L ≈ 2/3` — exactly where the tag looks. Now that
 the *unpolarised* QRT is priced inclusively (§1.4.3), its absence on the tagged
-channels is the one place the tagged `rc_tail ≡ 1` line is unsupported. It is
-probably small (a radiative tail of a quasi-elastic peak into a DIS bin, with
-the α-tag's own acceptance on top) but nobody has computed it. **Q3.**
+channels is the one place the tagged `rc_tail ≡ 1` line is unsupported.
+~~It is probably small (a radiative tail of a quasi-elastic peak into a DIS
+bin, with the α-tag's own acceptance on top) but nobody has computed it.~~
+**Q3.**
+
+> **WORKED OUT 2026-09-04 (task B4), and "probably small" is withdrawn.** The
+> kinematics are sharper than "can leave an intact α", and they point the
+> other way:
+>
+> 1. **The remnant has to break up.** Quasi-elastic knockout removes one
+>    nucleon; the A−1 remnant of either lithium channel is **unbound** — ⁵Li
+>    and ⁵He are resonances above the α + N threshold with no
+>    particle-stable state — so it decays to α + N and the α emerges at
+>    `x_L ≈ (4/5)(5/6) = 2/3`, the tag window itself, with a `p_T` spread of
+>    the order of the Fermi motion the tag already accepts.
+> 2. **In the α + d picture the generator actually uses, the α is a TRUE
+>    SPECTATOR** whenever the struck nucleon is one of the embedded deuteron's
+>    two: nothing touches it, and its momentum distribution is the same
+>    `n_M(k, c)` the tagged Born is built on. On the deuteron control the
+>    statement is bare — the quasi-elastic tail there **is** elastic `e`–`n`
+>    scattering with a spectator proton, the classic spectator-tagging
+>    background.
+> 3. **So the tag does not suppress it in the RATIO.** `rc_tail` is a ratio,
+>    the same spectator density and the same Roman-Pot acceptance multiply its
+>    numerator and its tagged Born, and both select the **2 of 6** nucleons
+>    inside the deuteron (a nucleon knocked out of the **α** destroys the α and
+>    *is* vetoed — the other 4 of 6). To leading order the two factors cancel
+>    and the omitted dilution is of the **same order as the inclusive
+>    quasi-elastic one**, which is 22 % / 73 % / 99.9 % of the inclusive tail
+>    at `x = 0.01 / 0.10 / 0.30`.
+>
+> That is an **order-of-magnitude argument, not a computed number**, and it is
+> why the omission stays an omission: pricing it needs a **tagged** Born
+> denominator (`RcModel::born_pb_at` is the inclusive one) and the tag
+> acceptance folded into Eq. (44) — plus a fourth piece Eq. (44)'s free-nucleon
+> sum does not contain at all, the **cluster-elastic**
+> `e + A → e' + γ + d + α`, whose tag acceptance would be perfect. What
+> changed is that `RcModel::exclusion_reason()` now says all of this in the run
+> banner and in the npz `meta`, so `rc_tail ≡ 1` cannot be read as a veto on
+> the whole tail. `../run_2026-09-03/phase_B_numbers.md` §B4.
 
 #### 1.5.3 Why the coherent channel is excluded
 
@@ -959,8 +1065,15 @@ deuteron's `t ∼ 1 GeV²`. So
 
 The consequence for the whole design: **`rc_tail` is an unpolarised dilution
 with a small tensor correction on top**, not "a tensor background". §8.1
-measures `σ^el_T/σ^el_U` and settles it; the estimate here says to expect
-`O(10⁻²)` per unit `Q_N`, against a tail/Born ratio that is `O(10⁻¹)`.
+measures `σ^el_T/σ^el_U` and settles the **magnitude**: `O(10⁻²)` per unit
+`Q_N` is met at `x = 0.30` and missed by 20–60× at `x ≤ 0.1`, on **both** edges of
+the C0 shape band added 2026-09-04, against a tail/Born ratio that is `O(10⁻¹)`.
+It does **not** settle the **sign**. §8.1c item 1 withdraws the `+1.5595e−04`
+published at `x = 0.10` as a *result*: the two edges read `+1.5595e−04` (`ho`) and
+`−4.0702e−05` (`vmc-ft`) there, so at that `x` both the sign and the
+"opposite in sign" half of the box above are **band edges**, not measurements.
+They do hold on both edges at `x = 0.01` and `x = 0.30`, where the deuteron
+reads `+0.106` and `−0.117` against ⁶Li's negative and positive.
 
 > **Reviewer note / response.** The review argued from Eq. (A.4) that the ⁶Li
 > tensor tail is *`F_m`-driven* (`ℑ₂`, `ℑ₇` carry `η F_m²`; `ℑ₈` carries
@@ -2137,14 +2250,21 @@ this design deliberately does not do). Agent 1 ≈ 4–6 d, agent 2 ≈ 2 d.
   vs `(4/3)η_A F_q`. A copy of the POLRAD FORTRAN (CPC Program Library,
   `ADXQ`) settles all three in an hour and is listed as a **prerequisite**
   (§6 step 0), not a test.
-* **Q3 — the quasi-elastic tail on a TAGGED channel.** The *unpolarised* QRT is
-  now priced inclusively (§1.4.3); its *polarised* part is neglected under Zhou
-  et al. everywhere. On the α-tagged channel a quasi-elastic event **can** leave
-  an intact α at `x_L ≈ 2/3` and would then not be vetoed the way the elastic
-  tail is (§1.5.2), so **`rc_tail ≡ 1` on the tagged channels is an assumption,
-  not a kinematic fact** — the elastic half of it is a fact, the quasi-elastic
-  half is not. Nobody has computed it. It is probably small (a radiative tail of
-  a quasi-elastic peak into a DIS bin, with the α acceptance on top).
+* **Q3 — the quasi-elastic tail on a TAGGED channel. STILL OPEN, and its
+  "probably small" is WITHDRAWN (2026-09-04, task B4).** The *unpolarised* QRT
+  is priced inclusively (§1.4.3); its *polarised* part is neglected under Zhou
+  et al. everywhere. On the α-tagged channel **`rc_tail ≡ 1` is half a
+  kinematic fact**: the elastic half is one, the quasi-elastic half is an
+  omission. The A−1 remnant is unbound, so the α comes out at `x_L ≈ 2/3` —
+  the tag window — and when the struck nucleon belongs to the embedded
+  deuteron the α is a **true spectator** carrying the same `n_M(k, c)` the
+  tagged Born does. The tag therefore neither vetoes it nor suppresses it in
+  the ratio, and the omitted dilution is of the **same order as the inclusive
+  quasi-elastic one** (99.9 % of the inclusive tail at x = 0.30), not a
+  negligible one. Nobody has computed it; pricing it needs a tagged Born
+  denominator and the tag acceptance inside Eq. (44), plus the cluster-elastic
+  `e + A → e' + γ + d + α` that Eq. (44) does not contain. Full kinematics in
+  §1.5.2 and `../run_2026-09-03/phase_B_numbers.md` §B4.
 * **Q4 — the tagged band is an extrapolation.** No RC calculation exists for a
   tagged tensor asymmetry (§1.5.1). Applying `δ(x)` to `τ_tag` is defensible
   and conservative but uncited.
@@ -2168,10 +2288,120 @@ this design deliberately does not do). Agent 1 ≈ 4–6 d, agent 2 ≈ 2 d.
   calculation's own — at the cost of inheriting an uncited calculation's shape
   as well as its magnitude. The design deliberately keeps the interpolation and
   the anchors visible.
+
+  > **DECIDED 2026-09-04 (task B6): the Gakh–Shekhovtsova SHAPE IS REJECTED,
+  > with numbers. Not overlooked — investigated and refused.** The digitisation
+  > is *available*: the arXiv source of hep-ph/0403262 ships the four panels as
+  > EPS files (`rrc01.eps`, `rrc1.eps`, `rrc4.eps`, `rrc10.eps` at
+  > `Q² = 0.1, 1, 4, 10 GeV²`), each carrying a 30-point `/x` array and **two**
+  > `/y` arrays — the dashed one is the RC-included `Δσ`, the solid one the
+  > Born, per the Fig. 2 caption. Every number below is read off those arrays,
+  > not off a picture. Four reasons it may not be adopted:
+  >
+  > **(a) `δ` is SINGULAR, not a bounded fraction.** The Born `Δσ` **crosses
+  > zero** — the `b₁` zero-crossing — inside the `Q² = 4` and `Q² = 10` panels,
+  > and the RC **moves the crossing**, which is the paper's own stated result
+  > (*"the inclusion of the radiative correction shifts the zero value of `b₁`
+  > and `b₂` to the smaller `x`-value region"*). Measured on the arrays:
+  > `x₀ = 0.20118 → 0.18467` at `Q² = 4` and `0.20161 → 0.18331` at `Q² = 10`.
+  > A ratio across a zero is unbounded. `δ ≡ (Δσ_RC − Δσ_Born)/Δσ_Born`
+  > throughout — the RC as a fraction **of the Born**, which is the base the
+  > paper's own quoted number names and the base the `w = 1 ∓ δτ` ansatz
+  > applies; it is this record's construction from the two curves,
+  > **inferred, not a symbol the paper defines** (`phase_B_numbers.md` §B6.3
+  > sets it out, corrected 2026-09-04 from `Δσ_Born/Δσ_RC − 1`, and every
+  > number here has been reconverted). It runs
+  >
+  > | `Q²` | `x` window | `δ` range on the panel |
+  > |---|---|---|
+  > | 0.1 | 0.00226 – 0.00966 | −0.266 … −0.113 |
+  > | 1 | 0.01348 – 0.09662 | **−0.171 … +0.240** (changes SIGN) |
+  > | 4 | 0.05394 – 0.38647 | **−1.691 … +7.810** |
+  > | 10 | 0.13097 – 0.85000 | **−0.887 … +4.091** |
+  >
+  > and at `Q² = 4` specifically −0.170 (`x = 0.111`) → **−0.537**
+  > (`x = 0.169`) → **+1.026** (`x = 0.214`) → +0.030 (`x = 0.283`). The band
+  > ansatz is `w = 1 ± δτ` with `band_tau_max = 1`, which assumes a **small,
+  > bounded, one-signed fractional rescale** and needs `|δ| < 1` for
+  > `w_lo > 0` and `w_hi > 0` at all. A paper-shaped `δ` is none of those
+  > things: it is
+  > unbounded, it changes sign, and it would emit negative weights.
+  >
+  > **(b) The shape is NOT monotone non-increasing in `x`**, which is this
+  > design's stated justification for the log-linear form (§1.3) and is
+  > *asserted* by `tests/test_rc.cpp:70-83` — T3 checks monotone
+  > non-increasing on a 2000-point log grid and compares **both anchors with
+  > `==`**. Beyond the sign changes of (a), the panels give **−0.128 at
+  > `x = 0.386`** (`Q² = 4`) and **−0.400 at `x = 0.85`** (`Q² = 10`) against
+  > `δ_high = 0.015` for **all** `x ≥ 0.16` — **8.5×** and **26.7×** past the
+  > E12-13-011 high-`x` anchor in magnitude, and negative, which a half-width
+  > cannot be. The two anchors and the shape cannot both
+  > stand; adopting the shape would silently delete the only *measured*
+  > statement in the band.
+  >
+  > **(c) The `Q²` support is patchy and not rectangular.** Four `Q²` values
+  > with barely-overlapping `x` windows (above), and panels **a and b do not
+  > overlap at all** — there is a gap at `0.00966 < x < 0.01348`. This
+  > generator's own quoted point, **`x = 0.01, Q² = 5`**, falls *between* the
+  > `Q² = 4` and `Q² = 10` panels **and** outside the `x` window of both
+  > (`0.01 < 0.05394` and `0.01 < 0.13097`) — and its `x` lands exactly in the
+  > a–b gap. There is no panel to interpolate from at the point the design
+  > publishes. **Related, and worth its own flag (corrected 2026-09-04):** the
+  > *magnitude* actually taken, the paper's "10 % to 30 %", is quoted there for
+  > `x ∼ 10⁻³–10⁻²`, and **only panel (a) lies in that window** — all 30 of its
+  > points do, while panel (b) starts at `x = 0.01348`, above `10⁻²`, and
+  > contributes none. So `δ_low = 0.30` is a **`Q² = 0.1 GeV²`** number quoted
+  > at `Q² = 5`, not the `0.1–1 GeV²` this block previously said, and
+  > `|δ| = 0.113…0.266` on that panel. The `0.171…0.240` published here as a
+  > `Q² = 1` `|δ|` range was **not a magnitude range at all**: `−0.171` and
+  > `+0.240` are that panel's two *signed* extremes under this `δ`, at
+  > opposite ends of its `x` window, while its `|δ|` spans **0.006 … 0.240**. Taking the magnitude is already an
+  > extrapolation; taking the shape would compound it.
+  >
+  > **(d) Their Born is not our Born.** The ratio is against **their** tensor
+  > model, not this generator's `b₁`: their Eq. (60) HERMES `A_zz`
+  > parametrisation `A_zz = −1.56·10⁻²(1 − 1.74x − 1.45√x)`, `F₂^d` from
+  > ALLM97 [21] with `F₂ⁿ/F₂ᵖ` [22], and `b₂` from the Callan–Gross-type
+  > relation Eq. (59). A *fractional* RC computed against a different `b₁`
+  > shape does not transfer to a different `b₁` shape — that is a fresh,
+  > unpriced assumption on top of the A = 2 → A = 6 one of Q8.
+  >
+  > **What is kept.** The log-linear interpolation, the two visible anchors,
+  > and the *magnitude* `δ_low = 0.30` with its flags. What Q7 is really
+  > asking — "is the shape right?" — has an answer that is **not** "digitise
+  > Fig. 2": it is *"the source cannot supply a shape this band can use"*.
+  > Q7 stays open; the digitisation route is now **closed**, and reopening it
+  > requires a `δ` definition that survives a zero crossing.
 * **Q8 — no `A > 2` tensor RC exists at all.** Everything cited is deuteron.
   ⁶Li enters only through its form factors (which we supply) and its `b₁`
   (Phase D). Whether the deuteron's *fractional* RC transfers to ⁶Li is
   untested and is the largest unquantified assumption in the band.
+
+  > **PRICED 2026-09-04 (task B6), still not answered.** The assumption now has
+  > a dial: `RcOptions::a_transfer_frac` / `--rc-a-transfer-frac`, a fraction of
+  > `δ(x)` added **in quadrature** by `RcModel::delta` — the model's single call
+  > site of `rc_delta`, so it is applied exactly once and on every path:
+  >
+  > ```
+  >   delta_eff(x) = hypot( delta(x), a_transfer_frac * delta(x) )
+  >                = delta(x) * sqrt(1 + a_transfer_frac^2)
+  > ```
+  >
+  > **Default 0.0**, which is the assumption v0 shipped *unstated* — "the
+  > deuteron fraction transfers exactly" — and the shipped output is bit for
+  > bit unchanged (`hypot(d, 0) == |d|`, and `rc_delta ≥ 0`; measured, §B6).
+  > `0.5` = "known to 50 % of itself"; `1.0` = "as uncertain as it is large",
+  > a `√2`-wider band. **There is no measurement to prefer any of them** — this
+  > is a price tag, not a correction, and `meta["rc_a_transfer_frac"]` records
+  > which one ran. Measured half-widths on `A_zz` at `x = 0.01, Q² = 5`:
+  > **1.3585e−04 / 1.5188e−04 / 1.9212e−04** at `f = 0 / 0.5 / 1`
+  > (`run_2026-09-03/phase_B_numbers.md` §B6).
+  >
+  > It is deliberately **multiplicative and `δ`-proportional**: it must vanish
+  > where `δ` does, because the E12-13-011 high-`x` anchor is an `A = 2`
+  > measurement too — the doubt about the transfer cannot be larger than the
+  > correction it doubts. Q8 stays **open**: no `A > 2` tensor RC calculation
+  > exists, and none of `0`, `0.5`, `1` is derived from one.
 * **Q9 — the quasi-elastic suppression factors.** v0 sets POLRAD Eq. (44)'s
   `S_E = S_M = S_EM = 1`, i.e. no Pauli blocking, banded by
   `qe_suppression ∈ {0, 0.5, 1}`. POLRAD's own peak prescription (its §2.1.2
@@ -2308,7 +2538,9 @@ and a **20–35 %** one on the tagged channels (§1.5.1).
   including (B.5), (B.7) and (B.8).
 * G. I. Gakh, O. Shekhovtsova, [arXiv:hep-ph/0403262](https://arxiv.org/abs/hep-ph/0403262),
   JETP **99** (2004) 898 — the only dedicated tensor-DIS RC calculation, Eqs. (57)–(60),
-  Fig. 2, §5 ("10 % to 30 %"). **Zero INSPIRE citations.**
+  Fig. 2, **§4** *Numerical estimations* ("10 % to 30 %"; **corrected 2026-09-04**
+  from "§5" — in the arXiv source's own numbering §5 is Appendix A).
+  **Zero INSPIRE citations.**
 * HERMES, [arXiv:hep-ex/0506018](https://arxiv.org/abs/hep-ex/0506018), PRL **95** (2005)
   242001 — **Eq. (1)** (the rate form `σ_U[1 − P_z P_B D A₁ + ½ P_zz A_zz]`), **Eq. (2)**
   (the extraction, `A_zz = (2σ¹ − 2σ⁰)/(3σ_U P_zz^eff)`), Eq. (5), **Table II** (the

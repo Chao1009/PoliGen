@@ -402,28 +402,57 @@ void PipelineConfig::validate() const {
       throw std::runtime_error("PipelineConfig: rc n_eta must be >= 8");
     }
     if (!(rc_options.fq_scale >= 0.0 && rc_options.tail_tensor_scale >= 0.0 &&
-          rc_options.qe_suppression >= 0.0)) {
+          rc_options.qe_suppression >= 0.0 &&
+          rc_options.qe_tensor_scale >= 0.0)) {
       throw std::runtime_error(
-          "PipelineConfig: rc fq_scale / tail_tensor_scale / qe_suppression "
-          "must be >= 0");
+          "PipelineConfig: rc fq_scale / tail_tensor_scale / qe_suppression / "
+          "qe_tensor_scale must be >= 0");
     }
-    if (rc_options.tail_model != RcTailModel::TPeak) {
+    // Its sign is erased by the quadrature in `RcModel::delta`, so a negative
+    // value would be recorded in `meta` as a price it did not charge.
+    if (!(rc_options.a_transfer_frac >= 0.0)) {
+      throw std::runtime_error(
+          "PipelineConfig: rc a_transfer_frac must be >= 0 (it is added in "
+          "QUADRATURE to delta(x), which erases its sign)");
+    }
+    // THE SAME "a knob that did not run may not be recorded" RULE as
+    // `m_lepton` below.  `qe_tensor_scale` is a fraction OF Eq. (44)'s
+    // sigma^q_U; with `with_qe_tail = false` there is no sigma^q_U, so the
+    // npz `meta` would carry `rc_qe_tensor_scale` as if the polarised
+    // quasi-elastic omission had been priced when nothing was computed.
+    // `RcModel`'s constructor makes the identical check for the C++ API path.
+    if (!rc_options.with_qe_tail && rc_options.qe_tensor_scale != 0.0) {
+      throw std::runtime_error(
+          "PipelineConfig: rc qe_tensor_scale != 0 needs with_qe_tail = true "
+          "-- the polarised stand-in is a fraction of the UNPOLARISED "
+          "quasi-elastic tail this run switches off, so it would record a "
+          "price that was never paid (rc.hpp, RcOptions::qe_tensor_scale)");
+    }
+    if (rc_options.tail_model == RcTailModel::PolradFull) {
       throw std::runtime_error(
           "PipelineConfig: rc tail_model PolradFull is not implemented "
           "(design_C_tensor_rc.md section 1.4.6)");
     }
     // A KNOB THAT DID NOT RUN MAY NOT BE RECORDED AS IF IT HAD -- the same
     // rule the Miller branch enforces for `b1_band_scale` below.  `m_lepton`
-    // is RESERVED for `RcTailModel::PolradFull` (F_IR, l_m); the shipped
-    // `TPeak` transcription carries no lepton mass at all, so setting it
-    // would be a silent no-op that the npz `meta` does not record.
-    if (rc_options.tail_model == RcTailModel::TPeak &&
-        rc_options.m_lepton != M_ELECTRON) {
+    // is RESERVED for `RcTailModel::PolradFull` (F_IR, l_m).
+    //
+    // IT IS REFUSED ON `TPeakPlusLL` TOO, and the reason is not the same as on
+    // `TPeak`.  `TPeak` carries no lepton mass at all.  `TPeakPlusLL` DOES --
+    // `ll_radiator` is (alpha/pi) ln(Q^2/m_e^2)(1+z^2)/(1-z) -- but it reads
+    // `M_ELECTRON` from constants.hpp directly and NOT `rc_options.m_lepton`,
+    // deliberately: a muon radiator would need the muon's own elastic
+    // kinematics (the `dsigma_el_dq2` kinematic factor carries the LEPTON mass
+    // nowhere and the TARGET mass everywhere), so honouring `m_lepton` in the
+    // log alone would be a half-change dressed as a whole one.  Refusing it
+    // keeps the rule intact: what `meta` records is what ran.
+    if (rc_options.m_lepton != M_ELECTRON) {
       throw std::runtime_error(
           "PipelineConfig: rc_options.m_lepton is RESERVED for tail_model = "
           "PolradFull (POLRAD's F_IR and l_m); the shipped TPeak tail has no "
-          "lepton-mass dependence, so setting it would record a variation "
-          "that did not run -- leave it at constants.hpp's M_ELECTRON");
+          "lepton-mass dependence and TPeakPlusLL's leading-log radiator "
+          "reads constants.hpp's M_ELECTRON directly, so setting it would "
+          "record a variation that did not run -- leave it at M_ELECTRON");
     }
     // DESIGN vs CODE: sec. 3.2's snippet also loops over `plan.categories()`
     // here to refuse a polarised beam.  `PipelineConfig` has no run plan --

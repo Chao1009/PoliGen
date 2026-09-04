@@ -244,7 +244,16 @@ and an `--rc off` npz and HepMC3 file are **byte-identical** to what the same
 seed wrote before `rc.hpp` existed. Applies on every channel except coherent
 ⁶Li (a φ-dependent tensor observable — nothing to cite); the tail is
 identically 1 on the tagged channels, where the tag itself vetoes the elastic
-recoil at x_L = 1.
+recoil at x_L = 1. **That last clause is half a kinematic fact.** It is one for
+the ELASTIC tail; for the QUASI-ELASTIC tail it is an **omission**, worked out
+in the 2026-09-04 run: the A−1 remnant is unbound (⁵Li, ⁵He), so its α comes
+out at x_L ≈ 2/3 — the tag window — and when the struck nucleon belongs to the
+embedded deuteron the α is a **true spectator** carrying the same n_M(k, c) the
+tagged Born does, so the tag neither vetoes it nor suppresses it in the
+**ratio**. The omitted dilution is of the same order as the inclusive
+quasi-elastic one (99.9 % of the inclusive tail at x = 0.30), and the design's
+"probably small" is withdrawn. `exclusion_reason()` now says so in the banner
+and in `meta` (`run_2026-09-03/phase_B_numbers.md` §B4).
 
 **Configuration for every number below.** ⁶Li, `--config 1`
 (s per nucleon = 3980 GeV²), `--channel inclusive`,
@@ -282,36 +291,111 @@ HERMES-like y gives 1.8 % at y = 0.5 and 33 % at y = 0.9. **`rc_tail` is a
 small effect at the EIC and a large one at a fixed target, and the difference
 is entirely `Y₊` and the Born's 1/Q⁴.**
 
-**And `rc_tail` is a LOWER BOUND: it is the t-peak ALONE.** T8(c)
-(`tests/test_rc.cpp`) now measures the leading-log s-/p-peaks of the same
-observable with an independent Weizsäcker–Williams × elastic construction.
-POLRAD §2.1.3 B's "the s- and p-peaks are suppressed" holds **where this
-generator runs** — > 99 % of the total for ⁶Li at Q² ≥ 20 GeV² — and fails
-elsewhere: at the HERMES deuteron point (x = 0.012, y = 0.85, Q² = 0.53) the
-t-peak is only **23 %** of the total, low by a factor **4.4**, and at the
-low-Q² corner of the generator window (Q² ≈ 4 GeV²) the quasi-elastic s-peak
-is already 3.3× the t-peak. Never quote `rc_tail` as "the" radiative tail.
+**And the DEFAULT `rc_tail` is a LOWER BOUND — it is the t-peak ALONE — with
+the other edge now shipped.** The leading-log s-/p-peak construction T8(c) used
+to build privately is now `ll_peaks_spin1` / `ll_peaks_qe` in
+`src/core/rc.cpp`, so T8(c) gates the **shipped** code path, and
+`RcTailModel::TPeakPlusLL` (`--rc-tail-model t-peak+ll`) adds it to the tail.
+**The two are a band and neither is "the" radiative tail.** The upper edge is a
+**STATED MODEL of mixed approximation orders** — POLRAD's η_A quadrature plus a
+single-z collinear leading log, good to the worse of the two (~5–10 %), with an
+uncancelled soft 1/(1−z) that overshoots as y → 0 — and **not** a controlled
+O(α) expansion. **Neither edge carries a tensor s/p peak**: POLRAD supplies
+none, inventing one would be a second definition of a physics number, so the
+s+p enter the **unpolarised** numerator only and `TPeakPlusLL` **lowers the
+tensor fraction of the tail**. That fraction is *unknown*, not zero.
+
+POLRAD §2.1.3 B's "the s- and p-peaks are suppressed" is an **event-weighted**
+statement about this generator's bulk and is **false cell by cell**. Both halves,
+because either one alone misleads:
+
+* **Event-weighted, it holds.** For ⁶Li at Q² ≥ 20 GeV² and y ≤ 0.9 the mean
+  dilution ⟨w_tail − 1⟩ moves **8.48914e−03 → 8.54072e−03**, **+0.61 %**
+  (5182 of 200 000 events, seed 1234); cross-section-weighted over the
+  sampler's accepted cells, 8.31257e−03 → 8.35972e−03, **+0.57 %**.
+* **Per cell, it fails.** **331 of that window's 1356 accepted cells — 24.4 %,
+  28.2 % of its cross section — disagree by more than 1 %**, worst **×6444** at
+  x = 0.7943, y = 0.0088, Q² = 27.8 (t-peak = 0.016 % of the total), and
+  **318 of the 331 sit at y < 0.1**: the failure is at **y → 0**, not y → 1.
+* **The surviving per-cell claim** is Q² ≥ 20 GeV² **and** 0.15 ≤ y ≤ 0.7,
+  worst **0.55 %** (660 cells); ≤ 0.77 % to y ≤ 0.8, ≤ 2.0 % to y ≤ 0.9;
+  **below y = 0.15, none**. The "0.16 % at y ≤ 0.7" published on 2026-09-03 was
+  four table rows — three at y = 0.5, one at y = 0.7 — read as a window
+  statement.
+
+**Two corners, two mechanisms.** At y = 0.985 the two differ by **59 %**
+because z_s = (1−y)/(1−x_A y) → 0 puts the elastic vertex at Q′² → 0 where the
+form factor is 1 and the s-peak beats Y₊. At y → 0 it is the **uncancelled
+soft radiator**: 1 − z_s = y(1−x_A)/(1−x_A y) and 1 − z_p = y(1−x_A), so
+D(z_s) ∝ 1/y — 0.082 / 1.36 / 4.39 / 11.5 at x = 0.01 / 0.10 / 0.30 / 0.72
+along Q² = 23.88 GeV², against ratios 1.0014 / 1.061 / 3.98 / 2244 — while the
+t-peak has no matching growth (Y₊ → 2) and is crushed because Q² ≥ 20 forces
+x·y ≥ 5.0e−3, so low y means **high x**, and its own vertex starts at
+t_min = M_A²x_A²/(1−x_A) ∝ x² (0.63 GeV² at x = 0.79). The ratio leaves 1 %
+exactly where D(z_s) passes 1 — **a breakdown of the upper edge, not evidence
+that the t-peak is low by ×6444.** The excess there is entirely quasi-elastic,
+both tails are ≤ 3.2e−04 of the Born, and the price is paid in the **tensor
+fraction of the tail**: −1.41817e−08 → −2.20067e−12, **×1.55e−04**, inside the
+Q² ≥ 20 window and below the smallest entry of the §B2.1 table (2.59e−04, at
+Q² = 3). The absolute tensor term is unchanged (−6.975e−16 on both models).
+
+It fails outright elsewhere too: at the HERMES deuteron point
+(x = 0.012, y = 0.85, Q² = 0.53) the t-peak is only **23 %** of the total, low
+by a factor **4.36**, and at the low-Q² corner of the generator window
+(x = 0.01, y = 0.1, Q² ≈ 4 GeV²) the quasi-elastic **s+p** is **3.35×** the
+t-peak unsuppressed and **7.09×** at the shipped Pauli k_F (the s-peak *alone*
+is 2.33× / 4.94× — the earlier "s-peak … 3.3×" wording conflated the two).
+Never quote either edge as "the" radiative tail.
 
 **The derived quantities that settle three design estimates:**
 
-| x | Q² | (1/6)σ^el_T/σ^el_U | σ^q_U/σ^el_U (S(q) on / S = 1) | ΔA_zz (tail) |
-|---|---|---|---|---|
-| 0.01 | 5 | −5.0943e−04 | 0.28237 / 0.5981 | +3.5167e−07 |
-| 0.10 | 5 | +1.5595e−04 | 2.7475 / 3.164 | +6.6751e−09 |
-| 0.30 | 5 | +1.3287e−02 | **1000.2** / 1000.2 | +1.2665e−11 |
+| x | Q² | edge | (1/6)σ^el_T/σ^el_U | σ^q_U/σ^el_U (S(q) on / S = 1) | ΔA_zz (tail) |
+|---|---|---|---|---|---|
+| 0.01 | 5 | ho | −5.0943e−04 | 0.28237 / 0.5981 | +3.5167e−07 |
+| 0.01 | 5 | vmc-ft | −5.4705e−04 | 0.27942 / 0.5918 | +3.2291e−07 |
+| 0.03 | 5 | ho | −7.3583e−04 | 0.54628 / 0.8679 | — |
+| 0.03 | 5 | vmc-ft | −8.0426e−04 | 0.53452 / 0.8492 | — |
+| 0.10 | 5 | ho | **+1.5595e−04** | 2.7475 / 3.164 | +6.6751e−09 |
+| 0.10 | 5 | vmc-ft | **−4.0702e−05** | 2.4881 / 2.865 | +6.7163e−09 |
+| 0.30 | 5 | ho | +1.3287e−02 | **1000.2** / 1000.2 | +1.2665e−11 |
+| 0.30 | 5 | vmc-ft | +1.5556e−02 | 329.85 / 329.85 | +1.7334e−11 |
 
-1. **The tensor fraction of the elastic tail changes SIGN with x** (−5.1e−04
-   at x = 0.01, +1.3e−02 at x = 0.30), which is why `σ^el_T` is a separate
-   table and never a scale factor on `σ^el_U`.
+The second row at every point is the other edge of the ⁶Li C0 **shape** band
+(`--rc-c0-shape vmc-ft`, added 2026-09-04): the j₀ transform of the committed
+ANL VMC point-proton density at the *same* measured ⟨r²⟩_point, so F_c(0),
+F_q(0) and ⟨r²⟩ are identical on the two edges and only the unfitted shape
+moves. σ^q_U itself is bit-identical between them.
+
+1. **The tensor fraction of the elastic tail changes SIGN with x — but the
+   crossing is not located, and at x = 0.10 the sign itself is a band edge.**
+   Both edges are negative at x = 0.01 and 0.03 and positive at x = 0.30, so the
+   sign *change* survives; the crossing sits between x = 0.03 and 0.10 on `ho`
+   and between 0.10 and 0.30 on `vmc-ft`, and at x = 0.10 the table reads
+   **+1.5595e−04 on one edge and −4.0702e−05 on the other**, at every Q².
+   **The +1.5595e−04 published here on 2026-09-02 is withdrawn as a result and
+   stands only as a band edge**; adding `fq_scale` 0…2 widens x = 0.10 to
+   −9.0e−05 … +4.0e−04, still spanning zero on both edges. Unaffected: `σ^el_T`
+   is a separate table and never a scale factor on `σ^el_U` — the ×(−0.29) the
+   C0 band puts on σ^el_T against ×1.10 on σ^el_U is the sharpest demonstration
+   of that yet — and design §2.1's `O(10⁻²)` per unit Q_N is met at x = 0.30 and
+   missed by 20–60× at x ≤ 0.1 on **both** edges. Everything measured, with the
+   two policy overrides that reading the VMC density required:
+   `docs/open_items/run_2026-09-03/phase_B_numbers.md` §B1.
 2. **`σ^q_U/σ^el_U` runs 0.28 → 2.75 → 1000** over x = 0.01 → 0.30 (0.60 →
-   3.16 → 1000 with the Pauli suppression off). The design's "30–70 % of the
+   3.16 → 1000 with the Pauli suppression off; 0.28 → 2.49 → 330 on the
+   `vmc-ft` edge, which does not change the reading). The design's "30–70 % of the
    ERT" estimate is right only at the bottom of the range: **`rc_tail` is
    quasi-elastic-dominated at every x ≳ 0.03** (22 % of the tail at x = 0.01,
    73 % at 0.1, **99.9 %** at 0.30), so `--rc-qe-suppression` and
    `RcOptions::qe_kf_gev` are the dominant tail knobs almost everywhere.
 3. **The tail is not the leading RC systematic at the EIC.** ΔA_zz from the
    whole tail is 3.5e−07 at x = 0.01, Q² = 5, against a **band half-width of
-   4.4e−04** — a factor 1300.
+   4.4e−04** — a factor 1300. **CORRECTED 2026-09-04 (task B6): the factor is
+   768, not 1300** — both numbers carried the ×3.253983 deuteron-b₁ `A_zz`
+   (see the WARNING below). With this generator's ⁶Li b₁ the tail is
+   −1.769797e−07 and the band half-width 1.358472e−04. **The ordering is
+   unchanged and that is the point of the row**; the arithmetic is now right,
+   and at `a_transfer_frac = 1` the band leads by ×1086.
 
 **Run-level:**
 
@@ -319,14 +403,22 @@ is already 3.3× the t-peak. Never quote `rc_tail` as "the" radiative tail.
 |---|---|
 | `RcModel` construction (101 × 77 nodes, `n_eta = 128`) | **0.106 s** — the `Pipeline` setup difference, median of 7. ONE number, shared with `phase_C_numbers.md` §8.3 and `USAGE.md` §7b; the earlier 0.16 s / 0.134 s pair is withdrawn. |
 | inclusive throughput, `--rc off` → `--rc tensor-band` (1 core, end to end) | 574 852 → 495 017 ev/s (**−13.9 %**), same build and machine as the row above |
-| clipped tail nodes at `tail_max = 10`, global / y < 0.5 / 0.5–0.9 / y > 0.9 | **0 / 0 / 0 / 0** (was 1.71 % / 0 / 0 / 21.95 % before the per-nucleon fix) |
-| clipped EVENTS — tail / band, default 2000-event inclusive run | **0 / 0** (`meta["rc_clipped_tail_event_fraction"]`, `..._band_...`; a DIFFERENT quantity from the node fractions — nodes are not event-weighted) |
+| clipped tail nodes at `tail_max = 10`, global / y < 0.5 / 0.5–0.9 / y > 0.9 | **0 / 0 / 0 / 0** at the default `tail_model = TPeak` (was 1.71 % / 0 / 0 / 21.95 % before the per-nucleon fix). On `--rc-tail-model t-peak+ll`: **0.36 % / 0 / 0 / 4.62 %** on the 101 × 77 CLI grid (1.01 % / 0 / 0 / 5.85 % on T8(d)'s coarser 40 × 24 test grid) — the same y → 1 edge as everywhere else |
+| clipped EVENTS — tail / band, default 2000-event inclusive run | **0 / 0** on BOTH tail models, and still 0 at 200 000 events (`meta["rc_clipped_tail_event_fraction"]`, `..._band_...`; a DIFFERENT quantity from the node fractions — nodes are not event-weighted, and no accepted cell centre lands in the nodes `t-peak+ll` clips) |
+| whole-run mean `rc_tail`, 200 k inclusive ⁶Li config 1, `t-peak` → `t-peak+ll` | **1.021836 → 1.040369** (max 3.410153 → 5.981595; the tail dilution roughly doubles, and every event's kinematics and `weight` are bit-identical — `RcModel::fill` takes no `Rng&`) |
 | clipped EVENTS on the BAND, 20 k tagged-alpha | **0.62 %** (⁶Li), **2.6 %** (⁷Li). `tau_tag` reaches 30.7 at the M = 0 density nodes; `band_tau_max = 1` holds every edge in [0.7, 1.3] instead of the −1.79 / −8.35 v0 published. |
 | δ(A_zz) at x = 0.01, Q² = 5 from the band, δ_low = 0.19 vs 0.30 | 2.7996e−04 vs **4.4204e−04** |
 | … from `fq_scale` 0 vs 2 | ΔA_zz +7.54154e−07 → −4.9925e−08, spread 8.041e−07 |
 | … from `tail_tensor_scale` 0.5 vs 2 | +3.59193e−07 → +3.23118e−07, spread 3.61e−08 |
 | … from `qe_suppression` 0 vs 1 | +1.83644e−07 → +3.51674e−07, spread 1.680e−07 |
 | … from `qe_kf_gev` 0 (S = 1) vs 0.169 | +5.39491e−07 → +3.51674e−07, spread 1.878e−07 |
+| … from `c0_shape` `ho` vs `vmc-ft` (the C0 SHAPE band, 2026-09-04) | +3.51683e−07 → +3.22911e−07, spread **2.877e−08**. On ΔA_zz it is the *smallest* of these knobs; on `σ^el_T` itself it is the largest by far, because it **flips the sign** at x = 0.10 (§9's table). `RcModel` construction 0.111 s → 1.293 s on this edge. |
+
+| … from `a_transfer_frac` 0 / 0.5 / 1 (the **A = 2 → A = 6 TRANSFER** price, 2026-09-04) | band half-widths on A_zz **1.358472e−04 / 1.518818e−04 / 1.921170e−04** — the band widens by √(1+f²) = 1 / 1.118 / **1.414**. Not a ΔA_zz row like the others: this knob moves the **band** and touches neither the tail nor τ (asserted bit-for-bit). Measured with this generator's ⁶Li b₁, so `f = 0` is the **corrected** 1.3585e−04, not the 4.4204e−04 row above. Default **0.0** and byte-identical output. `run_2026-09-03/phase_B_numbers.md` §B6 |
+
+| … from `qe_tensor_scale` 0 vs 1 (the POLARISED QE stand-in, 2026-09-04) | ΔA_zz **−1.769797e−07 → −2.931806e−07**, spread **1.162e−07** at x = 0.01; +3.017677e−10 at x = 0.10 and +1.795956e−09 at x = 0.30 — **0.086 % / 0.0003 % / 0.25 %** of the band half-width there. Computed with **this generator's own ⁶Li b₁**; see the warning below. It is a BORROWED magnitude, exactly linear in the scale, and possibly ~10² too small at x ≤ 0.1. |
+
+> **WARNING on the five ΔA_zz rows above, added 2026-09-04 (task B3).** Their `A_zz(Born)` — and therefore the 4.4204e−04 band half-width and every ΔA_zz that carries the `−A_zz·r_U` term — was computed with the **deuteron** Miller b₁ table (`toy_b1`, `B1Mode::Digitized`), not with this generator's ⁶Li b₁ (`Li6B1(MillerB1)`), and is **×3.253983 too large**. The correct band half-width at x = 0.01, Q² = 5 is **1.3585e−04**, and the ΔA_zz rows move with it — the default point, measured both ways, reads +3.51674e−07 above and **−1.76980e−07** with the ⁶Li b₁, i.e. it changes **sign**; the other rows in the block were not re-measured. The `σ^el_T`, `σ^q_U`, `r_U` and `w_tail` rows are **unaffected** and reproduce exactly. The block was **not** republished here — that is its own task. `run_2026-09-03/phase_B_numbers.md` §B3.2.
 
 **The `fq_scale` band changes the SIGN of ΔA_zz** and is not symmetric about
 the nominal — σ^el_T is *quadratic* in F_q. That is why it must be **RUN**
@@ -342,26 +434,131 @@ clip is the **band on the tagged channels**, 0.6–2.6 % of events, where
 **Honest flags, mandatory wherever any of this is quoted.** `δ_low = 0.30` is
 the **size of a correction this generator does not apply**, taken as a 1σ
 band; its source (Gakh–Shekhovtsova, hep-ph/0403262) has **zero INSPIRE
-citations**. `RC_DELTA_LOW_X_OPTIMISTIC = 0.19` is HERMES's *measured*
+citations** — **re-verified 2026-09-04** against the INSPIRE literature API
+(record 647050, `citation_count: 0`); the flag stands. It is also, measured
+from the paper's own figure data, a **Q² = 0.1 GeV² number quoted at Q² = 5**:
+the paper states its "10 % to 30 %" for x ∼ 10⁻³–10⁻², and **exactly one** panel
+of its Fig. 2 lies in that window — panel (a), Q² = 0.1, x = 0.00226–0.00966,
+all 30 of its points inside it, where |δ| = 0.113–0.266. Panel (b) begins at
+x = 0.01348, *above* 10⁻², and carries no point in the quoted range. So the
+10 %/30 % pair is **that one panel's two x ends at a single Q²** — |δ| = 0.1133
+at x = 0.00966 and 0.2662 at x = 0.00226, the paper scoping them to *x* and
+never to Q² — and **not** "the spread of one calculation over Q², not two
+independent edges", which `PHYSICS_CHANNELS.md`, `include/lipolgen/rc.hpp` and
+`design_C_tensor_rc.md` all said until 2026-09-04. **The anchor's real basis,
+written down here for the first time:** δ_low = 0.30 hangs at `RC_X_LOW` = 0.01,
+*above* that panel's top x = 0.00966, where the paper reads |δ| = 0.113; the
+0.266 is the panel's value at x = 0.00226, a factor 4.3 lower in x. "The
+conservative end of a Q² spread" and "the panel's lowest-x value extrapolated
+upward in x" are different bases, and the shipped documents asserted the first
+while the anchor rests on the second. Conservative in magnitude either way
+(0.30 > 0.266 > 0.113), which is all `w = 1 ∓ δτ` uses, so **nothing moves** —
+recorded, not changed (`run_2026-09-03/phase_B_numbers.md` §B6.3). Throughout,
+**δ ≡ (Δσ_RC − Δσ_Born)/Δσ_Born** — the RC as a fraction of the Born, which is
+the base the paper's own sentence names ("as compared with the Born
+contribution") and the base `w = 1 ∓ δτ` applies. It is **inferred** from the
+paper's two plotted curves; the paper defines no δ. **Withdrawn 2026-09-04**:
+the "Q² = 0.1–1 GeV²" above (panel (b) is out of range) and the "0.171–0.240 at
+Q² = 1" this block used to print as a |δ| range — that pair is panel (b)'s two
+*signed* extremes, −0.171 and +0.240, at opposite ends of its x window, while
+its |δ| actually spans 0.006–0.240 (`run_2026-09-03/phase_B_numbers.md` §B6.3).
+`RC_DELTA_LOW_X_OPTIMISTIC = 0.19` is HERMES's *measured*
 fractional residual at its lowest-x bin (2×10⁻³ on A_zz = −1.06×10⁻²).
 Everything cited is **deuteron** — whether the deuteron's fractional RC
-transfers to ⁶Li is the largest unquantified assumption here. The ⁶Li
+transfers to ⁶Li is the largest unquantified assumption here. **Since
+2026-09-04 that assumption has a price rather than only a sentence:**
+`RcOptions::a_transfer_frac` / `--rc-a-transfer-frac` adds `f·δ(x)` in
+quadrature, `δ_eff = δ√(1+f²)`, at **default 0.0** — which *is* the
+unstated v0 assumption, "the deuteron fraction transfers exactly" — with
+`f = 0.5` and `f = 1` as the priced edges. No measurement prefers any of
+them; `meta["rc_a_transfer_frac"]` records which ran. The ⁶Li
 form-factor shape parameters `(a, α, q₀) = (1.9069 fm, 0.13822,
 3.0999 fm⁻¹)` and `(q_z, b) = (1.30 fm⁻¹, 1.85 fm)` are **unfitted starting
 values** (the Suelzle–Yearian–Crannell and Li–Sick–Whitney–Yearian elastic
 data are not in this repository in machine-readable form — **Q1 and Q10 stay
 open**); their *normalisations* are the **measured** moments (μ = +0.822047
 μ_N, Q = −0.0818 fm², TUNL A = 6) and never VMC, whose Q(⁶Li) = −0.23(9) fm²
-is 3× the measured one. **No RC calculation exists for a tagged tensor
+is 3× the measured one. Since 2026-09-04 the **C0 shape** — `(a, α)`, i.e. the
+monopole `F_c` and `F_q` share — is banded rather than left to look settled:
+`--rc-c0-shape ho | vmc-ft`, both edges pinned to the same measured ⟨r²⟩_point,
+F_c(0) and F_q(0), differing by ×2.5 in `F_point` at q = 2 fm⁻¹ and flipping
+the sign of `(1/6)σ^el_T/σ^el_U` at x = 0.10. **Run both edges**; a band is a
+price tag and not a fit, and Q1 is unchanged by it. The ⁶Li form-factor DIP
+location is likewise a model number on either edge: q₀ = 3.0999 fm⁻¹ ⇒
+\|t\| = 0.3742 GeV², gated over [2.9, 3.3] fm⁻¹ by T11, while the committed
+VMC point-proton density has no C0 zero below q ≈ 4.3 fm⁻¹ at all (the uncited
+"\|t\| ≈ 0.31 GeV²" that `PHYSICS_CHANNELS.md` carried until then is
+withdrawn — `run_2026-09-03/phase_B_numbers.md` §B1.9). **No RC calculation exists for a tagged tensor
 asymmetry** (the tagged band is an uncited extrapolation) and none for any
 φ-dependent tensor observable at any axis. The **polarised** quasi-elastic
-tail is not priced at all (Zhou *et al.*, PRL **82** (1999) 687), and at
-x = 0.30 the tail is **99.9 %** quasi-elastic. **`rc_tail` is the t-peak only
-and is a LOWER BOUND** (T8(c): fine for ⁶Li at Q² ≥ 20 GeV², low by 4.4× at
-the HERMES deuteron point). The **tagged band is clamped** at
+tail is **not computed anywhere** (POLRAD supplies no tensor partner to
+Eq. (44); nothing exists for an A = 6 spin-1 nucleus) and is neglected by
+default citing Zhou *et al.*, PRL **82** (1999) 687 — a *deuteron* statement,
+and at x = 0.30 the tail is **99.9 %** quasi-elastic, so that zero is the
+largest unpriced piece of `rc_tail`. `--rc-qe-tensor-scale` (default **0.0**)
+prices the omission by lending the quasi-elastic tail the **elastic** tail's
+own tensor fraction: a **borrowed magnitude, not a derived bound**, possibly
+~10² too small at x ≤ 0.1, and with a meaningless sign
+(`run_2026-09-03/phase_B_numbers.md` §B3). **`rc_tail` is the t-peak only
+and is a LOWER BOUND**, and "fine at Q² ≥ 20 GeV²" is **event-weighted and
+never per cell** (T8(c), T8(d)(i)): the window mean moves only **+0.61 %**, but
+over Q² ≥ 20 GeV² with **no y cut 346 of 1399 accepted cells — 24.7 %, 29.6 %
+of that window's cross section — differ from the `t-peak+ll` edge by more than
+1 %**, **318 of them at y < 0.1**, worst ×6444 — a breakdown of the *upper*
+edge at y → 0, not a measured deficit of the t-peak. The **only** per-cell
+agreement statement is **Q² ≥ 20 GeV² and 0.15 ≤ y ≤ 0.7** (660 cells, worst
+0.55 %). What is unchanged is the lower bound elsewhere: the t-peak is **low by
+4.4×** at the HERMES deuteron point (the "POLRAD §2.1.3 B" block earlier in
+this section). The **tagged band is clamped** at
 `|τ| ≤ band_tau_max = 1`, which is a *choice*: `n_M → 0` is exactly where the
 fractional-rescale ansatz breaks down, and the clipped fraction is reported
 rather than hidden.
+
+**A RECORDED REJECTION, so it is not re-litigated: the Gakh–Shekhovtsova
+*shape* is deliberately NOT adopted (2026-09-04, task B6).** The obvious
+"better" move — replace the log-linear `rc_delta` with the shape digitised
+from hep-ph/0403262's own Fig. 2 — was investigated and **refused on measured
+grounds**, not overlooked. The arXiv source ships the four panels as EPS with
+their `/x` and two `/y` arrays (RC-included and Born, `Q² = 0.1, 1, 4, 10`),
+so this is read off the data, not off a picture:
+
+1. **δ is SINGULAR, not a bounded fraction.** The Born Δσ **crosses zero** (the
+   b₁ zero-crossing) inside the Q² = 4 and Q² = 10 panels and the RC **moves
+   the crossing** — the paper's own stated result, reproduced here as
+   x₀ = 0.20118 → 0.18467 (Q² = 4) and 0.20161 → 0.18331 (Q² = 10). So
+   δ = (Δσ_RC − Δσ_Born)/Δσ_Born — whose pole is that Born zero, the
+   denominator's — spans **−1.691 … +7.810** at Q² = 4 and
+   **−0.887 … +4.091** at Q² = 10 (at Q² = 4: −0.170 at x = 0.111,
+   **−0.537** at 0.169, **+1.026** at 0.214, +0.030 at 0.283), and changes
+   sign already at Q² = 1 (+0.240 at the low-x end → −0.171 at the high).
+   The band ansatz `w = 1 ± δτ` with
+   `band_tau_max = 1` assumes a small, bounded, one-signed rescale and needs
+   |δ| < 1 to keep both weights positive. A paper-shaped δ would emit
+   negative weights.
+2. **It is not monotone non-increasing in x**, which is the design's stated
+   justification for the log-linear form and is *asserted* by
+   `tests/test_rc.cpp:70-83` (T3: monotone on a 2000-point log grid, both
+   anchors compared with `==`). The panels give **−0.128 at x = 0.386**
+   (Q² = 4) and **−0.400 at x = 0.85** (Q² = 10) against δ_high = 0.015 for
+   all x ≥ 0.16 — **8.5×** and **26.7×** past the E12-13-011 anchor in
+   magnitude, and negative, which a half-width cannot be. The two
+   anchors and the shape cannot both stand.
+3. **Patchy, non-rectangular Q² support.** Four Q² values with x windows
+   0.00226–0.00966 / 0.01348–0.09662 / 0.05394–0.38647 / 0.13097–0.85000 —
+   the first two do not even overlap. This generator's own quoted point
+   **x = 0.01, Q² = 5** falls *between* the Q² = 4 and 10 panels and outside
+   the x window of both, with its x in the gap between panels a and b. There
+   is nothing to interpolate from where the design publishes.
+4. **Their Born is not our Born.** The ratio is against *their* tensor model —
+   Eq. (60)'s HERMES A_zz parametrisation with ALLM97 F₂ and the
+   Callan–Gross-type b₂ relation Eq. (59) — not this generator's b₁, so a
+   fractional RC computed against a different b₁ shape is a fresh unpriced
+   assumption on top of the A = 2 → A = 6 one.
+
+**Kept:** the interpolation, the two visible anchors, and the *magnitude* with
+its flags. Reopening the digitisation route requires a δ definition that
+survives a zero crossing. `run_2026-09-02/design_C_tensor_rc.md` Q7;
+`run_2026-09-03/phase_B_numbers.md` §B6.
 
 ## 10. b₁ of ⁶Li — a four-term α–d convolution, opt-in, and the A = 2 gate now PASSES
 

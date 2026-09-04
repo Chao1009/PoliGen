@@ -155,7 +155,8 @@ conditions; A1–A7 are those seven.
 - **B6** The A = 2 → A = 6 transfer band on δ (`RcModel::delta`, `rc.cpp:756`),
   added in quadrature and named as Q8. The Gakh–Shekhovtsova *shape* is
   deliberately **not** adopted: its δ is unbounded and changes sign near the
-  Born zero (+1.161 at x = 0.169, −0.506 at x = 0.214 for Q² = 4), it is not
+  Born zero (−0.537 at x = 0.169, +1.026 at x = 0.214 for Q² = 4, with
+  δ ≡ (Δσ_RC − Δσ_Born)/Δσ_Born as fixed in `phase_B_numbers.md` §B6.3), it is not
   monotone in x (so it falsifies T3 by construction), its Q² support is
   non-rectangular, and its Born is not this generator's Born. The reasons are
   recorded so the option is not re-litigated.

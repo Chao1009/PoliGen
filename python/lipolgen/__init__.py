@@ -60,7 +60,7 @@ from .export import (inclusive_dict, tagged_dict, hfs_sample,  # noqa: F401
 __all__ = [n for n in dir(_lipolgen) if not n.startswith("_")] + [
     "export", "inclusive_dict", "tagged_dict", "hfs_sample", "write_hfs_npz",
     "write_columns_npz", "CHANNELS", "PLANS", "TRITON_SFS", "FSI", "RC",
-    "B1_MODELS", "B1_UNPOL",
+    "B1_MODELS", "B1_UNPOL", "RC_C0_SHAPES", "RC_TAIL_MODELS",
     "make_config", "make_plan", "make_pipeline", "run", "__version__",
 ]
 
@@ -190,6 +190,51 @@ B1_UNPOL = {
     "ct18nlo": _lipolgen.B1UnpolSource.Ct18Nlo,
 }
 
+#: The two edges of the 6Li C0 (monopole) shape band, for `rc_c0_shape` /
+#: `--rc-c0-shape`.  It is shared by `F_c` and `F_q`, so it moves BOTH and
+#: cannot be rescaled out of one run the way a multiplier can.
+#:
+#: "ho" is the DEFAULT and is bit for bit what every published number was made
+#: with: the unfitted (a, alpha) harmonic oscillator, whose F_c and F_q both
+#: change sign at q_0 = 3.0999 fm^-1.  "vmc-ft" is the j0 transform of the
+#: committed ANL VMC point-proton density, r-rescaled to the SAME measured
+#: <r^2>_point = 6.0788 fm^2 (so F_c(0), F_q(0) and <r^2> are identical on the
+#: two edges) and exponentially continued above q = 3 fm^-1, so it has NO C0
+#: zero at any q.
+#:
+#: MEASURED on `(1/6) sigma^el_T / sigma^el_U` at Q^2 = 5 GeV^2:
+#: ho/vmc-ft = -5.0943e-4 / -5.4705e-4 at x = 0.01, +1.5595e-4 / -4.0702e-5 at
+#: x = 0.10 and +1.3287e-2 / +1.5556e-2 at x = 0.30 -- i.e. the SIGN at
+#: x = 0.10 is a band edge, not a result (phase_B_numbers.md sec. B1).
+#: RUN BOTH.
+RC_C0_SHAPES = {
+    "ho": _lipolgen.C0Shape.Ho,
+    "vmc-ft": _lipolgen.C0Shape.VmcFt,
+}
+
+#: The two IMPLEMENTED tail formulations, for `rc_tail_model` /
+#: `--rc-tail-model`.  (`RcTailModel.PolradFull` exists in the enum and is
+#: REFUSED by `PipelineConfig.validate`, so it is deliberately absent here.)
+#:
+#: "t-peak" is the DEFAULT and is bit for bit every published number: POLRAD
+#: Eqs. (37)-(39), (43), the t-peak ALONE, and therefore a LOWER BOUND on the
+#: dilution.  "t-peak+ll" adds the leading-log s- and p-peaks of the same two
+#: unpolarised observables.
+#:
+#: IT IS A STATED MODEL, NOT A CONTROLLED EXPANSION.  The t-peak is an eta_A
+#: quadrature; the s-/p-peaks are a single-z collinear leading log.  Their sum
+#: double-counts nothing but is accurate only to the leading log, ~5-10 %.
+#:
+#: AND IT HAS NO TENSOR PARTNER.  POLRAD supplies no sigma_T at the s-/p-peak
+#: and this library will not invent one, so the s+p contribution enters the
+#: UNPOLARISED numerator only.  Switching to "t-peak+ll" therefore LOWERS the
+#: tensor FRACTION of the tail wherever the s-/p-peaks matter -- the tensor
+#: part of those peaks is UNKNOWN, not zero.  RUN BOTH, as a band.
+RC_TAIL_MODELS = {
+    "t-peak": _lipolgen.RcTailModel.TPeak,
+    "t-peak+ll": _lipolgen.RcTailModel.TPeakPlusLL,
+}
+
 #: Run-plan names accepted on the command line (aliases included).
 PLANS = ("tensor-thirds", "azz", "helicity-flip", "apar", "transverse-tensor",
          "cos2phi", "tensor-flip", "flip")
@@ -214,8 +259,11 @@ def make_config(isotope="6Li", config=1, channel="inclusive", events=0,
                 cluster_wave=None, triton_sf=None,
                 fsi=None, fsi_sigma_mb=None,
                 rc=None, rc_delta_low_x=None, rc_delta_high_x=None,
+                rc_a_transfer_frac=None,
                 rc_fq_scale=None, rc_tail_tensor_scale=None,
-                rc_qe_suppression=None,
+                rc_qe_suppression=None, rc_qe_tensor_scale=None,
+                rc_c0_shape=None,
+                rc_tail_model=None,
                 b1_model=None, b1_band_scale=None,
                 b1_alpha_d_dwave_weight=None, b1_unpol=None):
     """A `PipelineConfig` from plain values (the CLI's own constructor).
@@ -238,8 +286,10 @@ def make_config(isotope="6Li", config=1, channel="inclusive", events=0,
     ends, never quote one row alone).  Tagged channels only; the FSI enters
     as a per-event weight on `Event.weight` and moves no four-vector.
     `rc` is a key of `RC` ("off", the default, or "tensor-band") or an
-    `RcMode` directly, and the five `rc_*` knobs write the matching
-    `RcOptions` fields.  The RC weights land on `Event.rc_weights` and on
+    `RcMode` directly, and the `rc_*` knobs write the matching
+    `RcOptions` fields -- including `rc_a_transfer_frac`, the A = 2 -> A = 6
+    transfer price on the band (design Q8; 0.0 default = the shipped band).
+    The RC weights land on `Event.rc_weights` and on
     NOTHING else -- never `Event.weight`, never a four-vector, never a random
     number -- so "off" is today bit for bit.
     `b1_model` is a key of `B1_MODELS` ("miller", the default, "cdks" or
@@ -324,19 +374,43 @@ def make_config(isotope="6Li", config=1, channel="inclusive", events=0,
     # `RcOptions` is returned BY VALUE from the binding, so every knob has to
     # be written on one copy and assigned back -- the `cfg.struck` pattern.
     if any(v is not None for v in (rc_delta_low_x, rc_delta_high_x,
+                                   rc_a_transfer_frac,
                                    rc_fq_scale, rc_tail_tensor_scale,
-                                   rc_qe_suppression)):
+                                   rc_qe_suppression, rc_qe_tensor_scale,
+                                   rc_c0_shape, rc_tail_model)):
         opt = cfg.rc_options
         if rc_delta_low_x is not None:
             opt.delta_low_x = float(rc_delta_low_x)
         if rc_delta_high_x is not None:
             opt.delta_high_x = float(rc_delta_high_x)
+        if rc_a_transfer_frac is not None:
+            opt.a_transfer_frac = float(rc_a_transfer_frac)
         if rc_fq_scale is not None:
             opt.fq_scale = float(rc_fq_scale)
         if rc_tail_tensor_scale is not None:
             opt.tail_tensor_scale = float(rc_tail_tensor_scale)
         if rc_qe_suppression is not None:
             opt.qe_suppression = float(rc_qe_suppression)
+        if rc_qe_tensor_scale is not None:
+            opt.qe_tensor_scale = float(rc_qe_tensor_scale)
+        if rc_c0_shape is not None:
+            if isinstance(rc_c0_shape, str):
+                if rc_c0_shape not in RC_C0_SHAPES:
+                    raise ValueError("unknown rc_c0_shape %r; know %s"
+                                     % (rc_c0_shape,
+                                        ", ".join(sorted(RC_C0_SHAPES))))
+                opt.c0_shape = RC_C0_SHAPES[rc_c0_shape]
+            else:
+                opt.c0_shape = rc_c0_shape
+        if rc_tail_model is not None:
+            if isinstance(rc_tail_model, str):
+                if rc_tail_model not in RC_TAIL_MODELS:
+                    raise ValueError("unknown rc_tail_model %r; know %s"
+                                     % (rc_tail_model,
+                                        ", ".join(sorted(RC_TAIL_MODELS))))
+                opt.tail_model = RC_TAIL_MODELS[rc_tail_model]
+            else:
+                opt.tail_model = rc_tail_model
         cfg.rc_options = opt
     if scenario is not None:
         cfg.scenario = scenario

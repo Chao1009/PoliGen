@@ -209,6 +209,24 @@ TEST_CASE("T6c: PipelineConfig::validate refuses only a bad RC knob") {
   SUBCASE("tail model") {
     cfg.rc_options.tail_model = RcTailModel::PolradFull;
     CHECK_THROWS_AS(cfg.validate(), std::runtime_error);
+    // ... but TPeakPlusLL is IMPLEMENTED and must pass: it is the opt-in
+    // s-/p-peak model of T8(d), not a reserved enumerator.
+    cfg.rc_options.tail_model = RcTailModel::TPeakPlusLL;
+    CHECK_NOTHROW(cfg.validate());
+  }
+  SUBCASE("m_lepton is refused on BOTH implemented tail models") {
+    // A KNOB THAT DID NOT RUN MAY NOT BE RECORDED AS IF IT HAD.  TPeak has no
+    // lepton-mass dependence at all; TPeakPlusLL's leading-log radiator DOES
+    // carry ln(Q^2/m_e^2) but reads constants.hpp's M_ELECTRON directly,
+    // because a different lepton would also need its own elastic kinematics.
+    for (RcTailModel tm : {RcTailModel::TPeak, RcTailModel::TPeakPlusLL}) {
+      cfg.rc_options.tail_model = tm;
+      cfg.rc_options.m_lepton = M_ELECTRON;
+      REQUIRE_NOTHROW(cfg.validate());
+      cfg.rc_options.m_lepton = 0.1056583755;          // a muon beam, say
+      CHECK_THROWS_AS(cfg.validate(), std::runtime_error);
+      cfg.rc_options.m_lepton = M_ELECTRON;
+    }
   }
   SUBCASE("a POLARISED beam is refused -- by RcModel, one frame later") {
     // design sec. 3.2 puts this loop in `validate()`; `PipelineConfig` has no

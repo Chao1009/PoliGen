@@ -494,9 +494,27 @@ py::dict columns_to_dict(Columns& c, const Pipeline& p, std::uint64_t n) {
     meta["rc_ff_provenance"] = rc->ff_provenance();
     meta["rc_delta_low_x"] = rc->options().delta_low_x;
     meta["rc_delta_high_x"] = rc->options().delta_high_x;
+    // The A = 2 -> A = 6 transfer price (design Q8).  Recorded for the same
+    // reason as `rc_qe_tensor_scale` below: it widens EVERY rc_tensor_* column
+    // by sqrt(1 + f^2) without changing any other key, so without it a
+    // 1.41x-wider band is indistinguishable in `meta` from the shipped one.
+    meta["rc_a_transfer_frac"] = rc->options().a_transfer_frac;
     meta["rc_fq_scale"] = rc->options().fq_scale;
+    // The C0 SHAPE edge.  Same provenance rule as `b1_unpol` above: "ho" and
+    // "vmc-ft" move F_c and F_q TOGETHER and flip the sign of
+    // sigma^el_T/sigma^el_U at x = 0.1 (phase_B_numbers.md sec. B1), so
+    // without this key the two npz files are indistinguishable in `meta`.
+    meta["rc_c0_shape"] =
+        std::string(c0_shape_name(rc->options().c0_shape));
     meta["rc_tail_tensor_scale"] = rc->options().tail_tensor_scale;
     meta["rc_qe_suppression"] = rc->options().qe_suppression;
+    // The POLARISED quasi-elastic stand-in.  Recorded for the same reason as
+    // every other knob here: it is 0 by default (the tail is tensor-blind on
+    // its dominant piece), and a run that turned it on must be
+    // distinguishable in `meta` from one that did not -- it is a BORROWED
+    // magnitude, not a computed tail, and an analysis has to be able to see
+    // that it was applied (rc.hpp, RcOptions::qe_tensor_scale).
+    meta["rc_qe_tensor_scale"] = rc->options().qe_tensor_scale;
     meta["rc_qe_kf_gev"] = rc->options().qe_kf_gev;
     meta["rc_band_tau_max"] = rc->options().band_tau_max;
     // The NON-numeric knobs, recorded for the same provenance reason as
@@ -509,9 +527,8 @@ py::dict columns_to_dict(Columns& c, const Pipeline& p, std::uint64_t n) {
         rc->options().scope == RcScope::TensorRate ? "tensor-rate"
                                                    : "tensor-all");
     meta["rc_with_qe_tail"] = rc->options().with_qe_tail;
-    meta["rc_tail_model"] = std::string(
-        rc->options().tail_model == RcTailModel::TPeak ? "t-peak"
-                                                       : "polrad-full");
+    meta["rc_tail_model"] =
+        std::string(rc_tail_model_name(rc->options().tail_model));
     meta["rc_n_eta"] = rc->options().n_eta;
     meta["rc_tail_max"] = rc->options().tail_max;
     meta["rc_clipped_cell_fraction"] = rc->clipped_cell_fraction();
@@ -690,6 +707,11 @@ PYBIND11_MODULE(_lipolgen, m) {
   m.attr("GEV2_TO_PB") = GEV2_TO_PB;
   m.attr("M_NUCLEON") = M_NUCLEON;
   m.attr("PROTON_MASS") = PROTON_MASS;
+  // "THE one conversion between fm^-1 and GeV" (constants.hpp).  Mirrored
+  // here so a Python test can build t = (q hbar c)^2 from the LIBRARY's
+  // own value instead of retyping 0.19733 -- the C0 shape band is stated
+  // in q [fm^-1] and every form factor takes t [GeV^2].
+  m.attr("HBARC_GEV_FM") = HBARC_GEV_FM;
   m.attr("PROTON_TOP_MOMENTUM") = PROTON_TOP_MOMENTUM;
   m.attr("B1_PER_DEUTERON_TO_PER_NUCLEON") = B1_PER_DEUTERON_TO_PER_NUCLEON;
   m.attr("B1_MILLER_TABLE_TO_PER_NUCLEON") = B1_MILLER_TABLE_TO_PER_NUCLEON;
@@ -2923,10 +2945,39 @@ static void bind_rc(py::module_& m) {
       .value("TensorBand", RcMode::TensorBand);
 
   py::enum_<RcTailModel>(m, "RcTailModel",
-      "Which tail formulation.  v0 ships TPeak only (POLRAD Eqs. (37)-(39), "
-      "(43)); PolradFull is the documented upgrade path and is refused.")
+      "Which tail formulation.  TPeak is the DEFAULT and is bit for bit "
+      "every published number (POLRAD Eqs. (37)-(39), (43) -- the t-peak "
+      "alone, a LOWER BOUND on the dilution).  TPeakPlusLL adds the "
+      "leading-log s- and p-peaks to the UNPOLARISED numerator and is a "
+      "STATED MODEL of mixed approximation orders, not a controlled O(alpha) "
+      "expansion: it has NO tensor s/p partner, so it LOWERS the tensor "
+      "fraction of the tail where it matters -- run it BESIDE TPeak as a "
+      "systematic, never instead of it.  PolradFull is the documented "
+      "upgrade path and is refused.")
       .value("TPeak", RcTailModel::TPeak)
-      .value("PolradFull", RcTailModel::PolradFull);
+      .value("PolradFull", RcTailModel::PolradFull)
+      .value("TPeakPlusLL", RcTailModel::TPeakPlusLL);
+
+  py::enum_<C0Shape>(m, "C0Shape",
+      "Which C0 (monopole) shape HoSpin1FF runs -- it is shared by F_c AND "
+      "F_q, so it moves both together and cannot be rescaled out of one "
+      "run.\n"
+      "  Ho      the DEFAULT: the (a, alpha) harmonic oscillator, bit for bit "
+      "what every published number was made with.  Its F_c and F_q both "
+      "change sign at q_0 = 3.0999 fm^-1.\n"
+      "  VmcFt   the OTHER BAND EDGE: the j0 transform of "
+      "data/vmc/density/li6.density, r-rescaled to the same measured "
+      "<r^2>_point = 6.0788 fm^2, exponentially continued above q = 3 fm^-1 "
+      "and therefore WITHOUT a C0 zero at any q.  Run BOTH: the two differ by "
+      "x2.5 in F_point at q = 2 fm^-1 and the tensor fraction of the elastic "
+      "tail at x = 0.1 is +1.56e-4 on Ho and -4.07e-5 on VmcFt, i.e. its SIGN "
+      "is not determined (phase_B_numbers.md sec. B1).")
+      .value("Ho", C0Shape::Ho)
+      .value("VmcFt", C0Shape::VmcFt);
+
+  m.def("c0_shape_name", &c0_shape_name, py::arg("shape"),
+        "\"ho\" | \"vmc-ft\" -- the meta key, the CLI spelling and the "
+        "provenance string all read this one function.");
 
   py::enum_<RcScope>(m, "RcScope",
       "Which rank-2 terms the band rescales.  TensorRate (the default) is the "
@@ -2936,6 +2987,9 @@ static void bind_rc(py::module_& m) {
       .value("TensorRate", RcScope::TensorRate)
       .value("TensorAll", RcScope::TensorAll);
 
+  m.def("rc_tail_model_name", &rc_tail_model_name, py::arg("model"),
+        "'t-peak', 'polrad-full' or 't-peak+ll' -- the ONE spelling, the "
+        "same one the npz meta['rc_tail_model'] key carries.");
   m.def("rc_mode_name", &rc_mode_name, py::arg("mode"),
         "\"off\" | \"tensor-band\".");
   m.def("pipeline_rc_name", &pipeline_rc_name, py::arg("rc"));
@@ -2968,6 +3022,17 @@ static void bind_rc(py::module_& m) {
                      "0.30 default (the conservative end of the uncited "
                      "10-30 %); 0.19 = 'as good as HERMES actually achieved'.")
       .def_readwrite("x_low", &RcOptions::x_low)
+      .def_readwrite("a_transfer_frac", &RcOptions::a_transfer_frac,
+                     "The A = 2 -> A = 6 TRANSFER uncertainty on delta(x), as "
+                     "a fraction of delta itself, added in QUADRATURE: "
+                     "delta_eff = delta * sqrt(1 + a_transfer_frac^2).  "
+                     "design Q8 -- every anchor the band interpolates between "
+                     "is a DEUTERON number, and whether the deuteron's "
+                     "fractional RC transfers to 6Li is the largest "
+                     "unquantified assumption in the band.  0.0 (default) is "
+                     "'it transfers exactly', which is what v0 shipped "
+                     "unstated; 0.5 and 1.0 price the doubt.  PRICES the "
+                     "assumption, never corrects it.  Must be >= 0.")
       .def_readwrite("with_tail", &RcOptions::with_tail)
       .def_readwrite("with_qe_tail", &RcOptions::with_qe_tail,
                      "The UNPOLARISED quasi-elastic tail (POLRAD Eq. (44)).  "
@@ -2975,7 +3040,18 @@ static void bind_rc(py::module_& m) {
                      "unpolarised elastic tail does; HERMES subtracted both.  "
                      "Turning it off prices the elastic tail alone and MUST "
                      "be labelled so.")
-      .def_readwrite("tail_model", &RcOptions::tail_model)
+      .def_readwrite("c0_shape", &RcOptions::c0_shape,
+                     "C0Shape.Ho (default) or C0Shape.VmcFt -- which monopole "
+                     "the DEFAULT form factor runs.  IGNORED when `ff` is "
+                     "user-supplied.  A SHAPE, not a multiplier: run both "
+                     "edges, never rescale one.")
+      .def_readwrite("tail_model", &RcOptions::tail_model,
+                     "RcTailModel.TPeak (default, bit for bit every "
+                     "published number) or RcTailModel.TPeakPlusLL (the "
+                     "leading-log s+p peaks added to the UNPOLARISED "
+                     "numerator; a STATED MODEL with no tensor s/p partner, "
+                     "so it LOWERS the tensor fraction of the tail).  Run "
+                     "both as a band; PolradFull is refused.")
       // NOT `def_readwrite`.  `RcOptions::ff` is a shared_ptr<const
       // Spin1ElasticFF>, so assigning a PYTHON SUBCLASS through a plain
       // readwrite stores only the C++ trampoline and drops the Python object
@@ -3016,6 +3092,20 @@ static void bind_rc(py::module_& m) {
                      "this: 1.0 = no EXTRA suppression, the conservative "
                      "direction for a DILUTION -- the band knob, not the "
                      "physics.  Run 0.0 / 0.5 / 1.0.")
+      .def_readwrite("qe_tensor_scale", &RcOptions::qe_tensor_scale,
+                     "The POLARISED quasi-elastic tail, priced by a STAND-IN "
+                     "and not computed.  DEFAULT 0.0 = the shipped "
+                     "tensor-blind quasi-elastic tail, bit for bit.  At 1.0 "
+                     "the quasi-elastic tail is given the ELASTIC tail's own "
+                     "sigma^el_T/sigma^el_U, which is a BORROWED magnitude "
+                     "(a coherent nuclear quadrupole fraction on an "
+                     "incoherent nucleon process), NOT a derived bound -- and "
+                     "6Li's elastic tensor fraction is anomalously small for "
+                     "a reason the quasi-elastic piece does not share, so 1.0 "
+                     "may UNDERSTATE the omission by ~1e2 at x <= 0.1.  Read "
+                     "the magnitude, never the sign.  It is LINEAR, so one "
+                     "run rescales; it rides inside qe_suppression; and "
+                     "with_qe_tail = False refuses a non-zero value.")
       .def_readwrite("qe_kf_gev", &RcOptions::qe_kf_gev,
                      "POLRAD Eq. (44)'s S_E/S_M as `ffquas` codes them: the "
                      "de Forest-Walecka Fermi-gas factor "
@@ -3030,8 +3120,13 @@ static void bind_rc(py::module_& m) {
                      "l_m = ln(Q^2/m^2)); UNUSED by the shipped TPeak tail, "
                      "which has no lepton-mass dependence.  PipelineConfig "
                      "REFUSES any value other than constants.hpp's "
-                     "M_ELECTRON while tail_model = TPeak, so that a knob "
-                     "that did not run is never recorded as if it had.")
+                     "M_ELECTRON on BOTH implemented tail models, so that a "
+                     "knob that did not run is never recorded as if it had.  "
+                     "TPeakPlusLL's leading-log radiator does carry "
+                     "ln(Q^2/m_e^2), but it reads M_ELECTRON directly: a "
+                     "different lepton needs its own elastic kinematics too, "
+                     "so honouring m_lepton in the log alone would be a "
+                     "half-change dressed as a whole one.")
       .def_readwrite("tail_max", &RcOptions::tail_max)
       .def_readwrite("band_tau_max", &RcOptions::band_tau_max,
                      "Ceiling on |tau| the BAND sees (default 1.0).  On the "
@@ -3098,6 +3193,9 @@ static void bind_rc(py::module_& m) {
       .def_readwrite("fq_scale", &HoSpin1FFOptions::fq_scale)
       .def_readwrite("tail_tensor_scale",
                      &HoSpin1FFOptions::tail_tensor_scale)
+      .def_readwrite("c0_shape", &HoSpin1FFOptions::c0_shape,
+                     "Which monopole F_c and F_q share -- C0Shape.Ho or "
+                     "C0Shape.VmcFt.")
       .def_readwrite("fold_nucleon", &HoSpin1FFOptions::fold_nucleon);
 
   py::class_<HoSpin1FF, Spin1ElasticFF, std::shared_ptr<HoSpin1FF>>(
@@ -3190,12 +3288,22 @@ static void bind_rc(py::module_& m) {
       .def_property_readonly("sigma_tail_qe", [](const RcModel& r) {
         return copy_array(r.sigma_tail_qe());
       })
+      .def_property_readonly("sigma_tail_u_sp", [](const RcModel& r) {
+        return copy_array(r.sigma_tail_u_sp());
+      })
+      .def_property_readonly("sigma_tail_qe_sp", [](const RcModel& r) {
+        return copy_array(r.sigma_tail_qe_sp());
+      })
       .def("tail_sigma_at", [](const RcModel& r, double x, double q2) {
         const RcModel::TailTriple t = r.tail_sigma_at(x, q2);
-        return py::make_tuple(t.u, t.t, t.qe);
+        return py::make_tuple(t.u, t.t, t.qe, t.u_sp, t.qe_sp);
       }, py::arg("x"), py::arg("q2"),
-         "(sigma^el_U, sigma^el_T, sigma^q_U) per nucleon [GeV^-2], straight "
-         "from the quadrature -- no table, no interpolation.");
+         "(sigma^el_U, sigma^el_T, sigma^q_U, sigma^el_U(s+p), "
+         "sigma^q_U(s+p)) per nucleon [GeV^-2], straight from the quadrature "
+         "-- no table, no interpolation.  The last two are the leading-log "
+         "s+p peaks and are IDENTICALLY ZERO unless tail_model = "
+         "RcTailModel.TPeakPlusLL; there is deliberately no tensor s/p "
+         "partner (see RcTailModel.TPeakPlusLL).");
 }
 
 // ---------------------------------------------------------------- coherent

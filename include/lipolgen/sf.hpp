@@ -382,16 +382,29 @@ double toy_b1_shape(double x, double q2, double f1);
 /// b1 of the deuteron, per nucleon: Miller's pion + hidden-colour total
 /// (PRC 89:045203 Fig. 5), the curve that reproduces HERMES.  Digitized range
 /// x = 0.010-0.900; frozen at 0.0647 below, tapered to zero at x = 1 above.
+/// The table is per DEUTERON and is converted by
+/// `B1_MILLER_TABLE_TO_PER_NUCLEON` = 0.5 -- likely, not certain; see that
+/// constant.
 double toy_b1(double x, double q2, double f1, B1Mode mode = B1Mode::kDigitized);
 
 /// b1 of the deuteron, per nucleon: the standard convolution (CDKS SD + DD at
-/// Q2 = 2.5 GeV2).  The camp that finds |b1| < 1e-3 at x >~ 0.2, with sign
-/// changes at x = 0.06 and 0.42.  Digitized range x = 0.010-1.590.
+/// Q2 = 2.5 GeV2).  The camp with sign changes at x = 0.0656 (falling) and
+/// 0.4572 (rising); |b1| <= 3.1e-3, reached at the table's floor x = 0.010,
+/// and 1.42e-3 at the large-x peak.  Digitized range x = 0.010-1.590.  It is
+/// two orders of magnitude below Miller's below x = 0.1, of the OPPOSITE
+/// sign over 0.07 < x < 0.30 and 0.46 < x < 0.58, and 2.5-5.8x LARGER above
+/// x = 0.7 (measured 2026-09-03 on a 0.005 grid).  The table is
+/// ALREADY per nucleon and is NOT converted
+/// (`B1_CDKS_TABLE_TO_PER_NUCLEON` = 1); before 2026-09-03 it was halved a
+/// second time, which made this accessor a factor 2 low.
 double b1_convolution(double x, double q2, double f1,
                       B1Mode mode = B1Mode::kDigitized);
 
 /// Integral of b1 over the digitized range -- the Close-Kumano sum rule
-/// int b1 dx = 0.  Reported, not enforced.
+/// int b1 dx = 0.  Reported, not enforced.  It integrates the RAW columns,
+/// so the two returns are NOT on the same scale and must not be compared to
+/// each other: `cdks = true` is per nucleon, `cdks = false` per deuteron
+/// (constants.hpp, the b1 normalisation block).
 double close_kumano_integral(bool cdks = true);
 
 /// b1(6Li)/nucleon = transfer * (2/6) * b1(d)/nucleon.  No published 6Li b1

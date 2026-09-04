@@ -86,6 +86,10 @@ def test_optional_tiers_follow_the_build():
     if lg._lipolgen.HAVE_PYTHIA8:
         assert hasattr(lg, "PythiaBridge")
         assert hasattr(lg, "hfs_summary")
+        # MSTW2008 LO rides the PYTHIA tier, not the LHAPDF one: the grid is
+        # PYTHIA's own pdfdata/mstw2008lo.00.dat (see python/tests/
+        # test_mstw_sf.py).
+        assert hasattr(lg, "MstwSF")
     if lg._lipolgen.HAVE_LHAPDF:
         assert hasattr(lg, "LhapdfSF")
         assert hasattr(lg, "Epps21Ratio")

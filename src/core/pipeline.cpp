@@ -280,6 +280,16 @@ const char* b1_model_name(B1Model m) {
   return "unknown";
 }
 
+const char* b1_unpol_name(B1UnpolSource s) {
+  switch (s) {
+    case B1UnpolSource::Toy:     return "toy";
+    case B1UnpolSource::Mstw:    return "mstw";
+    case B1UnpolSource::Ct18Nlo: return "ct18nlo";
+    case B1UnpolSource::Custom:  return "custom";
+  }
+  return "unknown";
+}
+
 bool is_tagged(PipelineChannel c) {
   return c == PipelineChannel::TaggedLi6Alpha ||
          c == PipelineChannel::TaggedLi7Alpha ||
@@ -507,15 +517,87 @@ void PipelineConfig::validate() const {
           "not run");
     }
   }
+  // --b1-unpol: the UNPOLARISED backend the `Li6Convolution` b1 folds its own
+  // F1 against.  Two rules, both of them the ones already enforced above.
+  //
+  // (1) A KNOB THAT DID NOT RUN MAY NOT BE RECORDED AS IF IT HAD.  Only the
+  //     `Li6Convolution` branch of `default_inclusive_kernel` reads it
+  //     (`Miller` is a ratio model with no F1 in it and `Cdks` carries the
+  //     digitized column), but `meta["b1_unpol"]` is written unconditionally,
+  //     so any other model would claim a PDF that never touched the rate.
+  //     The caller-supplied-kernel case needs no separate clause: a non-Toy
+  //     backend requires b1_model = li6-convolution, and THAT is already
+  //     refused together with `kernel` a few lines above.  The guard is not
+  //     loosened anywhere -- the point of this flag is that the passing
+  //     configuration no longer needs a hand-built kernel to be expressed.
+  //
+  // (2) A NAMED BACKEND WITH AN EMPTY SLOT IS AN ERROR, NEVER A FALLBACK.
+  //     `MstwSF` lives in the optional PYTHIA tier and `LhapdfSF` in the
+  //     optional LHAPDF tier; `sf.hpp`'s rule is that the core library links
+  //     neither, so this function cannot build either one.  Falling back to
+  //     `ToyF2` here would reproduce exactly the defect this flag exists to
+  //     fix -- a run labelled `mstw` whose numbers are the `toy` ones -- so
+  //     it throws instead, and says which tier is missing.
+  if (b1_unpol == B1UnpolSource::Toy) {
+    if (b1_unpol_sf) {
+      throw std::runtime_error(
+          "PipelineConfig: b1_unpol = toy with an object in b1_unpol_sf -- "
+          "the toy setting IS the kernel's own ToyF2, shared as one object, "
+          "so the attached backend would be silently dropped.  Use "
+          "B1UnpolSource::Custom to fold against your own UnpolSF (Python: "
+          "config.b1_unpol_sf = obj, which sets Custom for you), or clear "
+          "the slot");
+    }
+  } else {
+    if (b1_model != B1Model::Li6Convolution) {
+      throw std::runtime_error(
+          std::string("PipelineConfig: b1_unpol = ") + b1_unpol_name(b1_unpol) +
+          " is read ONLY by b1_model = li6-convolution (miller is a ratio "
+          "model with no F1 of its own, and cdks carries the digitized "
+          "column), got b1_model = " + b1_model_name(b1_model) +
+          " -- the flag would not reach the rate but WOULD reach "
+          "meta[\"b1_unpol\"], so it is refused rather than recorded as a "
+          "variation that did not run");
+    }
+    if (!b1_unpol_sf) {
+      throw std::runtime_error(
+          std::string("PipelineConfig: b1_unpol = ") + b1_unpol_name(b1_unpol) +
+          " but b1_unpol_sf is empty, and it is NEVER silently replaced by "
+          "ToyF2" +
+          (b1_unpol == B1UnpolSource::Mstw
+               ? " -- MstwSF reads PYTHIA 8's own "
+                 "pdfdata/mstw2008lo.00.dat and lives in the OPTIONAL PYTHIA "
+                 "tier (include/lipolgen/mstw_sf.hpp, src/pythia/"
+                 "mstw_sf.cpp), which the core library deliberately does not "
+                 "link.  Configure with -DLIPOLGEN_WITH_PYTHIA=ON (and a "
+                 "pdfdata grid on disk; $LIPOLGEN_PYTHIA8_PDFDATA overrides "
+                 "the compiled-in path), then attach it: Python "
+                 "lipolgen.make_config(b1_unpol='mstw') / "
+                 "_lipolgen.set_b1_unpol(cfg, B1UnpolSource.Mstw), C++ "
+                 "cfg.b1_unpol_sf = std::make_shared<const MstwSF>()"
+               : b1_unpol == B1UnpolSource::Ct18Nlo
+                     ? " -- LhapdfSF lives in the OPTIONAL LHAPDF tier "
+                       "(src/lhapdf/lhapdf_sf.cpp), which the core library "
+                       "deliberately does not link.  Configure with "
+                       "-DLIPOLGEN_WITH_LHAPDF=ON (and the CT18NLO set in "
+                       "LHAPDF's store), then attach it: Python "
+                       "lipolgen.make_config(b1_unpol='ct18nlo'), C++ "
+                       "cfg.b1_unpol_sf = std::make_shared<const LhapdfSF>("
+                       "\"CT18NLO\", 0)"
+                     : " -- Custom means the object YOU attach; put it in "
+                       "b1_unpol_sf or leave b1_unpol at Toy"));
+    }
+  }
   scenario.validate();
 }
 
 std::shared_ptr<const InclusiveKernel> default_inclusive_kernel(const Ion& ion) {
-  return default_inclusive_kernel(ion, B1Model::Miller, 1.0, 1.0);
+  return default_inclusive_kernel(ion, B1Model::Miller, 1.0, 1.0, nullptr);
 }
 
 std::shared_ptr<const InclusiveKernel> default_inclusive_kernel(
-    const Ion& ion, B1Model model, double band_scale, double w_alpha_d) {
+    const Ion& ion, B1Model model, double band_scale, double w_alpha_d,
+    std::shared_ptr<const UnpolSF> b1_unpol) {
   InclusiveKernel::Options opt;
   // ONE ToyF2, shared: the core must not link LHAPDF (sf.hpp), so an
   // `LhapdfSF` only ever enters through a caller-supplied `cfg.kernel` or a
@@ -551,7 +633,18 @@ std::shared_ptr<const InclusiveKernel> default_inclusive_kernel(
     } else {
       Li6ConvolutionOptions o;
       o.w_alpha_d_dwave = w_alpha_d;
-      o.unpol = f2;                       // the kernel's own ToyF2
+      // `--b1-unpol`.  Null (the default, and every caller that predates the
+      // flag) is the kernel's own ToyF2, handed over as the SAME object, so
+      // this line is bit for bit what it was.  Non-null is the selected
+      // backend -- MSTW2008 LO is what CDKS computed their b1_d with, and it
+      // is worth up to a factor 1.85 on `Li6ConvolutionB1::b1` (pipeline.hpp,
+      // `B1UnpolSource`).  `opt.f2_source` above stays ToyF2 either way: this
+      // flag moves b1 and only b1: the SPIN-BLIND cell cross section
+      // (`InclusiveSampler::cell_xsec_pb`) is bit-identical across settings,
+      // and the tensor-weighted per-category cross sections move, which is
+      // the point.  That asymmetry is deliberate and documented at
+      // `B1UnpolSource`.
+      o.unpol = b1_unpol ? std::move(b1_unpol) : f2;
       const auto b = std::make_shared<const Li6ConvolutionB1>(std::move(o));
       opt.b1_func = [b, band_scale](double x, double q2, double f1) {
         return band_scale * b->b1(x, q2, f1);
@@ -772,7 +865,8 @@ Pipeline::Pipeline(PipelineConfig config, RunPlan plan)
                             ? cfg_.kernel
                             : default_inclusive_kernel(
                                   ion, cfg_.b1_model, cfg_.b1_band_scale,
-                                  cfg_.b1_alpha_d_dwave_weight);
+                                  cfg_.b1_alpha_d_dwave_weight,
+                                  cfg_.b1_unpol_sf);
     dis_sampler_ = std::make_shared<InclusiveSampler>(kernel, beams_,
                                                       cfg_.scenario, cfg_.grid);
   }

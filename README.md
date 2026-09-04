@@ -45,23 +45,37 @@ Rows 5–10 and 12 are now **implemented** (coherent T2 via a PYTHIA Pomeron bea
 Glauber spectator-FSI weight, `--fsi`; the spin-3/2 finite-γ theory note,
 `docs/theory/SPIN32_FINITE_GAMMA.md`; the tensor-sector radiative-correction
 band and radiative tails, `--rc tensor-band`; the four-term α–d convolution for
-b₁(⁶Li), `--b1-model li6-convolution` — opt-in, and flagged in `--help` since its
-A = 2 magnitude gate is still open, see below; and packaging, `pip install -e .`).
+b₁(⁶Li), `--b1-model li6-convolution` — opt-in, band-mandatory, and since
+2026-09-03 through its A = 2 validation gate, see below; and packaging,
+`pip install -e .`).
 Row 11's coherent-⁶Li amplitude on-ramp gained the eSTARlight unpolarized
 baseline (`docs/open_items/run_2026-09-02/estarlight_li6.md`) and the polarized
 α+d configuration sampler (`cluster_config.hpp`, console script
 `lipolgen-configs`). Still open: the exact elastic radiative tail (Mo–Tsai,
 beyond POLRAD's transcribed t-peak), the tensor cos 2φ dipole-model run with
-the Mäntysaari group, b₁(⁶Li) beyond the α–d picture (the A = 2 convolution
-gate fails its magnitude clause by a factor 2.27–3.68 depending on the
-reference peak — a real nucleon PDF is the identified next step, and no ⁶Li
-number from the backend may be published until it closes), and the polarized
-quasi-elastic tail. Three smaller decisions were deliberately **not** taken in
-the 2026-09-03 close-out and are listed as follow-ups in
-`docs/OPEN_ITEMS_SOLUTIONS.md` §10: whether `Li6ConvolutionOptions` should
-default to `r1998` like the A = 2 gate rather than to `r_sigma_lt`, whether
-`CdksB1` should stop halving the per-nucleon column, and an independent check
-of Miller's own b₁ normalisation.
+the Mäntysaari group, b₁(⁶Li) beyond the α–d picture, and the polarized
+quasi-elastic tail. **The A = 2 convolution gate now passes — for one
+unpolarized nucleon input, not for the shipped default.** With MSTW2008 LO —
+CDKS's own nucleon PDF, checklist item 4 — at CDKS Eq. (21)'s δ-function the
+peak ratio is **0.843** against the digitized Fig. 4, inside the factor-2
+window; on the **default** toy F₂ it is **0.440**, *outside* it. So quote
+numbers made with `--b1-unpol mstw`, the selector that emits the passing
+configuration (it needs the optional PYTHIA tier and is refused, never
+silently downgraded, without it); the default `toy` backend's numbers are not
+covered by the lift, and the two are not a rescaling of each other — mstw/toy
+on b₁ is 1.848 / 1.276 / 0.817 at x = 0.10 / 0.30 / 0.50. With the real
+CD-Bonn wave function as well the ratio is **1.000338**, i.e. a residual below
+the error of digitizing a published figure — which is not the same claim as
+three-digit agreement with CDKS, and it is specific to CD-Bonn *and* MSTW
+together. The ⁶Li publication ban that failure imposed
+is lifted; the mandatory ±100 % band is not, because it comes from Q(⁶Li) vs
+Q_d and not from the gate. Of the three smaller decisions left open by the
+2026-09-03 close-out, one is now taken — `CdksB1` stopped halving the CDKS
+column, which is per nucleon already — and two are recorded as author decisions
+in `docs/OPEN_ITEMS_SOLUTIONS.md` §10: whether `Li6ConvolutionOptions` should
+default to `r1998` like the A = 2 gate rather than to `r_sigma_lt`, and
+Miller's own b₁ normalisation, which his paper is self-inconsistent about by
+exactly the factor in question.
 
 ## Build
 

@@ -1,6 +1,7 @@
 #include "lipolgen/cluster.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <cmath>
 #include <cstdlib>
@@ -8,6 +9,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <tuple>
 
 #include "lipolgen/constants.hpp"
 #include "lipolgen/numerics.hpp"
@@ -296,6 +298,146 @@ FdeutTable read_fdeut_k(const std::string& path) {
       throw std::runtime_error("fdeut k column is not increasing: " + path);
     }
   }
+  return t;
+}
+
+// --------------------------------------------------------- the CD-Bonn deuteron
+
+namespace {
+
+/// Table XX plus the four boundary conditions.  See `CdBonnWave` in
+/// cluster.hpp for the parameterisation, the sign and the provenance.
+CdBonnWave build_cdbonn_wave() {
+  // n = 11 is not a knob: the three-unknown constraint solve below and the
+  // `std::array<double, 11>` members are written for it.  If the table ever
+  // grows, these fire rather than the wave function quietly changing.
+  static_assert(CD_BONN_N == 11, "the CD-Bonn solve below assumes n = 11");
+  constexpr std::size_t kNc = sizeof(CD_BONN_C) / sizeof(CD_BONN_C[0]);
+  constexpr std::size_t kNd = sizeof(CD_BONN_D) / sizeof(CD_BONN_D[0]);
+  static_assert(kNc == 10, "Table XX publishes C_1..C_10; C_11 is Eq. (D23)");
+  static_assert(kNd == 8, "Table XX publishes D_1..D_8; D_9..D_11 are Eq. (D24)");
+  CdBonnWave w;
+  static_assert(std::tuple_size<decltype(w.m)>::value == CD_BONN_N, "size");
+  for (int j = 0; j < CD_BONN_N; ++j) {
+    w.m[static_cast<std::size_t>(j)] =
+        CD_BONN_GAMMA_FM + static_cast<double>(j) * CD_BONN_M0_FM;
+  }
+  // Eq. (D23), i.e. u_a(0) = 0: sum_j C_j = 0.
+  double sum_c = 0.0;
+  for (std::size_t j = 0; j < kNc; ++j) {
+    w.c[j] = CD_BONN_C[j];
+    sum_c += w.c[j];
+  }
+  w.c[CD_BONN_N - 1] = -sum_c;
+
+  // Eq. (D24) and its two circular permutations, in the equivalent sum-rule
+  // form of the header:  sum_j D_j/m_j^2 = sum_j D_j = sum_j D_j m_j^2 = 0.
+  // In x_j = m_j^2 and E_j = D_j/x_j the three conditions are
+  //     sum_{j=9,10,11} E_j x_j^i = b_i ,   i = 0, 1, 2 ,
+  // i.e. a VANDERMONDE system, whose inverse is Lagrange interpolation:
+  // with L_k(t) = (t - x_a)(t - x_b)/[(x_k - x_a)(x_k - x_b)] the solution is
+  //     E_k = [x_a x_b b_0 - (x_a + x_b) b_1 + b_2] / [(x_k-x_a)(x_k-x_b)] .
+  // No matrix solve, no permutation to get wrong, and no pivoting question.
+  double b0 = 0.0, b1 = 0.0, b2 = 0.0;
+  for (std::size_t j = 0; j < kNd; ++j) {
+    const double x = w.m[j] * w.m[j];
+    w.d[j] = CD_BONN_D[j];
+    b0 -= w.d[j] / x;
+    b1 -= w.d[j];
+    b2 -= w.d[j] * x;
+  }
+  const std::size_t last[3] = {kNd, kNd + 1, kNd + 2};
+  for (int t = 0; t < 3; ++t) {
+    const std::size_t k = last[t];
+    const std::size_t a = last[(t + 1) % 3];
+    const std::size_t b = last[(t + 2) % 3];
+    const double xk = w.m[k] * w.m[k];
+    const double xa = w.m[a] * w.m[a];
+    const double xb = w.m[b] * w.m[b];
+    w.d[k] = xk * (xa * xb * b0 - (xa + xb) * b1 + b2)
+             / ((xk - xa) * (xk - xb));
+  }
+  return w;
+}
+
+/// sum_ij A_i B_j/(m_i + m_j) -- the closed form of
+/// (2/pi) int_0^inf dp p^2 psi_A psi_B when both are Eq. (D21)/(D22) sums,
+/// from (2/pi) int_0^inf dp p^2/[(p^2+a^2)(p^2+b^2)] = 1/(a+b).
+double cdbonn_moment(const std::array<double, 11>& a,
+                     const std::array<double, 11>& b,
+                     const std::array<double, 11>& m) {
+  double s = 0.0;
+  for (std::size_t i = 0; i < m.size(); ++i)
+    for (std::size_t j = 0; j < m.size(); ++j) s += a[i] * b[j] / (m[i] + m[j]);
+  return s;
+}
+
+}  // namespace
+
+double CdBonnWave::psi_s(double p_fm) const {
+  const double p2 = p_fm * p_fm;
+  double s = 0.0;
+  for (std::size_t j = 0; j < m.size(); ++j) s += c[j] / (p2 + m[j] * m[j]);
+  return std::sqrt(2.0 / kPi) * s;
+}
+
+double CdBonnWave::psi_d(double p_fm) const {
+  const double p2 = p_fm * p_fm;
+  double s = 0.0;
+  for (std::size_t j = 0; j < m.size(); ++j) s += d[j] / (p2 + m[j] * m[j]);
+  // MINUS: w = -psi_2^a, the `fdeut.av18` / CDKS convention.  See the header.
+  return -std::sqrt(2.0 / kPi) * s;
+}
+
+double CdBonnWave::norm_s() const { return cdbonn_moment(c, c, m); }
+double CdBonnWave::norm_d() const { return cdbonn_moment(d, d, m); }
+double CdBonnWave::norm() const { return norm_s() + norm_d(); }
+double CdBonnWave::a_s() const { return c[0]; }
+double CdBonnWave::a_d() const { return d[0]; }
+double CdBonnWave::eta() const { return d[0] / c[0]; }
+
+std::array<double, 4> CdBonnWave::constraint_residuals() const {
+  std::array<double, 4> r{0.0, 0.0, 0.0, 0.0};
+  for (std::size_t j = 0; j < m.size(); ++j) {
+    const double x = m[j] * m[j];
+    r[0] += c[j];
+    r[1] += d[j] / x;
+    r[2] += d[j];
+    r[3] += d[j] * x;
+  }
+  return r;
+}
+
+const CdBonnWave& cdbonn_wave() {
+  static const CdBonnWave w = build_cdbonn_wave();
+  return w;
+}
+
+FdeutTable cdbonn_fdeut_table(double k_max_fm, double dk_fm) {
+  if (!(dk_fm > 0.0)) {
+    throw std::runtime_error("cdbonn_fdeut_table: dk_fm must be positive");
+  }
+  if (!(k_max_fm >= dk_fm)) {
+    throw std::runtime_error("cdbonn_fdeut_table: k_max_fm < dk_fm");
+  }
+  const CdBonnWave& w = cdbonn_wave();
+  // The SAME "both or neither" conversion `read_fdeut_k` applies: the
+  // abscissa is fm^-1 -> GeV and the ordinate fm^3/2 -> GeV^-3/2, or the norm
+  // moves by hbar c^3.
+  const double scale = 1.0 / (HBARC_GEV_FM * std::sqrt(HBARC_GEV_FM));
+  const std::size_t n =
+      static_cast<std::size_t>(std::llround(k_max_fm / dk_fm)) + 1;
+  FdeutTable t;
+  t.k_gev.reserve(n);
+  t.u.reserve(n);
+  t.w.reserve(n);
+  for (std::size_t i = 0; i < n; ++i) {
+    const double k = static_cast<double>(i) * dk_fm;
+    t.k_gev.push_back(k * HBARC_GEV_FM);
+    t.u.push_back(w.psi_s(k) * scale);
+    t.w.push_back(w.psi_d(k) * scale);
+  }
+  t.ebind_gev = CD_BONN_BINDING_MEV * 1e-3;
   return t;
 }
 

@@ -143,11 +143,11 @@ radiative-correction band (`include/lipolgen/rc.hpp`, `src/core/rc.cpp`,
 scikit-build-core, `pip install -e .`); the eSTARlight unpolarized coherent
 ⁶Li baseline (`docs/open_items/run_2026-09-02/estarlight_li6.md`) and the
 polarized ⁶Li α+d configuration sampler (`include/lipolgen/cluster_config.hpp`,
-console script `lipolgen-configs`). Landed but NOT closed: the four-term α–d
-convolution backend for b₁(⁶Li) (`include/lipolgen/b1_nuclear.hpp`,
-`--b1-model li6-convolution`) ships opt-in behind a magnitude-gate warning —
-see the "Physics inputs still external" bullet below and
-`docs/open_items/run_2026-09-02/phase_D_gate.md`.*
+console script `lipolgen-configs`). Landed, and its A = 2 gate CLOSED on
+2026-09-03: the four-term α–d convolution backend for b₁(⁶Li)
+(`include/lipolgen/b1_nuclear.hpp`, `--b1-model li6-convolution`) ships opt-in
+and band-mandatory — see the "Physics inputs still external" bullet below and
+`docs/open_items/run_2026-09-03/phase_A_numbers.md`.*
 
 *Updated 2026-09-02: every item below was investigated — see
 `docs/OPEN_ITEMS_SOLUTIONS.md` for the ranked solutions and the
@@ -225,9 +225,15 @@ gated at rtol 1e-12 against regenerated `validation/reference/*.json`
 - **Physics inputs still external** (updated 2026-09-03 from plans/04): tensor-sector
   radiative corrections and b₁ for A > 2 have moved from wholly external to
   opt-in `Backend`s (`--rc tensor-band`; `--b1-model li6-convolution`) — the RC
-  band is unrestricted, while the b₁(⁶Li) convolution still carries a
-  magnitude-gate warning and publishes no ⁶Li number until the gate closes
-  (`docs/open_items/run_2026-09-02/phase_D_gate.md`). The coherent amplitude
+  band is unrestricted, and the b₁(⁶Li) convolution passed its A = 2 magnitude
+  gate on 2026-09-03 **for one unpolarized nucleon input** (G3b peak ratio
+  0.843 with MSTW2008 LO at CDKS Eq. (21) — `--b1-unpol mstw`; **0.440 on the
+  shipped `toy` default, outside the [0.5, 2] window**, so quote numbers made
+  with the selector set to `mstw`; 1.000338 with CD-Bonn as well, which is a
+  residual below the error of digitizing a published figure and not three-digit
+  agreement with CDKS; `docs/open_items/run_2026-09-03/phase_A_numbers.md`),
+  which lifted its publication ban — the mandatory ±100 % band stays, and the
+  gate is A = 2 and says nothing about the α–d step. The coherent amplitude
   for polarized A > 2 has a first rung — the eSTARlight unpolarized ⁶Li
   baseline plus the polarized α+d configuration sampler — but not yet a full
   polarized coherent amplitude. The spin-3/2 rank-2 basis has its theory note

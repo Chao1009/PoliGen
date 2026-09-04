@@ -8,24 +8,76 @@
 /// docs/open_items/run_2026-09-02/design_D_b1_li6.md for the derivation, the
 /// symbol table and the FOUR-term truncation argument.
 ///
-/// WARNING -- THE A = 2 VALIDATION GATE IS NOT FULLY PASSED.  `G3a` (shape:
-/// two sign changes and the large-x peak position against the digitized
-/// CDKS Fig. 4) PASSES.  `G3b` (magnitude within a factor 2 of the digitized
-/// peak) FAILS: this kernel is a factor 2.27 low at CDKS Eq. (21)'s
-/// delta-function -- `DeuteronConvolutionB1`'s DEFAULT since the review of
-/// 2026-09-03 -- and 3.68 low at Eq. (17)'s kappa = 1 form.  The nucleon
-/// PDF is the dominant remaining item (x1.67 by the CT18NLO proxy; MSTW2008
-/// LO, which is what CDKS used, is not installed).  The measured checklist is
-/// in docs/open_items/run_2026-09-02/phase_D_gate.md.  Under design section
-/// 5.4 "Escalation" NO 6Li number from `Li6ConvolutionB1` may be published
-/// while that stands; the backend is here, opt-in and tested, so the remaining
-/// checklist items (nucleon PDF, CD-Bonn vs AV18) can be worked.
+/// THE A = 2 VALIDATION GATE PASSES (2026-09-03), AND READ ITS CONDITIONS.
+/// `G3a` (shape) and `G3b` (magnitude within a factor 2 of the digitized CDKS
+/// Fig. 4 peak) both pass when read where design section 5.4's checklist ends
+/// -- MSTW2008 LO, CDKS's own nucleon PDF (checklist item 4, `MstwSF` in
+/// mstw_sf.hpp), at CDKS Eq. (21)'s delta-function, which is
+/// `DeuteronConvolutionB1`'s default:
 ///
-/// G3a's margin, stated rather than left for the next reader to find: it
-/// passes by 0.0021 on the low-x zero, whose counting window starts at
-/// x = 0.02, and with a realistic PDF (CT18NLO) that zero drops below the scan
-/// floor so the "exactly two sign changes" clause FAILS.  The low-x zero is
-/// NOT a robust discriminator; the second zero and the peak position are.
+///   G3a  zeros 0.0279 (falling) / 0.4952 (rising), peak at 0.7716, against
+///        the digitized 0.0656 / 0.4572 / 0.7657 -- misses 0.038 / 0.038 /
+///        0.0059 against tolerances 0.08 / 0.10 / 0.10.
+///   G3b  max|x b1| over [0.10, 0.80] = 9.15096e-4 against 1.08521e-3,
+///        ratio 0.843243 (a factor 1.19 low), inside [0.5, 2].
+///   G3c  int b1 dx = 2.24896e-4 against 4.59200e-4 -- reported, NOT enforced.
+///
+/// FOUR CONDITIONS, none of them optional reading.  (1) THE LIFT IS ABOUT A
+/// CONFIGURATION, NOT ABOUT A BUILD.  The gate passes for the MSTW2008 LO
+/// nucleon input at CDKS Eq. (21)'s delta-function; the SHIPPED DEFAULT
+/// unpolarised backend, `ToyF2`, gives 0.440 on the same clause -- OUTSIDE
+/// the [0.5, 2] acceptance window.  So: quote numbers made with the
+/// unpolarised-backend selector set to `mstw` (`PipelineConfig::b1_unpol`,
+/// CLI `--b1-unpol mstw`, which reaches `Li6ConvolutionOptions::unpol`
+/// through `default_inclusive_kernel`); the default toy backend is outside
+/// the gate's acceptance window and ITS NUMBERS ARE NOT COVERED BY THE LIFT.
+/// The two are not a rescaling of each other: on the shipped observable
+/// `Li6ConvolutionB1::b1(x, 2.5)` mstw/toy is 1.848 / 1.276 / 0.817 at
+/// x = 0.10 / 0.30 / 0.50 -- up to a factor 1.85 and not monotone.  Selecting
+/// `mstw` needs the optional PYTHIA tier; a build without it REFUSES the
+/// selector at configuration time and is never silently downgraded to the
+/// toy, so a build that cannot reproduce the verdict row also cannot emit a
+/// number that claims it.  (2) It is comfortable at Eq. (21) and marginal at
+/// Eq. (17): MSTW at
+/// kappa = 1 gives 0.520, inside by 4 % of its own value.  (3) With CD-Bonn as
+/// well (`Options::wave = kCdBonn`, CDKS's own wave function) the ratio is
+/// 1.000338 and the zeros 0.0641 / 0.4570 -- below the error of digitizing a
+/// published figure, specific to CD-Bonn AND MSTW together, and NOT the
+/// default.  (4) The gate is A = 2.  It validates this kernel on the DEUTERON
+/// and says nothing about the alpha-d step, for which no measurement exists at
+/// any A > 2 -- so the mandatory +-100 % band on every 6Li number stays.  It
+/// comes from Q(6Li) vs Q_d, not from the gate.
+///
+/// Design section 5.4's "Escalation" clause -- "if AFTER the checklist the
+/// peak ratio is still outside a factor of 2" -- is therefore not triggered,
+/// and the 6Li publication ban it imposed is LIFTED.  Measurements:
+/// docs/open_items/run_2026-09-03/phase_A_numbers.md (sections 0-5 the MSTW
+/// rerun, section 8 CD-Bonn) and phase_A_cdbonn.md; the superseded failing
+/// verdict is docs/open_items/run_2026-09-02/phase_D_gate.md.
+///
+/// G3a's margins, stated rather than left for the next reader to find: the
+/// low-x zero is resolved to a few per cent at best on any of these grids and
+/// must not be quoted to more than two significant figures; its counting
+/// window is (0, 1.0] and the scan floor 0.001, both stated in the design
+/// since 2026-09-03 (the old [0.02, 1.0] window was narrower than the +-0.08
+/// tolerance it bracketed, which made that tolerance dead code, and with
+/// CT18NLO the zero fell below it and aborted the clause).  The second zero
+/// and the peak position are the robust discriminators.
+///
+/// G3A IS A QUALIFIED PASS, and the qualification is the counting window's
+/// UPPER edge.  (0, 1.0] is a scope choice that no position tolerance derives.
+/// Over the digitized reference's OWN domain [0.010, 1.590] the reference has
+/// TWO sign changes and stays positive to its last point, while EVERY computed
+/// configuration crosses zero a THIRD time -- ToyF2 1.220437, MSTW 1.217660,
+/// CT18NLO 1.197722 at Eq. (21) with AV18 (T17 pins these).  x > 1 per nucleon
+/// is kinematically allowed for a nucleus, so that region is physical and not
+/// out of range, and at those crossings the digitized column is still 7.0-8.5 %
+/// of its own peak -- not a digitization floor.  Widen the window to (0, 1.59]
+/// on the same argument that widened the floor and G3a fails on every
+/// configuration.  So: never quote "exactly two sign changes" without the
+/// window.  The argument in full, and why the clause is recorded rather than
+/// changed: docs/OPEN_ITEMS_SOLUTIONS.md section 10, "G3a's stated limitation
+/// -- the counting ceiling", and design_D_b1_li6.md's amendment.
 ///
 /// -------------------------------------------------------------------------
 /// THE MODEL (design 1.7), per nucleon, 6Li:
@@ -111,18 +163,18 @@ class CubicSpline;
 /// b1_nuclear.cpp.  A null `r_func` means `r_sigma_lt` (`resolve_r`).
 double f1_cdks(double f2, double x, double q2, const RFunc& r_func = nullptr);
 
-/// The RAW digitized CDKS theory-1 column as a `TensorSF`, i.e. b1 = (x b1)/x
-/// with NO `B1_PER_DEUTERON_TO_PER_NUCLEON`.
+/// The RAW digitized CDKS theory-1 column as a `TensorSF`, i.e. b1 = (x b1)/x.
 ///
-/// `CdksB1` (sf.hpp) goes through `b1_convolution()`, which halves the column
-/// (`sf.cpp:356-361`).  CDKS Eq. (10) carries an explicit 1/A, the text under
-/// their Eq. (16) says "b1 is defined by the one per nucleon", their f(y) is
-/// normalised to ONE nucleon, and their Fig. 6 overlays HERMES's per-nucleon
-/// b1 on the same axis -- so the digitized curve is ALREADY per nucleon and
-/// halving it a second time makes `CdksB1` a factor 2 low (design 9 Q1/Q1b).
-/// That constant is NOT changed here, because every published number carries
-/// the current convention; this accessor routes around it, which is what
-/// `Li6ConvolutionOptions::deuteron_b1 == nullptr` uses.
+/// CDKS Eq. (10) carries an explicit 1/A, the text under their Eq. (16) says
+/// "b1 is defined by the one per nucleon", their f(y) is normalised to ONE
+/// nucleon, and their Fig. 6 overlays HERMES's per-nucleon b1 on the same
+/// axis -- so the digitized curve is ALREADY per nucleon.  Until 2026-09-03
+/// `b1_convolution()` (sf.cpp) halved it a second time, which made `CdksB1` a
+/// factor 2 low, and this accessor existed to route around that; the constant
+/// has since been split per camp (`B1_CDKS_TABLE_TO_PER_NUCLEON` = 1,
+/// constants.hpp) and `CdksB1` now agrees with this accessor exactly.  It
+/// stays because `Li6ConvolutionOptions::deuteron_b1 == nullptr` uses it and
+/// because it names the normalisation at the point of use.
 std::shared_ptr<const TensorSF> cdks_b1_raw_per_nucleon();
 
 /// One partial wave of a two-cluster relative wave function in the CDKS
@@ -430,6 +482,28 @@ struct Li6ConvolutionOptions {
   /// deuteron's because Z = N in both; the alpha's own EMC effect (~10 % at
   /// x ~ 0.6) is NOT modelled (design 1.7 A9, 9 Q10).
   SFFunc3 alpha_f1;
+  /// R = sigma_L/sigma_T for this backend's own F1 slots.  Null =>
+  /// `r_sigma_lt`, DELIBERATELY, and NOT the `r1998` the A = 2 gate defaults
+  /// to (decided 2026-09-03; OPEN_ITEMS_SOLUTIONS.md section 10, condition 4).
+  /// The shipped observable is a RATIO -- the tensor weight is K/D_phi, and
+  /// D_phi's F1 is `InclusiveKernel`'s, built from the SAME `ToyF2` this
+  /// object is handed as `unpol`, whose R is `r_sigma_lt` because nothing sets
+  /// it -- so a different R here would not cancel:
+  /// (1 + r1998)/(1 + r_sigma_lt) is 1.088 at x = 0.1, Q2 = 2.5.
+  ///
+  /// MEASURED cost of the choice on x*b1 (Q2 = 2.5, defaults): -5.5 % /
+  /// +24.6 % / +5.4 % / +2.7 % / -1.9 % at x = 0.05 / 0.10 / 0.20 / 0.30 /
+  /// 0.50.  ALL of it is in the two orbital terms: term (1) is BIT-IDENTICAL
+  /// under the swap, because it carries b1_d from the injected `TensorSF`,
+  /// which has no R in it.  There the swap is x0.54 to x0.94, far more than
+  /// the <= 8 % a (1 + R) prefactor allows, because those terms convolve F1
+  /// against a density that INTEGRATES TO ZERO and so respond to the SLOPE of
+  /// R -- `r_sigma_lt` is x-independent, `r1998` runs 0.30 -> 0.20 over
+  /// x = 0.05 -> 0.5.  On the A = 2 gate, where there is no such
+  /// cancellation, the same swap is only +2.7 % on G3b.
+  ///
+  /// The clean fix, NOT made here, is to thread ONE R hook through
+  /// `default_inclusive_kernel` into both this and the kernel's `UnpolSF`.
   RFunc r_func;                        ///< null => r_sigma_lt
 
   /// TERM KNOBS -- each multiplies one term of design 1.7.  All 1 = nominal.
@@ -539,10 +613,36 @@ class Li6ConvolutionB1 : public TensorSF {
   mutable double q_x_ = -1.0, q_q2_ = -1.0;
 };
 
+/// Which deuteron wave function the A = 2 gate convolves.
+///
+/// `kFdeutFile` is the DEFAULT and the pre-existing behaviour, bit for bit:
+/// the tabulated AV18 file at `Options::fdeut_path`.  `kCdBonn` swaps in the
+/// analytic CD-Bonn parameterisation (`cdbonn_wave`, cluster.hpp), which is
+/// what CDKS actually used for Fig. 4 and what gate condition 3 of open
+/// item 10 asks for.  The DEFAULT IS A CHOICE and it is the conservative one:
+/// every published gate number in docs/open_items/ was measured on AV18, so
+/// moving the default would silently move all of them.  The two rows are
+/// measured side by side in
+/// docs/open_items/run_2026-09-03/phase_A_numbers.md section 8.
+///
+/// The D-state RESCALING PROXY of open item 5 (AV18's w(k) scaled to
+/// P_D = 4.85 %, S renormalised) is NOT an entry here because it never had a
+/// committed implementation -- the 2026-09-02 phase-D work built it in
+/// scratch by writing an `fdeut`-format file.  It stays exactly as reachable
+/// as it was, through `fdeut_path`, and phase_A_cdbonn.md section 7 records
+/// the two scale factors that reproduce it.
+enum class DeuteronWaveSource {
+  kFdeutFile,   ///< the tabulated file at `fdeut_path` (AV18) -- THE DEFAULT
+  kCdBonn,      ///< the analytic CD-Bonn parameterisation of cluster.hpp
+};
+
 /// A = 2 VALIDATION GATE.  The same kernel fed the AV18 deuteron u(k), w(k)
 /// and a nucleon F1: this MUST reproduce CDKS Fig. 4 (`tables::kB1CdksQ2p5`)
-/// before any 6Li number is quoted.  See design section 5 and
-/// docs/open_items/run_2026-09-02/phase_D_gate.md.
+/// before any 6Li number is quoted.  It DOES, since 2026-09-03 -- see design
+/// section 5, this file's header block for the verdict and its four
+/// conditions, and docs/open_items/run_2026-09-03/phase_A_numbers.md for the
+/// measurements (docs/open_items/run_2026-09-02/phase_D_gate.md is the
+/// superseded failing verdict, kept for its argument).
 ///
 /// The F1 slot is the ISOSCALAR nucleon (F1p + F1n)/2 with R = `r1998`
 /// (CDKS's SLAC world fit) and the CDKS Eq. (22) target-mass factor, NOT
@@ -552,6 +652,18 @@ class DeuteronConvolutionB1 : public TensorSF {
  public:
   struct Options {
     std::string fdeut_path = data_path("vmc/deuteron/fdeut.av18");
+    /// WHICH WAVE FUNCTION.  `kFdeutFile` (the default) reads `fdeut_path`;
+    /// `kCdBonn` IGNORES `fdeut_path` and builds CD-Bonn analytically on the
+    /// grid below.  See `DeuteronWaveSource`.
+    DeuteronWaveSource wave = DeuteronWaveSource::kFdeutFile;
+    /// `kCdBonn` only: the fm^-1 grid the analytic form is sampled on.  The
+    /// defaults are `fdeut.av18`'s OWN grid (0 .. 20 fm^-1 in 0.1, 201 rows),
+    /// so an AV18 row and a CD-Bonn row differ in the wave function and in
+    /// NOTHING else -- same spline, same node count, same truncation.
+    /// Refining to 0.02 moves the gate peak by 5e-4 relative
+    /// (phase_A_cdbonn.md section 8.4).  Ignored by `kFdeutFile`.
+    double cdbonn_k_max_fm = 20.0;
+    double cdbonn_dk_fm = 0.1;
     std::shared_ptr<const UnpolSF> unpol;   ///< null => ToyF2
     RFunc r_func;                           ///< null => r1998 (CDKS's choice)
     bool target_mass = true;                ///< CDKS Eq. (22) factor
@@ -563,9 +675,11 @@ class DeuteronConvolutionB1 : public TensorSF {
     /// Eq. (21) is CDKS's EXACT definition and Eq. (18)'s "~=" is what makes
     /// Eq. (17)'s (E - p_z)/M_N the approximation to it; on the A = 2 gate,
     /// which exists to reproduce THEIR figure, kappa is worth x1.62 at the
-    /// peak and x1.97 on int b1 dx and it moves the deficit from a factor
-    /// 3.68 to 2.27, so quoting the gate at kappa = 1 overstates
-    /// the deficit by the design's own checklist item 0.  In 6Li the same
+    /// peak and x1.97 on int b1 dx.  It is load-bearing for the verdict, not
+    /// only for the third digit: with CDKS's own MSTW2008 LO the G3b ratio is
+    /// 0.843 at Eq. (21) against 0.520 at Eq. (17), so the gate passes
+    /// comfortably at their exact definition and by 4 % at the "~=" of it.
+    /// In 6Li the same
     /// switch is a 1 % effect (the term kappa multiplies is the small orbital
     /// one) and the default there stays Eq. (17) as printed, which is what
     /// keeps f(y) a function of y alone -- one cached table reused at every x.

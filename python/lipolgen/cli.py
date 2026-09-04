@@ -32,8 +32,8 @@ import numpy as np
 
 from . import _lipolgen as _l
 from . import export
-from . import (B1_MODELS, CHANNELS, CLUSTER_WAVES, FSI, OPTICS, PLANS, RC,
-               TRITON_SFS,
+from . import (B1_MODELS, B1_UNPOL, CHANNELS, CLUSTER_WAVES, FSI, OPTICS,
+               PLANS, RC, TRITON_SFS,
                ion_spin,
                make_config, make_plan)
 
@@ -167,20 +167,29 @@ def build_parser():
                         "the run PLAN's 'toy'), 'cdks' (the same transfer on "
                         "the other CAMP for b1_d, the digitized CDKS Fig. 4 "
                         "column: |b1| two orders of magnitude smaller below "
-                        "x ~ 0.1, comparable above it -- peak |x b1| 1.67e-4 "
-                        "against Miller's 4.27e-4 at Q2 = 2.5, and 4x LARGER "
-                        "at x = 0.3 with the opposite sign) or "
+                        "x ~ 0.1, comparable or larger above it -- peak "
+                        "|x b1| 3.34e-4 against Miller's 4.27e-4 at Q2 = 2.5, "
+                        "and 8x LARGER at x = 0.3 with the opposite sign.  "
+                        "DOUBLED on 2026-09-03: the CDKS column is already "
+                        "per nucleon and is no longer halved) or "
                         "'li6-convolution' (the four-term alpha-d convolution "
                         "of b1_nuclear.hpp).  BOTH opt-in models are "
                         "INCLUSIVE CHANNEL ONLY and 6Li ONLY: on a tagged "
                         "channel the alpha-d density is already in the event "
                         "weight, and elsewhere the flag would reach the "
-                        "metadata but not the rate.  WARNING -- "
-                        "li6-convolution has NOT passed its A = 2 magnitude "
-                        "gate (a factor 2.27 below the digitized CDKS "
-                        "deuteron peak at CDKS Eq. (21)'s delta-function, "
-                        "3.68 at Eq. (17)'s kappa = 1 form; the nucleon PDF "
-                        "is the dominant remaining item); it is opt-in and "
+                        "metadata but not the rate.  li6-convolution "
+                        "PASSED its A = 2 magnitude gate on 2026-09-03 -- for "
+                        "ONE unpolarised nucleon input, not for the shipped "
+                        "default.  Ratio 0.843 against the digitized CDKS "
+                        "deuteron peak with CDKS's own MSTW2008 LO at their "
+                        "Eq. (21); 0.440 on the DEFAULT toy F2, OUTSIDE the "
+                        "gate's [0.5, 2] window.  So quote numbers made with "
+                        "--b1-unpol mstw; the default toy backend's are not "
+                        "covered by the lift.  With CD-Bonn as well the ratio "
+                        "is 1.000338 -- a residual below the error of "
+                        "digitizing a published figure, NOT three-digit "
+                        "agreement with CDKS.  That gate is A = 2 and says "
+                        "nothing about the alpha-d step, so both models stay "
                         "band-only")
     p.add_argument("--b1-band-scale", type=float, default=None,
                    help="the MANDATORY 100 %% band on --b1-model cdks and "
@@ -195,6 +204,28 @@ def build_parser():
                         "REFUSED with --b1-model miller (the band is not "
                         "applied to the published numbers, so recording it "
                         "would claim a variation that did not run)")
+    p.add_argument("--b1-unpol", choices=sorted(B1_UNPOL), default=None,
+                   help="UNPOLARISED structure-function backend that "
+                        "--b1-model li6-convolution folds its own F1 against "
+                        "(Li6ConvolutionOptions::unpol): 'toy' (default -- "
+                        "the inclusive kernel's own ToyF2, handed over as ONE "
+                        "shared object, bit-for-bit what every published "
+                        "number was made with), 'mstw' (MSTW2008 LO over "
+                        "PYTHIA 8's own pdfdata grid: the PDF CDKS computed "
+                        "their b1_d with, and THE CONFIGURATION THE A = 2 "
+                        "GATE PASSES ON -- G3b 0.843 against 0.440 on the "
+                        "toy.  Needs the optional PYTHIA tier) or 'ct18nlo' "
+                        "(the phase-D stand-in, kept selectable so the PDF "
+                        "systematic can be quoted; needs the optional LHAPDF "
+                        "tier).  MEASURED on Li6ConvolutionB1::b1(x, 2.5): "
+                        "mstw/toy = 1.848 / 1.276 / 0.817 at x = 0.10 / 0.30 "
+                        "/ 0.50 -- up to a factor 1.85 and not monotone.  It "
+                        "moves b1 ONLY: the kernel's own f2_source stays "
+                        "ToyF2, so the SPIN-BLIND cell cross section is bit "
+                        "for bit and only the tensor shift moves.  REFUSED "
+                        "with miller and cdks, "
+                        "which never read it, and never silently downgraded "
+                        "to the toy in a build without the tier")
     p.add_argument("--b1-alpha-d-dwave-weight", type=float, default=None,
                    help="knob on the alpha-d orbital terms (2d) AND (2a) of "
                         "--b1-model li6-convolution -- they are one physical "
@@ -207,7 +238,7 @@ def build_parser():
                         "li6-convolution: both carry the CDKS camp's b1_d, a "
                         "Q2 = 2.5 DIGITIZATION with no Q2 evolution, and in "
                         "the topmost default cell (x = 0.955) its b1/F1 "
-                        "reaches 3.3 resp. 5.6 -- past the point where "
+                        "reaches 6.6 resp. 5.6 -- past the point where "
                         "1 + w_avg stays positive and the sampler refuses the "
                         "run.  Use --x-max 0.95.  Miller's b1 is a ratio "
                         "model and does not need it")
@@ -260,7 +291,7 @@ DEFAULTS = dict(isotope="6Li", config=1, channel="inclusive",
                 coherent_t2="pomeron", pom_set=6, pom_rescale=1.0,
                 inclusive_b1=False,
                 b1_model="miller", b1_band_scale=1.0,
-                b1_alpha_d_dwave_weight=1.0, x_max=None,
+                b1_alpha_d_dwave_weight=1.0, b1_unpol="toy", x_max=None,
                 coherent=None)
 
 
@@ -289,6 +320,88 @@ def resolve(argv=None):
     return opts
 
 
+#: What the A = 2 gate's G3b clause measured on each `--b1-unpol` backend, for
+#: the run banner.  ONE definition, read from `docs/OPEN_ITEMS_SOLUTIONS.md`
+#: sec. 10's clause table; the numbers themselves live there and in
+#: `tests/test_b1_nuclear.cpp`, not here.
+B1_UNPOL_GATE_ROW = {
+    "toy": "its own G3b is 0.440, OUTSIDE the [0.5, 2] window",
+    "ct18nlo": "its own G3b is 0.719 -- inside the window, but CT18NLO is the "
+               "retired stand-in and not CDKS's own PDF, so it is not the row "
+               "the lift was read off",
+}
+
+
+def b1_gate_lines(unpol_name):
+    """The A = 2 gate lines of the `--b1-model li6-convolution` run banner.
+
+    A pure function of the unpolarised-backend name, so that both branches
+    are testable without building a pipeline.
+
+    WHY THE SECOND LINE EXISTS.  The gate's verdict is a statement about ONE
+    unpolarised nucleon input -- MSTW2008 LO at CDKS Eq. (21) -- and the
+    SHIPPED DEFAULT is not it.  A banner that prints "PASSED" over a run made
+    with a different backend hands the reader a pass their own numbers are not
+    covered by, which is the overclaim this line exists to stop.  It says
+    which side of the line THIS run is on.
+    """
+    lines = [
+        "A = 2 validation gate: PASSED 2026-09-03 -- for the MSTW2008 LO "
+        "nucleon input at CDKS Eq. (21)'s delta-function, where G3b's peak "
+        "ratio is 0.843 against the digitized CDKS Fig. 4.  The SHIPPED "
+        "DEFAULT toy F2 is 0.440, OUTSIDE the [0.5, 2] window.  With the "
+        "CD-Bonn wave function as well it is 1.000338 -- a residual below "
+        "the error of digitizing a published figure, NOT three-digit "
+        "agreement with CDKS.  It is an A = 2 gate and tests NOTHING about "
+        "the alpha-d step -- the band below is not optional.  See "
+        "docs/open_items/run_2026-09-03/phase_A_numbers.md.",
+    ]
+    if unpol_name == "mstw":
+        lines.append(
+            "^ THIS RUN IS in that configuration (b1 unpol = mstw), so the "
+            "lift covers these numbers -- as a band, and with the "
+            "configuration quoted.")
+    else:
+        lines.append(
+            "^ THIS RUN IS NOT in that configuration: b1 unpol = %s (%s).  "
+            "These numbers are NOT covered by the 2026-09-03 lift; rerun "
+            "with --b1-unpol mstw before quoting them as physics."
+            % (unpol_name,
+               B1_UNPOL_GATE_ROW.get(
+                   unpol_name, "not a row the gate was measured on")))
+    return lines
+
+
+def require_b1_unpol_tier(name, have_pythia=None, have_lhapdf=None):
+    """Refuse `--b1-unpol` for a backend this build cannot construct.
+
+    The same shape as the `--hadronize` tier check below: say which OPTIONAL
+    tier is missing, at the command line, instead of letting the binding's
+    RuntimeError come out three frames down.  It is NEVER downgraded to the
+    toy -- the toy's A = 2 gate ratio is 0.440 against MSTW's 0.843, so a
+    silent fallback would relabel exactly the number the flag exists to fix.
+    (A build that HAS the tier but no grid file on disk still fails, one
+    frame down, out of `MstwSF` naming the file and the directory.)
+
+    The two flags are arguments so both branches are testable in a build that
+    happens to have both tiers.
+    """
+    have_pythia = _l.HAVE_PYTHIA8 if have_pythia is None else have_pythia
+    have_lhapdf = _l.HAVE_LHAPDF if have_lhapdf is None else have_lhapdf
+    if name == "mstw" and not have_pythia:
+        raise SystemExit(
+            "--b1-unpol mstw needs the optional PYTHIA 8 tier: MstwSF reads "
+            "PYTHIA's own pdfdata/mstw2008lo.00.dat, and this build has no "
+            "PYTHIA tier.  Rebuild with -DLIPOLGEN_WITH_PYTHIA=ON, or run "
+            "--b1-unpol toy and say so -- it is not silently substituted, "
+            "because the two differ by up to a factor 1.85 on b1.")
+    if name == "ct18nlo" and not have_lhapdf:
+        raise SystemExit(
+            "--b1-unpol ct18nlo needs the optional LHAPDF tier, and this "
+            "build has none.  Rebuild with -DLIPOLGEN_WITH_LHAPDF=ON and "
+            "install the CT18NLO set, or run --b1-unpol toy and say so.")
+
+
 def main(argv=None):
     opts = resolve(argv)
     quiet = bool(opts["quiet"])
@@ -296,6 +409,7 @@ def main(argv=None):
 
     if opts["events"] and opts["lumi"]:
         raise SystemExit("--events and --lumi are exclusive")
+    require_b1_unpol_tier(opts["b1_unpol"])
     cfg = make_config(isotope=opts["isotope"], config=opts["config"],
                       channel=opts["channel"], events=opts["events"],
                       lumi_pb=opts["lumi"], seed=opts["seed"], run=opts["run"],
@@ -313,6 +427,7 @@ def main(argv=None):
                       b1_model=opts["b1_model"],
                       b1_band_scale=opts["b1_band_scale"],
                       b1_alpha_d_dwave_weight=opts["b1_alpha_d_dwave_weight"],
+                      b1_unpol=opts["b1_unpol"],
                       coherent=opts["coherent"])
     if opts["x_max"] is not None:
         # `Scenario` comes back BY VALUE from the binding, so it is written on
@@ -381,13 +496,18 @@ def main(argv=None):
             % (_l.b1_model_name(cfg.b1_model), cfg.b1_band_scale,
                cfg.b1_alpha_d_dwave_weight))
         if cfg.b1_model == _l.B1Model.Li6Convolution:
-            say("     WARNING: the A = 2 validation gate is NOT fully passed "
-                "-- this kernel is a factor 2.27 low at CDKS Eq. (21)'s "
-                "delta-function (3.68 at the Eq. (17) kappa = 1 form); the "
-                "nucleon PDF is the dominant remaining item (x1.67 by the "
-                "CT18NLO proxy; MSTW2008LO, CDKS's own, is not installed).  "
-                "See docs/open_items/run_2026-09-02/phase_D_gate.md; no 6Li "
-                "number from it may be published.")
+            # WHICH unpolarised PDF the convolution's own F1 came from.
+            # Printed on every li6-convolution run, "toy" included: the
+            # backends differ by up to a factor 1.85 on b1 and by nothing
+            # else in the banner, so a run that does not say which one it
+            # used is not reproducible from its own log.
+            say("     b1 unpol %s (--b1-unpol; F1 of the convolution only "
+                "-- the kernel's own f2_source is ToyF2 on every setting, so "
+                "the SPIN-BLIND cell cross section does not move with this "
+                "flag; the tensor split does)"
+                % _l.b1_unpol_name(cfg.b1_unpol))
+            for line in b1_gate_lines(_l.b1_unpol_name(cfg.b1_unpol)):
+                say("     " + line)
             say("     4 terms: (1) embedded d S wave, (2d)+(2a) alpha-d "
                 "D wave (struck d and struck alpha, one physical effect), "
                 "(3) CG depolarization.  N_ad = %.6g suppresses all of them; "

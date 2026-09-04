@@ -3,8 +3,14 @@
 // and the number placeholders of section 7.
 //
 // Design: docs/open_items/run_2026-09-02/design_D_b1_li6.md
-// Measured results:  docs/open_items/run_2026-09-02/phase_D_gate.md
+// Measured results:  docs/open_items/run_2026-09-03/phase_A_numbers.md
+//                      (the CURRENT gate: G3b passes at 0.843243 with CDKS's
+//                       own MSTW2008 LO at their Eq. (21); 1.000338 with the
+//                       CD-Bonn wave function as well) and phase_A_cdbonn.md
 //                    docs/open_items/run_2026-09-02/phase_D_numbers.md
+//                    docs/open_items/run_2026-09-02/phase_D_gate.md
+//                      (SUPERSEDED on G3b -- it recorded the ToyF2 row, 0.440,
+//                       as the verdict; kept for the argument, not the number)
 //
 // TWO DELIBERATE DEPARTURES FROM THIS REPO'S TEST CONVENTIONS, stated here so
 // that a reviewer does not "fix" them.
@@ -19,6 +25,7 @@
 #include <algorithm>
 #include <cmath>
 #include <fstream>
+#include <map>
 #include <stdexcept>
 #include <memory>
 #include <string>
@@ -39,6 +46,18 @@
 #include "lipolgen/spectator.hpp"
 #include "lipolgen/tagged.hpp"
 
+// Checklist item 4 (the nucleon PDF) needs a real global fit, so it needs an
+// OPTIONAL tier.  MSTW2008 LO rides the PYTHIA tier (`MstwSF` wraps
+// `Pythia8::MSTWpdf` over the grid PYTHIA ships), CT18NLO the LHAPDF one.
+#ifdef LIPOLGEN_HAVE_PYTHIA8
+#include <filesystem>
+
+#include "lipolgen/mstw_sf.hpp"
+#endif
+#ifdef LIPOLGEN_HAVE_LHAPDF
+#include "lipolgen/lhapdf_sf.hpp"
+#endif
+
 #ifndef LIPOLGEN_REFERENCE_DIR
 #define LIPOLGEN_REFERENCE_DIR "validation/reference"
 #endif
@@ -55,6 +74,22 @@ bool have(const std::string& path) {
   std::ifstream f(path);
   return static_cast<bool>(f);
 }
+
+#ifdef LIPOLGEN_HAVE_PYTHIA8
+/// Is the MSTW2008 LO grid the gate's VERDICT row needs on disk?
+///
+/// Called at doctest REGISTRATION time by the `doctest::skip()` decorator of
+/// T1v, so that a build without the grid reports that case as SKIPPED in the
+/// tally.  It used to be an `if` inside T1 whose else-branch printed a
+/// MESSAGE: with the grid absent the case still reported "1 passed" and the
+/// clause the 6Li ban lift rests on was never evaluated, while every doc said
+/// PASSED unconditionally.  A verdict that can silently not be measured is
+/// not a verdict.
+bool mstw_grid_present() {
+  return std::filesystem::exists(
+      std::filesystem::path(pythia8_pdfdata_dir()) / "mstw2008lo.00.dat");
+}
+#endif
 
 constexpr double kQ2 = 2.5;
 
@@ -93,24 +128,37 @@ const DeuteronConvolutionB1& gate_k1() {
   return d;
 }
 
-/// x*b1 on `xs` at the DEFAULT (finite-|q|) `DeuteronConvolutionB1`, one
-/// evaluation per grid point, spread over threads.  One object PER THREAD:
-/// the model is deterministic and every result is a pure function of the
-/// constructor arguments (T8 pins two independently built objects
-/// bit-identical), but a single object is NOT shareable across threads -- its
-/// one-deep density cache (`qd_`/`q_x_`/`q_q2_`, src/core/b1_nuclear.cpp) is
-/// mutable per-object state that every new x invalidates.  Same values as the
-/// sequential scan over `gate()`, bit for bit; measured 72 s -> 12 s on 8
-/// threads, which is half of the whole suite's wall clock.
-std::vector<double> xb1_on_gate_threaded(const std::vector<double>& xs) {
-  const unsigned nt =
-      std::min(8u, std::max(1u, std::thread::hardware_concurrency()));
+/// How many threads a landmark scan uses.
+unsigned gate_threads() {
+  return std::min(8u, std::max(1u, std::thread::hardware_concurrency()));
+}
+
+/// x*b1 on `xs`, one evaluation per grid point, spread over threads, with
+/// ONE `DeuteronConvolutionB1` PER THREAD: the model is deterministic and
+/// every result is a pure function of the constructor arguments (T8 pins two
+/// independently built objects bit-identical), but a single object is NOT
+/// shareable across threads -- its one-deep density cache
+/// (`qd_`/`q_x_`/`q_q2_`, src/core/b1_nuclear.cpp) is mutable per-object
+/// state that every new x invalidates.  Same values as a sequential scan over
+/// the same Options, bit for bit; measured 72 s -> 12 s on 8 threads, which
+/// is half of the whole suite's wall clock.
+///
+/// `opts` carries one entry per thread, and when it carries a BACKEND
+/// structure function (checklist item 4) each entry needs its OWN `unpol`:
+/// neither `MstwSF` (Pythia8::PDF::xf is non-const and memoizes the last
+/// (x, Q2)) nor `LhapdfSF` (LHAPDF's own interpolator caches) is safe to
+/// share across threads.  The Options are built in the CALLING thread, so
+/// grid loading is serialized too.
+std::vector<double> xb1_threaded(
+    const std::vector<double>& xs,
+    const std::vector<DeuteronConvolutionB1::Options>& opts) {
+  const unsigned nt = static_cast<unsigned>(opts.size());
   std::vector<double> v(xs.size());
   std::vector<std::thread> pool;
   pool.reserve(nt);
   for (unsigned t = 0; t < nt; ++t) {
     pool.emplace_back([&, t] {
-      const DeuteronConvolutionB1 d;
+      const DeuteronConvolutionB1 d(opts[t]);
       for (std::size_t i = t; i < xs.size(); i += nt)
         v[i] = xs[i] * d.b1(xs[i], kQ2, 0.0);
     });
@@ -118,6 +166,82 @@ std::vector<double> xb1_on_gate_threaded(const std::vector<double>& xs) {
   for (std::thread& th : pool) th.join();
   return v;
 }
+
+/// The same at the DEFAULT (finite-|q|) `DeuteronConvolutionB1`, i.e. the
+/// library `ToyF2` -- the gate's layer-3 scan.
+std::vector<double> xb1_on_gate_threaded(const std::vector<double>& xs) {
+  return xb1_threaded(
+      xs, std::vector<DeuteronConvolutionB1::Options>(gate_threads()));
+}
+
+/// Everything the G3 clauses ask of ONE x*b1 column, on the layer-3 grid:
+/// the sign changes inside G3a's (0, 1.0] counting window with their slopes,
+/// the peak position inside [0.5, 1.0], G3b's max|x*b1| over [0.10, 0.80] and
+/// its ratio to the digitized peak, and G3c's integral on the x >= 0.01
+/// sub-grid.  Hoisted out of checklist item 4 so that item 5 (the deuteron
+/// wave function) measures its rows with the SAME code and the two cases
+/// cannot drift apart.
+struct GateRow {
+  std::size_t nz = 0;
+  double z0 = 0.0, z1 = 0.0;
+  int sl0 = 0, sl1 = 0;
+  double xpk = 0.0, win = 0.0, ratio = 0.0;
+  double x_min = 0.0, xb1_min = 0.0, x_max = 0.0, xb1_max = 0.0;
+  double integral_g3c = 0.0;
+};
+
+GateRow gate_row(const std::vector<double>& xs, const std::vector<double>& xb1,
+                 const B1Landmarks& ref) {
+  const auto at = [&](double x) {
+    const std::size_t i = static_cast<std::size_t>(
+        std::lower_bound(xs.begin(), xs.end(), x - 1e-12) - xs.begin());
+    REQUIRE(i < xs.size());
+    return xb1[i];
+  };
+  const B1Landmarks lm = b1_landmarks(at, xs);
+  GateRow r;
+  for (std::size_t i = 0; i < lm.zeros.size(); ++i) {
+    if (lm.zeros[i] <= 0.0 || lm.zeros[i] > 1.0) continue;
+    if (r.nz == 0) { r.z0 = lm.zeros[i]; r.sl0 = lm.zero_slope[i]; }
+    if (r.nz == 1) { r.z1 = lm.zeros[i]; r.sl1 = lm.zero_slope[i]; }
+    ++r.nz;
+  }
+  double vpk = -1e30;
+  for (std::size_t i = 0; i < xs.size(); ++i) {
+    if (xs[i] >= 0.5 && xs[i] <= 1.0 && xb1[i] > vpk) {
+      vpk = xb1[i];
+      r.xpk = xs[i];
+    }
+    if (xs[i] >= 0.10 && xs[i] <= 0.80)
+      r.win = std::max(r.win, std::fabs(xb1[i]));
+  }
+  r.ratio = r.win / ref.xb1_max;
+  std::vector<double> sub;
+  for (std::size_t i = 0; i < xs.size(); ++i)
+    if (xs[i] >= 0.01) sub.push_back(xs[i]);
+  r.integral_g3c = b1_landmarks(at, sub).integral_b1;
+  r.x_min = lm.x_min;
+  r.xb1_min = lm.xb1_min;
+  r.x_max = lm.x_max;
+  r.xb1_max = lm.xb1_max;
+  return r;
+}
+
+/// G3a on one row.  `who` is a std::string, not a const char*: doctest's
+/// MESSAGE stringifies a raw char pointer as a pointer.
+void check_g3a(const std::string& who, const GateRow& r,
+               const B1Landmarks& ref) {
+  MESSAGE(who << " G3a: zeros in (0,1] = " << r.z0 << " (" << r.sl0 << "), "
+              << r.z1 << " (" << r.sl1 << ") ; peak in [0.5,1] at x = "
+              << r.xpk);
+  REQUIRE(r.nz == 2);
+  CHECK(r.sl0 == -1);
+  CHECK(r.sl1 == +1);
+  CHECK(std::fabs(r.z0 - ref.zeros[0]) < 0.08);
+  CHECK(std::fabs(r.z1 - ref.zeros[1]) < 0.10);
+  CHECK(std::fabs(r.xpk - ref.x_max) < 0.10);
+}
+
 const Li6ConvolutionB1& li6() {
   static const Li6ConvolutionB1 m;
   return m;
@@ -441,7 +565,13 @@ TEST_CASE("b1_nuclear T1 gate layer 3: CDKS Fig. 4 (G3a hard, G3b/G3c recorded)"
   CHECK_CLOSE(ref.xb1_max, 1.08521e-3, 1e-4);
   CHECK_CLOSE(ref.integral_b1, 4.5920e-4, 1e-4);
 
-  const std::vector<double> xs = linspace(0.01, 1.59, 300);
+  // The scan grid.  Its FLOOR is part of G3a -- a zero below it is invisible
+  // to `b1_landmarks` no matter what the counting window says -- so design
+  // 5.4 states it (amended 2026-09-03, phase A: 0.01 -> 0.001, a decade below
+  // the lowest crossing any PDF tried produces).  Still 300 points, still a
+  // plain linspace, so the step moves 0.0052843 -> 0.0053144 and every
+  // landmark below shifts by less than that.
+  const std::vector<double> xs = linspace(0.001, 1.59, 300);
   // ONE evaluation per grid point, shared by the landmarks, the peak scan and
   // G3b: the default is the finite-|q| delta-function, which rebuilds the
   // light-cone densities at every x (see `gate()`).  300 of those is the
@@ -457,21 +587,31 @@ TEST_CASE("b1_nuclear T1 gate layer 3: CDKS Fig. 4 (G3a hard, G3b/G3c recorded)"
   };
   const B1Landmarks got = b1_landmarks(at, xs);
 
-  // ---- G3a, HARD.  Exactly two sign changes in [0.02, 1.0], the first
+  // ---- G3a, HARD.  Exactly two sign changes in (0, 1.0], the first
   //      falling within 0.08 of the digitized first zero and the second
   //      rising within 0.10 of the second, and the maximum in [0.5, 1.0]
   //      within 0.10 of the digitized peak position.
+  //
+  //      The counting window's FLOOR was 0.02 until 2026-09-03; design 5.4
+  //      now says (0, 1.0].  0.02 was narrower than the +-0.08 position
+  //      tolerance this same clause grants (which reaches down to x = 0), so
+  //      it was a second, tighter, unstated position cut and the tolerance
+  //      was dead code below it.  (0, 1.0] introduces no new number: it is
+  //      0.0656 - 0.08 clipped at the physical floor.  The CEILING stays 1.0
+  //      and is load-bearing -- there is a real third crossing at x = 1.2204
+  //      here (1.1977 with CT18NLO, 1.2177 with MSTW2008 LO) and "exactly
+  //      two" is the only clause that excludes it.
   std::vector<double> z;
   std::vector<int> sl;
   for (std::size_t i = 0; i < got.zeros.size(); ++i) {
-    if (got.zeros[i] >= 0.02 && got.zeros[i] <= 1.0) {
+    if (got.zeros[i] > 0.0 && got.zeros[i] <= 1.0) {
       z.push_back(got.zeros[i]);
       sl.push_back(got.zero_slope[i]);
     }
   }
-  MESSAGE("G3a: zeros in [0.02,1] = " << (z.empty() ? 0.0 : z[0]) << ", "
-                                      << (z.size() < 2 ? 0.0 : z[1])
-                                      << " ; peak at x = " << got.x_max);
+  MESSAGE("G3a: zeros in (0,1] = " << (z.empty() ? 0.0 : z[0]) << ", "
+                                   << (z.size() < 2 ? 0.0 : z[1])
+                                   << " ; peak at x = " << got.x_max);
   REQUIRE(z.size() == 2);
   CHECK(sl[0] == -1);
   CHECK(sl[1] == +1);
@@ -485,50 +625,75 @@ TEST_CASE("b1_nuclear T1 gate layer 3: CDKS Fig. 4 (G3a hard, G3b/G3c recorded)"
   CHECK(std::fabs(xpk - ref.x_max) < 0.10);
 
   // ---- G3b, SOFT but RECORDED.  max|x b1| over [0.10, 0.80] against the
-  //      RAW digitized column's maximum.  This FAILS at the default: the
-  //      ratio is 0.440, a factor 2.27 (it was 0.272, a factor 3.68, at the
-  //      kappa = 1 form this object no longer defaults to).  The checklist of
-  //      design 5.4 attributes the rest -- see phase_D_gate.md, where the
-  //      nucleon PDF (the dominant remaining item) brings the ratio to 0.72,
-  //      inside the factor of 2.  The number is pinned so a later regression
-  //      is caught.
+  //      RAW digitized column's maximum.
+  //
+  //      THIS ROW IS NOT THE GATE'S VERDICT.  It is the LIBRARY ToyF2, and
+  //      design 5.4's Escalation clause reads the ratio "after the
+  //      checklist" -- checklist item 4 is the nucleon PDF, the dominant
+  //      term of the residual.  ToyF2 gives 0.440 (a factor 2.27 low; it was
+  //      0.272, a factor 3.68, at the kappa = 1 form this object no longer
+  //      defaults to), and that number is pinned here as a REGRESSION guard
+  //      on the kernel, not as a verdict.  The verdict is measured with
+  //      CDKS's own MSTW2008 LO in the checklist-item-4 case below, where
+  //      the ratio is 0.843 -- inside the factor of 2.  See
+  //      docs/open_items/run_2026-09-03/phase_A_numbers.md.
   double win = 0.0;
   for (std::size_t i = 0; i < xs.size(); ++i) {
     if (xs[i] < 0.10 || xs[i] > 0.80) continue;
     win = std::max(win, std::fabs(xb1[i]));
   }
   const double ratio = win / ref.xb1_max;
-  MESSAGE("G3b: max|x b1| over [0.10,0.80] = " << win << " ; ratio to the "
-          "digitized peak = " << ratio << " (factor " << 1.0 / ratio
-          << " LOW -- G3b's factor-2 window is NOT met at the default)");
-  CHECK_CLOSE(win, 4.77477e-4, 2e-3);
-  CHECK_CLOSE(ratio, 0.439986, 2e-3);
-  CHECK(ratio < 0.5);                  // the gate's honest state, pinned
+  MESSAGE("G3b (ToyF2, NOT the verdict): max|x b1| over [0.10,0.80] = "
+          << win << " ; ratio to the digitized peak = " << ratio
+          << " (factor " << 1.0 / ratio << " low)");
+  CHECK_CLOSE(win, 4.77494e-4, 2e-3);
+  CHECK_CLOSE(ratio, 0.440001, 2e-3);
+  // ToyF2 alone is outside G3b's [0.5, 2] window, and the nucleon PDF is why
+  // -- pinned as the statement it is, about ToyF2 and not about the gate.
+  CHECK(ratio < 0.5);
 
   // ---- G3c, REPORTED.  Close-Kumano, next to the two library numbers.
-  MESSAGE("G3c: int b1 dx (this kernel, 0.01-1.59) = " << got.integral_b1
-          << " ; digitized CDKS " << close_kumano_integral(true)
-          << " ; Miller " << close_kumano_integral(false));
-  CHECK_CLOSE(got.integral_b1, 2.15370e-4, 3e-3);
+  //      Taken on the x >= 0.01 SUB-GRID, per design 5.4's G3c as amended
+  //      2026-09-03: `integral_b1` is a trapezoid of b1 = (x*b1)/x, so
+  //      running it from the scan floor 0.001 would move it +23 % on 1/x
+  //      weighting alone, while the reference `close_kumano_integral(true)`
+  //      is over the digitized table's own [0.0100, 1.590].  The
+  //      evaluations are REUSED (`at` indexes the full scan), not repeated.
+  std::vector<double> xs_g3c;
+  for (std::size_t i = 0; i < xs.size(); ++i)
+    if (xs[i] >= 0.01) xs_g3c.push_back(xs[i]);
+  const B1Landmarks g3c = b1_landmarks(at, xs_g3c);
+  MESSAGE("G3c: int b1 dx (this kernel, x >= 0.01 sub-grid, "
+          << xs_g3c.front() << "-" << xs_g3c.back() << ") = "
+          << g3c.integral_b1 << " ; digitized CDKS "
+          << close_kumano_integral(true) << " ; Miller "
+          << close_kumano_integral(false));
+  CHECK_CLOSE(g3c.integral_b1, 2.14607e-4, 3e-3);
   CHECK_CLOSE(close_kumano_integral(true), ref.integral_b1, 1e-9);
+  // The whole-scan integral is NOT G3c and is 24 % larger for the 1/x reason
+  // above; pinned so the two are never confused.
+  CHECK_CLOSE(got.integral_b1, 2.65316e-4, 3e-3);
   // Landmarks of the computed curve, pinned.
-  CHECK_CLOSE(got.x_min, 0.2372, 1e-3);
-  CHECK_CLOSE(got.xb1_min, -3.30912e-5, 3e-3);
-  CHECK_CLOSE(got.x_max, 0.75508, 1e-3);
-  CHECK_CLOSE(got.xb1_max, 4.77477e-4, 2e-3);
-  CHECK_CLOSE(z[0], 0.022113, 5e-3);
-  CHECK_CLOSE(z[1], 0.377357, 2e-3);
-  // G3a's TWO fragile clauses, flagged rather than hidden.
-  //  (a) The first zero sits 0.0021 above the [0.02, 1.0] counting window's
-  //      lower edge, so a 10 % move of the low-x tail turns "exactly two sign
-  //      changes" into one -- and that is not hypothetical: with a realistic
-  //      PDF (CT18NLO) the zero drops below the scan floor and the counting
-  //      clause FAILS (phase_D_gate.md checklist item 4).
-  //  (b) The second zero clears its +-0.10 window by 0.020.
-  // The low-x zero is NOT a robust discriminator; the second zero and the
-  // peak position are.
-  CHECK(z[0] > 0.02);
-  CHECK(z[0] - 0.02 < 0.005);                       // the margin, pinned
+  CHECK_CLOSE(got.x_min, 0.23483, 1e-3);
+  CHECK_CLOSE(got.xb1_min, -3.30902e-5, 3e-3);
+  CHECK_CLOSE(got.x_max, 0.75564, 1e-3);
+  CHECK_CLOSE(got.xb1_max, 4.77494e-4, 2e-3);
+  CHECK_CLOSE(z[0], 0.022040, 5e-3);
+  CHECK_CLOSE(z[1], 0.377374, 2e-3);
+  // G3a's ONE remaining fragile clause, flagged rather than hidden.  The
+  // low-x zero's POSITION is the weak landmark: it is 0.0220 here, 0.0098
+  // with CT18NLO and 0.0279 with MSTW2008 LO -- a factor 2.8 spread across
+  // three nucleon PDFs -- and on a uniform 300-point grid it is bracketed by
+  // two points and interpolated, so it is resolved to a few per cent at
+  // best.  Its +-0.08 tolerance swallows all of that (the widest miss is
+  // 0.056, CT18NLO), which is why the clause is weak but no longer BRITTLE:
+  // until 2026-09-03 the counting window's floor of 0.02 sat 0.0021 below
+  // this zero and one PDF change turned "exactly two sign changes" into one.
+  // The second zero and the peak position are the discriminating landmarks.
+  //
+  // The second zero clears its +-0.10 window by 0.020 here.  That margin is
+  // a property of ToyF2, not of the kernel: MSTW2008 LO puts the second zero
+  // at 0.4952, only 0.038 from the digitized 0.4572.
   CHECK(std::fabs(z[1] - ref.zeros[1]) < 0.10);
   CHECK(std::fabs(z[1] - ref.zeros[1]) > 0.05);     // ... by 0.020
 }
@@ -579,7 +744,10 @@ TEST_CASE("b1_nuclear T1 gate checklist item 0/1/2: kappa, target mass, R") {
   orr.finite_q_delta = false;
   orr.r_func = [](double x, double q2) { return r_sigma_lt(x, q2); };
   const DeuteronConvolutionB1 dr(orr);
-  const std::vector<double> xg = linspace(0.01, 1.59, 300);
+  // Same grid as the layer-3 case above, floor included -- changing one and
+  // not the other would split the two cases and make phase_D_gate.md's
+  // kappa column no longer like for like.
+  const std::vector<double> xg = linspace(0.001, 1.59, 300);
   const B1Landmarks lr =
       b1_landmarks([&](double x) { return x * dr.b1(x, kQ2, 0.0); }, xg);
   const B1Landmarks l1 =
@@ -590,19 +758,444 @@ TEST_CASE("b1_nuclear T1 gate checklist item 0/1/2: kappa, target mass, R") {
           << lr.zeros[1] << " against " << l1.zeros[1]
           << " with r1998 (digitized 0.45718); peak " << lr.xb1_max << " at "
           << lr.x_max << " against " << l1.xb1_max << " at " << l1.x_max);
-  CHECK_CLOSE(lr.zeros[1], 0.365215, 3e-3);
-  CHECK_CLOSE(l1.zeros[1], 0.392321, 3e-3);
-  CHECK_CLOSE(lr.xb1_max, 2.99437e-4, 3e-3);
-  CHECK_CLOSE(l1.xb1_max, 2.94842e-4, 3e-3);
+  CHECK_CLOSE(lr.zeros[1], 0.365202, 3e-3);
+  CHECK_CLOSE(l1.zeros[1], 0.392320, 3e-3);
+  CHECK_CLOSE(lr.xb1_max, 2.99431e-4, 3e-3);
+  CHECK_CLOSE(l1.xb1_max, 2.94839e-4, 3e-3);
   // ... and the kappa = 1 column of the whole gate, pinned next to the
   // default's, so phase_D_gate.md's two rows are both regression-guarded.
   MESSAGE("checklist 0 (kappa = 1 column): zeros " << l1.zeros[0] << ", "
           << l1.zeros[1] << " ; peak " << l1.xb1_max << " at " << l1.x_max
           << " ; int b1 dx " << l1.integral_b1);
-  CHECK_CLOSE(l1.zeros[0], 0.022137, 5e-3);
-  CHECK_CLOSE(l1.x_max, 0.73923, 1e-3);
-  CHECK_CLOSE(l1.integral_b1, 1.07915e-4, 3e-3);
-  CHECK_CLOSE(l1.xb1_max / b1_landmarks_of_table().xb1_max, 0.271692, 2e-3);
+  CHECK_CLOSE(l1.zeros[0], 0.022060, 5e-3);
+  CHECK_CLOSE(l1.x_max, 0.73970, 1e-3);
+  // G3c on the x >= 0.01 sub-grid, exactly as in the layer-3 case: the
+  // whole-scan value is 47 % larger and is the 1/x weight of the extension
+  // to 0.001, not physics.  Both are pinned so the two never get confused.
+  std::vector<double> xg_g3c;
+  for (std::size_t i = 0; i < xg.size(); ++i)
+    if (xg[i] >= 0.01) xg_g3c.push_back(xg[i]);
+  const B1Landmarks l1c =
+      b1_landmarks([&](double x) { return x * d1.b1(x, kQ2, 0.0); }, xg_g3c);
+  CHECK_CLOSE(l1c.integral_b1, 1.07152e-4, 3e-3);
+  CHECK_CLOSE(l1.integral_b1, 1.57861e-4, 3e-3);
+  CHECK_CLOSE(l1.xb1_max / b1_landmarks_of_table().xb1_max, 0.271689, 2e-3);
+}
+
+// Checklist item 4, THE VERDICT ROW: MSTW2008 LO, CDKS's OWN nucleon PDF, at
+// CDKS's OWN Eq. (21) delta-function.  This is the row design 5.4's
+// Escalation clause is read off and the row the 6Li publication ban was
+// lifted on, so it is the one clause in this file that must never be able to
+// not-run quietly.
+//
+// It lives in its own case, decorated with `doctest::skip(...)`, for exactly
+// that reason.  Until 2026-09-04 it was an `if (!exists(grid)) { MESSAGE(); }
+// else { ... }` inside the item-4 case: with `mstw2008lo.00.dat` absent that
+// case reported "1 passed", the verdict was never measured, and every doc in
+// the tree said "PASSED" in that build too.  As a decorated case, doctest's
+// own tally reports it SKIPPED by name -- the build states what it could not
+// evaluate, in the one place a reader always looks.
+//
+// So: layers 0-3 REQUIRE their data (a blocking gate that silently skips is
+// not a blocking gate); this row SKIPS, visibly, because it additionally
+// needs an OPTIONAL tier.  The two are not in tension.
+#ifdef LIPOLGEN_HAVE_PYTHIA8
+TEST_CASE("b1_nuclear T1v gate checklist item 4, THE VERDICT ROW: MSTW2008 LO"
+          " at CDKS Eq. (21) -- G3a/G3b/G3c" *
+          doctest::skip(!mstw_grid_present())) {
+  REQUIRE(have(kFdeut));
+  REQUIRE(mstw_grid_present());   // the decorator already guaranteed it
+  const B1Landmarks ref = b1_landmarks_of_table();
+  const std::vector<double> xs = linspace(0.001, 1.59, 300);   // as layer 3
+  const auto measure = [&](const std::vector<double>& xb1) {
+    return gate_row(xs, xb1, ref);
+  };
+  const auto g3a = [&](const std::string& who, const GateRow& r) {
+    check_g3a("item 4 " + who, r, ref);
+  };
+
+  // One MstwSF PER THREAD: Pythia8::PDF::xf is non-const and memoizes the
+  // last (x, Q2), so a shared instance is a data race.  8 MB of grid each
+  // (sizeof(Pythia8::MSTWpdf) == 7 988 336), built here in the calling
+  // thread so the file reads are serialized.
+  const unsigned nt = gate_threads();
+  std::vector<DeuteronConvolutionB1::Options> opts(nt);
+  for (unsigned t = 0; t < nt; ++t) opts[t].unpol = std::make_shared<MstwSF>();
+  const GateRow m = measure(xb1_threaded(xs, opts));
+  g3a("MSTW2008 LO, kappa", m);
+  MESSAGE("item 4 MSTW2008 LO, kappa  G3b: max|x b1| over [0.10,0.80] = "
+          << m.win << " ; ratio to the digitized peak = " << m.ratio
+          << " -- G3b asks for [0.5, 2.0], so this PASSES (factor "
+          << 1.0 / m.ratio << " low)");
+  // G3b, THE GATE'S MAGNITUDE VERDICT, at CDKS's own PDF and CDKS's own
+  // Eq. (21) delta-function.  0.843 is inside the factor of 2 with room:
+  // the ToyF2 row of the layer-3 case is 0.440 and the CT18NLO stand-in
+  // 0.719, so the nucleon PDF is worth x1.92 and x1.17 respectively.
+  CHECK_CLOSE(m.win, 9.15096e-4, 2e-3);
+  CHECK_CLOSE(m.ratio, 0.843243, 2e-3);
+  CHECK(m.ratio > 0.5);
+  CHECK(m.ratio < 2.0);
+  // G3a's landmarks, pinned.  Note that CDKS's own PDF reproduces CDKS's
+  // own figure BETTER than either stand-in on every one of them: the
+  // second zero misses by 0.038 (ToyF2 0.080, CT18NLO 0.018) and the peak
+  // position by 0.0059 (ToyF2 0.0101, CT18NLO 0.0313).
+  CHECK_CLOSE(m.z0, 0.027886, 5e-3);
+  CHECK_CLOSE(m.z1, 0.495239, 2e-3);
+  CHECK_CLOSE(m.x_min, 0.35706, 1e-3);
+  CHECK_CLOSE(m.xb1_min, -2.34606e-4, 3e-3);
+  CHECK_CLOSE(m.x_max, 0.77159, 1e-3);
+  CHECK_CLOSE(m.xb1_max, 9.15096e-4, 2e-3);
+  // G3c, x >= 0.01 sub-grid, against the digitized +4.592e-4.
+  MESSAGE("item 4 MSTW2008 LO, kappa  G3c: int b1 dx (x >= 0.01) = "
+          << m.integral_g3c << " ; digitized CDKS "
+          << close_kumano_integral(true));
+  CHECK_CLOSE(m.integral_g3c, 2.24896e-4, 3e-3);
+
+  // --- the same at Eq. (17)'s kappa = 1, the checklist-item-0 column.
+  //     300x cheaper, so no threads.  It lands at 0.520 -- INSIDE G3b's
+  //     window but by only 4 %, which is the honest measure of how much of
+  //     the gate's pass the finite-|q| delta-function is carrying.
+  DeuteronConvolutionB1::Options o1;
+  o1.unpol = std::make_shared<MstwSF>();
+  o1.finite_q_delta = false;
+  const DeuteronConvolutionB1 d1m(o1);
+  std::vector<double> v1(xs.size());
+  for (std::size_t i = 0; i < xs.size(); ++i)
+    v1[i] = xs[i] * d1m.b1(xs[i], kQ2, 0.0);
+  const GateRow m1 = measure(v1);
+  g3a("MSTW2008 LO, kappa = 1", m1);
+  MESSAGE("item 4 MSTW2008 LO, kappa = 1  G3b ratio = " << m1.ratio);
+  CHECK_CLOSE(m1.ratio, 0.520332, 2e-3);
+  CHECK(m1.ratio > 0.5);
+  CHECK_CLOSE(m1.z0, 0.027946, 5e-3);
+  CHECK_CLOSE(m1.z1, 0.507853, 2e-3);
+  CHECK_CLOSE(m1.xb1_max, 5.64669e-4, 2e-3);
+  CHECK_CLOSE(m1.integral_g3c, 5.79583e-5, 3e-3);
+}
+#endif  // LIPOLGEN_HAVE_PYTHIA8
+
+// The one case that runs in EVERY build and says whether the tree's
+// "the A = 2 magnitude gate PASSED" claim was actually evaluated here.
+//
+// T1v's `doctest::skip` shows up only as the skipped COUNT, which is easy to
+// read past.  This prints the sentence, so `build/lipolgen_tests` itself
+// answers the question the docs now promise it answers (docs/USAGE.md sec.
+// 2a, condition 1: "the run prints SKIPPED (MSTW2008 LO unavailable)").
+TEST_CASE("b1_nuclear T1r: was the G3b VERDICT row measurable in this build?") {
+  // Not vacuous: it pins the selector name the docs tell a user to set in
+  // order to GENERATE in the configuration the verdict was read off.  A
+  // verdict row that a build cannot measure and a run surface that cannot
+  // emit it are the same defect seen from two sides.
+  CHECK(std::string(b1_unpol_name(B1UnpolSource::Mstw)) == "mstw");
+#ifdef LIPOLGEN_HAVE_PYTHIA8
+  if (mstw_grid_present()) {
+    MESSAGE("VERDICT ROW MEASURED: MSTW2008 LO is on disk under "
+            << pythia8_pdfdata_dir()
+            << ", so T1v ran and G3b's 0.843243 was checked in THIS build.");
+  } else {
+    MESSAGE("SKIPPED (MSTW2008 LO unavailable): no mstw2008lo.00.dat under "
+            << pythia8_pdfdata_dir()
+            << " -- T1v did NOT run, so G3b's verdict row (0.843243, the "
+               "clause the 6Li publication ban was lifted on) was NOT "
+               "evaluated in this build.  Every 'the gate passes' statement "
+               "in the tree is a statement about the MSTW2008 LO "
+               "configuration, which this build cannot reproduce and, by "
+               "PipelineConfig::validate(), also cannot emit.");
+  }
+#else
+  MESSAGE("SKIPPED (MSTW2008 LO unavailable): built without the PYTHIA tier "
+          "-- T1v is not even compiled in, so G3b's verdict row (0.843243) "
+          "was NOT evaluated in this build.  This build's only measured G3b "
+          "is the ToyF2 row, 0.440001, which is OUTSIDE the gate's [0.5, 2] "
+          "window; it also cannot emit --b1-unpol mstw.");
+#endif
+}
+
+// Checklist item 4 of design 5.4 -- the NUCLEON PDF, CT18NLO half.
+//
+// CDKS built the Fig. 4 curve this gate compares against on MSTW2008 LO, so
+// the MSTW row is the LIKE-FOR-LIKE measurement and the one G3b's verdict is
+// read off -- it is T1v above, in its own skip-decorated case.  The CT18NLO
+// row is here beside it -- not as the answer but so the PDF DEPENDENCE
+// itself is pinned; `MstwSF` and `LhapdfSF` share the charge weights and
+// `f2_from_weights` VERBATIM (mstw_sf.hpp, "COMPARABILITY"), so the two rows
+// differ in the grid and in nothing else.
+//
+// Compiled away, not skipped, when LHAPDF is absent: unlike the verdict row
+// there is no claim in the tree that rests on CT18NLO, so a build without
+// the tier has nothing to report about it.
+#ifdef LIPOLGEN_HAVE_LHAPDF
+TEST_CASE("b1_nuclear T1 gate checklist item 4: the nucleon PDF (G3a/G3b/G3c)") {
+  REQUIRE(have(kFdeut));
+  const B1Landmarks ref = b1_landmarks_of_table();
+  const std::vector<double> xs = linspace(0.001, 1.59, 300);   // as layer 3
+
+  // Everything G3 asks of one x*b1 column, on the layer-3 grid and with the
+  // layer-3 clauses: the sign changes inside G3a's (0, 1.0] counting window,
+  // the peak position inside [0.5, 1.0], G3b's max|x*b1| over [0.10, 0.80],
+  // and G3c's integral on the x >= 0.01 sub-grid.
+  const auto measure = [&](const std::vector<double>& xb1) {
+    return gate_row(xs, xb1, ref);
+  };
+  const auto g3a = [&](const std::string& who, const GateRow& r) {
+    check_g3a("item 4 " + who, r, ref);
+  };
+
+  // --- CT18NLO: the modern cross-check, kept so the PDF DEPENDENCE is
+  //     pinned and not only MSTW's answer.  It is also the row that made the
+  //     G3a counting window a live question: its low-x zero is at 0.0098,
+  //     below BOTH the old counting floor of 0.02 and the old scan floor of
+  //     0.01, so under the pre-2026-09-03 clause this REQUIRE(nz == 2) would
+  //     abort.  Under the amended clause it passes, by 0.024 of its +-0.08.
+  lhapdf_quiet();
+  {
+    const unsigned nt = gate_threads();
+    std::vector<DeuteronConvolutionB1::Options> opts(nt);
+    for (unsigned t = 0; t < nt; ++t)
+      opts[t].unpol = std::make_shared<LhapdfSF>("CT18NLO", 0);
+    const GateRow c = measure(xb1_threaded(xs, opts));
+    g3a("CT18NLO, kappa", c);
+    MESSAGE("item 4 CT18NLO, kappa  G3b ratio = " << c.ratio
+            << " ; MSTW2008 LO is the like-for-like row");
+    CHECK_CLOSE(c.win, 7.80734e-4, 2e-3);
+    CHECK_CLOSE(c.ratio, 0.719432, 2e-3);
+    CHECK_CLOSE(c.z0, 0.009795, 5e-3);
+    CHECK_CLOSE(c.z1, 0.438761, 2e-3);
+    CHECK_CLOSE(c.x_min, 0.29861, 1e-3);
+    CHECK_CLOSE(c.xb1_min, -1.86774e-4, 3e-3);
+    CHECK_CLOSE(c.x_max, 0.73438, 1e-3);
+    CHECK_CLOSE(c.xb1_max, 7.80734e-4, 2e-3);
+    CHECK_CLOSE(c.integral_g3c, 2.09620e-4, 3e-3);
+    // The old floor, stated as the measurement that motivated moving it.
+    CHECK(c.z0 < 0.01);
+    CHECK(std::fabs(c.z0 - ref.zeros[0]) < 0.08);
+  }
+}
+#endif  // LIPOLGEN_HAVE_LHAPDF
+
+// Checklist item 5 of design 5.4 -- the DEUTERON WAVE FUNCTION, i.e. gate
+// condition 3 of open item 10: "a real CD-Bonn u, w instead of the D-state
+// rescaling proxy of item 5".  CDKS built the Fig. 4 curve this gate is
+// compared against on CD-Bonn; every gate number before this case was
+// measured on AV18.
+//
+// THE OPTION IS OPT-IN AND THE DEFAULT DOES NOT MOVE.
+// `DeuteronConvolutionB1::Options::wave` defaults to `kFdeutFile`, so layer 3
+// and item 4 above are untouched and every published gate number keeps its
+// meaning.  What this case does is MEASURE what the swap is worth, on the
+// same grid and with the same clauses.
+//
+// THE RESULT, and it is the largest single move the gate has seen: with
+// CD-Bonn AND MSTW2008 LO -- CDKS's own wave function and CDKS's own PDF --
+// the kernel reproduces the digitized CDKS Fig. 4 on EVERY G3 landmark:
+//
+//   landmark              digitized CDKS   AV18 (item 4)   CD-Bonn (here)
+//   G3b peak ratio            1              0.8432          1.0003
+//   peak position x           0.765663       0.771585        0.766271
+//   first zero                0.065645       0.027886        0.064129
+//   second zero               0.457177       0.495239        0.457018
+//   dip                      -1.76814e-4    -2.34606e-4     -1.76907e-4
+//   dip position              0.33236        0.35706         0.33049
+//   G3c int b1 dx (x>=0.01)   4.59200e-4     2.24896e-4      4.48580e-4
+//
+// Nothing was tuned: the coefficients are Machleidt's Table XX (typed once,
+// in cluster.hpp, and gated against his own published deuteron properties in
+// tests/test_cluster.cpp), the PDF is PYTHIA's shipped MSTW grid, and the
+// kernel is unchanged.  The mechanism is in
+// docs/open_items/run_2026-09-03/phase_A_cdbonn.md section 7: CD-Bonn's S
+// node sits 13 % higher in k than AV18's and its u is half as big beyond it,
+// so the NEGATIVE lobe of the S-D interference that cancels part of the
+// positive one in AV18 is almost entirely gone.
+//
+// WHAT THIS DOES NOT SAY.  It does not make `Li6ConvolutionB1` validated --
+// the A = 2 gate is a necessary condition and 6Li adds the alpha-d wave
+// function, the four-term truncation and N_ad on top.  It does not remove the
+// digitization uncertainty of the reference column.  And a 0.03 % agreement
+// on a curve read off a published figure is BETTER THAN THE REFERENCE
+// DESERVES; read it as "the residual is now below the digitization error",
+// not as three-digit agreement with CDKS.
+TEST_CASE("b1_nuclear T1 gate checklist item 5: the deuteron wave function") {
+  REQUIRE(have(kFdeut));
+  const B1Landmarks ref = b1_landmarks_of_table();
+  const std::vector<double> xs = linspace(0.001, 1.59, 300);   // as layer 3
+
+  // ---- THE SIGN GATE, and it is the cheapest one available.  CD-Bonn is
+  //      published with a BARE j_L Fourier kernel for both L (his Eq. D13),
+  //      which is inconsistent at L = 2 with his own Eqs. (D20)/(D22); the
+  //      drop-in convention is w = -psi_2^a (cluster.hpp, `CdBonnWave`).  Get
+  //      it wrong and the S-D interference flips.  `alpha_d_quadrupole_fm2`
+  //      settles it against CD-Bonn's own published Q_d = 0.270 fm^2, from
+  //      the same code path that returns +0.2694 on the AV18 file (whose own
+  //      header prints qm = 0.269673).
+  const FdeutTable cdb = cdbonn_fdeut_table();
+  const ClusterPartialWave c0 = ClusterPartialWave::from_uw(cdb.k_gev, cdb.u, 0);
+  const ClusterPartialWave c2 = ClusterPartialWave::from_uw(cdb.k_gev, cdb.w, 2);
+  std::vector<double> w_flipped = cdb.w;
+  for (double& v : w_flipped) v = -v;
+  const ClusterPartialWave c2_wrong =
+      ClusterPartialWave::from_uw(cdb.k_gev, w_flipped, 2);
+  const FdeutTable av = read_fdeut_k(kFdeut);
+  const ClusterPartialWave a0 = ClusterPartialWave::from_uw(av.k_gev, av.u, 0);
+  const ClusterPartialWave a2 = ClusterPartialWave::from_uw(av.k_gev, av.w, 2);
+  const double qd_cdb = alpha_d_quadrupole_fm2(c0, c2);
+  const double qd_bad = alpha_d_quadrupole_fm2(c0, c2_wrong);
+  const double qd_av = alpha_d_quadrupole_fm2(a0, a2);
+  MESSAGE("item 5 Q_d: CD-Bonn " << qd_cdb << " fm^2 (published 0.270), "
+          << "wrong sign " << qd_bad << ", AV18 " << qd_av
+          << " fm^2 (fdeut.av18 header qm = 0.269673)");
+  CHECK(qd_cdb > 0.0);
+  CHECK(std::fabs(qd_cdb - 0.270) < 5e-4);
+  CHECK_CLOSE(qd_cdb, 0.270178, 2e-5);
+  CHECK(qd_bad < 0.0);                       // the wrong sign is unmistakable
+  CHECK_CLOSE(qd_av, 0.269362, 2e-5);
+
+  // ---- The two wave functions ON THE SAME GRID, so that the gate rows below
+  //      have a stated cause.  CD-Bonn is a SOFTER wave function overall
+  //      (P_D 4.86 % against AV18's 5.76 %) but its D wave is LARGER at small
+  //      k and smaller only in the tail -- which is exactly the structure the
+  //      item-5 rescaling proxy (one factor multiplying w everywhere) cannot
+  //      have, and why the proxy moved the gate the other way.
+  double nd_c = 0.0, nd_a = 0.0;
+  for (std::size_t i = 1; i < av.k_gev.size(); ++i) {
+    const double dk = av.k_gev[i] - av.k_gev[i - 1];
+    nd_c += 0.5 * dk * (cdb.k_gev[i - 1] * cdb.k_gev[i - 1] * cdb.w[i - 1]
+                            * cdb.w[i - 1]
+                        + cdb.k_gev[i] * cdb.k_gev[i] * cdb.w[i] * cdb.w[i]);
+    nd_a += 0.5 * dk * (av.k_gev[i - 1] * av.k_gev[i - 1] * av.w[i - 1]
+                            * av.w[i - 1]
+                        + av.k_gev[i] * av.k_gev[i] * av.w[i] * av.w[i]);
+  }
+  MESSAGE("item 5 P_D on the shared 0.1 fm^-1 grid: CD-Bonn " << nd_c
+          << " (published 4.85 %), AV18 " << nd_a
+          << " (fdeut.av18 header dstate = 0.057599)");
+  CHECK_CLOSE(nd_c, 0.0485621, 1e-5);
+  CHECK_CLOSE(nd_a, 0.0575985, 1e-5);
+  // w(CD-Bonn)/w(AV18) runs from 1.02 at 0.1 fm^-1 through 1 near 0.8 to 0.36
+  // at 5 fm^-1: a rescaling proxy is a CONSTANT here and cannot be either.
+  const auto ratio_at = [&](double p_fm) {
+    const std::size_t i = static_cast<std::size_t>(std::llround(p_fm / 0.1));
+    return cdb.w[i] / av.w[i];
+  };
+  MESSAGE("item 5 w(CD-Bonn)/w(AV18) at p = 0.1, 1.0, 5.0 fm^-1 = "
+          << ratio_at(0.1) << ", " << ratio_at(1.0) << ", " << ratio_at(5.0));
+  CHECK_CLOSE(ratio_at(0.1), 1.02026, 1e-4);
+  CHECK_CLOSE(ratio_at(1.0), 0.988783, 1e-4);
+  CHECK_CLOSE(ratio_at(5.0), 0.3597447, 1e-4);
+  // The S node, the feature that drives the b1 result.
+  CHECK(av.u[20] > 0.0);            // AV18's node is above p = 2.0 fm^-1 ...
+  CHECK(av.u[21] < 0.0);            // ... and below 2.1
+  CHECK(cdb.u[23] > 0.0);           // CD-Bonn's is above 2.3 ...
+  CHECK(cdb.u[24] < 0.0);           // ... and below 2.4, i.e. 13 % higher
+
+  const auto cdbonn_opts = [&](unsigned nt) {
+    std::vector<DeuteronConvolutionB1::Options> o(nt);
+    for (unsigned t = 0; t < nt; ++t) o[t].wave = DeuteronWaveSource::kCdBonn;
+    return o;
+  };
+
+  // ---- ToyF2, the row that runs with NO optional tier, so this case is
+  //      never vacuous.  Against layer 3's AV18 value 0.440001, CD-Bonn is
+  //      0.528662 -- and its curve has NO sign change in (0, 1].  That is a
+  //      property of ToyF2, not of the wave function: both real PDFs below
+  //      put two zeros back, close to the digitized ones.  So this row is
+  //      RECORDED and G3a's counting clause is deliberately NOT applied to
+  //      it; applying it would gate the wave function on the toy.
+  {
+    const GateRow t = gate_row(xs, xb1_threaded(xs, cdbonn_opts(gate_threads())),
+                               ref);
+    MESSAGE("item 5 ToyF2, kappa, CD-Bonn: G3b ratio = " << t.ratio
+            << " (layer 3's AV18 row is 0.440001), zeros in (0,1] = " << t.nz
+            << ", peak " << t.xb1_max << " at x = " << t.x_max);
+    CHECK(t.nz == 0);
+    CHECK_CLOSE(t.ratio, 0.528662, 2e-3);
+    CHECK_CLOSE(t.xb1_max, 5.737089e-4, 2e-3);
+    CHECK_CLOSE(t.integral_g3c, 4.499038e-4, 3e-3);
+  }
+
+#ifdef LIPOLGEN_HAVE_PYTHIA8
+  // ---- MSTW2008 LO: CDKS's OWN PDF with CDKS's OWN wave function.  THE ROW.
+  //      This is gate condition 3 (the 1.000338), not the verdict, so it
+  //      stays an in-case skip -- but it says what it did not measure.
+  if (!mstw_grid_present()) {
+    MESSAGE("SKIPPED (MSTW2008 LO unavailable): no mstw2008lo.00.dat under "
+            << pythia8_pdfdata_dir()
+            << " -- gate condition 3 (CD-Bonn AND MSTW together, peak ratio "
+               "1.000338) was NOT evaluated in this build.");
+  } else {
+    const unsigned nt = gate_threads();
+    std::vector<DeuteronConvolutionB1::Options> o = cdbonn_opts(nt);
+    for (unsigned t = 0; t < nt; ++t) o[t].unpol = std::make_shared<MstwSF>();
+    const GateRow m = gate_row(xs, xb1_threaded(xs, o), ref);
+    check_g3a("item 5 MSTW2008 LO, kappa, CD-Bonn", m, ref);
+    MESSAGE("item 5 MSTW2008 LO, kappa, CD-Bonn  G3b: max|x b1| over "
+            "[0.10,0.80] = " << m.win << " ; ratio to the digitized peak = "
+            << m.ratio << " (AV18 on the same row is 0.843243)");
+    CHECK_CLOSE(m.win, 1.085577e-3, 2e-3);
+    CHECK_CLOSE(m.ratio, 1.000338, 2e-3);
+    CHECK(m.ratio > 0.5);
+    CHECK(m.ratio < 2.0);
+    // G3a's landmarks.  Each is CLOSER to the digitized column than the AV18
+    // row of item 4, by an order of magnitude on the two zeros and the dip.
+    CHECK_CLOSE(m.z0, 0.064129, 5e-3);
+    CHECK_CLOSE(m.z1, 0.457018, 2e-3);
+    CHECK_CLOSE(m.x_min, 0.33049, 1e-3);
+    CHECK_CLOSE(m.xb1_min, -1.769065e-4, 3e-3);
+    CHECK_CLOSE(m.x_max, 0.766271, 1e-3);
+    CHECK(std::fabs(m.z0 - ref.zeros[0]) < 0.005);
+    CHECK(std::fabs(m.z1 - ref.zeros[1]) < 0.005);
+    CHECK(std::fabs(m.x_max - ref.x_max) < 0.005);
+    CHECK(std::fabs(m.xb1_min / ref.xb1_min - 1.0) < 0.01);
+    MESSAGE("item 5 MSTW2008 LO, kappa, CD-Bonn  G3c: int b1 dx (x >= 0.01) = "
+            << m.integral_g3c << " ; digitized CDKS "
+            << close_kumano_integral(true) << " (AV18 2.24896e-4)");
+    CHECK_CLOSE(m.integral_g3c, 4.485801e-4, 3e-3);
+
+    // THE GRID IS NOT DOING IT.  The analytic form is sampled on
+    // `fdeut.av18`'s own 0.1 fm^-1 spacing so that the AV18 and CD-Bonn rows
+    // differ in the wave function alone; refining to 0.02 fm^-1 (5x, 1001
+    // rows) moves the peak by 5e-4 relative and does not move either zero.
+    // Measured here on ONE x -- the peak's own grid point -- rather than on
+    // the whole scan, because each finite-|q| point costs ~0.24 s.
+    std::vector<DeuteronConvolutionB1::Options> of = cdbonn_opts(1);
+    of[0].unpol = std::make_shared<MstwSF>();
+    of[0].cdbonn_dk_fm = 0.02;
+    const DeuteronConvolutionB1 dfine(of[0]);
+    const double fine = m.x_max * dfine.b1(m.x_max, kQ2, 0.0);
+    MESSAGE("item 5 dk = 0.02 fm^-1 at the peak: " << fine << " against "
+            << m.xb1_max << " (relative " << fine / m.xb1_max - 1.0 << ")");
+    CHECK(std::fabs(fine / m.xb1_max - 1.0) < 2e-3);
+  }
+#endif  // LIPOLGEN_HAVE_PYTHIA8
+
+#ifdef LIPOLGEN_HAVE_LHAPDF
+  // ---- CT18NLO: the same swap on a DIFFERENT modern PDF, so that "CD-Bonn
+  //      lifts the peak" is not an MSTW artefact.  0.719432 -> 0.864233, the
+  //      same direction and 80 % of the same size.  This is also the row the
+  //      research stage predicted (phase_A_cdbonn.md section 8.2, 0.8642 on
+  //      its own grid) BEFORE any of this was written, which is why it is
+  //      kept rather than dropped as redundant.
+  lhapdf_quiet();
+  {
+    const unsigned nt = gate_threads();
+    std::vector<DeuteronConvolutionB1::Options> o = cdbonn_opts(nt);
+    for (unsigned t = 0; t < nt; ++t)
+      o[t].unpol = std::make_shared<LhapdfSF>("CT18NLO", 0);
+    const GateRow c = gate_row(xs, xb1_threaded(xs, o), ref);
+    check_g3a("item 5 CT18NLO, kappa, CD-Bonn", c, ref);
+    MESSAGE("item 5 CT18NLO, kappa, CD-Bonn  G3b ratio = " << c.ratio
+            << " (AV18 on the same row is 0.719432)");
+    CHECK_CLOSE(c.ratio, 0.864233, 2e-3);
+    CHECK_CLOSE(c.z0, 0.043538, 5e-3);
+    CHECK_CLOSE(c.z1, 0.391923, 2e-3);
+    CHECK_CLOSE(c.xb1_max, 9.378742e-4, 2e-3);
+    CHECK_CLOSE(c.integral_g3c, 4.389734e-4, 3e-3);
+    // CT18NLO's low-x zero was BELOW the old 0.02 counting floor on AV18
+    // (item 4 pins it at 0.0098); CD-Bonn lifts it to 0.0435, inside even the
+    // pre-2026-09-03 window.  Recorded because the amended window was argued
+    // on that AV18 row.
+    CHECK(c.z0 > 0.02);
+  }
+#endif  // LIPOLGEN_HAVE_LHAPDF
 }
 
 // ===================================================================== T2
@@ -1310,4 +1903,257 @@ TEST_CASE("b1_nuclear T11: b1_model channel and isotope legality") {
   CHECK(std::string(b1_model_name(B1Model::Cdks)) == "cdks");
   CHECK(std::string(b1_model_name(B1Model::Li6Convolution)) ==
         "li6-convolution");
+}
+
+// ==================================================================== T16
+// `--b1-unpol`: THE GATE-PASSING CONFIGURATION HAS TO BE EMITTABLE.
+//
+// The A = 2 gate passes at G3b = 0.843 with CDKS's own MSTW2008 LO
+// (checklist item 4 above) and at 0.440 on the library `ToyF2` (layer 3), so
+// the pass is a statement about a CONFIGURATION.  Until `B1UnpolSource`
+// existed the run surface could not produce that configuration:
+// `default_inclusive_kernel` hard-wired `ToyF2` into
+// `Li6ConvolutionOptions::unpol`, and the only other route -- hand-building a
+// kernel and putting it in `PipelineConfig::kernel` -- is refused together
+// with a non-Miller `b1_model` by `validate()`.  Every 6Li b1 number the
+// generator could emit was therefore made at 0.440.
+//
+// THE KERNEL/FLAG GUARD IS NOT TOUCHED HERE, and this test pins that too: a
+// caller-supplied kernel plus `b1_model = li6-convolution` still throws.  It
+// does not need to be loosened, because the selector works THROUGH
+// `default_inclusive_kernel` -- the passing configuration no longer needs a
+// hand-built kernel to be expressed.
+TEST_CASE("b1_nuclear T16: --b1-unpol reaches the kernel and the default "
+          "does not move") {
+  const double q2 = 2.5;
+  const std::array<double, 3> xs = {0.10, 0.30, 0.50};
+
+  // ---- the names the CLI and `meta["b1_unpol"]` print
+  CHECK(std::string(b1_unpol_name(B1UnpolSource::Toy)) == "toy");
+  CHECK(std::string(b1_unpol_name(B1UnpolSource::Mstw)) == "mstw");
+  CHECK(std::string(b1_unpol_name(B1UnpolSource::Ct18Nlo)) == "ct18nlo");
+  CHECK(std::string(b1_unpol_name(B1UnpolSource::Custom)) == "custom");
+
+  // ---- THE DEFAULT DID NOT MOVE, BIT FOR BIT.  Two clauses: the new
+  //      argument defaulted away is the old four-argument call, and an
+  //      EXPLICIT null is the same object again.  (T9 above pins the Miller
+  //      default against validation/reference/b1_default_li6.json at rtol
+  //      1e-12; this pins the li6-convolution branch, which has no reference
+  //      file, against itself.)
+  {
+    const auto a = default_inclusive_kernel(LI6(), B1Model::Li6Convolution,
+                                            1.0, 1.0);
+    const auto b = default_inclusive_kernel(LI6(), B1Model::Li6Convolution,
+                                            1.0, 1.0, nullptr);
+    REQUIRE(a);
+    REQUIRE(b);
+    for (double x : xs) {
+      const SFTables ta = a->tables(x, q2);
+      const SFTables tb = b->tables(x, q2);
+      CAPTURE(x);
+      CHECK(ta.b1 == tb.b1);          // bit for bit, not merely close
+      CHECK(ta.f1 == tb.f1);
+      CHECK(ta.delta == tb.delta);
+    }
+    // ... and the config default is `Toy` with an EMPTY slot, which is what
+    // makes `default_inclusive_kernel(..., cfg.b1_unpol_sf)` the old call.
+    PipelineConfig c;
+    CHECK(c.b1_unpol == B1UnpolSource::Toy);
+    CHECK(!c.b1_unpol_sf);
+  }
+
+  // ---- validate(): the provenance rules, and the guard that STAYS
+  {
+    auto base = [] {
+      PipelineConfig c;
+      c.channel = PipelineChannel::Inclusive;
+      c.isotope = "6Li";
+      c.n_events = 100;
+      c.b1_model = B1Model::Li6Convolution;
+      return c;
+    };
+    const auto toy = std::make_shared<const ToyF2>();   // stands for any UnpolSF
+
+    // a named backend with an EMPTY slot is an error, never a fallback
+    for (B1UnpolSource s : {B1UnpolSource::Mstw, B1UnpolSource::Ct18Nlo,
+                            B1UnpolSource::Custom}) {
+      PipelineConfig c = base();
+      c.b1_unpol = s;
+      CHECK_THROWS_AS(c.validate(), std::runtime_error);
+      c.b1_unpol_sf = toy;                    // ... and legal once attached
+      CHECK_NOTHROW(c.validate());
+    }
+    // `Toy` with an object attached is the same contradiction the other way
+    {
+      PipelineConfig c = base();
+      c.b1_unpol_sf = toy;
+      CHECK_THROWS_AS(c.validate(), std::runtime_error);
+    }
+    // A KNOB THAT DID NOT RUN MAY NOT BE RECORDED AS IF IT HAD: only the
+    // li6-convolution branch reads `unpol`, but meta["b1_unpol"] is written
+    // unconditionally.
+    for (B1Model m : {B1Model::Miller, B1Model::Cdks}) {
+      PipelineConfig c = base();
+      c.b1_model = m;
+      c.b1_unpol = B1UnpolSource::Custom;
+      c.b1_unpol_sf = toy;
+      CHECK_THROWS_AS(c.validate(), std::runtime_error);
+      c.b1_unpol = B1UnpolSource::Toy;        // ... and the default is legal
+      c.b1_unpol_sf.reset();
+      CHECK_NOTHROW(c.validate());
+    }
+    // THE KERNEL/FLAG GUARD IS UNCHANGED.  It is not loosened to let the
+    // gate-passing configuration through -- the selector routes around the
+    // need for it.
+    {
+      PipelineConfig c = base();
+      c.kernel = default_inclusive_kernel(LI6());
+      c.b1_unpol = B1UnpolSource::Custom;
+      c.b1_unpol_sf = toy;
+      CHECK_THROWS_AS(c.validate(), std::runtime_error);
+    }
+  }
+
+#ifdef LIPOLGEN_HAVE_PYTHIA8
+  // ---- MSTW2008 LO through the PIPELINE'S OWN kernel construction: the
+  //      configuration the gate passes on, now emittable.
+  if (!mstw_grid_present()) {
+    MESSAGE("SKIPPED (MSTW2008 LO unavailable): no mstw2008lo.00.dat under "
+            << pythia8_pdfdata_dir()
+            << " -- T16's MSTW row did NOT run, so this build did not check "
+               "that --b1-unpol mstw reaches the kernel.  It also cannot "
+               "SELECT it: PipelineConfig::validate() refuses the flag here "
+               "rather than downgrading to the toy.");
+  } else {
+    const auto toyk = default_inclusive_kernel(LI6(), B1Model::Li6Convolution,
+                                               1.0, 1.0);
+    const auto mstwk = default_inclusive_kernel(
+        LI6(), B1Model::Li6Convolution, 1.0, 1.0, std::make_shared<MstwSF>());
+    REQUIRE(mstwk);
+    // Measured 2026-09-04.  Up to a factor 1.85, and NOT monotone in x -- so
+    // the choice of nucleon PDF is a shape change in the shipped 6Li
+    // observable and not a normalisation that a band would absorb.
+    const std::array<double, 3> want = {1.847766, 1.275961, 0.816971};
+    for (std::size_t i = 0; i < xs.size(); ++i) {
+      const SFTables tt = toyk->tables(xs[i], q2);
+      const SFTables tm = mstwk->tables(xs[i], q2);
+      CAPTURE(xs[i]);
+      CHECK(tt.b1 != 0.0);
+      CHECK_CLOSE(tm.b1 / tt.b1, want[i], 1e-5);
+      // F1 DOES NOT MOVE.  `opt.f2_source` is `ToyF2` on every setting of
+      // the flag, so F1 -- and with it the spin-blind cell cross section and
+      // the D_phi denominator of the tensor weight -- is bit-identical; what
+      // moves is the tensor shift, which is the point.
+      // The price is that the numerator's F1 and the denominator's F1 are no
+      // longer the same object; that is documented at `B1UnpolSource`.
+      CHECK(tm.f1 == tt.f1);
+      CHECK(tm.delta == tt.delta);
+      MESSAGE("T16 x = " << xs[i] << ": b1 toy " << tt.b1 << " -> mstw "
+                         << tm.b1 << "  (x" << tm.b1 / tt.b1 << ")");
+    }
+  }
+#endif  // LIPOLGEN_HAVE_PYTHIA8
+}
+
+// ===================================================================== T17
+// G3a's CEILING, pinned.  The clause counts sign changes in (0, 1.0]; this
+// case measures what that ceiling excludes.
+//
+// The 2026-09-03 amendment widened G3a's counting FLOOR on the argument that
+// "bookkeeping that brackets a physics tolerance has to be at least as wide
+// as the tolerance, or it is a second, tighter, unstated cut".  The ceiling
+// was left at 1.0.  Over the digitized reference's OWN domain [0.010, 1.590]
+// the reference has TWO sign changes and stays positive from 0.4572 to its
+// last point, while EVERY computed configuration crosses zero a THIRD time.
+// "Exactly two" is therefore true of a windowed curve, and the window's upper
+// edge is a scope choice that no position tolerance derives.  x > 1 per
+// nucleon is kinematically allowed for a nucleus (for A = 2, x runs to 2), so
+// the crossing is in a physically meaningful region and cannot be dismissed
+// as out of range.
+//
+// This case exists so that the exclusion is a MEASUREMENT in the suite and
+// not a footnote: if a change moves the third crossing, or removes it, or
+// the reference acquires one, the suite says so.  The clause itself is NOT
+// changed here -- see design_D_b1_li6.md's amendment and
+// docs/OPEN_ITEMS_SOLUTIONS.md sec. 10 ("G3a's stated limitation") for the
+// argument and for why the status is recorded as a QUALIFIED pass.
+//
+// Grid: the x >= 0.9 sub-grid of the gate's own `linspace(0.001, 1.59, 300)`.
+// `b1_landmarks` locates a zero by linear interpolation between CONSECUTIVE
+// grid points, so dropping the points below 0.9 -- all of them far from this
+// crossing -- leaves every pair above it intact and the position identical to
+// the full-scan one.  Cheap on purpose: three columns, not thirty.
+TEST_CASE("b1_nuclear T17: G3a's counting ceiling -- the THIRD sign change") {
+  REQUIRE(have(kFdeut));
+  const std::vector<double> full = linspace(0.001, 1.59, 300);
+  std::vector<double> xs;
+  for (double x : full)
+    if (x >= 0.9) xs.push_back(x);
+  REQUIRE(xs.size() == 130);
+
+  // The reference, over its own domain: TWO zeros, and positive at the top.
+  const B1Landmarks ref = b1_landmarks_of_table();
+  REQUIRE(ref.zeros.size() == 2);
+  CHECK(ref.zero_slope[0] == -1);
+  CHECK(ref.zero_slope[1] == +1);
+  const std::shared_ptr<const TensorSF> raw = cdks_b1_raw_per_nucleon();
+  CHECK(1.59 * raw->b1(1.59, kQ2, 0.0) > 0.0);
+  // ... and NOT at its noise floor where the AV18 rows cross: the digitized
+  // x*b1 is still 7.0 % of its own peak at x = 1.2204.  That is the number
+  // that kills the "the reference is unreadable up there" defence of the
+  // ceiling for those rows; it only becomes an honest defence near x = 1.5,
+  // where the reference is 0.8 % of its peak (the CD-Bonn rows).
+  const double at_toy_zero = 1.220437 * raw->b1(1.220437, kQ2, 0.0);
+  CHECK_CLOSE(at_toy_zero, 7.606130e-5, 1e-3);
+  CHECK_CLOSE(at_toy_zero / ref.xb1_max, 0.070089, 2e-3);
+
+  const auto third = [&](const std::string& who,
+                         const std::vector<double>& xb1) {
+    std::map<double, double> tab;
+    for (std::size_t i = 0; i < xs.size(); ++i) tab[xs[i]] = xb1[i];
+    const B1Landmarks lm =
+        b1_landmarks([&](double x) { return tab.at(x); }, xs);
+    MESSAGE("T17 " << who << ": zeros above x = 0.9 = " << lm.zeros.size()
+                   << " ; x*b1(0.9) = " << xb1.front()
+                   << " ; x*b1(1.59) = " << xb1.back());
+    REQUIRE(lm.zeros.size() == 1);       // the THIRD of the full scan
+    CHECK(lm.zero_slope[0] == -1);       // falling: positive -> negative
+    CHECK(xb1.front() > 0.0);            // positive where G3a stops counting
+    CHECK(xb1.back() < 0.0);             // and negative at the top, unlike
+                                         // the reference, which is positive
+    return lm.zeros[0];
+  };
+
+  // ToyF2 -- the SHIPPED default, so this case is never vacuous.
+  CHECK_CLOSE(third("ToyF2, kappa [Eq. 21], AV18",
+                    xb1_on_gate_threaded(xs)), 1.220437, 2e-4);
+
+#ifdef LIPOLGEN_HAVE_PYTHIA8
+  if (!mstw_grid_present()) {
+    MESSAGE("SKIPPED (MSTW2008 LO unavailable): no mstw2008lo.00.dat under "
+            << pythia8_pdfdata_dir()
+            << " -- the third crossing of the VERDICT row was not measured "
+               "in this build.");
+  } else {
+    const unsigned nt = gate_threads();
+    std::vector<DeuteronConvolutionB1::Options> opts(nt);
+    for (unsigned t = 0; t < nt; ++t) opts[t].unpol = std::make_shared<MstwSF>();
+    // The verdict row -- the configuration the 6Li ban was lifted on -- has
+    // it too, and closer to the reference's readable region than the toy.
+    CHECK_CLOSE(third("MSTW2008 LO, kappa [Eq. 21], AV18",
+                      xb1_threaded(xs, opts)), 1.217660, 2e-4);
+  }
+#endif  // LIPOLGEN_HAVE_PYTHIA8
+
+#ifdef LIPOLGEN_HAVE_LHAPDF
+  lhapdf_quiet();
+  {
+    const unsigned nt = gate_threads();
+    std::vector<DeuteronConvolutionB1::Options> opts(nt);
+    for (unsigned t = 0; t < nt; ++t)
+      opts[t].unpol = std::make_shared<LhapdfSF>("CT18NLO", 0);
+    CHECK_CLOSE(third("CT18NLO, kappa [Eq. 21], AV18",
+                      xb1_threaded(xs, opts)), 1.197722, 2e-4);
+  }
+#endif  // LIPOLGEN_HAVE_LHAPDF
 }

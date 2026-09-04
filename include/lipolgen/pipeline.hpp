@@ -328,12 +328,84 @@ enum class TritonSfChoice : std::uint8_t { Hulthen, CiofiSimula };
 ///                   folding this in on top would count the same physics
 ///                   three times.
 ///
-///   WARNING: `Li6Convolution` has NOT fully passed its A = 2 validation
-///   gate (b1_nuclear.hpp's header block, and
-///   docs/open_items/run_2026-09-02/phase_D_gate.md).  It is opt-in and
-///   band-only: never quote a single row, always {0, 1, 2} x b1.
+///   `Li6Convolution` PASSED its A = 2 validation gate on 2026-09-03 -- for
+///   ONE unpolarised nucleon input, not for the shipped default.  G3b peak
+///   ratio 0.843 with CDKS's own MSTW2008 LO at their Eq. (21)
+///   delta-function; 0.440 on the DEFAULT `ToyF2`, which is OUTSIDE the
+///   gate's [0.5, 2] window.  So the lift covers numbers made with
+///   `b1_unpol = B1UnpolSource::Mstw` (CLI `--b1-unpol mstw`) and NOT the
+///   default toy backend's.  With the CD-Bonn wave function as well the ratio
+///   is 1.000338 -- read that as "the residual is now below the error of
+///   digitizing a published figure", never as three-digit agreement with
+///   CDKS, and note that it is specific to CD-Bonn AND MSTW together and is
+///   not the default.  See b1_nuclear.hpp's header block for the four
+///   conditions attached to that and
+///   docs/open_items/run_2026-09-03/phase_A_numbers.md for the numbers.
+///   That gate is A = 2 and tests NOTHING about the alpha-d step, so this
+///   stays opt-in and band-only: never quote a single row, always
+///   {0, 1, 2} x b1.
 enum class B1Model : std::uint8_t { Miller, Cdks, Li6Convolution };
 const char* b1_model_name(B1Model m);
+
+/// Which UNPOLARISED structure-function backend the `Li6Convolution` b1
+/// backend folds its own F1 against -- `Li6ConvolutionOptions::unpol`
+/// (`PipelineConfig::b1_unpol`; CLI `--b1-unpol`).
+///
+/// WHY THIS EXISTS.  The A = 2 gate of 2026-09-03 passes at G3b = 0.843
+/// with CDKS's OWN MSTW2008 LO and 0.440 on the library `ToyF2`, i.e. the
+/// pass is a statement about a configuration, not about a build.  Until this
+/// selector existed the generator could not EMIT that configuration:
+/// `default_inclusive_kernel` hard-wired `ToyF2` into
+/// `Li6ConvolutionOptions::unpol`, and the only other route -- hand-building
+/// a kernel and handing it to `PipelineConfig::kernel` -- is refused
+/// together with a non-Miller `b1_model` by `validate()` (and stays
+/// refused).  So every 6Li b1 number the run surface could produce was made
+/// at G3b = 0.440.  The selector closes that gap: the gate-passing
+/// backend is now reachable from `PipelineConfig`, the CLI and the Python
+/// API, THROUGH the pipeline's own kernel construction.
+///
+///   Toy      the DEFAULT and bit for bit what every published number was
+///            made with: the kernel's own `ToyF2`, shared as ONE object with
+///            `InclusiveKernel::Options::f2_source` (see
+///            `default_inclusive_kernel`).
+///   Mstw     `MstwSF` -- MSTW2008 LO central over PYTHIA 8's own
+///            `pdfdata/mstw2008lo.00.dat` (`mstw_sf.hpp`), which is the PDF
+///            CDKS computed their b1_d with.  MEASURED on the shipped
+///            observable `Li6ConvolutionB1::b1(x, 2.5)`: x1.847766 at
+///            x = 0.10, x1.275961 at 0.30, x0.816971 at 0.50 -- up to a
+///            factor 1.85, and NOT monotone, so it is not a normalisation.
+///   Ct18Nlo  `LhapdfSF("CT18NLO", 0)` -- the stand-in the phase-D numbers
+///            were made with, kept selectable so the systematic can be
+///            quoted rather than remembered.  x2.221302 / x1.238833 /
+///            x1.045870 at the same three points.
+///   Custom   whatever object the caller put in `b1_unpol_sf`.  The
+///            `OpticsChoice::Custom` arrangement exactly: the enum is the
+///            PROVENANCE (it is what `meta["b1_unpol"]` records) and the
+///            object is the realisation.
+///
+/// THE CORE LIBRARY CANNOT BUILD `Mstw` OR `Ct18Nlo` ITSELF, by design:
+/// `MstwSF` lives in the optional PYTHIA tier and `LhapdfSF` in the optional
+/// LHAPDF tier, and `sf.hpp`'s rule is that the core links neither.  So the
+/// enum names the backend and `b1_unpol_sf` carries it, filled by the layer
+/// that has the tier -- `_lipolgen.set_b1_unpol(cfg, source)`, which is the
+/// `set_pythia_hadronizer` arrangement.  `validate()` REFUSES a named
+/// backend with an empty slot and says which tier is missing; it is NEVER
+/// silently replaced by `ToyF2`.
+///
+/// SCOPE, and the price of it.  This reaches `Li6ConvolutionOptions::unpol`
+/// and NOTHING else.  `InclusiveKernel::Options::f2_source` -- the F1 of the
+/// unpolarised rate, and so the D_phi denominator of the tensor weight --
+/// stays `ToyF2` on every setting, which is what keeps the SPIN-BLIND cell
+/// cross section (`InclusiveSampler::cell_xsec_pb`) bit for bit under this
+/// flag -- only the per-state tensor shift moves, and with it the
+/// tensor-weighted per-category cross sections, which is the point.  The
+/// consequence is that with anything but
+/// `Toy` the numerator's F1 and the denominator's F1 are no longer the same
+/// object, so the partial cancellation `b1_nuclear.hpp` relies on for its
+/// `r_func` default is gone: `--b1-unpol mstw` is a statement about b1, not
+/// about the rate.  Say which backend a plot used.
+enum class B1UnpolSource : std::uint8_t { Toy, Mstw, Ct18Nlo, Custom };
+const char* b1_unpol_name(B1UnpolSource s);
 
 /// The T2 hand-off.  Called once per finished T0 event with the event's own
 /// counter-based stream, AFTER every T0 particle (including the off-shell
@@ -495,6 +567,23 @@ struct PipelineConfig {
   /// ONLY by the `Li6Convolution` branch, so `validate()` refuses anything but
   /// 1.0 on `Miller` and `Cdks` -- same provenance rule as the band.
   double b1_alpha_d_dwave_weight = 1.0;
+  /// Which unpolarised backend the `Li6Convolution` b1 folds its F1 against
+  /// (`B1UnpolSource` above; CLI `--b1-unpol`).  `Toy` is the DEFAULT and is
+  /// today bit for bit.  Read ONLY by the `Li6Convolution` branch of
+  /// `default_inclusive_kernel`, so `validate()` refuses anything but `Toy`
+  /// on `Miller` and `Cdks` -- same provenance rule as the band and the
+  /// alpha-d weight, and the same reason: `meta["b1_unpol"]` is written
+  /// unconditionally.
+  B1UnpolSource b1_unpol = B1UnpolSource::Toy;
+  /// The object `b1_unpol` names.  Empty for `Toy` (the kernel's own `ToyF2`
+  /// is used, as one shared object); REQUIRED for every other value, because
+  /// the core library links neither the PYTHIA nor the LHAPDF tier and so
+  /// cannot construct `MstwSF` / `LhapdfSF` here.  `validate()` refuses a
+  /// named backend with an empty slot and names the missing tier -- it is
+  /// never silently replaced by `ToyF2`.  Python fills both fields at once
+  /// with `_lipolgen.set_b1_unpol(cfg, source)`; a C++ caller sets them
+  /// together, the `optics_choice` / `optics` arrangement.
+  std::shared_ptr<const UnpolSF> b1_unpol_sf;
 
   /// Throws std::runtime_error on an inconsistent configuration.
   void validate() const;
@@ -515,10 +604,19 @@ std::shared_ptr<const InclusiveKernel> default_inclusive_kernel(const Ion& ion);
 /// `w_alpha_d` is `Li6ConvolutionOptions::w_alpha_d_dwave`.  The Delta slot is
 /// the SAME on every `B1Model` -- it is not part of this choice.  The
 /// `Li6Convolution` branch shares the kernel's own `ToyF2` with the
-/// convolution's `unpol`, so "the kernel's UnpolSF" is literally one object.
+/// convolution's `unpol` when `b1_unpol` is null, so "the kernel's UnpolSF"
+/// is then literally one object.
+///
+/// `b1_unpol` is `PipelineConfig::b1_unpol_sf`: the unpolarised backend the
+/// `Li6Convolution` branch folds its own F1 against (`B1UnpolSource`).  NULL
+/// -- the default, and every existing caller -- means the kernel's own
+/// `ToyF2`, so this argument is bit for bit inert unless it is set.  It is
+/// read by the `Li6Convolution` branch ONLY; `opt.f2_source`, and with it the
+/// unpolarised rate, is `ToyF2` on every path.
 std::shared_ptr<const InclusiveKernel> default_inclusive_kernel(
     const Ion& ion, B1Model model, double band_scale = 1.0,
-    double w_alpha_d = 1.0);
+    double w_alpha_d = 1.0,
+    std::shared_ptr<const UnpolSF> b1_unpol = nullptr);
 
 // ============================================================ event helpers
 

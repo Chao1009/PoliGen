@@ -6,15 +6,39 @@ Tests: `tests/test_b1_nuclear.cpp`.
 Author: Agent A of design D §8, 2026-09-03; re-measured the same day after
 review (the y-grid default and the b₁ᵈ-support fix below both move columns).
 
-> **READ THE GATE FIRST.** `phase_D_gate.md` records that the A = 2 validation
-> gate **fails G3b** at the gate's default settings: a factor **2.27** below
-> the digitized CDKS Fig. 4 peak at CDKS Eq. (21)'s δ-function (3.68 at
-> Eq. (17)'s κ = 1 form), with the nucleon PDF the dominant remaining item
-> (×1.67 by the CT18NLO proxy, which brings it to a factor 1.39 — inside the
-> window). Under design §5.4's *Escalation* clause **none of the ⁶Li numbers
-> below may be published**: they are recorded here so the phase is
-> reproducible and so a regression is catchable, not because they are results.
-> Every one of them also carries the mandatory ±100 % band.
+> **READ THE GATE FIRST — and the gate has CHANGED since this was written.**
+> `phase_D_gate.md` recorded that the A = 2 validation gate **failed G3b** at
+> its ToyF2 default: a factor **2.27** below the digitized CDKS Fig. 4 peak at
+> CDKS Eq. (21)'s δ-function (3.68 at Eq. (17)'s κ = 1). **That is superseded.**
+> On 2026-09-03 checklist item 4 was worked with CDKS's own MSTW2008 LO (not
+> the CT18NLO stand-in) and the ratio came out **0.843243** — inside G3b's
+> factor-2 window — with **1.000338** once the real CD-Bonn wave function
+> (item 5) is used as well. Design §5.4's *Escalation* clause is therefore not
+> triggered and **the ⁶Li publication ban is lifted** — *for the configuration
+> the gate was read in*, which is **not** the configuration these tables were
+> made in.
+>
+> **THE NUMBERS BELOW MUST BE REGENERATED UNDER `--b1-unpol mstw` BEFORE THEY
+> ARE QUOTED AS PHYSICS.** Every row here was made with the default `ToyF2`
+> unpolarised input, whose own G3b is **0.440** — outside the [0.5, 2] window
+> the lift was read off. The gap is a shape change and not a normalisation
+> (mstw/toy on `Li6ConvolutionB1::b1(x, 2.5)` is **1.848 / 1.276 / 0.817** at
+> x = 0.10 / 0.30 / 0.50; ×1.92 on the gate's own peak), so these tables cannot
+> be rescaled into covered ones. What survives untouched is only the
+> **algebra**: the four terms summing to `b1` to 1e−12, and the band's exact
+> linearity. Decision and reasons: `docs/USAGE.md` §2a and
+> `docs/OPEN_ITEMS_SOLUTIONS.md` §10.
+>
+> **Three conditions that come with them even after a rerun, and none of them
+> is the gate.**
+> (i) Every one still carries the **mandatory ±100 % band** — that rule comes
+> from Q(⁶Li) = −0.0818(17) fm² against Q_d = +0.2859(3) fm², not from the
+> gate. (ii) The gate is **A = 2**: it validates the kernel on the deuteron and
+> tests nothing about the α–d step, for which no measurement exists at any
+> A > 2. (iii) Quote the configuration with the number — the **unpolarised
+> backend first**, then `r_sigma_lt` and κ = 1, which are the ⁶Li backend's
+> defaults and **not** the gate's (`r1998`, Eq. (21)). Current gate
+> measurements: `docs/open_items/run_2026-09-03/phase_A_numbers.md`.
 
 All values: **x·b₁ per nucleon, ⁶Li, Q² = 2.5 GeV²**, default options
 (`Li6ConvolutionB1()`: raw digitized CDKS theory-1 b₁ᵈ, ToyF2 F₁ with

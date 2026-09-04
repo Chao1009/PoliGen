@@ -2,8 +2,11 @@
 // spherical harmonics, against validation/reference/tagged.json (`waves[i]`)
 // and against the analytic properties they must have.
 
+#include <array>
 #include <cmath>
+#include <cstddef>
 #include <fstream>
+#include <stdexcept>
 #include <memory>
 #include <string>
 #include <vector>
@@ -279,4 +282,158 @@ TEST_CASE("cluster: the VMC S-D relative sign, and where it comes from") {
   // no sign reference => positive definite (correct only for one wave)
   const VmcRadial plain = vmc_from_momentum(kLi6Momentum, 1, 0, 0, nullptr);
   for (double v : plain.psi()) CHECK(v >= 0.0);
+}
+
+// ------------------------------------------------ the CD-Bonn deuteron (A5)
+//
+// THE COEFFICIENT GATE.  `cluster.hpp` types twenty published numbers
+// (Machleidt, PRC 63 (2001) 024001 = arXiv:nucl-th/0006014, Table XX, LaTeX
+// label `tab_dwpar`) and computes four more from the r -> 0 boundary
+// conditions.  Nothing else in the library would notice a mistyped digit: the
+// wave function would simply be a slightly different one, the A = 2 gate
+// would move, and the move would be read as physics.  So this test asks the
+// coefficients for CD-Bonn's OWN published deuteron properties.
+//
+// It needs NO data file -- the parameterisation is analytic and the momentum
+// moments are CLOSED FORM.  With
+//   (2/pi) int_0^inf dp p^2/[(p^2+a^2)(p^2+b^2)] = 1/(a+b)
+// the norms are the double sums sum_ij C_i C_j/(m_i+m_j) and the same in D,
+// so what is tested here is the COEFFICIENTS, with no quadrature error
+// anywhere to hide behind.
+//
+// HOW SHARP IS IT, measured rather than asserted.  Perturbing each of the 18
+// published coefficients by one unit in its last printed digit and
+// recomputing moves the normalisation by, in units of 1e-9 relative:
+//   C1 25   C2 4.6  C3 0.21  C4 79   C5 42   C6 243  C7 143  C8 83
+//   C9 45   C10 18  D1 16    D2 4.8  D3 0.96 D4 23   D5 70   D6 21
+//   D7 55   D8 9.8
+// and the D-state probability by 20 to 1400e-9 relative for the D_j.  The
+// pins below sit at 1e-9, so a single wrong digit ANYWHERE in the table is
+// caught, with ONE honest exception: the last digit of C_3 = -0.44114404e-01,
+// whose eighth significant figure is an absolute 1e-9 on the smallest
+// coefficient in the table, is worth 2.1e-10 and is NOT resolvable by any
+// double-precision observable.  A slip in its seventh figure IS caught (2.1e-9).
+TEST_CASE("cluster: the CD-Bonn deuteron coefficients (Machleidt Table XX)") {
+  const CdBonnWave& w = cdbonn_wave();
+
+  // ---- the four boundary conditions, Eqs. (D23)/(D24) in the sum-rule form.
+  //      Machleidt: they "must be enforced by double precision (i.e., to
+  //      about 15 decimal digits), otherwise the wave function is not
+  //      reproduced correctly for r <= 0.5 fm".  The tolerances below are
+  //      that demand made mechanical: each residual is compared to the SCALE
+  //      of the sum it cancels (sum |term|), so they are relative statements
+  //      and do not silently loosen if a coefficient changes.
+  const std::array<double, 4> res = w.constraint_residuals();
+  double s_c = 0.0, s_dm = 0.0, s_d = 0.0, s_dp = 0.0;
+  for (std::size_t j = 0; j < w.m.size(); ++j) {
+    const double x = w.m[j] * w.m[j];
+    s_c += std::fabs(w.c[j]);
+    s_dm += std::fabs(w.d[j]) / x;
+    s_d += std::fabs(w.d[j]);
+    s_dp += std::fabs(w.d[j]) * x;
+  }
+  MESSAGE("CD-Bonn constraint residuals: sum C = " << res[0] << ", sum D/m^2 = "
+          << res[1] << ", sum D = " << res[2] << ", sum D m^2 = " << res[3]);
+  CHECK(res[0] == 0.0);                       // C_11 = -sum_{j<11} C_j, exactly
+  CHECK(std::fabs(res[1]) < 1e-14 * s_dm);
+  CHECK(std::fabs(res[2]) < 1e-14 * s_d);
+  CHECK(std::fabs(res[3]) < 1e-14 * s_dp);
+
+  // ---- NORMALISATION, Eq. (D14): (2/pi) int dp p^2 (u^2 + w^2) = 1.
+  //      TWO statements, and they are different tests.
+  //      (a) the physics: the parameterisation is a FIT to Machleidt's
+  //          numerical wave function (his quoted L2 quality is 2.2e-4 in u and
+  //          1.1e-4 in w), so it reproduces unity to 1.7e-7, not to machine
+  //          precision, and demanding better would be demanding the fit be
+  //          something it is not;
+  //      (b) the pin: 1e-9 relative on the computed value, which is what
+  //          actually catches a mistyped digit (see the table above).  The
+  //          value is route-dependent at the 5e-11 level -- the double sum
+  //          cancels 8e+4 down to 1, so it carries ~1e-11 of rounding however
+  //          it is summed -- and 1e-9 sits 20x above that.
+  MESSAGE("CD-Bonn norm = " << w.norm() << " (S " << w.norm_s() << ", D "
+                            << w.norm_d() << ")");
+  CHECK(std::fabs(w.norm() - 1.0) < 5e-7);
+  CHECK_CLOSE(w.norm(), 0.99999982615384, 1e-9);
+  CHECK_CLOSE(w.norm_s(), 0.95143775250961, 1e-9);
+
+  // ---- P_D.  CD-Bonn's Table XV publishes 4.85 %; the parameterisation
+  //      gives 4.8562 %, which does NOT round to 4.85 -- it is a fit, and
+  //      6.2e-5 absolute is the size of the fit residual, not of an error.
+  //      That is stated rather than hidden by a loose tolerance: the
+  //      published-value clause allows 1.5e-4 and the PIN is at 1e-9.
+  MESSAGE("CD-Bonn P_D = " << 100.0 * w.norm_d() << " % (published 4.85 %)");
+  CHECK(std::fabs(w.norm_d() - 0.0485) < 1.5e-4);
+  CHECK_CLOSE(w.norm_d(), 0.048562073644234, 1e-9);
+
+  // ---- the asymptotics, Eq. (D15): A_S = C_1 and A_D = D_1 exactly, so eta
+  //      is a RATIO OF TWO PUBLISHED NUMBERS and needs no integral.  Table XV
+  //      prints A_S = 0.8846(9) fm^-1/2 and eta = 0.0256(4) for CD-Bonn
+  //      (the parentheses are the EMPIRICAL errors it is compared against).
+  //      The parameterisation gives 0.884730 and 0.0255714, i.e. it misses
+  //      Machleidt's own A_S by 1.3e-4 -- a seventh of the experimental
+  //      uncertainty on that quantity, and the same kind of residual as P_D
+  //      above: this is a FIT to his numerical wave function, not the wave
+  //      function.  The tolerances say that and no more; the PINS are what
+  //      catch a typo.
+  MESSAGE("CD-Bonn A_S = " << w.a_s() << " (published 0.8846), eta = "
+                           << w.eta() << " (published 0.0256)");
+  CHECK(std::fabs(w.a_s() - 0.8846) < 2e-4);
+  CHECK(std::fabs(w.eta() - 0.0256) < 5e-5);
+  CHECK_CLOSE(w.a_s(), 0.88472985, 1e-15);
+  CHECK_CLOSE(w.eta(), 0.0255713786530431, 1e-13);
+  CHECK(w.a_d() == w.eta() * w.a_s());
+
+  // ---- the SIGN, cheaply: w(p) = -psi_2^a must be POSITIVE at small p (the
+  //      `fdeut.av18` / CDKS convention -- see the header, and
+  //      `alpha_d_quadrupole_fm2` in tests/test_b1_nuclear.cpp for the gate
+  //      that settles it against Q_d).  u(p) is positive there too, and both
+  //      D-wave endpoints vanish: w(0) = 0 is the sum_j D_j/m_j^2 = 0
+  //      constraint seen from momentum space.
+  CHECK(w.psi_s(0.1) > 0.0);
+  CHECK(w.psi_d(0.1) > 0.0);
+  CHECK(std::fabs(w.psi_d(0.0)) < 1e-12 * w.psi_s(0.0));
+  // The S wave has its node where the paper's own wave function does, and it
+  // is 13 % above AV18's 2.0929 fm^-1 -- the single feature that drives most
+  // of the difference the A = 2 gate sees (phase_A_cdbonn.md section 7).
+  CHECK(w.psi_s(2.0) > 0.0);
+  CHECK(w.psi_s(3.0) < 0.0);
+
+  // ---- the `FdeutTable` adapter: `fdeut.av18`'s OWN grid by default, the
+  //      same "both or neither" hbar c conversion `read_fdeut_k` applies, and
+  //      CD-Bonn's own binding energy rather than AV18's.
+  const FdeutTable t = cdbonn_fdeut_table();
+  REQUIRE(t.k_gev.size() == 201);
+  CHECK(t.k_gev.front() == 0.0);
+  CHECK_CLOSE(t.k_gev.back(), 20.0 * HBARC_GEV_FM, 1e-15);
+  CHECK_CLOSE(t.ebind_gev, CD_BONN_BINDING_MEV * 1e-3, 1e-15);
+  const double scale = 1.0 / (HBARC_GEV_FM * std::sqrt(HBARC_GEV_FM));
+  for (double p : {0.1, 0.7, 2.0, 5.0}) {
+    const std::size_t i = static_cast<std::size_t>(std::llround(p / 0.1));
+    CHECK_CLOSE(t.k_gev[i], p * HBARC_GEV_FM, 1e-14);
+    CHECK_CLOSE(t.u[i], w.psi_s(p) * scale, 1e-15);
+    CHECK_CLOSE(t.w[i], w.psi_d(p) * scale, 1e-15);
+  }
+  // "Both or neither": the GeV table must carry the SAME normalisation as the
+  // fm one, i.e. hbar c^3 must not appear.  Trapezoid on the file's own 201
+  // nodes, so this is 0.99998 rather than the closed form's 0.9999998 -- the
+  // 2.2e-5 is the 0.1 fm^-1 spacing and the 20 fm^-1 truncation, exactly as
+  // for `fdeut.av18` itself (0.9999764).
+  double n = 0.0;
+  for (std::size_t i = 1; i < t.k_gev.size(); ++i) {
+    const double a = t.k_gev[i - 1] * t.k_gev[i - 1]
+                     * (t.u[i - 1] * t.u[i - 1] + t.w[i - 1] * t.w[i - 1]);
+    const double b = t.k_gev[i] * t.k_gev[i]
+                     * (t.u[i] * t.u[i] + t.w[i] * t.w[i]);
+    n += 0.5 * (a + b) * (t.k_gev[i] - t.k_gev[i - 1]);
+  }
+  MESSAGE("CD-Bonn on the fdeut grid: int k^2 (u^2 + w^2) dk = " << n);
+  CHECK_CLOSE(n, 0.999977985, 1e-7);
+  // A finer grid changes the TABLE and not the wave function.
+  const FdeutTable f = cdbonn_fdeut_table(20.0, 0.02);
+  CHECK(f.k_gev.size() == 1001);
+  CHECK_CLOSE(f.u[50], t.u[10], 1e-15);   // both are p = 1.0 fm^-1
+  CHECK_CLOSE(f.w[50], t.w[10], 1e-15);
+  CHECK_THROWS_AS(cdbonn_fdeut_table(20.0, 0.0), std::runtime_error);
+  CHECK_THROWS_AS(cdbonn_fdeut_table(0.01, 0.1), std::runtime_error);
 }

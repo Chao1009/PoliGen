@@ -121,6 +121,25 @@
   conservative one: the 18 % of ⁶Li that is not α+d gets b₁ = 0.
   `VMC_S_ALPHA_D_LI6` = 0.81971 is the file's *total* block and is a THIRD,
   different value — do not "unify" them; P_D must be S₂/N with the same N.
+- **What each published b₁ curve is PER — the two camps stopped sharing one
+  constant on 2026-09-03.**  Every consumer here pairs b₁ with a per-NUCLEON
+  F₁, but the two digitized deuteron curves do not arrive normalised the same
+  way.  `B1_MILLER_TABLE_TO_PER_NUCLEON` = **0.5** (and it *is*
+  `B1_PER_DEUTERON_TO_PER_NUCLEON`, not a second copy of the number) because
+  Miller's Eqs. (1)/(5)/(6)/(20) are per deuteron with every ½ in the chain
+  spoken for; `B1_CDKS_TABLE_TO_PER_NUCLEON` = **1** because CDKS Eq. (10)
+  carries an explicit 1/A and the text under their Eq. (16) says "b₁ is defined
+  by the one per nucleon".  The arbiter is neither paper but HERMES, whose
+  published b₁ᵈ — the data both camps plot against — is per nucleon by their
+  Eq. (5).  The CDKS half is CERTAIN and `CdksB1` doubled; the Miller half is
+  LIKELY, not certain, because his own Table I and Fig. 5 compare an unhalved
+  curve to HERMES at face value, so the paper is self-inconsistent by exactly
+  this factor.  Keeping the 0.5 is the status quo and is an author decision
+  (`docs/OPEN_ITEMS_SOLUTIONS.md` §10; argument in
+  `docs/open_items/run_2026-09-03/phase_A_miller_normalisation.md`).  A
+  consequence worth stating: `close_kumano_integral(false)` and
+  `close_kumano_integral(true)` integrate the RAW columns and are therefore on
+  DIFFERENT scales — never compare them to each other.
 - **The b₁ convolution's δ-function — and the two objects default the OTHER WAY
   from each other, on purpose.**  `DeuteronConvolutionB1::Options::
   finite_q_delta` defaults to **TRUE** (since 2026-09-03), i.e. CDKS Eq. (21)'s
@@ -129,17 +148,27 @@
   derivations**, and the asymmetry is the point: Eq. (21) is CDKS's exact
   definition (their Eq. (18), of which Eq. (17) is the "≃"), and the A = 2
   object exists to reproduce *their* figure, where κ is worth a factor
-  **1.57–1.69** at x ≥ 0.5 and **1.97** on ∫b₁ dx — quoting the gate at κ = 1
-  overstated its deficit as a factor 3.68 instead of 2.27.  In ⁶Li the same
+  **1.57–1.69** at x ≥ 0.5 and **1.97** on ∫b₁ dx.  It is also load-bearing for
+  the gate's verdict: on 2026-09-03 the G3b peak ratio came out **0.843** at
+  Eq. (21) against **0.520** at Eq. (17), both with CDKS's own MSTW2008 LO, so
+  the pass is comfortable at Eq. (21) and clears the window by 4 % at Eq. (17).
+  In ⁶Li the same
   switch is worth only −1 % to +7 % (the term κ multiplies is the small orbital
   one), so there the κ = 1 form is kept: it is what makes f(y) a function of y
   alone, one cached table reused at every x, against a 0.24 s density rebuild
   per x.  Measured both ways in
   `docs/open_items/run_2026-09-02/phase_D_gate.md` checklist item 0.
-  **R differs between the two as well**: the gate defaults to `r1998` (CDKS's
-  SLAC world fit) and `Li6ConvolutionOptions` to `r_sigma_lt` (the kernel's own
-  toy R, for consistency with `InclusiveKernel`'s F₁) — worth the 0.392 → 0.365
-  second zero and +1.6 % on the peak, and stated in `docs/USAGE.md` §2a.
+  **R differs between the two as well, and that was decided on 2026-09-03**:
+  the gate defaults to `r1998` (CDKS's SLAC world fit) and
+  `Li6ConvolutionOptions` to `r_sigma_lt`.  The deciding argument is that the
+  observable is a RATIO — the tensor weight is K/D_φ, and D_φ's F₁ comes from
+  `InclusiveKernel`'s own `UnpolSF`, whose R is `r_sigma_lt` because nothing
+  sets it — so a different R in the numerator would not cancel.  Measured cost
+  of the choice on the shipped ⁶Li x·b₁: −5.5 % / +24.6 % / +5.4 % / +2.7 % /
+  −1.9 % at x = 0.05 / 0.10 / 0.20 / 0.30 / 0.50, all of it in the two orbital
+  terms (term (1) is bit-identical, because it carries a b₁ᵈ table with no R in
+  it); on the gate the same swap is +2.7 % on G3b.  Author decision, recorded
+  in `docs/OPEN_ITEMS_SOLUTIONS.md` §10 and stated in `docs/USAGE.md` §2a.
   The same file records the quadrature choices: the inner k integral is
   **Simpson**, not `numerics.hpp::trapezoid`, because b₁ at small x is a
   three-decade cancellation of the exact ∫δ_T f dy = 0 and the trapezoid's

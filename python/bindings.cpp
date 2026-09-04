@@ -29,6 +29,7 @@
 #include <pybind11/operators.h>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
@@ -78,6 +79,7 @@
 #include "lipolgen/lhapdf_sf.hpp"
 #endif
 #if LIPOLGEN_HAVE_PYTHIA8
+#include "lipolgen/mstw_sf.hpp"
 #include "lipolgen/pythia_bridge.hpp"
 #endif
 
@@ -469,6 +471,14 @@ py::dict columns_to_dict(Columns& c, const Pipeline& p, std::uint64_t n) {
                          : std::string(b1_model_name(p.config().b1_model));
   meta["b1_band_scale"] = p.config().b1_band_scale;
   meta["b1_alpha_d_dwave_weight"] = p.config().b1_alpha_d_dwave_weight;
+  // Which unpolarised PDF the b1 convolution folded against.  Same
+  // provenance rule and the same unconditional write as the three keys above:
+  // "toy" and "mstw" differ by up to a factor 1.85 on Li6ConvolutionB1::b1
+  // and by nothing at all in any other npz key, so without this one they are
+  // indistinguishable files.
+  meta["b1_unpol"] = p.config().kernel
+                         ? std::string("caller-supplied kernel")
+                         : std::string(b1_unpol_name(p.config().b1_unpol));
   // rc.hpp -- the WHOLE block, `meta["rc"]` included, is emitted only when
   // the run has RC on, so an `--rc off` npz is byte-identical to today's and
   // not merely key-compatible with it (T6).
@@ -682,6 +692,8 @@ PYBIND11_MODULE(_lipolgen, m) {
   m.attr("PROTON_MASS") = PROTON_MASS;
   m.attr("PROTON_TOP_MOMENTUM") = PROTON_TOP_MOMENTUM;
   m.attr("B1_PER_DEUTERON_TO_PER_NUCLEON") = B1_PER_DEUTERON_TO_PER_NUCLEON;
+  m.attr("B1_MILLER_TABLE_TO_PER_NUCLEON") = B1_MILLER_TABLE_TO_PER_NUCLEON;
+  m.attr("B1_CDKS_TABLE_TO_PER_NUCLEON") = B1_CDKS_TABLE_TO_PER_NUCLEON;
   m.attr("LI6_B1_RANK2_TRANSFER") = LI6_B1_RANK2_TRANSFER;
   m.attr("LI6_B1_LEGACY_TRANSFER") = LI6_B1_LEGACY_TRANSFER;
   m.attr("LI6_B1_PER_NUCLEON") = LI6_B1_PER_NUCLEON;
@@ -1170,6 +1182,22 @@ static void bind_sf(py::module_& m) {
       .def("f2a", &Epps21Ratio::f2a, py::arg("x"), py::arg("q2"), py::arg("A"));
 #endif
 
+  // MSTW2008 LO, read from PYTHIA's own pdfdata grid store -- bound HERE,
+  // inside bind_sf, and not in the `#if LIPOLGEN_HAVE_PYTHIA8` block further
+  // down, because bind_sf runs before that block and `UnpolSF` (the base it
+  // is registered against) is declared in this function.  Same placement
+  // rule LhapdfSF follows for LHAPDF just above.
+#if LIPOLGEN_HAVE_PYTHIA8
+  m.def("pythia8_pdfdata_dir", &pythia8_pdfdata_dir,
+        "PYTHIA 8's pdfdata grid directory (compiled-in default, overridden "
+        "by $LIPOLGEN_PYTHIA8_PDFDATA).");
+  py::class_<MstwSF, UnpolSF, std::shared_ptr<MstwSF>>(m, "MstwSF")
+      .def(py::init<int, std::string>(), py::arg("i_fit") = 3,
+           py::arg("pdfdata_path") = "")
+      .def_property_readonly("i_fit", &MstwSF::i_fit)
+      .def_property_readonly("pdfdata_path", &MstwSF::pdfdata_path);
+#endif
+
   py::enum_<B1Mode>(m, "B1Mode")
       .value("Digitized", B1Mode::kDigitized)
       .value("Toy", B1Mode::kToy);
@@ -1233,9 +1261,18 @@ static void bind_sf(py::module_& m) {
 
   // ================================================= b1_nuclear.hpp (design D)
   // The four-term alpha-d convolution b1 of 6Li and its A = 2 validation gate.
-  // WARNING: the gate is NOT fully passed (G3b, magnitude) -- see the header
-  // block of b1_nuclear.hpp and docs/open_items/run_2026-09-02/phase_D_gate.md.
-  // Opt-in and band-only: never quote a single row.
+  // The gate PASSES since 2026-09-03 -- for ONE unpolarised nucleon input,
+  // not for the shipped default: G3b ratio 0.843 with CDKS's own MSTW2008 LO
+  // at their Eq. (21), against 0.440 on the DEFAULT ToyF2, which is OUTSIDE
+  // the gate's [0.5, 2] window.  Quote numbers made with b1_unpol = Mstw
+  // (CLI --b1-unpol mstw); the default toy backend's are not covered by the
+  // lift.  With CD-Bonn as well the ratio is 1.000338 -- a residual below the
+  // error of digitizing a published figure, NOT three-digit agreement with
+  // CDKS, and specific to CD-Bonn AND MSTW together.  See the header block of
+  // b1_nuclear.hpp for the four conditions that come with that, and
+  // docs/open_items/run_2026-09-03/phase_A_numbers.md for the measurements.
+  // Still opt-in and still BAND-ONLY: the band comes from Q(6Li) vs Q_d, not
+  // from the gate, so never quote a single row.
   m.def("f1_cdks", &f1_cdks, py::arg("f2"), py::arg("x"), py::arg("q2"),
         py::arg("r_func") = nullptr,
         "CDKS Eq. (22) F1 = (1 + gamma^2) F2 / (2 x (1 + R)).  NOT "
@@ -1244,10 +1281,59 @@ static void bind_sf(py::module_& m) {
         "x = 0.8, Q2 = 2.5.");
   m.def("cdks_b1_raw_per_nucleon", []() {
     return std::const_pointer_cast<TensorSF>(cdks_b1_raw_per_nucleon());
-  }, "The RAW digitized CDKS theory-1 column as a TensorSF, WITHOUT "
-     "`B1_PER_DEUTERON_TO_PER_NUCLEON`.  `CdksB1` halves it a second time "
-     "(design 9 Q1/Q1b); that constant is untouched and this routes around "
-     "it.  This is `Li6ConvolutionOptions.deuteron_b1 = None`.");
+  }, "The RAW digitized CDKS theory-1 column as a TensorSF.  Since 2026-09-03 "
+     "`CdksB1` carries the same normalisation -- the column is per nucleon by "
+     "CDKS Eq. (10) and the text under their Eq. (16), and "
+     "`B1_CDKS_TABLE_TO_PER_NUCLEON` is 1 -- so this accessor is now a second "
+     "name for it rather than a route around a double halving.  This is "
+     "`Li6ConvolutionOptions.deuteron_b1 = None`.");
+
+  py::class_<CdBonnWave>(m, "CdBonnWave",
+      "The CD-Bonn deuteron wave function (Machleidt, PRC 63 (2001) 024001, "
+      "Appendix D, Table XX).  Units are the PAPER's: p in fm^-1, psi in "
+      "fm^3/2, (2/pi) int p^2 (u^2 + w^2) dp = 1.  `psi_d` carries the "
+      "`fdeut.av18` / CDKS sign w = -psi_2^a.")
+      .def_property_readonly("m", [](const CdBonnWave& w) {
+        return copy_array(std::vector<double>(w.m.begin(), w.m.end()));
+      }, "m_j [fm^-1], Eq. (D25).")
+      .def_property_readonly("c", [](const CdBonnWave& w) {
+        return copy_array(std::vector<double>(w.c.begin(), w.c.end()));
+      }, "C_j [fm^-1/2]; C_11 is COMPUTED from Eq. (D23), not published.")
+      .def_property_readonly("d", [](const CdBonnWave& w) {
+        return copy_array(std::vector<double>(w.d.begin(), w.d.end()));
+      }, "D_j [fm^-1/2]; D_9..D_11 are COMPUTED from Eq. (D24).")
+      .def("psi_s", &CdBonnWave::psi_s, py::arg("p_fm"))
+      .def("psi_d", &CdBonnWave::psi_d, py::arg("p_fm"))
+      .def("norm_s", &CdBonnWave::norm_s)
+      .def("norm_d", &CdBonnWave::norm_d,
+           "The D-state probability, CLOSED FORM.  CD-Bonn publishes 4.85 %.")
+      .def("norm", &CdBonnWave::norm, "= 1 by Eq. (D14).")
+      .def("a_s", &CdBonnWave::a_s)
+      .def("a_d", &CdBonnWave::a_d)
+      .def("eta", &CdBonnWave::eta,
+           "A_D/A_S, the asymptotic D/S ratio.  CD-Bonn publishes 0.0256.")
+      .def("constraint_residuals", [](const CdBonnWave& w) {
+        const std::array<double, 4> r = w.constraint_residuals();
+        return copy_array(std::vector<double>(r.begin(), r.end()));
+      }, "{sum C_j, sum D_j/m_j^2, sum D_j, sum D_j m_j^2}, all zero by "
+         "construction -- Machleidt's \"about 15 decimal digits\".");
+  m.def("cdbonn_wave", &cdbonn_wave,
+        py::return_value_policy::reference,
+        "The one CD-Bonn wave function: Table XX with C_11 and D_9..D_11 "
+        "solved for.");
+  m.def("cdbonn_fdeut_table", [](double k_max_fm, double dk_fm) {
+    const FdeutTable t = cdbonn_fdeut_table(k_max_fm, dk_fm);
+    py::dict out;
+    out["k_gev"] = copy_array(t.k_gev);
+    out["u"] = copy_array(t.u);
+    out["w"] = copy_array(t.w);
+    out["ebind_gev"] = t.ebind_gev;
+    return out;
+  }, py::arg("k_max_fm") = 20.0, py::arg("dk_fm") = 0.1,
+     "CD-Bonn sampled on 0 .. k_max_fm in dk_fm [fm^-1] and converted to the "
+     "library's GeV units exactly as `read_fdeut_k` converts the AV18 file.  "
+     "The defaults ARE `fdeut.av18`'s grid, so an AV18 row and a CD-Bonn row "
+     "differ in the wave function alone.");
 
   py::class_<ClusterPartialWave>(m, "ClusterPartialWave")
       .def(py::init<>())
@@ -1389,8 +1475,16 @@ static void bind_sf(py::module_& m) {
   py::class_<Li6ConvolutionB1, TensorSF, std::shared_ptr<Li6ConvolutionB1>>(
       m, "Li6ConvolutionB1",
       "b1 of 6Li per nucleon, four-term alpha-d convolution (CDKS Eqs. 16/17/"
-      "21 one level up).  OPT-IN, and the A = 2 magnitude gate is NOT passed: "
-      "band every number, {0, 1, 2} x b1.")
+      "21 one level up).  OPT-IN.  Its A = 2 magnitude gate PASSES since "
+      "2026-09-03 for ONE unpolarised nucleon input: ratio 0.843 with "
+      "MSTW2008 LO at CDKS Eq. (21) (`Li6ConvolutionOptions.unpol = "
+      "MstwSF()`, CLI --b1-unpol mstw).  On the DEFAULT `unpol` -- the "
+      "kernel's own ToyF2 -- it is 0.440, OUTSIDE the [0.5, 2] window, and "
+      "those numbers are NOT covered by the lift.  With CD-Bonn as well the "
+      "ratio is 1.000338, a residual below the error of digitizing a "
+      "published figure rather than three-digit agreement with CDKS.  And "
+      "that gate is A = 2 and tests nothing about the alpha-d step: band "
+      "every number, {0, 1, 2} x b1.")
       .def(py::init([](Li6ConvolutionOptions o) {
         return std::make_shared<Li6ConvolutionB1>(std::move(o));
       }), py::arg("options") = Li6ConvolutionOptions())
@@ -1438,6 +1532,14 @@ static void bind_sf(py::module_& m) {
       .def("options", &Li6ConvolutionB1::options,
            py::return_value_policy::reference_internal);
 
+  py::enum_<DeuteronWaveSource>(m, "DeuteronWaveSource",
+      "Which deuteron wave function `DeuteronConvolutionB1` convolves.  The "
+      "DEFAULT IS `kFdeutFile` and it is a CHOICE: every published gate "
+      "number was measured on AV18, so moving it would silently move all of "
+      "them.  `kCdBonn` is what CDKS actually used for Fig. 4.")
+      .value("kFdeutFile", DeuteronWaveSource::kFdeutFile)
+      .value("kCdBonn", DeuteronWaveSource::kCdBonn);
+
   py::class_<DeuteronConvolutionB1, TensorSF,
              std::shared_ptr<DeuteronConvolutionB1>> dcb1(
       m, "DeuteronConvolutionB1",
@@ -1447,6 +1549,13 @@ static void bind_sf(py::module_& m) {
   py::class_<DeuteronConvolutionB1::Options>(dcb1, "Options")
       .def(py::init<>())
       .def_readwrite("fdeut_path", &DeuteronConvolutionB1::Options::fdeut_path)
+      .def_readwrite("wave", &DeuteronConvolutionB1::Options::wave,
+                     "Which deuteron wave function: `DeuteronWaveSource."
+                     "kFdeutFile` (the default, `fdeut_path`) or `kCdBonn`.")
+      .def_readwrite("cdbonn_k_max_fm",
+                     &DeuteronConvolutionB1::Options::cdbonn_k_max_fm)
+      .def_readwrite("cdbonn_dk_fm",
+                     &DeuteronConvolutionB1::Options::cdbonn_dk_fm)
       .def_property("unpol",
           [](const DeuteronConvolutionB1::Options& o) {
             return std::const_pointer_cast<UnpolSF>(o.unpol);
@@ -3210,12 +3319,94 @@ static void bind_pipeline(py::module_& m) {
       "  Li6Convolution  b1_nuclear.hpp's four-term alpha-d convolution.  "
       "INCLUSIVE CHANNEL ONLY and 6Li ONLY (PipelineConfig.validate refuses "
       "the rest; on a tagged channel the alpha-d density is already in the "
-      "event weight).  Its A = 2 magnitude gate is NOT passed -- band every "
-      "number with --b1-band-scale 0/1/2.")
+      "event weight).  Its A = 2 magnitude gate PASSES since 2026-09-03 -- "
+      "for the MSTW2008 LO unpolarised nucleon input at CDKS Eq. (21)'s "
+      "delta-function (B1UnpolSource.Mstw, CLI --b1-unpol mstw), where G3b "
+      "is 0.843243.  On the SHIPPED DEFAULT B1UnpolSource.Toy it is 0.440, "
+      "OUTSIDE the gate's [0.5, 2] acceptance window, so quote numbers made "
+      "with b1_unpol = Mstw; the toy backend's are not covered by the lift.  "
+      "And it is an A = 2 gate either way -- band every number with "
+      "--b1-band-scale 0/1/2.")
       .value("Miller", B1Model::Miller)
       .value("Cdks", B1Model::Cdks)
       .value("Li6Convolution", B1Model::Li6Convolution);
   m.def("b1_model_name", &b1_model_name, py::arg("model"));
+
+  py::enum_<B1UnpolSource>(m, "B1UnpolSource",
+      "Which UNPOLARISED backend b1_model = Li6Convolution folds its own F1 "
+      "against (Li6ConvolutionOptions.unpol; CLI --b1-unpol).  It reaches the "
+      "b1 and NOTHING else -- InclusiveKernel's own f2_source stays ToyF2 on "
+      "every setting, so the SPIN-BLIND cell cross section "
+      "(InclusiveSampler.cell_xsec_pb) is bit for bit under this flag and "
+      "only the tensor shift moves.\n"
+      "  Toy      the DEFAULT: the kernel's own ToyF2, shared as ONE object.  "
+      "Bit for bit what every published number was made with.\n"
+      "  Mstw     MstwSF -- MSTW2008 LO over PYTHIA 8's pdfdata grid, the PDF "
+      "CDKS computed their b1_d with, and the one the A = 2 gate passes on "
+      "(G3b 0.843 against 0.440 on the toy).  MEASURED on "
+      "Li6ConvolutionB1.b1(x, 2.5): x1.847766 / x1.275961 / x0.816971 at "
+      "x = 0.10 / 0.30 / 0.50 -- not a normalisation.  Needs the PYTHIA "
+      "tier.\n"
+      "  Ct18Nlo  LhapdfSF('CT18NLO', 0), the phase-D stand-in, kept "
+      "selectable so the systematic can be quoted.  x2.221302 / x1.238833 / "
+      "x1.045870 at the same points.  Needs the LHAPDF tier.\n"
+      "  Custom   whatever object is in PipelineConfig.b1_unpol_sf; the enum "
+      "is the provenance meta['b1_unpol'] records.\n"
+      "Set it with set_b1_unpol(config, source), which builds the backend and "
+      "raises here if the tier or the grid is missing -- it is NEVER silently "
+      "replaced by ToyF2.")
+      .value("Toy", B1UnpolSource::Toy)
+      .value("Mstw", B1UnpolSource::Mstw)
+      .value("Ct18Nlo", B1UnpolSource::Ct18Nlo)
+      .value("Custom", B1UnpolSource::Custom);
+  m.def("b1_unpol_name", &b1_unpol_name, py::arg("source"));
+
+  // The `set_pythia_hadronizer` arrangement (bindings.cpp header note): the
+  // OPTIONAL tier's object is built HERE, where the tier is visible, and put
+  // into the config.  `lipolgen_core` links neither PYTHIA nor LHAPDF, so
+  // `PipelineConfig::validate()` can refuse a named backend with an empty
+  // slot but cannot fill it; this is the function that fills it.  A missing
+  // tier throws with the tier named, and a missing grid file throws out of
+  // MstwSF/LhapdfSF naming the path -- never a quiet fallback to ToyF2.
+  m.def("set_b1_unpol", [](PipelineConfig& cfg, B1UnpolSource src) {
+    switch (src) {
+      case B1UnpolSource::Toy:
+        cfg.b1_unpol_sf.reset();
+        break;
+      case B1UnpolSource::Mstw:
+#if LIPOLGEN_HAVE_PYTHIA8
+        cfg.b1_unpol_sf = std::make_shared<const MstwSF>();
+#else
+        throw std::runtime_error(
+            "set_b1_unpol: b1_unpol = mstw needs the OPTIONAL PYTHIA 8 tier "
+            "(MstwSF reads PYTHIA's own pdfdata/mstw2008lo.00.dat), and this "
+            "build has none -- lipolgen.HAVE_PYTHIA8 is False.  Rebuild with "
+            "-DLIPOLGEN_WITH_PYTHIA=ON.  It is never silently replaced by "
+            "ToyF2, whose A = 2 gate ratio is 0.440 against MSTW's 0.843.");
+#endif
+        break;
+      case B1UnpolSource::Ct18Nlo:
+#if LIPOLGEN_HAVE_LHAPDF
+        cfg.b1_unpol_sf = std::make_shared<const LhapdfSF>("CT18NLO", 0);
+#else
+        throw std::runtime_error(
+            "set_b1_unpol: b1_unpol = ct18nlo needs the OPTIONAL LHAPDF tier, "
+            "and this build has none -- lipolgen.HAVE_LHAPDF is False.  "
+            "Rebuild with -DLIPOLGEN_WITH_LHAPDF=ON and install the CT18NLO "
+            "set.  It is never silently replaced by ToyF2.");
+#endif
+        break;
+      case B1UnpolSource::Custom:
+        throw std::runtime_error(
+            "set_b1_unpol: B1UnpolSource.Custom names an object this function "
+            "cannot build -- assign config.b1_unpol_sf = <your UnpolSF> "
+            "instead, which sets Custom for you");
+    }
+    cfg.b1_unpol = src;
+  }, py::arg("config"), py::arg("source"),
+     "config.b1_unpol = source, with the matching backend built and attached "
+     "to config.b1_unpol_sf.  Raises RuntimeError naming the missing tier (or "
+     "the missing grid file) rather than falling back to ToyF2.");
 
   py::class_<CiofiSimulaOptions>(m, "CiofiSimulaOptions",
       "Configuration of CiofiSimulaTriton.  Everything here is a documented "
@@ -3334,6 +3525,29 @@ static void bind_pipeline(py::module_& m) {
                      "Li6ConvolutionOptions.w_alpha_d_dwave: the knob on "
                      "terms (2d) AND (2a) together, the SHAPE variant of the "
                      "band.")
+      .def_readwrite("b1_unpol", &PipelineConfig::b1_unpol,
+                     "B1UnpolSource: which UNPOLARISED backend "
+                     "b1_model = Li6Convolution folds its F1 against.  Toy is "
+                     "the default and is today bit for bit.  Assigning the "
+                     "enum here does NOT build the backend -- use "
+                     "set_b1_unpol(config, source), or validate() will refuse "
+                     "the named-but-empty combination.")
+      .def_property("b1_unpol_sf",
+          [](const PipelineConfig& c) {
+            return std::const_pointer_cast<UnpolSF>(c.b1_unpol_sf);
+          },
+          [](PipelineConfig& c, std::shared_ptr<UnpolSF> u) {
+            // Assigning an object IS B1UnpolSource.Custom, and clearing it is
+            // back to Toy: the two fields are the provenance and the
+            // realisation of one choice (the optics_choice / optics
+            // arrangement), so this setter keeps them from drifting apart.
+            // `set_b1_unpol` is the other direction of the same invariant.
+            c.b1_unpol = u ? B1UnpolSource::Custom : B1UnpolSource::Toy;
+            c.b1_unpol_sf = std::move(u);
+          },
+          "The UnpolSF b1_unpol names.  Assigning one sets b1_unpol = Custom; "
+          "assigning None clears it back to Toy.  For the named backends use "
+          "set_b1_unpol(config, source), which builds them.")
       .def_readwrite("with_virtual_photon", &PipelineConfig::with_virtual_photon)
       .def_readwrite("seed", &PipelineConfig::seed)
       .def_readwrite("run", &PipelineConfig::run)
@@ -3389,10 +3603,20 @@ static void bind_pipeline(py::module_& m) {
       .def_readwrite("hadronizer", &PipelineConfig::hadronizer)
       .def("validate", &PipelineConfig::validate);
 
-  m.def("default_inclusive_kernel", [](const Ion& ion) {
+  // The FULL form, defaulted so that `default_inclusive_kernel(ion)` is the
+  // one-argument overload it has always been -- i.e. (Miller, 1, 1, null),
+  // which `validation/reference/b1_default_li6.json` pins at rtol 1e-12.
+  // `b1_unpol` is the object `PipelineConfig::b1_unpol_sf` carries; null is
+  // the kernel's own ToyF2, shared as ONE object.
+  m.def("default_inclusive_kernel", [](const Ion& ion, B1Model model,
+                                       double band_scale, double w_alpha_d,
+                                       std::shared_ptr<UnpolSF> b1_unpol) {
     return std::const_pointer_cast<InclusiveKernel>(
-        default_inclusive_kernel(ion));
-  }, py::arg("ion"));
+        default_inclusive_kernel(ion, model, band_scale, w_alpha_d,
+                                 std::move(b1_unpol)));
+  }, py::arg("ion"), py::arg("model") = B1Model::Miller,
+     py::arg("band_scale") = 1.0, py::arg("w_alpha_d") = 1.0,
+     py::arg("b1_unpol") = nullptr);
 
   m.def("momentum_residual", &momentum_residual, py::arg("ev"));
   m.def("momentum_scale", &momentum_scale, py::arg("ev"));

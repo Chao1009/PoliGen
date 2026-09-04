@@ -1,5 +1,39 @@
 # Phase D — the A = 2 validation gate, measured
 
+> # ⚠ SUPERSEDED ON G3b — 2026-09-03 (phase A of the next run)
+>
+> **This document's verdict is out of date. The gate PASSES for the MSTW2008 LO
+> nucleon input at CDKS Eq. (21)'s δ-function (`--b1-unpol mstw`), and not for
+> the shipped `ToyF2` default, which stays at 0.440 — outside the acceptance
+> window and not covered by the lift.** Everything below
+> was measured with the library stand-in `ToyF2` (and a CT18NLO proxy for
+> checklist item 4, and a *rescaling* proxy for item 5), and on that footing
+> G3b was a factor 2.27 low. Both proxies have since been replaced by the real
+> inputs:
+>
+> | row | this document | 2026-09-03 |
+> |---|---|---|
+> | nucleon PDF (checklist item 4) | CT18NLO stand-in, ratio 0.7193 | **MSTW2008 LO, CDKS's own — ratio 0.843243** |
+> | wave function (checklist item 5) | AV18 rescaled to P_D = 4.85 %, ×0.88 (**opens**) | **the real CD-Bonn parameterisation, ×1.18631 (closes)** |
+> | G3b verdict | **FAIL** (0.4400 at the ToyF2 default) | **PASS** (0.843243; 1.000338 with CD-Bonn as well) |
+> | G3a counting window | [0.02, 1.0] with an unstated scan floor of 0.01 | **(0, 1.0]**, floor **0.001**, both stated in the design |
+> | the ⁶Li publication ban | in force | **lifted** (design §5.4 Escalation not triggered) |
+>
+> **What in this document is still true:** every layer-0/1/2 result, every
+> analytic identity, the κ = 1 vs Eq. (21) comparison, the target-mass and R
+> rows, and every number labelled `ToyF2` — 0.4400 is still exactly what the
+> library stand-in gives. That is a statement about the SHIPPED DEFAULT, not
+> about a build option: `ToyF2` is what `--b1-unpol toy` selects and what every
+> run that does not ask for another backend uses, in every build, PYTHIA tier
+> or not. A build with no PYTHIA tier additionally cannot *reach* the passing
+> configuration at all. What is **not** true any more is the verdict, the
+> escalation, and the ban — each for the MSTW configuration only.
+>
+> The current measurements are `docs/open_items/run_2026-09-03/phase_A_numbers.md`
+> (§§0–5 the MSTW rerun, §8 CD-Bonn) and `phase_A_cdbonn.md` (the
+> coefficients). This file is kept as the record of what was measured on
+> 2026-09-02/03, not as a statement of the gate's state.
+
 Design: `docs/open_items/run_2026-09-02/design_D_b1_li6.md` §5.
 Code: `include/lipolgen/b1_nuclear.hpp`, `src/core/b1_nuclear.cpp`.
 Tests: `tests/test_b1_nuclear.cpp` (T1, four `TEST_CASE`s).
@@ -51,6 +85,13 @@ quoted, always together, never one alone.
 a `WARNING: A = 2 gate not passed` in the header, and **no ⁶Li number may be
 published** while that stands. Item 10 stays open.
 
+> **SUPERSEDED 2026-09-03.** The paragraph above is the verdict *at the ToyF2
+> default*, and it is still what that configuration gives. It is no longer the
+> gate's verdict: with checklist item 4 worked (MSTW2008 LO, CDKS's own PDF)
+> G3b is **0.843243** — inside the factor-2 window — so Escalation is not
+> triggered, the `WARNING` is gone from the header and `--help`, and **the ⁶Li
+> publication ban is lifted**. The band is not.
+
 **G3a passes, but read how.** The low-x zero clears its counting window's
 lower edge (x = 0.02) by **0.0021**, and with a realistic PDF (CT18NLO,
 checklist item 4) it drops below the scan floor altogether, so the "exactly two
@@ -65,6 +106,14 @@ item: the **nucleon PDF** (item 4). With `LhapdfSF("CT18NLO")` in place of
 factor-2 window. It is not this phase's default to change — the core must not
 link LHAPDF, and CDKS used MSTW2008 LO, which is not installed — so the finding
 is recorded, not absorbed.
+
+> **RESOLVED 2026-09-03, and the last clause of that paragraph was wrong.**
+> MSTW2008 LO *is* on disk — the CENTRAL member ships with PYTHIA 8 as
+> `pdfdata/mstw2008lo.00.dat`, read by `Pythia8::MSTWpdf`; only LHAPDF's set
+> store lacks it. `MstwSF` (`include/lipolgen/mstw_sf.hpp`) reads it with the
+> same charge weights as `LhapdfSF`, and with it the ratio is **0.843243**,
+> not 0.7193. The prediction in this paragraph — that the nucleon PDF closes
+> G3b — held; the stand-in simply understated it by ×1.17.
 
 ---
 
@@ -351,7 +400,7 @@ Starting point: the κ = 1 column, ratio 0.2717 (a factor 3.68 low).
 | nucleon PDF (ToyF2 → CT18NLO) | ×1.669 | closes — **still open** |
 | target mass (already in) | ×1.49 at κ (1.52 at κ = 1) | in |
 | R (`r_sigma_lt` → `r1998`, already in) | ×0.98 | in |
-| wave function (AV18 → P_D = 4.85 %) | ×0.88 | **opens** |
+| wave function (AV18 → P_D = 4.85 %) | ×0.88 | **opens** — **SUPERSEDED**: that is the *rescaling proxy*. The real CD-Bonn is **×1.18631** and **closes** (`phase_A_numbers.md` §8) |
 | figure digitization | not quantified | — |
 | **the default today** | **ratio 0.4400 (a factor 2.27 low)** | **outside G3b** |
 | **with the PDF item as well, measured** | **ratio 0.7193 (a factor 1.39 low)** | **inside G3b** |
@@ -374,3 +423,17 @@ x·b₁(0.10) = −3.8e−5 against the digitized −1.73e−5.
 4. Decide whether `Li6ConvolutionOptions` should default to `r1998` like the
    gate rather than to `r_sigma_lt` (item 2).
 5. Only then re-open G3b. Until it passes, **no ⁶Li number ships.**
+
+> **DONE — 2026-09-03.** (2) `MstwSF` reads the MSTW2008 LO grid PYTHIA ships;
+> G3b 0.7193 → **0.843243**. (3) The real CD-Bonn Appendix-D parameterisation
+> is `cdbonn_wave()` in `cluster.hpp`, reachable as
+> `DeuteronConvolutionB1::Options::wave = kCdBonn`; it is **×1.18631** on the
+> peak, i.e. it *closes* rather than opens, which is the sign this document's
+> rescaling proxy got backwards. (4) Decided: `Li6ConvolutionOptions` keeps
+> `r_sigma_lt`, because the tensor weight is a ratio whose denominator carries
+> `InclusiveKernel`'s R — recorded with its measured cost in
+> `docs/OPEN_ITEMS_SOLUTIONS.md` §10. (5) G3b re-opened and **passes at
+> `--b1-unpol mstw`, Eq. (21)** — not at the `ToyF2` default, which stays at
+> 0.440; the ban is lifted for the configuration that was measured. The
+> residual budget above is superseded by
+> `phase_A_numbers.md` §5 and §8.2.

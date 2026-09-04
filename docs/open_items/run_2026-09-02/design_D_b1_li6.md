@@ -1197,6 +1197,27 @@ same worry and is reported separately (0, 1, 2 on terms (2d)+(2α) together).
 **Nothing about ⁶Li may be quoted, plotted or merged until this passes.** The gate is
 layered, cheapest first, so a failure localises itself.
 
+> **OUTCOME — 2026-09-03: IT PASSES, and this clause is satisfied rather than
+> waived.** At the end of §5.4's checklist — MSTW2008 LO (CDKS's own PDF,
+> checklist item 4) at CDKS Eq. (21)'s δ-function — G3a passes on all three
+> landmarks and **G3b's peak ratio is 0.843243**, inside the factor-2 window
+> with the lower edge cleared by a factor 1.69; with CD-Bonn (item 5) as well
+> it is **1.000338** — a residual below the error of digitizing a published
+> figure, which is not the same claim as three-digit agreement with CDKS.
+> Read the pass with its conditions. **It is a pass for a CONFIGURATION**: on
+> the *shipped default* unpolarised input, `ToyF2`, the ratio is **0.440**,
+> outside the window, and this clause still bites there — so what is lifted is
+> the ban on numbers made with the **MSTW2008 LO** input (`--b1-unpol mstw`,
+> the selector added 2026-09-04), and **not** on numbers made with the default,
+> which the tables of `phase_D_numbers.md` are. At Eq. (17)'s κ = 1 MSTW gives
+> **0.520**, inside by 4 % of its own value. **The ban this sentence imposes is
+> therefore lifted for that configuration; the ±100 % band is NOT** — the band
+> comes from Q(⁶Li) vs Q_d (§4.3), not from this gate, and this gate is A = 2
+> and tests nothing about the α–d step. And G3a's own pass is **qualified** by
+> its counting ceiling — see the amendment in §5.4 and
+> `docs/OPEN_ITEMS_SOLUTIONS.md` §10, "G3a's stated limitation".
+> Measurements: `docs/open_items/run_2026-09-03/phase_A_numbers.md`.
+
 ### 5.1 Layer 0 — analytic identities (no data, no figure)
 
 | id | statement | tolerance |
@@ -1280,13 +1301,33 @@ validity floor at **x ≳ 0.1**; above x ≈ 0.8 CDKS themselves say the answer 
 dominated by the high-momentum tail of the wave function. **Gate window: x ∈ [0.10,
 0.80].** Report x < 0.1 and x > 0.8, gate nothing there.
 
+*(Clarified 2026-09-03, phase A: that sentence scopes **G3b only** — the magnitude
+clause, which is the one that compares a VALUE against the digitized curve and so
+needs the region where the convolution is valid. G3a is a **shape** clause and its
+landmarks are positions, not values: the digitized curve's own first zero is at
+0.0656 and its peak at 0.766, both outside [0.10, 0.80], so a shape clause confined
+to that window could not be stated at all. G3a therefore reads landmarks over the
+whole scan, as the code has always done. G3c is an integral over the digitized
+table's range and is likewise not confined to [0.10, 0.80]. Before this note the
+design said both things and the code silently implemented one of them.)*
+
 **Acceptance criterion (three parts, all must hold).**
 
 * **G3a — shape, hard.** The computed x·b₁ has exactly **two** sign changes in
-  [0.02, 1.0], the first **falling** within **Δx = ±0.08** of 0.0656 and the second
+  **(0, 1.0]**, the first **falling** within **Δx = ±0.08** of 0.0656 and the second
   **rising** within **Δx = ±0.10** of 0.4572, and its maximum in [0.5, 1.0] sits
   within **Δx = ±0.10** of x = 0.766. Both reference values come from
   `b1_landmarks_of_table()`, so a re-digitization moves the target automatically.
+  The scan grid is **`linspace(0.001, 1.59, 300)`** — stated here because a zero
+  below the grid's floor is invisible to `b1_landmarks` no matter what the counting
+  window says, so the floor is a third bound on this clause and must not be left
+  implicit. **The counting window's upper edge is a SCOPE CHOICE and no position
+  tolerance derives it**: over the reference's own domain [0.010, 1.590] the
+  computed curve has *three* sign changes and the reference has two, so this
+  clause is a **qualified** pass and "exactly two" may never be quoted without
+  the window. *(Amended 2026-09-03, phase A; was "[0.02, 1.0]" with an unstated
+  floor of 0.01. Ceiling confronted and the qualification recorded 2026-09-04.
+  See "Amendment — G3a's counting window and scan floor" below.)*
 * **G3b — magnitude, soft but recorded.** max |x·b₁| over [0.10, 0.80] agrees with
   **1.0852 × 10⁻³** — the raw-column maximum, compared against the **raw column**,
   because the per-nucleon question is *resolved* (§9 Q1) and the gate no longer has to
@@ -1300,7 +1341,100 @@ dominated by the high-momentum tail of the wave function. **Gate window: x ∈ [
 * **G3c — Close–Kumano, reported.** ∫b₁ dx from the new code over the same range,
   next to `close_kumano_integral(true)` = **+4.592 × 10⁻⁴** and
   `close_kumano_integral(false)` (Miller). Neither is zero; neither is enforced
-  (`sf.hpp`: "Reported, not enforced"). Record both.
+  (`sf.hpp`: "Reported, not enforced"). Record both. **"The same range" now has to
+  be said explicitly**: the reference is the digitized table's own [0.0100, 1.590],
+  so with G3a's scan floor at 0.001 the computed integral is taken on the
+  **x ≥ 0.01 sub-grid** and not on the whole scan. `integral_b1` is a trapezoid of
+  b₁ = (x·b₁)/x, and the 1/x weight alone moves it **+23 %** if the extension to
+  0.001 is included — a change with no physics in it. *(Amended 2026-09-03,
+  phase A.)*
+
+**Amendment — G3a's counting window and scan floor (2026-09-03, phase A).**
+What moved: the counting window **[0.02, 1.0] → (0, 1.0]**, and the scan grid's
+lower end **0.01 → 0.001**, stated in the clause instead of being left to whatever
+grid the implementation happened to pick. The upper edge **stays at 1.0**. It is
+load-bearing, and **the asymmetry between the two edges is stated below rather
+than left implicit** — this amendment moved the edge that cost the clause
+nothing and left the edge that would have cost it the clause.
+
+Why. As written, G3a was three constraints wearing one clause — a count, a window
+for the count, and a position tolerance per zero — and the three disagreed. The
+position tolerance ±0.08 about 0.0656 admits any non-negative zero below 0.1456;
+the counting window excluded [0, 0.02); and the scan floor, which the design never
+stated at all, excluded [0, 0.01) before the window ever saw it. So the *narrowest*
+of the three silently won and the tolerance this clause actually writes down was
+dead code below x = 0.02. Bookkeeping that brackets a physics tolerance has to be
+at least as wide as the tolerance, or it is a second, tighter, unstated cut. `(0,
+1.0]` is not a new number: it is `0.0656 − 0.08` clipped at the physical floor
+x > 0. The floor 0.001 is a decade below the lowest measured crossing (CT18NLO,
+0.0098) and the curve is measured positive and featureless over [10⁻⁴, 5 × 10⁻³]
+for every PDF tried, so nothing is hidden below it.
+
+**The ceiling, and why this amendment did not touch it (added 2026-09-04).**
+The same "the bookkeeping must be at least as wide as the tolerance" argument,
+applied to the upper edge, does **not** force a change: ±0.10 about 0.4572
+reaches 0.5572 and the peak clause's ±0.10 about 0.766 reaches 0.866, so
+(0, 1.0] already brackets every tolerance this clause writes down, with room.
+The floor argument is about the *bracket*. The ceiling is about the **count**,
+which is a different thing: a counting clause is a statement about a domain,
+and the domain decides the answer. **G3a's domain is chosen and is narrower
+than the reference it compares against**, and the difference is not academic:
+
+* the digitized reference has **exactly two** sign changes over its **own**
+  domain [0.010, 1.590] and stays **positive** from 0.4572 to its last point
+  (+4.040e−6 at x = 1.590);
+* **every computed configuration crosses zero a third time**, falling, and is
+  **negative** at the top of that domain — ToyF2 **1.220437**, MSTW2008 LO
+  **1.217660**, CT18NLO **1.197722** at Eq. (21) with AV18; 1.142281 /
+  1.137076 / 1.133695 at Eq. (17)'s κ = 1; and 1.500803 / 1.493052 / 1.473742
+  with CD-Bonn. (Gate grid `linspace(0.001, 1.59, 300)`; pinned by
+  `tests/test_b1_nuclear.cpp` **T17**.)
+
+So over the reference's own domain the computed curve has **three** sign
+changes and the reference has **two**, and **"exactly two" holds only because
+of a ceiling that no position tolerance derives. Widen the window to
+(0, 1.59] on exactly the argument used for the floor and G3a fails on every
+configuration, MSTW + CD-Bonn included.**
+
+Two defences of the ceiling, and what survives of them. **(1) "x > 1 is out of
+range" is false and must not be used**: x per nucleon for a nucleus runs to A,
+i.e. to 2 for the deuteron this gate is about, so x ≈ 1.13–1.22 is a
+kinematically allowed and physically meaningful region (Fermi motion and
+short-range correlations) and it lies inside the domain CDKS themselves
+plotted. **(2) "the reference is unreadable that high" is only partly true.**
+At the AV18 crossings the digitized x·b₁ is still **7.0–8.5 %** of its own peak
+(and **13.5–14.5 %** at the κ = 1 crossings), with a smooth monotone decay
+rather than jitter — a real sign disagreement, not noise. The defence becomes
+honest only near x ≈ 1.47–1.50, the CD-Bonn crossings, where the reference is
+0.8–1.0 % of its peak.
+
+**Consequence for the record.** G3a's status is a **qualified** pass: it passes
+as written, on a window whose upper edge is a scope choice. The clause is not
+changed here, because moving an acceptance criterion after seeing the answer is
+the failure mode this note is about, and because the criterion belongs to the
+author. But nobody may quote "exactly two sign changes" without the window, and
+anyone quoting "the A = 2 gate passes" is quoting a pass that includes this
+scope — G3a is listed above as *"shape, **hard**"* in a criterion whose own
+words are "three parts, all must hold", so widening the ceiling would not
+merely annotate the verdict, it would withdraw it. `docs/OPEN_ITEMS_SOLUTIONS.md`
+§10, "G3a's stated limitation — the counting ceiling", carries the same numbers
+and the same conclusion.
+
+Where the 0.02 came from, for the record: it is the prototype's own first sign
+change as reported in the warning below — a number the same paragraph records as
+having moved 0.03 → 0.02 between two runs of the same code. A gate floor set at a
+quantity the design itself records as unstable at the 50 % level was never a bound.
+
+Honesty note on the trigger. This amendment was argued from the CT18NLO stand-in,
+whose low-x zero (0.0098) falls below both the old floor and the old window and
+therefore aborted `REQUIRE(z.size() == 2)`. It turned out **not** to be needed for
+the measurement that closes the gate: with CDKS's own MSTW2008 LO the low-x zero
+sits at **x = 0.0292** (`linspace(0.01, 1.59, 300)`) / **0.0279**
+(`linspace(0.001, 1.59, 300)`), i.e. above the old floor and the old window both,
+and G3a passes either way. The amendment is kept because the inconsistency it
+removes is real and independent of which PDF is used, not because MSTW needed it —
+and because the CT18NLO row is now itself pinned in the doctest, where it does need
+it. See `docs/open_items/run_2026-09-03/phase_A_numbers.md` for every number.
 
 **Honest warning to the implementer — read this before starting.** A prototype written
 for this design (AV18 u,w; CDKS Eqs. 16/17/21 exactly as transcribed at κ = 1; the
@@ -1358,6 +1492,25 @@ the prototype table, leave `Li6ConvolutionB1` in the tree behind the flag with a
 `WARNING: A=2 gate not passed` in its header and in `--help`, and put **no ⁶Li number
 in `OPEN_ITEMS_SOLUTIONS.md`**. Item 10 stays open. That is a legitimate and expected
 outcome for a first-mover calculation and is much better than a tuned number.
+
+> **OUTCOME — 2026-09-03: Escalation NOT triggered.** The checklist was worked
+> in order: item 0 (Eq. (21)'s δ-function) ×1.6195, item 4 (MSTW2008 LO,
+> replacing the CT18NLO stand-in) ×1.9152, item 5 (the real CD-Bonn wave
+> function, replacing the D-state rescaling proxy) ×1.1863. After the
+> checklist the peak ratio is **0.843243** (AV18 + MSTW + Eq. (21), the gate's
+> own wave-function default) and **1.000338** with CD-Bonn — inside a factor of
+> 2 either way, so the "stop and hand back" branch does not apply and the ban
+> is lifted **for the configuration that was measured** — `--b1-unpol mstw` at
+> Eq. (21)'s δ-function. It is NOT lifted for the numbers this clause names:
+> the ⁶Li tables then standing in `OPEN_ITEMS_SOLUTIONS.md` were made with the
+> `ToyF2` library stand-in, whose own G3b is 0.440 and outside the acceptance
+> window, so they must be **regenerated under `--b1-unpol mstw` before they are
+> quoted as physics** (`OPEN_ITEMS_SOLUTIONS.md` §10, "The ⁶Li numbers — a
+> ToyF2 measurement, NOT covered by the lift until rerun").
+> Items 0 and 4 are independent to 0.07 % (0.271689 × 1.91519 × 1.61951 =
+> 0.842682 predicted against 0.843243 measured), and item 5 supplies exactly
+> the residual 1.186 that was left over — no fudge factor was tuned anywhere.
+> The ±100 % band and the "say which configuration made it" rule stand.
 
 ## 6. Tests
 
@@ -1627,6 +1780,13 @@ at κ = 1 with CDKS Eq. (22) F₁. Checklist item 0 (the finite-|q⃗| δ-functi
 identified piece — and items 1–6 are the rest of the plan. If it does not close, item
 10 stays open and no ⁶Li number ships. **This is the single largest risk in the
 phase.**
+
+> **ANSWERED — 2026-09-03. It closed.** Item 0 delivered ×1.6195 as predicted;
+> the two pieces this question did not have numbers for turned out to be the
+> whole of the rest — the nucleon PDF (item 4, ToyF2 → MSTW2008 LO) ×1.9152 and
+> the wave function (item 5, AV18 → the real CD-Bonn) ×1.1863. Final peak
+> ratios: 0.843243 (AV18 + MSTW) and 1.000338 (CD-Bonn + MSTW), against a
+> κ = 1 ToyF2 starting point of 0.271689. The risk did not materialise.
 
 **Q4. Normalisation to N_{αd}: suppression or renormalisation?** Default here: the
 18 % of ⁶Li that is not α+d gets b₁ = 0 (assumption A1), so b₁ carries a factor 0.82.

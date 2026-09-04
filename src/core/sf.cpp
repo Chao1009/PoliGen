@@ -349,7 +349,7 @@ double toy_b1_shape(double x, double, double f1) {
 
 double toy_b1(double x, double q2, double f1, B1Mode mode) {
   if (mode == B1Mode::kToy) return toy_b1_shape(x, q2, f1);
-  return B1_PER_DEUTERON_TO_PER_NUCLEON
+  return B1_MILLER_TABLE_TO_PER_NUCLEON
          * tables::kB1Miller().interp_tapered("b1", x);
 }
 
@@ -357,7 +357,7 @@ double b1_convolution(double x, double q2, double f1, B1Mode mode) {
   if (mode == B1Mode::kToy) return 0.1 * toy_b1_shape(x, q2, f1);
   const double xs = std::max(x, 1e-6);
   const double xb1 = tables::kB1CdksQ2p5().interp("xb1_theory1_sum", xs);
-  return B1_PER_DEUTERON_TO_PER_NUCLEON * xb1 / xs;
+  return B1_CDKS_TABLE_TO_PER_NUCLEON * xb1 / xs;
 }
 
 double close_kumano_integral(bool cdks) {

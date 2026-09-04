@@ -125,6 +125,15 @@ if(LIPOLGEN_WITH_PYTHIA)
     execute_process(COMMAND ${PYTHIA8_CONFIG} --includedir OUTPUT_VARIABLE PYTHIA8_INCDIR OUTPUT_STRIP_TRAILING_WHITESPACE)
     execute_process(COMMAND ${PYTHIA8_CONFIG} --libdir     OUTPUT_VARIABLE PYTHIA8_LIBDIR OUTPUT_STRIP_TRAILING_WHITESPACE)
     execute_process(COMMAND ${PYTHIA8_CONFIG} --datadir    OUTPUT_VARIABLE PYTHIA8_DATADIR OUTPUT_STRIP_TRAILING_WHITESPACE)
+    # Where PYTHIA's own PDF grids live.  `xmldoc` was already compiled in;
+    # `pdfdata` was not, and `mstw_sf.cpp` needs it -- the MSTW2008 LO central
+    # grid CDKS used is `${PYTHIA8_DATADIR}/pdfdata/mstw2008lo.00.dat`, which
+    # is on disk even though LHAPDF's set store has no MSTW2008 set.  Derived
+    # from pythia8-config like the rest of the deps prefix, a CACHE PATH so a
+    # build can point elsewhere, and overridden at RUN time by
+    # $LIPOLGEN_PYTHIA8_PDFDATA -- exactly the LIPOLGEN_DATA_DIR arrangement.
+    set(LIPOLGEN_PYTHIA8_PDFDATA "${PYTHIA8_DATADIR}/pdfdata" CACHE PATH
+        "Compiled-in default for PYTHIA 8's pdfdata grid directory (override at run time with \$LIPOLGEN_PYTHIA8_PDFDATA)")
     file(GLOB LIPOLGEN_PYTHIA_SOURCES CONFIGURE_DEPENDS src/pythia/*.cpp)
     if(LIPOLGEN_PYTHIA_SOURCES)
       add_library(lipolgen_pythia SHARED ${LIPOLGEN_PYTHIA_SOURCES})
@@ -133,7 +142,8 @@ if(LIPOLGEN_WITH_PYTHIA)
       target_link_directories(lipolgen_pythia PUBLIC ${PYTHIA8_LIBDIR})
       target_link_libraries(lipolgen_pythia PUBLIC lipolgen_core pythia8 dl)
       target_compile_definitions(lipolgen_pythia PUBLIC LIPOLGEN_HAVE_PYTHIA8=1
-        LIPOLGEN_PYTHIA8_XMLDOC="${PYTHIA8_DATADIR}/xmldoc")
+        LIPOLGEN_PYTHIA8_XMLDOC="${PYTHIA8_DATADIR}/xmldoc"
+        LIPOLGEN_PYTHIA8_PDFDATA="${LIPOLGEN_PYTHIA8_PDFDATA}")
       if(TARGET lipolgen_hepmc)
         target_link_libraries(lipolgen_pythia PUBLIC lipolgen_hepmc)
       endif()

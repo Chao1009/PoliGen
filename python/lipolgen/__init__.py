@@ -60,7 +60,7 @@ from .export import (inclusive_dict, tagged_dict, hfs_sample,  # noqa: F401
 __all__ = [n for n in dir(_lipolgen) if not n.startswith("_")] + [
     "export", "inclusive_dict", "tagged_dict", "hfs_sample", "write_hfs_npz",
     "write_columns_npz", "CHANNELS", "PLANS", "TRITON_SFS", "FSI", "RC",
-    "B1_MODELS",
+    "B1_MODELS", "B1_UNPOL",
     "make_config", "make_plan", "make_pipeline", "run", "__version__",
 ]
 
@@ -146,13 +146,48 @@ RC = {
 #: "li6-convolution".  "li6-convolution" is
 #: b1_nuclear.hpp's four-term alpha-d convolution (design_D_b1_li6.md):
 #: INCLUSIVE CHANNEL ONLY and 6Li ONLY (on a tagged channel the alpha-d
-#: density is already in the event weight), and its A = 2 magnitude gate is
-#: NOT passed -- band every number with --b1-band-scale 0/1/2 and never quote
-#: one row alone.
+#: density is already in the event weight).  Its A = 2 magnitude gate PASSES
+#: since 2026-09-03, but only for ONE unpolarised nucleon input: MSTW2008 LO
+#: (`--b1-unpol mstw`, `B1_UNPOL` below) at CDKS Eq. (21)'s delta-function,
+#: where G3b = 0.843243.  The SHIPPED DEFAULT `--b1-unpol toy` gives 0.440 --
+#: OUTSIDE the gate's [0.5, 2] acceptance window -- so quote numbers made with
+#: `b1_unpol="mstw"`; toy-backend numbers are not covered by the lift.  The
+#: gate is A = 2 on every setting and says nothing about the alpha-d step, so
+#: band every number with --b1-band-scale 0/1/2 and never quote one row alone.
 B1_MODELS = {
     "miller": _lipolgen.B1Model.Miller,
     "cdks": _lipolgen.B1Model.Cdks,
     "li6-convolution": _lipolgen.B1Model.Li6Convolution,
+}
+
+#: `--b1-unpol` -- which UNPOLARISED structure-function backend the
+#: "li6-convolution" b1 folds its own F1 against
+#: (`Li6ConvolutionOptions.unpol`).  "toy" is the DEFAULT and is bit for bit
+#: what every published number was made with: the inclusive kernel's own
+#: `ToyF2`, handed to the convolution as ONE shared object.  "mstw" is
+#: MSTW2008 LO over PYTHIA 8's own pdfdata grid -- the PDF CDKS computed their
+#: b1_d with, and the one the A = 2 gate passes on (G3b 0.843 against 0.440 on
+#: the toy) -- and needs the optional PYTHIA tier.  "ct18nlo" is the phase-D
+#: stand-in, kept selectable so the systematic can be quoted rather than
+#: remembered, and needs the optional LHAPDF tier.
+#:
+#: MEASURED on the shipped observable `Li6ConvolutionB1.b1(x, 2.5)`:
+#: mstw/toy = 1.847766 / 1.275961 / 0.816971 and ct18nlo/toy = 2.221302 /
+#: 1.238833 / 1.045870 at x = 0.10 / 0.30 / 0.50.  Up to a factor 1.85 and NOT
+#: monotone, so it is a shape change and not a normalisation.
+#:
+#: It reaches the b1 and NOTHING else: the kernel's own `f2_source` stays
+#: `ToyF2` on every setting, so the SPIN-BLIND cell cross section
+#: (`InclusiveSampler.cell_xsec_pb`) is bit for bit under this flag and only
+#: the tensor shift moves.  Read only by "li6-convolution"; `validate()` refuses it
+#: on the other two models rather than let `meta["b1_unpol"]` record a PDF
+#: that never touched the rate.  `B1UnpolSource.Custom` is not here on
+#: purpose: it names an object, so it is set by assigning
+#: `config.b1_unpol_sf`.
+B1_UNPOL = {
+    "toy": _lipolgen.B1UnpolSource.Toy,
+    "mstw": _lipolgen.B1UnpolSource.Mstw,
+    "ct18nlo": _lipolgen.B1UnpolSource.Ct18Nlo,
 }
 
 #: Run-plan names accepted on the command line (aliases included).
@@ -182,7 +217,7 @@ def make_config(isotope="6Li", config=1, channel="inclusive", events=0,
                 rc_fq_scale=None, rc_tail_tensor_scale=None,
                 rc_qe_suppression=None,
                 b1_model=None, b1_band_scale=None,
-                b1_alpha_d_dwave_weight=None):
+                b1_alpha_d_dwave_weight=None, b1_unpol=None):
     """A `PipelineConfig` from plain values (the CLI's own constructor).
 
     `channel` is a key of `CHANNELS`; `optics` a key of `OPTICS`.  The isotope
@@ -220,6 +255,15 @@ def make_config(isotope="6Li", config=1, channel="inclusive", events=0,
     shape knob on the alpha-d orbital terms (2d) + (2a) together, read only by
     "li6-convolution".  A knob that the chosen backend does not read is
     REFUSED at 1.0-away values, for the same provenance reason.
+    `b1_unpol` is a key of `B1_UNPOL` ("toy", the default, "mstw" or
+    "ct18nlo") or a `B1UnpolSource` directly: the UNPOLARISED backend the
+    "li6-convolution" b1 folds its own F1 against.  "mstw" is CDKS's own
+    MSTW2008 LO and is the configuration the A = 2 gate passes on; it needs
+    the optional PYTHIA tier and raises RuntimeError naming it (or naming the
+    missing grid file) in a build that has none -- it is never silently
+    replaced by the toy.  It is read only by "li6-convolution" and moves b1
+    only: the spin-blind cell cross section is bit-identical across settings,
+    the tensor-weighted per-category cross sections are not.
     """
     if channel not in CHANNELS:
         raise ValueError("unknown channel %r; know %s"
@@ -312,6 +356,18 @@ def make_config(isotope="6Li", config=1, channel="inclusive", events=0,
         cfg.b1_band_scale = float(b1_band_scale)
     if b1_alpha_d_dwave_weight is not None:
         cfg.b1_alpha_d_dwave_weight = float(b1_alpha_d_dwave_weight)
+    if b1_unpol is not None:
+        if isinstance(b1_unpol, str):
+            if b1_unpol not in B1_UNPOL:
+                raise ValueError("unknown b1_unpol %r; know %s"
+                                 % (b1_unpol, ", ".join(sorted(B1_UNPOL))))
+            b1_unpol = B1_UNPOL[b1_unpol]
+        # NOT a plain assignment: the enum is the provenance and the backend
+        # object is the realisation, and the core library links neither the
+        # PYTHIA nor the LHAPDF tier, so the binding is what builds the
+        # object.  It raises here, naming the missing tier, rather than
+        # letting `validate()` report a named-but-empty slot later.
+        _lipolgen.set_b1_unpol(cfg, b1_unpol)
     if inclusive_b1 is not None:
         struck = cfg.struck
         struck.inclusive_b1 = bool(inclusive_b1)

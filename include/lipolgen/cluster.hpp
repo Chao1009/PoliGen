@@ -24,6 +24,7 @@
 /// behind the same `radial()` interface -- see `ClusterWaveSource` below and
 /// `docs/open_items/vmc_reconciliation.md` for which file feeds which wave.
 
+#include <array>
 #include <memory>
 #include <string>
 #include <vector>
@@ -111,6 +112,185 @@ struct FdeutTable {
 /// than silently propagated -- it is far inside every tolerance in
 /// docs/open_items/run_2026-09-02/design_D_b1_li6.md section 5.
 FdeutTable read_fdeut_k(const std::string& path);
+
+// -------------------------------------------------------- the CD-Bonn deuteron
+
+/// CD-Bonn's own deuteron binding energy: R. Machleidt, Phys. Rev. C 63,
+/// 024001 (2001) (arXiv:nucl-th/0006014), Table XV (LaTeX label `tab_deu`).
+///
+/// This is NOT a second copy of any binding energy already in the library.
+/// `fdeut.av18`'s header `ebind` = 2.224574 MeV is AV18's and stays where it
+/// is; `DEUTERON_P_TAG().separation_energy` is the tagged channel's rounded
+/// 2.2246e-3 GeV.  A wave function's epsilon_d must belong to the wave
+/// function it is convolved with, so `cdbonn_fdeut_table` puts THIS one in
+/// `FdeutTable::ebind_gev`.
+///
+/// It is TYPED, not derived from `CD_BONN_GAMMA_FM`.  gamma does imply it, to
+/// 5e-7, but only through Machleidt's relativistic Eq. (D11); the
+/// non-relativistic gamma = sqrt(M_N B_d)/hbar c misses the published gamma
+/// by 3.0e-4 (docs/open_items/run_2026-09-03/phase_A_cdbonn.md section 5.2),
+/// and reproducing (D11) would need Machleidt's own hbar c, M_p and M_n --
+/// a third hbar c, which docs/CONVENTIONS.md forbids.
+inline constexpr double CD_BONN_BINDING_MEV = 2.224575;
+
+/// THE PUBLISHED CD-BONN COEFFICIENTS, verbatim.
+///
+/// Source: R. Machleidt, "The high-precision, charge-dependent Bonn
+/// nucleon-nucleon potential (CD-Bonn)", Phys. Rev. C 63, 024001 (2001);
+/// e-print arXiv:nucl-th/0006014, Table XX (LaTeX label `tab_dwpar`,
+/// "Coefficients for the parametrized deuteron wave functions (n = 11)"),
+/// with the parameterisation in Appendix D, Eqs. (D19)-(D25) and gamma in
+/// Eq. (D6).  Read out of the e-print's LaTeX source and cross-read out of
+/// `pdftotext` of the PDF, digit for digit -- see
+/// docs/open_items/run_2026-09-03/phase_A_cdbonn.md sections 1 and 3, which
+/// also reproduces both listings.
+///
+/// The table publishes C_1..C_10 and D_1..D_8 ONLY.  C_11 and D_9..D_11 are
+/// determined by the r -> 0 boundary conditions and are computed in
+/// `cdbonn_wave()`; see `CdBonnWave` below.
+inline constexpr double CD_BONN_GAMMA_FM = 0.2315380;   ///< gamma [fm^-1], Eq. (D6)
+inline constexpr double CD_BONN_M0_FM = 0.9;            ///< m_0 [fm^-1], Eq. (D25)
+inline constexpr int CD_BONN_N = 11;                    ///< n, Table XX's caption
+inline constexpr double CD_BONN_C[10] = {                            // fm^-1/2
+    0.88472985e+00, -0.26408759e+00, -0.44114404e-01, -0.14397512e+02,
+    0.85591256e+02, -0.31876761e+03,  0.70336701e+03, -0.90049586e+03,
+    0.66145441e+03, -0.25958894e+03};
+inline constexpr double CD_BONN_D[8] = {                             // fm^-1/2
+    0.22623762e-01, -0.50471056e+00,  0.56278897e+00, -0.16079764e+02,
+    0.11126803e+03, -0.44667490e+03,  0.10985907e+04, -0.16114995e+04};
+
+/// The CD-Bonn deuteron wave function, r- and momentum-space parameterisation
+/// of Machleidt, PRC 63, 024001 (2001), **Appendix D**, Eqs. (D19)-(D25),
+/// with the coefficients of **Table XX** (LaTeX label `tab_dwpar`).
+///
+/// WHY IT IS HERE.  Gate condition 3 of open item 10
+/// (docs/OPEN_ITEMS_SOLUTIONS.md) asks the A = 2 gate for a REAL CD-Bonn u, w
+/// rather than the D-state RESCALING PROXY of item 5 (AV18's w scaled to
+/// P_D = 4.85 %), because CDKS built the Fig. 4 curve the gate compares
+/// against on CD-Bonn.  The proxy has the wrong SIGN of the effect: measured
+/// through this repository's own gate, CD-Bonn moves the G3b peak ratio the
+/// opposite way from the proxy.  The reason is that CD-Bonn's D wave is not a
+/// rescaled AV18 D wave: w(CD-Bonn)/w(AV18) runs 1.02 -> 0.99 -> 0.36 over
+/// p = 0.1, 1.0, 5.0 fm^-1, so ONE factor (which is all the proxy is) is
+/// ~11 % too small where the D wave is largest and 2.6x too large in the
+/// tail.  On top of that CD-Bonn's first S node sits 13 % higher in k
+/// (between 2.3 and 2.4 fm^-1 against AV18's 2.0-2.1) and its u is half as
+/// big beyond it, which nearly removes the NEGATIVE lobe of the S-D
+/// interference that partly cancels the positive one in AV18 -- and a
+/// rescaling can never see that, because it keeps AV18's node.  The
+/// measurements are in
+/// docs/open_items/run_2026-09-03/phase_A_cdbonn.md (sections 6-8) and the
+/// gate rows in .../phase_A_numbers.md section 8.
+///
+/// A TABLE-NUMBERING WARNING.  Several planning documents in this repository
+/// say "Tables XVII/XVIII".  In the e-print those are the scalar-isoscalar
+/// boson parameters; the deuteron material is Table XIX (numerical u, w) and
+/// **Table XX** (these coefficients).  The LaTeX labels `tab_dwpar` /
+/// `tab_dwaves` are the unambiguous handles and are what is cited here; the
+/// published journal's numbering has not been checked against the e-print's.
+///
+/// THE PARAMETERISATION, n = 11, m_0 = 0.9 fm^-1, gamma from Eq. (D6):
+///
+///   u_a(r)     = sum_j C_j exp(-m_j r)                              (D19)
+///   w_a(r)     = sum_j D_j exp(-m_j r) [1 + 3/(m_j r) + 3/(m_j r)^2](D20)
+///   psi_0^a(q) = sqrt(2/pi) sum_j C_j/(q^2 + m_j^2)                 (D21)
+///   psi_2^a(q) = sqrt(2/pi) sum_j D_j/(q^2 + m_j^2)                 (D22)
+///   m_j        = gamma + (j - 1) m_0                                (D25)
+///
+/// ONLY C_1..C_10 and D_1..D_8 ARE PUBLISHED.  C_11 and D_9..D_11 are fixed
+/// by the boundary conditions u_a(r) -> r and w_a(r) -> r^3 as r -> 0
+/// (Eqs. (D23)/(D24)) and are COMPUTED in `cdbonn_wave()`, never typed --
+/// typing them would be a second definition of a physics quantity, which
+/// docs/CONVENTIONS.md forbids, and the four residuals are gated in
+/// tests/test_cluster.cpp.  This file uses the equivalent form of those
+/// constraints, obtained by expanding
+/// e^{-x}(1 + 3/x + 3/x^2) = 3/x^2 - 1/2 + x^2/8 - ... (the 1/x term cancels
+/// identically), which is three SUM RULES rather than Eq. (D24)'s three
+/// circular permutations and so cannot be mis-permuted:
+///
+///   sum_j C_j = 0 ,  sum_j D_j/m_j^2 = 0 ,  sum_j D_j = 0 ,
+///   sum_j D_j m_j^2 = 0 .
+///
+/// Machleidt's own warning, quoted because it is a real trap: "The
+/// constraints Eqs. (D23) and (D24) must be enforced by double precision
+/// (i.e., to about 15 decimal digits), otherwise the wave function is not
+/// reproduced correctly for r <= 0.5 fm.  This applies, particularly, to the
+/// D wave."
+///
+/// THE SIGN -- the (-i)^L trap that b1_nuclear.hpp's `ClusterPartialWave`
+/// already warns about, and CD-Bonn walks straight into it.  Machleidt's
+/// Eq. (D13) is printed with a BARE j_L kernel for both L; taken together
+/// with (D20)/(D22) that is inconsistent at L = 2 -- the bare-j_2 transform
+/// of psi_2^a comes back as MINUS w_a(r), while the L = 0 pair round-trips
+/// (measured, phase_A_cdbonn.md section 4).  `fdeut.av18`'s own r and k
+/// blocks ARE related by the bare kernel for BOTH L.  So the drop-in
+/// convention, and what `psi_s`/`psi_d` return, is
+///
+///   u(p) = + psi_0^a(p) ,     w(p) = - psi_2^a(p) ,
+///
+/// i.e. exactly `FdeutTable`'s `u`, `w`, hence the CDKS phi_0 = u,
+/// phi_2 = -w.  Three independent confirmations are recorded in
+/// phase_A_cdbonn.md sections 4 and 8.3; the cheapest is
+/// `alpha_d_quadrupole_fm2`, which returns +0.2702 fm^2 with this sign
+/// (CD-Bonn's published Q_d = 0.270 fm^2) and -0.3037 with the other.
+///
+/// UNITS are the paper's throughout this struct: p in fm^-1, C_j, D_j in
+/// fm^-1/2, psi in fm^3/2, and the normalisation is
+/// (2/pi) int_0^inf dp p^2 (u^2 + w^2) = 1 (Eq. D14).  The single conversion
+/// to the library's GeV happens in `cdbonn_fdeut_table`, with
+/// `HBARC_GEV_FM`, exactly as `read_fdeut_k` does it.
+struct CdBonnWave {
+  std::array<double, 11> m{};   ///< m_j [fm^-1], Eq. (D25)
+  std::array<double, 11> c{};   ///< C_j [fm^-1/2]; c[10] is COMPUTED
+  std::array<double, 11> d{};   ///< D_j [fm^-1/2]; d[8..10] are COMPUTED
+
+  /// u(p) = +psi_0^a(p) [fm^3/2], p in fm^-1.
+  double psi_s(double p_fm) const;
+  /// w(p) = -psi_2^a(p) [fm^3/2] -- SIGNED as above, p in fm^-1.
+  double psi_d(double p_fm) const;
+
+  /// The momentum-space moments in CLOSED FORM.  With
+  /// (2/pi) int_0^inf dp p^2/[(p^2+a^2)(p^2+b^2)] = 1/(a+b) the two norms are
+  /// the double sums sum_ij C_i C_j/(m_i+m_j) and sum_ij D_i D_j/(m_i+m_j),
+  /// so they carry NO quadrature error at all -- which is what makes them a
+  /// sharp test of the coefficients rather than of an integrator.
+  double norm_s() const;   ///< (2/pi) int dp p^2 u^2
+  double norm_d() const;   ///< (2/pi) int dp p^2 w^2 -- the D-state probability
+  double norm() const;     ///< the sum; = 1 by Eq. (D14)
+
+  /// The asymptotics of Eq. (D15).  m_1 = gamma is the slowest-decaying mass,
+  /// so u_a -> C_1 e^{-gamma r} and w_a -> D_1 e^{-gamma r}[1 + 3/(gamma r) +
+  /// 3/(gamma r)^2], i.e. A_S = C_1 and A_D = D_1 with no integral needed.
+  double a_s() const;      ///< A_S = C_1
+  double a_d() const;      ///< A_D = D_1
+  double eta() const;      ///< A_D/A_S, the asymptotic D/S ratio
+
+  /// The four boundary-condition sums, in the order
+  /// {sum C_j, sum D_j/m_j^2, sum D_j, sum D_j m_j^2}.  All four are zero by
+  /// construction; the test measures HOW zero, which is Machleidt's
+  /// "about 15 decimal digits" demand made mechanical.
+  std::array<double, 4> constraint_residuals() const;
+};
+
+/// The one CD-Bonn wave function: Table XX with C_11 and D_9..D_11 solved
+/// for.  Built once, on first use.
+const CdBonnWave& cdbonn_wave();
+
+/// CD-Bonn sampled on `k = 0, dk, .. k_max` [fm^-1] and returned as an
+/// `FdeutTable`, i.e. converted to the library's GeV units with
+/// `HBARC_GEV_FM` in BOTH the abscissa and the fm^3/2 ordinate (the same
+/// "both or neither" rule `read_fdeut_k` states), and carrying
+/// `CD_BONN_BINDING_MEV` as `ebind_gev`.  So a caller can swap
+/// `read_fdeut_k(...)` for this and change the WAVE FUNCTION and nothing
+/// else.
+///
+/// The defaults are `fdeut.av18`'s OWN grid -- 0 to 20 fm^-1 in steps of 0.1,
+/// 201 rows -- deliberately, so that an AV18 row and a CD-Bonn row of the
+/// gate differ in the wave function alone: same spline, same node count, same
+/// 20 fm^-1 truncation.  Refining to dk = 0.02 moves the gate's peak by 5e-4
+/// relative (phase_A_cdbonn.md section 8.4), so the coarse grid is not what
+/// drives any of it.  Throws if `dk_fm <= 0` or `k_max_fm < dk_fm`.
+FdeutTable cdbonn_fdeut_table(double k_max_fm = 20.0, double dk_fm = 0.1);
 
 // ----------------------------------------------------------------- VmcRadial
 

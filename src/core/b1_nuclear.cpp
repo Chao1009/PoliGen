@@ -482,12 +482,22 @@ DeuteronConvolutionB1::DeuteronConvolutionB1(Options opt) : opt_(std::move(opt))
     // CDKS use the SLAC/E143 world fit R1998, not the programme's toy R.
     opt_.r_func = [](double x, double q2) { return r1998(x, q2); };
   }
-  const FdeutTable t = read_fdeut_k(opt_.fdeut_path);
+  // The wave function is the ONLY thing `Options::wave` changes: both
+  // branches hand the SAME `FdeutTable` contract (GeV abscissa, GeV^-3/2
+  // u, w with w = -phi_2, and the wave function's OWN binding energy) to the
+  // same two lines below.
+  const bool cdbonn = opt_.wave == DeuteronWaveSource::kCdBonn;
+  const FdeutTable t =
+      cdbonn ? cdbonn_fdeut_table(opt_.cdbonn_k_max_fm, opt_.cdbonn_dk_fm)
+             : read_fdeut_k(opt_.fdeut_path);
   eps_ = t.ebind_gev;
   phi0_ = ClusterPartialWave::from_uw(t.k_gev, t.u, 0);
   phi2_ = ClusterPartialWave::from_uw(t.k_gev, t.w, 2);
-  phi0_.provenance = opt_.fdeut_path + " u(k)";
-  phi2_.provenance = opt_.fdeut_path + " w(k)  [phi_2 = -w]";
+  const std::string src =
+      cdbonn ? "CD-Bonn (Machleidt PRC 63 (2001) 024001, Table XX)"
+             : opt_.fdeut_path;
+  phi0_.provenance = src + " u(k)";
+  phi2_.provenance = src + " w(k)  [phi_2 = -w]";
   ConvolutionKinematics kin;
   kin.m_struck = M_NUCLEON;
   kin.m_recoil = M_NUCLEON;   // the residual system of a deuteron IS a nucleon

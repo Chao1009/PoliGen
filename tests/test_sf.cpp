@@ -157,9 +157,22 @@ TEST_CASE("g2_ww on a power law matches its analytic Wandzura-Wilczek form") {
 }
 
 TEST_CASE("the digitized Miller b1 curve reproduces the published figure") {
-  // The tables hold the published PER-DEUTERON b1 and the accessor halves it,
-  // because every consumer pairs b1 with a per-nucleon F1.  At x = 0.012 the
-  // digitized total is 0.114 per deuteron, against HERMES's 0.112 +- 0.055.
+  // The MILLER table is per DEUTERON and `toy_b1` converts it with
+  // B1_MILLER_TABLE_TO_PER_NUCLEON = 0.5.  (The CDKS table is NOT converted --
+  // the two camps stopped sharing one factor on 2026-09-03; constants.hpp.)
+  // Both assertions below are DIGITIZATION checks -- that reading kB1Miller at
+  // x = 0.012 returns 0.1143 -- and hold whatever that column is per.
+  //
+  // Do not read them as agreement with HERMES.  HERMES's published
+  // b1_d = (11.20 +- 5.51 +- 2.77)e-2 is PER NUCLEON: their Eq. (5) divides by
+  // an F1_d built from F2_d = (F2_p + F2_n)/2, and inverting their own
+  // Table II reproduces that F1_d in all six bins (mean ratio 0.95, against
+  // 0.47 for the per-deuteron one).  The honest comparison is therefore
+  // 0.1143/2 = 0.057 per nucleon against 0.112 +- 0.055 +- 0.028, i.e. 0.97
+  // sigma LOW -- consistent, but not sitting on the point.  That the UNHALVED
+  // curve passes through the datum is the coincidence Miller himself read as
+  // agreement, and it is evidence for the reading this factor decides against
+  // (docs/open_items/run_2026-09-03/phase_A_miller_normalisation.md 4.3).
   CHECK_CLOSE(2.0 * toy_b1(0.012, 2.5, 0.0), 0.11429317074113018, kRtol);
   CHECK_CLOSE_AT(2.0 * toy_b1(0.012, 2.5, 0.0), 0.114, 0.0, 0.01);
   // constant extrapolation below the table's x = 0.01
@@ -172,8 +185,16 @@ TEST_CASE("the digitized Miller b1 curve reproduces the published figure") {
 }
 
 TEST_CASE("the digitized CDKS convolution is the other b1 camp") {
-  CHECK_CLOSE(b1_convolution(0.3, 2.5, 0.0), -0.0002816198975086724, kRtol);
-  CHECK_CLOSE(b1_convolution(0.05, 2.5, 0.0), 5.8517162680014353e-05, kRtol);
+  // Both pins DOUBLED on 2026-09-03: the CDKS column is already per nucleon
+  // (Eq. (10)'s 1/A, the text under Eq. (16), F1^N = (F1p + F1n)/2), so
+  // `b1_convolution` stopped halving it -- B1_CDKS_TABLE_TO_PER_NUCLEON = 1.
+  // Was -2.816198975086724e-04 and +5.8517162680014353e-05.
+  CHECK_CLOSE(b1_convolution(0.3, 2.5, 0.0), -0.0005632397950173448, kRtol);
+  CHECK_CLOSE(b1_convolution(0.05, 2.5, 0.0), 1.1703432536002871e-04, kRtol);
+  // ... and it is now EXACTLY the raw column, with no conversion at all
+  CHECK_CLOSE(b1_convolution(0.3, 2.5, 0.0),
+              tables::kB1CdksQ2p5().interp("xb1_theory1_sum", 0.3) / 0.3,
+              kRtol);
   CHECK(std::fabs(b1_convolution(0.3, 2.5, 0.0)) < 1e-3);
   CHECK(std::fabs(b1_convolution(0.25, 2.5, 0.0)) < 1e-3);
   // two sign changes in 0.01 < x < 0.5 (at 0.06 and 0.42), which the old

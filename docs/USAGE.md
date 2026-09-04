@@ -153,12 +153,46 @@ choice, not a fact:
 | `--b1-model` | `B1Model` | what it is |
 |---|---|---|
 | `miller` (default) | `B1Model::Miller` | `Li6B1(MillerB1)` through `LI6_B1_RANK2_TRANSFER` and `LI6_B1_PER_NUCLEON` (2/6). **Bit-for-bit what every published inclusive tensor number was made with**, and pinned at rtol 1e-12 by `validation/reference/b1_default_li6.json` (`tests/test_b1_nuclear.cpp` T9). This IS the run PLAN's "toy": today's default `b1_func` is `Li6B1(MillerB1)`, which is what `toy_b1` reaches. |
-| `cdks` | `B1Model::Cdks` | the same ⁶Li rank-2 transfer on the **other camp** for b₁ᵈ — the digitized Cosyn–Dong–Kumano–Sargsian PRD **95** (2017) 074036 Fig. 4 column. \|b₁\| is **two orders of magnitude smaller below x ≈ 0.1 and comparable above it**: peak \|x·b₁\| 1.67e−4 against Miller's 4.27e−4 over x ∈ [0.02, 0.95] at Q² = 2.5, and at x = 0.3 it is **4× larger** with the opposite sign (∫b₁ dx 6.9e−5 against 9.1e−4). Different sign structure throughout. |
+| `cdks` | `B1Model::Cdks` | the same ⁶Li rank-2 transfer on the **other camp** for b₁ᵈ — the digitized Cosyn–Dong–Kumano–Sargsian PRD **95** (2017) 074036 Fig. 4 column. \|b₁\| is **two orders of magnitude smaller below x ≈ 0.1 and comparable to or larger than Miller's above it**: peak \|x·b₁\| **3.34e−4** against Miller's 4.27e−4 over x ∈ [0.02, 0.95] at Q² = 2.5, and at x = 0.3 it is **8× larger** with the opposite sign (∫b₁ dx **1.39e−4** against 9.1e−4). Different sign structure throughout. **These numbers DOUBLED on 2026-09-03**: `b1_convolution()` stopped applying `B1_PER_DEUTERON_TO_PER_NUCLEON` to a column that CDKS Eq. (10) and the text under their Eq. (16) say is already per nucleon (§2a "The two b₁ camps are not per the same thing"). |
 | `li6-convolution` | `B1Model::Li6Convolution` | `Li6ConvolutionB1` (`b1_nuclear.hpp`): the **four-term α–d convolution** of `docs/open_items/run_2026-09-02/design_D_b1_li6.md`. |
 
 Miller (HERMES-like) and CDKS (convolution) are *different camps* for the
 deuteron's own b₁ and the library does not adjudicate between them. **Say which
 one a plot used.**
+
+### The two b₁ camps are not per the same thing
+
+Both digitized curves are consumed as **per-nucleon** b₁, because every F₁ in
+this program is per nucleon — but they do not arrive that way, and since
+2026-09-03 they no longer share one conversion constant
+(`include/lipolgen/constants.hpp`).
+
+| camp | table | applied factor | why |
+|---|---|---|---|
+| Miller | `kB1Miller` | `B1_MILLER_TABLE_TO_PER_NUCLEON` = **0.5** | Miller PRC **89** (2014) 045203 is **per deuteron**: his Eq. (1) densities are "in a target hadron", Eq. (5) is a light-cone correlator in the normalised deuteron state, and Eq. (6)'s ½ is the quark-spin average of a *spinless* pion, so no 1/A is left anywhere in Eqs. (1)/(5)/(6)/(20). **Likely, not certain** — see below |
+| CDKS | `kB1CdksQ2p5` | `B1_CDKS_TABLE_TO_PER_NUCLEON` = **1** | CDKS PRD **95** (2017) 074036 is **already per nucleon**: Eq. (10)'s spectral function carries an explicit 1/A, the text under Eq. (16) says so in words, f(y) is normalised to one nucleon and F₁ᴺ = (F₁ᵖ + F₁ⁿ)/2. **Certain** |
+
+The arbiter is neither paper but **HERMES**, the data both camps plot against:
+their published b₁ᵈ is **per nucleon**, because their Eq. (5) divides by an F₁ᵈ
+built from F₂ᵈ = (F₂ᵖ + F₂ⁿ)/2 — and inverting their own Table II reproduces
+that F₁ᵈ in all six bins (mean ratio 0.95, against 0.47 for the per-deuteron
+one). Full argument:
+`docs/open_items/run_2026-09-03/phase_A_miller_normalisation.md`.
+
+**What changed at the run surface:** `--b1-model cdks` (and anything reading
+`b1_convolution` / `CdksB1`) is a **factor 2 larger** than before 2026-09-03.
+`--b1-model miller`, the default, and `--b1-model li6-convolution`, which
+already reached the raw column through `cdks_b1_raw_per_nucleon()`, are both
+**bit-for-bit unchanged**; the rtol-1e−12 reference gate does not move.
+
+**What is still open on Miller.** His paper is self-inconsistent by exactly
+this factor: the derivation is per deuteron, but his Table I transcribes
+HERMES's per-nucleon numbers unrescaled, his Fig. 5 overlays them on the curve,
+and he tunes P₆q to one of them. Keeping the 0.5 is the status quo and is
+recorded as an author decision (`OPEN_ITEMS_SOLUTIONS.md` §10, condition 6).
+The sharp form of the question is *"does Miller's Eq. (20) evaluate to
+10.5 × 10⁻² or 5.25 × 10⁻² at x = 0.012?"*, and answering it needs the pion PDF
+set (his ref [29], model 1) that this tree does not have.
 
 ```cpp
 PipelineConfig cfg;
@@ -217,19 +251,54 @@ while the npz/HFS `meta` would still record it.
   `--b1-model cdks --b1-alpha-d-dwave-weight 2` would record a variation that
   never ran, and both now throw. Both knobs must also be ≥ 0 on every model.
 
-### Which R each object uses — they are NOT the same
+### Which R each object uses — they are NOT the same, and that is decided
 
 `Li6ConvolutionOptions::r_func` null means **`r_sigma_lt`**, the kernel's own
 toy R, so that the ⁶Li backend's F₁ is consistent with `InclusiveKernel`'s.
 `DeuteronConvolutionB1::Options::r_func` null means **`r1998`**, the SLAC world
 fit, because that is what CDKS used and the A = 2 gate exists to reproduce
 *their* figure. So **the R the gate was validated with is not the R the shipped
-⁶Li backend runs with.** Measured on the gate (κ = 1, like for like): switching
-r1998 → r_sigma_lt moves the second zero from 0.392 to 0.365, i.e. *away* from
-the digitized 0.457, and the peak up by 1.6 %. Far inside the 100 % band, but
-not cosmetic; whether the ⁶Li default should become `r1998` is an **open
-follow-up, not decided in the 2026-09-03 close-out** (`phase_D_gate.md`
-checklist item 2; `OPEN_ITEMS_SOLUTIONS.md` §10 item 4).
+⁶Li backend runs with.**
+
+**Both defaults stay, and it is an author decision rather than an oversight**
+(`OPEN_ITEMS_SOLUTIONS.md` §10, condition 4). What decides it is that the
+observable is a *ratio*: the tensor weight is K/D_φ with K ∋ b₁ and D_φ ∋ F₁,
+and the F₁ in the denominator is `InclusiveKernel`'s, built from the shared
+`ToyF2` with **its** R — which is `r_sigma_lt`, because nothing sets it. Give
+`Li6ConvolutionOptions` a different R and the (1 + R) in the numerator no
+longer cancels the one in the denominator: at Q² = 2.5 the mismatch factor
+(1 + r1998)/(1 + r_sigma_lt) is 1.088 at x = 0.1 and 1.039 at x = 0.3 — the
+same size as the whole effect being chased. Fidelity to CDKS is worth having
+on the *gate*, which has no denominator; inside the pipeline consistency wins.
+
+**The measured cost of the choice** (Q² = 2.5, default options, 2026-09-03):
+
+| x | x·b₁ with `r_sigma_lt` (the default) | with `r1998` | change |
+|---|---|---|---|
+| 0.05 | +3.650716e−6 | +3.449387e−6 | −5.5 % |
+| 0.10 | −2.796612e−6 | −3.484857e−6 | +24.6 % |
+| 0.20 | −2.120522e−5 | −2.235704e−5 | +5.4 % |
+| 0.30 | −4.173248e−5 | −4.284379e−5 | +2.7 % |
+| 0.50 | +5.173934e−5 | +5.075777e−5 | −1.9 % |
+
+**Where that comes from, and it is not the (1 + R) prefactor.** Term (1), the
+embedded deuteron, is **bit-identical** under the swap — it carries b₁ᵈ from
+the injected `TensorSF` (the raw digitized column), which has no R at all. The
+whole effect is in the two orbital terms, whose F₁ᵈ slot *is* `f1_cdks`, and
+there it is **×0.54 to ×0.94**, far more than the ~8 % the prefactor allows:
+those terms convolve F₁ᵈ(x/z) against a density that **integrates to zero**, so
+they respond to the *slope* of R, and `r_sigma_lt` is x-independent by
+construction while `r1998` runs from 0.30 at x = 0.05 to 0.20 at x = 0.5. The
++24.6 % at x = 0.10 is that ×0.64 seen through the near-cancellation between
+term (1) and terms (2d)+(2α). On the **gate**, where there is no cancellation,
+the same swap is worth only +2.7 % on G3b (0.8432 → 0.8662 on a 0.01 grid over
+[0.10, 0.80], MSTW at Eq. (21)) — so the gate's verdict does not rest on it.
+
+The third option, and the one a future task should take instead of flipping a
+default: thread **one** R hook through `default_inclusive_kernel` into both the
+kernel's `UnpolSF` and `Li6ConvolutionOptions`, so the two can never disagree
+by accident. That is a wiring change, not a physics choice, and it is not made
+here.
 
 ### The mandatory 100 % band — never quote a single row
 
@@ -256,47 +325,212 @@ a computed output, not an assumption. Therefore: **every published number from
 these backends is {0, 1, 2} × b₁.** `--b1-alpha-d-dwave-weight 0/1/2` is the
 *shape* variant of the same worry and is reported separately.
 
-### ⚠ The A = 2 validation gate is NOT fully passed
+### The A = 2 validation gate — PASSED since 2026-09-03, and what that does not say
 
-`li6-convolution` is in the tree, opt-in and tested, but the gate of design §5
-**fails its magnitude clause**. Fed the AV18 deuteron u(k), w(k) instead of the
-α–d waves, the same kernel must reproduce the digitized CDKS Fig. 4:
+Design §5's gate is **blocking**: fed the AV18 deuteron u(k), w(k) instead of
+the α–d waves, the same kernel must reproduce the digitized CDKS Fig. 4 before
+any ⁶Li number is quoted. **It now does.** The verdict is read where design
+§5.4's checklist ends — with **MSTW2008 LO, CDKS's own nucleon PDF**
+(checklist item 4; `MstwSF`, below), at **CDKS Eq. (21)'s δ-function**, which
+is `DeuteronConvolutionB1`'s default:
 
 | clause | result |
 |---|---|
 | G0a–G0g (analytic identities), G1a–G1f (unpolarized convolution), layer 2 (α–d sign gate) | **PASS** |
-| **G3a** — two sign changes and the large-x peak position | **PASS** at the gate's default (κ = √(1+γ²), ToyF2, `r1998`) — but by a thin margin, below |
-| **G3b** — peak magnitude within a factor 2 of the digitized 1.0852e−3 | **FAIL**: 4.7748e−4, ratio **0.440**, a factor **2.27 low** (2.9484e−4, ratio 0.272, a factor 3.68, at CDKS Eq. (17)'s κ = 1 form) |
+| **G3a** — exactly two sign changes in (0, 1.0], the first falling within ±0.08 of 0.0656, the second rising within ±0.10 of 0.4572, the peak within ±0.10 of 0.766 | **PASS, QUALIFIED**: zeros **0.0279** and **0.4952**, peak at **0.7716** — misses of 0.038 / 0.038 / 0.0059 against tolerances 0.08 / 0.10 / 0.10. The qualification is the window's **upper** edge, which no tolerance derives: over the reference's own domain [0.010, 1.590] the computed curve has a **third** sign change (1.2204 toy / 1.2177 MSTW / 1.1977 CT18NLO) and the reference has none there. Never quote "exactly two" without the window; the numbers and the argument are in `docs/OPEN_ITEMS_SOLUTIONS.md` §10, "G3a's stated limitation" |
+| **G3b** — max \|x·b₁\| over [0.10, 0.80] within a factor 2 of the digitized 1.08521e−3 | **PASS**: **9.15096e−4**, ratio **0.843243**, a factor **1.19 low** — inside [0.5, 2] with the lower edge cleared by a factor 1.69 |
+| G3c — Close–Kumano ∫b₁ dx, **reported, not enforced** | +2.24896e−4 against the digitized +4.59200e−4, i.e. 0.49 of it (with CD-Bonn, +4.48580e−4 = 0.98) |
 
-**G3a's margin, stated.** The low-x zero clears the [0.02, 1.0] counting
-window's lower edge by **0.0021**, and with a realistic PDF (CT18NLO) it drops
-below the scan floor, so the "exactly two sign changes" clause *fails* there.
-The low-x zero is **not** a robust discriminator; the second zero (0.392 → 0.377
-against the digitized 0.457) and the peak position (0.755 against 0.766) are.
+**Four things that belong in the same breath as the pass.**
+
+1. **It is conditional on the CONFIGURATION, not on the build.** The gate
+   passes for the **MSTW2008 LO** nucleon input at CDKS Eq. (21)'s δ-function.
+   The **shipped default** unpolarised backend — the library `ToyF2` — gives
+   ratio **0.440** on the same clause, *outside* the [0.5, 2] window. MSTW is
+   checklist item 4 and the dominant term of the design's own residual budget,
+   so reading G3b off `ToyF2` reads it *before* the checklist. Since
+   2026-09-04 the passing configuration is emittable from the run surface:
+   `--b1-unpol mstw` (below) puts `MstwSF` into
+   `Li6ConvolutionOptions::unpol` through the pipeline's own
+   `default_inclusive_kernel`. So the rule is **quote numbers made with
+   `--b1-unpol mstw`; the default `toy` backend sits outside the gate's
+   acceptance window and its numbers are not covered by the lift.** They
+   cannot be rescaled into covered ones either — the gap is a shape change,
+   mstw/toy = **1.848 / 1.276 / 0.817** at x = 0.10 / 0.30 / 0.50, up to a
+   factor 1.85 and not monotone. Selecting `mstw` needs the optional PYTHIA
+   tier and is **refused at configuration time, never downgraded**, when the
+   tier or the `mstw2008lo.00.dat` grid is missing; in such a build the
+   doctest's MSTW rows are skipped **loudly** — the run prints
+   `SKIPPED (MSTW2008 LO unavailable)` and doctest reports the case as
+   skipped, not as passed — so a build that cannot reproduce the verdict row
+   also cannot emit a number that claims it.
+2. **It passes comfortably at Eq. (21) and marginally at Eq. (17).** At κ = 1
+   MSTW gives **0.520** — inside [0.5, 2] by 4 % of its own value. Any
+   statement of the form "the gate passes" that does not also say "at CDKS
+   Eq. (21)'s δ-function" is overselling it.
+3. **With CD-Bonn as well the residual closes.** `Options::wave = kCdBonn`
+   (below) — CDKS's own wave function — gives peak ratio **1.000338**, zeros
+   0.0641 / 0.4570 against the digitized 0.0656 / 0.4572, and a dip of
+   −1.769065e−4 against −1.768140e−4. Read that as *"the residual is now below
+   the error of digitizing a published figure"*, never as three-digit agreement
+   with CDKS; and it is specific to CD-Bonn **and** MSTW together — on CT18NLO
+   the same swap improves two landmarks and degrades two others.
+4. **The gate is A = 2.** It validates the kernel on the **deuteron**. There is
+   no measured b₁ for any A > 2, so **the mandatory ±100 % band on every ⁶Li
+   number stays** — that rule comes from Q(⁶Li) = −0.0818(17) fm² against
+   Q_d = +0.2859(3) fm², not from the gate.
 
 **Since 2026-09-03 the gate is quoted at CDKS Eq. (21)'s δ-function**
-(`DeuteronConvolutionB1::Options::finite_q_delta`, now `true`): Eq. (21) is
-their exact definition, y = (E − p_z κ)/M_N with κ = \|q⃗\|/ν, and Eq. (17)'s
+(`DeuteronConvolutionB1::Options::finite_q_delta`, `true`): Eq. (21) is their
+exact definition, y = (E − p_z κ)/M_N with κ = \|q⃗\|/ν, and Eq. (17)'s
 (E − p_z)/M_N is the "≃" of their Eq. (18). It is worth ×1.62 at the peak.
 `Li6ConvolutionOptions::finite_q_delta` keeps its `false` default, where the
 same switch is worth 1 %.
 
-The remaining factor 2.27 is *attributed*, not dangling: a real nucleon PDF
-(CT18NLO in place of `ToyF2`) is ×1.67, and with it the ratio is **0.719 —
-inside the factor-2 window**. That is not this phase's default to change (the
-core must not link LHAPDF, and CDKS's own MSTW2008 LO is not installed), so it
-is recorded rather than absorbed. The full checklist is
-`docs/open_items/run_2026-09-02/phase_D_gate.md`.
+**The residual budget, all measured** (doctest grid, `linspace(0.001, 1.59,
+300)`), starting from the κ = 1 `ToyF2` column:
 
-**Consequence: no ⁶Li number from this backend may be published while that
-stands.** Open item 10 stays open. The CLI prints the warning on every run.
+| item | effect on the peak ratio | in the default? |
+|---|---|---|
+| starting point: `ToyF2`, κ = 1 | 0.271689 | — |
+| 0. finite-\|q⃗\| δ-function, κ = 1 → √(1+γ²) | ×1.6195 | **yes** |
+| 4. nucleon PDF, `ToyF2` → **MSTW2008 LO** | ×1.9152 | opt-in (`MstwSF`) |
+| 5. wave function, AV18 → **CD-Bonn** | ×1.1863 | opt-in (`wave = kCdBonn`) |
+| 1. target mass (CDKS Eq. 22) / 2. R (`r1998`) | ×1.49 at x = 0.8 / ×0.98 | yes / yes |
+| **AV18 + MSTW + Eq. (21)** | **0.843243** | the verdict row |
+| **CD-Bonn + MSTW + Eq. (21)** | **1.000338** | — |
+
+Items 0 and 4 are independent to 0.07 % (0.271689 × 1.91519 × 1.61951 =
+0.842682 predicted against 0.843243 measured), so there is no third
+unexplained factor at the peak, and item 5 supplies exactly the 1.186 that
+was left over. **The ⁶Li publication ban that the previous failure imposed
+under design §5.4's *Escalation* clause is therefore lifted** — that clause
+reads "if **after the checklist** the peak ratio is still outside a factor of
+2", and after the checklist it is not. Quote ⁶Li numbers **as a band**, and say
+which configuration made them.
+
+Full measurements: `docs/open_items/run_2026-09-03/phase_A_numbers.md` (the
+rerun and the CD-Bonn section) and `phase_A_cdbonn.md` (the coefficients). The
+previous, failing verdict is `docs/open_items/run_2026-09-02/phase_D_gate.md`,
+**superseded on G3b** and kept for the argument, not for the number.
+
+#### `MstwSF` — MSTW2008 LO from the grid PYTHIA already ships
+
+`include/lipolgen/mstw_sf.hpp`, implemented in `src/pythia/mstw_sf.cpp`; the
+core library still links neither LHAPDF nor PYTHIA. CDKS computed their b₁ with
+MSTW2008 LO, and the CENTRAL member is on disk as
+`<pythia8 datadir>/pdfdata/mstw2008lo.00.dat` — `Pythia8::MSTWpdf` with
+`i_fit = 3` reads exactly it, so the long-standing "MSTW2008 LO is not
+installed" in the older documents was true only of LHAPDF's set store.
+
+```cpp
+#include "lipolgen/mstw_sf.hpp"
+DeuteronConvolutionB1::Options o;
+o.unpol = std::make_shared<const MstwSF>();   // i_fit = 3 = MSTW2008 LO
+DeuteronConvolutionB1 gate(o);
+```
+
+```python
+o = lipolgen._lipolgen.DeuteronConvolutionB1.Options()
+o.unpol = lipolgen._lipolgen.MstwSF()
+```
+
+The charge weights and the F₂ construction are copied verbatim from
+`LhapdfSF`, so an MSTW/CT18NLO ratio taken from these two classes is a **PDF**
+comparison and not a convention comparison. `pythia8_pdfdata_dir()` is the
+compiled-in directory, overridden at run time by `$LIPOLGEN_PYTHIA8_PDFDATA`.
+
+#### `DeuteronWaveSource` — AV18 from file, or CD-Bonn analytically
+
+`DeuteronConvolutionB1::Options::wave` selects the deuteron wave function the
+A = 2 gate is fed:
+
+| value | what it is |
+|---|---|
+| `kFdeutFile` (**default**) | the tabulated `data/vmc/deuteron/fdeut.av18`, i.e. AV18, P_D = 5.76 % — **unchanged**, and a pytest asserts that setting this explicitly is a bit-for-bit no-op |
+| `kCdBonn` | the analytic CD-Bonn parameterisation (Machleidt, PRC **63** (2001) 024001, Appendix D, Table XX) built by `cdbonn_wave()` / `cdbonn_fdeut_table()` in `cluster.hpp`; P_D = 4.86 %, Q_d = +0.2702 fm² against his published 4.85 % and 0.270 fm². `cdbonn_k_max_fm` / `cdbonn_dk_fm` (default 20.0 / 0.1) are `fdeut.av18`'s **own** grid, so an AV18 row and a CD-Bonn row differ in the wave function and in nothing else |
+
+`C₁₁` and `D₉..D₁₁` are **computed** from the r → 0 boundary conditions, never
+typed. CD-Bonn is CDKS's own wave function and closes the gate's remaining
+factor 1.186 (above) — but it is **not** the default, because flipping it would
+move every pinned gate number, and it is not a uniform improvement on an
+arbitrary PDF.
+
+### `--b1-unpol` — which unpolarised PDF the convolution folds against
+
+`--b1-model li6-convolution` builds its own F₁ from an `UnpolSF`
+(`Li6ConvolutionOptions::unpol`). Until 2026-09-04 that object was hard-wired
+to the library `ToyF2` inside `default_inclusive_kernel`, so **every ⁶Li b₁
+number the generator could emit was made on the toy** — including after the
+A = 2 gate passed on CDKS's own MSTW2008 LO. `--b1-unpol` makes the other
+backends selectable from the run surface, through the pipeline's own kernel
+construction:
+
+| value | backend | needs |
+|---|---|---|
+| `toy` (**default**) | the inclusive kernel's own `ToyF2`, handed to the convolution as **one shared object** — bit for bit what every published number was made with | — |
+| `mstw` | `MstwSF()` — MSTW2008 LO over PYTHIA's `pdfdata` grid, the PDF CDKS computed their b₁ᵈ with | the optional PYTHIA tier |
+| `ct18nlo` | `LhapdfSF("CT18NLO", 0)` — the phase-D stand-in, kept selectable so the PDF systematic can be quoted rather than remembered | the optional LHAPDF tier |
+
+Measured on the shipped observable `Li6ConvolutionB1::b1(x, 2.5)` (2026-09-04):
+
+| x | toy | mstw | mstw/toy | ct18nlo/toy |
+|---|---|---|---|---|
+| 0.10 | −2.796612e-05 | −5.167487e-05 | **1.847766** | 2.221302 |
+| 0.30 | −1.391083e-04 | −1.774967e-04 | **1.275961** | 1.238833 |
+| 0.50 | +1.034787e-04 | +8.453904e-05 | **0.816971** | 1.045870 |
+
+Up to a factor 1.85 and **not monotone**, so the nucleon PDF is a shape change
+in the ⁶Li observable and not a normalisation the 100 % band would absorb.
+
+**Scope, and the price of it.** The flag reaches
+`Li6ConvolutionOptions::unpol` and nothing else. `InclusiveKernel`'s own
+`f2_source` — the F₁ of the unpolarised rate, and so the D_φ denominator of
+the tensor weight — stays `ToyF2` on every setting, so the **spin-blind rate
+is bit for bit** under this flag (`InclusiveSampler::cell_xsec_pb` is
+array-identical, the same invariant the 100 % band satisfies) and what moves
+is the tensor shift alone. Measured end to end on a ⁶Li inclusive
+tensor-thirds run (seed 7, `--x-max 0.95`, default grid): the azz0 − azz±
+cross-section split goes from **12.6037 pb** on `toy` to **10.6743 pb** on
+`mstw`, a factor **0.8469**; `sigma_per_category_pb` and `sigma_pb` carry
+that shift and are therefore not bit-identical. The consequence of the narrow
+scope is that with anything but `toy` the numerator's F₁ and the denominator's
+F₁ are no longer the same object, so the partial cancellation the `r_func`
+default relies on is gone. Say which backend a plot used.
+
+**It is never silently downgraded.** Selecting `mstw` in a build with no
+PYTHIA tier, or with no `mstw2008lo.00.dat` on disk, raises at configuration
+time and names what is missing — the tier, or the file and the directory it
+was looked for in. The core library links neither optional tier, so the enum
+(`PipelineConfig::b1_unpol`, the provenance `meta["b1_unpol"]` records) and
+the object (`PipelineConfig::b1_unpol_sf`, the realisation) are two fields of
+one choice, exactly as `optics_choice` / `optics` are; `set_b1_unpol` builds
+the object, and `validate()` refuses a named backend with an empty slot.
+Assigning `config.b1_unpol_sf` yourself names the choice `custom`.
+
+`validate()` also refuses the flag with `--b1-model miller` and `cdks`, which
+never read it — the same provenance rule as `--b1-band-scale` — and the
+existing refusal of a **caller-supplied `kernel` together with a non-miller
+`b1_model` is unchanged**: the point of this flag is that the gate-passing
+configuration no longer needs a hand-built kernel to be expressed.
+
+```bash
+lipolgen-run --b1-model li6-convolution --b1-unpol mstw \
+             --b1-band-scale 0 --x-max 0.95 --events 100000 --npz b0.npz
+```
+
+```python
+cfg = lipolgen.make_config(b1_model="li6-convolution", b1_unpol="mstw",
+                           events=100000)
+```
 
 ### The top x cell — why `--x-max 0.95`
 
 Both opt-in backends carry the CDKS camp's b₁ᵈ, which is a **Q² = 2.5
 digitization with no Q² evolution**. In the topmost cell of the default window
-(x = 0.955) F₁ has fallen far enough that b₁/F₁ reaches **3.3** for `cdks` and
-**5.6** for `li6-convolution` — past where the phi-averaged density 1 + w_avg
+(x = 0.955) F₁ has fallen far enough that b₁/F₁ reaches **6.6** for `cdks`
+(3.3 before the 2026-09-03 normalisation fix doubled that camp) and **5.6** for
+`li6-convolution` — past where the phi-averaged density 1 + w_avg
 stays positive, and `InclusiveSampler` refuses the run with *"negative
 phi-averaged density"*. Use `--x-max 0.95` (or `cfg.scenario.x_max = 0.95`).
 `lipolgen-run` now checks this **before** building the pipeline and says which
@@ -326,8 +560,36 @@ The measured tables — the four terms at five x, the band rows, the knob rows,
 `finite_q_delta` on/off, the densities, the ±5 % N_αd systematic and the T14
 truncation remainders — are in
 `docs/open_items/run_2026-09-02/phase_D_numbers.md` and are summarised in
-`docs/OPEN_ITEMS_SOLUTIONS.md` §10. **They are recorded for reproducibility and
-regression-catching, not as results**, for the gate reason above.
+`docs/OPEN_ITEMS_SOLUTIONS.md` §10.
+
+**They must be REGENERATED under `--b1-unpol mstw` before any of their b₁
+values is quoted as physics.** They were recorded under a publication ban that
+the A = 2 gate lifted on 2026-09-03 — but the lift is a statement about a
+*configuration*, and those tables are not in it. Three facts decide this, and
+they are why "quotable with `r_sigma_lt` and `finite_q_delta = false`" was not
+enough: naming the two small knobs and omitting the unpolarised backend named
+the wrong things.
+
+1. Every row was made with the **default `ToyF2`** unpolarised input. That
+   configuration's own G3b is **0.440** — *outside* the [0.5, 2] acceptance
+   window the lift was read off. Nothing that fails the gate's own magnitude
+   clause is covered by a lift granted on a row that passes it.
+2. The gap is a **shape change, not a normalisation**: mstw/toy on
+   `Li6ConvolutionB1::b1(x, 2.5)` is **1.848 / 1.276 / 0.817** at
+   x = 0.10 / 0.30 / 0.50. No single factor converts the ToyF2 tables into
+   `mstw` ones, so they cannot be rescaled and must be recomputed. Checklist
+   item 4 puts the same effect at **×1.92** on the gate's own peak.
+3. What survives regeneration untouched, and may be cited as it stands, is
+   only what is **algebraic** and so configuration-independent: the four terms
+   summing to `b1` to 1e−12, and the band's exact linearity (the scale-2 row
+   is bit-for-bit 2× the scale-1 row). Every **value**, every ratio *between*
+   terms, and every derived systematic in those tables is a ToyF2 measurement
+   and is labelled as such until it is rerun.
+
+When they are regenerated, the standing rules still apply: **always as a
+{0, 1, 2} × b₁ band and always with the configuration that made them** — which
+now means naming the unpolarised backend first, and then `r_sigma_lt` and
+`finite_q_delta = false`, the ⁶Li backend's defaults and not the gate's.
 
 ## 3. Tagged (⁶Li α, ⁷Li α, d control)
 

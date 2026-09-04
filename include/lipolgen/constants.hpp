@@ -81,9 +81,42 @@ inline constexpr double EPIOS_GAMMA_BYPASS = 43.5;
 inline constexpr double EPIOS_GAMMA_SHIFT_LO = 118.0;
 inline constexpr double EPIOS_GAMMA_SHIFT_HI = 293.0;
 
-/// The published b1 curves are per DEUTERON; every consumer here pairs b1
-/// with a per-NUCLEON F1, so the tables are halved on the way out.
+/// b1 NORMALISATION.  Every consumer here pairs b1 with a per-NUCLEON F1, but
+/// the two digitized deuteron curves are NOT normalised to the same thing, so
+/// since 2026-09-03 they no longer share one applied factor.  The arbiter is
+/// docs/open_items/run_2026-09-03/phase_A_miller_normalisation.md, whose
+/// pivot is that HERMES's PUBLISHED b1_d -- the data both camps plot against
+/// -- is per NUCLEON, because their Eq. (5) divides by an F1_d built from
+/// F2_d = (F2_p + F2_n)/2 (confirmed by inverting their own Table II in all
+/// six bins).
+///
+/// 1/A at A = 2: the conversion of a per-DEUTERON b1 into a per-NUCLEON one.
 inline constexpr double B1_PER_DEUTERON_TO_PER_NUCLEON = 0.5;
+
+/// Applied to `tables::kB1Miller` by `toy_b1()` (sf.cpp).  Miller (PRC
+/// 89:045203) is PER DEUTERON: his Eq. (1) number densities are "in a target
+/// hadron", his Eq. (5) is a light-cone correlator in the normalised deuteron
+/// state, and Eq. (6)'s 1/2 is fully consumed by the quark-spin average of a
+/// SPINLESS pion (q_up = q_down = Delta q / 2), so no 1/A is left anywhere in
+/// Eqs. (1)/(5)/(6)/(20).  LIKELY, NOT CERTAIN -- his Table I transcribes
+/// HERMES's per-nucleon numbers unrescaled, his Fig. 5 overlays them on this
+/// curve and he tunes P_6q to one of them, so the paper is self-inconsistent
+/// by exactly this factor and only the author (or a numerical reproduction of
+/// his Eq. (20)) can close it.  Keeping 0.5 is the status quo; it is recorded
+/// as an AUTHOR DECISION in docs/OPEN_ITEMS_SOLUTIONS.md section 10.
+inline constexpr double B1_MILLER_TABLE_TO_PER_NUCLEON =
+    B1_PER_DEUTERON_TO_PER_NUCLEON;
+
+/// Applied to `tables::kB1CdksQ2p5` by `b1_convolution()` (sf.cpp).  CDKS
+/// (PRD 95:074036) is ALREADY per nucleon -- their Eq. (10) spectral function
+/// carries an explicit 1/A, the text under their Eq. (16) says in words "the
+/// structure function b1 is defined by the one per nucleon", their f(y) is
+/// normalised to ONE nucleon and their F1^N = (F1_p + F1_n)/2 -- so the
+/// column is NOT converted.  CERTAIN.  This was 0.5 until 2026-09-03, which
+/// made `CdksB1` a factor 2 low; `cdks_b1_raw_per_nucleon()` (b1_nuclear.hpp)
+/// existed to route around it and is now merely a second name for the same
+/// normalisation.
+inline constexpr double B1_CDKS_TABLE_TO_PER_NUCLEON = 1.0;
 
 /// Rank-2 transfer of the embedded deuteron's tensor polarization to 6Li:
 /// `TaggedModel(li6_alpha_channel()).tensor_dilution()` evaluated at

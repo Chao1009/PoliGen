@@ -157,14 +157,24 @@ Miller default. Opus implements in two agents (kernel/convolution;
 wiring+tests) with Fable design first and review after. Measured numbers into
 `OPEN_ITEMS_SOLUTIONS.md` §10.
 
-**OUTCOME: the A = 2 gate PASSES its shape clause and FAILS its magnitude
-clause** (a factor 2.27 below the digitized CDKS Fig. 4 peak at CDKS Eq. (21)'s
-δ-function, which the gate defaults to after the review of 2026-09-03 — 3.68 at
-Eq. (17)'s κ = 1 form; a real nucleon PDF, the one remaining identified item,
-closes it to 1.39).
-Under design §5.4's *Escalation* clause the backend ships opt-in, behind a
-warning in its header and in `--help`, and **no ⁶Li number may be published**:
-item 10 does **not** close. The measured gate is
+**OUTCOME as of this run: the A = 2 gate PASSES its shape clause and FAILS its
+magnitude clause** (a factor 2.27 below the digitized CDKS Fig. 4 peak at CDKS
+Eq. (21)'s δ-function, which the gate defaults to after the review of
+2026-09-03 — 3.68 at Eq. (17)'s κ = 1 form; a real nucleon PDF, the one
+remaining identified item, closes it to 1.39).
+Under design §5.4's *Escalation* clause the backend shipped opt-in, behind a
+warning in its header and in `--help`, and no ⁶Li number could be published:
+item 10 did **not** close in this run.
+
+> **SUPERSEDED 2026-09-03 by phase A of the next run.** The "real nucleon PDF"
+> item was worked with CDKS's own MSTW2008 LO — which turned out to be on disk
+> in PYTHIA's `pdfdata` all along — and G3b came out **0.843243**, inside the
+> factor-2 window; with the real CD-Bonn wave function as well, **1.000338**.
+> Escalation is not triggered, the warning is out of the header and `--help`,
+> and the ⁶Li publication ban is **lifted** (the ±100 % band is not). Current
+> numbers: `docs/open_items/run_2026-09-03/phase_A_numbers.md`.
+
+The measured gate as it stood in this run is
 `docs/open_items/run_2026-09-02/phase_D_gate.md`, the measured numbers
 `phase_D_numbers.md`, and both are summarised in `OPEN_ITEMS_SOLUTIONS.md` §10.
 

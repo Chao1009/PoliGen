@@ -1113,61 +1113,6 @@ TEST_CASE("b1_nuclear T1 gate checklist item 5: the deuteron wave function") {
     CHECK_CLOSE(t.integral_g3c, 4.499038e-4, 3e-3);
   }
 
-#ifdef LIPOLGEN_HAVE_PYTHIA8
-  // ---- MSTW2008 LO: CDKS's OWN PDF with CDKS's OWN wave function.  THE ROW.
-  //      This is gate condition 3 (the 1.000338), not the verdict, so it
-  //      stays an in-case skip -- but it says what it did not measure.
-  if (!mstw_grid_present()) {
-    MESSAGE("SKIPPED (MSTW2008 LO unavailable): no mstw2008lo.00.dat under "
-            << pythia8_pdfdata_dir()
-            << " -- gate condition 3 (CD-Bonn AND MSTW together, peak ratio "
-               "1.000338) was NOT evaluated in this build.");
-  } else {
-    const unsigned nt = gate_threads();
-    std::vector<DeuteronConvolutionB1::Options> o = cdbonn_opts(nt);
-    for (unsigned t = 0; t < nt; ++t) o[t].unpol = std::make_shared<MstwSF>();
-    const GateRow m = gate_row(xs, xb1_threaded(xs, o), ref);
-    check_g3a("item 5 MSTW2008 LO, kappa, CD-Bonn", m, ref);
-    MESSAGE("item 5 MSTW2008 LO, kappa, CD-Bonn  G3b: max|x b1| over "
-            "[0.10,0.80] = " << m.win << " ; ratio to the digitized peak = "
-            << m.ratio << " (AV18 on the same row is 0.843243)");
-    CHECK_CLOSE(m.win, 1.085577e-3, 2e-3);
-    CHECK_CLOSE(m.ratio, 1.000338, 2e-3);
-    CHECK(m.ratio > 0.5);
-    CHECK(m.ratio < 2.0);
-    // G3a's landmarks.  Each is CLOSER to the digitized column than the AV18
-    // row of item 4, by an order of magnitude on the two zeros and the dip.
-    CHECK_CLOSE(m.z0, 0.064129, 5e-3);
-    CHECK_CLOSE(m.z1, 0.457018, 2e-3);
-    CHECK_CLOSE(m.x_min, 0.33049, 1e-3);
-    CHECK_CLOSE(m.xb1_min, -1.769065e-4, 3e-3);
-    CHECK_CLOSE(m.x_max, 0.766271, 1e-3);
-    CHECK(std::fabs(m.z0 - ref.zeros[0]) < 0.005);
-    CHECK(std::fabs(m.z1 - ref.zeros[1]) < 0.005);
-    CHECK(std::fabs(m.x_max - ref.x_max) < 0.005);
-    CHECK(std::fabs(m.xb1_min / ref.xb1_min - 1.0) < 0.01);
-    MESSAGE("item 5 MSTW2008 LO, kappa, CD-Bonn  G3c: int b1 dx (x >= 0.01) = "
-            << m.integral_g3c << " ; digitized CDKS "
-            << close_kumano_integral(true) << " (AV18 2.24896e-4)");
-    CHECK_CLOSE(m.integral_g3c, 4.485801e-4, 3e-3);
-
-    // THE GRID IS NOT DOING IT.  The analytic form is sampled on
-    // `fdeut.av18`'s own 0.1 fm^-1 spacing so that the AV18 and CD-Bonn rows
-    // differ in the wave function alone; refining to 0.02 fm^-1 (5x, 1001
-    // rows) moves the peak by 5e-4 relative and does not move either zero.
-    // Measured here on ONE x -- the peak's own grid point -- rather than on
-    // the whole scan, because each finite-|q| point costs ~0.24 s.
-    std::vector<DeuteronConvolutionB1::Options> of = cdbonn_opts(1);
-    of[0].unpol = std::make_shared<MstwSF>();
-    of[0].cdbonn_dk_fm = 0.02;
-    const DeuteronConvolutionB1 dfine(of[0]);
-    const double fine = m.x_max * dfine.b1(m.x_max, kQ2, 0.0);
-    MESSAGE("item 5 dk = 0.02 fm^-1 at the peak: " << fine << " against "
-            << m.xb1_max << " (relative " << fine / m.xb1_max - 1.0 << ")");
-    CHECK(std::fabs(fine / m.xb1_max - 1.0) < 2e-3);
-  }
-#endif  // LIPOLGEN_HAVE_PYTHIA8
-
 #ifdef LIPOLGEN_HAVE_LHAPDF
   // ---- CT18NLO: the same swap on a DIFFERENT modern PDF, so that "CD-Bonn
   //      lifts the peak" is not an MSTW artefact.  0.719432 -> 0.864233, the
@@ -1198,6 +1143,74 @@ TEST_CASE("b1_nuclear T1 gate checklist item 5: the deuteron wave function") {
   }
 #endif  // LIPOLGEN_HAVE_LHAPDF
 }
+
+// ===================================================== item 5v, GATE COND. 3
+//
+// CD-Bonn AND MSTW2008 LO TOGETHER -- the 1.000338 peak ratio that is the
+// THIRD condition of the b1 ban lift (docs/OPEN_ITEMS_SOLUTIONS.md sec. 10
+// item 3, STATUS.md decision row 4).  It used to be an `if (!mstw_grid_
+// present()) { MESSAGE(...) } else { ... }` INSIDE item 5, and with the grid
+// absent doctest tallied that case as PASSED while the condition the lift
+// rests on was never evaluated -- the very defect T1v was split out for
+// (docs/USAGE.md sec. 4, "the doctest's MSTW rows are skipped loudly").  As
+// its own decorated case the build now states in its tally what it could not
+// measure.  Split out 2026-09-05 (phase F); every pin below is unchanged.
+#ifdef LIPOLGEN_HAVE_PYTHIA8
+TEST_CASE("b1_nuclear T1 gate checklist item 5v: CD-Bonn + MSTW2008 LO --"
+          " gate condition 3" * doctest::skip(!mstw_grid_present())) {
+  REQUIRE(have(kFdeut));
+  REQUIRE(mstw_grid_present());   // the decorator already guaranteed it
+  const B1Landmarks ref = b1_landmarks_of_table();
+  const std::vector<double> xs = linspace(0.001, 1.59, 300);   // as item 5
+  const auto cdbonn_opts = [](unsigned nt) {
+    std::vector<DeuteronConvolutionB1::Options> o(nt);
+    for (unsigned t = 0; t < nt; ++t) o[t].wave = DeuteronWaveSource::kCdBonn;
+    return o;
+  };
+  const unsigned nt = gate_threads();
+  std::vector<DeuteronConvolutionB1::Options> o = cdbonn_opts(nt);
+  for (unsigned t = 0; t < nt; ++t) o[t].unpol = std::make_shared<MstwSF>();
+  const GateRow m = gate_row(xs, xb1_threaded(xs, o), ref);
+  check_g3a("item 5 MSTW2008 LO, kappa, CD-Bonn", m, ref);
+  MESSAGE("item 5 MSTW2008 LO, kappa, CD-Bonn  G3b: max|x b1| over "
+          "[0.10,0.80] = " << m.win << " ; ratio to the digitized peak = "
+          << m.ratio << " (AV18 on the same row is 0.843243)");
+  CHECK_CLOSE(m.win, 1.085577e-3, 2e-3);
+  CHECK_CLOSE(m.ratio, 1.000338, 2e-3);
+  CHECK(m.ratio > 0.5);
+  CHECK(m.ratio < 2.0);
+  // G3a's landmarks.  Each is CLOSER to the digitized column than the AV18
+  // row of item 4, by an order of magnitude on the two zeros and the dip.
+  CHECK_CLOSE(m.z0, 0.064129, 5e-3);
+  CHECK_CLOSE(m.z1, 0.457018, 2e-3);
+  CHECK_CLOSE(m.x_min, 0.33049, 1e-3);
+  CHECK_CLOSE(m.xb1_min, -1.769065e-4, 3e-3);
+  CHECK_CLOSE(m.x_max, 0.766271, 1e-3);
+  CHECK(std::fabs(m.z0 - ref.zeros[0]) < 0.005);
+  CHECK(std::fabs(m.z1 - ref.zeros[1]) < 0.005);
+  CHECK(std::fabs(m.x_max - ref.x_max) < 0.005);
+  CHECK(std::fabs(m.xb1_min / ref.xb1_min - 1.0) < 0.01);
+  MESSAGE("item 5 MSTW2008 LO, kappa, CD-Bonn  G3c: int b1 dx (x >= 0.01) = "
+          << m.integral_g3c << " ; digitized CDKS "
+          << close_kumano_integral(true) << " (AV18 2.24896e-4)");
+  CHECK_CLOSE(m.integral_g3c, 4.485801e-4, 3e-3);
+
+  // THE GRID IS NOT DOING IT.  The analytic form is sampled on
+  // `fdeut.av18`'s own 0.1 fm^-1 spacing so that the AV18 and CD-Bonn rows
+  // differ in the wave function alone; refining to 0.02 fm^-1 (5x, 1001
+  // rows) moves the peak by 5e-4 relative and does not move either zero.
+  // Measured here on ONE x -- the peak's own grid point -- rather than on
+  // the whole scan, because each finite-|q| point costs ~0.24 s.
+  std::vector<DeuteronConvolutionB1::Options> of = cdbonn_opts(1);
+  of[0].unpol = std::make_shared<MstwSF>();
+  of[0].cdbonn_dk_fm = 0.02;
+  const DeuteronConvolutionB1 dfine(of[0]);
+  const double fine = m.x_max * dfine.b1(m.x_max, kQ2, 0.0);
+  MESSAGE("item 5 dk = 0.02 fm^-1 at the peak: " << fine << " against "
+          << m.xb1_max << " (relative " << fine / m.xb1_max - 1.0 << ")");
+  CHECK(std::fabs(fine / m.xb1_max - 1.0) < 2e-3);
+}
+#endif  // LIPOLGEN_HAVE_PYTHIA8
 
 // ===================================================================== T2
 TEST_CASE("b1_nuclear T2: quadrature convergence") {

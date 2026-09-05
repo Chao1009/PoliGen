@@ -1145,11 +1145,16 @@ struct RcOptions {
   ///   (3) WHERE IT FAILS, AND IN WHICH DIRECTION.  At x <~ 0.1 6Li's elastic
   ///       tensor fraction is ANOMALOUSLY SMALL, and for a reason the
   ///       quasi-elastic piece does not share.  MEASURED in this tree at
-  ///       Q^2 = 5 GeV^2, sigma^el_T/sigma^el_U = -3.057e-03 / +9.357e-04 /
+  ///       Q^2 = 5 GeV^2 ON THE `ho` C0-SHAPE EDGE (phase_B_numbers.md B3.1
+  ///       labels the same row "this tree, `ho` edge"),
+  ///       sigma^el_T/sigma^el_U = -3.057e-03 / +9.357e-04 /
   ///       +7.972e-02 at x = 0.01 / 0.10 / 0.30, against POLRAD's own DEUTERON
   ///       elastic-tail numbers +0.106 / +0.064 / -0.117 (transcription check
   ///       sec. 8) -- a factor 35 / 68 at the first two and only 1.5 at the
-  ///       third.  Design sec. 2.1 says why: what sets the fraction is Q_A/Z,
+  ///       third.  THE MAGNITUDE IS A BAND EDGE TOO, not only the sign of
+  ///       point (4): the `vmc-ft` edge gives -3.282e-03 / -2.442e-04 /
+  ///       +9.333e-02 on the same three x, so the x = 0.10 factor is 68 on
+  ///       one edge and ~260 on the other.  Design sec. 2.1 says why: what sets the fraction is Q_A/Z,
   ///       and Q(6Li)/Q(d) = 0.29 against Z = 3.  But that near-vanishing 6Li
   ///       quadrupole is a cancellation in the COHERENT charge distribution,
   ///       while the alignment of the NUCLEON MOMENTUM distribution -- what a

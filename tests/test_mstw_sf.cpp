@@ -24,8 +24,11 @@
 //
 // The whole file compiles out when PYTHIA 8 is not configured (the
 // `#ifdef LIPOLGEN_HAVE_PYTHIA8` pattern of tests/test_t2.cpp), and the
-// grid-file presence is re-checked at run time so a PYTHIA build without
-// its pdfdata tree reports a skip instead of a failure.
+// grid-file presence is checked at doctest REGISTRATION time
+// (`doctest::skip(!mstw_grid_present())`, 2026-09-05) so a PYTHIA build
+// without its pdfdata tree reports these four cases as SKIPPED in the tally.
+// They used to return early with a MESSAGE, which doctest tallies as
+// "3 passed / 0 assertions" -- a pass that measured nothing.
 
 #ifdef LIPOLGEN_HAVE_PYTHIA8
 
@@ -92,12 +95,12 @@ constexpr double kExact = 1e-14;
 
 }  // namespace
 
-TEST_CASE("MstwSF constructs off PYTHIA's own MSTW2008 LO grid") {
-  if (!mstw_grid_present()) {
-    MESSAGE("SKIP: no mstw2008lo.00.dat under '" << pythia8_pdfdata_dir()
-            << "' -- PYTHIA 8 built without its pdfdata tree");
-    return;
-  }
+TEST_CASE("MstwSF constructs off PYTHIA's own MSTW2008 LO grid" *
+          doctest::skip(!mstw_grid_present())) {
+  // the decorator already guaranteed it: an absent grid makes
+  // doctest report this case as SKIPPED, never as passed with
+  // zero assertions (phase F, 2026-09-05)
+  REQUIRE(mstw_grid_present());
   // Not a stack local.  sizeof(Pythia8::MSTWpdf) is 7 988 336 bytes, so
   // `MstwSF` must (and does) keep it behind a unique_ptr; the class itself
   // is small enough to live anywhere.
@@ -124,12 +127,9 @@ TEST_CASE("MstwSF constructs off PYTHIA's own MSTW2008 LO grid") {
   CHECK_THROWS_AS(MstwSF(3, "/nonexistent/pdfdata"), std::runtime_error);
 }
 
-TEST_CASE("MstwSF::f2p / f2n reproduce a raw Pythia8::MSTWpdf probe") {
-  if (!mstw_grid_present()) {
-    MESSAGE("SKIP: no mstw2008lo.00.dat under '" << pythia8_pdfdata_dir()
-            << "'");
-    return;
-  }
+TEST_CASE("MstwSF::f2p / f2n reproduce a raw Pythia8::MSTWpdf probe" *
+          doctest::skip(!mstw_grid_present())) {
+  REQUIRE(mstw_grid_present());   // the decorator guaranteed it
   MstwSF sf;
 
   for (const Row& r : kQ2p5) {
@@ -157,12 +157,9 @@ TEST_CASE("MstwSF::f2p / f2n reproduce a raw Pythia8::MSTWpdf probe") {
   CHECK_CLOSE(sf.f2p(0.95, 2.5), 2.0443e-4, 1e-4);
 }
 
-TEST_CASE("MstwSF carries LhapdfSF's 0 < x < 1 guard and Q2 = 10 ratio") {
-  if (!mstw_grid_present()) {
-    MESSAGE("SKIP: no mstw2008lo.00.dat under '" << pythia8_pdfdata_dir()
-            << "'");
-    return;
-  }
+TEST_CASE("MstwSF carries LhapdfSF's 0 < x < 1 guard and Q2 = 10 ratio" *
+          doctest::skip(!mstw_grid_present())) {
+  REQUIRE(mstw_grid_present());   // the decorator guaranteed it
   MstwSF sf;
 
   // Verbatim from f2_from_weights: outside the OPEN unit interval the grid
@@ -190,12 +187,9 @@ TEST_CASE("MstwSF carries LhapdfSF's 0 < x < 1 guard and Q2 = 10 ratio") {
 }
 
 #ifdef LIPOLGEN_HAVE_LHAPDF
-TEST_CASE("MSTW2008 LO / CT18NLO on F2p -- the ratio the b1 gate turns on") {
-  if (!mstw_grid_present()) {
-    MESSAGE("SKIP: no mstw2008lo.00.dat under '" << pythia8_pdfdata_dir()
-            << "'");
-    return;
-  }
+TEST_CASE("MSTW2008 LO / CT18NLO on F2p -- the ratio the b1 gate turns on" *
+          doctest::skip(!mstw_grid_present())) {
+  REQUIRE(mstw_grid_present());   // the decorator guaranteed it
   MstwSF mstw;
   LhapdfSF ct18("CT18NLO", 0);
 

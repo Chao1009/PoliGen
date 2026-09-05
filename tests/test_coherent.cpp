@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <fstream>
 #include <limits>
 #include <map>
 #include <string>
@@ -40,14 +41,25 @@ bool load_coherent(jsonmin::Value& out) {
                             out);
 }
 
+/// Is the reference blob on disk?  Called at doctest REGISTRATION time by the
+/// `doctest::skip()` decorators below, so that a checkout without
+/// `validation/reference/` reports those cases as SKIPPED in the tally
+/// instead of PASSED with zero assertions (the T1v pattern of
+/// tests/test_b1_nuclear.cpp; phase F, 2026-09-05).  A blob that IS there and
+/// does not parse is a failure, not a skip -- that is what the `REQUIRE` on
+/// the loader inside each case is for.
+bool coherent_present() {
+  return std::ifstream(std::string(LIPOLGEN_REFERENCE_DIR) +
+                       "/coherent.json")
+      .good();
+}
+
 }  // namespace
 
-TEST_CASE("coherent: constants and scenario defaults against polligen") {
+TEST_CASE("coherent: constants and scenario defaults against polligen" *
+          doctest::skip(!coherent_present())) {
   jsonmin::Value ref;
-  if (!load_coherent(ref)) {
-    MESSAGE("coherent.json not found -- skipping");
-    return;
-  }
+  REQUIRE(load_coherent(ref));
   CHECK_CLOSE(GEV_PER_FM_INV, ref["constants"]["GEV_PER_FM_INV"].num(), kRtol);
   CHECK_CLOSE(M_LI6_DOC, ref["constants"]["M_LI6"].num(), kRtol);
   CHECK_CLOSE(RATE_WEIGHT_SYST, ref["constants"]["RATE_WEIGHT_SYST"].num(), kRtol);
@@ -73,12 +85,10 @@ TEST_CASE("coherent: constants and scenario defaults against polligen") {
   }
 }
 
-TEST_CASE("coherent: the scenario formulas against polligen") {
+TEST_CASE("coherent: the scenario formulas against polligen" *
+          doctest::skip(!coherent_present())) {
   jsonmin::Value ref;
-  if (!load_coherent(ref)) {
-    MESSAGE("coherent.json not found -- skipping");
-    return;
-  }
+  REQUIRE(load_coherent(ref));
   const CoherentScenario sc;
   for (const jsonmin::Value& r : ref["gaussian_slope"].arr()) {
     CHECK_CLOSE(gaussian_slope(r["r_rms_fm"].num()), r["B"].num(), kRtol);
@@ -645,12 +655,10 @@ TEST_CASE("coherent: the recoil stays inside the near-beam band") {
   }
 }
 
-TEST_CASE("coherent: fragment rigidities are mass-to-charge ratios") {
+TEST_CASE("coherent: fragment rigidities are mass-to-charge ratios" *
+          doctest::skip(!coherent_present())) {
   jsonmin::Value ref;
-  if (!load_coherent(ref)) {
-    MESSAGE("coherent.json not found -- skipping");
-    return;
-  }
+  REQUIRE(load_coherent(ref));
   for (const jsonmin::Value& r : ref["fragment_rigidity"].arr()) {
     const int a = static_cast<int>(r["a"].num());
     const int z = static_cast<int>(r["z"].num());

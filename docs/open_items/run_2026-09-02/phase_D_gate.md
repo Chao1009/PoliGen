@@ -90,7 +90,10 @@ published** while that stands. Item 10 stays open.
 > gate's verdict: with checklist item 4 worked (MSTW2008 LO, CDKS's own PDF)
 > G3b is **0.843243** — inside the factor-2 window — so Escalation is not
 > triggered, the `WARNING` is gone from the header and `--help`, and **the ⁶Li
-> publication ban is lifted**. The band is not.
+> publication ban is lifted** — for that configuration (`--b1-unpol mstw` at CDKS
+> Eq. (21)); on the shipped `toy` default the same clause gives **0.440**,
+> outside [0.5, 2], so the default's numbers are **not covered by the lift**.
+> The mandatory ±100 % band is not lifted either.
 
 **G3a passes, but read how.** The low-x zero clears its counting window's
 lower edge (x = 0.02) by **0.0021**, and with a realistic PDF (CT18NLO,

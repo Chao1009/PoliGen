@@ -565,12 +565,26 @@ py::dict columns_to_dict(Columns& c, const Pipeline& p, std::uint64_t n,
   // top-level keys, and it survived the fix that was supposed to close the
   // class because these two bypassed the mechanism entirely.
   //
-  // NOTHING IS LOST BY LABELLING THEM.  The bare name stays available in
+  // AND THE NAME IS NOT LOST BY LABELLING THEM -- but it WAS, between
+  // 2026-09-05 and the phase-F fix of the same day.  The first form of this
+  // block wrote the bare scope clause "not read on this run" into both keys
+  // on every channel that HAS a route (tagged-d-p, tagged-6Li-alpha, the
+  // coherent channel), where the classifier IS consulted and only the
+  // SENSITIVITY to the envelope is missing; the a94fd6e files carried
+  // "10x100 high-acceptance" / "10x100" there, and the CLI banner printed
+  // "not read on this run" three lines above a tag fraction quoted AT that
+  // envelope.  The scalar said more than the provenance row it came from.
+  //
+  // The fix is in the ONE place the label is built (`Pipeline::knob_provenance`,
+  // src/core/pipeline.cpp): on a channel with a route the label now opens
+  // "not read on this run at 10x100 high-acceptance (...)", so the name is in
+  // the scalar, in the banner and in the provenance row, and the scope clause
+  // is still there.  Nothing is special-cased HERE: these two keys go through
+  // `meta_value()` exactly like `pol_sf` and the three Pomeron keys, which is
+  // the whole point of the mechanism (CONVENTIONS.md "one mechanism").
+  // The bare name also stays available in
   // `meta["knob_provenance"]["optics"]["value"]`, which is where a consumer
-  // that wants to re-route the sample reads it -- and where the label is
-  // written, the `route` column is by measurement the same under every other
-  // tabulated envelope this run has, so there is nothing for that consumer to
-  // disambiguate.
+  // that wants to re-route the sample reads it.
   meta["optics"] = knob("optics").meta_value();
   meta["pot_config"] = knob("pot_config").meta_value();
   meta["frame"] = "head-on: ion +z, electron -z; per-nucleon x, y, Q2";
@@ -591,11 +605,14 @@ py::dict columns_to_dict(Columns& c, const Pipeline& p, std::uint64_t n,
   // `validate()`'s Miller branch already refuses any other value on that path,
   // so neither can record a variation that did not run, and changing their
   // TYPE per isotope would break every consumer that reads them as floats.
-  const bool no_rank2 = inclusive_rank2_is_empty(p.config());
-  meta["b1_model"] = p.config().kernel ? std::string("caller-supplied kernel")
-                     : no_rank2       ? std::string(rank2_none_label())
-                                      : std::string(b1_model_name(
-                                            p.config().b1_model));
+  // THROUGH THE TABLE, like every other key in this block (2026-09-05).  The
+  // same three-way ternary -- caller-supplied kernel / rank2_none_label() /
+  // the backend name -- used to be typed here AND in the `b1_model` row of
+  // `Pipeline::knob_provenance`, which is the one thing CONVENTIONS.md's
+  // "the three surfaces read that table and nothing else" forbids: two
+  // spellings of one label drift.  The row's status is Read or Refused, never
+  // NotRead, so `meta_value()` is its `value` and this is bit-identical.
+  meta["b1_model"] = knob("b1_model").meta_value();
   meta["b1_band_scale"] = p.config().b1_band_scale;
   meta["b1_alpha_d_dwave_weight"] = p.config().b1_alpha_d_dwave_weight;
   // Which unpolarised PDF the b1 convolution folded against.  Same
@@ -603,10 +620,7 @@ py::dict columns_to_dict(Columns& c, const Pipeline& p, std::uint64_t n,
   // "toy" and "mstw" differ by up to a factor 1.85 on Li6ConvolutionB1::b1
   // and by nothing at all in any other npz key, so without this one they are
   // indistinguishable files.
-  meta["b1_unpol"] = p.config().kernel ? std::string("caller-supplied kernel")
-                     : no_rank2       ? std::string(rank2_none_label())
-                                      : std::string(b1_unpol_name(
-                                            p.config().b1_unpol));
+  meta["b1_unpol"] = knob("b1_unpol").meta_value();
   // ... and the SENTENCE, on every run and every channel, from the one
   // definition the CLI run banner also prints (`rank2_input_report`).  This
   // is the key that makes a 7Li tensor run self-describing: before it, an npz

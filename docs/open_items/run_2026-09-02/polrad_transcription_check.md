@@ -634,11 +634,19 @@ so `ll_peaks_spin1` returns essentially nothing there and the minimum of
 column is not a window statement at all: its minimum is **1.6458e−04** (at
 `x = 0.7244`, `y = 0.0070`) and **275** of the 1356 cells sit below 0.96 at
 this section's own `kf_gev = 0` convention, **282** at the shipped
-`k_F = 0.169 GeV`. On the *total* tail, `t/(t+s+p) < 0.99` in **346** of the
-1356. The failures **concentrate** at `y → 0` — 318 of the 331 sit at
-`y < 0.1` — but they are not confined there: 21 of the 346 total-tail
-failures sit at `y ≥ 0.1`, five of them at `y = 0.845–0.892`, i.e. at the
-`y → 1` end as well. (An earlier revision of this paragraph read "the failures
+`k_F = 0.169 GeV`. On the *total* tail at this section's own `kf_gev = 0`,
+`t/(t+s+p) < 0.99` in **346** of the 1356; 21 of those 346 sit at `y ≥ 0.1`,
+five of them at `y = 0.845–0.892`, i.e. at the `y → 1` end as well, so they
+are not confined to the low-y corner.
+
+**Two censuses, on two conventions, and they are not nested.** The 346 above is
+`t/(t+s+p) < 0.99` at `kf_gev = 0` (unsuppressed; this section's convention, and
+a measurement record). The figure every doc site carries is the *other* one:
+`phase_B_numbers.md` §B2.3(i)'s **331 of 1356 cells with
+`RcModel::tail_ratio > 1.01` at the shipped `k_F = 0.169 GeV`, 318 of them at
+`y < 0.1`**. 346 > 331 under a *stricter* cut is only possible because the two
+conventions differ — the 318/331 are **not** a subset of the 346, and an
+earlier form of this paragraph read them as one (corrected 2026-09-05). (An earlier revision of this paragraph read "the failures
 are at `y → 0`, not at `y → 1`"; that contradicted this document's own
 `y → 1` rows below and is withdrawn, 2026-09-04.) Measured on the 101 × 77 CLI
 grid and set out in `../run_2026-09-03/phase_B_numbers.md` §B2.3(i). It is a

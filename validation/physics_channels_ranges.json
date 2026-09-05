@@ -14,50 +14,45 @@
   "first": "## `momenta/` — the cluster MOMENTUM DISTRIBUTIONS (fetched 2026-08-29, second pass)",
   "last": "**What each family is good for.**  The momentum files carry |ψ_L|² only — a"
  },
- "docs/CONVENTIONS.md:153-156": {
+ "docs/CONVENTIONS.md:161-164": {
   "sha256": "bf5cd1c67bb18dd608ff62ddaa5b8ffc67481638631d358db29c73b14d7c2874",
   "first": "- **Struck nucleon species.** Drawn `Z F2p(x, Q²) : N F2n(x, Q²)` at the",
   "last": "  limit and is wrong wherever `F2n/F2p ≠ 1` (0.5 against a true 0.615 for 6Li"
  },
- "docs/CONVENTIONS.md:179-183": {
+ "docs/CONVENTIONS.md:187-191": {
   "sha256": "bb956c6885e5f0b712f86395c4b9a2e03e9a1d56d50a38fbb965f1e34968b0d3",
   "first": "  come out of one code path; the EPPS21 depletion is the single stored number",
   "last": "  modification alone; against CT18NLO it was 0.02979, 4.2 % shallower.  On"
  },
- "docs/CONVENTIONS.md:18-25": {
-  "sha256": "b2c6e13662f0b53347178a8794bd026fb5bf85d1c6f85e98838e95a52a1d9085",
-  "first": "**The rule.** If a selector, scale or switch cannot affect *this* run's output,",
-  "last": "returns one row per user-settable knob — `{name, flag, value, status ∈ {read,"
- },
- "docs/CONVENTIONS.md:286-288": {
+ "docs/CONVENTIONS.md:294-296": {
   "sha256": "3fdf426e67ab73b2f05da59956d200e817696c39e36b6d645e57a7b54a2d7a19",
   "first": "  momentum.  `β = x/x_P` and `M_X²` are on the record.  X must be TIMELIKE on",
   "last": "  `InclusiveGenerator`, never a clip."
  },
- "docs/CONVENTIONS.md:290-293": {
-  "sha256": "2703ca4e146e2e2c1b16e2c8003bc2cb703ce44ab2c663cd985d932ab5b69f7d",
-  "first": "  everywhere and is bit-compatible with every published number; the analytic",
-  "last": "  LITHIUM alpha-tag channels only, with the ANL VMC tables:"
+ "docs/CONVENTIONS.md:346-348": {
+  "sha256": "f04a60e7f41f903283d8776a21b7167f0068fde8a2f729dff110de5546c92654",
+  "first": "  n₁(k) is Eq. (76) for A = 3 and Eq. (75)/Table A.3 for A = 4; k in fm⁻¹ is",
+  "last": "  single definition since 2026-09-01, with `coherent.hpp`'s `GEV_PER_FM_INV`"
  },
- "docs/CONVENTIONS.md:301-303": {
-  "sha256": "039c583c666bd30ca320cbf1f7106043b28be105ede8050fbcfbad3a1c7a672b",
-  "first": "  is |ψ_L|² and has no phase, but the **S–D relative sign is observable**: the",
-  "last": "  DOMINATES the tensor asymmetry (negating the D table flips A_zz^tag from"
+ "docs/CONVENTIONS.md:468-469": {
+  "sha256": "79eb7bbe3851888930155576aa86ac57e39a7207d90d5e533133eea1b33a12cf",
+  "first": "- **Luminosity shares.** `Optics::lumi_fraction` multiplies COUNTS and never",
+  "last": "  cross sections (`PipelineConfig::apply_optics_lumi_fraction`, default true) —"
  },
- "docs/CONVENTIONS.md:348-351": {
-  "sha256": "6a3c83fdc7a0b106f7bbaf8a708f5190b1a0ac58038091576f2dc05275c26771",
-  "first": "  (A = 3) / 20.0 % (A = 4) correlated continuum: its high-k tails there are",
-  "last": "  the deficit BE the branching.  `sample()` consumes a fixed 6 uniforms on"
- },
- "docs/CONVENTIONS.md:57-63": {
+ "docs/CONVENTIONS.md:62-68": {
   "sha256": "f35ed6f252a00c78ab9fbb2a8871f8054bd774a6170fa07b07f958e8c0dfcac2",
   "first": "- **Tensor-sector sign.** `TENSOR_LL_SIGN = -1.0` since 2026-08-29 (author",
   "last": "  with P_zz = n₊ + n₋ − 2n₀, i.e. b₁ > 0 means the m = 0 state has the LARGER"
  },
- "docs/CONVENTIONS.md:57-65": {
+ "docs/CONVENTIONS.md:62-70": {
   "sha256": "1b166ad4f0c88cddcba9ddc2ceb9837551053a507342efe3b0cfcec635c9ec0c",
   "first": "- **Tensor-sector sign.** `TENSOR_LL_SIGN = -1.0` since 2026-08-29 (author",
   "last": "  Hoodbhoy–Jaffe–Manohar — until that date, and setting the constant back is"
+ },
+ "docs/CONVENTIONS.md:68-69": {
+  "sha256": "332f335d4de7e3135ba852c1394aabd2def59dcfb35a90618fe0430a7b0e0769",
+  "first": "  with P_zz = n₊ + n₋ − 2n₀, i.e. b₁ > 0 means the m = 0 state has the LARGER",
+  "last": "  cross section.  It was `+1` — the repository's own transcription of"
  },
  "docs/DEVELOPMENT_PLAN.md:61-65": {
   "sha256": "c243793dc9e98775b80cedbb46f12d5fbfafc754a9c24881a6e59a2a95bd4eaf",
@@ -179,27 +174,27 @@
   "first": "### Installing the Python package with pip",
   "last": "`docs/OPEN_ITEMS_SOLUTIONS.md` §12–13 and `docs/open_items/engineering.md` §C)."
  },
- "docs/USAGE.md:1274-1280": {
+ "docs/USAGE.md:1304-1310": {
   "sha256": "295056a3e251fa3f9f9600719aa648bf6097d3dc6710cc0e266235f7e106b68e",
   "first": "| ⁷Li | tagging optics | 0.9805 | 0.9993 | 0.9927 | 0.9992 | 0.9941 | 0.9992 |",
   "last": "Reach the tables directly when you want them: `VmcRadial`,"
  },
- "docs/USAGE.md:1300-1308": {
+ "docs/USAGE.md:1330-1338": {
   "sha256": "6d27ba15d241fcc608f01fec7817877fb043267b4fb6ab09881f8c4e1dd0ae34",
   "first": "| ⁷Li α | quasi-free t | d, or two n | sequential two-body at the AME2020 S_n(³H) = 6.2572 MeV / S(…",
   "last": "Balance at T1: **whole nucleus**,"
  },
  "docs/USAGE.md:163-500": {
-  "sha256": "e92d8b705c9471b0c2689a0bee5832fd01da0330bd46d59d2337499d04fae336",
-  "first": "## 2a. b₁ backends for the inclusive channel — `--b1-model`",
-  "last": "Up to a factor 1.85 and **not monotone**, so the nucleon PDF is a shape change"
+  "sha256": "ce0396cac09c5514ff88a481f8f8be5a9c3f902c6f46b9a97d7cf4d29ff581ae",
+  "first": "X (pdg 92). The balance is **per-nucleon**, `k + P_N = k' + X`, exactly as",
+  "last": "number the generator could emit was made on the toy** — including after the"
  },
- "docs/USAGE.md:1717-1908": {
+ "docs/USAGE.md:1748-1939": {
   "sha256": "90a7c095fadc0dee726f4abe18f015cbe6f0854a37ea71d93e4fac3e9aa7eeef",
   "first": "## 5. Far-forward routing",
   "last": "  `rc_tensor_lo`/`rc_tensor_hi`/`rc_tail`. **Every other CLI plan is"
  },
- "docs/USAGE.md:1936-2089": {
+ "docs/USAGE.md:1967-2120": {
   "sha256": "ab508a7b007bf4750078430b97585afdd6dd1a4562cc9c6c954734eaee5d0244",
   "first": ">   lithium channel is **unbound** — ⁵Li and ⁵He are resonances above the",
   "last": "  the tensor part of those peaks is **unknown, not zero**."
@@ -394,7 +389,7 @@
   "first": "/// ---------------------------------------------------------------------------",
   "last": "///                    p_z = (1 - x_P) A p_u; X = k + P_ion - k' - P_recoil is"
  },
- "include/lipolgen/pipeline.hpp:1350-1360": {
+ "include/lipolgen/pipeline.hpp:1353-1363": {
   "sha256": "4a8c241bda67b8d311a5e3f8125e50c2ca117692377265485a90d2fe92eb0fb5",
   "first": "  /// Accepted cross section [pb] per category, in plan order.  SHARE",
   "last": "  const std::vector<double>& lumi_per_category_pb() const { return lumi_; }"
@@ -404,7 +399,7 @@
   "first": "/// Fidelity tier of the final state a run writes (DEVELOPMENT_PLAN.md 2).",
   "last": "/// The switch does nothing on the inclusive and coherent channels, which have"
  },
- "include/lipolgen/pipeline.hpp:832-835": {
+ "include/lipolgen/pipeline.hpp:833-836": {
   "sha256": "edb4be8cb1bca399de805257f1dabe4d99512493d2bbb89bdf29a35cc14d5565",
   "first": "  /// the latter).  Run 0 / 1 / 2 and quote the envelope.  Q(6Li) =",
   "last": "  /// against Q_d = +0.2859(3) fm^2: the alpha-d relative"
@@ -648,22 +643,22 @@
   "last": "  if (beamSetup.doVarEcm && doHardProc) {",
   "src": "pythia8317"
  },
- "python/bindings.cpp:1647-1656": {
+ "python/bindings.cpp:1661-1670": {
   "sha256": "affaf106a7d1dbfaf074e07ba11105a3835e01f11485f47742f9ceeb12103e36",
   "first": "        py::arg(\"r_func\") = nullptr,",
   "last": "     \"CDKS Eq. (10) and the text under their Eq. (16), and \""
  },
- "python/bindings.cpp:1687-1689": {
+ "python/bindings.cpp:1701-1703": {
   "sha256": "71b5b572842c7a109d0974c0f8c33cfccfc829e41f09a566c2f26854c94560dd",
   "first": "        return copy_array(std::vector<double>(r.begin(), r.end()));",
   "last": "         \"construction -- Machleidt's \\\"about 15 decimal digits\\\".\");"
  },
- "python/bindings.cpp:1797-1798": {
+ "python/bindings.cpp:1811-1812": {
   "sha256": "ff2ba6207b4c08b0d8b4d06880682be5d71d23c4806853e78c8678e45c99de19",
   "first": "      .def_property_readonly(\"options\", &LightConeDensities::options)",
   "last": "      .def(\"convolve\", &LightConeDensities::convolve, py::arg(\"dens_at\"),"
  },
- "python/bindings.cpp:1950-1951": {
+ "python/bindings.cpp:1964-1965": {
   "sha256": "daccc48f820e4b1ef3bf89f4377cb312f11e60d59ca82248a9bbf026b5cd153e",
   "first": "           py::arg(\"q2\"))",
   "last": "      .def(\"densities\", &DeuteronConvolutionB1::densities,"
@@ -688,7 +683,7 @@
   "line": "            setattr(sc, k, float(v))",
   "name": "setattr"
  },
- "python/lipolgen/cli.py:1189": {
+ "python/lipolgen/cli.py:1202": {
   "sha256": "1d2f24498096c3b3855a2ea8b882f003dd6d6cae4a8b164319b6b93399cb564d",
   "line": "    if p.rc_model is not None:",
   "name": "rc_model"
@@ -778,7 +773,7 @@
   "line": "      const bool fits = cfg_.coherent_xpom.x_pom_min(q2c[c], w2c)",
   "name": "x_pom_min"
  },
- "src/core/pipeline.cpp:3259": {
+ "src/core/pipeline.cpp:3286": {
   "sha256": "0ff9c4ac169c911d660a1430a75278c4de48e6709b20b7d4281b06c8e2f26adb",
   "line": "  if (cfg_.hadronizer) cfg_.hadronizer(out, rng);",
   "name": "hadronizer"

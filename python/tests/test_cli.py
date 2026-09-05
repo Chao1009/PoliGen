@@ -28,6 +28,32 @@ def test_config_file_then_switches(tmp_path):
     assert o["events"] == 77                    # the switch wins over the file
 
 
+def test_lumi_alone_selects_luminosity_mode(tmp_path):
+    """`--lumi X` alone must not collide with the `events` DEFAULT.
+
+    Luminosity mode used to be reachable only as `--events 0 --lumi X`: the
+    option defaults carry events = 100000, so `--lumi X` alone arrived at
+    `main()` with both set and was refused with "--events and --lumi are
+    exclusive" -- a message about a switch the user never typed, and a mode no
+    help text or document described (fixed 2026-09-05).
+    """
+    o = cli.resolve(["--lumi", "0.02"])
+    assert o["lumi"] == 0.02
+    assert o["events"] == 0                 # luminosity mode, not a collision
+
+    # an --events typed anywhere still collides, and is still refused there
+    o = cli.resolve(["--lumi", "0.02", "--events", "500"])
+    assert (o["events"], o["lumi"]) == (500, 0.02)
+    path = tmp_path / "run.json"
+    path.write_text(json.dumps({"events": 500}))
+    o = cli.resolve(["--config-file", str(path), "--lumi", "0.02"])
+    assert (o["events"], o["lumi"]) == (500, 0.02)
+
+    # ... and neither flag leaves the defaults alone
+    assert cli.resolve([])["events"] == cli.DEFAULTS["events"]
+    assert cli.resolve(["--events", "77"])["lumi"] == cli.DEFAULTS["lumi"]
+
+
 def test_config_file_rejects_typos(tmp_path):
     path = tmp_path / "bad.json"
     path.write_text(json.dumps({"isotop": "6Li"}))

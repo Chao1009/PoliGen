@@ -35,14 +35,25 @@ bool load_tagged(jsonmin::Value& out) {
                             out);
 }
 
+/// Is the reference blob on disk?  Called at doctest REGISTRATION time by the
+/// `doctest::skip()` decorators below, so that a checkout without
+/// `validation/reference/` reports those cases as SKIPPED in the tally
+/// instead of PASSED with zero assertions (the T1v pattern of
+/// tests/test_b1_nuclear.cpp; phase F, 2026-09-05).  A blob that IS there and
+/// does not parse is a failure, not a skip -- that is what the `REQUIRE` on
+/// the loader inside each case is for.
+bool tagged_present() {
+  return std::ifstream(std::string(LIPOLGEN_REFERENCE_DIR) +
+                       "/tagged.json")
+      .good();
+}
+
 }  // namespace
 
-TEST_CASE("cluster: Wave::radial reproduces the polligen radial tables") {
+TEST_CASE("cluster: Wave::radial reproduces the polligen radial tables" *
+          doctest::skip(!tagged_present())) {
   jsonmin::Value ref;
-  if (!load_tagged(ref)) {
-    MESSAGE("tagged.json not found -- skipping");
-    return;
-  }
+  REQUIRE(load_tagged(ref));
   for (const auto& kv : ref["channels"].obj()) {
     CAPTURE(kv.first);
     for (const jsonmin::Value& w : kv.second["waves"].arr()) {
@@ -159,11 +170,9 @@ TEST_CASE("cluster: data_dir honours LIPOLGEN_DATA_DIR, else the built-in") {
   CHECK(data_path("x/y") == data_dir() + "/x/y");
 }
 
-TEST_CASE("cluster: the ANL overlap reader") {
-  if (!have(kLi6Overlap)) {
-    MESSAGE("data/vmc not present -- skipping");
-    return;
-  }
+TEST_CASE("cluster: the ANL overlap reader" *
+          doctest::skip(!have(kLi6Overlap))) {
+  REQUIRE(have(kLi6Overlap));   // the decorator already guaranteed it
   const std::vector<AnlTable> b = read_anl_overlap(kLi6Overlap);
   REQUIRE(b.size() == 2);
   // k block: 0.00 .. 5.00 fm^-1 in 0.10 steps, two signed columns + errors
@@ -180,11 +189,9 @@ TEST_CASE("cluster: the ANL overlap reader") {
   CHECK_CLOSE_AT(b[1].col[1][0], -0.1357e-01, 0.0, 1e-12);
 }
 
-TEST_CASE("cluster: the ANL momentum reader and its printed normalizations") {
-  if (!have(kLi6Momentum)) {
-    MESSAGE("data/vmc not present -- skipping");
-    return;
-  }
+TEST_CASE("cluster: the ANL momentum reader and its printed normalizations" *
+          doctest::skip(!have(kLi6Momentum))) {
+  REQUIRE(have(kLi6Momentum));   // the decorator already guaranteed it
   const std::vector<AnlTable> b = read_anl_momentum(kLi6Momentum);
   REQUIRE(b.size() == 2);
   CHECK(b[0].col.size() == 1);            // total rho(K)
@@ -224,11 +231,9 @@ TEST_CASE("cluster: VmcRadial interpolates and is ZERO outside its table") {
   CHECK_CLOSE_AT(w.radial(0.5, 999.0), 5.0, 0.0, 1e-12);
 }
 
-TEST_CASE("cluster: the r-space Fourier-Bessel route reproduces the k block") {
-  if (!have(kLi6Overlap)) {
-    MESSAGE("data/vmc not present -- skipping");
-    return;
-  }
+TEST_CASE("cluster: the r-space Fourier-Bessel route reproduces the k block" *
+          doctest::skip(!have(kLi6Overlap))) {
+  REQUIRE(have(kLi6Overlap));   // the decorator already guaranteed it
   // The two blocks of li6.ad are INDEPENDENT Monte Carlo estimators of the
   // same overlap, one in r and one in k.  Transforming the r block with the
   // ANL cluster convention A(k) = 4pi int A(r) j_L(kr) r^2 dr must land on
@@ -245,11 +250,11 @@ TEST_CASE("cluster: the r-space Fourier-Bessel route reproduces the k block") {
   }
 }
 
-TEST_CASE("cluster: the VMC S-D relative sign, and where it comes from") {
-  if (!have(kLi6Overlap) || !have(kLi6Momentum)) {
-    MESSAGE("data/vmc not present -- skipping");
-    return;
-  }
+TEST_CASE("cluster: the VMC S-D relative sign, and where it comes from" *
+          doctest::skip(!have(kLi6Overlap) || !have(kLi6Momentum))) {
+  // the decorator already guaranteed both
+  REQUIRE(have(kLi6Overlap));
+  REQUIRE(have(kLi6Momentum));
   // A momentum DENSITY carries no phase; the overlap amplitudes do.  Both
   // blocks of li6.ad, and the Fourier-Bessel transform of the r block, agree
   // that A22 and A00 have OPPOSITE sign wherever the D wave has strength.

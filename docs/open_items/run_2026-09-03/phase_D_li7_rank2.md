@@ -144,7 +144,7 @@ The two ⁷Li category cross sections are **the same double**. There is no
 | Run banner (`python/lipolgen/cli.py:561-598`) | Channel, optics, σ per category. The b₁ block prints **only** when `b1_model != Miller`, which ⁷Li can never reach — so **no line at all** |
 | npz / HFS `meta` (`python/bindings.cpp:469-471`) | **`b1_model = "miller"`** — a backend that did not run. `b1_band_scale = 1.0`, `b1_alpha_d_dwave_weight = 1.0`, `b1_unpol = "toy"`, all likewise |
 | `PipelineConfig::validate` | Accurate, but only fires if the user *asks* for `--b1-model` (`src/core/pipeline.cpp:580-588`) |
-| `docs/PHYSICS_CHANNELS.md:120` | Says it plainly: *"for spin 3/2 no slot is set, so the whole tensor and cos 2φ sector of a ⁷Li inclusive run vanishes."* An internal reference table |
+| `docs/PHYSICS_CHANNELS.md:125` | Says it plainly: *"for spin 3/2 no slot is set, so the whole tensor and cos 2φ sector of a ⁷Li inclusive run vanishes."* An internal reference table |
 | `docs/USAGE.md:242` | *"`7Li` is spin 3/2 and has no rank-2 input here."* — inside the `--b1-model` bullet, about the **flag**, not about running ⁷Li |
 
 **The answer to the task's question: a user asking for ⁷Li A_zz gets zeros with
@@ -605,7 +605,7 @@ Three statements, each with its window:
    because Miller's own curve crosses zero near x = 0.30 (+2.24e−05 there) and
    is negative at x = 0.50: the ratios are +148 %, −15 %, +60 % at
    x = 0.30 / 0.50 / 0.70. That gap is the Miller-versus-CDKS **camp** gap
-   (`PHYSICS_CHANNELS.md:160-161`: two orders of magnitude and a sign), not a
+   (`PHYSICS_CHANNELS.md:184`: two orders of magnitude and a sign), not a
    ⁶Li/⁷Li physics gap, and it must never be quoted as one.
 
 ### 5.3 Why 2.99, and why it is F₁-independent
@@ -753,7 +753,7 @@ statistics, not the quadrature, not the VMC errors — is what sets it.**
 | **D4** | **F₁ of the triton.** Isoscalar (the ⁶Li shortcut) or the true Z = 1, N = 2 triton | 0.6 … 8.6 % (§3.2 item 11). The ⁶Li code's `f1_alpha_ = f1_d_` is *correct* for a deuteron and *wrong* here; copying it would be a silent error, not a documented approximation. `include/lipolgen/triton_sf.hpp` already exists for the tagged channel |
 | **D5** | **κ: CDKS Eq. (17) or Eq. (21).** ⁶Li defaults to Eq. (17) because the switch costs −1…+7 % there | Costs +0.35 … +69 % here (§5.4). The ⁶Li default's stated justification ("the term κ multiplies is the small ORBITAL one") **inverts** for ⁷Li, where it is the only term |
 | **D6** | **Which A_zz.** `A_T` (= −b₁/F₁) or `A_zz^{(3/2)} ≡ (2/(3T))(σ_T/σ_U − 1)` (= −(2/3)b₁/F₁) | A factor 3/2. `SPIN32_FINITE_GAMMA.md` §5.4 says either is defensible and §6.4 test 10 pins whichever is adopted, but the spin-1 `azz()`'s explicit `2.0/3.0` (`src/core/asymmetries.cpp:84`) has **no J = 3/2 counterpart**. Must be chosen before any ⁷Li tensor number is published |
-| **D7** | **`ClusterPartialWave` refuses odd L** (`b1_nuclear.cpp:210`, `:233`) | For a single wave the i^L phase is unobservable, so the refusal protects nothing — but it must be *taught* that, in the type, rather than worked around by passing `l = 0` as §9 does |
+| **D7** | **`ClusterPartialWave` refuses odd L** (`b1_nuclear.cpp:244`, `:267`) | For a single wave the i^L phase is unobservable, so the refusal protects nothing — but it must be *taught* that, in the type, rather than worked around by passing `l = 0` as §9 does |
 | **D8** | **`LightConeDensities`' interface.** Its φ₀/φ₂ + SD/DD shape is an A = 2/⁶Li shape. §9 reuses `f_d`/`f_d_p2` with the L = 1 wave in the φ₂ slot — numerically exact, semantically a lie | A first-class implementation needs either an L-generic alignment slot or an explicit `Options::alignment_coefficient` (1 for L = 1/S = ½/J = 3/2, 1.5 for the L = 2 DD term, 6/√2 for the SD one) — which would also let the ⁶Li coefficients be *derived* rather than hard-coded at `b1_nuclear.cpp:355-356` |
 | **D9** | **b₂_32.** `TensorSF`'s base gives 2x·b₁ | No reason to differ, but the ⁷Li slot is separate (`b2_32_func`) and silence there means 2x·b₁ by default, which should be stated rather than inherited |
 | **D10** | **Δ_32 (cos 2φ gluon transversity).** ⁶Li gets `toy_delta_gluon(…, 1e-2)`; ⁷Li gets nothing | Filling `b1_32_func` alone leaves cos 2φ at zero. There is **no ⁷Li Δ model**; reusing the ⁶Li toy means adopting an arbitrary 1e−2 scale for a second nucleus. Note 3·Q_NN = ±3 for J = 3/2 against ±1/−2 for spin 1, so the same Δ gives a *larger* ⁷Li cos 2φ amplitude |

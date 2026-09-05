@@ -229,7 +229,10 @@ defensible sentence.
 **And it is this repository's own factor-7.5 quadrupole overshoot (§2) that
 sets the scale.** The identical J/ψ sample gives 19.7 σ fed with this α+d
 geometry's own Q = −0.6154 fm², 6.40 σ fed with GFMC's −0.20, and **2.62 σ**
-fed with the measured −0.0818. ⁶Li is attractive as a near-null test against
+fed with the measured −0.0818 — the last of these being **the uncorrected
+ε_det = 0.1775 chain's middle, kept so that the comparison is between
+quadrupoles only, and not quotable on its own: the band is 2.63 σ at its low
+edge and 2.84 … 3.29 σ at its top, 3 σ at 8.3 … 13.0 fb⁻¹/u** (the two boxes of §4 above). ⁶Li is attractive as a near-null test against
 the deuteron's own +0.286 fm² — and this is the exact price of a near-null
 target: near-null is expensive. What it is not, on these numbers, is
 unmeasurable.
@@ -417,7 +420,7 @@ own Fig. 4 lives.
 > be blind at any EIC luminosity" and rewrote (c) into a question about
 > whether to bother. That is withdrawn: the blindness was an artefact of one
 > lepton channel and one Q² window. (c) is a request for a calculation
-> again — with the two things this repository cannot settle stated inside
+> again — with the four things that are not established (no detection efficiency below Q² = 0.1, where 85 % of the coherent rate sits; no decay-lepton reconstruction efficiency anywhere in this tree, which is what leaves the band OPEN BELOW; the ⁷Li → ⁶Li efficiency substitution, which straddles 1 and makes the band's top a span; and the far-forward working point, unchosen — `cluster_config.hpp:525-534`) stated inside
 > it.)*
 
 **What is offered, in one line**: the configuration sampler and its output

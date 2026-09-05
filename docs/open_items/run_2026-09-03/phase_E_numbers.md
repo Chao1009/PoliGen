@@ -61,11 +61,21 @@ passed**). The doctest/docs-gate numbers are bit-identical to that prior
 measurement; the pytest **pass** count moved (skip count did not). The most
 likely source is commit `de1a040` ("sweep findings: ... open items 12-14,
 15"), the one commit between `STATUS.md`'s recorded phase-D state and today's
-`HEAD`, but this was not independently traced pytest-case-by-pytest-case —
-flagging the discrepancy rather than asserting its cause is the point of a
-measured baseline. Whatever the cause, **909 passed, 112 skipped** is what
-this tree measures today and is the number the next phase should diff
+`HEAD`, but this was not independently traced pytest-case-by-pytest-case at
+the time — flagging the discrepancy rather than asserting its cause is the
+point of a measured baseline. Whatever the cause, **909 passed, 112 skipped**
+is what this tree measures today and is the number the next phase should diff
 against, not 888.
+
+> **TRACED, phase F, 2026-09-05.** The cause is neither `de1a040` nor any
+> commit: `git archive de1a040 python/tests` collects **1021 tests
+> (909 + 112)** — the phase-D tree AS COMMITTED already ran 909/112, and
+> `git diff --stat de1a040 HEAD -- python/tests` is phase E's 16 tests
+> (`test_doc_link_gate.py`, `test_mstw_sf.py`, `test_release_metadata.py`,
+> `test_spdx_headers.py`) and nothing else. So `888 passed` was measured
+> DURING §D8, before the §D7–F fourteen-site pass and §D9 added their tests,
+> and was never re-run; both `888` cells in `phase_D_numbers.md` now say so.
+> The 21 are phase D's own, not a later commit's.
 
 ### E0.4 Open engineering items — verified against the live tree, not copied
 
@@ -489,7 +499,7 @@ container in this environment)" / "is not run from this repository" — while
 `docs/DEVELOPMENT_PLAN.md:270-272` already recorded, correctly, "HepMC3 ->
 abconv -> npsim smoke test: PASSED 2026-09-02 (10/10 events through `npsim`
 directly and via `abconv`; see `docs/OPEN_ITEMS_SOLUTIONS.md` §2 ...)", and
-`docs/OPEN_ITEMS_SOLUTIONS.md` §2 ("Chain gate — passed") independently
+`docs/OPEN_ITEMS_SOLUTIONS.md` §2 ("Chain gate — **CLOSED** (passed)", retitled 2026-09-05) independently
 carries the same record (the `npsim --compactFile
 epic_craterlake_10x100.xml` direct pass, the `abconv -p 1` failure and the
 `abconv -p ip6_hiacc_100x10` workaround that also passes). `docs/T2_CHAIN.md`
@@ -701,14 +711,16 @@ author's.
 rebuilt from six URLs reproduces, to the digit, the environment this
 generator's rtol-1e-12 numbers were measured in.
 
-pytest reads **923 / 114** where the working tree reads **925 / 112**. Both
+pytest reads **923 / 114** where the working tree read **925 / 112** on the
+day (phase F later added one pytest; the tree reads 926 / 112 now). Both
 extra skips were identified, not assumed: `test_release_metadata.py:121` (*no
 'origin' remote configured in this checkout* — the copy has no `.git`) and
 `test_hfs.py:125` (*polligen is not importable* — `conftest.py`'s fixture
 wants a sibling `PolarizedLithiumSim/` checkout). On GitHub the first comes
 back (`actions/checkout` creates a `.git` with an `origin`) and the second
-does not, so **924 passed / 113 skipped** is the prediction there — a
-prediction, not a measurement.
+does not, so **924 passed / 113 skipped** was the prediction there for this
+commit — a prediction, not a measurement. With phase F's added pytest it
+becomes **925 / 113**.
 
 ### E4.4 (a) `.github/workflows/ci.yml` — and what is NOT claimed about it
 

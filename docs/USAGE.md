@@ -76,6 +76,17 @@ A run is **one `PipelineConfig` + one `RunPlan`**.
   fills*: `tensor_thirds_plan`, `helicity_flip_plan`, `transverse_tensor_plan`,
   `tensor_flip_plan`, or your own `std::vector<SpinCategory>`.
 
+**Fixed-count mode or luminosity mode, and how the CLI reaches each.**
+`--events N` fixes the total; `--lumi X` [pb⁻¹] derives the counts from the
+luminosity and the cross sections. They are exclusive, and **`--lumi X` alone
+is enough** — since 2026-09-05 typing it with no `--events` anywhere sets
+`events = 0`, which is what selects luminosity mode. (Before that the option
+defaults carried `events = 100000`, so `--lumi X` alone was refused with
+"`--events and --lumi are exclusive`" and the mode was reachable only as
+`--events 0 --lumi X`, which no help text said. An `--events` typed on the
+command line or given in a `--config-file` still collides with `--lumi` and is
+still refused.)
+
 `Pipeline` resolves both in its constructor — grids, per-spin-state amplitude
 tables, spectator amplitude tables, per-category counts — and then maps
 **event index → `Event`** as a pure function. That is the whole design:
@@ -377,10 +388,18 @@ is `DeuteronConvolutionB1`'s default:
    factor 1.85 and not monotone. Selecting `mstw` needs the optional PYTHIA
    tier and is **refused at configuration time, never downgraded**, when the
    tier or the `mstw2008lo.00.dat` grid is missing; in such a build the
-   doctest's MSTW rows are skipped **loudly** — the run prints
-   `SKIPPED (MSTW2008 LO unavailable)` and doctest reports the case as
-   skipped, not as passed — so a build that cannot reproduce the verdict row
-   also cannot emit a number that claims it.
+   doctest's MSTW rows are skipped **loudly**, and since 2026-09-05 that is
+   true of every row the lift rests on: the verdict row `T1v`, the
+   gate-condition-3 row `item 5v` (CD-Bonn + MSTW, 1.000338) and the four
+   `MstwSF` backend cases carry `doctest::skip(!mstw_grid_present())`, so
+   **doctest reports them as skipped, not as passed**. Two rows that are not
+   themselves gate conditions — T16's `--b1-unpol mstw` reach row and T17's
+   third-crossing row, each inside a case whose shipped-default rows must
+   still run — keep an in-case skip: they print
+   `SKIPPED (MSTW2008 LO unavailable)` with what was not measured and are
+   tallied as passed (the choice between splitting them out and leaving them
+   is `AUTHOR_DECISIONS.md` B26). Either way a build that cannot reproduce the
+   verdict row also cannot emit a number that claims it.
 2. **It passes comfortably at Eq. (21) and marginally at Eq. (17).** At κ = 1
    MSTW gives **0.520** — inside [0.5, 2] by 4 % of its own value. Any
    statement of the form "the gate passes" that does not also say "at CDKS
@@ -1217,7 +1236,9 @@ There is no CLI flag; set the config field.
 C5.5b).  A ⁶Li α-tag run reads the embedded deuteron's own wave function in
 **two** places besides the α–d relative motion: `TaggedChannel::dis_target`,
 which is the struck cluster's g₁, and the T1 `BreakupOptions`, which is the
-struck-nucleon spin draw.  Until 2026-09-04 **neither** followed
+struck-nucleon **momentum and** spin draw — `ClusterBreakup` samples k from
+that same deuteron (`src/core/breakup.cpp` `sample_kc_one`).  Until 2026-09-04
+**neither** followed
 `--cluster-wave vmc`: the relative motion came from the ANL VMC AV18+UX
 overlap and the embedded deuteron stayed on the scenario Hulthén
 P_D = 0.045, so every polarized tagged-α observable came out **+2.069 %**
@@ -1234,6 +1255,15 @@ Both now follow it (`DEUTERON_AV18()`; `BreakupOptions::source`).
 The Hulthén default is untouched, bit for bit.  ⁷Li deliberately does **not**
 move: there is no AV18 A = 3 wave function in this tree, so on the α–t channel
 the flag selects the relative motion alone.
+
+**The cost is not only on the polarized observables.**  The same deuteron
+supplies the T1 struck-nucleon MOMENTUM draw, so the `struck_virtuality`
+column — unpolarised and plan-independent — moves on this flag as well.
+Measured on `--cluster-wave vmc --events 400 --seed 4242` (tagged-6Li-alpha,
+`tensor-thirds`) against the same command on the pre-fix build: **378 of 400
+events** differ, ⟨p² − M²⟩ **−0.0567 → −0.0599 GeV²**, σ ×1.54; `k`, `weight`
+and every other T0 column are bit-identical, and the Hulthén default is
+untouched there too.
 
 **And the inclusive constants do NOT follow the flag.** Under
 `--cluster-wave vmc` a tagged row and an inclusive row of the same programme
@@ -1427,7 +1457,8 @@ files):
 | | `off` | `glauber-cluster` | `glauber-nucleon` |
 |---|---|---|---|
 | Σ weight (20 000 events) | 20000.0 | 10419.07 | 11632.10 |
-| integrated survival | 1 | 0.520954 | 0.581605 |
+| Σw/Σw_off (the sample mean weight) | 1 | 0.520954 | 0.581605 |
+| `survival()` — the model's own grid-integrated one, `meta["fsi_survival"]` | 1 | 0.520239 | 0.582899 |
 | per-event weight, min … max | 1 | 0.0208 … 1.4043 | 0.2139 … 6.9523 |
 
 Per event, w_nucleon/w_cluster has median 0.897 and reaches **68.52**, and
@@ -2212,6 +2243,17 @@ per user-settable knob (66 on the shipped default run):
   different value is accepted*. The `meta` key then carries the `label`
   (`not read on channel coherent-6Li`, `not read by plan tensor-thirds`,
   `not read at rc = off`, …) instead of a value that would mislead.
+  **The three route knobs are the one place where the label carries the value
+  too** (`--optics`, `n_sigma`, `pot_config`, since 2026-09-05): on a channel
+  that writes a far-forward fragment the classifier IS consulted — every
+  event's `route` is priced at THIS envelope — and what is absent is only the
+  SENSITIVITY of the labels to it on this sample, so the label reads
+  `not read on this run at 10x100 high-acceptance (the classifier IS consulted
+  here; this run's route labels are insensitive to yr-high-divergence)` and the
+  envelope name survives into `meta["optics"]` and the banner's header line.
+  On the inclusive channel, where `route_of` returns `Route::Lost` before it
+  looks at an envelope, the label stays the bare scope clause
+  `not read on channel inclusive`.
 * **`refused`** — the **axis** is closed on this run: `PipelineConfig.validate()`
   (or the `Pipeline` constructor) throws on any value but the one shown, so a
   bare value cannot mislead and is kept.
@@ -2273,9 +2315,12 @@ an envelope; `cluster_beta`, `p_d`, `triton_sf`, `inclusive_b1` and
 `coherent_t_max` are round 5, the ones that used to be recorded nowhere; and
 `coherent_t2` / `pom_set` / `pom_rescale` are round 3.
 
-3. **`python/tests/test_knob_provenance.py`** rebuilds the (channel × plan ×
-   knob) matrix and asserts the table against the **output hash** of two small
-   runs: moved → `read`, did not move → `not-read`, refused → `refused`. It
+3. **`python/tests/test_knob_provenance.py`** rebuilds the (spec × knob)
+   matrix — 12 (isotope, channel, plan) specs, 71 knob variants, **547 cells**:
+   every knob on the 7 (isotope, channel) combinations under one plan each,
+   plus the plan axis on inclusive-⁶Li and tagged-⁷Li-alpha for the 10
+   plan-sensitive knobs, which is *not* the full (channel × plan) product —
+   and asserts the table against the **output hash** of two small runs: moved → `read`, did not move → `not-read`, refused → `refused`. It
    also fails if a table row has no matrix entry and no excuse, so a knob
    cannot be added without classifying it.
 

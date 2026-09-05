@@ -260,7 +260,7 @@ Three consequences for the run plans:
   property of the physics. No C++ example CLI parses a `--pzz` flag, so the
   branch is unreachable from *them*; the Python API does expose it
   (`HelicityFlipOptions.use_explicit_pzz` and `.pzz`,
-  `python/bindings.cpp:1797-1798`), so a Python caller who sets `pzz` gets
+  `python/bindings.cpp:1811-1812`), so a Python caller who sets `pzz` gets
   R₃ = 0 silently today. If the rank-3 sector is ever switched on,
   `HelicityFlipOptions` needs an explicit `o` alongside `pzz` — and `RunPlan`
   needs somewhere to record it (§6.1).
@@ -415,7 +415,7 @@ so b1 = F1^{(0)} − F1^{(1)}, which with (23) and Q_NN(1) − Q_NN(0) = 1 is an
 identity. It is also the sign of every published number: A_zz = −(2/3) b1/F1
 ([2] Eq. (27), HERMES [8]), which the code reproduces exactly at every y and is
 pinned at `tests/test_xsec.cpp:223-240` and `tests/test_xsec.cpp:242-255`, and
-which `docs/CONVENTIONS.md:18-25` states as "b₁ > 0 means the m = 0 state has the
+which `docs/CONVENTIONS.md:68-69` states as "b₁ > 0 means the m = 0 state has the
 LARGER cross section". Comparing (20) with (23),
 
         b1_32|_code  =  − b1^{[6]}  =  − Σ_q e_q² [ f1LL^q + f1LL^q̄ ]         (24)
@@ -974,9 +974,9 @@ This section is a design sketch, not an instruction; nothing here is implemented
 | `InclusiveKernel` | `double octupole_moments(double m) const` returning `(m³ − (41/20)m)/0.3` for spin 3/2 and `0.0` otherwise, the exact analogue of `tensor_moments` (`src/core/xsec.cpp:168-173`) and consistent with `src/core/spin.cpp:246-259`. **Plural, mirroring `tensor_moments`**: a member named `octupole_moment` would hide the free function `lipolgen::octupole_moment(const CplxMatrix&, double)` (`include/lipolgen/spin.hpp:102`) inside the class scope |
 | `HelicityFlipOptions` (`include/lipolgen/bookkeeping.hpp:137-147`) | an explicit `o` beside `pzz`, since the explicit branch silently sets R₃ = 0 today (`src/core/bookkeeping.cpp:89`) |
 | `RunPlan` (`include/lipolgen/bookkeeping.hpp:89-129`) | **there is nowhere to record R₃ today.** The class carries `pe/pz/pzz` true + measured only, and `helicity_flip_plan` records just `.tensor` (`src/core/bookkeeping.cpp:102-104`), so the `HelicityFlipOptions::o` above has no destination. Add `o_true_` / `measured_o_`, recorded from `moments_along_axis(j, pops).octupole`, and give the smear block (`src/core/bookkeeping.cpp:33-41`) a policy — noting §2.4 that **there is no rank-3 polarimeter**, so the honest default is *not* a fourth `rng.normal()` draw but R₃ taken from the fill model (14) with its own systematic |
-| `python/bindings.cpp:1687-1689` | the two new `Options` members, beside the existing `b1_32_func` / `b2_32_func` / `delta_32_func` |
-| `python/bindings.cpp:1647-1656` | the `Amplitudes` binding gains `a3` — and this is a **breaking** change, not an addition: its `__iter__` and `__repr__` are a fixed 3-tuple, so every Python caller doing `w, a1, a2 = amps` breaks the day `a3` appears |
-| `python/bindings.cpp:1950-1951` | the `state_tables` dict export gains `a3`, `a3n` |
+| `python/bindings.cpp:1701-1703` | the two new `Options` members, beside the existing `b1_32_func` / `b2_32_func` / `delta_32_func` |
+| `python/bindings.cpp:1661-1670` | the `Amplitudes` binding gains `a3` — and this is a **breaking** change, not an addition: its `__iter__` and `__repr__` are a fixed 3-tuple, so every Python caller doing `w, a1, a2 = amps` breaks the day `a3` appears |
+| `python/bindings.cpp:1964-1965` | the `state_tables` dict export gains `a3`, `a3n` |
 
 Naming: **use `g1_rank3`, never `g2`**, for [6]'s fourth function (§3.3); the
 name `g2` is already taken in `SFTables` by the twist-3 nucleon g2

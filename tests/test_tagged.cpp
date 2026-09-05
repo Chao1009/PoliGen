@@ -1032,11 +1032,9 @@ bool vmc_data_present() {
 
 }  // namespace
 
-TEST_CASE("tagged: the VMC channels are built from the tables, and normalize") {
-  if (!vmc_data_present()) {
-    MESSAGE("data/vmc not present -- skipping");
-    return;
-  }
+TEST_CASE("tagged: the VMC channels are built from the tables, and normalize" *
+          doctest::skip(!vmc_data_present())) {
+  REQUIRE(vmc_data_present());   // the decorator already guaranteed it
   const TaggedChannel c6 = li6_alpha_channel(BETA_DEFAULT, P_D_LI6,
                                              ClusterWaveSource::VmcAV18);
   REQUIRE(c6.waves.size() == 2);
@@ -1065,11 +1063,9 @@ TEST_CASE("tagged: the VMC channels are built from the tables, and normalize") {
   }
 }
 
-TEST_CASE("tagged: VMC P_D(6Li) = 1.94% within the file's own MC error") {
-  if (!vmc_data_present()) {
-    MESSAGE("data/vmc not present -- skipping");
-    return;
-  }
+TEST_CASE("tagged: VMC P_D(6Li) = 1.94% within the file's own MC error" *
+          doctest::skip(!vmc_data_present())) {
+  REQUIRE(vmc_data_present());   // the decorator already guaranteed it
   // The constant is the file's printed 0.015861 / (0.80362 + 0.015861).  The
   // 1-sigma MC errors on those two integrals are ~1e-4 relative on the S
   // block and ~1% on the D block (DRHOKA2/RHOKA2 near the D peak), so 1.94%
@@ -1084,11 +1080,9 @@ TEST_CASE("tagged: VMC P_D(6Li) = 1.94% within the file's own MC error") {
   CHECK_CLOSE_AT(P_D_LI6 / VMC_P_D_LI6, 4.48, 0.0, 0.01);
 }
 
-TEST_CASE("tagged: the VMC moments reproduce the reconciled table") {
-  if (!vmc_data_present()) {
-    MESSAGE("data/vmc not present -- skipping");
-    return;
-  }
+TEST_CASE("tagged: the VMC moments reproduce the reconciled table" *
+          doctest::skip(!vmc_data_present())) {
+  REQUIRE(vmc_data_present());   // the decorator already guaranteed it
   // docs/open_items/vmc_reconciliation.md, "Moments on the TaggedModel grid".
   const GridMoments g6 = grid_moments(TaggedModel(
       li6_alpha_channel(BETA_DEFAULT, P_D_LI6, ClusterWaveSource::VmcAV18)));
@@ -1149,11 +1143,9 @@ TEST_CASE("tagged: the Hulthen path is untouched by the VMC backend") {
   }
 }
 
-TEST_CASE("tagged: the VMC S-D interference flips sign below the S node") {
-  if (!vmc_data_present()) {
-    MESSAGE("data/vmc not present -- skipping");
-    return;
-  }
+TEST_CASE("tagged: the VMC S-D interference flips sign below the S node" *
+          doctest::skip(!vmc_data_present())) {
+  REQUIRE(vmc_data_present());   // the decorator already guaranteed it
   // With the global phase fixed by psi_0(k -> 0) > 0 the model's own radial
   // tables carry the sign, and it is NOT the sign the positive-definite
   // Hulthen forms assume.  The S node is at 0.678 fm^-1 = 0.1338 GeV.
@@ -1182,11 +1174,9 @@ TEST_CASE("tagged: the VMC S-D interference flips sign below the S node") {
 // T24.  The ANL Monte Carlo errors are CARRIED, not parsed and dropped, and
 // the band they buy is measured rather than asserted.
 // docs/open_items/run_2026-09-03/phase_C_numbers.md sec. C5.2.
-TEST_CASE("T24 the VMC tables carry their Monte Carlo band") {
-  if (!vmc_data_present()) {
-    MESSAGE("data/vmc not present -- skipping");
-    return;
-  }
+TEST_CASE("T24 the VMC tables carry their Monte Carlo band" *
+          doctest::skip(!vmc_data_present())) {
+  REQUIRE(vmc_data_present());   // the decorator already guaranteed it
   const TaggedChannel c0 =
       li6_alpha_channel(BETA_DEFAULT, P_D_LI6, ClusterWaveSource::VmcAV18);
   REQUIRE(c0.waves.size() == 2);
@@ -1245,11 +1235,9 @@ TEST_CASE("T24 the VMC tables carry their Monte Carlo band") {
 }
 
 // T25.  The deuteron control on the exact AV18 wave function (C5.4).
-TEST_CASE("T25 the deuteron control channel, Hulthen against AV18") {
-  if (!vmc_data_present()) {
-    MESSAGE("data/vmc not present -- skipping");
-    return;
-  }
+TEST_CASE("T25 the deuteron control channel, Hulthen against AV18" *
+          doctest::skip(!vmc_data_present())) {
+  REQUIRE(vmc_data_present());   // the decorator already guaranteed it
   // The k-space block's own D fraction reproduces the file's r-space header
   // `dstate` = 0.057599 to 1.55e-5 relative -- the reader and the convention
   // validated by the file against itself.  The residual is the file's own
@@ -1286,11 +1274,9 @@ TEST_CASE("T25 the deuteron control channel, Hulthen against AV18") {
 
 // T26.  C5.3 (the N_ad / P_D spreads) and C5.5 (the inclusive-tagged drift),
 // in one place because they are the same question asked of two constants.
-TEST_CASE("T26 the alpha-d normalisation spread, and the inclusive drift") {
-  if (!vmc_data_present()) {
-    MESSAGE("data/vmc not present -- skipping");
-    return;
-  }
+TEST_CASE("T26 the alpha-d normalisation spread, and the inclusive drift" *
+          doctest::skip(!vmc_data_present())) {
+  REQUIRE(vmc_data_present());   // the decorator already guaranteed it
   // --- C5.3.  THREE NUMBERS SPAN THREE DIFFERENT AMOUNTS, and the document
   // that says "N_ad 5 %, P_D 7 %" is quoting two of them about a third: the
   // 7 % belongs to the D-wave NORM, and P_D -- the RATIO the tagged sector
@@ -1374,11 +1360,9 @@ TEST_CASE("T26 the alpha-d normalisation spread, and the inclusive drift") {
 // observable under the flag was 2.069 % HIGH against the wave function the flag
 // claims to select, and the run held two deuteron wave-function families.  This
 // pins that it now holds one, and that the Hulthen default is untouched.
-TEST_CASE("T27 the embedded deuteron follows --cluster-wave") {
-  if (!vmc_data_present()) {
-    MESSAGE("data/vmc not present -- skipping");
-    return;
-  }
+TEST_CASE("T27 the embedded deuteron follows --cluster-wave" *
+          doctest::skip(!vmc_data_present())) {
+  REQUIRE(vmc_data_present());   // the decorator already guaranteed it
   // --- what the two DIS targets are.
   const TaggedChannel h = li6_alpha_channel();
   const TaggedChannel v = li6_alpha_channel(BETA_DEFAULT, P_D_LI6,

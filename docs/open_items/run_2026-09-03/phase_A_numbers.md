@@ -19,8 +19,12 @@ that §5 leaves unattributed.
 > **STATUS NOTE, added by task A4/A6/A7 on the same day.** Where §0, §7.1 and
 > §8.0 item 3 say the ⁶Li publication ban is untouched, that was true when they
 > were written and is **no longer true**: the ban was lifted on the strength of
-> these measurements, and the sixteen files that carried it now carry the
-> verdict and its four conditions instead. **No number in this document
+> these measurements, and the **17 files** that carried it now carry the
+> verdict and its four conditions instead — 17 is the measured count
+> (`phase_A_gate_mechanics.md` §4 enumerates them, and
+> `git grep -il 'publication ban'` returns the same 17 files at `ac22331` and
+> at `HEAD`; re-measured 2026-09-05).  "Sixteen" here was the mid-task count,
+> before the survey finished. **No number in this document
 > changed** — only the sentences about what had and had not yet been reconciled
 > in the prose. The decision, its conditions and the two author decisions that
 > came with it are `docs/OPEN_ITEMS_SOLUTIONS.md` §10 and
@@ -382,9 +386,10 @@ absent the case still reported "1 passed" and the verdict clause was simply not
 evaluated, while every doc in the tree said PASSED in that build too. The MSTW
 half now lives in its own case, `b1_nuclear T1v gate checklist item 4, THE
 VERDICT ROW: MSTW2008 LO at CDKS Eq. (21) -- G3a/G3b/G3c`, decorated with
-`doctest::skip(!mstw_grid_present())` so doctest's own tally reports it SKIPPED
-by name; `b1_nuclear T1r` runs in **every** build and prints whether the
-verdict row was measured. This case keeps the CT18NLO half and is now
+`doctest::skip(!mstw_grid_present())` so doctest's own tally counts it SKIPPED
+instead of passed — doctest reports a skipped case in the COUNT only, never by
+name, so the name and the reason come from `b1_nuclear T1r`, which runs in
+**every** build and prints whether the verdict row was measured. This case keeps the CT18NLO half and is now
 `#ifdef LIPOLGEN_HAVE_LHAPDF`.)* The scan is threaded with **one structure function per thread**: neither
 `MstwSF` (`Pythia8::PDF::xf` is non-const and memoizes the last (x, Q²)) nor
 `LhapdfSF` is safe to share, and the Options are built in the calling thread so
@@ -428,9 +433,11 @@ touched by this task**, only test grids and reporting.
 
 ## 7. What is NOT done, and what a reader must not conclude
 
-1. **The ⁶Li publication ban is untouched.** Sixteen files carry it or a
-   gate-failure statement (`phase_A_gate_mechanics.md` §4 enumerates all 46
-   sites). This task edited exactly two of them, and only where leaving them
+1. **The ⁶Li publication ban is untouched.** **17 files** carry it or a
+   gate-failure statement — `phase_A_gate_mechanics.md` §4 enumerates the 46
+   sites in them, and `git grep -il 'publication ban'` returns the same 17 at
+   `ac22331` and at `HEAD` (re-measured 2026-09-05; this line said "Sixteen",
+   the count as of the middle of the survey). This task edited exactly two of them, and only where leaving them
    would have made the *code and its own generated output* contradict the
    measurement: `validation/b1_li6_table.py`'s module docstring and its
    emitted footer. **`phase_D_gate.md`, `OPEN_ITEMS_SOLUTIONS.md` §10,
@@ -439,7 +446,8 @@ touched by this task**, only test grids and reporting.
    now wrong on G3b and right on everything else. Reconciling them is a
    separate, larger edit with a policy decision inside it.
 2. **G3b passing is one of the seven conditions** listed at
-   `OPEN_ITEMS_SOLUTIONS.md:556-572` for item 10 to close. The others —
+   `OPEN_ITEMS_SOLUTIONS.md` §10 ("The seven close conditions, and where each
+   one landed") for item 10 to close. The others —
    CD-Bonn, the `r1998` default question, the VMC 5 % spread — are not
    addressed here. (**CD-Bonn was addressed afterwards, by task A5: see §8.**
    The `r1998` question and the VMC spread remain open.)

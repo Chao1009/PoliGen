@@ -1296,15 +1296,25 @@ declaration.
 
 1. **The reach.** §C2's significance is linear in κ = a₂(±1)/|t|. The same
    J/ψ sample that gives **2.62 σ** at the measured quadrupole
-   (κ = 0.08752978 GeV⁻², §C2.4's headline row) gives **29.9 σ** at the
+   (κ = 0.08752978 GeV⁻², §C2.4c's **uncorrected middle** — the ε_det = 0.1775
+   chain, which may not be quoted on its own: the band is 2.63 σ at its low
+   edge and 2.84 … 3.29 σ at its top, 3 σ at 8.3 … 13.0 fb⁻¹/u) gives
+   **29.9 σ** at the
    scenario's own κ = 1.0 GeV⁻². Had §C2 been run on `eps_b0` instead of on
    `a2_from_quadrupole`, it would have answered O5 the wrong way round by a
    factor 11.4 — an overstatement of the reach, where the Q²-window and
    lepton-channel errors §C2 shipped with were an understatement of it. The
    two are independent and both had to be fixed.
 2. **`COHERENT_T_MAX_DEFAULT` = 0.2 is a consequence of the oversized
-   `eps_b0`, not of the target.** The positivity edge |c₂| = 1 at P_zz = −2
-   sits at |t| = (2·`amp` − 1)/(`eps_b0`·B):
+   `eps_b0`, not of the target.** *(**SUPERSEDED 2026-09-04 by D5**, `STATUS.md`
+   decision row 12 and `OPEN_ITEMS_SOLUTIONS.md` §11.6: the dependency is
+   stated the other way round now — the ceiling rests on the **anchor range**
+   (|t| ≤ 0.30, knob-independent) and does not move with `eps_b0`; what
+   `eps_b0` sets is the **positivity edge**, 0.245 GeV² at the shipped value
+   and 2.80 at the measured quadrupole, which is the contingent second reason.
+   The measurement in the table below is unchanged and correct.)* The
+   positivity edge |c₂| = 1 at P_zz = −2 sits at
+   |t| = (2·`amp` − 1)/(`eps_b0`·B):
 
    | `eps_b0` | |t| at \|c₂\| = 1 |
    |---|---|
@@ -1314,8 +1324,9 @@ declaration.
    | −0.0070 (measured Q) | **2.800** |
 
    At the measured quadrupole the azimuthal weight would stay a density out to
-   |t| = 2.8 GeV², i.e. the |t| ceiling would be set by the digitisation range
-   of the anchor and by nothing else.
+   |t| = **2.80 GeV²**, i.e. positivity would leave the ceiling to the
+   digitisation range of the anchor and to nothing else — which, since D5, is
+   the reason the ceiling is written down on (`STATUS.md` decision row 12).
 
 ### C4.6 The decision
 
@@ -1709,7 +1720,16 @@ What changed:
   constexpr expression, so every value is bit for bit unchanged.
 
 **Cost, stated.** Every polarized ⁶Li tagged-α observable made with
-`--cluster-wave vmc` moves by **−2.027 %** (= 1/1.020687). Nothing on the
+`--cluster-wave vmc` moves by **−2.027 %** (= 1/1.020687). And the polarized
+observables are not all of it: the same deuteron supplies the T1 struck-nucleon
+MOMENTUM draw, so on that flag the **`struck_virtuality` column moves too** —
+an unpolarised, plan-independent column. Measured on
+`--isotope 6Li --channel tagged-6Li-alpha --plan tensor-thirds --cluster-wave
+vmc --events 400 --seed 4242` against the same command on the pre-fix build:
+**378 of 400 events** differ, ⟨p² − M²⟩ **−0.056656 → −0.059909 GeV²**,
+σ **0.0736 → 0.1135** (×1.54); `k`, `weight`, `x`, `Q2` and every other T0
+column are bit-identical under `tensor-thirds`, and the hadronized run's
+HFS particle count moves 2441 → 2472. Nothing on the
 Hulthén default moves — no reference file, no `validation/reference/*.json`
 gate, no assertion count. ⁷Li deliberately does **not** move: `TRITON()` is a
 Faddeev-family per-nucleon slot and this tree has no AV18 A = 3 wave function
@@ -1905,9 +1925,11 @@ polarized-J/ψ machinery on this repository's ⁶Li configuration tables.
 Requests (a) (the GFMC ⁴He configurations — the only route to closing
 O3 above) and (b) (the code generalization to any A) are unaffected, since
 neither is J/ψ-specific. Request (c) now states the deciding number, the
-kinematic window it belongs to, the two-factor quadrupole budget and the two
-things that are **not** established (the efficiency below Q² = 0.1 and the
-far-forward working point) plainly rather than omitting them.
+kinematic window it belongs to, the two-factor quadrupole budget and **the four things that are not established (no detection efficiency below Q² = 0.1, where 85 % of the coherent rate sits; no decay-lepton reconstruction efficiency anywhere in this tree, which is what leaves the band OPEN BELOW; the ⁷Li → ⁶Li efficiency substitution, which straddles 1 and makes the band's top a span; and the far-forward working point, unchosen — `cluster_config.hpp:525-534`)** plainly rather than omitting them.  (Until 2026-09-05 this sentence said
+"the two things … (the efficiency below Q² = 0.1 and the far-forward working
+point)" — the same under-count the fourth pass fixed at `a2_from_geometry`,
+and the two it omitted are the two that set the band's open bottom and the
+span of its top.)
 
 **Nothing has been sent.** The canonical draft says so at its own top and
 leaves that decision to the author.
@@ -2482,7 +2504,7 @@ them** — it did not report them as unchecked either.
 
 Rule **D** now resolves them against the dependency tree `env.sh` sets up.
 *Two names exist for that prefix and both are honoured*: `env.sh` exports
-`$LIPOLGEN_DEPS`, while `CMakeLists.txt`, `README.md:89` and `docs/USAGE.md:19`
+`$LIPOLGEN_DEPS`, while `CMakeLists.txt`, `README.md:188` and `docs/USAGE.md:19`
 call the same directory `$LIPOLGEN_DEPS_PREFIX` (it is a CMake cache variable
 that CMakeLists.txt also reads from the environment). Both name
 `<...>/deps/install`; the unpacked sources sit beside it at
@@ -2934,8 +2956,8 @@ done, beyond the prose:
   statement of why they do **not** move.
 * `include/lipolgen/breakup.hpp` / `src/core/breakup.cpp` —
   `BreakupOptions::source`; `ClusterBreakup` builds
-  `deuteron_channel(beta, p_d, source)`, so the T1 struck-nucleon spin draw is
-  the run's deuteron. The `⟨2m₁⟩ = (1 − 1.5 P_D) m_S` identity in the header is
+  `deuteron_channel(beta, p_d, source)`, so the T1 struck-nucleon MOMENTUM
+  draw (`sample_kc_one`) and its spin draw are both the run's deuteron. The `⟨2m₁⟩ = (1 − 1.5 P_D) m_S` identity in the header is
   now stated as the consistency gate it is.
 * `src/core/pipeline.cpp` — `bo.source = cfg_.cluster_wave` next to
   `bo.beta = cfg_.cluster_beta`; and `validate()` **refuses** `cluster_wave` on
@@ -2984,8 +3006,12 @@ list"**, and one printed self-contradiction.
   the PDF. The only measurement of the beam-energy dependence this tree has.
 * **`chang26_species_efficiency()`** — that paper's p. 4 species list with
   Fig. 2's beam energies, which exists to make **one fact checkable**: every
-  entry is at `A/Z × E` = 274.0–275.3 GeV/e, i.e. the same rigidity, so the
-  A-ordering is a species lever separate from the energy one.
+  entry is at `A/Z × E` = 274.0–275.3 GeV/e, i.e. the same rigidity,
+  ~~so the A-ordering is a species lever separate from the energy one~~
+  **RETRACTED 2026-09-04, fourth pass (§A1): fixed rigidity fixes neither E/u
+  nor Z, so the list is a joint (A, Z, E/u) lever and not a species lever;
+  this THIRD-pass sentence was missed when the retraction was applied at the
+  other sites and is struck here 2026-09-05.**
 * **`EstarlightLi6Q2Row::w_mean_gev`** — ⟨W⟩ per (meson, Q² floor), which both
   transfer arguments run on and which lived only in `estarlight_li6.md` prose.
 * **`validation/o5_a2_reach.py`** — `beam_energy_scaling`, `species_scaling`,

@@ -1584,7 +1584,7 @@ asking the group to run their polarised J/ψ setup on our ⁶Li tables — asks
 for a channel that is **marginally measurable** (2.63 σ at the band's low edge
 and 2.84–3.29 σ at its top, 3 σ at 8.3–13.0 fb⁻¹/u; §11.3c), so the canonical
 draft keeps that request and moves it to
-**photoproduction**, with the two things this repository cannot settle stated
+**photoproduction**, with the four things that are not established (no detection efficiency below Q² = 0.1, where 85 % of the coherent rate sits; no decay-lepton reconstruction efficiency anywhere in this tree, which is what leaves the band OPEN BELOW; the ⁷Li → ⁶Li efficiency substitution, which straddles 1 and makes the band's top a span; and the far-forward working point, unchosen — `cluster_config.hpp:525-534`) stated
 inside the ask. *(An intermediate version called the channel "blind" and
 withdrew the request; that came from one lepton channel in one Q² window,
 `OPEN_ITEMS_SOLUTIONS.md` §11.3a.)*

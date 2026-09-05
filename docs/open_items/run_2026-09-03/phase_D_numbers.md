@@ -17,8 +17,20 @@ pytests -- 40 passing and 18 refused-base skips -- and no C++ case):
 | gate | after D2 | after D1 | after D3+D4+D5 | after §D2.8 | after §D6 | after §D7 | after §D8 (this tree) |
 |---|---|---|---|---|---|---|---|
 | `build/lipolgen_tests` | 394 cases / 17 217 500 assertions / 1 skipped / 0 failed | 398 cases / 17 219 756 assertions / 1 skipped / 0 failed | 400 cases / 17 240 262 assertions / 1 skipped / 0 failed | 400 cases / 17 240 262 assertions / 1 skipped / 0 failed | 400 cases / 17 240 262 assertions / 1 skipped / 0 failed | 400 cases / 17 240 262 assertions / 1 skipped / 0 failed | **400 cases / 17 240 262 assertions / 1 skipped / 0 failed** |
-| `python -m pytest python/tests -q` | 367 passed | 390 passed | 407 passed | 433 passed | 848 passed, 94 skipped | 848 passed, 94 skipped | **888 passed, 112 skipped** |
+| `python -m pytest python/tests -q` | 367 passed | 390 passed | 407 passed | 433 passed | 848 passed, 94 skipped | 848 passed, 94 skipped | **888 passed, 112 skipped** (measured mid-§D8; the committed tree `de1a040` runs **909 passed, 112 skipped** — see the note under this table) |
 | `python3 validation/check_physics_channels_links.py` | 1115 references checked (strict), 97 ranges, 6 external, 0 broken, 6 allow-listed | 1119 references checked (strict), 97 ranges, 6 external, 0 broken, 6 allow-listed | 1122 references checked (strict), 97 ranges, 7 external, 0 broken, 6 allow-listed | 1130 references checked (strict), 97 ranges, 7 external, 0 broken, 6 allow-listed | 1144 references checked (strict), 97 ranges, 7 external, 0 broken, 6 allow-listed | 1145 references checked (strict), 97 ranges, 7 external, 0 broken, 6 allow-listed | **1145 references checked (strict), 97 ranges, 7 external, 0 broken, 6 allow-listed** |
+
+**The `888 passed, 112 skipped` cell is a measurement taken BEFORE the section
+that follows it finished.** It was measured during §D8 and not re-run after the
+§D7–F fourteen-site pass and §D9 added their tests. Re-measured 2026-09-05 on
+the committed phase-D tree: `de1a040`'s `python/tests` **collects 1021 tests
+(909 + 112)** and runs **909 passed, 112 skipped** — the figure `STATUS.md`
+row D and `phase_E_numbers.md` §E0.2 carry, and the 21-test gap
+`phase_E_numbers.md:59-66` records as "not independently traced" is exactly
+this. `git diff --stat de1a040 HEAD -- python/tests` is phase E's 16 tests
+only (`test_doc_link_gate.py`, `test_mstw_sf.py`, `test_release_metadata.py`,
+`test_spdx_headers.py`). Both `888` cells in this file are left as the
+historical measurement they are.
 
 (The "after §D2.8" reference count above is **1130**, measured on this tree on
 2026-09-05 before §D6 touched anything; §D2.8's own text below says 1128, which
@@ -57,7 +69,15 @@ columns are unchanged.
 `rc_tail_applies`, `cluster_wave_name`, `triton_sf_name`,
 `knob_provenance_lines`). Its C++ column is unchanged for the same reason
 §D2.8's was, and its pytest column moves by 415 because the new file is a
-MATRIX — one case per (channel × plan × knob) cell — which is the point of it.
+MATRIX — one case per (spec × knob) cell, where a "spec" is a
+(isotope, channel, plan) triple: the 7 (isotope, channel) combinations carry
+EVERY knob under ONE plan each, and 5 further specs carry the plan axis
+(helicity-flip / transverse-tensor / tensor-flip / pe = 0 on inclusive-⁶Li and
+tagged-⁷Li-alpha) for the 10 plan-sensitive knobs — 12 specs, 71 variants,
+**547 cells** (582 collected tests, re-measured 2026-09-05). It is NOT the
+full (channel × plan) product: coherent, tagged-⁶Li-alpha, tagged-d-p and
+inclusive-d are never run under helicity-flip, transverse-tensor or
+tensor-flip.  That is the point of it.
 `python/tests/test_knob_provenance.py` alone is **409 passed, 94 skipped in
 58 s**, every skip naming the refusal that made that cell's base configuration
 unbuildable; the remaining 6 of the 415 are the two new
@@ -1862,7 +1882,7 @@ file:
 | gate | after §D7 | after §D8 (this tree) |
 |---|---|---|
 | `build/lipolgen_tests` | 400 cases / 17 240 262 assertions / 1 skipped / 0 failed | **400 cases / 17 240 262 assertions / 1 skipped / 0 failed** |
-| `python -m pytest python/tests -q` | 848 passed, 94 skipped | **888 passed, 112 skipped** |
+| `python -m pytest python/tests -q` | 848 passed, 94 skipped | **888 passed, 112 skipped** (measured before the §D7–F pass and §D9 added their tests; `de1a040` as committed collects 1021 and runs **909 passed, 112 skipped**, re-measured 2026-09-05 — the figure `STATUS.md` row D and `phase_E_numbers.md` §E0 carry) |
 | `python3 validation/check_physics_channels_links.py` | 1145 references checked (strict), 97 ranges, 7 external, 0 broken, 6 allow-listed | **1145 references checked (strict), 97 ranges, 7 external, 0 broken, 6 allow-listed** |
 
 The C++ column does not move: every one of the six defects is on the run
@@ -1909,6 +1929,30 @@ coherent-6Li  e(10) x 6Li(99.5/u)  10x100 high-acceptance
 
 Nothing is lost: the bare name stays in
 `meta["knob_provenance"]["optics"]["value"]`.
+
+> **AMENDED, phase F, 2026-09-05.** "Nothing is lost" was true of the inclusive
+> channel, where the classifier is never reached, and FALSE of every channel
+> that HAS a route. There the label was the bare scope clause "not read on this
+> run", so `meta["optics"]` on a `tagged-d-p` run — 95.75 % of whose events
+> carry an optics-classified route — went from `10x100 high-acceptance` at
+> `a94fd6e` to `not read on this run`, and the banner printed that three lines
+> above a tag fraction quoted AT that envelope. The status is right (the labels
+> are insensitive to the one alternative envelope tabulated for d at 10x100);
+> the scalar said more than the row it came from. Fixed in the ONE place the
+> label is built: on a channel with a route the reason now opens
+> `not read on this run at 10x100 high-acceptance (the classifier IS consulted
+> here; this run's route labels are insensitive to yr-high-divergence)`, and
+> `n_sigma` and `pot_config` carry their own value the same way, so the name is
+> in the scalar, in the banner header and in the row — with no per-key branch
+> in `bindings.cpp`. Measured after that fix:
+>
+> ```text
+> $ python -m lipolgen --isotope d --channel tagged-d-p --plan tensor-thirds --events 400 --seed 4242
+> tagged-d-p  e(10) x d(100/u)  not read on this run at 10x100 high-acceptance (the classifier IS
+>     consulted here; this run's route labels are insensitive to yr-high-divergence)
+> $ python -m lipolgen --events 200 --channel inclusive --optics yr-high-divergence
+> inclusive  e(10) x 6Li(99.5/u)  not read on channel inclusive
+> ```
 
 ### D8.2 The coherent `x_max` rule was self-referential, and wrong at both edges
 

@@ -165,13 +165,17 @@ libpythia8.so  => <scratch>/ci-clone/deps/install/lib/libpythia8.so
 | SPDX gate | `python3 validation/check_spdx_headers.py` | 101 files, 0 missing |
 
 The doctest line is **bit-for-bit the tallies the author's own prefix
-produces** — 400 / 17 240 262 / 1 skipped / 0 failed. That is the strongest
-single statement on this page: a dependency stack rebuilt from four URLs by
+produced at the commit this was run against** (`7f68339`) —
+400 / 17 240 262 / 1 skipped / 0 failed; phase F has since added one case, so
+both trees now read 401 / 17 240 286. That is the strongest single statement
+on this page: a dependency stack rebuilt from four URLs by
 the script in §1 reproduces, to the digit, the environment this generator's
 rtol-1e-12 pinned numbers were measured in.
 
-The Python suite reads **923 / 114** where the repository itself reads
-**925 / 112**. Both extra skips were identified rather than assumed:
+The Python suite read **923 / 114** where the repository itself read
+**925 / 112** at that same commit (phase F then added one pytest: the tree
+reads **926 / 112** now). Both extra skips were identified rather than
+assumed:
 
 * `test_release_metadata.py:121` — *no 'origin' remote configured in this
   checkout*. The copy has no `.git`. **On GitHub this one would RUN**:

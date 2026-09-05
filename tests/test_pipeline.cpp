@@ -1101,7 +1101,18 @@ TEST_CASE("pipeline: the optics luminosity fraction reaches the event count") {
 
 // ------------------------------------------------- the VMC cluster backend
 
-TEST_CASE("pipeline: the tagged pipeline runs on the VMC cluster waves") {
+namespace {
+/// Is the VMC momentum tree on disk?  Read at doctest REGISTRATION time by the
+/// decorator below, so an absent `data/vmc` shows in the tally as SKIPPED
+/// rather than as a passed case that returned before its first CHECK
+/// (tests/test_b1_nuclear.cpp's T1v pattern; phase F, 2026-09-05).
+bool vmc_momenta_present() {
+  return std::ifstream(data_path("vmc/momenta/li6_ad1.momentum")).good();
+}
+}  // namespace
+
+TEST_CASE("pipeline: the tagged pipeline runs on the VMC cluster waves" *
+          doctest::skip(!vmc_momenta_present())) {
   // `--cluster-wave vmc`, end to end, for BOTH isotopes: the pipeline builds,
   // conserves four-momentum and charge event by event, and moves the tag
   // fractions the way docs/open_items/vmc_reconciliation.md says it does.
@@ -1110,11 +1121,7 @@ TEST_CASE("pipeline: the tagged pipeline runs on the VMC cluster waves") {
   // 0.2-0.3 GeV band, which is exactly where the Roman-Pot envelope bites,
   // 6Li alpha+d is HARDER (P(k>0.2) 0.148 -> 0.241), so the 6Li tag fraction
   // GOES UP at the high-acceptance envelope even though <k> barely moves.
-  std::ifstream probe(data_path("vmc/momenta/li6_ad1.momentum"));
-  if (!probe) {
-    MESSAGE("data/vmc not present -- skipping");
-    return;
-  }
+  REQUIRE(vmc_momenta_present());   // the decorator already guaranteed it
   struct Row { PipelineChannel ch; const char* iso; int plan; double expect; };
   const Row rows[] = {
       {PipelineChannel::TaggedLi6Alpha, "6Li", 0, 0.0348},

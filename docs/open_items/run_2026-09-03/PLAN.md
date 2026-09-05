@@ -80,7 +80,8 @@ Three findings reorder the work relative to `OPEN_ITEMS_SOLUTIONS.md`:
 ## Phase A — lift the ⁶Li b₁ publication ban (open item 10)
 
 The single highest-leverage cluster: it is the only gate in the tree that
-forbids publishing a number. `OPEN_ITEMS_SOLUTIONS.md:556-573` lists seven
+forbids publishing a number. `OPEN_ITEMS_SOLUTIONS.md` §10 "The seven close conditions, and where each one
+landed" lists seven
 conditions; A1–A7 are those seven.
 
 - **A1** `include/lipolgen/mstw_sf.hpp` + `src/pythia/mstw_sf.cpp`:
@@ -123,7 +124,11 @@ conditions; A1–A7 are those seven.
   (`README.md`, `docs/{USAGE,PHYSICS_CHANNELS,OPEN_ITEMS_SOLUTIONS,CONVENTIONS}.md`,
   the five `run_2026-09-02/*.md`, `b1_nuclear.hpp`, `cli.py`,
   `test_b1_nuclear.cpp`, `b1_li6_table.py`), and `PHYSICS_CHANNELS.md` carries
-  it twice. If it does not: restate the residual budget with the new number.
+  it twice. *(The "fourteen" is this plan's PRE-SURVEY estimate, written before
+  A7 ran and left as written. The measured count is **17** —
+  `phase_A_gate_mechanics.md` §4 enumerates them and
+  `git grep -il 'publication ban'` returns the same 17 at `ac22331` and at
+  `HEAD`, re-measured 2026-09-05.)* If it does not: restate the residual budget with the new number.
 
 ## Phase B — the radiative tail, where it is wrong rather than merely incomplete
 
@@ -137,7 +142,7 @@ conditions; A1–A7 are those seven.
   target rather than an input (T6 becomes partly circular — needs a written
   override), and the same file is being called too wrong for the quadrupole and
   right enough for the monopole. Split off the one-line contradiction between
-  T11's q₀ ∈ [2.9, 3.3] fm⁻¹ and `PHYSICS_CHANNELS.md:370`'s |t| ≈ 0.31 GeV²
+  T11's q₀ ∈ [2.9, 3.3] fm⁻¹ and `PHYSICS_CHANNELS.md:397`'s |t| ≈ 0.31 GeV²
   (⇒ q = 2.82 fm⁻¹, outside the gate).
 - **B2** Promote the s-/p-peaks. Six functions (`ll_radiator`,
   `rosenbluth_spin1`, `rosenbluth_nucleon`, `dsigma_el_dq2`, `ll_peaks_spin1`,
@@ -304,7 +309,13 @@ conditions; A1–A7 are those seven.
   0.02 × ⁶Li's orbital term) but its sign flips with the unpolarised backend,
   and the Q(⁷Li) check that would gate the wave function is **not committed**
   because its reference number is not in this tree. `OPEN_ITEMS_SOLUTIONS.md`
-  §15, decisions D2 and D11.
+  §15.5, decisions **§15.5 D2** and **§15.5 D11**. *(The label "D2" names
+  three different decisions in this document set and must always be qualified:
+  **sweep D2** — the SF injection of this run, `OPEN_ITEMS_SOLUTIONS.md`
+  summary row 14 and `STATUS.md`'s phase-D row; **§15.5 D2** — the ⁷Li
+  unpolarised backend, this pointer; and **plans/08 D2**, reached through
+  `OPEN_ITEMS_SOLUTIONS.md` row 3's "unblocks D2", in a file that is not in
+  this tree.  Likewise "D1".)*
 - **D2** ~~Toy F₂/g₁/R are the shipped defaults everywhere and the tagged channels
   have no injection point for a real backend.~~ **CLOSED 2026-09-04 for F₂ and
   g₁; R stays its own axis, deliberately.** `--unpol-sf {toy,mstw,ct18nlo}`
@@ -323,13 +334,14 @@ conditions; A1–A7 are those seven.
   premise is false.** Measured on one event stream reweighted three ways
   (`tagged-6Li-alpha`, 20 000 events, seed 1234, `tensor-thirds` at
   P_z = 0.7 / P_zz = 0.6 / P_e = 0.7, σ_XN = 40 mb), the two variants differ
-  on **99.50 %** of events,
-  by up to a factor 68.5 per event and by 48 %/42 % in integrated rate. The
-  identity that *does* hold — the Ciofi degli Atti–Kaptari per-nucleon product
-  on an uncorrelated density collapsing onto the cluster form — is about a code
-  path this tree does not have, which is why the shipped `glauber-nucleon` is
-  the single-scattering limit instead. What was actually wrong: the knob was
-  absent from the npz `meta`. `OPEN_ITEMS_SOLUTIONS.md` §7.1–7.2.
+  on **99.50 %** of events by more than **1 %**
+  (|w_nucleon/w_cluster − 1| > 0.01), by up to a factor 68.5 per event and by
+  48 %/42 % in integrated rate. The identity that *does* hold — the Ciofi degli
+  Atti–Kaptari per-nucleon product on an uncorrelated density collapsing onto
+  the cluster form — is about a code path this tree does not have, which is why
+  the shipped `glauber-nucleon` is the single-scattering limit instead. What
+  was actually wrong: the knob was absent from the npz `meta`.
+  `OPEN_ITEMS_SOLUTIONS.md` §7.1–7.2.
 - **D4** ~~`PDF:PomSet` is called the coherent T2 tier's largest systematic and has
   never been scanned.~~ **SCANNED 2026-09-04**, all 15 sets × 20 000 events at
   ⁶Li config 1, seed 4242. The proposed observable was the wrong one: the T0

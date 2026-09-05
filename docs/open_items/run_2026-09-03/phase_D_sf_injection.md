@@ -45,7 +45,7 @@ correctly, including the tagged clause:
 > `inclusive_b1` and `delta_func`, so F₂, g₁, R and EMC there are hard-locked to
 > `ToyF2`/`ToyG1`/`r_sigma_lt`/none.
 
-and the EMC row (`docs/PHYSICS_CHANNELS.md:152`) already says
+and the EMC row (`docs/PHYSICS_CHANNELS.md:172`) already says
 `Options::emc_ratio` "is empty in every default kernel". `docs/USAGE.md`
 §§2a and the `B1UnpolSource` block in `include/lipolgen/pipeline.hpp:395-406`
 say the same about the scope of `--b1-unpol`. What is missing is not the
@@ -442,7 +442,7 @@ The reasons are physics reasons, not compatibility ones:
    | 8 | `tests/test_b1_nuclear.cpp:2043` | the same assertion in C++ |
    | 9 | `docs/USAGE.md:486-492` | "Scope, and the price of it" |
 
-   `docs/PHYSICS_CHANNELS.md:162` states the *consequence* rather than the
+   `docs/PHYSICS_CHANNELS.md:158-159` states the *consequence* rather than the
    sentence, so it is a tenth site to check by hand and no single grep pattern
    catches all ten — which is itself the reason to keep the two flags separate
    rather than re-derive this paragraph.
@@ -653,7 +653,7 @@ Mechanically:
   only occurrences are the declaration (`include/lipolgen/xsec.hpp:229`), the
   consumption (`src/core/xsec.cpp:64`) and the pybind property
   (`python/bindings.cpp:1836`). So **no shipped run applies any EMC ratio to
-  F₂A on any channel**, exactly as `docs/PHYSICS_CHANNELS.md:152` states.
+  F₂A on any channel**, exactly as `docs/PHYSICS_CHANNELS.md:172` states.
 
 Conceptually, the interaction is a **denominator-matching** trap that
 `include/lipolgen/sf.hpp:297-301` already documents for a different reason:
@@ -725,7 +725,7 @@ simpler and matches the existing rule. Note that closing §5.8 clause 3 does
 `default_inclusive_kernel(deuteron()).tables(x, q2).b1` is *identical* to the
 ⁶Li kernel's at every point, and is 0.307316 × `toy_b1(x, q2, f1)`. The isotope
 guard exists in `validate()` (`:571-589`) but only inside the **non-Miller**
-branch, and Miller is the default. `docs/PHYSICS_CHANNELS.md:120` already
+branch, and Miller is the default. `docs/PHYSICS_CHANNELS.md:125` already
 describes this behaviour ("for ANY spin-1 ion"), so it is documented — but a
 deuteron run is not a ⁶Li run and the 2/6 embedded-deuteron counting factor has
 no meaning for A = 2. Worth a decision in phase F.

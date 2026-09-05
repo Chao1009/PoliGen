@@ -166,7 +166,7 @@ Fig. 4 (G3a hard, G3b/G3c recorded)")`, which opens at **:428** and closes at
 | g | "its maximum in [0.5, 1.0] sits within **Δx = ±0.10** of x = 0.766" (`:1287-1288`) | own scan `if (xs[i] < 0.5 \|\| xs[i] > 1.0) continue;` **:480-484**, then `CHECK(std::fabs(xpk - ref.x_max) < 0.10)` **:485** | agrees |
 | h | G3b: "max \|x·b₁\| over [0.10, 0.80]" (`:1290`) | `if (xs[i] < 0.10 \|\| xs[i] > 0.80) continue; win = std::max(win, std::fabs(xb1[i]));` **:496-499** | agrees in intent; the linspace does not land on 0.10 or 0.80 exactly (§1.3 D-8) |
 | i | G3b: "agrees with 1.0852e−3 … **within a factor of 2**" (`:1290-1293`) | `CHECK_CLOSE(win, 4.77477e-4, 2e-3); CHECK_CLOSE(ratio, 0.439986, 2e-3); CHECK(ratio < 0.5);` **:504-506** | **DISAGREES** — the code pins the failure, see D-4 |
-| j | G3b: "the ratio is written into `OPEN_ITEMS_SOLUTIONS.md` §10 to three digits" (`:1293-1294`) | `MESSAGE(...)` **:501-503**; the document carries it at `OPEN_ITEMS_SOLUTIONS.md:414`, `:428` | agrees |
+| j | G3b: "the ratio is written into `OPEN_ITEMS_SOLUTIONS.md` §10 to three digits" (§10, "The A = 2 gate, measured") | `MESSAGE(...)` **:501-503**; the document carries it at `OPEN_ITEMS_SOLUTIONS.md:474`, `:428` | agrees |
 | k | G3c: "∫b₁ dx … next to `close_kumano_integral(true)` and `(false)`. Record both." (`:1300-1303`) | `MESSAGE` **:509-511**, `CHECK_CLOSE(got.integral_b1, 2.15370e-4, 3e-3)` **:512**, `CHECK_CLOSE(close_kumano_integral(true), ref.integral_b1, 1e-9)` **:513** | agrees |
 | l | — (not in the design) | the computed curve's own landmarks pinned: **:515-520** (`x_min` 0.2372, `xb1_min` −3.30912e−5, `x_max` 0.75508, `xb1_max` 4.77477e−4, `z[0]` 0.022113, `z[1]` 0.377357) | code-only regression pins |
 | m | — (not in the design) | the margin clauses `CHECK(z[0] > 0.02)` **:530** and `CHECK(z[0] - 0.02 < 0.005)` **:531**; and `CHECK(std::fabs(z[1] - ref.zeros[1]) > 0.05)` **:533** | code-only; **:531** and **:533** are *upper* bounds on agreement — see D-6 |
@@ -810,7 +810,7 @@ inside data), `data/vmc/deuteron/fdeut.av18` (likewise).
    `linspace(0.01, 1.59, 300)`. Changing one and not the other splits the two
    test cases onto different grids and makes `phase_D_gate.md`'s κ-column
    comparison no longer like-for-like.
-3. **`PHYSICS_CHANNELS.md:161` carries seven `include/lipolgen/b1_nuclear.hpp:NNN`
+3. **`PHYSICS_CHANNELS.md:184-186` carries seven `include/lipolgen/b1_nuclear.hpp:NNN`
    line anchors** (`:551`, `:575`, `:456`, `:603`, `:608`, `:610`, `:629`), and
    `validation/check_physics_channels_links.py` gates them to ±2 lines
    (`:17-18`). Editing the header WARNING block at `b1_nuclear.hpp:11-28`

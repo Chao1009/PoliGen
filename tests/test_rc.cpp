@@ -460,7 +460,7 @@ TEST_CASE("T11: the 6Li form-factor anchors, and for_ion's refusals") {
       CHECK_CLOSE(f->fq(0.0),
                   std::pow(m_a / HBARC_GEV_FM, 2) * LI6_QUADRUPOLE_FM2, 1e-14);
       // The design's printed values (sec. 2.1), at its own precision.
-      CHECK_CLOSE(f->fc(0.0), 3.0, 1e-13);
+      CHECK_CLOSE(f->fc(0.0), 3.0, 1e-14);
       CHECK_CLOSE(f->fm(0.0), 4.90765, 1e-4);
       CHECK_CLOSE(f->fq(0.0), -65.914, 1e-4);
       // TUNL's -0.0818(17) fm^2, NOT Pyykko's -0.0806 (which gives -64.947).

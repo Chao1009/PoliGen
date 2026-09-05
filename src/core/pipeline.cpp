@@ -2054,13 +2054,27 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
                         "four-vector") +
                 probe_tail + ": " + rr.optics_alt + " moves " +
                 std::to_string(rr.optics_n) + " of them"
-      : !has_route ? no_route
-                   : std::string("not read on this run") + probe_tail +
-                         ", every one of them keeps its route label under "
-                         "every other tabulated envelope (" +
-                         rr.optics_tried +
-                         ").  The classifier IS consulted here; what it is "
-                         "not is sensitive to the envelope on this sample",
+      : !has_route
+          ? no_route
+          // THE NAME STAYS IN THE LABEL, and therefore in `meta["optics"]`
+          // and in the banner header (2026-09-05, phase F).  This branch is
+          // the one where the classifier IS consulted -- the channel writes a
+          // far-forward fragment and every event's route label is priced at
+          // THIS envelope -- and only the SENSITIVITY to the envelope is
+          // absent on this sample.  A bare "not read on this run" said the
+          // stronger thing and dropped the envelope name that the a94fd6e
+          // files carried and that the tag fraction printed three lines below
+          // it in the banner is quoted at.  The status stays NotRead, because
+          // the output hash is what the matrix measures; the label carries
+          // the name AND the scope, which is what a reader needs.
+          : std::string("not read on this run at ") + optics_.name +
+                " (the classifier IS consulted here; this run's route labels "
+                "are insensitive to " + rr.optics_tried + ")" + probe_tail +
+                ", every one of them keeps its route label under "
+                "every other tabulated envelope (" +
+                rr.optics_tried +
+                ").  The classifier IS consulted here; what it is "
+                "not is sensitive to the envelope on this sample",
       c.optics_choice == d.optics_choice);
   add("n_sigma", "", fmt_g(c.n_sigma),
       rr.n_sigma_moves ? KnobStatus::Read : KnobStatus::NotRead,
@@ -2074,7 +2088,13 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
           ? std::string("not read at optics_choice = Custom: the Optics "
                         "object in PipelineConfig::optics is taken verbatim "
                         "and no envelope is rebuilt")
-          : std::string("not read on this run") + probe_tail +
+          // The same rule as `optics` above: the envelope every route label
+          // IS priced at was built at THIS n_sigma, so the label names it.
+          : std::string("not read on this run at n_sigma = ") +
+                fmt_g(c.n_sigma) +
+                " (the envelope the classifier consults was built at it; "
+                "this run's route labels are insensitive to " +
+                rr.n_sigma_tried + ")" + probe_tail +
                 ", every one of them keeps its route label at n_sigma = " +
                 rr.n_sigma_tried,
       c.n_sigma == d.n_sigma);
@@ -2085,14 +2105,21 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
                         "the route classification tests against") +
                 probe_tail + ": pot_config = " + rr.pot_alt + " moves " +
                 std::to_string(rr.pot_n) + " route labels"
-      : !has_route ? no_route
-                   : std::string("not read on this run") + probe_tail +
-                         ", none of them is over-rigid enough to reach the "
-                         "only branch it has: pot_config enters route_charged "
-                         "through over_rigid_route alone, which is tested at "
-                         "R > 1 + NEAR_BEAM_BAND, and every machine "
-                         "configuration (" + rr.pot_tried +
-                         ") leaves this run's route column bit-identical",
+      : !has_route
+          ? no_route
+          // The same rule as `optics` above, and the same reason: this run's
+          // route classification consults the machine configuration, so the
+          // label names the one it consulted (`meta["pot_config"]` carried a
+          // bare "10x100" before 2026-09-05 and must not lose it).
+          : std::string("not read on this run at ") + pot_config_ +
+                " (the branch it enters is never reached on this run)" +
+                probe_tail +
+                ", none of them is over-rigid enough to reach the "
+                "only branch it has: pot_config enters route_charged "
+                "through over_rigid_route alone, which is tested at "
+                "R > 1 + NEAR_BEAM_BAND, and every machine "
+                "configuration (" + rr.pot_tried +
+                ") leaves this run's route column bit-identical",
       c.pot_config == d.pot_config);
   add("seed", "--seed", std::to_string(c.seed), KnobStatus::Read,
       "every event is Rng(seed, run, category, local index): the whole "

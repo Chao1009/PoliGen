@@ -690,7 +690,8 @@ struct PipelineConfig {
   ///   * SINCE 2026-09-04 the EMBEDDED DEUTERON of the 6Li alpha tag, in BOTH
   ///     places a run reads it (open item C5.5b): `TaggedChannel::dis_target`
   ///     -- the struck cluster's g1 -- is `DEUTERON_AV18()` (tagged.hpp), and
-  ///     `BreakupOptions::source` -- the T1 struck-nucleon spin draw -- is
+  ///     `BreakupOptions::source` -- the T1 struck-nucleon MOMENTUM draw and
+  ///     its spin draw, both from that same deuteron (`sample_kc_one`) -- is
   ///     this field.  It used to reach NEITHER, so a `--cluster-wave vmc` run
   ///     took the alpha-d RELATIVE motion from the ANL VMC AV18+UX overlap and
   ///     the embedded deuteron from the 0.045 scenario: two deuteron
@@ -1090,7 +1091,9 @@ std::string pol_sf_unread_label(const PipelineConfig& cfg, const RunPlan& plan);
 // `Pipeline::knob_provenance` is that enumeration: ONE function that returns
 // EVERY user-settable knob of a run with what the run did with it.  The npz
 // `meta` block, the CLI banner block and `python/tests/test_knob_provenance.py`
-// -- which rebuilds the measured (channel x plan x knob) matrix and asserts
+// -- which rebuilds the measured (spec x knob) matrix (12 (isotope, channel,
+// plan) specs x 71 knob variants = 547 cells; not the full channel x plan
+// product -- USAGE.md sec. 7c) and asserts
 // the table against the OUTPUT HASH -- all read this one table, so a knob
 // cannot be reported without a status and a new knob cannot be added without
 // one either.
@@ -1421,11 +1424,19 @@ class Pipeline {
   /// fragment (|R - 1| < 0.05, theta < THETA_RP_OUTER) and `pot_config` only
   /// for an OVER-RIGID one (R > 1.05).  Whether a different value moves a
   /// LABEL is therefore a property of where THIS run's fragments fall, and it
-  /// is not decidable from the channel: measured 2026-09-05, `--pot-config`
-  /// moves nothing on the coherent channel at any statistics (the intact
-  /// recoil is never over-rigid) while it moves labels on tagged-6Li-alpha at
-  /// 60 events, and `--optics yr-high-divergence` moves labels on tagged-d-p
-  /// at 60 events and none at 2000.
+  /// is not decidable from the channel.  Measured 2026-09-05: `pot_config`
+  /// moves nothing on `coherent` at 60, 400, 2000 or 20 000 events (the
+  /// intact recoil is never over-rigid) while it moves labels on
+  /// `tagged-6Li-alpha` at every one of those sizes, 60 included; and
+  /// `--optics yr-high-divergence` moves ONE `tagged-d-p` label at 60 events
+  /// with SEED 7 and none at 2000 with SEED 11 (phase D's own pair,
+  /// `phase_D_numbers.md` D6).  The seed is half of that statement: at the
+  /// SHIPPED DEFAULT seed the same channel is not-read at 60, 400 and 2000
+  /// under all four plans -- the one exception being `n_sigma` under
+  /// `tensor-flip` at 2000, which is READ -- and at seed 1234 it is not-read
+  /// at 60 and 2000 for all three configs and both YR envelopes.  So it is a
+  /// property of the SAMPLE (seed and size together), not of the size and not
+  /// of the channel, and no tabulated rule can stand in for the probe.
   ///
   /// So it is MEASURED, on this run, the way every script in this tree prices
   /// a sample at a second envelope: the sample is drawn ONCE and re-routed

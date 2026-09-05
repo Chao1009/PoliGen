@@ -171,8 +171,11 @@ item 10 did **not** close in this run.
 > in PYTHIA's `pdfdata` all along — and G3b came out **0.843243**, inside the
 > factor-2 window; with the real CD-Bonn wave function as well, **1.000338**.
 > Escalation is not triggered, the warning is out of the header and `--help`,
-> and the ⁶Li publication ban is **lifted** (the ±100 % band is not). Current
-> numbers: `docs/open_items/run_2026-09-03/phase_A_numbers.md`.
+> and the ⁶Li publication ban is **lifted** (the ±100 % band is not) — for
+> that configuration (`--b1-unpol mstw` at CDKS
+> Eq. (21)); on the shipped `toy` default the same clause gives **0.440**,
+> outside [0.5, 2], so the default's numbers are **not covered by the lift**.
+> Current numbers: `docs/open_items/run_2026-09-03/phase_A_numbers.md`.
 
 The measured gate as it stood in this run is
 `docs/open_items/run_2026-09-02/phase_D_gate.md`, the measured numbers

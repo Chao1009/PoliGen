@@ -25,10 +25,15 @@ never bare.
 returns one row per user-settable knob — `{name, flag, value, status ∈ {read,
 not-read, refused}, reason, label, at_default}` — and the three surfaces read
 that table and nothing else: `meta["knob_provenance"]` plus the individual keys
-that carry a label (`pol_sf`, `rc_scope`, `coherent_t2`, `pom_set`,
-`pom_rescale`), the CLI's `KNOB PROVENANCE` banner block
+that go through `KnobProvenance::meta_value()` — `pol_sf`, `rc_scope`,
+`coherent_t2`, `pom_set`, `pom_rescale`, `optics`, `pot_config`, and (since
+2026-09-05) `b1_model` and `b1_unpol`, whose ⁷Li value is the same
+`rank2_none_label()` the row carries and which used to be computed a second
+time in `python/bindings.cpp` — the CLI's `KNOB PROVENANCE` banner block
 (`cli.knob_provenance_lines`), and `python/tests/test_knob_provenance.py`,
-which rebuilds the (channel × plan × knob) matrix and asserts the table against
+which rebuilds the (spec × knob) matrix — 12 (isotope, channel, plan) specs
+× 71 knob variants = 547 cells, not the full (channel × plan) product; see
+`USAGE.md` §7c — and asserts the table against
 the **output hash**. **A knob added without a row fails that test.** Do not add
 a per-knob reach sentence to the banner or a bare per-knob key to the `meta`:
 add the row.
@@ -106,7 +111,8 @@ knobs recorded nowhere at all
   the ANL VMC AV18+UX α–d overlap for the RELATIVE motion, and the scenario
   Hulthén deuteron (P_D = 0.045) for the embedded deuteron in both places a
   run reads it — `TaggedChannel::dis_target`, i.e. the struck cluster's g₁,
-  and `BreakupOptions`, i.e. the T1 struck-nucleon spin draw.  Every polarized
+  and `BreakupOptions`, i.e. the T1 struck-nucleon MOMENTUM **and** spin draw
+  (`ClusterBreakup` samples k from that same deuteron).  Every polarized
   tagged-α observable was **+2.069 %** high against the AV18 deuteron
   (P_D = 0.057600) belonging to that overlap.  Since 2026-09-04 both follow
   the flag (`DEUTERON_AV18()`, `BreakupOptions::source`), the opt-in path moved
@@ -120,8 +126,10 @@ knobs recorded nowhere at all
   g₁(⁶Li)/g₁(d) = (1 − 1.5 P_D_LI6)/3 = 0.290 exactly (the deuteron's own D
   state cancels between the two isoscalar ions).  The retired Cloet
   convention stays reachable as `LI6_NAIVE_ONE_THIRD` — a whole-nucleus 1.0,
-  1.233× this one and above the 0.81–0.85 band whose top is the Wiringa VMC
-  0.848.
+  1.233× this one and above the **0.81–0.91** band of this tree's wave
+  functions, INSIDE which the ab-initio Wiringa VMC 0.848 sits (0.811 … 0.905;
+  this bullet said "the 0.81–0.85 band whose top is the Wiringa VMC 0.848"
+  until 2026-09-05, which contradicted the same file's own C5.5 bullet).
 - **Exact finite-γ tensor sector.** `InclusiveKernel::Options::tensor_gamma`
   defaults to FALSE, matching `xsec.py`.  True replaces the massless
   Hoodbhoy–Jaffe–Manohar b-sector with the Cosyn Eqs. (9)/(10)/(14)/(16)/(17)/
@@ -289,8 +297,10 @@ knobs recorded nowhere at all
 - **Cluster radial forms.** `ClusterWaveSource::Hulthen` is the DEFAULT
   everywhere and is bit-compatible with every published number; the analytic
   two-parameter forms and their `beta` band (0.20–0.40, default 0.30) are in
-  `cluster.hpp`.  `ClusterWaveSource::VmcAV18` replaces them, on the two
-  LITHIUM alpha-tag channels only, with the ANL VMC tables:
+  `cluster.hpp`.  `ClusterWaveSource::VmcAV18` replaces them — on all three
+  tagged channels: the two lithium α tags and, since 2026-09-04, the deuteron
+  control and the ⁶Li α tag's EMBEDDED deuteron (one deuteron per run) — with
+  the ANL VMC tables:
 
   | wave | magnitude |ψ_L(k)| | sign |
   |---|---|---|
@@ -315,9 +325,14 @@ knobs recorded nowhere at all
   P_D is a property of the wave function (`VMC_P_D_LI6` = 0.01935, the file's
   own 0.015861/(0.80362+0.015861), against the 0.0867 SCENARIO placeholder).
   Tables are ZERO outside 5 fm⁻¹ = 0.9866 GeV, so the sampler cannot draw a
-  spectator past it.  The deuteron control channel is always Hulthen — the
-  deuteron IS the cluster and no d → p+n two-cluster table exists — which is
-  what keeps the Cosyn–Weiss tensor gate on the analytic path.
+  spectator past it.  The deuteron control channel is Hulthén **by default and
+  follows `--cluster-wave vmc`** (C5.4, 2026-09-04): `fdeut.av18`'s u(k), w(k)
+  ARE the p–n relative waves, so the sentence that used to stand here — "the
+  deuteron control channel is always Hulthen … no d → p+n two-cluster table
+  exists" — was false, and the flag had been *silently ignored* there.
+  `deuteron_channel(beta, p_d, source)` now takes the flag and selects
+  P_D = 0.057600.  The Cosyn–Weiss tensor gate is pinned on the Hulthén
+  DEFAULT, which is bit for bit what it was.
   Reconciliation, provenance and every number:
   `docs/open_items/vmc_reconciliation.md`, `data/vmc/README.md`.
 - **Triton spectral function.** `TritonSfChoice::Hulthen` is the DEFAULT
@@ -386,9 +401,13 @@ knobs recorded nowhere at all
   --events 20000 --seed 1234`, `tensor-thirds` at P_z = 0.7 / P_zz = 0.6 /
   P_e = 0.7, at the default σ_XN = 40 mb, with `k`, `cos_theta_k`, `phi_k`,
   `x` and `q2` bit-identical across the three runs — they differ on
-  **99.50 %** of events (Σw 10419.07 vs 11632.10, integrated survival 0.520954
-  vs 0.581605) and by up to a factor **68.52** per event.  Quote that window
-  with the two numbers; the whole claim is about one stream and one σ_XN.  The weight table
+  **99.50 %** of events by more than **1 %** (|w_nucleon/w_cluster − 1| > 0.01;
+  Σw 10419.07 vs 11632.10, i.e. Σw/Σw_off **0.520954** vs **0.581605**) and by
+  up to a factor **68.52** per event.  Σw/Σw_off is the SAMPLE mean weight and
+  is not the model's own grid-integrated `GlauberFsiWeight::survival()`, which
+  is **0.520239** vs **0.582899** — the number `meta["fsi_survival"]` carries
+  and `tests/test_fsi.cpp` pins.  Quote that window with the two numbers; the
+  whole claim is about one stream and one σ_XN.  The weight table
   is built on a (k_z, k_T) grid — a deliberate deviation from the design
   note's literal (k, cos θ_k): the eikonal kernel transfers k_T only, so the
   table is smooth and even in k_z there — and read per event by bilinear
@@ -435,7 +454,8 @@ knobs recorded nowhere at all
   (d) The ⁶Li elastic form-factor **normalisations are the MEASURED moments**
   — `LI6_MU_N = +0.8220473 μ_N`, `LI6_QUADRUPOLE_FM2 = −0.0818 fm²` (TUNL
   A = 6) — and never VMC: Wiringa–Schiavilla's Q(⁶Li) = −0.23(9) fm² is 3×
-  the measured one, and `OPEN_ITEMS_SOLUTIONS.md` §5's standing instruction
+  the measured one, and `OPEN_ITEMS_SOLUTIONS.md` §3–4's (restated in §11.3)
+  standing instruction
   forbids deriving a ⁶Li tensor input from those wave functions. Their
   *shapes* are unfitted starting values and are banded by `--rc-fq-scale`
   (0/1/2 — σ^el_T is QUADRATIC in it, so RUN the band, never rescale one row)

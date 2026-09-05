@@ -22,7 +22,7 @@ record. §D6 collects that.
 
 ### D3.1 The premise is false as stated
 
-`PLAN.md:301-302` says *"The per-nucleon Glauber FSI variant is algebraically
+`PLAN.md:332-333` says *"The per-nucleon Glauber FSI variant is algebraically
 identical to the cluster one — the two 'variants' are one."* As implemented
 they are not, and the header already says so correctly and in more detail than
 the inventory line preserved.
@@ -94,7 +94,7 @@ Pointwise rows (θ_k = 90°):
 | 0.30 | 1.13927 | 4.07433 | 3.576 |
 | 0.50 | 0.63510 | 6.54603 | 10.307 |
 
-(The 0.10 GeV row reproduces the pair `docs/PHYSICS_CHANNELS.md:298` records
+(The 0.10 GeV row reproduces the pair `docs/PHYSICS_CHANNELS.md:321` records
 for the **production S+D tag**, 0.391 vs 0.321; `tests/test_fsi.cpp:258-281`
 pins the *pure-S prototype* channel's 0.381 / 0.309 instead, which is why the
 two pairs differ.)
@@ -119,8 +119,8 @@ Per-event ratio w_nucleon/w_cluster, percentiles [1, 5, 25, 50, 75, 95, 99] =
 
 **Verdict: the two variants are different on essentially every event, and by
 construction, not by parameter choice.** D3 should be closed as *premise
-false*, and `PLAN.md:301-302` retracted where it stands (it is the only place
-in the tree that carries the claim — `docs/PHYSICS_CHANNELS.md:298` and
+false*, and `PLAN.md:332-333` retracted where it stands (it is the only place
+in the tree that carries the claim — `docs/PHYSICS_CHANNELS.md:321` and
 `docs/CONVENTIONS.md:328` already state it correctly).
 
 ### D3.4 What a genuinely NON-identical per-nucleon variant would have to include
@@ -501,8 +501,13 @@ the DERIVED band (measured 2026-09-05, B = 50, amp = 0.01) the `eps_b0` are
 −0.0526846 / −0.0171207 / −0.0070024 and the P_zz = −2 edges 0.3720 / 1.1448 /
 **2.7990**.
 
-**Phase C's conclusion is confirmed: `COHERENT_T_MAX_DEFAULT` = 0.2 is a
-consequence of the oversized eps_b0, not a property of ⁶Li.**
+**Phase C's conclusion is confirmed on the arithmetic: the POSITIVITY EDGE is
+a consequence of the oversized `eps_b0`, not a property of ⁶Li** — 0.245 GeV²
+at the shipped value against 2.80 at the measured quadrupole. *(This sentence
+read "`COHERENT_T_MAX_DEFAULT` = 0.2 is a consequence of the oversized eps_b0"
+until 2026-09-05. **Superseded by D5 itself** — the section this line closes:
+the ceiling stays 0.2 on the ANCHOR RANGE and does not move with `eps_b0`;
+`STATUS.md` decision row 12, `OPEN_ITEMS_SOLUTIONS.md` §11.6.)*
 
 ### D5.2 "c₂ is linear and unbounded" — and whether a bounded form is motivated or a fudge
 

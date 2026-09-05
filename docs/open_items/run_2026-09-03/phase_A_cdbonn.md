@@ -1,6 +1,9 @@
 # A5 — the CD-Bonn deuteron wave function in momentum space
 
-**Task.** Gate condition 3 of open item 10 (`docs/OPEN_ITEMS_SOLUTIONS.md:565`)
+**Task.** Gate condition 3 of open item 10 (`docs/OPEN_ITEMS_SOLUTIONS.md` §10,
+"The seven close conditions, and where each one landed", row 3 — a line
+citation into that file was stale by three sections and is replaced by the
+section name, 2026-09-05)
 wants "a real CD-Bonn u, w instead of the D-state rescaling proxy of item 5"
 (`docs/open_items/run_2026-09-02/phase_D_gate.md:322-334`). This document
 supplies it: the coefficients, read from Machleidt's own source; every
@@ -216,7 +219,7 @@ sum_j D_j m_j^2 = -1.819e-12
 
 ## 4. Sign and normalisation — **measured, and it is not what Eq. (D13) says**
 
-This is the `(−i)^L` trap that `docs/PHYSICS_CHANNELS.md:398` and
+This is the `(−i)^L` trap that `docs/PHYSICS_CHANNELS.md:246` and
 `b1_nuclear.hpp:159` already warn about, and CD-Bonn walks straight into it.
 
 Machleidt's Eq. (D13) is printed with a **bare** j_L kernel,

@@ -76,8 +76,10 @@ def build_parser():
     p.add_argument("--events", type=int, default=None,
                    help="fixed event count (exclusive with --lumi)")
     p.add_argument("--lumi", type=float, default=None,
-                   help="integrated luminosity [pb^-1] (exclusive with "
-                        "--events)")
+                   help="integrated luminosity [pb^-1]: it SETS the count "
+                        "from the luminosity, so --events is not needed and "
+                        "is left at 0 when only this is typed (exclusive "
+                        "with an --events given here or in --config-file)")
     p.add_argument("--seed", type=int, default=None)
     p.add_argument("--run", type=int, default=None, help="run number")
     p.add_argument("--optics", default=None, choices=sorted(OPTICS),
@@ -544,6 +546,7 @@ def resolve(argv=None):
     parser = build_parser()
     args = vars(parser.parse_args(argv))
     opts = dict(DEFAULTS)
+    fromfile = {}
     if args.get("config_file"):
         fromfile = _load_config_file(args["config_file"])
         unknown = set(fromfile) - set(DEFAULTS) - {"coherent"}
@@ -561,6 +564,16 @@ def resolve(argv=None):
         if v is not None:
             opts[k] = v
     opts["coherent"] = coh or None
+    # LUMINOSITY MODE IS REACHABLE BY TYPING ONE FLAG (2026-09-05).  `DEFAULTS`
+    # carries events = 100000, so `--lumi X` alone used to arrive at `main()`
+    # with BOTH set and was refused with "--events and --lumi are exclusive" --
+    # a mode that only `--events 0 --lumi X` could reach, which no help text
+    # and no document said.  Typing `--lumi` and no `--events` anywhere means
+    # "take the count from the luminosity"; an `--events` given on the command
+    # line or in the config file still collides, and is still refused there.
+    if (args.get("lumi") is not None and args.get("events") is None
+            and "events" not in fromfile):
+        opts["events"] = 0
     return opts
 
 

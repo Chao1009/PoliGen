@@ -691,4 +691,12 @@ double theta_lm(int l, int m, double c) {
                            + std::to_string(l) + ", m=" + std::to_string(m) + ")");
 }
 
+const char* cluster_wave_name(ClusterWaveSource s) {
+  switch (s) {
+    case ClusterWaveSource::Hulthen: return "hulthen";
+    case ClusterWaveSource::VmcAV18: return "vmc";
+  }
+  return "?";
+}
+
 }  // namespace lipolgen

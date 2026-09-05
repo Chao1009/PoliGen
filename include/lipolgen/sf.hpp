@@ -206,6 +206,17 @@ class LhapdfSF : public UnpolSF {
   double f2n(double x, double q2) const override;
   double f2n_over_f2p(double x) const override;
 
+  /// The loaded grid's OWN lower Q2 edge (`LHAPDF::PDF::q2Min()`), read from
+  /// the set's metadata and not transcribed anywhere -- CT18NLO's is 1.677
+  /// (QMin 1.295 GeV), NNPDFpol11_100's is 1.  BELOW IT LHAPDF DOES NOT
+  /// FREEZE: it continues the evolution downward, and F2p falls fast (a
+  /// factor 2.34 below `ToyF2` at x = 3e-4, Q2 = 0.7).  The shipped 6Li
+  /// window's accepted cells start at Q2 = 1.054, so a `--unpol-sf ct18nlo`
+  /// run puts a third of its rate there; `PipelineConfig`'s run banner and
+  /// `meta["unpol_sf_below_grid_frac"]` are computed FROM THIS accessor so
+  /// that the fraction is never a typed-in number.
+  double q2_min() const;
+
  private:
   struct Impl;
   std::unique_ptr<Impl> impl_;

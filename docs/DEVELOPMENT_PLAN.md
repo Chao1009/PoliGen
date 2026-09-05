@@ -220,8 +220,19 @@ gated at rtol 1e-12 against regenerated `validation/reference/*.json`
   `ζ = β` exactly, so the whole record conserves (worst 4.8e-14 relative, charge
   exact, veto 0 at M_X ≥ 1.4 GeV). The old refusal and its `hadronize_coherent`
   opt-in are gone; the knob is `PythiaBridgeOptions::coherent_t2 = {Pomeron, Off}`.
-  Still open in the coherent sector: no exclusive-VM channel below M_X = 1.2 GeV,
-  and `PDF:PomSet` (default 6) is the tier's largest systematic.
+  Still open in the coherent sector: no exclusive-VM channel below M_X = 1.2 GeV.
+  `PDF:PomSet` (default 6) is the tier's largest systematic and was **scanned
+  2026-09-04** (D4, 20 000 coherent events per set at ⁶Li config 1, seed 4242):
+  it moves nothing at T0 (bit-identical columns across the fourteen sets that
+  still run, 1–10 and 12–15; set 11 is refused by the constructor now, so that
+  is the reproducible count — re-measured 2026-09-05) and moves
+  the hadronic final state by **−2.6 % / +9.9 %** in ⟨n_charged⟩ and a factor
+  2.8 in the kaon fraction, quoted as an envelope over re-runs. **That band is
+  over the twelve genuine DPDF fits (3–10, 12–15) about set 6, not over all
+  15**: sets 1 (a toy) and 2 (π⁰ densities) are not Pomeron fits and set 11 is
+  refused by the constructor, and including set 2 would move the low edge to
+  −4.7 % (⟨n_charged⟩ 3.7773 against set 6's 3.9639) and −7.0 % on ⟨n_hadrons⟩.
+  `docs/OPEN_ITEMS_SOLUTIONS.md` §5.1.
 - **Physics inputs still external** (updated 2026-09-03 from plans/04): tensor-sector
   radiative corrections and b₁ for A > 2 have moved from wholly external to
   opt-in `Backend`s (`--rc tensor-band`; `--b1-model li6-convolution`) — the RC

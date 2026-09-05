@@ -501,9 +501,20 @@ and produced **at its own** `ζ_q = (Q² + m_q²)/(M_X² + Q²)` (P2 of §3).
 
 Flavour ∝ `e_q² · x f_q(ζ_q, max(Q², q2_pdf_min))` on PYTHIA's own Pomeron
 PDF (`PDF:PomSet`, default **6** = H1 2006 Fit B LO — PYTHIA's own default,
-and the only LO Q²-dependent set; `PDF:PomRescale` is exposed for
+and the only LO *H1* set (12 and 13 are LO GKG18; this line said "the only LO
+Q²-dependent set" until 2026-09-04); `PDF:PomRescale` is exposed for
 completeness but cancels out of the per-event-normalized draw).
-`PythiaBridgeOptions::pom_set` / `pom_rescale`.  Two traps, both silent, both
+`PythiaBridgeOptions::pom_set` / `pom_rescale`.  **The set is the tier's
+largest model systematic and it has been SCANNED** (2026-09-04, D4): all 15
+sets × 20 000 events, the T0 columns bit-identical across the **fourteen** of
+them that still run (1–10, 12–15 — set 11 has been refused by the constructor
+since, so that is the count that reproduces; re-measured 2026-09-05, one md5
+`ffd35a3a62b591c547e9ca2ac4301b5d`) — so the band on |t|, x_P, M_X and σ is
+*identically zero* — and the systematic
+on the hadronic final state is ⟨n_charged⟩ **−2.6 % / +9.9 %** and the kaon
+fraction a **factor 2.8** over the twelve DPDF fits (3–10, 12–15). Set 11 is
+refused (100 % e_q² fallback). `docs/OPEN_ITEMS_SOLUTIONS.md` §5.1 and
+`docs/USAGE.md` §4 carry the table.  Two traps, both silent, both
 found on the prototype:
 
 1. **Colour-tag orientation follows the initiator's sign**: an incoming
@@ -517,17 +528,37 @@ found on the prototype:
    Every `e_q² x f_q` weight is zero there and the event would be vetoed for
    a bookkeeping reason, so the sampler falls back to the bare charge
    weights `e_q²` (the flavour-democratic limit of the same formula) — over
-   the **light flavours only**: the H1 LO grids carry no charm or bottom at
-   *any* (β, Q²), so `e_q² · f_q` gives the heavy flavours zero weight
-   everywhere and the democratic limit must not resurrect them.  (Before
-   that restriction the fallback reused the DIS offer list — `include_charm`
-   defaults to true — and ~7 % of a default coherent sample came out
-   charm-initiated with zero PDF support, every event on the fallback.)
-   PYTHIA's backward evolution then still finds the gluon.  Counted in
-   `PythiaBridgeStats::n_pom_flavour_fallback`; a non-zero count is
-   *routine* whenever the Q² window reaches below the grid's quark-support
-   edge, and raising `q2_pdf_min` to ≈ 1.75 removes the fallback at the
-   cost of clamping every flavour weight to that Q².
+   the **light flavours only**: all three H1 2006 grids carry no charm or
+   bottom at *any* (β, Q²) — Fit A NLO (3) and Fit B NLO (4) exactly as much
+   as Fit B LO (6), because all three are PYTHIA's one `PomH1FitAB` class and
+   its `xfUpdate` assigns `xc = xcbar = xb = xbbar = 0.` unconditionally
+   (`PartonDistributions.cc:2630`; "the H1 LO grids" here until 2026-09-04
+   was true but too narrow) — so `e_q² · f_q` gives the heavy flavours zero
+   weight everywhere and the democratic limit must not resurrect them.
+   (Before that restriction the fallback reused the DIS offer list —
+   `include_charm` defaults to true — and ~7 % of a default coherent sample
+   came out charm-initiated with zero PDF support, every event on the
+   fallback.)  PYTHIA's backward evolution then still finds the gluon.
+   Counted in `PythiaBridgeStats::n_pom_flavour_fallback`, and since
+   2026-09-04 **printed at the run banner and recorded in the npz `meta`**
+   (`n_pom_flavour_fallback`, `pom_flavour_fallback_frac`) — it had been
+   counted and surfaced nowhere.  A non-zero count is *routine* whenever the
+   Q² window reaches below the grid's quark-support edge, **and it is not a
+   systematic: measured, it costs exactly zero.**  Raising `q2_pdf_min` from
+   1.0 to 1.75 drives the share to 0.00 % (sets 6, 3) or a few per cent
+   (12: 19.45 → 2.65, 13: 20.10 → 3.23, 15: 21.65 → 5.12) — **except on set 4
+   (H1 2006 Fit B NLO), where it only falls 35.52 % → 29.32 %** — and leaves
+   the final state **bit-identical** in all six cases, set 4 included; every
+   Pomeron DPDF carries a single light-quark singlet, so `e_q²·x f_q ∝ e_q²`
+   exactly over the light flavours and the "fallback" *is* the true draw, which
+   is why set 4's residual 29 % costs nothing either.  (4 000 coherent events
+   per point at ⁶Li config 1, seed 4242; measured 2026-09-04, re-measured
+   2026-09-05.)  (This line
+   said "removes the fallback at the cost of clamping every flavour weight to
+   that Q²" until 2026-09-04: true about the counter, **false about the
+   cost**.  The one real cost shows up only at `q2_pdf_min` = 3.0, on the
+   GKG18 sets, and is a **charm** effect — bit-identical again with
+   `include_charm = false`.)
 
 ### The M_X floor and the veto table
 

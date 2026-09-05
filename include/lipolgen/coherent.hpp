@@ -42,12 +42,48 @@ inline constexpr double RATE_WEIGHT_SYST = 0.73;
 
 /// |t| truncation of the coherent channel [GeV^2].
 ///
-/// 0.2, NOT the 0.5 carried until 2026-08-29 (P4).  Two reasons, and they
-/// agree: the deformation mechanism is scaled from Mantysaari et al.'s
-/// polarized-deuteron a_2, digitized over |t| <= 0.30 and LINEAR in |t| only
-/// as |t| -> 0, so 0.5 is outside the input; and the linear c_2 crosses -1 at
-/// |t| = 0.245 for P_zz = -2, i.e. the azimuthal weight goes NEGATIVE inside
-/// the old range.  See `CoherentScenario::positivity_margin`.
+/// 0.2, NOT the 0.5 carried until 2026-08-29 (P4).  It STAYS FIXED, and since
+/// 2026-09-04 the reason it is written down is the ANCHOR RANGE, not
+/// positivity.  The two are not interchangeable and this header used to
+/// present them as "two reasons, and they agree" -- true at the shipped
+/// eps_b0 and false at every other 6Li value of it (D5).
+///
+///   PRIMARY, and INDEPENDENT of every knob: the deformation mechanism is
+///   scaled from Mantysaari et al.'s polarized-deuteron a_2, and
+///   `mantysaari_a2_deuteron()` carries FOUR digitized rows, |t| = 0.05,
+///   0.10, 0.20, 0.30.  The fit is linear in |t| and exact only as
+///   |t| -> 0, so 0.2 is inside the input and 0.5 is outside it.  This
+///   reason is a property of the INPUT TABLE; it does not move when
+///   `CoherentScenario::eps_b0` moves.
+///
+///   SECONDARY, and CONTINGENT on eps_b0: the linear c_2 crosses -1 at
+///   |t| = 0.245 for P_zz = -2 (0.495 at P_zz = +1).  That number is
+///   `CoherentScenario::t_positivity_edge`, which DERIVES it rather than
+///   repeating it, and it moves with eps_b0: at the measured 6Li quadrupole
+///   (eps_b0 = -0.0070 ROUNDED, sec. C4; -0.0070024 as derived) the same
+///   formula returns |t| = 2.80 GeV^2 (2.7990 on the derived value,
+///   2.8000 on the rounded one -- quote 2.80, never 2.8000, see
+///   `t_positivity_edge`), i.e. 9.3x OUTSIDE the anchor's own |t| <= 0.30.  Positivity therefore
+///   STOPS BINDING the moment eps_b0 is corrected; the anchor range does
+///   not.  Deriving t_max from positivity alone would license extrapolating
+///   a linear-in-|t| fit ten times past its data.
+///
+/// What the ceiling costs, measured on 200 000 generated coherent events at
+/// the shipped defaults (seed 99, plan `tensor-thirds` at pz = 0.7,
+/// pzz = 0.6, 4 threads -- the plan splits the events across categories, so
+/// a single-category run of the same seed gives 0.019974; max |t| and the
+/// zero count above 0.20 are the same either way,
+/// `phase_D_small_items.md` D5.3): <|t|> = 0.019963 GeV^2, max |t| =
+/// 0.197575, and `sample_t` RENORMALIZES on [0, t_max], so the truncation
+/// does not lose rate -- it redistributes exp(-B t_max) = 4.54e-5 of it.
+/// The ceiling is not a rate question: it is a statement about where the
+/// model is DEFINED.
+///
+/// This depends on the eps_b0 author decision (`CoherentScenario::eps_b0`,
+/// STATUS.md decision table row 8) only through the secondary reason.  See
+/// also `CoherentScenario::positivity_margin`, which stays exactly as it is:
+/// it is the GUARD on the truncated weight the sampler actually uses, not
+/// the derivation of this constant.
 inline constexpr double COHERENT_T_MAX_DEFAULT = 0.2;
 
 /// Smallest diffractive mass M_X of the coherent channel [GeV].
@@ -433,10 +469,12 @@ struct CoherentScenario {
   /// validation/reference/*.json and this run may not move a reference gate.
   /// The cost is stated in one line: every GENERATED coherent tensor number
   /// (a2_deformation, cos2phi_coefficient, the sampled azimuth) is 11.4x the
-  /// measured-quadrupole expectation, and `COHERENT_T_MAX_DEFAULT` = 0.2 is
-  /// itself a consequence of that -- the positivity edge |c_2| = 1 sits at
-  /// |t| = 0.245 GeV^2 at eps_b0 = -0.08, P_zz = -2, and would sit at
-  /// |t| = 2.8 GeV^2 at the measured-quadrupole -0.0070.  Nothing published
+  /// measured-quadrupole expectation.  What that does NOT any longer imply
+  /// is the |t| ceiling: since 2026-09-04 `COHERENT_T_MAX_DEFAULT` = 0.2 is
+  /// justified by the ANCHOR RANGE, which does not move with eps_b0, and the
+  /// positivity edge is stated as the contingent second reason and DERIVED
+  /// by `t_positivity_edge` (|t| = 0.245 GeV^2 here at P_zz = -2; 2.80 at
+  /// the measured-quadrupole -0.0070).  Nothing published
   /// from this channel may quote a single eps_b0 row: band it, and say which
   /// quadrupole the row assumes.
   double eps_b0 = -0.08;
@@ -499,9 +537,59 @@ struct CoherentScenario {
   /// it throws rather than silently clipping.  |c_2| is monotone in |t|
   /// (2|t| + amp > 0 for every |t| >= 0), so the margin at `t_max` is the
   /// worst one.  At the scenario defaults it is 1 - |P_zz| (2 |t| + 0.01):
-  /// zero at |t| = 0.495 for P_zz = +1 and at |t| = 0.245 for P_zz = -2,
-  /// which is why `COHERENT_T_MAX_DEFAULT` is 0.2 and not 0.5.
+  /// zero at |t| = 0.495 for P_zz = +1 and at |t| = 0.245 for P_zz = -2 --
+  /// `t_positivity_edge` below is that zero in closed form.
+  ///
+  /// THIS IS A GUARD, NOT THE DERIVATION OF `COHERENT_T_MAX_DEFAULT`
+  /// (2026-09-04, D5).  It catches an author who raises `t_max` or `eps_b0`
+  /// past the point where the TRUNCATED weight the sampler actually uses
+  /// stops being a density.  Both failure modes are real and nothing else
+  /// catches them, so it must keep throwing; but the ceiling's own stated
+  /// reason is the anchor range (`COHERENT_T_MAX_DEFAULT`), because this one
+  /// stops binding as soon as eps_b0 is corrected.
   double positivity_margin(double t_max, double pzz) const;
+
+  /// The |t| [GeV^2] at which `positivity_margin(|t|, pzz)` reaches zero --
+  /// i.e. where the linear azimuthal weight 1 + c_2 cos 2(phi - phi_S) first
+  /// stops being a density.  DERIVED, so the number moves with `eps_b0` and
+  /// is not repeated in four docstrings (2026-09-04, D5).
+  ///
+  /// With c_2 = A|t| + C, A = -(P_zz/2) eps_b0 B and C = amp P_zz, the edge
+  /// |c_2| = 1 is at
+  ///
+  ///     |t|_pos = (1 - sign(A) C) / |A|
+  ///
+  /// which for the shipped signs (eps_b0 < 0, amp > 0, so A and C share a
+  /// sign) is 2 (1/|P_zz| - amp) / (|eps_b0| B).  Measured against the
+  /// sec. C4 quadrupole budget at B = 50, amp = 0.01:
+  ///
+  ///     eps_b0    P_zz = -2   P_zz = +1
+  ///     -0.08     0.2450      0.4950     (shipped -- an EXACT input)
+  ///     -0.0527   0.3719      0.7514     (alpha+d model Q, rounded)
+  ///     -0.0171   1.1462      2.3158     (GFMC Q, rounded)
+  ///     -0.0070   2.80        5.6571     (MEASURED Q, rounded)
+  ///
+  /// THE LAST THREE eps_b0 ARE ROUNDED, AND THE ROW IS ARITHMETIC ON THE
+  /// ROUNDED VALUE.  On the DERIVED band (`ClusterConfigSampler::
+  /// quadrupole_band_fm2()` through `a2_from_quadrupole`, at B = 50,
+  /// amp = 0.01, 2026-09-05) the eps_b0 are -0.0526846 / -0.0171207 /
+  /// -0.0070024 and the P_zz = -2 edges are 0.3720 / 1.1448 / 2.7990.  So
+  /// the measured-Q row is "2.80 GeV^2", to the three figures the rounded
+  /// input carries -- NEVER "2.8000", which is four figures of arithmetic on
+  /// a two-figure input.  `tests/test_coherent.cpp` asserts the DERIVED
+  /// 2.7990 on the derived eps_b0, which is where that digit comes from.
+  ///
+  /// Read the bottom row before using this as a ceiling: it is 9.3x outside
+  /// the |t| <= 0.30 the deformation input is digitized over
+  /// (`mantysaari_a2_deuteron`), which is exactly why
+  /// `COHERENT_T_MAX_DEFAULT` is justified by the ANCHOR RANGE and not by
+  /// this function.
+  ///
+  /// Degenerate cases, stated rather than silently returned: A == 0 (P_zz,
+  /// eps_b0 or B zero) means c_2 is constant, so the edge is +infinity when
+  /// |C| < 1 and 0 when it is not; and when |C| >= 1 already at |t| = 0 the
+  /// weight is not a density anywhere and the edge is 0.
+  double t_positivity_edge(double pzz) const;
 };
 
 /// Lab kinematics of the intact 6Li recoil.  pT = sqrt(|t|), neglecting

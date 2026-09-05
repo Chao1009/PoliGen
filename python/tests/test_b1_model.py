@@ -817,11 +817,12 @@ def test_mstw_moves_b1_through_the_pipelines_own_kernel():
         tt, tm = toy.tables(x, 2.5), mstw.tables(x, 2.5)
         assert tt.b1 != 0.0
         assert tm.b1 / tt.b1 == pytest.approx(want, rel=1e-5), x
-        # F1 DOES NOT MOVE: the kernel's own f2_source is ToyF2 on every
-        # setting of this flag, so F1 -- and with it the spin-blind cell
-        # cross section and the D_phi denominator of the tensor weight -- is
-        # bit-identical.  The price is that numerator and denominator no
-        # longer share one object; see B1UnpolSource in pipeline.hpp.
+        # F1 DOES NOT MOVE: the kernel's own f2_source is set by a
+        # SEPARATE flag (--unpol-sf), left at its `toy` default here, so F1
+        # -- and with it the spin-blind cell cross section and the D_phi
+        # denominator of the tensor weight -- is bit-identical under THIS
+        # flag.  The price is that numerator and denominator no longer share
+        # one object; see B1UnpolSource in pipeline.hpp.
         assert tm.f1 == tt.f1, x
         assert tm.delta == tt.delta, x
 

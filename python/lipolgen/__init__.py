@@ -60,7 +60,8 @@ from .export import (inclusive_dict, tagged_dict, hfs_sample,  # noqa: F401
 __all__ = [n for n in dir(_lipolgen) if not n.startswith("_")] + [
     "export", "inclusive_dict", "tagged_dict", "hfs_sample", "write_hfs_npz",
     "write_columns_npz", "CHANNELS", "PLANS", "TRITON_SFS", "FSI", "RC",
-    "B1_MODELS", "B1_UNPOL", "RC_C0_SHAPES", "RC_TAIL_MODELS",
+    "B1_MODELS", "B1_UNPOL", "UNPOL_SF", "POL_SF",
+    "RC_C0_SHAPES", "RC_TAIL_MODELS",
     "make_config", "make_plan", "make_pipeline", "run", "__version__",
 ]
 
@@ -179,10 +180,15 @@ B1_MODELS = {
 #: 1.238833 / 1.045870 at x = 0.10 / 0.30 / 0.50.  Up to a factor 1.85 and NOT
 #: monotone, so it is a shape change and not a normalisation.
 #:
-#: It reaches the b1 and NOTHING else: the kernel's own `f2_source` stays
-#: `ToyF2` on every setting, so the SPIN-BLIND cell cross section
-#: (`InclusiveSampler.cell_xsec_pb`) is bit for bit under this flag and only
-#: the tensor shift moves.  Read only by "li6-convolution"; `validate()` refuses it
+#: It reaches the b1 and NOTHING else.  The kernel's own `f2_source` is set
+#: by a SEPARATE flag, `--unpol-sf` (`UNPOL_SF` below), and at its shipped
+#: default "toy" it is `ToyF2` on every `--b1-unpol` setting -- which is what
+#: keeps the SPIN-BLIND cell cross section (`InclusiveSampler.cell_xsec_pb`)
+#: bit for bit under THIS flag, with only the tensor shift moving.  With
+#: `unpol_sf` set to anything else the rate moves too, but it moves because
+#: of that flag; `validate()` refuses `b1_unpol="toy"` there, because "toy"
+#: means "the kernel's own UnpolSF, shared" and that object would no longer
+#: be `ToyF2`.  Read only by "li6-convolution"; `validate()` refuses it
 #: on the other two models rather than let `meta["b1_unpol"]` record a PDF
 #: that never touched the rate.  `B1UnpolSource.Custom` is not here on
 #: purpose: it names an object, so it is set by assigning
@@ -191,6 +197,84 @@ B1_UNPOL = {
     "toy": _lipolgen.B1UnpolSource.Toy,
     "mstw": _lipolgen.B1UnpolSource.Mstw,
     "ct18nlo": _lipolgen.B1UnpolSource.Ct18Nlo,
+}
+
+#: `--unpol-sf` -- which UNPOLARISED structure-function backend supplies F2,
+#: and through it F1, F_L and the whole unpolarised rate, to EVERY kernel a
+#: `Pipeline` builds: the inclusive kernel, the coherent channel that rides
+#: its cell cross sections, and the tagged struck-cluster kernel.  It is the
+#: injection point the tagged channels did not have at all before 2026-09-04
+#: -- `PipelineConfig.kernel` is read on the non-tagged branch alone.
+#:
+#: "toy" is the DEFAULT and is bit for bit what every published number was
+#: made with: `ToyF2`, which `sf.hpp` labels TOY and anchors BY EYE
+#: ("adequate for phase-space maps and factor-1.5 rate estimates ONLY").
+#: "mstw" is MSTW2008 LO over PYTHIA 8's own pdfdata grid (optional PYTHIA
+#: tier); "ct18nlo" is `LhapdfSF("CT18NLO", 0)` (optional LHAPDF tier).
+#:
+#: MEASURED, 6Li inclusive at config 1 over the shipped window: the summed
+#: accepted cell cross section is 591846.2 pb (toy), 472571.9 (ct18nlo,
+#: x0.7985), 469556.5 (mstw, x0.7934).  It is a shape change, not a
+#: normalisation: F2p at Q2 = 10 moves x0.9215 / x1.1095 / x1.3709 / x1.2641
+#: (ct18nlo) and x0.8154 / x1.0133 / x1.3649 / x1.4479 (mstw) at
+#: x = 0.01 / 0.10 / 0.30 / 0.50, and the toy's F2n/F2p -- the straight line
+#: clip(1 - 0.75x, 0.25, 1), which the T1 and T2 species draws use -- is
+#: 0.9625 / 0.8500 / 0.6250 at x = 0.05 / 0.20 / 0.50 against CT18NLO's
+#: 0.9218 / 0.7219 / 0.5035.
+#:
+#: READ THE GRID CLAUSE for "ct18nlo": CT18NLO's grid starts at Q2 = 1.677
+#: and the shipped window's accepted cells start at 1.054, so 36.18 % of a
+#: CT18NLO run's own accepted cell cross section (42.33 % of the toy run's)
+#: sits below the grid, where LHAPDF keeps evolving downward instead of
+#: freezing.  It is not refused -- that would make the flag unusable on the
+#: shipped scenario -- but it is printed at the banner and recorded in
+#: `meta["unpol_sf_below_grid_frac"]` on every run.
+#:
+#: NOT ORTHOGONAL TO `POL_SF`: `InclusiveKernel` builds its default `ToyG1`
+#: on its own base `UnpolSF`, so this flag alone moves g1 as well and
+#: A1 = g1/F1 moves 5-8 %.  `pol_sf="toy"` does not mean "g1 unchanged".
+#: `UnpolSfSource.Custom` is not here on purpose: it names an object, so it
+#: is set by assigning `config.unpol_sf_obj`.
+UNPOL_SF = {
+    "toy": _lipolgen.UnpolSfSource.Toy,
+    "mstw": _lipolgen.UnpolSfSource.Mstw,
+    "ct18nlo": _lipolgen.UnpolSfSource.Ct18Nlo,
+}
+
+#: `--pol-sf` -- which POLARISED backend supplies g1, and through the
+#: Wandzura-Wilczek relation g2, to the INCLUSIVE and TAGGED kernels a
+#: `Pipeline` builds.  NOT to every kernel, and unlike `UNPOL_SF` it never
+#: could: g1 enters through the single product lam_e * P_e * (m/J) *
+#: cos(theta_S) * A_par, so the selector is read only where the CHANNEL
+#: evaluates g1 AND the FILL carries lam_e * P_e != 0.  The coherent channel
+#: does neither, and neither does any unpolarised-beam plan -- "tensor-thirds"
+#: is the CLI's own default and builds every category at lam_e = 0, so at the
+#: defaults `--pol-sf` is read on NO channel.  It is LABELLED there, not
+#: refused and not credited (`pol_sf_is_read(config, plan)`, and the `pol_sf`
+#: row of `Pipeline.knob_provenance`).  "toy"
+#: is the DEFAULT and is bit for bit: `ToyG1` on the kernel's own `UnpolSF`
+#: and `r_func`.  "nnpdfpol" is `LhapdfG1("NNPDFpol11_100", 0)` -- already
+#: `LhapdfG1`'s own declared default, and the ONLY polarised set installed in
+#: this tree's LHAPDF store, so there is no second row to offer.
+#:
+#: MEASURED on 6Li per-nucleon g1A (A_par tracks it to better than 0.1 % at
+#: y = 0.5): nnpdfpol/toy = 0.6691 / 0.6761 / 1.1139 / 1.3491 / 1.2982 /
+#: 0.9815 / 0.6358 at (x, Q2) = (0.01, 2.5) / (0.05, 5) / (0.10, 10) /
+#: (0.20, 10) / (0.30, 15) / (0.50, 25) / (0.70, 50) -- x0.64 to x1.35 over
+#: the generator window, and not monotone.
+#:
+#: THE NEUTRON IS A SIGN, NOT A FACTOR.  `ToyG1`'s
+#: a1n(x) = -0.07(1-x)^2 + 0.8 x^2.2 crosses zero near x ~ 0.25 and is
+#: POSITIVE above it, while NNPDFpol1.1's g1n stays negative to x ~ 0.6:
+#: g1n(x, 10) is -0.0801 / -0.0114 / +0.00521 / +0.00779 (toy) against
+#: -0.1365 / -0.0608 / -0.02740 / -0.00037 (nnpdfpol) at
+#: x = 0.10 / 0.20 / 0.30 / 0.50.  The shipped toy g1n has the WRONG SIGN
+#: over roughly 0.25 < x < 0.6.  On isoscalar 6Li the proton term dominates
+#: and this mostly hides; on a neutron-tagged run (d + p tagging, whose
+#: `dis_target` is NEUTRON_TARGET) it does not.
+POL_SF = {
+    "toy": _lipolgen.PolSfSource.Toy,
+    "nnpdfpol": _lipolgen.PolSfSource.NnpdfPol,
 }
 
 #: The two edges of the 6Li C0 (monopole) shape band, for `rc_c0_shape` /
@@ -268,13 +352,18 @@ def make_config(isotope="6Li", config=1, channel="inclusive", events=0,
                 rc_c0_shape=None,
                 rc_tail_model=None,
                 b1_model=None, b1_band_scale=None,
-                b1_alpha_d_dwave_weight=None, b1_unpol=None):
+                b1_alpha_d_dwave_weight=None, b1_unpol=None,
+                unpol_sf=None, pol_sf=None, coherent_t_max=None):
     """A `PipelineConfig` from plain values (the CLI's own constructor).
 
     `channel` is a key of `CHANNELS`; `optics` a key of `OPTICS`.  The isotope
     a channel implies wins over the `isotope` argument (a 6Li alpha tag is a
     6Li run whatever the caller said), which is `channel_isotope`'s rule.
-    `coherent` is a dict of `CoherentScenario` fields.  `cluster_wave` is a
+    `coherent` is a dict of `CoherentScenario` fields, and `coherent_t_max`
+    the channel's |t| ceiling [GeV^2] (`PipelineConfig.coherent_t_max`, NOT a
+    `CoherentScenario` field): 0.2 by default, kept there by the Mantysaari
+    anchor's |t| <= 0.30 digitization range rather than by positivity, and
+    recorded in the npz meta.  `cluster_wave` is a
     key of `CLUSTER_WAVES` ("hulthen", the default, or "vmc") or a
     `ClusterWaveSource` directly; "vmc" replaces the lithium alpha-tag radial
     forms with the ANL VMC tables and then ignores `cluster_beta` / `p_d`.
@@ -315,8 +404,29 @@ def make_config(isotope="6Li", config=1, channel="inclusive", events=0,
     the optional PYTHIA tier and raises RuntimeError naming it (or naming the
     missing grid file) in a build that has none -- it is never silently
     replaced by the toy.  It is read only by "li6-convolution" and moves b1
-    only: the spin-blind cell cross section is bit-identical across settings,
-    the tensor-weighted per-category cross sections are not.
+    only: AT `unpol_sf="toy"` the spin-blind cell cross section is
+    bit-identical across its settings, while the tensor-weighted per-category
+    cross sections are not.
+    `unpol_sf` is a key of `UNPOL_SF` ("toy", the default, "mstw" or
+    "ct18nlo") and `pol_sf` a key of `POL_SF` ("toy", the default, or
+    "nnpdfpol"), or the matching enum directly: the structure-function
+    backends of the kernels the run builds.  THEY DO NOT HAVE THE SAME REACH.
+    `unpol_sf` reaches EVERY kernel -- inclusive, coherent and tagged -- on
+    every plan.  `pol_sf` reaches the inclusive and tagged kernels only where
+    the fill also carries lam_e * P_e != 0, and the coherent channel not at
+    all: under "tensor-thirds", this function's own default plan, it is read
+    on no channel and the run records the LABEL rather than the backend name
+    (`pol_sf_is_read`).  Both default to the toy backends and are then bit for
+    bit.  A
+    named backend needs its optional tier and raises RuntimeError naming the
+    missing one; it is never silently replaced by the toy, which is x0.80 on
+    the 6Li rate and has the WRONG SIGN on g1n over 0.25 < x < 0.6.  They are
+    NOT orthogonal -- `unpol_sf` alone moves g1 through the default `ToyG1`,
+    so state both next to any number.  `unpol_sf` is a separate choice from
+    `b1_unpol` (that one is the deuteron F1 inside CDKS Eq. (22), a
+    CDKS-comparability choice); `validate()` refuses the one combination that
+    would mislabel them, `b1_unpol="toy"` with a non-toy `unpol_sf` on
+    "li6-convolution".
     """
     if channel not in CHANNELS:
         raise ValueError("unknown channel %r; know %s"
@@ -445,6 +555,23 @@ def make_config(isotope="6Li", config=1, channel="inclusive", events=0,
         # object.  It raises here, naming the missing tier, rather than
         # letting `validate()` report a named-but-empty slot later.
         _lipolgen.set_b1_unpol(cfg, b1_unpol)
+    if unpol_sf is not None:
+        if isinstance(unpol_sf, str):
+            if unpol_sf not in UNPOL_SF:
+                raise ValueError("unknown unpol_sf %r; know %s"
+                                 % (unpol_sf, ", ".join(sorted(UNPOL_SF))))
+            unpol_sf = UNPOL_SF[unpol_sf]
+        # NOT a plain assignment, for the `set_b1_unpol` reason above: the
+        # enum is the provenance and the object the realisation, and only
+        # this layer can see the optional tiers.
+        _lipolgen.set_unpol_sf(cfg, unpol_sf)
+    if pol_sf is not None:
+        if isinstance(pol_sf, str):
+            if pol_sf not in POL_SF:
+                raise ValueError("unknown pol_sf %r; know %s"
+                                 % (pol_sf, ", ".join(sorted(POL_SF))))
+            pol_sf = POL_SF[pol_sf]
+        _lipolgen.set_pol_sf(cfg, pol_sf)
     if inclusive_b1 is not None:
         struck = cfg.struck
         struck.inclusive_b1 = bool(inclusive_b1)
@@ -456,6 +583,11 @@ def make_config(isotope="6Li", config=1, channel="inclusive", events=0,
                 raise ValueError("CoherentScenario has no field %r" % k)
             setattr(sc, k, float(v))
         cfg.coherent = sc
+    if coherent_t_max is not None:
+        # NOT a `CoherentScenario` field -- it is `PipelineConfig`'s own |t|
+        # ceiling (coherent.hpp, COHERENT_T_MAX_DEFAULT), which is why it is
+        # a separate argument rather than a key of `coherent`.
+        cfg.coherent_t_max = float(coherent_t_max)
     if cfg.n_events or cfg.lumi_pb:
         cfg.validate()   # exclusive-and-one-of; leave an unset config alone
     return cfg
@@ -467,15 +599,40 @@ def make_plan(name="tensor-thirds", j=1.0, pz=0.7, pzz=0.6, pe=0.7,
 
     tensor-thirds / azz          `tensor_thirds_plan` -- spin 1 only
     helicity-flip / apar         `helicity_flip_plan` at spin `j`
-    transverse-tensor / cos2phi  `transverse_tensor_plan`
-    tensor-flip / flip           `tensor_flip_plan`
+    transverse-tensor / cos2phi  `transverse_tensor_plan` -- spin 1 only
+    tensor-flip / flip           `tensor_flip_plan` -- spin 1 only
+
+    THREE OF THE FOUR ARE SPIN-1 PATTERNS AND ARE NOW REFUSED AT ANY OTHER J.
+    `tensor_thirds_plan`, `transverse_tensor_plan` and `tensor_flip_plan`
+    hard-code `SpinCategory(..., 1.0, spin1_populations(...), ...)` in
+    `src/core/bookkeeping.cpp`; only `helicity_flip_plan` takes `j`.  Before
+    2026-09-04 the last two BUILT a spin-1 plan at J = 3/2 and the run then
+    threw three frames down out of `InclusiveKernel::amplitudes` ("spin state
+    J = 1.000000 is not the kernel's ion spin 1.500000"), and
+    `tensor-thirds`' own refusal advised `transverse-tensor`, which is one of
+    the two that could not work (`phase_D_li7_rank2.md` sec. 1.5, defect F2).
     """
     name = name.lower()
+    if name in ("tensor-thirds", "azz", "transverse-tensor", "cos2phi",
+                "tensor-flip", "flip") and abs(j - 1.0) > 1e-12:
+        raise ValueError(
+            "%s is a SPIN-1 pattern (bookkeeping.cpp hard-codes j = 1 in its "
+            "categories) and J = %g was asked for; at J = 3/2 the only plan "
+            "that takes j is helicity-flip, and it is a VECTOR plan (the "
+            "beam helicity flips, the fill does not).  THERE IS NO SPIN-3/2 "
+            "TENSOR PLAN IN THIS TREE, and on the INCLUSIVE channel there "
+            "would be nothing for one to measure: 7Li is spin 3/2, "
+            "default_inclusive_kernel fills a rank-2 slot for spin 1 only, "
+            "so b1_32 = b2_32 = delta_32 = 0 and a T = +1 against T = -1 "
+            "contrast comes back as the SAME double (measured at the "
+            "default 7Li beam config 1 and scenario: 590952.42641509 pb for "
+            "BOTH categories, and the asymmetry exactly 0.0).  Build the two-category T contrast by hand if you "
+            "want the zero on the record, use --isotope 6Li for an inclusive "
+            "tensor programme, or run --channel tagged-7Li-alpha, whose "
+            "alpha-t alignment IS carried (in the event weight, gated at "
+            "<P2(cos theta_k)> = -T/5).  See docs/OPEN_ITEMS_SOLUTIONS.md "
+            "open item 15." % (name, j))
     if name in ("tensor-thirds", "azz"):
-        if abs(j - 1.0) > 1e-12:
-            raise ValueError(
-                "tensor-thirds is the spin-1 equal-thirds pattern; J = %g "
-                "needs helicity-flip or transverse-tensor" % j)
         return _lipolgen.tensor_thirds_plan(pz, pzz, rel_lumi_offset, theta_s,
                                             0.0 if phi_s is None else phi_s)
     if name in ("helicity-flip", "apar"):
@@ -528,14 +685,47 @@ def run(isotope="6Li", config=1, channel="inclusive", plan="tensor-thirds",
         opts = _lipolgen.PythiaBridgeOptions()
         for k, v in (pythia_options or {}).items():
             setattr(opts, k, v)
+        # ONE unpolarised backend for the whole run (docs/CONVENTIONS.md), the
+        # same wiring `cli.py` does: the T2 struck-nucleon SPECIES draw reads
+        # `PythiaBridgeOptions.f2_source`, and the `Pipeline` cannot fill it
+        # because the bridge is built out here.  Left unset it would keep
+        # drawing from `ToyF2` while T0 and T1 moved to the selected backend,
+        # and the toy's F2n/F2p is up to 24 % away from CT18NLO's at x = 0.5.
+        # None (the `unpol_sf="toy"` default) leaves the bridge's own ToyF2 in
+        # place, so this is bit for bit on a default run.  An explicit
+        # `pythia_options={"f2_source": ...}` still wins HERE, and then
+        # `set_pythia_hadronizer` refuses it unless it is the config's own
+        # object: a bridge on a backend `meta["unpol_sf"]` does not name would
+        # draw its T2 species from one fit while the rate came from another
+        # (up to 24 % on F2n/F2p).  Pass `unpol_sf=` instead of overriding
+        # this one field.
+        if opts.f2_source is None:
+            opts.f2_source = cfg.unpol_sf_obj
         bridge = _lipolgen.PythiaBridge(beams, opts)
         _lipolgen.set_pythia_hadronizer(cfg, bridge)
         nthreads = 1               # PythiaBridge is not re-entrant
     p = _lipolgen.Pipeline(cfg, rp)
+    # THE RUN CONTEXT, which this function has always held and never passed.
+    # `RunPlan` records its MOMENTS and not which flags produced them, so
+    # without a `KnobRunContext` the `pz` / `pzz` / `rel_lumi_offset` rows are
+    # omitted rather than guessed and `meta["knob_provenance"]` came back with
+    # 63 rows: `lg.run(plan="helicity-flip", pzz=0.6)` recorded the typed
+    # `pzz` NOWHERE, which is the silence class the table exists to close, on
+    # the library's own entry point.  The T2 half is deliberately left alone:
+    # the metadata writer overwrites it from the bridge ACTUALLY bound to the
+    # config, which is the only honest source for it.
+    ctx = _lipolgen.KnobRunContext()
+    ctx.plan_name = plan
+    ctx.pz = float(pz)
+    ctx.pzz = float(pzz)
+    ctx.pe = float(pe)
+    # `make_plan` above took `rel_lumi_offset`'s own default and this function
+    # exposes no other value, so 0.0 is what was asked for, not a guess.
+    ctx.rel_lumi_offset = 0.0
     # The luminosity is already on the config, so the pipeline resolved the
     # per-category counts in its constructor: generate(0) is the whole run in
     # both modes.
-    out = p.generate(0, keep_events, nthreads)
+    out = p.generate(0, keep_events, nthreads, context=ctx)
     out["pipeline"] = p
     if bridge is not None:
         out["bridge"] = bridge

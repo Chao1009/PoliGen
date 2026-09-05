@@ -370,7 +370,73 @@ void generate_columns(const Pipeline& p, std::uint64_t n, Columns& cols,
   for (auto& th : pool) th.join();
 }
 
-py::dict columns_to_dict(Columns& c, const Pipeline& p, std::uint64_t n) {
+/// The selected unpolarised backend's own grid floor, and how much of THIS
+/// run's own accepted RATE sits below it.
+///
+/// ONE DEFINITION, read by both `meta["unpol_sf_grid_q2_min"]` /
+/// `meta["unpol_sf_below_grid_frac"]` and the CLI run banner, so the fraction
+/// is never a typed-in number (docs/CONVENTIONS.md).  The floor comes from
+/// the loaded grid's own metadata (`LhapdfSF::q2_min`, LHAPDF's `q2Min()`).
+///
+/// THE DENOMINATOR IS THE CHANNEL'S OWN (`Pipeline::cell_rate_weights_pb`),
+/// not the inclusive sampler's cells.  On the inclusive and the tagged
+/// channels the two are the same vector; on the COHERENT one they are not,
+/// because the coherent yield is `sigma_cell * f_coh(x)` over the cells that
+/// admit a diffractive mass, and `f_coh` falls by a factor ~26 across the
+/// window.  Measured on the shipped 6Li ct18nlo run (2026-09-05): the
+/// coherent rate has 0.447460 below CT18NLO's floor where the inclusive
+/// cells it rides on have 0.361791 -- and the coherent weights sum to
+/// 8806.096207 pb, which is `Pipeline::sigma_pb()` exactly.  Reporting the
+/// inclusive number on a coherent run was a quantified `meta` key that did
+/// not describe the run it was attached to.
+///
+/// Three cases, and NaN is used where the honest answer is "not known":
+///   * a caller-supplied `cfg.kernel` -- the backend is the caller's and this
+///     function cannot see its grid: (NaN, NaN);
+///   * `unpol_sf = Toy` -- `ToyF2` is closed form and has no grid at all, so
+///     nothing can be below one: (0, 0);
+///   * an `LhapdfSF`: its own `q2Min()` and the measured fraction;
+///   * anything else (`MstwSF`, a `Custom` object) -- PYTHIA's `MSTWpdf`
+///     keeps its `qsqmin` private and a custom backend reports nothing, so
+///     the floor is NOT known and must not be guessed: (NaN, NaN).
+std::pair<double, double> unpol_sf_grid_report(const Pipeline& p) {
+  const double kNan = std::numeric_limits<double>::quiet_NaN();
+  const PipelineConfig& cfg = p.config();
+  if (cfg.kernel) return {kNan, kNan};
+  if (cfg.unpol_sf == UnpolSfSource::Toy) return {0.0, 0.0};
+#if LIPOLGEN_HAVE_LHAPDF
+  if (const auto lh =
+          std::dynamic_pointer_cast<const LhapdfSF>(cfg.unpol_sf_obj)) {
+    const double q2_min = lh->q2_min();
+    const std::vector<double>& sc = p.cell_rate_weights_pb();
+    const std::vector<double>& q2c = p.dis_sampler().q2_cells();
+    double tot = 0.0, below = 0.0;
+    for (std::size_t i = 0; i < sc.size(); ++i) {
+      tot += sc[i];
+      if (q2c[i] < q2_min) below += sc[i];
+    }
+    return {q2_min, tot > 0.0 ? below / tot : kNan};
+  }
+#endif
+  return {kNan, kNan};
+}
+
+#if LIPOLGEN_HAVE_PYTHIA8
+/// `PipelineConfig::hadronizer` when the T2 tier was bound by
+/// `set_pythia_hadronizer` -- a NAMED callable rather than a lambda, so
+/// `columns_to_dict` can recover the bridge with `std::function::target` and
+/// write the Pomeron block of the `meta`.  Without it the bridge is invisible
+/// to the metadata writer (the hook is type-erased), which is why two runs
+/// differing only in `--pom-set` used to produce identical `meta` while their
+/// whole hadronic final state differed (D4.7).
+struct PythiaHadronizerHook {
+  std::shared_ptr<PythiaBridge> bridge;
+  void operator()(Event& ev, Rng& rng) const { bridge->hadronize(ev, rng); }
+};
+#endif
+
+py::dict columns_to_dict(Columns& c, const Pipeline& p, std::uint64_t n,
+                         KnobRunContext ctx = KnobRunContext()) {
   py::dict d;
   d["x"] = move_array(std::move(c.x));
   d["q2"] = move_array(std::move(c.q2));
@@ -438,6 +504,37 @@ py::dict columns_to_dict(Columns& c, const Pipeline& p, std::uint64_t n) {
   py::object np = py::module_::import("numpy");
   d["category"] = np.attr("asarray")(names).attr("__getitem__")(idx);
 
+  // THE KNOB-PROVENANCE TABLE, built once and read by every key below that
+  // has a reach rule (`Pipeline::knob_provenance`, pipeline.hpp).  The
+  // context's T2 half is filled from the bridge ACTUALLY bound to this
+  // config, not from what a caller says: `set_pythia_hadronizer` wraps the
+  // bridge in a NAMED callable exactly so the metadata writer can recover it
+  // (`PythiaHadronizerHook`), and taking `--pom-set` from the caller instead
+  // would be one more place for the file and the run to disagree.  The
+  // run-plan half is the caller's, because a `RunPlan` records its moments
+  // and not which flags produced them.
+#if LIPOLGEN_HAVE_PYTHIA8
+  if (const auto* hook0 = p.config().hadronizer.target<PythiaHadronizerHook>();
+      hook0 != nullptr && hook0->bridge) {
+    const PythiaBridgeOptions& po0 = hook0->bridge->options();
+    ctx.t2_bound = true;
+    ctx.t2_pomeron = (po0.coherent_t2 == CoherentT2::Pomeron);
+    ctx.pom_set = po0.pom_set;
+    ctx.pom_rescale = po0.pom_rescale;
+  } else {
+    ctx.t2_bound = false;
+  }
+#else
+  ctx.t2_bound = false;
+#endif
+  const std::vector<KnobProvenance> knobs = p.knob_provenance(ctx);
+  auto knob = [&knobs](const char* name) -> const KnobProvenance& {
+    for (const KnobProvenance& r : knobs)
+      if (r.name == name) return r;
+    throw std::runtime_error(std::string("columns_to_dict: no knob_provenance "
+                                         "row named ") + name);
+  };
+
   py::dict meta;
   meta["generator"] = "LiPolGen";
   meta["version"] = LIPOLGEN_VERSION;
@@ -456,8 +553,25 @@ py::dict columns_to_dict(Columns& c, const Pipeline& p, std::uint64_t n) {
   meta["tier"] = (p.tier() == Tier::T1) ? "T1" : "T0";
   meta["sigma_per_category_pb"] = p.sigma_per_category_pb();
   meta["lumi_per_category_pb"] = p.lumi_per_category_pb();
-  meta["optics"] = p.optics().name;
-  meta["pot_config"] = p.pot_config();
+  // THE TWO ROUTE KEYS GO THROUGH THE TABLE, like `pol_sf` and the three
+  // Pomeron keys below and for the identical reason.  They were written
+  // unconditionally until 2026-09-05, so on the INCLUSIVE channel -- where
+  // the table says not-read and the banner's provenance block labels them --
+  // `--optics yr-high-divergence` recorded `meta["optics"] =
+  // "10x100 high-divergence"` and a `pot_config` of "18x275" as bare values
+  // while all 47 columns were bit-identical (16 cells over the five inclusive
+  // specs of the 2026-09-05 matrix).  That is the `pol_sf` defect on two
+  // top-level keys, and it survived the fix that was supposed to close the
+  // class because these two bypassed the mechanism entirely.
+  //
+  // NOTHING IS LOST BY LABELLING THEM.  The bare name stays available in
+  // `meta["knob_provenance"]["optics"]["value"]`, which is where a consumer
+  // that wants to re-route the sample reads it -- and where the label is
+  // written, the `route` column is by measurement the same under every other
+  // tabulated envelope this run has, so there is nothing for that consumer to
+  // disambiguate.
+  meta["optics"] = knob("optics").meta_value();
+  meta["pot_config"] = knob("pot_config").meta_value();
   meta["frame"] = "head-on: ion +z, electron -z; per-nucleon x, y, Q2";
   // Which b1 backend and which band row made this file (design_D_b1_li6.md
   // sec. 4.2).  UNCONDITIONAL, unlike the `rc` block below: the band is
@@ -466,9 +580,21 @@ py::dict columns_to_dict(Columns& c, const Pipeline& p, std::uint64_t n) {
   // which is exactly the "never quote a single row" rule failing silently.
   // On a caller-supplied `cfg.kernel` the flag is not what produced the
   // numbers, so say so rather than printing a model name that did not run.
-  meta["b1_model"] = p.config().kernel
-                         ? std::string("caller-supplied kernel")
-                         : std::string(b1_model_name(p.config().b1_model));
+  //
+  // THE 7Li ZERO IS RECORDED, NOT LABELLED WITH A BACKEND THAT DID NOT RUN
+  // (`inclusive_rank2_is_empty`, pipeline.hpp).  `default_inclusive_kernel`
+  // fills a rank-2 slot for spin 1 only, so on `--isotope 7Li --channel
+  // inclusive` nothing filled one and `"miller"` here named a backend the run
+  // never used -- the same defect `validate()` refuses for `b1_band_scale`,
+  // applied to the model name.  The two SCALES stay numeric and stay at 1.0:
+  // `validate()`'s Miller branch already refuses any other value on that path,
+  // so neither can record a variation that did not run, and changing their
+  // TYPE per isotope would break every consumer that reads them as floats.
+  const bool no_rank2 = inclusive_rank2_is_empty(p.config());
+  meta["b1_model"] = p.config().kernel ? std::string("caller-supplied kernel")
+                     : no_rank2       ? std::string(rank2_none_label())
+                                      : std::string(b1_model_name(
+                                            p.config().b1_model));
   meta["b1_band_scale"] = p.config().b1_band_scale;
   meta["b1_alpha_d_dwave_weight"] = p.config().b1_alpha_d_dwave_weight;
   // Which unpolarised PDF the b1 convolution folded against.  Same
@@ -476,9 +602,177 @@ py::dict columns_to_dict(Columns& c, const Pipeline& p, std::uint64_t n) {
   // "toy" and "mstw" differ by up to a factor 1.85 on Li6ConvolutionB1::b1
   // and by nothing at all in any other npz key, so without this one they are
   // indistinguishable files.
-  meta["b1_unpol"] = p.config().kernel
+  meta["b1_unpol"] = p.config().kernel ? std::string("caller-supplied kernel")
+                     : no_rank2       ? std::string(rank2_none_label())
+                                      : std::string(b1_unpol_name(
+                                            p.config().b1_unpol));
+  // ... and the SENTENCE, on every run and every channel, from the one
+  // definition the CLI run banner also prints (`rank2_input_report`).  This
+  // is the key that makes a 7Li tensor run self-describing: before it, an npz
+  // whose whole tensor sector was exactly 0.0 was indistinguishable in `meta`
+  // from one whose b1 merely happened to be small.
+  meta["rank2_input"] = rank2_input_report(p.config(), p.plan());
+  // Which structure-function backend EVERY kernel of this run actually used
+  // (`UnpolSfSource`, `PolSfSource`; CLI --unpol-sf / --pol-sf).  Same
+  // provenance rule and the same UNCONDITIONAL write as the b1 keys above,
+  // and for a bigger reason: `toy` and `ct18nlo` differ by a FACTOR 0.80 on
+  // the 6Li rate and move every column of the file, so without these two
+  // keys two npz files that disagree by 20 % in cross section would be
+  // indistinguishable in `meta`.  On a caller-supplied `cfg.kernel` the
+  // selectors are not what produced the numbers (and on a tagged channel the
+  // kernel itself is not even read), so say that rather than print a backend
+  // name that did not run.
+  meta["unpol_sf"] = p.config().kernel
                          ? std::string("caller-supplied kernel")
-                         : std::string(b1_unpol_name(p.config().b1_unpol));
+                         : std::string(unpol_sf_name(p.config().unpol_sf));
+  // ... and the POLARISED one, which has one channel the unpolarised one
+  // does not: `CoherentLi6` never evaluates g1 at all (`pol_sf_is_read`), so
+  // a coherent run records the "not read on channel ..." LABEL and not a
+  // backend name -- the `rank2_none_label` rule.  "toy" would be as wrong as
+  // "nnpdfpol" there: `ToyG1` did not run on that channel either.  Measured
+  // 2026-09-05: every generated column of a coherent run is bit-identical
+  // between the two settings, while `meta["pol_sf"]` used to print whichever
+  // one was typed.
+  //
+  // AND IT IS TWO AXES NOW, NOT ONE.  The label went in on the CHANNEL axis
+  // on 2026-09-04 and the identical defect on the RUN-PLAN axis survived it:
+  // under `tensor-thirds`, `transverse-tensor`, `tensor-flip` or
+  // `helicity-flip --pe 0` the fill carries lam_e * P_e = 0 in every category
+  // and g1 is multiplied by zero, so `--pol-sf nnpdfpol` is bit-identical to
+  // `toy` -- on the CLI's own DEFAULT plan -- while this key wrote
+  // "nnpdfpol".  Both axes now come from the ONE `knob_provenance` row, which
+  // is `pol_sf_is_read(config, plan)`.
+  meta["pol_sf"] = knob("pol_sf").meta_value();
+  // ... with the reason beside it, on every run and every channel, from the
+  // one definition the CLI run banner also prints (`pol_sf_reach_report`) --
+  // the `rank2_input` arrangement.  This is the key that makes a coherent
+  // run self-describing: the label above says the selector did not run, this
+  // one says why, and says that `--unpol-sf` DID reach the same run.
+  meta["pol_sf_reach"] = knob("pol_sf").reason;
+  // ... and how much of THIS run's accepted rate sits below the selected
+  // grid's own floor.  `--unpol-sf ct18nlo` on the shipped 6Li window puts
+  // 36 % of its own cell cross section below CT18NLO's Q2 = 1.677, where
+  // LHAPDF keeps evolving downward instead of freezing; that is a property
+  // of the run, not of the flag, so it is measured per run rather than
+  // quoted.  NaN means "the backend reports no grid floor" (MstwSF, a Custom
+  // object, or a caller-supplied kernel) -- never a silent 0.
+  const std::pair<double, double> grid = unpol_sf_grid_report(p);
+  meta["unpol_sf_grid_q2_min"] = grid.first;
+  meta["unpol_sf_below_grid_frac"] = grid.second;
+  // fsi.hpp -- CONDITIONAL, following the `rc` precedent below rather than
+  // the unconditional `b1` one, so an `--fsi off` npz carries exactly
+  // today's key set and no reference gate moves.  Measured on the three runs
+  // that made this block necessary (D3.3, --channel tagged-6Li-alpha
+  // --events 20000 --seed 1234, tensor-thirds at pz 0.7 / pzz 0.6 / pe 0.7,
+  // at the default sigma_XN = 40 mb): the kinematic columns are BIT-IDENTICAL
+  // across `off` / `glauber-cluster` / `glauber-nucleon`, the total rate
+  // differs by 48 % / 42 %, individual event weights by up to a factor 68.5
+  // -- and the `meta` dicts compared EQUAL, key by key.  That is exactly the
+  // "never quote a single row" rule failing silently, one level worse than
+  // the b1 case it was written for, because `fsi_sigma_mb` carries a
+  // documented 20-40 mb band that must never be quoted as a single row.
+  if (const GlauberFsiWeight* fw = p.fsi_weight()) {
+    meta["fsi"] = std::string(pipeline_fsi_name(p.config().fsi));
+    meta["fsi_sigma_mb"] = p.config().fsi_sigma_mb;
+    // What the weight actually applied, not only what was asked for: the
+    // cluster profile and the integrated survival ARE the difference between
+    // the two variants (131.0 vs 160.0 mb, 0.520 vs 0.583 on the 6Li alpha
+    // tag), so a file that records the name records the numbers too.
+    const double sig = fw->sigma_eff_mb(0.0);
+    meta["fsi_sigma_cluster_mb"] = fw->sigma_cluster_mb(sig);
+    meta["fsi_sigma_cluster_el_mb"] = fw->sigma_cluster_el_mb(sig);
+    meta["fsi_survival"] = fw->survival();
+    meta["fsi_clipped_grid_fraction"] = fw->clipped_grid_fraction();
+    // The sigma_XN(W) ramp is a DIFFERENT run: `fsi_sigma_mb` alone does not
+    // describe it, so the anchors go in only when the ramp ran.
+    meta["fsi_formation_ramp"] = fw->options().formation_ramp;
+    if (fw->options().formation_ramp) {
+      meta["fsi_ramp_w_lo"] = fw->options().ramp_w_lo;
+      meta["fsi_ramp_sigma_lo_mb"] = fw->options().ramp_sigma_lo_mb;
+      meta["fsi_ramp_w_hi"] = fw->options().ramp_w_hi;
+      meta["fsi_ramp_sigma_hi_mb"] = fw->options().ramp_sigma_hi_mb;
+    }
+  }
+  // coherent.hpp -- CONDITIONAL on the channel, same precedent.  `t_max` is
+  // the one that had to be here: it moves the whole |t| spectrum, the tag
+  // acceptance and every c_2 in the file, and until 2026-09-04 it was
+  // neither reachable from the CLI nor recorded anywhere (D5.6).  The
+  // positivity edge is DERIVED (`t_positivity_edge`), so the file says how
+  // far the run was from the edge rather than leaving a reader to recompute
+  // it from eps_b0 -- and it is quoted at P_zz = -2, the worst case of the
+  // shipped scenario.
+  if (p.config().channel == PipelineChannel::CoherentLi6) {
+    const CoherentScenario& sc = p.config().coherent;
+    meta["coherent_t_max"] = p.config().coherent_t_max;
+    meta["coherent_slope_b"] = sc.slope_b;
+    meta["coherent_eps_b0"] = sc.eps_b0;
+    meta["coherent_amp"] = sc.amp;
+    meta["coherent_f0"] = sc.f0;
+    meta["coherent_t_positivity_edge_pzz_m2"] = sc.t_positivity_edge(-2.0);
+    meta["coherent_m_x_min"] = p.config().coherent_xpom.m_x_min;
+    meta["coherent_x_pom_max"] = p.config().coherent_xpom.x_pom_max;
+    meta["coherent_weighted_azimuth"] = p.config().coherent_weighted_azimuth;
+  }
+#if LIPOLGEN_HAVE_PYTHIA8
+  // pythia_bridge.hpp -- CONDITIONAL on the T2 tier having been bound
+  // through `set_pythia_hadronizer`, which is the only route by which the
+  // metadata writer can see the bridge at all.  Measured (D4; 20 000 coherent
+  // events per set at 6Li config 1, seed 4242): the `--pom-set` runs of the
+  // same seed produce BIT-IDENTICAL T0 columns (t, x_pom, q2, x, weight --
+  // one md5, ffd35a3a62b591c547e9ca2ac4301b5d, over the FOURTEEN sets the
+  // constructor still admits, 1-10 and 12-15; set 11 gave that md5 too in
+  // the 2026-09-04 scan but is refused now, so fourteen is the count that
+  // reproduces, re-measured 2026-09-05) and a hadronic final state that
+  // moves by
+  // -2.6 % / +9.9 % in <n_charged> and by a factor 2.8 in the kaon fraction,
+  // while their `meta` compared equal.  THAT BAND IS OVER THE TWELVE DPDF
+  // FITS (3-10, 12-15) ABOUT SET 6, not over all fifteen: sets 1 (a toy) and
+  // 2 (pi^0 densities) are not Pomeron fits and 11 is refused, and set 2
+  // would take the <n_charged> low edge to -4.7 % (3.7773 against 3.9639).
+  // `pom_set`'s own declaration in `pythia_bridge.hpp` is where the band and
+  // its window are stated once.  The
+  // fallback COUNTER is here for the reason PipelineConfig::validate refuses
+  // a knob that did not run: on `pom_set = 11` it reads 1.000, i.e. the
+  // Pomeron PDF was not consulted on a single event.
+  if (const auto* hook = p.config().hadronizer
+                             .target<PythiaHadronizerHook>();
+      hook != nullptr && hook->bridge) {
+    const PythiaBridge& br = *hook->bridge;
+    const PythiaBridgeOptions& po = br.options();
+    meta["t2_bridge"] = std::string("pythia8");
+    // THE THREE POMERON KNOBS GO THROUGH THE TABLE, and the reason is the
+    // measurement above turned on its head.  The Pomeron PYTHIA instance is
+    // built whenever `coherent_t2 == Pomeron` REGARDLESS of channel
+    // (pythia_bridge.cpp) and then hadronizes ZERO events off the coherent
+    // one, so on the six non-coherent channels these three moved NOTHING --
+    // measured 2026-09-05 with a deterministic hadron hash, 150 events seed
+    // 4242: not a T0 column and not one of 3278 particles -- while this block
+    // wrote `pom_set = 5` and `coherent_t2 = "pomeron"` as if they had run.
+    // `pom_set` stays an INT where it ran and carries the label where it did
+    // not, the `b1_model` / `pol_sf` rule; `meta["knob_provenance"]` carries
+    // the whole sentence beside it.
+    const KnobProvenance& kt2 = knob("coherent_t2");
+    const KnobProvenance& kps = knob("pom_set");
+    const KnobProvenance& kpr = knob("pom_rescale");
+    meta["coherent_t2"] = kt2.meta_value();
+    if (kps.status == KnobStatus::Read) meta["pom_set"] = po.pom_set;
+    else meta["pom_set"] = kps.meta_value();
+    if (kpr.status == KnobStatus::Read) meta["pom_rescale"] = po.pom_rescale;
+    else meta["pom_rescale"] = kpr.meta_value();
+    meta["pom_q2_pdf_min"] = po.q2_pdf_min;
+    meta["t2_include_charm"] = po.include_charm;
+    const PythiaBridgeStats& st = br.stats();
+    meta["t2_n_ok"] = st.n_ok;
+    meta["t2_n_failed"] = st.n_failed;
+    meta["t2_n_pomeron"] = st.n_pomeron;
+    meta["n_pom_flavour_fallback"] = st.n_pom_flavour_fallback;
+    meta["pom_flavour_fallback_frac"] =
+        st.n_pomeron > 0
+            ? static_cast<double>(st.n_pom_flavour_fallback)
+                  / static_cast<double>(st.n_pomeron)
+            : 0.0;
+  }
+#endif
   // rc.hpp -- the WHOLE block, `meta["rc"]` included, is emitted only when
   // the run has RC on, so an `--rc off` npz is byte-identical to today's and
   // not merely key-compatible with it (T6).
@@ -523,9 +817,16 @@ py::dict columns_to_dict(Columns& c, const Pipeline& p, std::uint64_t n) {
     // is 73-99.9 % of the tail at x >= 0.1, phase_C_numbers.md), so without
     // these keys such an npz is indistinguishable in `meta` from a default
     // run.  `rc_tail_applies` above covers `with_tail` only.
-    meta["rc_scope"] = std::string(
-        rc->options().scope == RcScope::TensorRate ? "tensor-rate"
-                                                   : "tensor-all");
+    // ... and `rc_scope` goes THROUGH THE TABLE, because it is the one rc
+    // knob whose reach depends on the RUN PLAN and so cannot be refused by
+    // `validate()`, which has no plan.  `tensor-all` differs from
+    // `tensor-rate` only in the cos 2phi amplitude, which carries a
+    // sin^2(theta_S): under `tensor_thirds_plan`, whose categories sit at
+    // theta_S = 0, the two runs are BIT-IDENTICAL (measured 2026-09-05) and
+    // "tensor-all" here would name a variation that did not happen.  Under
+    // `transverse-tensor` / `tensor-flip` (theta_S = pi/2) it does run, and
+    // the name goes in.
+    meta["rc_scope"] = knob("rc_scope").meta_value();
     meta["rc_with_qe_tail"] = rc->options().with_qe_tail;
     meta["rc_tail_model"] =
         std::string(rc_tail_model_name(rc->options().tail_model));
@@ -553,12 +854,40 @@ py::dict columns_to_dict(Columns& c, const Pipeline& p, std::uint64_t n) {
     meta["rc_clipped_tail_event_fraction"] =
         static_cast<double>(n_tail) / denom;
   }
+  // ... AND THE WHOLE TABLE, on every run and every channel, unconditionally.
+  // This is the block that closes the fourth defect class: `--cluster-wave`,
+  // `--triton-sf`, `--inclusive-b1`, `--cluster-beta`, `--p-d`,
+  // `--fsi-sigma-mb` at `--fsi off`, `--coherent-t-max` off the coherent
+  // channel and `--x-max` on it were each accepted, some of them MOVED the
+  // output, and NONE of them was recorded anywhere -- a VMC and a Hulthen
+  // tagged file were indistinguishable in `meta`.  Every knob is here now,
+  // with its status and the reason, so silence is no longer reachable: a knob
+  // added without a `knob_provenance` row fails
+  // python/tests/test_knob_provenance.py.
+  //
+  // It is a NESTED dict and `export.write_columns_npz` writes `meta` as JSON,
+  // so it survives the round trip unchanged.  The existing keys keep their
+  // names and their meaning; this one is added beside them.
+  py::dict prov;
+  for (const KnobProvenance& r : knobs) {
+    py::dict row;
+    row["value"] = r.value;
+    row["status"] = std::string(knob_status_name(r.status));
+    row["reason"] = r.reason;
+    row["at_default"] = r.at_default;
+    if (!r.flag.empty()) row["flag"] = r.flag;
+    if (!r.label.empty()) row["label"] = r.label;
+    prov[py::str(r.name)] = row;
+  }
+  meta["knob_provenance"] = prov;
+
   d["meta"] = meta;
   return d;
 }
 
 py::object pipeline_generate(const Pipeline& p, std::uint64_t n, bool events,
-                             unsigned nthreads, std::size_t chunk) {
+                             unsigned nthreads, std::size_t chunk,
+                             const KnobRunContext& ctx = KnobRunContext()) {
   if (n == 0 || n > p.size()) n = p.size();
   Columns cols;
   cols.with_rc = p.rc_model() != nullptr;
@@ -573,7 +902,7 @@ py::object pipeline_generate(const Pipeline& p, std::uint64_t n, bool events,
     py::gil_scoped_release unlock;
     generate_columns(p, n, cols, events ? &evs : nullptr, nthreads, chunk);
   }
-  py::dict d = columns_to_dict(cols, p, n);
+  py::dict d = columns_to_dict(cols, p, n, ctx);
   if (events) {
     py::list lst;
     for (auto& e : evs) lst.append(py::cast(std::move(e)));
@@ -1199,7 +1528,14 @@ static void bind_sf(py::module_& m) {
   m.def("lhapdf_quiet", &lhapdf_quiet);
   py::class_<LhapdfSF, UnpolSF, std::shared_ptr<LhapdfSF>>(m, "LhapdfSF")
       .def(py::init<std::string, int>(), py::arg("setname") = "CT18NLO",
-           py::arg("member") = 0);
+           py::arg("member") = 0)
+      .def_property_readonly("q2_min", &LhapdfSF::q2_min,
+          "The loaded grid's OWN lower Q2 edge (LHAPDF's q2Min()), read from "
+          "the set metadata and never transcribed: 1.677 for CT18NLO "
+          "(QMin 1.295 GeV), 1 for NNPDFpol11_100.  Below it LHAPDF does NOT "
+          "freeze -- it keeps evolving downward and F2p falls fast -- which "
+          "is why unpol_sf_grid_report() exists and why the run banner and "
+          "meta['unpol_sf_below_grid_frac'] are computed from this.");
   py::class_<LhapdfG1, PolSF, std::shared_ptr<LhapdfG1>>(m, "LhapdfG1")
       .def(py::init<std::string, int>(), py::arg("setname") = "NNPDFpol11_100",
            py::arg("member") = 0);
@@ -3495,7 +3831,19 @@ static void bind_coherent(py::module_& m) {
       .def("a2_m_state", &CoherentScenario::a2_m_state, py::arg("t_abs"),
            py::arg("m"))
       .def("cos2phi_coefficient", &CoherentScenario::cos2phi_coefficient,
-           py::arg("t_abs"), py::arg("pzz"));
+           py::arg("t_abs"), py::arg("pzz"))
+      .def("positivity_margin", &CoherentScenario::positivity_margin,
+           py::arg("t_max"), py::arg("pzz"),
+           "1 - |c_2(t_max, pzz)|.  NEGATIVE means the azimuthal weight is "
+           "not a density any more; CoherentSampler throws on it.")
+      .def("t_positivity_edge", &CoherentScenario::t_positivity_edge,
+           py::arg("pzz"),
+           "|t| [GeV^2] where positivity_margin reaches zero, in closed "
+           "form: (1 - sign(A) C)/|A| with c_2 = A|t| + C.  DERIVED, so it "
+           "moves with eps_b0 -- 0.245 at the shipped -0.08 and P_zz = -2, "
+           "2.80 at the measured 6Li quadrupole's -0.0070.  It is NOT the "
+           "derivation of COHERENT_T_MAX_DEFAULT (the anchor range is); see "
+           "coherent.hpp.");
 
   py::class_<CoherentRecoil>(m, "CoherentRecoil")
       .def_readonly("pT", &CoherentRecoil::pT)
@@ -3588,10 +3936,15 @@ static void bind_pipeline(py::module_& m) {
   py::enum_<B1UnpolSource>(m, "B1UnpolSource",
       "Which UNPOLARISED backend b1_model = Li6Convolution folds its own F1 "
       "against (Li6ConvolutionOptions.unpol; CLI --b1-unpol).  It reaches the "
-      "b1 and NOTHING else -- InclusiveKernel's own f2_source stays ToyF2 on "
-      "every setting, so the SPIN-BLIND cell cross section "
-      "(InclusiveSampler.cell_xsec_pb) is bit for bit under this flag and "
-      "only the tensor shift moves.\n"
+      "b1 and NOTHING else -- InclusiveKernel's own f2_source is set by a "
+      "SEPARATE flag, --unpol-sf (UnpolSfSource), and at its shipped default "
+      "'toy' it is ToyF2 on every --b1-unpol setting, so the SPIN-BLIND cell "
+      "cross section (InclusiveSampler.cell_xsec_pb) is bit for bit under "
+      "THIS flag and only the tensor shift moves.  The two are kept separate "
+      "because they are different quantities (this one is the deuteron F1 "
+      "inside CDKS Eq. (22), a CDKS-comparability choice the A = 2 gate "
+      "verdict rests on); validate() refuses the one combination that would "
+      "mislabel them, b1_unpol = Toy under a non-toy unpol_sf.\n"
       "  Toy      the DEFAULT: the kernel's own ToyF2, shared as ONE object.  "
       "Bit for bit what every published number was made with.\n"
       "  Mstw     MstwSF -- MSTW2008 LO over PYTHIA 8's pdfdata grid, the PDF "
@@ -3660,6 +4013,241 @@ static void bind_pipeline(py::module_& m) {
      "config.b1_unpol = source, with the matching backend built and attached "
      "to config.b1_unpol_sf.  Raises RuntimeError naming the missing tier (or "
      "the missing grid file) rather than falling back to ToyF2.");
+
+  py::enum_<UnpolSfSource>(m, "UnpolSfSource",
+      "Which UNPOLARISED structure-function backend supplies F2 -- and "
+      "through it F1, F_L and the whole unpolarised rate -- to EVERY kernel "
+      "a Pipeline builds: the inclusive kernel, the coherent channel that "
+      "rides its cell cross sections, and the tagged struck-cluster kernel "
+      "(PipelineConfig.unpol_sf; CLI --unpol-sf).\n"
+      "  Toy      the DEFAULT: the kernel's own ToyF2, bit for bit what "
+      "every published number was made with.  ToyF2 is labelled TOY in "
+      "sf.hpp and anchored BY EYE -- 'factor-1.5 rate estimates ONLY'.\n"
+      "  Mstw     MstwSF (MSTW2008 LO over PYTHIA 8's pdfdata grid).  Needs "
+      "the PYTHIA tier.\n"
+      "  Ct18Nlo  LhapdfSF('CT18NLO', 0).  Needs the LHAPDF tier.  READ THE "
+      "GRID CLAUSE: 36 % of a shipped 6Li run's own accepted cell cross "
+      "section sits below CT18NLO's Q2 = 1.677 grid floor, where LHAPDF "
+      "extrapolates downward rather than freezing.\n"
+      "  Custom   whatever object is in PipelineConfig.unpol_sf_obj; the "
+      "enum is the provenance meta['unpol_sf'] records.\n"
+      "MEASURED on 6Li inclusive at config 1: the summed accepted cell cross "
+      "section is 591846.2 pb (toy), 472571.9 (ct18nlo, x0.7985), 469556.5 "
+      "(mstw, x0.7934) -- and it is not a normalisation, F2p at Q2 = 10 "
+      "moves x0.92 / x1.11 / x1.37 / x1.26 (ct18nlo) at x = 0.01 / 0.10 / "
+      "0.30 / 0.50.\n"
+      "NOT ORTHOGONAL TO PolSfSource: InclusiveKernel's default ToyG1 is "
+      "built on the kernel's OWN UnpolSF, so this flag alone moves g1 too "
+      "(A1 = g1/F1 moves 5-8 %).  pol_sf = Toy does NOT mean 'g1 "
+      "unchanged'.\n"
+      "Set it with set_unpol_sf(config, source), which builds the backend "
+      "and raises here if the tier or the grid is missing -- it is NEVER "
+      "silently replaced by ToyF2.")
+      .value("Toy", UnpolSfSource::Toy)
+      .value("Mstw", UnpolSfSource::Mstw)
+      .value("Ct18Nlo", UnpolSfSource::Ct18Nlo)
+      .value("Custom", UnpolSfSource::Custom);
+  m.def("unpol_sf_name", &unpol_sf_name, py::arg("source"));
+
+  py::enum_<PolSfSource>(m, "PolSfSource",
+      "Which POLARISED backend supplies g1 -- and through Wandzura-Wilczek "
+      "g2 -- to the INCLUSIVE and TAGGED kernels a Pipeline builds "
+      "(PipelineConfig.pol_sf; CLI --pol-sf).\n"
+      "  Toy       the DEFAULT: the kernel's own ToyG1, built on the "
+      "kernel's own UnpolSF and r_func.\n"
+      "  NnpdfPol  LhapdfG1('NNPDFpol11_100', 0) -- the only POLARISED set "
+      "installed in this tree's LHAPDF store, and already LhapdfG1's own "
+      "default.  Needs the LHAPDF tier.\n"
+      "  Custom    whatever object is in PipelineConfig.pol_sf_obj.\n"
+      "MEASURED on 6Li per-nucleon g1A (A_par tracks it to better than "
+      "0.1 % at y = 0.5): nnpdfpol/toy = 0.669 / 1.114 / 1.349 / 0.982 / "
+      "0.636 at (x, Q2) = (0.01, 2.5) / (0.10, 10) / (0.20, 10) / "
+      "(0.50, 25) / (0.70, 50) -- x0.64 to x1.35, and not monotone.\n"
+      "THE NEUTRON IS A SIGN, not a factor: ToyG1's a1n crosses zero near "
+      "x ~ 0.25 and is POSITIVE above it while NNPDFpol1.1's g1n stays "
+      "negative to x ~ 0.6, so the shipped toy g1n has the WRONG SIGN over "
+      "roughly 0.25 < x < 0.6.  That matters most on a neutron-tagged run "
+      "(d + p tagging), least on isoscalar 6Li.\n"
+      "SCOPE -- IT DOES NOT REACH EVERY KERNEL, and unlike UnpolSfSource it "
+      "never could; this is the C++ header's own caveat "
+      "(include/lipolgen/pipeline.hpp, PolSfSource), which this docstring "
+      "dropped until 2026-09-05.  g1 enters through exactly one product, "
+      "lam_e * P_e * (m/J) * cos(theta_S) * A_par, so the selector is read "
+      "only where the CHANNEL evaluates g1 AND the FILL carries "
+      "lam_e * P_e != 0.  It does NOT reach CoherentLi6, whose rate is "
+      "spin-independent, and it does NOT reach any unpolarised-beam plan -- "
+      "tensor_thirds_plan, transverse_tensor_plan and tensor_flip_plan build "
+      "every category at lam_e = 0, and tensor-thirds is the CLI's own "
+      "default, so at defaults --pol-sf is read on NO channel.  Neither is "
+      "refused; both are LABELLED (pol_sf_is_read(config, plan), "
+      "meta['pol_sf'] / meta['pol_sf_reach'], and the pol_sf row of "
+      "Pipeline.knob_provenance).  'Every kernel the pipeline builds' is "
+      "true of --unpol-sf alone.\n"
+      "Set it with set_pol_sf(config, source).")
+      .value("Toy", PolSfSource::Toy)
+      .value("NnpdfPol", PolSfSource::NnpdfPol)
+      .value("Custom", PolSfSource::Custom);
+  m.def("pol_sf_name", &pol_sf_name, py::arg("source"));
+
+  m.def("unpol_sf_grid_report", [](const Pipeline& p) {
+    const std::pair<double, double> g = unpol_sf_grid_report(p);
+    return py::make_tuple(g.first, g.second);
+  }, py::arg("pipeline"),
+     "(q2_min, below_frac) of the run's selected unpolarised backend: the "
+     "loaded grid's OWN lower Q2 edge, and the fraction of THIS run's own "
+     "accepted RATE that sits below it, where LHAPDF extrapolates downward "
+     "rather than freezing.  The denominator is the CHANNEL's own per-cell "
+     "rate (Pipeline.cell_rate_weights_pb), which on the coherent channel is "
+     "sigma_cell * f_coh(x) and not the inclusive cells: measured on the "
+     "shipped 6Li ct18nlo run, 0.447460 coherent against 0.361791 "
+     "inclusive.  (0, 0) for the toy backend, which has no grid; (nan, nan) "
+     "when the backend reports no floor (MstwSF keeps PYTHIA's qsqmin "
+     "private; a Custom object or a caller-supplied kernel reports "
+     "nothing).  ONE definition, read by both the run banner and "
+     "meta['unpol_sf_below_grid_frac'].");
+
+  // The polarised selector's REACH (pipeline.hpp).  Exposed in all three
+  // pieces for the same reason the rank-2 trio is: the CLI needs the
+  // predicate to decide whether to print, the sentence to print, and the
+  // label to compare meta against; a pytest needs all three to check that
+  // meta and the banner say the same true thing.
+  m.def("pol_sf_is_read", &pol_sf_is_read, py::arg("config"),
+        py::arg("plan"),
+        "Does --pol-sf reach the RATE of THIS RUN?  TWO axes, and the second "
+        "one is the shipped default.  False on the coherent channel -- the "
+        "yield is f_coh(x) times the UNPOLARIZED cell cross sections and the "
+        "tensor signal is the recoil azimuth's 1 + c2 cos 2(phi_t - phi_S), "
+        "so nothing evaluates g1 -- and false under any UNPOLARISED-BEAM "
+        "PLAN, because InclusiveKernel::amplitudes multiplies g1 by "
+        "lam_e * P_e and the three tensor plans build every category at "
+        "lam_e = 0, pe = 0 (helicity-flip at --pe 0 likewise).  Measured: "
+        "--pol-sf nnpdfpol is bit-identical to toy on four channels under "
+        "tensor-thirds, the CLI's own default plan.  The kernel still "
+        "CARRIES the selected g1_model; the run never reads it.  --unpol-sf, "
+        "by contrast, reaches every run.");
+  m.def("pol_sf_reach_report", &pol_sf_reach_report, py::arg("config"),
+        py::arg("plan"),
+        "One sentence saying what --pol-sf reached on this run.  ONE "
+        "definition, read by meta['pol_sf_reach'], by the pol_sf row of "
+        "Pipeline.knob_provenance and printed by the CLI run banner.");
+  m.def("pol_sf_unread_label", &pol_sf_unread_label, py::arg("config"),
+        py::arg("plan"),
+        "The label meta['pol_sf'] carries INSTEAD of a backend name where "
+        "pol_sf_is_read is false -- the rank2_none_label rule for the "
+        "polarised selector: a run whose g1 was never evaluated may not "
+        "record 'nnpdfpol', and may not record 'toy' either.  Two shapes, "
+        "one per axis: 'not read on channel coherent-6Li' and 'not read "
+        "under this run's fill'.");
+  m.def("plan_has_beam_helicity", &plan_has_beam_helicity, py::arg("plan"),
+        "Does any category of this plan carry lam_e != 0 AND pe != 0 AND a "
+        "non-zero population at some m != 0?  That product is the whole of "
+        "what InclusiveKernel::amplitudes multiplies g1 by, so it is the "
+        "exact condition under which a run evaluates a polarised structure "
+        "function.  ONE definition, read by pol_sf_is_read and by the pe row "
+        "of Pipeline.knob_provenance.");
+
+  // The 7Li rank-2 zero, out loud (pipeline.hpp).  Both are exposed because
+  // the CLI needs the PREDICATE to decide whether to print and the SENTENCE
+  // to print, and a pytest needs both to check that meta and banner agree.
+  m.def("inclusive_rank2_is_empty", &inclusive_rank2_is_empty,
+        py::arg("config"),
+        "True when this config's INCLUSIVE kernel has a rank-2 (tensor) "
+        "sector that nothing fills -- i.e. isotope 7Li on the inclusive "
+        "channel with no caller-supplied kernel.  default_inclusive_kernel "
+        "fills b1_func/delta_func for spin 1 ONLY, so at spin 3/2 "
+        "b1_32 = b2_32 = delta_32 = 0 and the tensor term of the rate, the "
+        "cos 2phi amplitude and A_zz are IDENTICALLY zero -- not small.  "
+        "False on a caller-supplied kernel, false off the inclusive channel "
+        "(a tagged 7Li run DOES carry the alpha-t alignment, in the event "
+        "weight), and false at spin 1/2 or 0, where there is no rank-2 "
+        "sector at all.");
+  m.def("rank2_none_label", &rank2_none_label,
+        "The label meta['b1_model'] and meta['b1_unpol'] carry instead of a "
+        "backend name when inclusive_rank2_is_empty(config) holds -- a "
+        "'miller' there would name a backend that did not run.  The two "
+        "SCALES b1_band_scale / b1_alpha_d_dwave_weight stay numeric and at "
+        "their defaults, because validate()'s Miller branch already refuses "
+        "any other value on that path.");
+  m.def("rank2_input_report", &rank2_input_report, py::arg("config"),
+        py::arg("plan"),
+        "One sentence saying what filled -- or did not fill -- this run's "
+        "rank-2 slots.  ONE definition, read by meta['rank2_input'] and "
+        "printed by the CLI run banner, so the claim cannot drift between "
+        "them.  The plan is read for one clause: a fill that carries a "
+        "rank-2 moment (RunPlan.pzz_true, which is T and not P_zz at "
+        "J = 3/2) is named, because that is the run that asked for the "
+        "sector that is not there.");
+
+  // The `set_b1_unpol` arrangement, for the two general selectors: the
+  // OPTIONAL tier's object is built HERE, where the tier is visible.
+  m.def("set_unpol_sf", [](PipelineConfig& cfg, UnpolSfSource src) {
+    switch (src) {
+      case UnpolSfSource::Toy:
+        cfg.unpol_sf_obj.reset();
+        break;
+      case UnpolSfSource::Mstw:
+#if LIPOLGEN_HAVE_PYTHIA8
+        cfg.unpol_sf_obj = std::make_shared<const MstwSF>();
+#else
+        throw std::runtime_error(
+            "set_unpol_sf: unpol_sf = mstw needs the OPTIONAL PYTHIA 8 tier "
+            "(MstwSF reads PYTHIA's own pdfdata/mstw2008lo.00.dat), and this "
+            "build has none -- lipolgen.HAVE_PYTHIA8 is False.  Rebuild with "
+            "-DLIPOLGEN_WITH_PYTHIA=ON.  It is never silently replaced by "
+            "ToyF2, which is 21 % away on the shipped 6Li rate.");
+#endif
+        break;
+      case UnpolSfSource::Ct18Nlo:
+#if LIPOLGEN_HAVE_LHAPDF
+        cfg.unpol_sf_obj = std::make_shared<const LhapdfSF>("CT18NLO", 0);
+#else
+        throw std::runtime_error(
+            "set_unpol_sf: unpol_sf = ct18nlo needs the OPTIONAL LHAPDF "
+            "tier, and this build has none -- lipolgen.HAVE_LHAPDF is False. "
+            " Rebuild with -DLIPOLGEN_WITH_LHAPDF=ON and install the CT18NLO "
+            "set.  It is never silently replaced by ToyF2.");
+#endif
+        break;
+      case UnpolSfSource::Custom:
+        throw std::runtime_error(
+            "set_unpol_sf: UnpolSfSource.Custom names an object this "
+            "function cannot build -- assign config.unpol_sf_obj = <your "
+            "UnpolSF> instead, which sets Custom for you");
+    }
+    cfg.unpol_sf = src;
+  }, py::arg("config"), py::arg("source"),
+     "config.unpol_sf = source, with the matching backend built and attached "
+     "to config.unpol_sf_obj.  Raises RuntimeError naming the missing tier "
+     "(or the missing grid file) rather than falling back to ToyF2.");
+
+  m.def("set_pol_sf", [](PipelineConfig& cfg, PolSfSource src) {
+    switch (src) {
+      case PolSfSource::Toy:
+        cfg.pol_sf_obj.reset();
+        break;
+      case PolSfSource::NnpdfPol:
+#if LIPOLGEN_HAVE_LHAPDF
+        cfg.pol_sf_obj = std::make_shared<const LhapdfG1>("NNPDFpol11_100", 0);
+#else
+        throw std::runtime_error(
+            "set_pol_sf: pol_sf = nnpdfpol needs the OPTIONAL LHAPDF tier, "
+            "and this build has none -- lipolgen.HAVE_LHAPDF is False.  "
+            "Rebuild with -DLIPOLGEN_WITH_LHAPDF=ON and install the "
+            "NNPDFpol11_100 set.  It is never silently replaced by ToyG1, "
+            "whose g1n has the WRONG SIGN over 0.25 < x < 0.6.");
+#endif
+        break;
+      case PolSfSource::Custom:
+        throw std::runtime_error(
+            "set_pol_sf: PolSfSource.Custom names an object this function "
+            "cannot build -- assign config.pol_sf_obj = <your PolSF> "
+            "instead, which sets Custom for you");
+    }
+    cfg.pol_sf = src;
+  }, py::arg("config"), py::arg("source"),
+     "config.pol_sf = source, with the matching backend built and attached "
+     "to config.pol_sf_obj.  Raises RuntimeError naming the missing tier "
+     "rather than falling back to ToyG1.");
 
   py::class_<CiofiSimulaOptions>(m, "CiofiSimulaOptions",
       "Configuration of CiofiSimulaTriton.  Everything here is a documented "
@@ -3755,7 +4343,30 @@ static void bind_pipeline(py::module_& m) {
       .def_readwrite("delta_func", &StruckClusterOptions::delta_func)
       .def_readwrite("scenario", &StruckClusterOptions::scenario)
       .def_readwrite("grid", &StruckClusterOptions::grid)
-      .def_readwrite("with_perp", &StruckClusterOptions::with_perp);
+      .def_readwrite("with_perp", &StruckClusterOptions::with_perp)
+      .def_property("f2_source",
+          [](const StruckClusterOptions& o) {
+            return std::const_pointer_cast<UnpolSF>(o.f2_source);
+          },
+          [](StruckClusterOptions& o, std::shared_ptr<UnpolSF> u) {
+            o.f2_source = std::move(u);
+          },
+          "InclusiveKernel.Options.f2_source of the struck cluster's kernel "
+          "-- the tagged channels' ONLY unpolarised injection point.  None "
+          "(the default) is the kernel class's own ToyF2, bit for bit.  "
+          "Pipeline fills it from PipelineConfig.unpol_sf_obj when it is "
+          "left empty.")
+      .def_property("g1_model",
+          [](const StruckClusterOptions& o) {
+            return std::const_pointer_cast<PolSF>(o.g1_model);
+          },
+          [](StruckClusterOptions& o, std::shared_ptr<PolSF> g) {
+            o.g1_model = std::move(g);
+          },
+          "InclusiveKernel.Options.g1_model of the struck cluster's kernel.  "
+          "None (the default) is the kernel's own ToyG1 on its own UnpolSF.  "
+          "Pipeline fills it from PipelineConfig.pol_sf_obj when it is left "
+          "empty.");
 
   py::class_<PipelineConfig>(m, "PipelineConfig")
       .def(py::init<>())
@@ -3809,6 +4420,48 @@ static void bind_pipeline(py::module_& m) {
           "The UnpolSF b1_unpol names.  Assigning one sets b1_unpol = Custom; "
           "assigning None clears it back to Toy.  For the named backends use "
           "set_b1_unpol(config, source), which builds them.")
+      .def_readwrite("unpol_sf", &PipelineConfig::unpol_sf,
+                     "UnpolSfSource: which UNPOLARISED backend EVERY kernel "
+                     "this config builds takes its F2 from -- inclusive, "
+                     "coherent and tagged alike.  Toy is the default and is "
+                     "today bit for bit.  Assigning the enum here does NOT "
+                     "build the backend -- use set_unpol_sf(config, source), "
+                     "or validate() will refuse the named-but-empty "
+                     "combination.")
+      .def_property("unpol_sf_obj",
+          [](const PipelineConfig& c) {
+            return std::const_pointer_cast<UnpolSF>(c.unpol_sf_obj);
+          },
+          [](PipelineConfig& c, std::shared_ptr<UnpolSF> u) {
+            // The provenance and the realisation are one choice; this setter
+            // is what keeps them from drifting (the b1_unpol_sf arrangement).
+            c.unpol_sf = u ? UnpolSfSource::Custom : UnpolSfSource::Toy;
+            c.unpol_sf_obj = std::move(u);
+          },
+          "The UnpolSF unpol_sf names.  Assigning one sets unpol_sf = "
+          "Custom; assigning None clears it back to Toy.  For the named "
+          "backends use set_unpol_sf(config, source), which builds them.")
+      .def_readwrite("pol_sf", &PipelineConfig::pol_sf,
+                     "PolSfSource: which POLARISED backend the INCLUSIVE and "
+                     "TAGGED kernels take their g1 (and, through "
+                     "Wandzura-Wilczek, their g2) from -- NOT every kernel: "
+                     "the coherent channel evaluates no g1, and neither does "
+                     "any unpolarised-beam plan (tensor-thirds included, "
+                     "which is the CLI default), so the run LABELS the "
+                     "selector there rather than crediting it (PolSfSource's "
+                     "own SCOPE note; pol_sf_is_read(config, plan)).  Toy is "
+                     "the default and is today bit for bit.  Use "
+                     "set_pol_sf(config, source) to build the backend.")
+      .def_property("pol_sf_obj",
+          [](const PipelineConfig& c) {
+            return std::const_pointer_cast<PolSF>(c.pol_sf_obj);
+          },
+          [](PipelineConfig& c, std::shared_ptr<PolSF> g) {
+            c.pol_sf = g ? PolSfSource::Custom : PolSfSource::Toy;
+            c.pol_sf_obj = std::move(g);
+          },
+          "The PolSF pol_sf names.  Assigning one sets pol_sf = Custom; "
+          "assigning None clears it back to Toy.")
       .def_readwrite("with_virtual_photon", &PipelineConfig::with_virtual_photon)
       .def_readwrite("seed", &PipelineConfig::seed)
       .def_readwrite("run", &PipelineConfig::run)
@@ -3899,6 +4552,57 @@ static void bind_pipeline(py::module_& m) {
     return py::cast(sc);
   }, py::arg("ev"), py::arg("channel"));
 
+  // ------------------------------------------- the knob-provenance table
+  py::enum_<KnobStatus>(m, "KnobStatus",
+      "What a run did with one user-settable knob (pipeline.hpp).")
+      .value("Read", KnobStatus::Read,
+             "the run consults it: some quantity it computes is a function "
+             "of this knob")
+      .value("NotRead", KnobStatus::NotRead,
+             "nothing the run computes is a function of it; meta writes the "
+             "reason in place of the value")
+      .value("Refused", KnobStatus::Refused,
+             "the AXIS is closed on this run -- validate() throws on any "
+             "value but the one shown");
+  m.def("knob_status_name", &knob_status_name, py::arg("status"),
+        "'read', 'not-read' or 'refused' -- ONE spelling, shared by the npz "
+        "meta block, the CLI banner and the tests.");
+  py::class_<KnobProvenance>(m, "KnobProvenance",
+      "One row of Pipeline.knob_provenance: what this run did with one "
+      "user-settable knob, and why.")
+      .def(py::init<>())
+      .def_readwrite("name", &KnobProvenance::name)
+      .def_readwrite("flag", &KnobProvenance::flag)
+      .def_readwrite("value", &KnobProvenance::value)
+      .def_readwrite("status", &KnobProvenance::status)
+      .def_readwrite("reason", &KnobProvenance::reason)
+      .def_readwrite("label", &KnobProvenance::label)
+      .def_readwrite("at_default", &KnobProvenance::at_default)
+      .def_property_readonly("meta_value", &KnobProvenance::meta_value,
+        "What a meta key carries for this row: the bare value where the knob "
+        "RAN or where its axis is refused (so the value is necessarily the "
+        "default), and the reason sentence where it did not.")
+      .def("__repr__", [](const KnobProvenance& r) {
+        return "<KnobProvenance " + r.name + " = " + r.value + " (" +
+               knob_status_name(r.status) + ")>";
+      });
+  py::class_<KnobRunContext>(m, "KnobRunContext",
+      "The facts a Pipeline cannot see because they are resolved one tier "
+      "up: the T2 bridge (which lives in the OPTIONAL PYTHIA tier) and what "
+      "the caller asked the run-plan factory for (a RunPlan records its "
+      "MOMENTS, not which flags produced them).  Rows the context cannot "
+      "decide are omitted rather than guessed.")
+      .def(py::init<>())
+      .def_readwrite("plan_name", &KnobRunContext::plan_name)
+      .def_readwrite("pz", &KnobRunContext::pz)
+      .def_readwrite("pzz", &KnobRunContext::pzz)
+      .def_readwrite("pe", &KnobRunContext::pe)
+      .def_readwrite("rel_lumi_offset", &KnobRunContext::rel_lumi_offset)
+      .def_readwrite("t2_bound", &KnobRunContext::t2_bound)
+      .def_readwrite("t2_pomeron", &KnobRunContext::t2_pomeron)
+      .def_readwrite("pom_set", &KnobRunContext::pom_set)
+      .def_readwrite("pom_rescale", &KnobRunContext::pom_rescale);
+
   py::class_<Pipeline>(m, "Pipeline",
       "One configured run: PipelineConfig + RunPlan -> Event records.")
       .def(py::init([](PipelineConfig cfg, RunPlan plan) {
@@ -3912,6 +4616,28 @@ static void bind_pipeline(py::module_& m) {
       .def_property_readonly("pot_config", &Pipeline::pot_config)
       .def_property_readonly("dis_sampler", &Pipeline::dis_sampler,
                              py::return_value_policy::reference_internal)
+      .def_property_readonly("cell_rate_weights_pb", [](const Pipeline& p) {
+        return copy_array(p.cell_rate_weights_pb());
+      },
+        "The per-cell weights of THIS run's own accepted rate [pb], in the "
+        "cell order of dis_sampler.cell_xsec_pb / .x_cells / .q2_cells.  The "
+        "same vector as dis_sampler.cell_xsec_pb on the inclusive and tagged "
+        "channels; on the COHERENT one it is sigma_cell * f_coh(x) over the "
+        "cells that admit a diffractive mass and 0 on the ones that do not, "
+        "so it sums to sigma_pb() exactly.  It is the denominator of any "
+        "'how much of this run sits in region R' fraction -- see "
+        "unpol_sf_grid_report.  The spin modulation (1 + w_avg) is NOT in "
+        "it: these are the spin-blind weights.")
+      .def("knob_provenance", &Pipeline::knob_provenance,
+           py::arg("context") = KnobRunContext(),
+        "EVERY user-settable knob of this run, with what the run did with "
+        "it: a list of KnobProvenance rows {name, flag, value, status, "
+        "reason, at_default}.  THE mechanism the rule 'a knob that did not "
+        "run may not be recorded as if it had' is enforced by -- the npz "
+        "meta['knob_provenance'] block, the CLI banner's provenance block "
+        "and python/tests/test_knob_provenance.py all read THIS table and "
+        "nothing else.  `context` carries what the core cannot see "
+        "(KnobRunContext).")
       .def_property_readonly("tagged_model", &Pipeline::tagged_model,
                              py::return_value_policy::reference_internal)
       .def_property_readonly("tagged_channel", &Pipeline::tagged_channel,
@@ -3960,16 +4686,22 @@ static void bind_pipeline(py::module_& m) {
       }, py::arg("first"), py::arg("last"),
          "list of Event records for the index range [first, last)")
       .def("generate", [](const Pipeline& p, std::uint64_t n, bool events,
-                          unsigned nthreads, std::size_t chunk) {
-        return pipeline_generate(p, n, events, nthreads, chunk);
+                          unsigned nthreads, std::size_t chunk,
+                          const KnobRunContext& ctx) {
+        return pipeline_generate(p, n, events, nthreads, chunk, ctx);
       }, py::arg("n") = 0, py::arg("events") = false,
          py::arg("nthreads") = 1, py::arg("chunk") = 4096,
+         py::arg("context") = KnobRunContext(),
          "Generate `n` events (0 = the whole run) and return a columnar dict\n"
          "of numpy arrays; `events=True` adds the Event records under\n"
-         "'events'.  The GIL is released around the generation loop.")
+         "'events'.  The GIL is released around the generation loop.\n"
+         "`context` is the KnobRunContext the meta['knob_provenance'] block\n"
+         "is written from -- what the core cannot see.  Its T2 fields are\n"
+         "OVERWRITTEN from the bridge actually bound to the config, so only\n"
+         "the run-plan half ever has to be supplied.")
       .def("generate_lumi", [](const Pipeline& p, double lumi_pb, bool poisson,
                                bool events, unsigned nthreads,
-                               std::size_t chunk) {
+                               std::size_t chunk, const KnobRunContext& ctx) {
         PipelineConfig cfg = p.config();
         cfg.lumi_pb = lumi_pb;
         cfg.n_events = 0;
@@ -3979,10 +4711,10 @@ static void bind_pipeline(py::module_& m) {
           py::gil_scoped_release unlock;
           q = std::make_unique<Pipeline>(cfg, p.plan());
         }
-        return pipeline_generate(*q, 0, events, nthreads, chunk);
+        return pipeline_generate(*q, 0, events, nthreads, chunk, ctx);
       }, py::arg("lumi_pb"), py::arg("poisson") = true,
          py::arg("events") = false, py::arg("nthreads") = 1,
-         py::arg("chunk") = 4096,
+         py::arg("chunk") = 4096, py::arg("context") = KnobRunContext(),
          "Rebuild this run at an integrated luminosity [pb^-1] and generate\n"
          "every event of it; same columnar dict as generate().")
       .def("write_hepmc", [](const Pipeline& p, const std::string& path,
@@ -4097,7 +4829,23 @@ static void bind_io(py::module_& m) {
       .def_readwrite("pom_rescale", &PythiaBridgeOptions::pom_rescale,
                      "PYTHIA PDF:PomRescale; cancels out of the bridge's own "
                      "per-event flavour draw.")
-      .def_readwrite("nucleon_choice", &PythiaBridgeOptions::nucleon_choice);
+      .def_readwrite("nucleon_choice", &PythiaBridgeOptions::nucleon_choice)
+      .def_property("f2_source",
+          [](const PythiaBridgeOptions& o) {
+            return std::const_pointer_cast<UnpolSF>(o.f2_source);
+          },
+          [](PythiaBridgeOptions& o, std::shared_ptr<UnpolSF> u) {
+            o.f2_source = std::move(u);
+          },
+          "Unpolarised structure functions of the T2 struck-nucleon SPECIES "
+          "draw (nucleon_choice = ByStructureFunctions).  None = the "
+          "library's ToyF2, which is also InclusiveKernel's default.  HAND "
+          "IT THE SAME BACKEND THE KERNEL WAS BUILT WITH: the toy's "
+          "F2n/F2p is a straight line and is up to 24 % away from CT18NLO's "
+          "at x = 0.5, so a --unpol-sf ct18nlo run whose bridge is left on "
+          "the toy draws its T2 species from a different nucleus than its "
+          "rate.  python/lipolgen/cli.py does this wiring for --hadronize "
+          "runs; a caller building a bridge directly must do it here.");
 
   py::class_<PythiaBridgeStats>(m, "PythiaBridgeStats")
       .def_readonly("n_called", &PythiaBridgeStats::n_called)
@@ -4112,10 +4860,21 @@ static void bind_io(py::module_& m) {
       .def_readonly("n_pom_flavour_fallback",
                     &PythiaBridgeStats::n_pom_flavour_fallback,
                     "Coherent events whose Pomeron-PDF flavour weights were "
-                    "all zero (the LO grid is pure gluon at small beta below "
+                    "all zero (the grid is pure gluon at small beta below "
                     "Q^2 ~ 1.5-1.75) and fell back to the bare e_q^2 charge "
                     "weights over the light flavours only; ~20% of a default "
-                    "coherent run, so non-zero is routine.")
+                    "coherent run, so non-zero is routine -- and MEASURED "
+                    "(D4.6), it costs exactly zero: raising q2_pdf_min to "
+                    "1.75 drives the fallback to 0.00 % (sets 6 and 3) or a "
+                    "few per cent (12, 13, 15) -- EXCEPT on pom_set = 4 "
+                    "(H1 2006 Fit B NLO), where it only falls 35.52 % -> "
+                    "29.32 % -- and leaves the final state bit-identical in "
+                    "every one of those cases, set 4 INCLUDED, so that "
+                    "residual costs nothing either, because every Pomeron "
+                    "DPDF carries one light-quark singlet.  1.000 on "
+                    "pom_set = 11, which is why that set is refused.  In the "
+                    "npz meta since 2026-09-04, as n_pom_flavour_fallback "
+                    "and pom_flavour_fallback_frac.")
       .def_readonly("n_flavour_dropped",
                     &PythiaBridgeStats::n_flavour_dropped)
       .def_readonly("n_cluster_fallback",
@@ -4154,7 +4913,50 @@ static void bind_io(py::module_& m) {
   // nthreads = 1.
   m.def("set_pythia_hadronizer", [](PipelineConfig& cfg,
                                     std::shared_ptr<PythiaBridge> br) {
-    cfg.hadronizer = [br](Event& ev, Rng& rng) { br->hadronize(ev, rng); };
+    // A NAMED callable, not a lambda: `columns_to_dict` recovers the bridge
+    // from the type-erased hook with `std::function::target` and writes the
+    // Pomeron / T2 block of the npz `meta` (D4.7).
+    if (!br) throw std::invalid_argument(
+        "set_pythia_hadronizer: bridge must not be None");
+    // ONE UNPOLARISED BACKEND FOR THE WHOLE RUN, enforced where the two
+    // objects finally meet.  `PipelineConfig::validate()` cannot do it -- the
+    // core links no PYTHIA tier and has never heard of `PythiaBridge` -- and
+    // the `Pipeline` cannot fill the slot the way it fills
+    // `BreakupOptions::f2`, because the caller builds the bridge.  So this is
+    // the `validate()` rule applied at the binding: a bridge whose T2
+    // struck-nucleon SPECIES draw
+    // (`NucleonChoice::ByStructureFunctions`, P(p) = Z F2p/(Z F2p + N F2n))
+    // is not on the config's own `unpol_sf_obj` would draw from a backend
+    // `meta["unpol_sf"]` does not name.  Measured price: the toy's F2n/F2p is
+    // the straight line clip(1 - 0.75x, 0.25, 1), 0.9625 / 0.8500 / 0.6250 at
+    // x = 0.05 / 0.20 / 0.50 against CT18NLO's 0.9218 / 0.7219 / 0.5035 --
+    // up to 24 % away, on the species of every T2 event.
+    //
+    // IDENTITY, not equality: "the same object" is the rule everything else
+    // in this run follows (the `Li6Convolution` b1 shares the kernel's own
+    // `UnpolSF`; `BreakupOptions::f2` is the sampler kernel's own), and two
+    // separately constructed `LhapdfSF("CT18NLO", 0)` are two grids whose
+    // agreement nothing here checks.  Both null -- the shipped default -- is
+    // the same object, so a default run is untouched.
+    if (br->options().f2_source != cfg.unpol_sf_obj) {
+      throw std::runtime_error(
+          std::string("set_pythia_hadronizer: the bridge's species draw is "
+                      "on a different unpolarised backend from this run's "
+                      "kernel -- bridge f2_source is ") +
+          (br->options().f2_source ? "an attached object"
+                                   : "unset (the bridge's own ToyF2)") +
+          " while the config's unpol_sf is " + unpol_sf_name(cfg.unpol_sf) +
+          (cfg.unpol_sf_obj ? " with an object attached" : " with no object") +
+          ".  The T2 struck-nucleon species draw is "
+          "P(p) = Z F2p/(Z F2p + N F2n) on PythiaBridgeOptions::f2_source, "
+          "so the run would draw its T2 species from one backend while "
+          "meta[\"unpol_sf\"] recorded the other, and the toy's F2n/F2p is "
+          "up to 24 % away from CT18NLO's.  Hand the bridge THE SAME OBJECT "
+          "before constructing it: opts.f2_source = config.unpol_sf_obj "
+          "(what lipolgen-run and lipolgen.run do), or leave both unset for "
+          "the toy");
+    }
+    cfg.hadronizer = PythiaHadronizerHook{std::move(br)};
   }, py::arg("config"), py::arg("bridge"),
      "config.hadronizer = bridge.hadronize, as a pure C++ callable "
      "(no GIL per event; single-threaded generation only)");

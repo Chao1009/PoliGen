@@ -1206,3 +1206,315 @@ TEST_CASE("pipeline: cluster_wave is refused on the channels that never read it"
   d.cluster_vmc_mc_sigma = 1.0;
   CHECK_THROWS_AS(d.validate(), std::runtime_error);
 }
+
+// ---------------------------------------------------------------- D2: the
+// structure-function selectors, on the side of the fence the doctest binary
+// can reach: the core library links neither the PYTHIA nor the LHAPDF tier,
+// so every backend below is a HAND-BUILT `UnpolSF` / `PolSF`.  The named
+// ones (`mstw`, `ct18nlo`, `nnpdfpol`) are exercised from Python, where the
+// tiers are visible -- `python/tests/test_sf_backend.py`.
+
+namespace {
+
+/// A deliberately WRONG UnpolSF: `ToyF2` scaled by 2, so any observable that
+/// reads it moves by a factor the test can assert exactly.
+class ScaledF2 : public UnpolSF {
+ public:
+  explicit ScaledF2(double k) : k_(k) {}
+  double f2p(double x, double q2) const override { return k_ * toy_.f2p(x, q2); }
+  double f2n(double x, double q2) const override { return k_ * toy_.f2n(x, q2); }
+  double f2n_over_f2p(double x) const override { return toy_.f2n_over_f2p(x); }
+
+ private:
+  ToyF2 toy_;
+  double k_;
+};
+
+/// The same for g1: `ToyG1` scaled, so g1 moves and F1 does not.
+class ScaledG1 : public PolSF {
+ public:
+  explicit ScaledG1(double k) : k_(k) {}
+  double g1p(double x, double q2) const override { return k_ * toy_.g1p(x, q2); }
+  double g1n(double x, double q2) const override { return k_ * toy_.g1n(x, q2); }
+
+ private:
+  ToyG1 toy_;
+  double k_;
+};
+
+}  // namespace
+
+TEST_CASE("D2: the tagged struck-cluster kernel takes a structure-function "
+          "backend, and the null default is bit for bit") {
+  const TaggedChannel ch = li6_alpha_channel();
+
+  // (a) THE DEFAULT IS UNCHANGED BY CONSTRUCTION.  Both new fields are null,
+  // so `struck_cluster_kernel` hands `InclusiveKernel` two null slots and it
+  // takes exactly the branch it always took -- a fresh `ToyF2` and a `ToyG1`
+  // built on it.  Asserted bit for bit against a kernel built the way the
+  // class itself defaults, which is what the tagged pipeline used before
+  // these fields existed.
+  StruckClusterOptions plain;
+  const auto k_default = struck_cluster_kernel(ch, plain);
+  const InclusiveKernel k_class(ch.dis_target, InclusiveKernel::Options{});
+  for (double x : {0.05, 0.20, 0.50}) {
+    for (double q2 : {2.5, 10.0}) {
+      const SFTables a = k_default->tables(x, q2);
+      const SFTables b = k_class.tables(x, q2);
+      CHECK(a.f2 == b.f2);          // bit for bit, not merely close
+      CHECK(a.f1 == b.f1);
+      CHECK(a.g1 == b.g1);
+      CHECK(a.g2 == b.g2);
+    }
+  }
+
+  // (b) AND IT ACTUALLY REACHES THE KERNEL.  A x2 UnpolSF doubles F2 and F1;
+  // g1 follows it, because the kernel's own default `ToyG1` is built on the
+  // kernel's own base -- the non-orthogonality `UnpolSfSource` documents.
+  StruckClusterOptions with_f2;
+  with_f2.f2_source = std::make_shared<const ScaledF2>(2.0);
+  const auto k_f2 = struck_cluster_kernel(ch, with_f2);
+  for (double x : {0.05, 0.20, 0.50}) {
+    const SFTables a = k_default->tables(x, 10.0);
+    const SFTables b = k_f2->tables(x, 10.0);
+    CHECK(b.f2 == doctest::Approx(2.0 * a.f2).epsilon(1e-14));
+    CHECK(b.f1 == doctest::Approx(2.0 * a.f1).epsilon(1e-14));
+    CHECK(b.g1 == doctest::Approx(2.0 * a.g1).epsilon(1e-14));
+  }
+
+  // (c) THE POLARISED SLOT MOVES g1 AND NOT F1 -- an EXPLICIT `g1_model`
+  // keeps whatever it was built with, so the rate does not move at all.
+  StruckClusterOptions with_g1;
+  with_g1.g1_model = std::make_shared<const ScaledG1>(3.0);
+  const auto k_g1 = struck_cluster_kernel(ch, with_g1);
+  for (double x : {0.05, 0.20, 0.50}) {
+    const SFTables a = k_default->tables(x, 10.0);
+    const SFTables b = k_g1->tables(x, 10.0);
+    CHECK(b.f2 == a.f2);            // bit for bit: the rate is untouched
+    CHECK(b.f1 == a.f1);
+    CHECK(b.g1 == doctest::Approx(3.0 * a.g1).epsilon(1e-14));
+  }
+}
+
+TEST_CASE("D2: default_inclusive_kernel's two new arguments are inert when "
+          "null and reach the kernel when set") {
+  const Ion& ion = LI6();
+  const auto base = default_inclusive_kernel(ion);
+  // The one-argument overload forwards two nulls; spelling them out must not
+  // change a digit (`validation/reference/b1_default_li6.json`, T9).
+  const auto same = default_inclusive_kernel(ion, B1Model::Miller, 1.0, 1.0,
+                                             nullptr, nullptr, nullptr);
+  for (double x : {0.05, 0.20, 0.50}) {
+    const SFTables a = base->tables(x, 2.5), b = same->tables(x, 2.5);
+    CHECK(a.f1 == b.f1);
+    CHECK(a.g1 == b.g1);
+    CHECK(a.b1 == b.b1);
+    CHECK(a.delta == b.delta);
+  }
+
+  const auto scaled = default_inclusive_kernel(
+      ion, B1Model::Miller, 1.0, 1.0, nullptr,
+      std::make_shared<const ScaledF2>(2.0), nullptr);
+  for (double x : {0.05, 0.20, 0.50}) {
+    CHECK(scaled->tables(x, 2.5).f1
+          == doctest::Approx(2.0 * base->tables(x, 2.5).f1).epsilon(1e-14));
+  }
+
+  // The `Li6Convolution` branch shares the kernel's OWN UnpolSF with the
+  // convolution when `b1_unpol` is null -- which is exactly why
+  // `PipelineConfig::validate()` refuses `b1_unpol = Toy` beside a non-toy
+  // `unpol_sf`: the label "toy" would then name something else.
+  const auto conv_toy = default_inclusive_kernel(
+      ion, B1Model::Li6Convolution, 1.0, 1.0, nullptr, nullptr, nullptr);
+  const auto conv_scaled = default_inclusive_kernel(
+      ion, B1Model::Li6Convolution, 1.0, 1.0, nullptr,
+      std::make_shared<const ScaledF2>(2.0), nullptr);
+  CHECK(conv_scaled->tables(0.30, 2.5).b1 != conv_toy->tables(0.30, 2.5).b1);
+}
+
+TEST_CASE("D2: validate() refuses every way the selectors could mislabel a "
+          "run") {
+  PipelineConfig cfg;
+  cfg.n_events = 10;
+  CHECK_NOTHROW(cfg.validate());               // the shipped default
+
+  // named but empty -- never a silent fallback to the toy
+  for (UnpolSfSource s : {UnpolSfSource::Mstw, UnpolSfSource::Ct18Nlo,
+                          UnpolSfSource::Custom}) {
+    PipelineConfig c = cfg;
+    c.unpol_sf = s;
+    CHECK_THROWS_AS(c.validate(), std::runtime_error);
+    c.unpol_sf_obj = std::make_shared<const ScaledF2>(1.0);
+    CHECK_NOTHROW(c.validate());
+  }
+  {
+    PipelineConfig c = cfg;
+    c.pol_sf = PolSfSource::NnpdfPol;
+    CHECK_THROWS_AS(c.validate(), std::runtime_error);
+    c.pol_sf_obj = std::make_shared<const ScaledG1>(1.0);
+    CHECK_NOTHROW(c.validate());
+  }
+  // toy WITH an object is the same contradiction the other way
+  {
+    PipelineConfig c = cfg;
+    c.unpol_sf_obj = std::make_shared<const ScaledF2>(1.0);
+    CHECK_THROWS_AS(c.validate(), std::runtime_error);
+  }
+  {
+    PipelineConfig c = cfg;
+    c.pol_sf_obj = std::make_shared<const ScaledG1>(1.0);
+    CHECK_THROWS_AS(c.validate(), std::runtime_error);
+  }
+  // a caller-supplied kernel wins, so the two are refused together
+  {
+    PipelineConfig c = cfg;
+    c.kernel = default_inclusive_kernel(LI6());
+    CHECK_NOTHROW(c.validate());
+    c.unpol_sf = UnpolSfSource::Custom;
+    c.unpol_sf_obj = std::make_shared<const ScaledF2>(1.0);
+    CHECK_THROWS_AS(c.validate(), std::runtime_error);
+  }
+  // the b1 collision: `b1_unpol = toy` would name an object that is no
+  // longer ToyF2
+  {
+    PipelineConfig c = cfg;
+    c.b1_model = B1Model::Li6Convolution;
+    c.scenario.x_max = 0.95;
+    c.unpol_sf = UnpolSfSource::Custom;
+    c.unpol_sf_obj = std::make_shared<const ScaledF2>(1.0);
+    CHECK(c.b1_unpol == B1UnpolSource::Toy);
+    CHECK_THROWS_AS(c.validate(), std::runtime_error);
+    c.b1_unpol = B1UnpolSource::Custom;
+    c.b1_unpol_sf = std::make_shared<const ScaledF2>(1.0);
+    CHECK_NOTHROW(c.validate());
+  }
+  // ... and NEITHER selector is channel-restricted: they reach the rate on
+  // every channel, which is the whole point of them.
+  for (PipelineChannel ch : {PipelineChannel::Inclusive,
+                             PipelineChannel::CoherentLi6,
+                             PipelineChannel::TaggedLi6Alpha}) {
+    PipelineConfig c = cfg;
+    c.channel = ch;
+    c.unpol_sf = UnpolSfSource::Custom;
+    c.unpol_sf_obj = std::make_shared<const ScaledF2>(1.0);
+    c.pol_sf = PolSfSource::Custom;
+    c.pol_sf_obj = std::make_shared<const ScaledG1>(1.0);
+    CHECK_NOTHROW(c.validate());
+  }
+}
+
+TEST_CASE("D2: the names round-trip") {
+  CHECK(std::string(unpol_sf_name(UnpolSfSource::Toy)) == "toy");
+  CHECK(std::string(unpol_sf_name(UnpolSfSource::Mstw)) == "mstw");
+  CHECK(std::string(unpol_sf_name(UnpolSfSource::Ct18Nlo)) == "ct18nlo");
+  CHECK(std::string(unpol_sf_name(UnpolSfSource::Custom)) == "custom");
+  CHECK(std::string(pol_sf_name(PolSfSource::Toy)) == "toy");
+  CHECK(std::string(pol_sf_name(PolSfSource::NnpdfPol)) == "nnpdfpol");
+  CHECK(std::string(pol_sf_name(PolSfSource::Custom)) == "custom");
+}
+
+// ============================================================ D1: the 7Li zero
+
+TEST_CASE("D1: the 7Li rank-2 sector is identically zero, and the run says so") {
+  // THE DEFECT.  `default_inclusive_kernel` fills the rank-2 slots inside the
+  // spin-1 test alone, so at J = 3/2 `b1_32_func / b2_32_func / delta_32_func`
+  // stay unset and `InclusiveKernel::tables` returns 0.0 for all three (an
+  // unset b2 is 2x*b1 and therefore 0 too).  Until 2026-09-04 that was SILENT
+  // and `meta["b1_model"]` said "miller", a backend that did not run
+  // (docs/open_items/run_2026-09-03/phase_D_li7_rank2.md).
+  const auto k7 = default_inclusive_kernel(ion_by_name("7Li"));
+  const auto k6 = default_inclusive_kernel(ion_by_name("6Li"));
+  for (double x : {0.05, 0.20, 0.50}) {
+    const SFTables t7 = k7->tables(x, 5.0);
+    CHECK(t7.b1 == 0.0);
+    CHECK(t7.b2 == 0.0);
+    CHECK(t7.delta == 0.0);
+    // ... and the same call on the spin-1 ion is not zero, so this is a
+    // missing INPUT and not a broken kernel.
+    const SFTables t6 = k6->tables(x, 5.0);
+    CHECK(t6.b1 != 0.0);
+    CHECK(t6.delta != 0.0);
+  }
+
+  PipelineConfig cfg;
+  cfg.isotope = "7Li";
+  cfg.channel = PipelineChannel::Inclusive;
+  cfg.n_events = 400;
+  CHECK(inclusive_rank2_is_empty(cfg));
+
+  // The honest 7Li A_zz contrast: pure |m| = 3/2 (T = +1) against pure
+  // |m| = 1/2 (T = -1).  Built by hand because every tensor plan in
+  // bookkeeping.cpp hard-codes j = 1.
+  std::vector<SpinCategory> cats{
+      SpinCategory("T+", 1.5, {0.5, 0.0, 0.0, 0.5}, 0, 0.0, 0.0, 0.0, 0.5),
+      SpinCategory("T-", 1.5, {0.0, 0.5, 0.5, 0.0}, 0, 0.0, 0.0, 0.0, 0.5)};
+  const RunPlan plan(std::move(cats), 0.0, 0.0, 1.0);
+  Pipeline p(cfg, plan);
+  const std::vector<double> sig = p.sigma_per_category_pb();
+  // NOT "close": the SAME double.  There is no small here.
+  CHECK(sig[0] == sig[1]);
+  CHECK(sig[0] - sig[1] == 0.0);
+
+  const std::string r = rank2_input_report(cfg, plan);
+  CHECK(r.rfind("EMPTY -- 7Li is spin 3/2", 0) == 0);
+  CHECK(r.find("IDENTICALLY ZERO, not small") != std::string::npos);
+  CHECK(r.find("THIS RUN'S PLAN CARRIES A RANK-2 FILL (T = 1)")
+        != std::string::npos);
+  CHECK(std::string(rank2_none_label()) == "none (spin 3/2: no rank-2 input)");
+}
+
+TEST_CASE("D1: the loud zero fires for 7Li inclusive and for nothing else") {
+  PipelineConfig cfg;
+  cfg.n_events = 100;
+  const RunPlan thirds = tensor_thirds_plan(0.0, 0.6);
+
+  // (a) spin 1 -- both isotopes that reach the branch -- names the backend.
+  for (const char* iso : {"6Li", "d"}) {
+    PipelineConfig c = cfg;
+    c.isotope = iso;
+    CHECK_FALSE(inclusive_rank2_is_empty(c));
+    CHECK(rank2_input_report(c, thirds).rfind("b1_model = miller (spin 1", 0)
+          == 0);
+  }
+  // (b) a caller-supplied kernel is the caller's business.
+  {
+    PipelineConfig c = cfg;
+    c.isotope = "7Li";
+    c.kernel = default_inclusive_kernel(ion_by_name("7Li"));
+    CHECK_FALSE(inclusive_rank2_is_empty(c));
+    CHECK(rank2_input_report(c, thirds) == "caller-supplied kernel");
+  }
+  // (c) off the inclusive channel the slots do not reach the rate at all --
+  // and a TAGGED 7Li run really does carry the alpha-t alignment, in the
+  // event weight, so claiming "identically zero" there would be false.
+  {
+    PipelineConfig c = cfg;
+    c.isotope = "7Li";
+    c.channel = PipelineChannel::TaggedLi7Alpha;
+    CHECK_FALSE(inclusive_rank2_is_empty(c));
+    const std::string r = rank2_input_report(c, thirds);
+    CHECK(r.rfind("not read on channel tagged-7Li-alpha", 0) == 0);
+    CHECK(r.find("EMPTY") == std::string::npos);
+  }
+  {
+    PipelineConfig c = cfg;
+    c.isotope = "6Li";
+    c.channel = PipelineChannel::CoherentLi6;
+    CHECK_FALSE(inclusive_rank2_is_empty(c));
+    CHECK(rank2_input_report(c, thirds).find("recoil azimuth")
+          != std::string::npos);
+  }
+  // (d) the plan clause is a property of the FILL, not of the isotope: an
+  // unaligned plan does not claim the run asked for the missing sector.
+  {
+    PipelineConfig c = cfg;
+    c.isotope = "7Li";
+    HelicityFlipOptions o;
+    o.use_explicit_pzz = true;
+    o.pzz = 0.0;
+    const RunPlan flat = helicity_flip_plan(1.5, 0.0, 0.0, o);
+    CHECK(flat.pzz_true() == 0.0);
+    CHECK(rank2_input_report(c, flat).find("THIS RUN'S PLAN")
+          == std::string::npos);
+  }
+}

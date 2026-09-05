@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
+#include <string>
 
 #include "lipolgen/asymmetries.hpp"   // gamma_squared
 #include "lipolgen/beams.hpp"         // DEUTERON()
@@ -174,12 +175,43 @@ std::shared_ptr<const TensorSF> cdks_b1_raw_per_nucleon() {
 
 // --------------------------------------------------------- ClusterPartialWave
 
+namespace {
+
+/// HALF-BUILT WAVE -> AN ERROR, NEVER A CRASH (`phase_D_li7_rank2.md`
+/// sec. 1.5, defect F4).  `k` and `phi` are two public vectors that Python
+/// assigns ONE AT A TIME, so between the two assignments they have different
+/// lengths; the spline constructor indexes `y_[i + 1]` over the length of x
+/// and used to walk off the end of an empty `phi` -- a three-line
+/// segmentation fault reachable from the documented API:
+///
+///     w = _lipolgen.ClusterPartialWave(); w.k = [0.1, 0.2, 0.3]
+///
+/// `rebuild()` therefore DEFERS (drops the cached spline) rather than throws,
+/// so that either assignment order works; every path that would READ the
+/// mismatched pair throws this instead.
+void require_matched(const ClusterPartialWave& w, const char* what) {
+  if (w.k.size() != w.phi.size()) {
+    throw std::runtime_error(
+        std::string("ClusterPartialWave::") + what + ": k has " +
+        std::to_string(w.k.size()) + " points and phi has " +
+        std::to_string(w.phi.size()) +
+        " -- a half-assigned wave has no value.  Set BOTH (they are assigned "
+        "one at a time from Python, and the wave is unusable in between), or "
+        "build it with from_uw / from_vmc / from_vmc_pair, which set them "
+        "together");
+  }
+}
+
+}  // namespace
+
 void ClusterPartialWave::rebuild() {
-  spline = (k.size() >= 2) ? std::make_shared<const CubicSpline>(k, phi)
-                           : nullptr;
+  spline = (k.size() >= 2 && phi.size() == k.size())
+               ? std::make_shared<const CubicSpline>(k, phi)
+               : nullptr;
 }
 
 double ClusterPartialWave::operator()(double kk) const {
+  require_matched(*this, "operator()");
   if (k.size() < 2 || kk < k.front() || kk > k.back()) return 0.0;
   if (!spline) spline = std::make_shared<const CubicSpline>(k, phi);
   return (*spline)(kk);
@@ -187,12 +219,14 @@ double ClusterPartialWave::operator()(double kk) const {
 
 void ClusterPartialWave::eval_sorted(const std::vector<double>& kk,
                                      std::vector<double>* out) const {
+  require_matched(*this, "eval_sorted");
   if (k.size() < 2) { out->assign(kk.size(), 0.0); return; }
   if (!spline) spline = std::make_shared<const CubicSpline>(k, phi);
   spline->eval_sorted(kk, out);
 }
 
 double ClusterPartialWave::norm2() const {
+  require_matched(*this, "norm2");
   std::vector<double> y(k.size());
   for (std::size_t i = 0; i < k.size(); ++i) y[i] = k[i] * k[i] * phi[i] * phi[i];
   return trapezoid(y, k);

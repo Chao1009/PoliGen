@@ -601,11 +601,17 @@ def test_skipping_does_not_drop_recorded_external_fingerprints(gate, tmp_path,
 
 def test_real_document_external_citations(gate):
     """On this machine (env.sh sourced) they are checked; without it they are
-    skipped by name.  Either way the count is printed."""
+    skipped by name.  Either way the count is printed.
+
+    7 since 2026-09-04 (D4): the Pomeron flavour row now cites
+    `PartonDistributions.cc:2630`, the line at which PYTHIA's one `PomH1FitAB`
+    class -- sets 3, 4 AND 6 -- assigns `xc = xcbar = 0.` unconditionally.
+    The tree's old wording covered the LO set only.
+    """
     rc, out = _capture(gate.main, [])
     assert rc == 0, out
-    assert ", 6 external," in out, out
-    assert out.count("  skipped ") in (0, 6), out
+    assert ", 7 external," in out, out
+    assert out.count("  skipped ") in (0, 7), out
 
 
 def test_external_citation_accepts_either_name_for_the_deps_prefix(gate, tmp_path,

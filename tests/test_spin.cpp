@@ -238,3 +238,64 @@ TEST_CASE("the density matrix of a pure state along a tilted axis") {
   CHECK_CLOSE_AT(v[1], std::sin(theta) * std::sin(phi), 0.0, 1e-12);
   CHECK_CLOSE_AT(v[2], std::cos(theta), 0.0, 1e-12);
 }
+
+TEST_CASE("D1/F3: the J = 3/2 population domain is stated exactly, and it is "
+          "the function's own") {
+  // The four populations are fixed UNIQUELY by (1, pz, t, o) -- the system is
+  // square -- so an unphysical request is a DOMAIN statement and not a solver
+  // failure.  Inverting by hand:
+  //
+  //   p(+3/2) + p(-3/2) = (1 + t)/2 ,  p(+3/2) - p(-3/2) = 0.9 pz + 0.1 o
+  //   p(+1/2) + p(-1/2) = (1 - t)/2 ,  p(+1/2) - p(-1/2) = 0.3 (pz - o)
+  //
+  // so positivity is exactly the two inequalities below, and at o = 0
+  // 1.8|pz| - 1 <= t <= 1 - 0.6|pz| (hence |pz| <= 5/6).  The refusal message
+  // prints those bounds; this checks they ARE the boundary.
+  auto reachable = [](double pz, double t, double o) {
+    return std::fabs(0.9 * pz + 0.1 * o) <= 0.5 * (1.0 + t) + 1e-12
+           && std::fabs(0.3 * (pz - o)) <= 0.5 * (1.0 - t) + 1e-12;
+  };
+  int checked = 0;
+  for (int i = 0; i <= 20; ++i) {
+    for (int j = 0; j <= 20; ++j) {
+      for (int m = 0; m <= 4; ++m) {
+        const double pz = -1.0 + 0.1 * i;
+        const double t = -1.0 + 0.1 * j;
+        const double o = -1.0 + 0.5 * m;
+        bool ok = true;
+        try {
+          spin32_populations(pz, t, o);
+        } catch (const std::runtime_error&) {
+          ok = false;
+        }
+        CHECK(ok == reachable(pz, t, o));
+        ++checked;
+      }
+    }
+  }
+  CHECK(checked == 21 * 21 * 5);
+  // The inversion itself, on a point well inside: the four moments come back.
+  const std::array<double, 4> p = spin32_populations(0.4, 0.2, 0.1);
+  double s = 0.0, v = 0.0, tt = 0.0, oo = 0.0;
+  const double ms[4] = {1.5, 0.5, -0.5, -1.5};
+  for (int i = 0; i < 4; ++i) {
+    s += p[i];
+    v += p[i] * ms[i] / 1.5;
+    tt += p[i] * (3.0 * ms[i] * ms[i] - 3.75) / 3.0;
+    oo += p[i] * (ms[i] * ms[i] * ms[i] - (41.0 / 20.0) * ms[i]) / 0.3;
+  }
+  CHECK_CLOSE_AT(s, 1.0, 0.0, 1e-12);
+  CHECK_CLOSE_AT(v, 0.4, 0.0, 1e-12);
+  CHECK_CLOSE_AT(tt, 0.2, 0.0, 1e-12);
+  CHECK_CLOSE_AT(oo, 0.1, 0.0, 1e-12);
+  // ... and the message names the pair, the offending m and both edges.
+  try {
+    spin32_populations(0.7, 0.6, 0.0);
+    CHECK(false);
+  } catch (const std::runtime_error& e) {
+    const std::string m(e.what());
+    CHECK(m.find("unphysical (pz = 0.7, t = 0.6, o = 0)") != std::string::npos);
+    CHECK(m.find("0.26 <= t <= 0.58") != std::string::npos);
+    CHECK(m.find("|pz| <= 5/6") != std::string::npos);
+  }
+}

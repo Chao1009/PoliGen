@@ -247,6 +247,16 @@ A hadronizer assigned as a **Python callable** (`cfg.hadronizer = f`) also
 works, but pybind11 re-acquires the GIL for every event; `set_pythia_hadronizer`
 binds the C++ method directly and stays GIL-free.
 
+**One unpolarised backend for the whole run.** The bridge's struck-nucleon
+species draw is `P(p) = Z F2p/(Z F2p + N F2n)` on
+`PythiaBridgeOptions.f2_source`, so on a config built with `unpol_sf=...` the
+bridge must be given **the same object**: `opts.f2_source = cfg.unpol_sf_obj`
+before `PythiaBridge(...)`. `set_pythia_hadronizer` refuses any other bridge —
+otherwise the run would draw its T2 species from one backend while
+`meta["unpol_sf"]` named another (the toy's F2n/F2p is up to 24 % from
+CT18NLO's). Both unset, as above, is the default and is fine.
+`lipolgen-run` and `lipolgen.run(hadronize=True, ...)` do this wiring for you.
+
 ---
 
 ## 5. Exporting to polligen

@@ -993,6 +993,26 @@ enum class RcTailModel : int {
                     ///< reference JSON stays bit for bit reproducible.
 };
 const char* rc_mode_name(RcMode m);          ///< "off", "tensor-band"
+
+/// Does the tensor-RC BAND apply on `channel`, and does the radiative TAIL?
+///
+/// ONE DEFINITION of the per-channel rule of design_C_tensor_rc.md sec. 1.5,
+/// read by `RcModel`'s own constructor (which then attaches the reason
+/// sentence) and by `PipelineConfig::validate()`, which needs the same two
+/// answers BEFORE any model exists in order to refuse a sub-knob whose piece
+/// this run does not compute.  Written here rather than derived twice: the
+/// second derivation is exactly how a knob that did not run gets recorded as
+/// if it had.
+///
+///   band  false on `CoherentLi6` -- its tensor dependence is entirely
+///         AZIMUTHAL and nobody has computed RC for a phi-dependent tensor
+///         observable -- and true everywhere else.
+///   tail  additionally false on every TAGGED channel, where rc_tail == 1
+///         exactly (half a kinematic fact and half an omission; `RcModel`'s
+///         `exclusion_reason` is where that is spelled out), and false when
+///         `RcOptions::with_tail` is off.
+bool rc_band_applies(Channel channel);
+bool rc_tail_applies(Channel channel, bool with_tail);
 /// "t-peak", "polrad-full", "t-peak+ll" -- ONE definition, read by the npz
 /// `meta["rc_tail_model"]` key, by the run banner and by the tests.
 const char* rc_tail_model_name(RcTailModel m);

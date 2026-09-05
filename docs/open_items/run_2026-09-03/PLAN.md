@@ -293,16 +293,61 @@ conditions; A1–A7 are those seven.
 
 ## Phase D — what the repository-wide sweep found that the documents missed
 
-- **D1** A ⁷Li inclusive run's entire tensor and cos 2φ sector is **identically
+- **D1** ~~A ⁷Li inclusive run's entire tensor and cos 2φ sector is **identically
   zero** — the rank-2 structure-function input is never set. Decide and
-  implement an input, or make the zero explicit and loud at the run surface.
-- **D2** Toy F₂/g₁/R are the shipped defaults everywhere and the tagged channels
-  have no injection point for a real backend.
-- **D3** The per-nucleon Glauber FSI variant is algebraically identical to the
-  cluster one — the two "variants" are one.
-- **D4** `PDF:PomSet` is called the coherent T2 tier's largest systematic and has
-  never been scanned.
-- **D5** The coherent channel's hard |t| ≤ 0.2 GeV² ceiling and c₂ positivity.
+  implement an input, or make the zero explicit and loud at the run surface.~~
+  **CLOSED 2026-09-04 by the second branch: the zero is LOUD, the b₁ is
+  DEFERRED.** An unconditional banner block, `meta["rank2_input"]`, and
+  `b1_model`/`b1_unpol` = `"none (spin 3/2: no rank-2 input)"`; plus four
+  run-surface defects fixed (F2–F5). No b₁(⁷Li) was implemented and none is
+  claimed: the α–t convolution is worked out in `phase_D_li7_rank2.md` (2.99 ±
+  0.02 × ⁶Li's orbital term) but its sign flips with the unpolarised backend,
+  and the Q(⁷Li) check that would gate the wave function is **not committed**
+  because its reference number is not in this tree. `OPEN_ITEMS_SOLUTIONS.md`
+  §15, decisions D2 and D11.
+- **D2** ~~Toy F₂/g₁/R are the shipped defaults everywhere and the tagged channels
+  have no injection point for a real backend.~~ **CLOSED 2026-09-04 for F₂ and
+  g₁; R stays its own axis, deliberately.** `--unpol-sf {toy,mstw,ct18nlo}`
+  reaches every kernel the pipeline builds — including the tagged
+  struck-cluster kernel, which gained the injection point — and `--pol-sf
+  {toy,nnpdfpol}` does not: it reaches the inclusive and tagged kernels only
+  where the FILL also carries `lam_e·P_e ≠ 0`, and is *labelled, not
+  credited*, on the coherent channel, which reads no g₁, **and under every
+  unpolarised-beam plan — `tensor-thirds`, the CLI's own default, included**.
+  Both axes, not the channel one alone: at defaults `--pol-sf` is read on no
+  channel. The shipped default
+  stays `toy` and bit for bit. `--r-model` was deliberately NOT shipped in the
+  same change (§2b, "R stays its own axis"). `OPEN_ITEMS_SOLUTIONS.md` §14.
+- **D3** ~~The per-nucleon Glauber FSI variant is algebraically identical to the
+  cluster one — the two "variants" are one.~~ **RETRACTED 2026-09-04 — the
+  premise is false.** Measured on one event stream reweighted three ways
+  (`tagged-6Li-alpha`, 20 000 events, seed 1234, `tensor-thirds` at
+  P_z = 0.7 / P_zz = 0.6 / P_e = 0.7, σ_XN = 40 mb), the two variants differ
+  on **99.50 %** of events,
+  by up to a factor 68.5 per event and by 48 %/42 % in integrated rate. The
+  identity that *does* hold — the Ciofi degli Atti–Kaptari per-nucleon product
+  on an uncorrelated density collapsing onto the cluster form — is about a code
+  path this tree does not have, which is why the shipped `glauber-nucleon` is
+  the single-scattering limit instead. What was actually wrong: the knob was
+  absent from the npz `meta`. `OPEN_ITEMS_SOLUTIONS.md` §7.1–7.2.
+- **D4** ~~`PDF:PomSet` is called the coherent T2 tier's largest systematic and has
+  never been scanned.~~ **SCANNED 2026-09-04**, all 15 sets × 20 000 events at
+  ⁶Li config 1, seed 4242. The proposed observable was the wrong one: the T0
+  columns are bit-identical across the fourteen sets that still run (1–10,
+  12–15; 11 is refused now, so fourteen is the reproducible count, re-measured
+  2026-09-05), so the band on M_X, |t|, x_P and σ is identically zero. The real band is on the hadronic final state —
+  ⟨n_charged⟩ −2.6 %/+9.9 %, kaon fraction a factor 2.8 — **over the twelve
+  genuine DPDF fits (3–10, 12–15) about set 6, not over all 15**: sets 1 (toy)
+  and 2 (π⁰) are not Pomeron fits, 11 is refused, and set 2 would put the
+  ⟨n_charged⟩ low edge at −4.7 %. `OPEN_ITEMS_SOLUTIONS.md` §5.1–5.2.
+- **D5** ~~The coherent channel's hard |t| ≤ 0.2 GeV² ceiling and c₂ positivity.~~
+  **CLOSED 2026-09-04: 0.2 stays, and the reason it is written down changed.**
+  The anchor range (|t| ≤ 0.30) is primary and knob-independent; positivity is
+  secondary and contingent — the edge is 0.245 only at the shipped `eps_b0`
+  and 2.80 GeV² at the measured quadrupole (rounded `eps_b0` = −0.0070;
+  2.7990 on the derived −0.0070024 — never "2.8000"), now derived by
+  `t_positivity_edge`.
+  `OPEN_ITEMS_SOLUTIONS.md` §11.6.
 
 ## Phase E — release hygiene
 

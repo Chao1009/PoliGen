@@ -140,6 +140,14 @@ double rc_delta(double x, double delta_high, double delta_low, double x_high,
   return delta_high + (delta_low - delta_high) * f;
 }
 
+bool rc_band_applies(Channel channel) {
+  return channel != Channel::CoherentLi6;
+}
+
+bool rc_tail_applies(Channel channel, bool with_tail) {
+  return rc_band_applies(channel) && !is_tagged_channel(channel) && with_tail;
+}
+
 const char* rc_mode_name(RcMode m) {
   switch (m) {
     case RcMode::Off:        return "off";
@@ -960,16 +968,31 @@ RcModel::RcModel(RcMode mode, RcOptions opt,
   // `m_lepton` is refused under.  `qe_tensor_scale` multiplies `sigma^q_U`,
   // which `with_qe_tail = false` never computes, so the pair would silently
   // record a polarised quasi-elastic price on a run that priced no
-  // quasi-elastic tail at all.  (`qe_suppression = 0` degenerates the same
-  // way and is NOT refused, for the same reason `qe_kf_gev` is not: it is a
-  // numeric edge of a knob that did run, not a structural switch.)
-  if (!opt_.with_qe_tail && opt_.qe_tensor_scale != 0.0) {
+  // quasi-elastic tail at all.
+  //
+  // ALL THREE QUASI-ELASTIC KNOBS, since 2026-09-05, and not the polarised
+  // one alone.  `qe_suppression` is a flat multiplier ON sigma^q_U and
+  // `qe_kf_gev` the Fermi momentum of the Pauli factor S(q) INSIDE it, so
+  // with the tail off neither is a factor of anything: measured, both are
+  // bit-identical to `with_qe_tail = false` alone, and `meta` recorded them
+  // as 0.5 and 0.25 with row status `read`.  That is the same defect the
+  // clause was written for, one level up.  (What is NOT refused: either knob
+  // at a non-default value with the tail ON -- `qe_suppression = 0`
+  // degenerates the tail the same way `with_qe_tail = false` does, but it is
+  // then a numeric edge of a term that RAN, which is a band row and not a
+  // silent claim.)
+  const RcOptions od;
+  if (!opt_.with_qe_tail &&
+      (opt_.qe_tensor_scale != 0.0 ||
+       opt_.qe_suppression != od.qe_suppression ||
+       opt_.qe_kf_gev != od.qe_kf_gev)) {
     throw std::runtime_error(
-        "RcModel: qe_tensor_scale != 0 with with_qe_tail = false -- the "
-        "polarised stand-in is a fraction of Eq. (44)'s sigma^q_U, which this "
-        "run does not compute, so it would be recorded in meta as a price "
-        "that was never paid.  Turn the quasi-elastic tail on, or leave "
-        "qe_tensor_scale at 0");
+        "RcModel: qe_tensor_scale / qe_suppression / qe_kf_gev away from "
+        "their defaults with with_qe_tail = false -- they scale, or sit "
+        "inside, Eq. (44)'s sigma^q_U, which this run does not compute, so "
+        "they would be recorded in meta as a price that was never paid.  "
+        "Turn the quasi-elastic tail on, or leave all three at their "
+        "defaults");
   }
   if (!(opt_.tail_max > 0.0)) {
     throw std::runtime_error("RcModel: tail_max must be > 0 (a Monte-Carlo "
@@ -991,9 +1014,15 @@ RcModel::RcModel(RcMode mode, RcOptions opt,
   }
 
   // --- the per-Channel rule, TOTAL over `Channel` (design sec. 1.5) -------
+  //
+  // The two BOOLEANS come from `rc_band_applies` / `rc_tail_applies`, which
+  // `PipelineConfig::validate()` also reads -- one definition, so the refusal
+  // of a sub-knob whose piece did not run and the model that does not compute
+  // that piece cannot disagree.  What stays here is the REASON, which only a
+  // built model can state.
+  applies_ = rc_band_applies(channel_);
+  tail_applies_ = rc_tail_applies(channel_, opt_.with_tail);
   if (channel_ == Channel::CoherentLi6) {
-    applies_ = false;
-    tail_applies_ = false;
     exclusion_reason_ =
         "coherent-6Li: its tensor dependence is entirely AZIMUTHAL "
         "(the cos 2phi coefficient of CoherentSampler), and nobody has "
@@ -1001,8 +1030,6 @@ RcModel::RcModel(RcMode mode, RcOptions opt,
         "M_X >= 1 GeV cut already excludes the elastic point.  Both weights "
         "are exactly 1.0";
   } else if (is_tagged_channel(channel_)) {
-    applies_ = true;
-    tail_applies_ = false;
     // WHY THIS TEXT IS SO LONG.  `rc_tail == 1` here is HALF a kinematic fact
     // and half an OMISSION, and the two halves have opposite standing.  The
     // elastic half is a property of the route classification.  The
@@ -1046,8 +1073,6 @@ RcModel::RcModel(RcMode mode, RcOptions opt,
           "return tau = 0 and price nothing (design sec. 1.5.1)");
     }
   } else {
-    applies_ = true;
-    tail_applies_ = opt_.with_tail;
     if (!tail_applies_) {
       exclusion_reason_ =
           "with_tail = false: this is a BAND-ONLY diagnostic run and "

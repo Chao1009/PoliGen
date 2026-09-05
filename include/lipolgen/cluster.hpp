@@ -405,6 +405,13 @@ enum class ClusterWaveSource {
   Hulthen = 0,   ///< the analytic two-parameter forms above -- THE DEFAULT
   VmcAV18 = 1,   ///< the ANL VMC tables (AV18+UX magnitudes, AV18+UIX signs)
 };
+/// The run-surface name of a wave source -- the same two strings the CLI's
+/// `--cluster-wave` takes (`python/lipolgen/__init__.py`'s `CLUSTER_WAVES`),
+/// defined ONCE here so a `meta` key, a `KnobProvenance` row and a banner line
+/// cannot spell them differently (docs/CONVENTIONS.md).  Every other selector
+/// in the library already has one (`b1_model_name`, `unpol_sf_name`, ...);
+/// this enum and `TritonSfChoice` were the two that did not.
+const char* cluster_wave_name(ClusterWaveSource s);
 
 /// One cluster relative partial wave: orbital L, probability P_L = a_L^2, and
 /// the short-range scale beta of its radial shape.

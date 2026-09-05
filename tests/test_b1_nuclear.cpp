@@ -2040,10 +2040,11 @@ TEST_CASE("b1_nuclear T16: --b1-unpol reaches the kernel and the default "
       CAPTURE(xs[i]);
       CHECK(tt.b1 != 0.0);
       CHECK_CLOSE(tm.b1 / tt.b1, want[i], 1e-5);
-      // F1 DOES NOT MOVE.  `opt.f2_source` is `ToyF2` on every setting of
-      // the flag, so F1 -- and with it the spin-blind cell cross section and
-      // the D_phi denominator of the tensor weight -- is bit-identical; what
-      // moves is the tensor shift, which is the point.
+      // F1 DOES NOT MOVE.  `opt.f2_source` is set by a SEPARATE selector
+      // (`--unpol-sf`, left at its `toy` default here), so under THIS flag
+      // F1 -- and with it the spin-blind cell cross section and the D_phi
+      // denominator of the tensor weight -- is bit-identical; what moves is
+      // the tensor shift, which is the point.
       // The price is that the numerator's F1 and the denominator's F1 are no
       // longer the same object; that is documented at `B1UnpolSource`.
       CHECK(tm.f1 == tt.f1);
@@ -2156,4 +2157,33 @@ TEST_CASE("b1_nuclear T17: G3a's counting ceiling -- the THIRD sign change") {
                       xb1_threaded(xs, opts)), 1.197722, 2e-4);
   }
 #endif  // LIPOLGEN_HAVE_LHAPDF
+}
+
+TEST_CASE("b1_nuclear D1/F4: a half-assigned ClusterPartialWave throws "
+          "instead of walking off the end of phi") {
+  // `k` and `phi` are two public vectors that Python assigns ONE AT A TIME,
+  // so between the assignments they have different lengths; `rebuild()` used
+  // to build the spline anyway and the constructor indexed `y_[i + 1]` over
+  // an empty `phi` -- a segmentation fault from three lines of documented
+  // API (docs/open_items/run_2026-09-03/phase_D_li7_rank2.md sec. 1.5, F4).
+  ClusterPartialWave w;
+  w.k = {0.1, 0.2, 0.3};
+  w.rebuild();                       // DEFERS, so either order works
+  CHECK(!w.spline);
+  CHECK_THROWS_AS(w(0.15), std::runtime_error);
+  CHECK_THROWS_AS(w.norm2(), std::runtime_error);
+  std::vector<double> out;
+  CHECK_THROWS_AS(w.eval_sorted({0.15}, &out), std::runtime_error);
+  w.phi = {1.0, 2.0, 1.0};
+  w.rebuild();
+  CHECK(!!w.spline);
+  CHECK_CLOSE_AT(w(0.15), 1.6875, 0.0, 1e-12);
+  // the other assignment order, which is the one a reader writes first
+  ClusterPartialWave v;
+  v.phi = {1.0, 2.0, 1.0};
+  v.rebuild();
+  CHECK_THROWS_AS(v(0.15), std::runtime_error);
+  v.k = {0.1, 0.2, 0.3};
+  v.rebuild();
+  CHECK_CLOSE_AT(v(0.15), 1.6875, 0.0, 1e-12);
 }

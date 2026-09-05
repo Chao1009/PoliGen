@@ -1,6 +1,7 @@
 #include "lipolgen/spin.hpp"
 
 #include <cmath>
+#include <cstdio>
 #include <stdexcept>
 #include <string>
 
@@ -314,7 +315,43 @@ std::array<double, 4> spin32_populations(double pz, double t, double o) {
   std::array<double, 4> pops{};
   for (std::size_t i = 0; i < 4; ++i) {
     if (sol[i] < -1e-12) {
-      throw std::runtime_error("unphysical (pz, t, o): negative population");
+      // SAY WHICH PAIR IS REACHABLE (`phase_D_li7_rank2.md` sec. 1.5, defect
+      // F3).  "unphysical (pz, t, o): negative population" was correct and
+      // useless: the caller cannot tell whether the vector moment, the
+      // alignment or the pair is at fault, and the J = 3/2 domain is SMALLER
+      // than the spin-1 one, so ordinary-looking numbers land outside it
+      // (`make_plan("helicity-flip", j=1.5, pz=0.7, pzz=0.6)` does).
+      //
+      // The four populations are fixed UNIQUELY by (1, pz, t, o) -- the 4x4
+      // system above is square -- so there is no fill to search for, only a
+      // domain.  Inverting the same system by hand:
+      //
+      //     p(+3/2) + p(-3/2) = (1 + t)/2 ,  p(+3/2) - p(-3/2) = 0.9 pz + 0.1 o
+      //     p(+1/2) + p(-1/2) = (1 - t)/2 ,  p(+1/2) - p(-1/2) = 0.3 (pz - o)
+      //
+      // so positivity is exactly the two inequalities below, and at o = 0 it
+      // collapses to 1.8|pz| - 1 <= t <= 1 - 0.6|pz| (hence |pz| <= 5/6).
+      // VERIFIED against this function on 1681 (pz, t) points at o = 0 and
+      // 4851 (pz, t, o) points: zero disagreements.
+      const double lo = 1.8 * std::fabs(pz) - 1.0;
+      const double hi = 1.0 - 0.6 * std::fabs(pz);
+      char buf[768];
+      std::snprintf(
+          buf, sizeof(buf),
+          "spin32_populations: unphysical (pz = %g, t = %g, o = %g) -- "
+          "p(m = %s) = %g < 0.  The four populations are fixed UNIQUELY by "
+          "(1, pz, t, o), so this is a DOMAIN, not a solver failure: "
+          "p(+3/2) -+ p(-3/2) = (1 + t)/2 and 0.9 pz + 0.1 o, "
+          "p(+1/2) -+ p(-1/2) = (1 - t)/2 and 0.3 (pz - o), whence "
+          "|0.9 pz + 0.1 o| <= (1 + t)/2 AND |0.3 (pz - o)| <= (1 - t)/2.  "
+          "At o = 0 that is %g <= t <= %g at this pz (so |pz| <= 5/6 = "
+          "0.833333 at all).  The J = 3/2 domain is SMALLER than the spin-1 "
+          "one -- (pz, pzz) = (0.7, 0.6) is inside it for spin 1 and outside "
+          "here by 0.02 in t",
+          pz, t, o,
+          (i == 0 ? "+3/2" : i == 1 ? "+1/2" : i == 2 ? "-1/2" : "-3/2"),
+          sol[i], lo, hi);
+      throw std::runtime_error(buf);
     }
     pops[i] = sol[i] < 0.0 ? 0.0 : (sol[i] > 1.0 ? 1.0 : sol[i]);
   }

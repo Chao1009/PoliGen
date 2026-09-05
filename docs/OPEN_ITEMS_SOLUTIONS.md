@@ -11,15 +11,17 @@ the recommended solution, effort, and status. Ordered by leverage.
 | 2 | ePIC chain gate (HepMC3 → abconv → npsim) | **passed** — 10/10 events through `npsim` directly and via `abconv -p ip6_hiacc_100x10` | done | writer fix in (m_e written as generated_mass; pinned by tests) |
 | 3 | Tensor sign `TENSOR_LL_SIGN` (plans/08 D1) | **decided by literature: −1** (Cosyn Eq. 27, HERMES Eq. 6, HJM derivation, POLRAD Eqs. 9/10 all give A_zz = −(2/3) b₁/F₁) | 1 line + test | author to confirm; unblocks D2 |
 | 4 | ⁶Li/⁷Li effective polarizations (plans/04 #6) | **closed** — 1/3 vs 0.81 was a convention mismatch; VMC (Wiringa 2014 Table I, Piarulli 2023) gives whole-nucleus P_p = P_n = 0.85 ± 0.03 (⁶Li), 0.87 / −0.03 (⁷Li) | 0.5 d | author to confirm |
-| 5 | Coherent T2 final state | **implemented 2026-09-01** — γ*–Pomeron tier is the default coherent T2 (`CoherentT2::{Pomeron, Off}`, `docs/PYTHIA_BRIDGE.md` §12); ζ = β exact, 300-event chain conserves to 2.8e-14, M_had = M_X to 2.3e-11, veto 0 at M_X ≥ 1.4 GeV | done | `--coherent-t2`, `--pom-set` |
+| 5 | Coherent T2 final state | **implemented 2026-09-01** — γ*–Pomeron tier is the default coherent T2 (`CoherentT2::{Pomeron, Off}`, `docs/PYTHIA_BRIDGE.md` §12); ζ = β exact, 300-event chain conserves to 2.8e-14, M_had = M_X to 2.3e-11, veto 0 at M_X ≥ 1.4 GeV | done | `--coherent-t2`, `--pom-set`; **`PDF:PomSet` SCANNED 2026-09-04 (D4)** — all 15 sets × 20 000 events: the T0 columns are **bit-identical across the fourteen sets that still run** (1–10, 12–15; set 11 is refused by the constructor now, so fourteen is the count that reproduces — re-measured 2026-09-05, one md5 `ffd35a3a`), so the band on M_X, \|t\|, x_P and σ is *identically zero* and the systematic is on the **hadronic final state** — ⟨n_charged⟩ **−2.6 % / +9.9 %** and the **kaon fraction a factor 2.8** over the twelve DPDF fits. Set 11 refused (100 % e_q² fallback); the light-only fallback is **measured bit-identical**, not a systematic; `pom_set` now in the npz `meta` — §5.1–5.2 |
 | 6 | Triton remnant (t* → N + …) | **implemented 2026-09-01** — `triton_sf.hpp` CS n₀+n₁ model, S₀ = 0.6525 untuned, third channel n → (pn); opt-in `--triton-sf ciofi-simula`, sequential Hulthén stays the default bit for bit | done | numbers in §6 below |
-| 7 | Spectator FSI (plans/04 #16) | **implemented 2026-09-01** — `GlauberFsiWeight` per-event weight on `Event::weight` (`--fsi`, tagged channels; never a momentum shift); σ_Xα = 131.0 mb at σ_XN = 40, band 20–40 mb mandatory | done | numbers in §7 below |
+| 7 | Spectator FSI (plans/04 #16) | **implemented 2026-09-01** — `GlauberFsiWeight` per-event weight on `Event::weight` (`--fsi`, tagged channels; never a momentum shift); σ_Xα = 131.0 mb at σ_XN = 40, band 20–40 mb mandatory | done | numbers in §7 below; **D3 (2026-09-04): the inventory's "the two variants are one" is RETRACTED** — measured on one event stream, they differ on **99.50 %** of events (ratio to 68.5, integrated survival 0.520954 vs 0.581605), and `fsi` / `fsi_sigma_mb` are now in the npz `meta` — §7.1–7.2 |
 | 8 | Spin-3/2 SF basis (plans/04 #14) | **implemented as a theory note** — Jaffe–Manohar NPB 321 (1989); explicit J=3/2 functions arXiv:2209.12161 Eqs. 19a–d; rank-≤2 truncation is *exact* for unpolarized-beam inclusive observables; the finite-γ J = 3/2 decomposition and the full list of code changes needed if the rank-3 sector is ever switched on are written up, with no default behaviour change | done | `docs/theory/SPIN32_FINITE_GAMMA.md` |
 | 9 | Tensor-sector RC (plans/04 #10) | **implemented 2026-09-03** — `rc.hpp`/`rc.cpp`, opt-in `--rc tensor-band`: the two-sided band `rc_tensor_lo`/`rc_tensor_hi` on the tensor part of the rate (δ log-linear, 0.30 at x = 0.01 → 0.015 at x = 0.16) plus `rc_tail`, POLRAD's t-peak elastic tail with its tensor part and the unpolarised quasi-elastic tail. Weight-only, on `Event::rc_weights` and never on `Event::weight`; `--rc off` is byte-identical | done | numbers in §9 below |
 | 10 | b₁ for A > 2 (plans/04 #9) | **implemented 2026-09-03 as an OPT-IN backend; its A = 2 gate CLOSED the same day** — `b1_nuclear.hpp`/`b1_nuclear.cpp`, `--b1-model li6-convolution`: the **four**-term α–d convolution on the Cosyn–Dong–Kumano–Sargsian kernel (the struck-α orbital term is not optional, it is ≈ 0.5 × the struck-d one). The default stays `Li6B1(MillerB1)`, bit for bit. **The A = 2 validation gate PASSES**: read where design §5.4's checklist ends — MSTW2008 LO (CDKS's own PDF, now reachable as `MstwSF` from PYTHIA's own grid) at CDKS Eq. (21)'s δ-function — G3a passes on all three landmarks and G3b's peak ratio is **0.843243**, inside the factor-2 window; with the real CD-Bonn wave function as well, **1.000338**. Four conditions travel with that: **the lift is about a configuration, not about a build** — the shipped default `ToyF2` gives **0.440**, outside the window, so quote numbers made with `--b1-unpol mstw` and not the default backend's; it is marginal at Eq. (17)'s κ = 1 (0.520); the CD-Bonn agreement is below the reference's own digitization error and is not three-digit agreement with CDKS; and **the gate is A = 2** — so the **mandatory ±100 % band stays**. G3a's own pass is **qualified** by its counting ceiling (§10, "G3a's stated limitation"). The ⁶Li publication ban is lifted. Of the seven close conditions five are done and two are author decisions (Miller's normalisation; the ⁶Li R default) | 10–15 d, ~9 spent | **gate closed**, band mandatory — §10 below |
-| 11 | Coherent ⁶Li amplitude (plans/04 #18) | **both halves in-tree** — eSTARlight ⁶Li unpolarized rates/slope (2026-09-02, `estarlight_li6.md`) settle `slope_b = 50 ± 10` GeV⁻² as citable and put a **lower bound** of 1.0e-3 on `f0` (the all-VM 3.0e-2 is not an upper bound — ρ/φ sit below the M_X floor); both recorded in `coherent.hpp`, with the cross sections themselves now in code as `estarlight_li6_coherent()`; the α+d configuration sampler (2026-09-03, `cluster_config.hpp`, `phase_G_numbers.md`) predicts ⁶Li's tensor a₂ ~10× smaller than the deuteron's and of **opposite sign**. **2026-09-04, §11.3: that a₂ is MARGINALLY measurable in coherent J/ψ — a BAND, S = 2.63 σ at the low edge and 2.84 … 3.29 σ at the top, 3 σ at 8.3 … 13.0 fb⁻¹/u, inside the {1, 10, 100} band at both ends; whether the top crosses 3 σ is NOT established (§11.3c)**, once the photoproduction region (Q² < 0.1 = 85 % of the rate, `estarlight_li6.md` §2f, `estarlight_li6_q2_floors()`) and the μ⁺μ⁻ channel are included. a₂ ∝ \|t\| on an e^{−B\|t\|} sample really is only a 0.25 % modulation — but on 4.2e5 events that is 2.6 σ. The photon-polarisation background separates for free and the separation survives Q² → 0 (the P_zz flip is a 1.50× *gain*). **Everything here is a closed-form map, not a dipole-model amplitude** (§11.3, §C2.0). *(§11.3a: the first pass said "NOT measurable — 0.75 σ, 160 fb⁻¹/u"; that used one lepton channel in one Q² window and is withdrawn.)* *(§11.3c: the fourth pass then found the band's TOP resting on an **unquantified factor presented as quantified** — a ⁷Li → ⁶Li efficiency substitution read off a list whose A-ordering is confounded with E/u and Z; read off the four entries that share a beam energy it **straddles 1**, so the top is a span, 2.84 … 3.29 σ, and the crossing of 3 σ is withdrawn.)* *(§11.3b: the second pass had shipped that verdict on an efficiency chain with **two defects of comparable size and opposite sign, neither in its own "complete" assumption list** — ε_det applied at ⁷Li's TOP energy 18 × 117.9 to a ⁶Li sample at 10 × 99.5, worth ×1.12–1.16 UP by the same paper's own ³He energy scan; and **no decay-lepton acceptance or reconstruction efficiency in the chain at all**, DOWN and unbounded below. They cancel to 0.7 %, which is why the point barely moved and why quoting either alone is worse than quoting neither.)* What is still open is not statistics: **no detection efficiency exists below Q² = 0.1 anywhere in this tree**; **no decay-lepton reconstruction efficiency exists in it at all** (only the geometry can be bounded, and it is 0.99 — not the problem); and the far-forward working point is unchosen — **that last is the single correction that on its own restores a NO**, taking the whole band to 0.73–0.92 σ at 106–167 fb⁻¹/u | done / done / **ask stands, on photoproduction** | §11 below — O1/O2/O4/O5 CLOSED/ANSWERED (§§11.2–11.4), O3 partially bounded offline at +18 %/+9 % (§11.5); the Mäntysaari-group ask is **reconciled into one canonical draft** (task C6, `docs/open_items/run_2026-09-03/mantysaari_collaboration_draft.md`), **not sent — sending is the author's decision** |
+| 11 | Coherent ⁶Li amplitude (plans/04 #18) | **both halves in-tree** — eSTARlight ⁶Li unpolarized rates/slope (2026-09-02, `estarlight_li6.md`) settle `slope_b = 50 ± 10` GeV⁻² as citable and put a **lower bound** of 1.0e-3 on `f0` (the all-VM 3.0e-2 is not an upper bound — ρ/φ sit below the M_X floor); both recorded in `coherent.hpp`, with the cross sections themselves now in code as `estarlight_li6_coherent()`; the α+d configuration sampler (2026-09-03, `cluster_config.hpp`, `phase_G_numbers.md`) predicts ⁶Li's tensor a₂ ~10× smaller than the deuteron's and of **opposite sign**. **2026-09-04, §11.3: that a₂ is MARGINALLY measurable in coherent J/ψ — a BAND, S = 2.63 σ at the low edge and 2.84 … 3.29 σ at the top, 3 σ at 8.3 … 13.0 fb⁻¹/u, inside the {1, 10, 100} band at both ends; whether the top crosses 3 σ is NOT established (§11.3c)**, once the photoproduction region (Q² < 0.1 = 85 % of the rate, `estarlight_li6.md` §2f, `estarlight_li6_q2_floors()`) and the μ⁺μ⁻ channel are included. a₂ ∝ \|t\| on an e^{−B\|t\|} sample really is only a 0.25 % modulation — but on 4.2e5 events that is 2.6 σ. The photon-polarisation background separates for free and the separation survives Q² → 0 (the P_zz flip is a 1.50× *gain*). **Everything here is a closed-form map, not a dipole-model amplitude** (§11.3, §C2.0). *(§11.3a: the first pass said "NOT measurable — 0.75 σ, 160 fb⁻¹/u"; that used one lepton channel in one Q² window and is withdrawn.)* *(§11.3c: the fourth pass then found the band's TOP resting on an **unquantified factor presented as quantified** — a ⁷Li → ⁶Li efficiency substitution read off a list whose A-ordering is confounded with E/u and Z; read off the four entries that share a beam energy it **straddles 1**, so the top is a span, 2.84 … 3.29 σ, and the crossing of 3 σ is withdrawn.)* *(§11.3b: the second pass had shipped that verdict on an efficiency chain with **two defects of comparable size and opposite sign, neither in its own "complete" assumption list** — ε_det applied at ⁷Li's TOP energy 18 × 117.9 to a ⁶Li sample at 10 × 99.5, worth ×1.12–1.16 UP by the same paper's own ³He energy scan; and **no decay-lepton acceptance or reconstruction efficiency in the chain at all**, DOWN and unbounded below. They cancel to 0.7 %, which is why the point barely moved and why quoting either alone is worse than quoting neither.)* What is still open is not statistics: **no detection efficiency exists below Q² = 0.1 anywhere in this tree**; **no decay-lepton reconstruction efficiency exists in it at all** (only the geometry can be bounded, and it is 0.99 — not the problem); and the far-forward working point is unchosen — **that last is the single correction that on its own restores a NO**, taking the whole band to 0.73–0.92 σ at 106–167 fb⁻¹/u | done / done / **ask stands, on photoproduction** | §11 below — O1/O2/O4/O5 CLOSED/ANSWERED (§§11.2–11.4), O3 partially bounded offline at +18 %/+9 % (§11.5); the Mäntysaari-group ask is **reconciled into one canonical draft** (task C6, `docs/open_items/run_2026-09-03/mantysaari_collaboration_draft.md`), **not sent — sending is the author's decision**; **D5 (2026-09-04): the \|t\| ceiling STAYS 0.2 and its stated reason changed** — the anchor range (\|t\| ≤ 0.30, a property of the input table) is now primary and positivity is stated as secondary and contingent, because the positivity edge is `t_positivity_edge` = 0.245 GeV² only at the shipped `eps_b0` and would be **2.80** at the measured quadrupole; `--coherent-t-max` and the whole coherent block are now in the npz `meta` — §11.6 |
 | 12 | Packaging | **implemented 2026-09-02** — `pyproject.toml` (scikit-build-core) in-tree, `pip install -e .` works (66 s); one copy of each `.so` in `lipolgen/`, `$ORIGIN`+deps-prefix RPATH, data/vmc vendored; portable wheel still needs `auditwheel` + GPL-3 terms | done | see §12–13 below |
 | 13 | License | **GPL-3.0-or-later** (forced by HepMC3/LHAPDF; matches MCnet norms) | 0 | author to confirm |
+| 14 | Structure-function backend injection (the 2026-09-03 sweep's **D2**, filed as `sf-backend-injection`) | **implemented 2026-09-04** — `--unpol-sf {toy,mstw,ct18nlo}` reaches **every kernel the pipeline builds**, the tagged struck-cluster kernel included, which had **no** structure-function slot of any kind before (and which `PipelineConfig::kernel` never reached either). **`--pol-sf {toy,nnpdfpol}` does not have that reach and never could** — it reaches the inclusive and tagged kernels only where the fill also carries `lam_e·P_e ≠ 0`, and not the coherent channel at all, whose rate is spin-independent; under `tensor-thirds`, this CLI's own default plan, it is read on **no** channel. It is *labelled, not credited*, wherever it did not run (`pol_sf_is_read(config, plan)`, §15.3). Both default to the toy backends and are then **bit for bit**, proved per channel by `np.array_equal`. Measured price of the toy on ⁶Li at config 1: accepted σ **×0.7985** (ct18nlo) / **×0.7934** (mstw), run-level A_zz ×1.2524 / ×1.2604 — and the shipped `ToyG1`'s g₁ⁿ has the **WRONG SIGN** over roughly 0.25 < x < 0.6. R and the EMC hook are deliberately **not** covered and stay hard-locked | 1 session | done — §14 below |
+| 15 | ⁷Li rank-2 (tensor) input (the 2026-09-03 sweep's **D1**) | **the ZERO is now LOUD; the b₁ is DEFERRED, deliberately** — a ⁷Li inclusive run's tensor term, cos 2φ amplitude and A_zz have always been *exactly* 0 (`default_inclusive_kernel` fills a rank-2 slot for spin 1 only) while `meta` recorded `b1_model = "miller"`, a backend that did not run, and no run-surface line said anything. Now: an unconditional banner block, `meta["rank2_input"]`, and `b1_model` / `b1_unpol` = `"none (spin 3/2: no rank-2 input)"`; plus four run-surface defects (F2 the spin-1 plans at J = 3/2, F3 the population-domain message, F4 a three-line segfault, F5 the silently ignored `--pzz`). **No b₁(⁷Li) was implemented**: the α–t convolution is worked out and measured **in `phase_D_li7_rank2.md`, not here** — 2.99 ± 0.02 × ⁶Li's orbital term, and the ⟨r²⟩/P-wave character of the same wave function agrees with Q(⁷Li) to 13 % — but its **sign flips with the unpolarised backend** the A = 2 gate tells you to use, so shipping it would publish a tensor asymmetry whose direction is a flag. **Both numbers are the research note's, quoted, not re-measured and not in the code; and the 13 % "gate" is NOT COMMITTED** — its reference Q(⁷Li) = −4.00(3) fm² is quoted from memory of the standard compilations, is absent from this tree and must be sourced first (§15.4, author decision D11) | loud zero 1 session; b₁ ~1 week after the decision | **blocked on author decision D2** (one unpolarised backend, for both isotopes) — §15 below |
 
 ## 1. Cluster wave functions — the biggest physics correction
 
@@ -117,7 +119,139 @@ set `COHERENT_MX_MIN_DEFAULT = 1.2`). One extra find: PYTHIA closes the
 meson-like Pomeron-beam record on the electron beam's massive light-cone
 minus — a constant Δ(m²) = −3.9e-6 GeV² the baryon-beam remnant path absorbs —
 so the surrogate is built at a compensated w2_sur, keeping the mass-repair
-rescale at ~1e-11. `PDF:PomSet` remains the tier's largest systematic.
+rescale at ~1e-11.
+
+### 5.1 `PDF:PomSet` — the tier's largest systematic, SCANNED (2026-09-04, D4)
+
+`PDF:PomSet` was called the coherent T2 tier's largest systematic from the day
+the tier was built and had never been scanned. It has been now: **every set
+PYTHIA 8.317 ships (1–15), 20 000 coherent events each, ⁶Li config 1, seed
+4242, `coherent_t2 = Pomeron`, single thread — 17 s wall for the whole scan**,
+as run 2026-09-04; set 11 has been refused by the bridge constructor since.
+Reproduction and the full per-set table are in
+`docs/open_items/run_2026-09-03/phase_D_numbers.md` §D4.
+
+**The observable had to move, and the reason is exact.** The T0 columns `t`,
+`x_pom`, `q2`, `x` and the event `weight` come out **bit-identical across the
+fourteen sets the constructor still admits** (1–10, 12–15) — one md5,
+`ffd35a3a62b591c547e9ca2ac4301b5d`, re-measured 2026-09-05 in 14.3 s. Set 11
+gave that md5 too in the 2026-09-04 scan, but it is refused now (below), so
+**the reproducible claim is over fourteen, not fifteen**; this section said
+"all fifteen" until 2026-09-05. The Pomeron PDF enters only the flavour
+draw and PYTHIA's backward evolution, while |t|, x_P, M_X and the rate are
+fixed upstream by `CoherentSampler` / `CoherentXpomModel`. So a `PomSet` band
+on M_X (the observable this item originally proposed), on |t|, on x_P or on σ
+is **identically zero by construction**, and quoting one would be meaningless.
+The band is on the **hadronic final state**, which is the only thing that
+moves.
+
+**The band, measured over the twelve genuine diffractive-PDF fits (3–10,
+12–15), about the default set 6:**
+
+| observable | set 6 | min | max | band about the default |
+|---|---|---|---|---|
+| **⟨n_charged⟩** (primary) | 3.964 ± 0.016 | 3.860 (set 9) | 4.355 (set 5) | **−2.6 % / +9.9 %** |
+| ⟨n_hadrons⟩ | 8.521 | 8.300 (10) | 9.394 (5) | −2.6 % / +10.2 % |
+| ⟨p_T⟩ per particle [GeV] | 0.342 | 0.322 (5) | 0.379 (10) | −5.9 % / +10.9 % |
+| **kaon fraction of the HFS** (secondary) | 0.0646 | 0.0359 (9) | 0.1002 (10) | **−44 % / +55 %, a factor 2.8** |
+
+Statistical error on ⟨n_charged⟩ is 0.017 at 20 000 events and the
+seed-to-seed scatter over 4242 / 777 / 31337 is ≤ 0.057, against a 0.50 spread
+across sets — so 20 000 events per set already resolves the band by a factor
+~30 and there is no case for more. The band itself is stable seed to seed:
+−1.8…−2.6 % / +9.3…+9.9 % on ⟨n_charged⟩, factor 2.66–2.79 on the kaon
+fraction, with set 9 always the low end and sets 5 / 10 always the high ones.
+
+**How to quote it.** As an **envelope over re-runs, one npz per set**, never as
+a per-event reweighting: the set changes the final state event by event and
+there is no weight that maps one set onto another. That is why `meta["pom_set"]`
+had to exist first (§5.2). And say which is which: **set 6 is the only LO H1
+set**, so the band mixes LO and NLO DPDFs used in an LO Monte Carlo —
+defensible for a *systematic envelope*, indefensible for a *central value*.
+
+**What is excluded, and why — and what it costs.** Sets 1 (a Q²-independent
+`N x^a (1−x)^b` toy) and 2 (π⁰ distributions) are not Pomeron fits and are
+outside the band; set 1 is still worth running as a sanity floor and is in the
+reproduction table. **Measured, so the exclusion is not a free choice**
+(re-measured 2026-09-05, same recipe): including them moves the ⟨n_charged⟩
+low edge from −2.6 % (set 9, 3.8600) to **−4.7 %** (set 2, 3.7773) and the
+⟨n_hadrons⟩ low edge from −2.6 % to **−7.0 %** (set 2, 7.9261); the high edges
+(set 5) and the ⟨p_T⟩ and kaon bands are unchanged, because sets 1 and 2 are
+interior on those. So **−2.6 % / +9.9 % is a twelve-fit number and must never
+be attached to "all 15 sets"**; **four** sites said "all fifteen" beside it
+(`docs/DEVELOPMENT_PLAN.md`, `python/bindings.cpp`,
+`docs/open_items/run_2026-09-03/PLAN.md` D4, all three corrected in the first
+pass on 2026-09-05, and `docs/open_items/run_2026-09-03/STATUS.md` row D,
+which read "all 15 sets × 20 000 events; … ⟨n_ch⟩ −2.6 %/+9.9 %" on one line
+and was only found on the second pass the same day).
+**Set 11 is now REFUSED by `PythiaBridge`'s constructor** when the Pomeron
+instance is built: `PomHISASD` returns densities only after `setXPom(x_Pom)`,
+which this bridge never calls (there is no Angantyr collision system here to
+supply x_P), and measured, **100.00 % of 20 000 events took the charge-
+democratic e_q² fallback** — the Pomeron PDF was not consulted on a single
+event while `meta["pom_set"]` would have said 11. That is exactly the case
+`PipelineConfig::validate`'s "a knob that did not run may not be recorded as
+if it had" rule exists to prevent.
+
+**Charm is a feature of the band and must be flagged.** Measured by toggling
+`include_charm` and diffing the final states event by event (4 000 events,
+seed 4242): set 5 (H1 2007 Jets) changes **29.98 %** of its events, the four
+GKG18 sets 10.4–11.1 %, and sets 3, 4, 6, 7, 8, 9, 10 **exactly 0.00 %**. So
+including set 5 in a scan produces an open-charm final state the default never
+makes. Confirmed at the PYTHIA source, not merely observed: sets 3, 4 **and** 6
+are all `PomH1FitAB`, whose `xfUpdate` sets `xc = xcbar = xb = xbbar = 0.`
+unconditionally (`PartonDistributions.cc:2630`) — so the tree's old wording,
+"the H1 **LO** grids carry no charm or bottom", was true but too narrow: it is
+equally true of the two H1 **NLO** fits.
+
+**The light-only e_q² fallback is NOT a systematic in its own right —
+measured, it costs exactly zero.** Raising `q2_pdf_min` from 1.0 to 1.75 takes
+the fallback share from 20.70 % → 0.00 % (set 6), 31.25 % → 0.00 % (3),
+35.52 % → 29.32 % (4), 19.45 % → 2.65 % (12), 20.10 % → 3.23 % (13),
+21.65 % → 5.12 % (15) — and leaves a **bit-identical** final state (`pid` and
+`p4` arrays, ~34 000 hadrons over 4 000 events) in every one of those cases.
+The reason is structural, not luck: every Pomeron DPDF PYTHIA ships carries a
+single light-quark singlet (H1 sets it explicitly; the GKG18 LHAGrid1 grids
+have columns −3…3 equal row by row), so e_q²·xf_q ∝ e_q² **exactly** over the
+light flavours and the normalised "fallback" *is* the true draw. The fallback
+fires only where every weight vanishes, which is below the charm threshold,
+where charm is zero anyway.
+
+*Corrected while measuring it:* `docs/PHYSICS_CHANNELS.md`'s remedy —
+"raising `q2_pdf_min` to ≈1.75 removes it at the cost of clamping every
+flavour weight to that Q²" — was true about the counter and **false about the
+cost**; at 1.75 it changes nothing at all. There IS a cost at 3.0, and it is a
+**charm** effect rather than a fallback one: sets 12, 13, 15 stop being
+bit-identical there because the clamp lifts charm above threshold, and with
+`include_charm = false` the same comparison is bit-identical again. Keep the
+light-only restriction (it is the correct guard against the `2e404b8` bug) and
+stop implying the fallback share is a modelling uncertainty; it is a
+bookkeeping artefact.
+
+Pinned at reduced statistics in `python/tests/test_pom_set_band.py` (4 sets ×
+4 000 events, 4 s) so the band cannot rot silently, and carried at the run
+surface by `--pom-set`'s help string and the coherent run banner.
+
+### 5.2 The knob was absent from the npz `meta` (2026-09-04)
+
+Two runs differing only in `--pom-set` had **identical `meta`** while their
+entire hadronic final state differed. `python/bindings.cpp` states the rule on
+the `b1_*` block — *without these keys three otherwise identical npz files are
+indistinguishable, which is exactly the "never quote a single row" rule failing
+silently* — and it had been applied to `b1_*` and to `rc_*` and to nothing
+else. A conditional T2 block now records `t2_bridge`, `coherent_t2`,
+`pom_set`, `pom_rescale`, `pom_q2_pdf_min`, `t2_include_charm`, `t2_n_ok`,
+`t2_n_failed`, `t2_n_pomeron`, `n_pom_flavour_fallback` and
+`pom_flavour_fallback_frac`. It is emitted only when the T2 tier was bound
+through `set_pythia_hadronizer`, so a T0 npz keeps exactly today's key set.
+
+The mechanics are worth recording: `PipelineConfig::hadronizer` is a type-
+erased `std::function`, so the metadata writer could not see the bridge at all.
+`set_pythia_hadronizer` now installs a **named** callable
+(`PythiaHadronizerHook`) and `columns_to_dict` recovers the bridge with
+`std::function::target`. `n_pom_flavour_fallback` was likewise counted and
+surfaced nowhere; it is now in the `meta` and printed at the run banner beside
+`n_ok` / `n_failed`.
 
 ## 6. Triton remnant — Ciofi–Simula A = 3
 
@@ -170,6 +304,77 @@ guard, the ⁷Li P-wave channel and the σ_XN(W) formation ramp are all in
 `weight` column, and every four-vector stays bit-identical to the PWIA run.
 Quote it as an unpolarized-shape systematic banded over 20–40 mb, never as
 a correction to A_zz.
+
+### 7.1 The two variants are NOT one — D3, premise false (2026-09-04)
+
+The inventory carried, as open item D3, *"the per-nucleon Glauber FSI variant
+is algebraically identical to the cluster one — the two 'variants' are one."*
+**Retracted: measured, they differ on 99.50 % of events, and by construction
+rather than by parameter choice.**
+
+What is true is narrower and is what `fsi.hpp` already said: for an
+**uncorrelated** cluster density the Ciofi degli Atti–Kaptari per-nucleon
+product ⟨Π_i[1 − Γ_N(b − s_i)]⟩ factorises into [1 − (Γ_N ⊛ T_a)]^A, which is
+the **cluster** form — so a literal per-nucleon code path would reproduce
+variant (a), and that is precisely why the shipped variant (b) is deliberately
+something else: the **single-scattering (optical, unshadowed) limit**
+Γ_a = A·(Γ_N ⊛ T_a), i.e. σ_Xa = A σ_XN exactly.
+
+**Measured on one event stream reweighted three ways** (`--channel
+tagged-6Li-alpha --events 20000 --seed 1234 --fsi {off,glauber-cluster,
+glauber-nucleon}`, plan `tensor-thirds` at P_z = 0.7 / P_zz = 0.6 / P_e = 0.7,
+at the default σ_XN = 40 mb — one stream at one end of the mandatory 20–40 mb
+band; the columns `k`, `cos_theta_k`, `phi_k`, `x`, `q2` are bit-identical
+across the three files, so the weight is the whole difference):
+
+| | `off` | `glauber-cluster` | `glauber-nucleon` |
+|---|---|---|---|
+| Σ weight (20 000 events) | 20000.0 | 10419.07 | 11632.10 |
+| integrated survival Σw/Σw_off | 1 | **0.520954** | **0.581605** |
+| per-event weight, min … max | 1 | 0.0208 … 1.4043 | 0.2139 … 6.9523 |
+| σ_tot(X–α) [mb] | — | 131.045 | 160.006 |
+| σ_el(X–α) [mb] | — | 35.224 | 68.186 |
+| `survival()` | — | 0.520239 | 0.582899 |
+
+Per-event ratio w_nucleon/w_cluster, percentiles [1, 5, 25, 50, 75, 95, 99] =
+0.821, 0.827, 0.853, 0.897, 0.934, 3.337, 5.935; **maximum 68.52**;
+`np.allclose(rtol = 1e-14)` is **False**; **99.50 %** of the 20 000 events
+differ by more than 1 %. Pinned in `tests/test_fsi.cpp` ("the two variants
+differ on essentially every event") and in
+`python/tests/test_meta_provenance.py`.
+
+**What a genuinely different per-nucleon variant would need**, and why it is
+not a coding task. `fsi.hpp`'s standing TODO names both missing pieces and
+they are the right two — the centre-of-mass constraint Σ_i **s**_i = 0, and
+short-range NN correlations in the cluster density. Of the two:
+
+* the **c.m. constraint** is a change of T_a alone, i.e. of
+  `cluster_point_a2_fm2` (Gartenhaus–Schwartz on a Gaussian gives
+  a²_int = a²(1 − 1/A) = 0.5250 fm² for the α). A better input to the **same**
+  variant, not a different variant;
+* **short-range correlations** need the **two-body** density ρ₂(**s**_i,
+  **s**_j) — that is the whole content of ⟨Π_i(·)⟩ ≠ Π_i⟨·⟩ — and **the tree
+  has none**. `data/vmc/density/{he4,li6}.density` are ONE-body point-proton
+  densities, which is exactly the T_a the cluster form already convolves, and
+  the ANL page the README fetches from publishes one-body densities only. So
+  the SRC correction needs an input the repository does not have.
+
+And the input is **not** σ_NN: the rescattering here is the DIS debris X off a
+**spectator nucleon**, so the amplitude is X–N and the cross section is
+`GlauberFsiOptions::sigma_xn_mb`. A σ_NN would enter only for the spectator
+cluster's own *internal* absorption, which is not what this weight is.
+
+### 7.2 The knob was absent from the npz `meta` (2026-09-04)
+
+The three runs above produced **identical `meta` dicts**, key by key, while
+their total rate differed by 48 % / 42 %. A conditional FSI block now records
+`fsi`, `fsi_sigma_mb`, `fsi_sigma_cluster_mb`, `fsi_sigma_cluster_el_mb`,
+`fsi_survival`, `fsi_clipped_grid_fraction` and `fsi_formation_ramp` (plus the
+four ramp anchors when the ramp ran). It is emitted only when the run had an
+FSI weight, so an `--fsi off` npz keeps exactly today's key set. This matters
+most for `fsi_sigma_mb`: it carries a documented 20–40 mb band that the header
+says must never be quoted as a single row, and until now the two ends of that
+band produced indistinguishable files.
 
 ## 8–10. Theory notes
 
@@ -1796,6 +2001,93 @@ quoted" and rewrote (c) into a question about whether to bother; §11.3a is the
 record of why that was withdrawn.)* **It is not sent. Sending it, in whatever form, is the author's
 decision**, and the draft says so at its own top.
 
+### 11.6 D5 — the |t| ceiling: 0.2 STAYS, and the reason it is written down changed (2026-09-04)
+
+`COHERENT_T_MAX_DEFAULT` = 0.2 GeV² carried **two** stated reasons, presented
+as agreeing: the Mäntysaari deformation input is digitised only to |t| ≤ 0.30,
+*and* the linear c₂ crosses −1 at |t| = 0.245 for P_zz = −2. **They agree only
+at the shipped `eps_b0`.** Written in closed form — with c₂ = A|t| + C,
+A = −(P_zz/2)·eps_b0·B and C = amp·P_zz, the positivity edge is
+|t|_pos = (1 − sign(A)·C)/|A|, i.e. 2(1/|P_zz| − amp)/(|eps_b0|·B) for the
+shipped signs — the second reason moves with `eps_b0` and the first does not:
+
+| eps_b0 | \|t\|_pos, P_zz = −2 | \|t\|_pos, P_zz = +1 |
+|---|---|---|
+| −0.08 (shipped, an EXACT input) | **0.2450** | **0.4950** |
+| −0.0527 (α+d model Q, rounded) | 0.3719 | 0.7514 |
+| −0.0171 (GFMC Q, rounded) | 1.1462 | 2.3158 |
+| −0.0070 (**measured** Q, rounded) | **2.80** | 5.6571 |
+
+**Read the digit count with the table.** The last three `eps_b0` are ROUNDED
+and each row is arithmetic on the rounded value, so the bottom row is
+**2.80 GeV²** — three figures, which is what a two-figure input supports —
+and never "2.8000". On the DERIVED band (`ClusterConfigSampler::
+quadrupole_band_fm2()` through `a2_from_quadrupole` at B = 50, amp = 0.01;
+measured 2026-09-05) the three `eps_b0` are −0.0526846 / −0.0171207 /
+−0.0070024 and the P_zz = −2 edges are **0.3720 / 1.1448 / 2.7990**;
+`tests/test_coherent.cpp` T10b asserts the three derived `eps_b0` and the
+0.37202 / 2.7990 edges.
+
+So §11.2's conclusion is confirmed — the positivity edge at 0.245 is a
+consequence of an `eps_b0` that is 11.4× the measured ⁶Li quadrupole, not a
+property of ⁶Li — and **deriving the ceiling from positivity would be less
+honest than the number it replaces**: at the measured quadrupole it would
+license |t| up to 2.80 GeV², **9.3× outside the four digitised rows**
+(|t| = 0.05, 0.10, 0.20, 0.30) the whole deformation term is scaled from.
+
+**What was decided and implemented.** The ceiling **stays fixed at 0.2**, and
+its stated primary reason is now the **anchor range**, which is a property of
+the input table and does not move with any knob; the positivity edge is stated
+as **secondary and contingent**, with the arithmetic on the page. Concretely:
+
+1. `COHERENT_T_MAX_DEFAULT` unchanged — no reference gate moves.
+2. Its comment rewritten in `coherent.hpp`; the same correction applied at
+   `pipeline.hpp`'s `coherent_t_max`, `CoherentScenario::eps_b0`,
+   `docs/CONVENTIONS.md`, `docs/PHYSICS_CHANNELS.md` and `docs/USAGE.md`.
+3. `CoherentScenario::positivity_margin` and `CoherentSampler::check_positivity`
+   **keep throwing, unchanged**. They are the GUARD on the truncated weight the
+   sampler actually uses — an author who raises `t_max` or `eps_b0` past where
+   it stops being a density is caught by nothing else — not the derivation of
+   the ceiling.
+4. **`CoherentScenario::t_positivity_edge(pzz)` is new**: the edge in closed
+   form, so the number is *derived* rather than repeated in four docstrings,
+   and so it **moves with `eps_b0`** for any caller who asks. It changes no
+   default. Gated in `tests/test_coherent.cpp` (every sign combination against
+   the zero of `positivity_margin`, plus the degenerate cases) and in
+   `python/tests/test_meta_provenance.py`.
+5. `coherent_t_max` is now **reachable as `--coherent-t-max`** and **recorded
+   in the npz `meta`**, together with `coherent_slope_b`, `coherent_eps_b0`,
+   `coherent_amp`, `coherent_f0`, `coherent_m_x_min`, `coherent_x_pom_max`,
+   `coherent_weighted_azimuth` and the derived
+   `coherent_t_positivity_edge_pzz_m2`. Before this a Python caller who moved
+   `coherent_t_max` changed the entire |t| spectrum, the tag acceptance and
+   every c₂ in the file, and the sidecar could not tell.
+
+**The number that says the ceiling is not a rate question.** Measured on
+**200 000 generated coherent events** at the shipped defaults (seed 99, plan
+`tensor-thirds` at P_z = 0.7 / P_zz = 0.6, 4 threads — the plan splits the
+events across categories, so a single-category run of the same seed gives
+0.019974; max |t| and the zero count above 0.20 are the same either way,
+`phase_D_small_items.md` §D5.3):
+⟨|t|⟩ = 0.019963 GeV², max |t| = 0.197575, and the fractions above 0.05 /
+0.10 / 0.15 / 0.20 are 0.082015 / 0.006550 / 0.000455 / 0. `sample_t`
+**renormalises** on [0, t_max], so the ceiling does not lose rate — it
+redistributes exp(−B·t_max) = **4.5e−5** of it. Moving the ceiling to 0.245 or
+anywhere else inside the anchor range changes the generated sample at the
+1e−5 level. The ceiling is a statement about **where the model is defined**,
+and it is now justified as one.
+
+**What this depends on, and what it does not.** Only the *secondary* reason
+depends on the `eps_b0` author decision (STATUS.md decision table row 8): if
+`eps_b0` is ever corrected to the ⁶Li band, positivity stops binding entirely
+and the anchor range is the only ceiling left — the ceiling itself does not
+move. The follow-on that *does* wait on that decision is un-truncating the
+azimuthal modulation (sampling φ from Σ_m p_m e^{−ΔB_m|t|cos 2φ} directly
+instead of from its O(ΔB|t|) truncation 1 + c₂ cos 2φ). That is the physically
+right form — it is positive for every |t| by construction — but it moves every
+pinned coherent azimuth, so it is filed as the follow-on to the `eps_b0`
+decision rather than as an independent item.
+
 ## 12–13. Engineering
 
 - **In-tree now** (2026-09-02; the prototype in `engineering.md` §B was
@@ -1877,3 +2169,396 @@ decision**, and the draft says so at its own top.
 - License: GPL-3.0-or-later for LiPolGen's own code (the linked combination is
   GPL-3 regardless; permissive headers would mislead; MCnet-consistent).
   `pyproject.toml`'s `license = "GPL-3.0-or-later"` (SPDX string) matches.
+
+## 14. Structure-function backends at the run surface — D2, `--unpol-sf` / `--pol-sf`
+
+**The finding (2026-09-03 sweep, D2).** Toy F₂/g₁/R were the shipped defaults
+on every channel, and the tagged channels had no injection point for a real
+backend. Confirmed in full on 2026-09-04 by reading every construction and
+defaulting site of `InclusiveKernel`, `UnpolSF`, `PolSF`, `TensorSF` and
+`RFunc` in the tree
+(`docs/open_items/run_2026-09-03/phase_D_sf_injection.md`), with one
+correction to the finding's own premise: **the documents had not missed it.**
+`docs/PHYSICS_CHANNELS.md` §3 already said, verbatim, that on the tagged
+channels `struck_cluster_kernel` exposes only `inclusive_b1` and `delta_func`
+"so F₂, g₁, R and EMC there are hard-locked", and its EMC row already said
+`Options::emc_ratio` "is empty in every default kernel". What was missing was
+the *injection point*, not its documentation. D2 was a code task.
+
+### What was built
+
+Phase A's `B1UnpolSource` thread, copied piece for piece:
+
+* **Two enums with a `Custom` value**, `UnpolSfSource {Toy, Mstw, Ct18Nlo,
+  Custom}` and `PolSfSource {Toy, NnpdfPol, Custom}`, each with the whole
+  "why it exists / what each value is / what the scope is and what it costs"
+  block in the header (`include/lipolgen/pipeline.hpp`).
+* **Two fields kept in step per selector**: the enum is the PROVENANCE (it is
+  what `meta` records) and the object is the REALISATION. Assigning an object
+  from Python sets `Custom`; clearing it sets `Toy`; `set_unpol_sf` /
+  `set_pol_sf` go the other way.
+* **The core library cannot build the named backends and does not try.**
+  `MstwSF` is in the PYTHIA tier, `LhapdfSF`/`LhapdfG1` in the LHAPDF tier,
+  and `sf.hpp`'s rule is that the core links neither, so the object is built
+  one layer up in `python/bindings.cpp`, where the tiers are visible.
+* **Six refusals in `validate()`**, all modelled on the b₁ ones: a named
+  backend with an empty slot (naming the missing tier — never a silent
+  fallback), `toy` with an object attached, either selector together with a
+  caller-supplied `kernel`, a directly set `struck.f2_source`/`g1_model`
+  under a `toy` selector, the one collision the two flag families
+  create — `--b1-unpol toy` under a non-toy `--unpol-sf`, where "toy" would
+  no longer name `ToyF2` while `meta["b1_unpol"]` still wrote `"toy"` — and,
+  **added 2026-09-05**, a caller-supplied `kernel` on a **tagged** channel,
+  which is never read there while `meta` wrote `"caller-supplied kernel"`
+  into three keys (the `cluster_wave` rule applied to the escape hatch).
+  A seventh refusal lives at the binding, where the two objects meet:
+  `set_pythia_hadronizer` rejects a bridge whose `options.f2_source` is not
+  the config's own `unpol_sf_obj`.
+* **Four new `meta` keys, written unconditionally**: `unpol_sf`, `pol_sf`
+  (both `"caller-supplied kernel"` when one is set), the pair
+  `unpol_sf_grid_q2_min` / `unpol_sf_below_grid_frac`, and — **added
+  2026-09-05** — `pol_sf_reach`. On the **coherent** channel `pol_sf` carries
+  `not read on channel coherent-6Li` rather than a backend name, because
+  nothing there evaluates g₁ (`pol_sf_is_read`); the below-grid fraction is
+  taken against that channel's **own** rate (`cell_rate_weights_pb`), 0.447460
+  and not the inclusive 0.361791. Both were knobs recorded as if they had run;
+  see `docs/open_items/run_2026-09-03/phase_D_numbers.md` §D2.8.
+* **Two kernels changed**: `default_inclusive_kernel` gained two trailing
+  `nullptr` arguments (so the one-argument overload, which
+  `validation/reference/b1_default_li6.json` pins at rtol 1e-12, is untouched)
+  and `StruckClusterOptions` gained `f2_source` / `g1_model`. Nothing in
+  `src/core/xsec.cpp` changed: `Toy` leaves both `Options` slots exactly as
+  they were, so **the default path is unchanged by construction, not by
+  inspection.**
+* **The T2 bridge closed at the same time**, because it would otherwise have
+  become a live inconsistency the moment the flag existed:
+  `PythiaBridgeOptions::f2_source` was unbound and set by nothing, so the T2
+  struck-nucleon species draw was on `ToyF2` while T0 and T1 would have moved.
+  It is now bound, and both `lipolgen-run` and `lipolgen.run(hadronize=True)`
+  hand it the same object they gave the kernel.
+
+### What it costs to have been on the toy — measured 2026-09-04
+
+⁶Li, `default_configs("6Li")[1]`, the shipped window, through the pipeline.
+A_zz is the canonical thirds estimator on `tensor_thirds_plan(0, 0.6)`
+divided by P_zz; A_∥ is `(σ₊−σ₋)/(σ₊+σ₋)/(P_e P_z)` on
+`helicity_flip_plan(1, 0.7, 0.7)`.
+
+| channel | backend | σ [pb] | A_zz | A_∥ |
+|---|---|---|---|---|
+| inclusive | `toy` | 591846.2 | −5.193231e−4 | −1.171716e−3 |
+| inclusive | `ct18nlo` | 472571.9 (×0.79847) | −6.503970e−4 (×1.25239) | −9.668880e−4 (×0.82519) |
+| inclusive | `mstw` | 469556.5 (×0.79338) | −6.545739e−4 (×1.26044) | −1.057030e−3 (×0.90212) |
+| inclusive | `nnpdfpol` | 591846.2 (×1, exactly) | −5.193231e−4 (×1, exactly) | −1.270806e−4 (×0.10846) |
+| tagged-6Li-α | `toy` | 591846.2 | **0 exactly** | −3.514730e−3 |
+| tagged-6Li-α | `ct18nlo` | 472571.9 (×0.79847) | **0 exactly** | −2.900243e−3 (×0.82517) |
+| tagged-6Li-α | `mstw` | 469556.5 (×0.79338) | **−1.3774e−16** (qual. 1) | −3.170626e−3 (×0.90210) |
+| tagged-6Li-α | `nnpdfpol` | 591846.2 (×1, exactly) | **0 exactly** | −3.811967e−4 (×0.10846) |
+
+**The A_zz column is at the shipped window, `Scenario::x_max` = 1.0** — it was
+printed at `--x-max 0.95` until 2026-09-05, in the same rows whose σ and A_∥
+were at 1.0, so one row carried two windows. At 0.95 the same three numbers are
+−5.193192e−4 / −6.503956e−4 / −6.545724e−4; the ratios ×1.25239 / ×1.26044 are
+the same to six digits in either window, which is why the error was invisible.
+
+Three qualifications travel with that table and are not optional.
+
+1. **The tagged A_zz is zero on every backend by construction — and on
+   `mstw` that zero is a floating-point one, not a bit-level one.** At the
+   shipped default the struck-cluster kernel carries no b₁, so the *total*
+   per-category cross sections carry no tensor term. On `toy`, `ct18nlo` and
+   `nnpdfpol` the three totals are then **equal to the last bit** and the
+   estimator returns **0.0 exactly**. On `mstw` they are not: measured
+   2026-09-05, `sigma_per_category_pb()` = 469556.45134814945 /
+   469556.45134814945 / 469556.4513481495, i.e. σ₀ **one ULP** (5.82e−11 pb)
+   above σ_±, so A_zz = **−1.3774e−16**. That is summation round-off —
+   2.7e−13 of the inclusive channel's own toy A_zz — not a tensor signal, but
+   "equal to the last bit" is false there and must not be written. The tagged
+   tensor signal lives in the spectator-differential rate, not in σ_tot. With
+   `--inclusive-b1 --x-max 0.95` A_zz is −1.557969e−3 (`toy`) → −1.951190e−3
+   (×1.25239) → −1.963721e−3 (×1.26044), i.e. the same factors the inclusive
+   channel shows.
+2. **The A_∥ ratios are window integrals of a sign-changing integrand and
+   are smaller than any of their own parts.** On the toy ⟨A_∥⟩ is −2.34618e−3
+   for x < 0.01 (53.0 % of the rate) and positive above x = 0.05. Per x band
+   the `nnpdfpol` swap is ×0.163 (x < 0.01), ×1.041, ×0.905, ×1.172, ×0.937 —
+   the window-integrated **×0.108 is smaller than every band ratio** because
+   the bands partly cancel. Quote the band, not the ×0.108, unless the window
+   is the observable.
+3. **The two selectors are not orthogonal.** `InclusiveKernel` builds its
+   default `ToyG1` on its own base `UnpolSF`, so `--unpol-sf` alone moves g₁:
+   at `--pol-sf toy`, `ct18nlo` moves ⁶Li F₁ by ×0.9942/×1.0711/×1.2038/×1.0014
+   and g₁ by ×1.0544/×1.1346/×1.3050/×1.0551 at x = 0.05/0.10/0.30/0.50, so
+   A₁ = g₁/F₁ moves 5–8 %. `--pol-sf toy` does **not** mean "g₁ unchanged".
+
+**The neutron is a sign, not a factor.** `ToyG1`'s
+a1n(x) = −0.07(1−x)² + 0.8x^2.2 crosses zero near x ≈ 0.25 and is positive
+above it; NNPDFpol1.1's g₁ⁿ stays negative to x ≈ 0.6. At Q² = 10, g₁ⁿ is
+−0.0800 / −0.0114 / **+0.00521** / +0.00779 (toy) against −0.1365 / −0.0608 /
+**−0.02740** / −0.00037 (nnpdfpol) at x = 0.10/0.20/0.30/0.50. So **the
+shipped toy g₁ⁿ has the wrong sign over roughly 0.25 < x < 0.6** — hidden on
+isoscalar ⁶Li, not hidden at all on the neutron-tagged `TaggedDeuteronP`
+channel. This is the single strongest argument for the polarised selector,
+and it is a first measurement of this run.
+
+**The grid clause.** CT18NLO's grid starts at Q² = 1.677 and the shipped
+window's accepted cells start at 1.054; below its grid LHAPDF continues the
+evolution downward rather than freezing, and F₂ᵖ at x = 3e−4 is a factor 2.34
+below the toy at Q² = 0.7. **36.18 %** of a CT18NLO run's own accepted cell
+cross section (42.33 % of the toy run's) is there. It is not refused —
+refusing would make the flag unusable on the shipped scenario — but the
+banner prints it and `meta` carries it, computed from the grid's own
+`q2Min()` and written NaN (never 0) for a backend that reports no floor.
+
+### What this deliberately does NOT cover, and why
+
+* **R stays its own axis and no flag selects it.** Measured over the 3051
+  accepted cells: `r_sigma_lt` spans 0.0046–0.1763 against `r1998`'s
+  0.0124–0.4010, (1+r1998)/(1+r_sigma_lt) spans 0.9203–1.1910 with a
+  σ-weighted mean of 1.1229, and **38.18 %** of the accepted cell cross
+  section lies outside R1998's own stated support, where `r1998` returns a
+  clipped boundary value. R1998 is therefore not a drop-in default, and
+  shipping an `--r-model` in the same change as these two would make three
+  independent 10–40 % movements unattributable. §10's close condition 4 (the
+  ⁶Li R default) is untouched and still stands as decided.
+* **The EMC hook is still empty in every kernel**, exactly as
+  `PHYSICS_CHANNELS.md` already said. If one is ever wired, the transcribed
+  EPPS21 depletion constant is quoted against **CT18ANLO** — which is not
+  installed here — while `Epps21Ratio`'s own `proton_set` default is CT18NLO;
+  referencing a ratio and a baseline to two different proton fits is the same
+  4.2 %-class error that constant's own provenance note describes. That is
+  also why `--unpol-sf` offers no `ct18anlo` row: the set is not on disk.
+* **`--b1-unpol` stays a separate flag.** They are different quantities with
+  different conventions (that one is the deuteron's per-nucleon F₁ inside
+  CDKS Eq. (22) through `f1_cdks`, explicitly *not* `NuclearF2::f1a`), and it
+  is a CDKS-comparability choice the §10 verdict rests on: a user who wants a
+  realistic rate must not be forced to move the b₁ gate row off MSTW as a
+  side effect. One refusal closes the ambiguity the two create.
+
+### Adjacent defects found while mapping, and where they stand
+
+* **`PipelineConfig::kernel` is silently ignored on tagged channels, and the
+  `meta` then says `"caller-supplied kernel"` for a kernel that never ran.**
+  `Pipeline` reads `cfg_.kernel` on the non-tagged branch alone. This change
+  does **not** close it — a tagged config with a kernel and no selector still
+  validates — but it removes the reason to reach for that escape hatch, since
+  the tagged channels now have a real injection point. Filed for phase F:
+  `validate()` should refuse `kernel` off the inclusive channel.
+* **An `--isotope d --channel inclusive` run gets the ⁶Li rank-2 transfer**,
+  because `default_inclusive_kernel`'s tensor branch keys on `ion.spin == 1`
+  and the isotope guard lives only in `validate()`'s non-Miller branch.
+  Documented behaviour (`PHYSICS_CHANNELS.md` says "for ANY spin-1 ion"), but
+  a deuteron run is not a ⁶Li run. Unchanged here; a phase-F decision.
+* **`PythiaBridgeOptions::f2_source` was unbound** — closed by this change,
+  because it would have become a live inconsistency the moment the flag
+  landed.
+
+
+---
+
+## 15. ⁷Li rank-2 (tensor) input — the zero made loud, the α–t b₁ deferred
+
+**The finding (2026-09-03 sweep, D1; researched in
+`docs/open_items/run_2026-09-03/phase_D_li7_rank2.md`, implemented and
+measured in `phase_D_numbers.md` §D1).** A ⁷Li **inclusive** run's entire
+rank-2 sector — the tensor term of the φ-averaged rate, the cos 2φ (gluon
+transversity) amplitude, and therefore A_zz — is **exactly, bit-for-bit
+zero**. `InclusiveKernel::tables` dispatches the rank-2 slots on the ion spin
+(spin 1 → `b1_func / b2_func / delta_func`, spin 3/2 → `b1_32_func /
+b2_32_func / delta_32_func`), an unset slot is 0.0 and an unset b₂ is 2x·b₁
+and so 0 too; `default_inclusive_kernel` fills the **spin-1** slots only.
+Measured: the two per-category cross sections of a T = +1 against T = −1 fill
+are **the same double**, 590952.42641509 pb, and the asymmetry is exactly 0.0.
+
+It was **silent**. The npz `meta` recorded `b1_model = "miller"` — a backend
+that did not run — and the banner printed its b₁ block only when
+`b1_model != Miller`, which a ⁷Li run can never reach. That is the
+repository's own rule (*a knob that did not run may not be recorded as if it
+had*, which `validate()` enforces for `b1_band_scale`) failing on the model
+name itself.
+
+### 15.1 What shipped (2026-09-04)
+
+* **The banner**, unconditional on every ⁷Li inclusive run, tensor plan or
+  not: the sentence, then what is unaffected (the unpolarised rate and the
+  whole vector sector — measured, with a hand-supplied slot the sampler
+  returns A_T = −0.043258 for b₁_32 = +0.05·F₁), then the two escape routes
+  (`--isotope 6Li`; `--channel tagged-7Li-alpha`, whose α–t alignment **is**
+  carried, in the event weight, gated at ⟨P₂⟩ = −T/5).
+* **`meta["rank2_input"]`**, on every run and every channel, from the **one**
+  C++ definition the banner prints (`rank2_input_report`) — so the claim
+  cannot drift between the file and the log. Off the inclusive channel it says
+  where that channel's tensor signal actually lives instead of borrowing the
+  inclusive sentence.
+* **`meta["b1_model"]` and `meta["b1_unpol"]` = `"none (spin 3/2: no rank-2
+  input)"`** on such a run. The two **scales** stay numeric and stay at 1.0:
+  `validate()`'s Miller branch already refuses any other value there, so
+  neither can record a variation that did not run, and changing their type per
+  isotope would break every consumer that reads them as floats.
+* **Four run-surface defects.** F2: `make_plan` refuses the three spin-1-only
+  tensor plans at J ≠ 1 (two of them used to *build* a spin-1 plan), and the
+  `Pipeline` constructor now makes the run-plan-spin check on the inclusive
+  branch that the tagged branch has always made. F3: `spin32_populations`
+  prints the offending m and the **derived** domain. F4: a half-assigned
+  `ClusterPartialWave` throws instead of segfaulting. F5: the run banner
+  prints the fill's own moments, so `--plan helicity-flip --pzz 0.6` can no
+  longer look as if it set T = 0.6 when the max-entropy ladder gave 0.4.
+* **No b₁(⁷Li), in any form.** Nothing below is in the code.
+
+### 15.2 Why the b₁ is deferred, and what would unblock it
+
+The α–t construction is worked out, and it is **cleaner than ⁶Li's**: α is 0⁺
+and the triton is ½⁺, so parity plus L ⊗ ½ ∋ 3/2 leaves **L = 1 alone** — one
+partial wave, no interference, no node — and neither cluster carries rank-2, so
+**b₁(⁷Li) is 100 % orbital**. Leading estimate at Q² = 2.5 with the shipped
+`ToyF2`: b₁/nucleon = 1.246e−04 … 1.040e−04 over 0.05 ≤ x ≤ 0.70, i.e.
+**2.99 ± 0.02 × ⁶Li's orbital term** — *larger*, not suppressed. **Every number
+in this subsection was measured in `phase_D_li7_rank2.md` §§5–6 and is quoted
+from it; none of it was re-measured when this item was written, and none of it
+is in the code.**
+
+**What blocks it is not the algebra. It is the sign.** Swapping the
+unpolarised backend `ToyF2 → MSTW2008 LO` — the swap the A = 2 gate verdict
+(§10) tells you to make before quoting a ⁶Li number — **flips the sign of
+b₁(⁷Li) at four of six x points** and moves it by up to 348 %; a second
+in-tree decomposition (⁷Li = ⁶Li + n) gives the opposite sign and up to 8× the
+magnitude. Shipping that would publish a tensor asymmetry whose **direction is
+a flag**, and no band expresses it: the band would have to contain zero and
+both signs, at which point the number carries no information the loud zero
+does not.
+
+> **The unblocking decision is D2 below: one unpolarised backend, decided once
+> for both isotopes.** It is the same question `--b1-unpol` asks for ⁶Li, where
+> term (1) hides it; ⁷Li has nothing to hide it with.
+
+### 15.3 The deferred design, in full
+
+Write the α–t relative-momentum density in ion state M. One partial wave, so
+the Clebsch–Gordan sum collapses to a single Legendre coefficient — **exact**,
+for every k:
+
+        n_M(k, k̂) = |φ₁(k)|² · A_M(k̂)
+        A_M(k̂)   = Σ |⟨1 m_L ; ½ m_S | 3/2 M⟩|² |Y_{1 m_L}(k̂)|²
+                  = (1/4π) [ 1 − Q_NN(M) · P₂(cos θ_k) ]                    (1)
+
+with Q_NN(±3/2) = +1, Q_NN(±½) = −1 (`spin.hpp`; for J = 3/2 the plan's `pzz`
+field carries **T**, not P_zz). Eq. (1) **is** the repository's own ⁷Li
+polarimeter ⟨P₂⟩ = −T/5, which is a passing test today, and the identical CG
+procedure reproduces the code's shipped ⁶Li coefficients 4.242641 and 1.500000
+(`b1_nuclear.cpp`) — that is the load-bearing check on the normalisation.
+
+Light-cone densities, `LightConeDensities`' own prefactor and δ-function:
+
+        f_M(y)     = f₁(y) − Q_NN(M) · f₁^{P₂}(y)
+        f₁(y)      = pre ∫ k dk |φ₁|²          (unpolarised α–t density)
+        f₁^{P₂}(y) = pre ∫ k dk |φ₁|² P₂(c*)   (tensor density)             (2)
+
+and, matching F₁^{(M)} = F₁ − Q_NN b₁ per nucleon,
+
+> **b₁(⁷Li)(x, Q²) = (3/7) ∫ (dz/z) f₁^{P₂,t}(z) F₁^t(x/z, Q²)
+>                  + (4/7) ∫ (dz/z) f₁^{P₂,α}(z) F₁^α(x/z, Q²)**           (3)
+
+**Two terms, not ⁶Li's four**: there is no embedded spin-1 cluster, so ⁶Li's
+dominant term (1) and its CG-depolarisation term (3) have no ⁷Li counterpart.
+Kinematics {m_struck, m_recoil} = {M_t, M_α} and {M_α, M_t},
+ε = 2.467 MeV (`LI7_ALPHA_TAG().separation_energy`); counting factors **3/7 and
+4/7** replace ⁶Li's 2/6 and 4/6. Consistency check the implementation must
+report: struck-t : struck-α = 1 : 0.756 against the analytic
+[(4/7)/(3/7)]·(M_t/M_α)² = 0.757.
+
+**What transfers from `b1_nuclear.hpp`**: `ConvolutionKinematics` unchanged
+(only two masses and ε change; y_max = 1.6626 / 1.3761), the
+`LightConeDensities` quadrature unchanged (converged: doubling every grid moves
+b₁ by ≤ 0.05 %), `convolve` unchanged with `x_max_g = 1`, and Phase A's
+`r_func` decision (`r_sigma_lt`) — which **matters more** here, worth
+−9.66 % … −46.02 %, because *all* of b₁(⁷Li) is the orbital term that responds
+to the slope of R.
+
+**What must NOT transfer**: `LI6_B1_RANK2_TRANSFER` = 0.921947 — it is the
+tensor dilution of an *embedded spin-1 deuteron*, ⁷Li has no spin-1
+constituent, and the number that plays its role is the exact −1/5 of
+⟨P₂⟩ = −T/5. Phase A's per-nucleon table constants
+(`B1_CDKS_TABLE_TO_PER_NUCLEON`, `B1_MILLER_TABLE_TO_PER_NUCLEON`) **do not
+arise**: they reconcile two published *deuteron* tables and there is no ⁷Li
+table to reconcile. `LightConeDensities`' φ₀/φ₂ + SD/DD interface does not
+transfer either — there is no S–D interference to split, and reusing `f_d` /
+`f_d_p2` with the L = 1 wave in the φ₂ slot is numerically exact and
+semantically a lie (decision D8).
+
+**The nucleon input must be the run's own.** `--unpol-sf` (§14) already
+reaches every ⁷Li kernel — measured: σ ×0.795936 (`ct18nlo`) and ×0.791318
+(`mstw`) on the ⁷Li inclusive channel, ×0.792543 / ×0.788565 on tagged-⁷Li-α,
+with `meta` recording which — so the unpolarised backend a ⁷Li b₁ folds
+against **is** selectable today. `--pol-sf` reaches those same kernels, but
+only where the fill carries `lam_e · P_e ≠ 0`: on a tensor plan it is
+`not-read` and `meta` says so rather than naming a backend (§14, the
+knob-provenance table). Since b₁ is a tensor observable, that is the plan a
+⁷Li b₁ would be measured on — so a ⁷Li b₁ must take its polarised input from
+the field, never from `meta["pol_sf"]`, which is a label there. A `Li7AtConvolutionB1` must therefore share
+the kernel's own `f2_source` object exactly as the `Li6Convolution` branch
+does, and `validate()` must refuse the same mislabelling collision `--b1-unpol
+toy` under a non-toy `--unpol-sf` is refused for.
+
+### 15.4 Step 2, before any b₁: the A = 7 quadrupole gate
+
+**There is no A = 3 analogue of the A = 2 gate, and the reason is a selection
+rule**: the A = 3 analogue of α + t would be ³H or ³He, which are **J = ½** and
+have **no rank-2 structure function at all**. Nothing about the ⁷Li
+convolution can be validated by running it on a lighter system. That must be
+said in any header that ever ships this model.
+
+What *does* exist is a measured rank-2 observable of the same nucleus that the
+same wave function and the same CG coefficient predict with **no free
+parameter**. Both clusters have zero intrinsic quadrupole, so the whole of
+Q(⁷Li) is orbital:
+
+        Q = Z_eff ⟨r²⟩ ⟨3cos²θ − 1⟩_{M=3/2} = − (2/5) Z_eff ⟨r²⟩
+        Z_eff = Z_α (M_t/M₇)² + Z_t (M_α/M₇)² = 0.695075                    (4)
+
+From `momenta/li7_at3.momentum` by Fourier–Bessel the research measured (there,
+not here) ⟨r²⟩ = 12.5348 fm² and **Q = −3.4851 fm²** (converged to 0.1 % in r_max, ±0.3 %
+on the VMC MC band), against a measured −4.00(3) fm² → **ratio 0.871** — an
+order of magnitude better than the ⁶Li sign gate's factor 4.08.
+
+**It was not committed here, and the reason is a rule, not effort.** The
+measured Q(⁷Li) is **not in this tree** (there is no `LI7_QUADRUPOLE_FM2`
+beside `LI6_QUADRUPOLE_FM2`), and the research note quotes it *from memory of
+the standard compilations*, saying itself that it "must be sourced before it
+is committed". A gate whose reference number nobody verified against a source
+is not a gate. **Author action:** supply the source, then this is ~20 lines
+and one constant, and it should land whether or not the b₁ ever does — it is
+the only quantitative check the ⁷Li α–t input has ever had, and it validates
+the wave function `li7_vmc_waves` already ships to the tagged channel. Record
+the −4.06 fm² alternative beside it: it moves the ratio 0.871 → 0.858.
+
+Its honest limits, to travel with it: S_αt = 1.0084 > 1 proves the α–t overlap
+is **not a probability**, and the missing 13 % is the expected size of cluster
+distortion and non-α–t components; and it gates ⟨r²⟩ and the P-wave character,
+**not** the light-cone convolution or the DIS input, which is where the real
+uncertainty lives.
+
+### 15.5 The author decisions this needs
+
+| # | decision | what is at stake |
+|---|---|---|
+| **D1** | **Which decomposition** — α + t (S = 1.008, purely orbital) or ⁶Li + n (S = 0.682, carries a core b₁) | They disagree in **sign** and by up to 8×, and they are non-orthogonal, so summing them double counts. α + t is the one already in the C++ (`li7_vmc_waves`, `li7_alpha_channel`), the one with a k-space table, and the one with a quadrupole gate |
+| **D2** | **The unpolarised backend the convolution folds against** — `ToyF2` or MSTW2008 LO | **Decides the sign** at four of six x points. This is the blocker, and it should be settled **once, for both isotopes**, not twice |
+| **D3** | **The normalisation target** — renormalise to S_αt = 1.0084, or to 1 | 0.83 % numerically, so a **provenance** decision, not a magnitude one; but "the file's own S" and "1" are different claims about ⁷Li, and S > 1 means the ⁶Li rule ("the non-α–d 18 % is given b₁ = 0") has no ⁷Li form |
+| **D4** | **F₁ of the triton** — isoscalar (the ⁶Li shortcut) or the true Z = 1, N = 2 | 0.6 … 8.6 %. ⁶Li's `f1_alpha_ = f1_d_` is *correct* for a deuteron and **wrong** here; copying it would be a silent error, not a documented approximation. `triton_sf.hpp` already exists |
+| **D5** | **κ: CDKS Eq. (17) or Eq. (21)** | +0.35 … **+69 %** here against −1 … +7 % on ⁶Li. The ⁶Li default's stated justification ("the term κ multiplies is the small orbital one") **inverts** for ⁷Li, where it is the only term |
+| **D6** | **Which A_zz** — `A_T` = −b₁/F₁ or `A_zz^{(3/2)}` = −(2/3) b₁/F₁ | A factor 3/2, and the spin-1 `azz()`'s explicit `2.0/3.0` has **no J = 3/2 counterpart**. Must be chosen before any ⁷Li tensor number is published |
+| **D7** | **`ClusterPartialWave` refuses odd L** | For a single wave the i^L phase is unobservable, so the refusal protects nothing — but the **type** must be taught that rather than worked around |
+| **D8** | **`LightConeDensities`' interface** | Its φ₀/φ₂ + SD/DD shape is an A = 2 / ⁶Li shape. A first-class ⁷Li needs an L-generic alignment slot or an explicit `alignment_coefficient` (1 for L = 1 / S = ½ / J = 3/2; 1.5 and 6/√2 for ⁶Li's DD and SD), which would also let the ⁶Li coefficients be **derived** instead of hard-coded |
+| **D9** | **b₂_32** | Silence means 2x·b₁ by default; state it rather than inherit it |
+| **D10** | **Δ_32 (cos 2φ)** | Filling `b1_32_func` alone leaves cos 2φ at zero. There is **no ⁷Li Δ model**; reusing ⁶Li's toy means adopting an arbitrary 1e−2 scale for a second nucleus — and 3·Q_NN = ±3 at J = 3/2 against ±1/−2 at spin 1, so the same Δ gives a **larger** ⁷Li amplitude |
+| **D11** | **Q(⁷Li) is not in the tree** | §15.4. One constant, with a real source, and the −4.00(3) vs −4.06 spread recorded |
+| **D12** | **The run-plan surface** | There is no J = 3/2 tensor plan. The honest one is the **two-state T = +1 / T = −1 contrast**, not a thirds pattern — and at J = 3/2 the pure-alignment fill is rank-3 clean by construction |
+| **D13** | **`--pzz` on `helicity-flip`** (new, F5) | It is silently not read: `use_explicit_pzz` stays false and the fill comes from the max-entropy ladder at `--pz` (T = 0.4, not the 0.6 typed). Honouring it would **move a shipped fill**, so nothing was changed; the banner now prints the fill's own moments. Options: honour it (a number change), refuse it, or leave it documented |
+
+### 15.6 One thing not to do
+
+Do **not** reuse `LI6_B1_RANK2_TRANSFER` = 0.921947 for ⁷Li. It is
+1 − (9/10)·P_D(α–d), the tensor dilution of an *embedded spin-1 deuteron*
+inside an L = 2 component. ⁷Li has no spin-1 constituent; the number that
+plays the analogous role is the −1/5 of ⟨P₂⟩ = −T/5, and it is **exact**
+rather than model-dependent.

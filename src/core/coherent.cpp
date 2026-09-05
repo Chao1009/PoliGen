@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <cstdio>
+#include <limits>
 #include <stdexcept>
 
 #include "lipolgen/constants.hpp"
@@ -201,6 +202,16 @@ double CoherentScenario::cos2phi_coefficient(double t_abs, double pzz) const {
 
 double CoherentScenario::positivity_margin(double t_max, double pzz) const {
   return 1.0 - std::fabs(cos2phi_coefficient(t_max, pzz));
+}
+
+double CoherentScenario::t_positivity_edge(double pzz) const {
+  // c_2(|t|) = A |t| + C, exactly as `cos2phi_coefficient` builds it.
+  const double a = -0.5 * pzz * eps_b0 * slope_b;
+  const double c = amp * pzz;
+  if (std::fabs(c) >= 1.0) return 0.0;      // not a density even at |t| = 0
+  if (a == 0.0) return std::numeric_limits<double>::infinity();
+  const double edge = (1.0 - (a > 0.0 ? c : -c)) / std::fabs(a);
+  return edge > 0.0 ? edge : 0.0;
 }
 
 CoherentRecoil recoil_lab(double t_abs, double phi_t, double p_per_nucleon,

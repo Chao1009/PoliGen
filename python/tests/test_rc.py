@@ -247,7 +247,12 @@ def test_meta_records_every_rc_knob_that_moves_a_column(rc_run):
         "rc_clipped_band_event_fraction", "rc_clipped_tail_event_fraction",
     }
     assert meta["rc_c0_shape"] == "ho"
-    assert meta["rc_scope"] == "tensor-rate"
+    # `rc_scope` carries the LABEL under this fixture's `tensor_thirds_plan`,
+    # whose categories sit at theta_S = 0 where the two scopes are one run
+    # (test_meta_distinguishes_a_tensor_all_no_qe_run measures it).  The name
+    # goes in wherever the knob is read.
+    assert meta["rc_scope"] == meta["knob_provenance"]["rc_scope"]["label"]
+    assert meta["knob_provenance"]["rc_scope"]["value"] == "tensor-rate"
     assert meta["rc_with_qe_tail"] is True
     assert meta["rc_tail_model"] == "t-peak"
     assert meta["rc_n_eta"] == defaults.n_eta
@@ -255,17 +260,46 @@ def test_meta_records_every_rc_knob_that_moves_a_column(rc_run):
 
 
 def test_meta_distinguishes_a_tensor_all_no_qe_run(rc_run):
-    """The two knobs the numeric block could not see, each written down."""
+    """The two knobs the numeric block could not see, each written down --
+    and `rc_scope` only where it RAN.
+
+    2026-09-05.  This test used to set `scope = TensorAll` under
+    `tensor_thirds_plan` and assert `meta["rc_scope"] == "tensor-all"` and
+    "it really is a different file, not only a different label" -- while
+    checking only the label.  It is NOT a different file there: `TensorAll`
+    differs from `TensorRate` only in the cos 2phi amplitude, which
+    `tensor_amplitudes` builds with a sin^2(theta_S) factor, and every
+    `tensor_thirds_plan` category sits at theta_S = 0.  Measured (400 events,
+    seed 7, inclusive 6Li): bit-identical in all 47 columns and every sigma.
+    So the knob-provenance table calls it NOT READ under that plan and
+    `meta["rc_scope"]` carries the label; under `transverse_tensor_plan`
+    (theta_S = pi/2) it runs, the file moves, and the name goes in.
+    """
     _, base = rc_run
+    # (a) theta_S = 0: it did NOT run, and the file says so.
     cfg = _cfg("tensor-band")
     cfg.rc_options.scope = _l.RcScope.TensorAll
     cfg.rc_options.with_qe_tail = False
-    p = lg.Pipeline(cfg, lg.tensor_thirds_plan(0.0, 0.6))
-    meta = p.generate(0)["meta"]
-    assert meta["rc_scope"] == "tensor-all"
+    flat = lg.Pipeline(cfg, lg.tensor_thirds_plan(0.0, 0.6))
+    meta = flat.generate(0)["meta"]
     assert meta["rc_with_qe_tail"] is False
-    # ... and it really is a different file, not only a different label.
-    assert meta["rc_scope"] != base["meta"]["rc_scope"]
+    row = meta["knob_provenance"]["rc_scope"]
+    assert row["status"] == "not-read"
+    assert meta["rc_scope"] == row["label"] != "tensor-all"
+    # ... and the run really is bit for bit the tensor-rate one, which is why.
+    ref = _cfg("tensor-band")
+    ref.rc_options.with_qe_tail = False
+    flat0 = lg.Pipeline(ref, lg.tensor_thirds_plan(0.0, 0.6)).generate(0)
+    for k in export.RC_KEYS:
+        assert np.array_equal(flat.generate(0)[k], flat0[k]), k
+
+    # (b) theta_S = pi/2: it DID run, and now the name goes in.
+    tilt = _cfg("tensor-band")
+    tilt.rc_options.scope = _l.RcScope.TensorAll
+    tmeta = lg.Pipeline(tilt, lg.transverse_tensor_plan(0.6)).generate(0)["meta"]
+    assert tmeta["rc_scope"] == "tensor-all"
+    assert tmeta["knob_provenance"]["rc_scope"]["status"] == "read"
+    assert tmeta["rc_scope"] != base["meta"]["rc_scope"]
 
 
 def test_m_lepton_is_reserved_and_refused_on_the_shipped_tail():

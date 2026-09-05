@@ -13,6 +13,45 @@
 - Every double compared to `polligen` is compared at rtol 1e-12 unless the reference itself is MC.
 - No exceptions for control flow in the event loop; errors in setup throw `std::runtime_error`.
 
+## A knob that did not run may not be recorded as if it had
+
+**The rule.** If a selector, scale or switch cannot affect *this* run's output,
+the run may not write its value into the npz `meta` or print it in the banner
+as though it had. It is either **refused** or **labelled**, never silent and
+never bare.
+
+**The mechanism, and there is exactly one.**
+`Pipeline::knob_provenance(KnobRunContext)` (`include/lipolgen/pipeline.hpp`)
+returns one row per user-settable knob — `{name, flag, value, status ∈ {read,
+not-read, refused}, reason, label, at_default}` — and the three surfaces read
+that table and nothing else: `meta["knob_provenance"]` plus the individual keys
+that carry a label (`pol_sf`, `rc_scope`, `coherent_t2`, `pom_set`,
+`pom_rescale`), the CLI's `KNOB PROVENANCE` banner block
+(`cli.knob_provenance_lines`), and `python/tests/test_knob_provenance.py`,
+which rebuilds the (channel × plan × knob) matrix and asserts the table against
+the **output hash**. **A knob added without a row fails that test.** Do not add
+a per-knob reach sentence to the banner or a bare per-knob key to the `meta`:
+add the row.
+
+**Refuse or label — the criterion, once.** REFUSE when the value would name a
+*variation of a piece that did not run* (a scale, a band edge or a shape on a
+term the run computes as identically 1): such a value claims a systematic was
+PRICED, and no label makes a priced systematic un-priced — `b1_band_scale` on
+the Miller branch, `rc_qe_tensor_scale` without the quasi-elastic tail, every
+rc tail sub-knob on a tagged channel. LABEL when it names a *backend, an axis
+or a member of a family that a channel-, plan- or set-scan sets uniformly
+across runs*: refusing one cell of such a scan costs more than it buys —
+`--pol-sf` on coherent and under the unpolarised-beam plans, `--pzz` under
+`helicity-flip`, `--pom-set` off the coherent channel. A rule that depends on
+the RUN PLAN can only be labelled: `validate()` has no plan (`rc_scope` under a
+θ_S = 0 fill).
+
+Why it needs a mechanism at all: the rule was enforced knob by knob and then
+broke five times in one run, each time on an axis the previous fix had not
+looked at — the channel, the run plan, the T2 tier, the rc sub-knobs, and
+knobs recorded nowhere at all
+(`docs/open_items/run_2026-09-03/phase_D_numbers.md` §D6).
+
 ## Physics defaults that are a CHOICE, and where the single copy lives
 
 - **Tensor-sector sign.** `TENSOR_LL_SIGN = -1.0` since 2026-08-29 (author
@@ -226,11 +265,21 @@
   **2400 / 2400 / 3200** three-segment grid (the design's 600 / 2400 / 800 was
   2.3 % out on the struck-deuteron orbital term at x = 0.1, because that
   constituent's z-width scales with M_α/M_d = 1.987).
-- **Coherent |t| range.** `COHERENT_T_MAX_DEFAULT = 0.2 GeV²`.  The cos 2φ
-  coefficient is linear and unbounded in |t| and crosses −1 at |t| = 0.245 for
-  P_zz = −2, so a larger range makes the azimuthal weight negative;
-  `CoherentSampler` checks `CoherentScenario::positivity_margin` at SETUP and
-  throws, mirroring `InclusiveKernel::positivity_margin`.
+- **Coherent |t| range.** `COHERENT_T_MAX_DEFAULT = 0.2 GeV²`, and it STAYS
+  0.2.  Since 2026-09-04 the reason is the **anchor range**:
+  `mantysaari_a2_deuteron()` is digitized over |t| ≤ 0.30 in four rows and is
+  linear in |t| only as |t| → 0, so 0.2 is inside the input and 0.5 is not.
+  That reason is a property of the input table and does not move with
+  `CoherentScenario::eps_b0`.  The **second** reason is contingent and must be
+  quoted as such: the cos 2φ coefficient is linear and unbounded in |t| and
+  crosses −1 at |t| = 0.245 for P_zz = −2 — a number now DERIVED by
+  `CoherentScenario::t_positivity_edge` rather than repeated, and one that
+  becomes 2.80 GeV² at the measured ⁶Li quadrupole — three figures, because
+  that is arithmetic on a ROUNDED `eps_b0` = −0.0070 (the derived −0.0070024
+  gives 2.7990); never write 2.8000 — i.e. 9.3× outside the anchor.  `CoherentSampler` still checks `CoherentScenario::positivity_margin`
+  at SETUP and throws, mirroring `InclusiveKernel::positivity_margin`: that is
+  the GUARD on the truncated weight the sampler uses, not the derivation of
+  the constant.
 - **Coherent x_P.** Per-nucleon pomeron fraction,
   `x_P = (M_X² + Q²)/(W² + Q²)` with the per-nucleon W², drawn log-uniform on
   `[x_P(M_X,min), 0.1]`; the nucleus loses `x_P/A` of its own light-cone
@@ -323,11 +372,23 @@
   `--fsi-sigma-mb`) is the free hadron, 20 mb the formation-length end; run
   both.  The survival probability (∫w dΓ/∫dΓ ≈ 0.52 at 40 mb on the ⁶Li α
   tag) is logged by the run summary and exposed as
-  `Pipeline::fsi_weight()->survival()`.  Variant (a) `GlauberCluster`
+  `Pipeline::fsi_weight()->survival()`, and since 2026-09-04 the whole FSI
+  block is in the npz `meta` (`fsi`, `fsi_sigma_mb`, `fsi_sigma_cluster_mb`,
+  `fsi_sigma_cluster_el_mb`, `fsi_survival`, …) — without it the two ends of
+  the mandatory band were indistinguishable files, which is the same failure
+  the `b1_*` block exists to prevent.  Variant (a) `GlauberCluster`
   shadows σ_Xα over the α's own profile (131.0 mb at σ_XN = 40, not
   4 × 40); variant (b) `GlauberNucleon` is the unshadowed A σ_XN = 160 mb
   single-scattering bracket — a POINTWISE low-k bracket, not an integrated
-  one (its survival lands above (a)'s; `fsi.hpp` header).  The weight table
+  one (its survival lands above (a)'s; `fsi.hpp` header).  **The two are NOT
+  one**, which the open-items inventory claimed until 2026-09-04: measured on
+  ONE event stream reweighted both ways — `--channel tagged-6Li-alpha
+  --events 20000 --seed 1234`, `tensor-thirds` at P_z = 0.7 / P_zz = 0.6 /
+  P_e = 0.7, at the default σ_XN = 40 mb, with `k`, `cos_theta_k`, `phi_k`,
+  `x` and `q2` bit-identical across the three runs — they differ on
+  **99.50 %** of events (Σw 10419.07 vs 11632.10, integrated survival 0.520954
+  vs 0.581605) and by up to a factor **68.52** per event.  Quote that window
+  with the two numbers; the whole claim is about one stream and one σ_XN.  The weight table
   is built on a (k_z, k_T) grid — a deliberate deviation from the design
   note's literal (k, cos θ_k): the eikonal kernel transfers k_T only, so the
   table is smooth and even in k_z there — and read per event by bilinear

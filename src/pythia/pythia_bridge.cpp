@@ -318,7 +318,9 @@ void PythiaBridge::Impl::configure(Pythia8::Pythia& py, bool is_pomeron) {
   set("Next:numberShowEvent = " + std::string(opt.verbosity > 1 ? "1" : "0"));
   if (opt.verbosity < 1) set("Print:quiet = on");
   // The Pomeron parton densities.  6 (H1 2006 Fit B, LO) is PYTHIA's own
-  // default and the only LO Q^2-dependent set; it is set explicitly so the
+  // default and the only LO *H1* set (12 and 13 are LO GKG18; this comment
+  // said "the only LO Q^2-dependent set" until 2026-09-04); it is set
+  // explicitly so the
   // record of what was run is complete and a PYTHIA default change cannot
   // silently move the coherent flavour draw.  On the nucleon instances these
   // two lines would be inert, so they are simply not applied there.
@@ -594,15 +596,34 @@ bool PythiaBridge::Impl::run(Event& ev, Rng& rng) {
     // e_q^2 x f_q weight is zero there and the event would be vetoed for a
     // bookkeeping reason rather than a physical one, so fall back to the
     // bare charge weights e_q^2 -- the flavour-democratic limit of the same
-    // formula -- over the LIGHT flavours ONLY.  The H1 LO grids carry no
-    // charm or bottom at ANY (beta, Q^2) (xf == 0 identically), so
+    // formula -- over the LIGHT flavours ONLY.  ALL THREE H1 2006 grids carry
+    // no charm or bottom at ANY (beta, Q^2) (xf == 0 identically) -- Fit A
+    // NLO (set 3) and Fit B NLO (4) exactly as much as Fit B LO (6), because
+    // all three are PYTHIA's one `PomH1FitAB` class and its `xfUpdate`
+    // assigns xc = xcbar = xb = xbbar = 0. unconditionally
+    // (PartonDistributions.cc:2630; this comment said "the H1 LO grids"
+    // until 2026-09-04, which was true but too narrow) -- so
     // e_q^2 x f_q gives the heavy flavours zero weight everywhere and the
     // democratic limit must not resurrect them: before this restriction ~7 %
     // of a default coherent sample came out charm-initiated -- open-charm
     // diffractive final states with zero PDF support, every one on this
     // branch (the prototype's pool, pom_dis.cc, was light-only).  PYTHIA's
-    // own backward evolution then still finds the gluon.  Counted, so the
-    // fallback share of a run is visible.
+    // own backward evolution then still finds the gluon.
+    //
+    // COUNTED, AND SINCE 2026-09-04 ACTUALLY VISIBLE (D4.7): the counter had
+    // been surfaced nowhere -- not in the npz `meta`, not in the run banner.
+    // It is now in both.  And MEASURED (D4.6, 4 000 coherent events per
+    // point at 6Li config 1, seed 4242), it costs exactly zero: raising
+    // `q2_pdf_min` to 1.75 drives the fallback to 0.00 % (sets 6 and 3) or a
+    // few per cent (12, 13, 15) -- EXCEPT on `pom_set` 4, H1 2006 Fit B NLO,
+    // where it only falls 35.52 % -> 29.32 % and a residual quarter of the
+    // sample stays on this branch -- and leaves the final state
+    // BIT-IDENTICAL in every one of those cases, set 4 INCLUDED, which is
+    // why that residual costs nothing either.  The reason is structural:
+    // every Pomeron DPDF PYTHIA ships carries a single light-quark singlet,
+    // so e_q^2 x f_q is proportional to e_q^2 exactly over the light
+    // flavours and this "fallback" IS the true draw.  See
+    // `PythiaBridgeStats::n_pom_flavour_fallback`.
     if (id_n == 990 && nfl > 0) {
       for (int i = 0; i < nfl; ++i) {
         wgt[i] = (std::abs(ids[i]) <= 3) ? eq2s[i] : 0.0;
@@ -817,6 +838,27 @@ PythiaBridge::PythiaBridge(const BeamConfig& beams, PythiaBridgeOptions opt)
     throw std::runtime_error("PythiaBridge: electron_energy must be positive");
   if (!(impl_->opt.headroom >= 1.0))
     throw std::runtime_error("PythiaBridge: headroom must be >= 1");
+  // PDF:PomSet = 11 is REFUSED when the Pomeron instance is built, for the
+  // reason `PipelineConfig::validate` refuses any knob that would be recorded
+  // without having run.  Set 11 is PYTHIA's `PomHISASD` (a rescaled proton,
+  // Angantyr), and it returns its densities only after `setXPom(xPomNow)`,
+  // which this bridge never calls -- there is no Angantyr collision system
+  // here to supply x_P to the PDF object.  MEASURED, 20 000 coherent events
+  // at 6Li config 1: n_pom_flavour_fallback = 20000 / 20000, i.e. 100.00 %
+  // -- the Pomeron PDF is not consulted on a single event and the whole run
+  // is the charge-democratic e_q^2 fallback, while `meta["pom_set"]` would
+  // say 11.  Use any of 1-10 or 12-15 (12-15 are the GKG18 grids), or turn
+  // the tier off with `coherent_t2 = Off`.
+  if (impl_->opt.coherent_t2 == CoherentT2::Pomeron &&
+      impl_->opt.pom_set == 11) {
+    throw std::runtime_error(
+        "PythiaBridge: PDF:PomSet = 11 (PomHISASD, the Angantyr rescaled "
+        "proton) needs PYTHIA's setXPom(x_Pom), which this bridge never "
+        "calls -- measured, 100.00 % of coherent events fall back to the "
+        "charge-democratic e_q^2 weights and the Pomeron PDF is never "
+        "consulted, so recording pom_set = 11 would record a knob that did "
+        "not run.  Pick a fitted set (1-10, 12-15) or set coherent_t2 = Off.");
+  }
   impl_->f2 = impl_->opt.f2_source
                   ? impl_->opt.f2_source
                   : std::static_pointer_cast<const UnpolSF>(

@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <map>
 #include <string>
 #include <vector>
@@ -918,9 +919,13 @@ TEST_CASE("T10b Delta B is defined, and eps_b0 = -0.08 is a deuteron number") {
                           / sc.slope_b;
   const double eps_mod = a2_from_quadrupole(2.0 * band[2], 6, 1.0, 1) * -4.0
                          / sc.slope_b;
-  CHECK_CLOSE(eps_meas, -0.0070023, 1e-4);
-  CHECK_CLOSE(eps_gfmc, -0.0171209, 1e-4);
-  CHECK_CLOSE(eps_mod, -0.0526853, 1e-4);
+  // Measured 2026-09-05 at the defaults (B = 50): the three DERIVED eps_b0.
+  // The docs' tables round these to -0.0070 / -0.0171 / -0.0527 and do their
+  // arithmetic on the rounded values -- which is why "2.8000" is not a
+  // publishable digit count and "2.80" is (`t_positivity_edge`).
+  CHECK_CLOSE(eps_meas, -0.0070024, 1e-4);
+  CHECK_CLOSE(eps_gfmc, -0.0171207, 1e-4);
+  CHECK_CLOSE(eps_mod, -0.0526846, 1e-4);
   // the shipped default sits 1.52x ABOVE the top of that band ...
   CHECK(std::fabs(sc.eps_b0) > std::fabs(eps_mod));
   CHECK_CLOSE(sc.eps_b0 / eps_mod, 1.5185, 2e-3);
@@ -939,12 +944,84 @@ TEST_CASE("T10b Delta B is defined, and eps_b0 = -0.08 is a deuteron number") {
                     / q_charge,
                 b / sc.slope_b, 1e-12);
   }
-  // (7) COHERENT_T_MAX_DEFAULT is a consequence of (4), not of the target.
-  // |c_2| = 1 at P_zz = -2 sits at |t| = (2 amp - 1)/(eps_b0 B).
-  const double t_pos = (2.0 * sc.amp - 1.0) / (sc.eps_b0 * sc.slope_b);
-  CHECK_CLOSE(t_pos, 0.245, 1e-9);
-  CHECK(COHERENT_T_MAX_DEFAULT < t_pos);
+  // (7) The POSITIVITY EDGE is a consequence of (4), not a property of 6Li,
+  // and since 2026-09-04 it is DERIVED by `t_positivity_edge` rather than
+  // retyped as a closed form here (D5).  It is no longer the stated reason
+  // for COHERENT_T_MAX_DEFAULT -- see (8) below and the constant's own
+  // comment -- but it is still what `check_positivity` guards.
+  CHECK_CLOSE(sc.t_positivity_edge(-2.0), 0.245, 1e-12);
+  CHECK(COHERENT_T_MAX_DEFAULT < sc.t_positivity_edge(-2.0));
   CoherentScenario meas = sc;
   meas.eps_b0 = eps_meas;
-  CHECK((2.0 * meas.amp - 1.0) / (meas.eps_b0 * meas.slope_b) > 2.7);
+  // At the MEASURED 6Li quadrupole the edge is 2.80 GeV^2, 9.3x outside the
+  // |t| <= 0.30 the deformation input is digitized over: positivity stops
+  // binding the moment eps_b0 is corrected.  The literal here is the DERIVED
+  // value 2.7990 (eps_meas = -0.0070024 above), not the 2.8000 the docs'
+  // tables get from the ROUNDED eps_b0 = -0.0070; both round to the same
+  // "2.80 GeV^2", which is all three figures of the rounded input support.
+  // (This read 2.7991 until 2026-09-05 -- inside the 1e-3 tolerance, but one
+  // unit wrong in the digit it printed.)
+  CHECK_CLOSE(meas.t_positivity_edge(-2.0), 2.7990, 1e-3);
+  CoherentScenario mod = sc;
+  mod.eps_b0 = eps_mod;
+  CHECK_CLOSE(mod.t_positivity_edge(-2.0), 0.37202, 1e-4);
+  // (8) ... and the reason that DOES survive a change of eps_b0 is the
+  // anchor range: `mantysaari_a2_deuteron` is digitized to |t| <= 0.30, and
+  // 0.2 is inside it while every one of the three quadrupole rows above puts
+  // the positivity edge somewhere else entirely.
+  double t_anchor_max = 0.0;
+  for (const MantysaariRow& r : mantysaari_a2_deuteron())
+    t_anchor_max = std::max(t_anchor_max, r.t_abs);
+  CHECK(t_anchor_max == 0.30);
+  CHECK(COHERENT_T_MAX_DEFAULT < t_anchor_max);
+  for (double e : {sc.eps_b0, eps_mod, eps_gfmc, eps_meas}) {
+    CoherentScenario v = sc;
+    v.eps_b0 = e;
+    CHECK(COHERENT_T_MAX_DEFAULT < v.t_positivity_edge(-2.0));
+  }
+  CHECK(meas.t_positivity_edge(-2.0) > 9.0 * t_anchor_max);
+}
+
+// D5.  `t_positivity_edge` in its own right: it must reproduce the zero of
+// `positivity_margin` for every sign combination, not only the shipped one,
+// and it must SAY what happens in the degenerate cases rather than return a
+// plausible-looking number.
+TEST_CASE("coherent: t_positivity_edge is the zero of positivity_margin") {
+  const double inf = std::numeric_limits<double>::infinity();
+  for (double eps : {-0.08, -0.0070, +0.05, +0.13}) {
+    for (double b : {33.1, 50.0}) {
+      for (double amp : {0.0, 0.01, -0.02}) {
+        for (double pzz : {-2.0, -0.6, 0.6, 1.0}) {
+          CoherentScenario v;
+          v.eps_b0 = eps;
+          v.slope_b = b;
+          v.amp = amp;
+          const double edge = v.t_positivity_edge(pzz);
+          REQUIRE(std::isfinite(edge));
+          REQUIRE(edge > 0.0);
+          // AT the edge the margin is zero, and it is positive strictly
+          // inside and negative strictly outside -- i.e. this is the FIRST
+          // crossing, which is what a ceiling has to be.
+          CHECK_CLOSE_AT(v.positivity_margin(edge, pzz), 0.0, 0.0, 1e-12);
+          CHECK(v.positivity_margin(0.999 * edge, pzz) > 0.0);
+          CHECK(v.positivity_margin(1.001 * edge, pzz) < 0.0);
+        }
+      }
+    }
+  }
+  // Degenerate: c_2 constant in |t| (P_zz = 0, or eps_b0 = 0, or B = 0) --
+  // the weight never stops being a density, so the edge is infinite.
+  CoherentScenario z;
+  CHECK(z.t_positivity_edge(0.0) == inf);
+  CoherentScenario flat = z;
+  flat.eps_b0 = 0.0;
+  CHECK(flat.t_positivity_edge(-2.0) == inf);
+  // ... unless the FLAT term alone already exceeds 1, in which case the
+  // weight is not a density anywhere and the edge is 0, not infinity.
+  flat.amp = 0.6;
+  CHECK(flat.t_positivity_edge(-2.0) == 0.0);
+  CoherentScenario over = z;
+  over.amp = 0.75;                       // |amp P_zz| = 1.5 at P_zz = -2
+  CHECK(over.t_positivity_edge(-2.0) == 0.0);
+  CHECK(over.positivity_margin(0.0, -2.0) < 0.0);
 }

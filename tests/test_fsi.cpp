@@ -15,6 +15,7 @@
 
 #include <cmath>
 #include <cstdio>
+#include <algorithm>
 #include <memory>
 #include <vector>
 
@@ -279,6 +280,86 @@ TEST_CASE("fsi: GlauberNucleon is the POINTWISE bracket, not the integrated one"
   CHECK(fn.survival() > fc.survival());
   MESSAGE("survival: nucleon " << fn.survival() << " vs cluster "
                                << fc.survival());
+}
+
+// D3.  The inventory carried "the per-nucleon Glauber FSI variant is
+// algebraically identical to the cluster one -- the two 'variants' are one".
+// It is not: (a) shadows and (b) does not, and the identity that DOES hold
+// (the Ciofi-Kaptari per-nucleon product on an uncorrelated density collapses
+// onto (a)) is about a code path this file does not have.  Pinned on GENERATED
+// EVENTS, not on the profile alone, so the claim cannot come back.
+TEST_CASE("fsi: the two variants differ on essentially every event") {
+  PipelineConfig cfg;
+  cfg.channel = PipelineChannel::TaggedLi6Alpha;
+  cfg.isotope = "6Li";
+  cfg.beam_config = 1;
+  cfg.n_events = 4000;
+  cfg.seed = 1234;
+  cfg.grid.nx = 40;
+  cfg.grid.nq2 = 28;
+  const RunPlan plan = tensor_thirds_plan(0.7, 0.6);
+
+  PipelineConfig cfg_c = cfg, cfg_n = cfg;
+  cfg_c.fsi = PipelineFsi::GlauberCluster;
+  cfg_n.fsi = PipelineFsi::GlauberNucleon;
+  const Pipeline off(cfg, plan), pc(cfg_c, plan), pn(cfg_n, plan);
+
+  // The profiles: shadowed 131.0 mb against the unshadowed A sigma_XN = 160.0,
+  // and the elastic (gain) term differs by nearly a factor two.
+  const GlauberFsiWeight& wc = *pc.fsi_weight();
+  const GlauberFsiWeight& wn = *pn.fsi_weight();
+  CHECK_CLOSE_AT(wc.sigma_cluster_mb(40.0), 131.045, 0.0, 1e-2);
+  CHECK_CLOSE_AT(wn.sigma_cluster_mb(40.0), 160.006, 0.0, 1e-2);
+  CHECK_CLOSE_AT(wc.sigma_cluster_el_mb(40.0), 35.224, 0.0, 1e-2);
+  CHECK_CLOSE_AT(wn.sigma_cluster_el_mb(40.0), 68.186, 0.0, 1e-2);
+  CHECK_CLOSE_AT(wc.survival(), 0.520239, 0.0, 1e-5);
+  CHECK_CLOSE_AT(wn.survival(), 0.582899, 0.0, 1e-5);
+
+  // ONE event stream reweighted three ways: the kinematics are bit-identical
+  // (the weight moves nothing), so the weight difference is the whole of it.
+  Event ea, eb, ec;
+  std::uint64_t n = 0, n_differ = 0;
+  double sum_off = 0.0, sum_c = 0.0, sum_n = 0.0;
+  double r_lo = 1e300, r_hi = 0.0;
+  for (std::uint64_t i = 0; i < off.size(); ++i) {
+    off.event(i, ea);
+    pc.event(i, eb);
+    pn.event(i, ec);
+    REQUIRE(ea.kin.k == eb.kin.k);
+    REQUIRE(ea.kin.k == ec.kin.k);
+    REQUIRE(ea.kin.cos_theta_k == ec.kin.cos_theta_k);
+    REQUIRE(ea.kin.x == ec.kin.x);
+    REQUIRE(ea.kin.q2 == ec.kin.q2);
+    sum_off += ea.weight;
+    sum_c += eb.weight;
+    sum_n += ec.weight;
+    const double r = ec.weight / eb.weight;
+    r_lo = std::min(r_lo, r);
+    r_hi = std::max(r_hi, r);
+    if (std::fabs(r - 1.0) > 0.01) ++n_differ;
+    ++n;
+  }
+  REQUIRE(n == 4000);
+  MESSAGE("sum w: off " << sum_off << ", cluster " << sum_c << ", nucleon "
+                        << sum_n << "; ratio in [" << r_lo << ", " << r_hi
+                        << "], differing by >1 % on "
+                        << 100.0 * static_cast<double>(n_differ) / n << " %");
+  // The integrated survivals bracket in the direction the header says they do
+  // (the unshadowed quadratic term feeds strength BACK into the tag), and the
+  // total rate differs by tens of percent, not by rounding.
+  CHECK(sum_c / sum_off < 0.56);
+  CHECK(sum_n / sum_off > 0.56);
+  CHECK(sum_n > 1.1 * sum_c);
+  // ... and the per-event ratio spans more than an order of magnitude, with
+  // essentially every event moved.  Measured through the pipeline at
+  // tagged-6Li-alpha, 20 000 events, seed 1234, tensor-thirds at
+  // pz = 0.7 / pzz = 0.6 / pe = 0.7, sigma_XN = 40 mb (the default, one end
+  // of the mandatory 20-40 mb band): 99.50 % differ by more than 1 % and the
+  // ratio reaches 68.52.  This case reproduces the SHAPE of that at reduced
+  // statistics; the quoted percentages belong to the 20 000-event run.
+  CHECK(r_lo < 0.9);
+  CHECK(r_hi > 5.0);
+  CHECK(static_cast<double>(n_differ) / n > 0.98);
 }
 
 TEST_CASE("fsi: the formation ramp interpolates sigma_XN in W") {

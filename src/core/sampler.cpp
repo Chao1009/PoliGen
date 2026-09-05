@@ -224,11 +224,39 @@ const InclusiveSampler::StateTables& InclusiveSampler::build_state(
                                                with_perp_);
     const double den = 1.0 + amp.w_avg;
     if (!(den > 0.0)) {
-      char msg[256];
+      // NAME THE CELL AND THE CURE.  This is a CONFIGURATION-TIME refusal --
+      // it fires while the `Pipeline` is being built, before a single event
+      // is drawn -- and the thing the caller has to change is the acceptance
+      // WINDOW, `Scenario::x_max` (the CLI's `--x-max`), which is what drops
+      // the offending cell.  Until 2026-09-05 the message stopped after the
+      // parenthesis and a user met it as a bare traceback naming no way out;
+      // the combination that first showed it is documented under "the top x
+      // cell" in docs/USAGE.md.  The A1 = g1/F1 of the cell is printed
+      // because it is the quantity that is too large: the phi-averaged
+      // modulation is P_e P_z D(y) A1 plus the tensor term, so a backend
+      // pair whose A1 runs away at high x is refused here and a milder one
+      // is not.  NO CLAMP: max(g1, ...) here would be a silent physics
+      // change, and the sampler's own accept-reject would then draw
+      // max(W, 0), diluting the modulation AND skewing the (x, Q2) mixture.
+      const double f1 = tables_[i].f1;
+      char msg[1024];
       std::snprintf(msg, sizeof(msg),
                     "negative phi-averaged density for m=%g at x = %.4g, "
-                    "Q2 = %.4g (1 + w_avg = %.4g)", key.m, x_cells_[i],
-                    q2_cells_[i], den);
+                    "Q2 = %.4g (1 + w_avg = %.4g).  That cell's A1 = g1/F1 "
+                    "is %.4g (F1 = %.4g, g1 = %.4g) at lam_e = %d, "
+                    "P_e = %.4g, J = %g: the phi-averaged rate would go "
+                    "NEGATIVE there, and the sampler refuses rather than "
+                    "draw max(W, 0), which would dilute the modulation and "
+                    "skew the (x, Q2) mixture.  Cure: lower the acceptance "
+                    "window's x_max below %.4g (Scenario::x_max; the CLI's "
+                    "--x-max, e.g. --x-max 0.95 on the shipped grid, whose "
+                    "top cell is x = 0.955), or reduce P_e / P_z, which "
+                    "scale w_avg linearly.  It is a property of the (x, Q2) "
+                    "CELL and the structure-function backends, not of the "
+                    "event count.",
+                    key.m, x_cells_[i], q2_cells_[i], den,
+                    f1 != 0.0 ? tables_[i].g1 / f1 : 0.0, f1, tables_[i].g1,
+                    key.lam_e, key.pe, key.j, x_cells_[i]);
       throw std::runtime_error(msg);
     }
     st.w_avg[i] = amp.w_avg;

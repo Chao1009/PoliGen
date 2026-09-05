@@ -209,7 +209,15 @@ and `tools/fullsim/README.md` (read-only references for this file):
    conservation. What remains open is physics, not bookkeeping: no
    exclusive-vector-meson channel below M_X = 1.2 GeV (design §1 option c,
    phase 2), and the Pomeron-PDF model choice (`PDF:PomSet`, default 6 = H1
-   2006 Fit B LO) is the tier's largest systematic.
+   2006 Fit B LO) is the tier's largest systematic — **scanned 2026-09-04**
+   (D4): all 15 sets × 20 000 events, the T0 columns bit-identical across
+   the fourteen that still run (1–10, 12–15; set 11 has been refused by the
+   bridge constructor since, so fifteen is history and fourteen is what
+   reproduces — re-measured 2026-09-05), so the band on |t|, x_P, M_X and σ
+   is *identically zero*, and
+   the systematic on the hadronic final state is ⟨n_charged⟩ −2.6 % / +9.9 %
+   and the kaon fraction a factor 2.8 over the twelve DPDF fits.
+   `docs/OPEN_ITEMS_SOLUTIONS.md` §5.1.
 4. **CLOSED (2026-08-30) -- the "no surrogate" tail.** It was ~12 % for
    7Li-alpha and ~5-7 % for 6Li with the whole-cluster hook, because a whole
    off-shell cluster fed to the surrogate exceeded

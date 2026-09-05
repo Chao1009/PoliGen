@@ -100,6 +100,8 @@ LhapdfSF::LhapdfSF(std::string setname, int member) : impl_(new Impl) {
 
 LhapdfSF::~LhapdfSF() = default;
 
+double LhapdfSF::q2_min() const { return impl_->pdf->q2Min(); }
+
 double LhapdfSF::f2p(double x, double q2) const {
   return f2_from_weights(*impl_->pdf, x, q2, kF2ProtonE2);
 }

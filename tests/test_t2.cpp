@@ -552,8 +552,10 @@ TEST_CASE("T2 chain: coherent e_q^2 flavour fallback -- small beta below the "
   // takes the e_q^2 fallback on ~20 % of its events (not just at Q^2 = 1
   // exactly).  Build the coherent record by hand in that region and check
   // the bridge (a) hadronizes it, (b) counts the fallback, (c) still
-  // reproduces M_X, and (d) NEVER initiates a heavy flavour there: the H1
-  // LO grids carry no charm at ANY (beta, Q^2), so e_q^2 x f_q gives charm
+  // reproduces M_X, and (d) NEVER initiates a heavy flavour there: all three
+  // H1 2006 grids -- Fit A NLO (3) and Fit B NLO (4) as well as Fit B LO (6),
+  // one `PomH1FitAB` class between them -- carry no charm at ANY (beta, Q^2),
+  // so e_q^2 x f_q gives charm
   // zero weight everywhere and the democratic fallback must not resurrect
   // it.  (d) is the regression guard for the bug where the fallback reused
   // the DIS offer list -- include_charm defaults to true -- and ~7 % of a

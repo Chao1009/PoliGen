@@ -202,12 +202,64 @@ struct PythiaBridgeOptions {
 
   /// PYTHIA's `PDF:PomSet`, the Pomeron parton densities the flavour sampler
   /// reads and PYTHIA's backward evolution starts from.  **6 is PYTHIA
-  /// 8.317's own default** (H1 2006 Fit B, LO) and the only LO
-  /// Q^2-dependent set in the list, which is what a Monte Carlo wants; 1 is
-  /// the Q^2-independent toy, 3/4/5/7/8 are NLO fits.  Exposed because it is
-  /// the single largest model choice of the coherent T2 tier: at
-  /// M_X = 5 GeV, Q^2 = 5 GeV^2 the Pomeron is 87 % gluon on set 6, and a
-  /// different set moves both that fraction and the beta shape.
+  /// 8.317's own default** (H1 2006 Fit B, LO).  The list, read off
+  /// `xmldoc/PDFSelection.xml` at PYTHIA 8.317 rather than remembered:
+  ///
+  ///     1        N x^a (1-x)^b toy, Q^2-INDEPENDENT (not a fit)
+  ///     2        pi^0 distributions (not a Pomeron fit)
+  ///     3,4,5    H1 2006 Fit A / Fit B / 2007 Jets, NLO
+  ///     6        H1 2006 Fit B, LO             <- the default
+  ///     7,8,9    ACTW B / D / SG, NLO, eps = 0.14
+  ///     10       ACTW D, NLO, eps = 0.19
+  ///     11       PomHISASD, the Angantyr rescaled proton -- REFUSED here
+  ///     12,13    GKG18-DPDF Fit A / Fit B, LO
+  ///     14,15    GKG18-DPDF Fit A / Fit B, NLO
+  ///
+  /// (6 is NOT "the only LO Q^2-dependent set", as this comment said until
+  /// 2026-09-04: 12 and 13 are LO too.  It is the only LO *H1* set.)
+  ///
+  /// MEASURED SYSTEMATIC (2026-09-04, D4).  Scanned over all fifteen, 20 000
+  /// coherent events each at 6Li config 1, seed 4242, `coherent_t2 =
+  /// Pomeron`.  The T0 columns t, x_pom, q2, x and the event weight come out
+  /// BIT-IDENTICAL across the FOURTEEN sets this constructor still admits --
+  /// 1-10 and 12-15, one md5 ffd35a3a62b591c547e9ca2ac4301b5d over the lot,
+  /// re-measured 2026-09-05 in 14.3 s.  Set 11 gave the same md5 in the
+  /// original scan and is refused now (below), so fourteen is the count that
+  /// REPRODUCES; this comment said "every set ... all fifteen" until
+  /// 2026-09-05.  The Pomeron
+  /// PDF enters only the flavour draw and PYTHIA's backward evolution, while
+  /// |t|, x_P, M_X and the rate are fixed upstream by `CoherentSampler` /
+  /// `CoherentXpomModel`.  So there is NO PomSet band on |t|, x_P, M_X or
+  /// the cross section -- it is identically zero by construction, and
+  /// quoting one would be meaningless.  The band is on the HADRONIC FINAL
+  /// STATE, over the twelve genuine diffractive-PDF fits (3-10, 12-15),
+  /// about the default set 6:
+  ///
+  ///     <n_charged>      3.964    -2.6 % / +9.9 %   (min set 9, max set 5)
+  ///     <n_hadrons>      8.521    -2.6 % / +10.2 %  (min set 10, max set 5)
+  ///     <p_T> [GeV]      0.342    -5.9 % / +10.9 %  (min set 5, max set 10)
+  ///     kaon fraction    0.0646   -44 % / +55 %     -- a FACTOR 2.8
+  ///
+  /// Statistical error on <n_charged> is 0.017 at 20 000 events and the
+  /// seed-to-seed scatter over 4242 / 777 / 31337 is <= 0.057, against a
+  /// 0.50 spread across sets, so 20 000 events per set already resolves the
+  /// band and there is no case for more.
+  ///
+  /// It is an ENVELOPE OVER RE-RUNS, one npz per set: the set changes the
+  /// final state event by event and no per-event weight maps one set onto
+  /// another.  Sets 1 and 2 are excluded from the band (a toy and a pi^0
+  /// PDF, neither a Pomeron fit); set 11 is refused outright by the
+  /// constructor.  THE EXCLUSION IS NOT FREE AND IS MEASURED (2026-09-05,
+  /// same recipe): including 1 and 2 takes the <n_charged> low edge from
+  /// -2.6 % (set 9, 3.8600) to -4.7 % (set 2, 3.7773) and the <n_hadrons>
+  /// low edge from -2.6 % to -7.0 % (set 2, 7.9261), while the high edges and
+  /// the <p_T> and kaon bands do not move.  So the band above is a
+  /// TWELVE-FIT number: never attach it to "all 15 sets".  Set 6 is the only LO H1 set, so the band mixes LO and NLO
+  /// DPDFs used in an LO Monte Carlo -- defensible for a systematic
+  /// envelope, indefensible for a central value; say which is which.  Set 5
+  /// is the only set that puts real weight on a charm initiator: 29.98 % of
+  /// its events change when `include_charm` is turned off, against
+  /// 10.4-11.1 % on GKG18 (12-15) and EXACTLY 0 on 3, 4, 6, 7, 8, 9, 10.
   int pom_set = 6;
   /// PYTHIA's `PDF:PomRescale`, the overall normalization of the H1/ACTW
   /// Pomeron sets (their momentum sum is arbitrary).  It cancels out of the
@@ -246,16 +298,45 @@ struct PythiaBridgeStats {
   /// Coherent events hadronized off the Pomeron beam (`Role::Pomeron`).
   std::uint64_t n_pomeron = 0;
   /// Coherent events whose flavour weights e_q^2 x f_q(beta, Q^2) all came
-  /// out zero because the LO Pomeron grid has literally no quarks there
-  /// (gluon fraction 1.000 at small beta until Q^2 ~ 1.5-1.75 GeV^2, which
-  /// is ABOVE the default `q2_pdf_min` = 1.0 clamp), so the sampler fell
-  /// back to the bare charge weights e_q^2 over the LIGHT flavours only
-  /// (the H1 LO grids carry no charm/bottom anywhere, so the democratic
-  /// limit keeps them at zero).  A DEFAULT coherent run sits on this branch
-  /// for ~20 % of its events -- non-zero is routine whenever the Q^2 window
-  /// reaches below the grid's quark-support edge, not a misconfiguration;
-  /// raising `q2_pdf_min` to ~1.75 removes the fallback at the cost of
-  /// clamping every flavour weight to that Q^2.
+  /// out zero because the Pomeron grid has literally no quarks there (gluon
+  /// fraction 1.000 at small beta until Q^2 ~ 1.5-1.75 GeV^2, which is ABOVE
+  /// the default `q2_pdf_min` = 1.0 clamp), so the sampler fell back to the
+  /// bare charge weights e_q^2 over the LIGHT flavours only.  The three H1
+  /// 2006 sets carry no charm or bottom at ANY (beta, Q^2) -- Fit B LO
+  /// (`pom_set` 6) and, equally, Fit A and Fit B NLO (3 and 4), because all
+  /// three are PYTHIA's one `PomH1FitAB` class and its `xfUpdate` assigns
+  /// `xc = xcbar = xb = xbbar = 0.` unconditionally
+  /// (`PartonDistributions.cc:2630`) -- so on those the democratic limit
+  /// keeps them at zero.  A DEFAULT coherent run sits on this branch for
+  /// ~20 % of its events; non-zero is routine whenever the Q^2 window
+  /// reaches below the grid's quark-support edge, not a misconfiguration.
+  ///
+  /// IT IS NOT A SYSTEMATIC.  MEASURED 2026-09-04 (D4.6), 4 000 coherent
+  /// events per point at 6Li config 1, seed 4242, diffing the whole final
+  /// state (`pid` and `p4` arrays) wholesale: raising `q2_pdf_min` from 1.0
+  /// to 1.75 drives the fallback from 20.70 % to 0.00 % (set 6), 31.25 % to
+  /// 0.00 % (set 3), 35.52 % to 29.32 % (set 4 -- THE EXCEPTION, and it
+  /// travels with the sentence: on Fit B NLO the share stays high), 19.45 %
+  /// to 2.65 % (set 12), 20.10 % to 3.23 % (13), 21.65 % to 5.12 % (15) --
+  /// and produces a BIT-IDENTICAL final state in every one of those cases,
+  /// set 4 included, which is why its residual 29 % costs nothing either.  The reason is structural, not luck: every
+  /// Pomeron DPDF PYTHIA ships carries a single light-quark singlet (H1 sets
+  /// it explicitly; the GKG18 LHAGrid1 files have columns -3..3 equal row by
+  /// row), so e_q^2 x f_q is proportional to e_q^2 exactly over the light
+  /// flavours and the normalised "fallback" IS the true draw.  The
+  /// light-only restriction has therefore never discarded anything: it fires
+  /// only where every weight vanishes, which is below the charm threshold,
+  /// where charm is zero anyway.
+  ///
+  /// The one thing that is NOT free is the CLAMP, and it is a charm effect
+  /// rather than a fallback effect: at `q2_pdf_min` = 3.0 the GKG18 sets
+  /// (12, 13, 15) stop being bit-identical, because the clamp lifts charm
+  /// above its threshold -- with `include_charm = false` the same comparison
+  /// is bit-identical again.  So keep the light-only restriction (it is the
+  /// correct guard against the `2e404b8` bug) and do not quote the fallback
+  /// share as a modelling uncertainty; it is a bookkeeping artefact.
+  /// Recorded per run since 2026-09-04 as `meta["n_pom_flavour_fallback"]`
+  /// and `meta["pom_flavour_fallback_frac"]`, and printed at the run banner.
   std::uint64_t n_pom_flavour_fallback = 0;
   /// Events that took the DEPRECATED `Role::StruckCluster` branch -- i.e.
   /// arrived with no `Role::StruckNucleon`.  Non-zero on a `Pipeline` run

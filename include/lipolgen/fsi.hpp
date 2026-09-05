@@ -123,10 +123,53 @@
 /// order in Gamma_N and formally beyond single scattering, which feeds enough
 /// strength back into the tag that the integrated survival comes out ABOVE
 /// the shadowed default (0.582 against 0.517 on the pure-S 6Li channel) --
-/// pinned in `tests/test_fsi.cpp` so a change is loud.  TODO (open): the two
-/// corrections that would make a true per-nucleon product differ from (a) --
-/// the centre-of-mass constraint Sum_i s_i = 0 and short-range NN correlations
-/// in the cluster density -- are not implemented.
+/// pinned in `tests/test_fsi.cpp` so a change is loud.
+///
+/// THE TWO VARIANTS ARE NOT ONE, AND THE DIFFERENCE IS MEASURED (2026-09-04,
+/// D3).  `PLAN.md` carried "the per-nucleon Glauber FSI variant is
+/// algebraically identical to the cluster one -- the two 'variants' are one"
+/// as an open item; it is RETRACTED, because the identity in the paragraph
+/// above is a statement about a per-nucleon product that this file does not
+/// implement, not about the single-scattering limit that it does.  On one
+/// event stream reweighted three ways (`--channel tagged-6Li-alpha --events
+/// 20000 --seed 1234 --fsi {off,glauber-cluster,glauber-nucleon}`, plan
+/// `tensor-thirds` at P_z = 0.7 / P_zz = 0.6 / P_e = 0.7, at the DEFAULT
+/// sigma_XN = 40 mb -- the whole claim is one stream at one end of the
+/// 20-40 mb band; the kinematic columns are bit-identical across the three):
+///
+///     Sum w             20000.0      10419.07     11632.10
+///     Sum w / Sum w_off      1       0.520954     0.581605
+///     per-event min..max     1    0.0208..1.404  0.2139..6.952
+///
+/// and per event w_nucleon/w_cluster has percentiles [1, 5, 25, 50, 75, 95,
+/// 99] = 0.821, 0.827, 0.853, 0.897, 0.934, 3.337, 5.935 with a maximum of
+/// 68.52.  **99.50 % of the 20 000 events differ by more than 1 %**, and
+/// `np.allclose(rtol = 1e-14)` is False.  Different by construction, not by
+/// parameter choice.  Pinned in `tests/test_fsi.cpp` ("the two variants
+/// differ on essentially every event").
+///
+/// TODO (open): the two corrections that would make a true per-nucleon
+/// product differ from (a) -- the centre-of-mass constraint Sum_i s_i = 0
+/// and short-range NN correlations in the cluster density -- are not
+/// implemented, and ONE OF THEM CANNOT BE BUILT FROM COMMITTED DATA:
+///
+///   * the c.m. constraint is a change of T_a alone, i.e. of
+///     `cluster_point_a2_fm2` (Gartenhaus-Schwartz on a Gaussian gives
+///     a^2_int = a^2 (1 - 1/A) = 0.5250 fm^2 for the alpha).  A better input
+///     to the SAME variant, not a different variant;
+///   * short-range NN correlations need the TWO-body density
+///     rho_2(s_i, s_j) -- that is the whole content of <Prod_i(.)> !=
+///     Prod_i<.> -- and the tree has none.  `data/vmc/density/*.density` are
+///     ONE-body point-proton densities, which is exactly the T_a the cluster
+///     form already convolves, and the ANL page they are fetched from
+///     publishes one-body densities only.  So the SRC correction needs an
+///     input the repository does not have; it is not a coding task.
+///
+/// And note what the input is NOT: the rescattering here is the DIS debris X
+/// off a SPECTATOR NUCLEON, so the amplitude is X-N and the cross section is
+/// `sigma_xn_mb`.  A sigma_NN would enter only for the spectator cluster's
+/// own internal absorption, which is not what this weight is; substituting
+/// one would change the physics, not the variant.
 ///
 /// ---------------------------------------------------------------------------
 /// THE OPEN PHYSICS INPUT.  sigma_XN(W) is the weakest number in the model.

@@ -244,17 +244,17 @@ ALLOW = {
         "no rank-3 (octupole) slot",
         "no such symbol exists in the tree, deliberately: the row cites the "
         "comment that states why there is no rank-3 slot"),
-    ("src/core/pipeline.cpp", 567, "coherent"): (
+    ("src/core/pipeline.cpp", 773, "coherent"): (
         "on the coherent channel the tensor signal is in the recoil",
         "the cited line is inside PipelineConfig::validate()'s refusal "
         "message; `coherent` there is the English word in that message, which "
         "is the text the row quotes"),
-    ("src/core/pipeline.cpp", 1085, "optics_lumi_factor"): (
+    ("src/core/pipeline.cpp", 1692, "optics_lumi_factor"): (
         "cfg_.lumi_pb * optics_lumi_factor()",
         "the row's claim is that luminosity mode multiplies the optics factor "
         "in, so it cites the multiplication, not the accessor (declared at "
         "include/lipolgen/pipeline.hpp:779, cited there too)"),
-    ("src/core/rc.cpp", 1003, "is_tagged_channel"): (
+    ("src/core/rc.cpp", 1032, "is_tagged_channel"): (
         "is_tagged_channel(channel_)",
         "one of three consecutive branch lines of RcModel::exclusion_reason "
         "the row cites together; the neighbours are use sites in files that "
@@ -263,7 +263,7 @@ ALLOW = {
         "proton_fraction(in.x, in.q2, 1, 3)",
         "the triton branch's own proton/neutron draw, which is what the row "
         "describes; the definition is generic over (Z, A)"),
-    ("src/pythia/pythia_bridge.cpp", 679, "dis_parton_fraction"): (
+    ("src/pythia/pythia_bridge.cpp", 700, "dis_parton_fraction"): (
         "dis_parton_fraction(q, p_n, &xi_tmp, 1.0, mq)",
         "the re-solve with the chosen quark's mass, cited beside the "
         "definition at src/pythia/pythia_bridge.cpp:170 in the same row"),
@@ -295,8 +295,24 @@ def word(base: str) -> re.Pattern:
     return re.compile(r"(?<![A-Za-z0-9_])" + re.escape(base) + r"(?![A-Za-z0-9_])")
 
 
-def mask_cxx(lines: list[str]) -> list[str]:
-    """Blank out comment and string/char-literal characters, keeping columns."""
+def mask_cxx(lines: list[str], keep_strings: bool = False) -> list[str]:
+    """Blank out comment and string/char-literal characters, keeping columns.
+
+    `keep_strings` blanks the COMMENTS ONLY and leaves string and character
+    literals standing.  That is the line `literal_defines` has to read: a name
+    that lives only as a string is introduced by the line that spells it, and
+    `mask_cxx`'s ordinary output has already erased it -- but the RAW line,
+    which is what this function was called with until 2026-09-05, also carries
+    the comments, and a `///` line is DOCUMENTATION and not a declaration.
+    That is exactly how `docs/PHYSICS_CHANNELS.md` came to cite
+    `include/lipolgen/pythia_bridge.hpp:338` for `n_pom_flavour_fallback`:
+    :338 reads `/// Recorded per run since 2026-09-04 as
+    meta["n_pom_flavour_fallback"]`, whose bracketed literal satisfied
+    `literal_defines`, so the doc comment one line ABOVE the declaration
+    counted as a declaration and `--fix` re-anchored onto it -- invisibly,
+    because the gate then agreed with itself.  With the comments gone that
+    line offers nothing and :340, the declaration, is the only target left.
+    """
     out, in_block = [], False
     for ln in lines:
         chars, i, n = list(ln), 0, len(ln)
@@ -315,6 +331,18 @@ def mask_cxx(lines: list[str]) -> list[str]:
                 for j in range(i, n):
                     chars[j] = " "
                 break
+            if keep_strings and c in "\"'":
+                q, j = c, i + 1
+                while j < n:
+                    if chars[j] == "\\":
+                        j += 2
+                        continue
+                    if chars[j] == q:
+                        j += 1
+                        break
+                    j += 1
+                i = j
+                continue
             if c == "/" and i + 1 < n and chars[i + 1] == "*":
                 chars[i] = chars[i + 1] = " "
                 i += 2
@@ -384,10 +412,14 @@ def cxx_tags(masked: list[str]) -> set[str]:
                           " \n".join(masked)))
 
 
-def cxx_declares(masked, i, base, enums, tags, raw):
+def cxx_declares(masked, i, base, enums, tags, code):
+    """`code` is the line with its COMMENTS stripped and its string literals
+    kept (`mask_cxx(..., keep_strings=True)`), never the raw line: a `//` or
+    `///` line is documentation, and a name it merely spells inside a string
+    is not declared there."""
     s = masked[i - 1]
     body, single = enums
-    if literal_defines(raw, base):
+    if literal_defines(code, base):
         return "literal"
     if macro_registers(s, base):
         return "macro-call"
@@ -488,6 +520,9 @@ class Source:
         if rel.endswith((".hpp", ".cpp", ".h", ".cc")):
             self.kind = "cxx"
             self.masked = mask_cxx(self.lines)
+            # ... and the same line with the COMMENTS gone and the string
+            # literals kept, which is the only line `literal_defines` may read.
+            self.code = mask_cxx(self.lines, keep_strings=True)
             self.enums = enum_bodies(self.masked)
             self.tags = cxx_tags(self.masked)
         elif rel.endswith(".py"):
@@ -511,7 +546,7 @@ class Source:
             return "text" if base in self.lines[i - 1] else None
         if self.kind == "cxx":
             return cxx_declares(self.masked, i, base, self.enums, self.tags,
-                                self.lines[i - 1])
+                                self.code[i - 1])
         if self.kind == "py":
             return py_declares(self.lines, i, base, self.depth0)
         return "text" if word(base).search(self.lines[i - 1]) else None
@@ -521,7 +556,8 @@ class Source:
             return False
         if not (IDENT.match(base) or FLAG.match(base)):
             return base in self.lines[i - 1]
-        if literal_defines(self.lines[i - 1], base):
+        if literal_defines(self.code[i - 1] if self.kind == "cxx"
+                           else self.lines[i - 1], base):
             return True
         if self.kind == "cxx":
             s = self.masked[i - 1]

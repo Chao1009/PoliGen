@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 #ifndef LIPOLGEN_PYTHIA_BRIDGE_HPP
 #define LIPOLGEN_PYTHIA_BRIDGE_HPP
 

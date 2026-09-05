@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Round-trip tests for lipolgen::HepMC3Writer against a synthetic event built
 // by hand: e + 6Li beams (10 GeV x 99.5 GeV/u), scattered e', an alpha
 // spectator, and a status-3 hadronic-system pseudo-particle X. See

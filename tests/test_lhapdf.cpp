@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // LHAPDF6 backends against the Python they are ported from:
 // PolarizedLithiumSim/fastsim/polli_fastsim/{structure,polarized}.py
 // (PartonF2, PartonG1) and fastsim/scripts/money_delta_20260729.py

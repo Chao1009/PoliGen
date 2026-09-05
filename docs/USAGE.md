@@ -39,15 +39,31 @@ them directly, so no third variable is needed for those — see
 `$ORIGIN` (LiPolGen's own libraries, shipped alongside it in the wheel) plus
 the literal `LIPOLGEN_DEPS_PREFIX` path (HepMC3/PYTHIA8/LHAPDF, NOT shipped
 in the wheel) — so a wheel built this way only runs on the machine it was
-built on, at that same path. Making it relocatable means running
-[`auditwheel repair`](https://github.com/pypa/auditwheel) after `pip wheel`,
-which vendors HepMC3/PYTHIA8/LHAPDF's shared libraries into the wheel itself
-and rewrites the RPATHs to be `$ORIGIN`-relative — standard practice for
-compiled-extension PyPI wheels, but note it turns the wheel into a genuine
-combined/linked work with all three (GPL-2-or-later, GPL-3.0, GPL-3.0), so
-whoever redistributes an `auditwheel`-repaired wheel is redistributing under
-GPL-3.0-or-later terms for the combination, regardless of LiPolGen's own
-license header (see `docs/OPEN_ITEMS_SOLUTIONS.md` §12–13 and `docs/open_items/engineering.md` §C).
+built on, at that same path.
+[`auditwheel repair`](https://github.com/pypa/auditwheel) fixes the *library*
+half of that, and since 2026-09-05 that is measured rather than recommended:
+run on this tree it vendors `libHepMC3.so.4`, `libLHAPDF.so` and
+`libpythia8.so` into a `lipolgen.libs/` directory, rewrites the RPATHs to
+`$ORIGIN`-relative, and takes the wheel from **1 779 767 to 7 232 971 bytes**
+under the tag **`manylinux_2_35_x86_64`**. The repaired wheel was verified to
+import, generate events and run the T2 tier with the dependency prefix
+*removed from the filesystem altogether*.
+
+It does **not** fix the *data* half. PYTHIA's `xmldoc` and LHAPDF's PDF sets
+are not in the wheel and their compiled-in defaults are the build machine's
+absolute paths, so on any other machine `PYTHIA8DATA`, `LHAPDF_DATA_PATH`
+(and `LIPOLGEN_PYTHIA8_PDFDATA`, for `MstwSF`) must be exported exactly as
+above — with them unset the failures are
+`Couldn't find required lhapdf.conf system config file` and
+`PYTHIA Error in Settings::init: settings file <build machine path>/Index.xml
+not found`. Every command, every number and every one of those messages is in
+**`docs/PACKAGING.md`**.
+
+Repairing the wheel also turns it into a genuine combined/linked work with all
+three (GPL-2-or-later, GPL-3.0, GPL-3.0), so whoever redistributes an
+`auditwheel`-repaired wheel is redistributing under GPL-3.0-or-later terms for
+the combination, regardless of LiPolGen's own license header (see
+`docs/OPEN_ITEMS_SOLUTIONS.md` §12–13 and `docs/open_items/engineering.md` §C).
 
 ## 1. The shape of a run
 

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Tensor-sector radiative corrections (rc.hpp), the OPT-IN weight-only family
 // of docs/open_items/run_2026-09-02/design_C_tensor_rc.md.
 //

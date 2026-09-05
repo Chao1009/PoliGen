@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // T2 chain: Pipeline -> PythiaBridge -> (HepMC3) for the three physics
 // channels the T2 tier is exercised on: inclusive, tagged 6Li-alpha, and
 // coherent 6Li.  See docs/T2_CHAIN.md for the record layout and the two

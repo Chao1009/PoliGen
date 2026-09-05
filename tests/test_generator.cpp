@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // T0 event assembly: beams, the scattered-electron four-vector and its
 // azimuth convention, the virtual photon, exact per-nucleon four-momentum
 // conservation through the hadronic X, the spin labels, and the

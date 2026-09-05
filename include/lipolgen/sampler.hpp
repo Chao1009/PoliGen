@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 #ifndef LIPOLGEN_SAMPLER_HPP
 #define LIPOLGEN_SAMPLER_HPP
 

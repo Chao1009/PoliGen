@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The triton spectral function (triton_sf.hpp): the Ciofi degli Atti-Simula
 // transcription and its three-channel breakup.  Every number the header
 // quotes as "MEASURED HERE" is measured here; the conservation and RNG

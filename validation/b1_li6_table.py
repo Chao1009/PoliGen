@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Regenerate design D's number tables and its A = 2 validation-gate report.
 
 Design: `docs/open_items/run_2026-09-02/design_D_b1_li6.md` (sections 5 and 7).

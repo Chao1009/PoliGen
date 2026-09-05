@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Phase G(i): the alpha+d configuration sampler for polarized 6Li.
 // One TEST_CASE per identity of
 // docs/open_items/run_2026-09-02/design_G_cluster_config.md sec. 7.

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Open item O3: how much does the alpha core's genuine 4-body correlation
 move a position-space observable, relative to the uncorrelated product of
 one-body densities `ClusterConfigSampler` actually draws?

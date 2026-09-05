@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 #ifndef LIPOLGEN_TESTS_CHECK_CLOSE_HPP
 #define LIPOLGEN_TESTS_CHECK_CLOSE_HPP
 

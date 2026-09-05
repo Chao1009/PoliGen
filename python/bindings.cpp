@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // pybind11 bindings for LiPolGen (task P7).
 //
 // Module `_lipolgen`, imported by the `lipolgen` package

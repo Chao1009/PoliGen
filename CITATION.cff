@@ -1,0 +1,20 @@
+# This file follows the Citation File Format (https://citation-file-format.github.io/).
+# `version` must track CMakeLists.txt's `project(LiPolGen VERSION ...)` -- the
+# single source of truth pyproject.toml already reads with a regex
+# (`[tool.scikit-build.metadata.version]`); this file has no build step of its
+# own, so a version bump there must be copied here by hand. Kept in sync by
+# `python/tests/test_release_metadata.py`, which fails the suite if they drift.
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: LiPolGen
+version: 0.1.0
+date-released: "2026-09-05"
+type: software
+license: GPL-3.0-or-later
+repository-code: "https://github.com/Chao1009/PoliGen"
+abstract: >-
+  Doubly polarized e + 6Li / 7Li DIS event generator for the EIC: a C++17
+  spin-density kernel and cluster-spectator sampler, stock PYTHIA 8 as the
+  hadronizer (through LHAup), HepMC3 output, and pybind11 Python bindings.
+authors:
+  - name: "<AUTHOR NAME — to be filled by the author>"

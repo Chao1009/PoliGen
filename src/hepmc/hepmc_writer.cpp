@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 #include "lipolgen/hepmc_writer.hpp"
 
 #include "lipolgen/constants.hpp"

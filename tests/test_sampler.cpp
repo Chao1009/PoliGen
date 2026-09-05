@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Sampler-level checks (evgen/tests/test_sampler.py) and the Gate-3
 // pseudo-experiment estimator closure (evgen/tests/test_pseudoexp.py):
 // distributions, rates, reproducibility, Mode-W weights, the exact positivity

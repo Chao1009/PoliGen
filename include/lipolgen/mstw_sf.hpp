@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 #ifndef LIPOLGEN_MSTW_SF_HPP
 #define LIPOLGEN_MSTW_SF_HPP
 

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The cross-language gate: every number in validation/reference/*.json was
 // produced by the Python (PolarizedLithiumSim) through
 // validation/dump_polligen_reference.py, and the C++ port must reproduce it

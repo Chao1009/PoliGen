@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Cluster relative partial waves: the radial shapes and the azimuth-stripped
 // spherical harmonics, against validation/reference/tagged.json (`waves[i]`)
 // and against the analytic properties they must have.

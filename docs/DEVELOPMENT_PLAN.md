@@ -97,23 +97,82 @@ scripts, docs, reference dumps.
 
 ## 4. Validation matrix (must hold before v0.1)
 
+Every row below names the `TEST_CASE` (`tests/*.cpp`) that demonstrates it, as
+of 2026-09-05 (Phase E item E3c) — added where the row previously named none.
+
 1. ρ moments exact (atol 1e-12), J = 1, 3/2, arbitrary axis; max-entropy fills
    reproduce (P_z, P_zz) = (8/13, 4/13) and (0.7, 0.4).
+   `tests/test_spin.cpp`: "pure and unpolarized moments", "rotated moments
+   follow the analytic n_hat / P2(cos theta) law", "max-entropy anchor
+   (P_z, P_zz) = (8/13, 4/13) for J = 1", "max-entropy populations for spin
+   3/2, anchor (0.7, 0.4)".
 2. Master formula sector identities at rtol 1e-12 against P1 tables:
    (w₊−w₋)/(2+w₊+w₋) = P_e A∥; thirds → A_zz; a₂ → A_cos2φ; F₂ cancels in a₂;
    magic angle kills tensor rate shift; unpolarized limit.
+   `tests/test_xsec.cpp`: "vector sector: (w+ - w-)/(2 + w+ + w-) = P_e A_par",
+   "tensor sector: the thirds combination is A_zz", "transverse tensor: a_2 is
+   A_cos2phi", "the cos 2phi amplitude is independent of the F2 backend", "the
+   tensor rate follows P_2(cos theta_S), and the magic angle kills it", "the
+   population-averaged cross section is the unpolarized one".
 3. Estimator closure: pulls unbiased, spreads within 15 % of
    err_A∥ = 1/(P_e P_z √N), err_Azz = √(2/N)/P_zz, err_cos2φ = √(2/N)/P_zz;
    relative-luminosity biases −(2/3)δ/P_zz and δ/(2P_eP_z) reproduced and removed.
+   `tests/test_sampler.cpp`: "closure: A_par pulls unbiased, spread within 15%
+   of err_a_parallel", "closure: Azz pulls unbiased, spread within 15% of
+   err_azz", "closure: cos2phi moment unbiased, spread within 15%", "closure:
+   the Azz relative-luminosity bias is -(2/3) delta / Pzz", "closure: the
+   A_par relative-luminosity bias is delta/(2 Pe Pz)".
 4. Tagged: Cosyn–Weiss deuteron limit (P₂ factorization < 1e-5, peak k = 0.31 GeV,
    A_T∥ extremes +1/−2); ⁶Li S-wave = inclusive deuteron; ⁷Li ⟨P₂⟩ = −T/5;
    P_p = 0.866 and P_n ≈ −0.037 (the neutron half is an *open* gate, report it).
+   `tests/test_tagged.cpp`: "tagged: the Cosyn-Weiss deuteron tensor gate (CW
+   TABLE II)", "tagged: the 6Li S-wave limit reduces to the inclusive
+   deuteron", "tagged: 7Li P2 moments and the <P2> = -T/5 polarimeter",
+   "tagged: 7Li triton polarization and the forward-limit gate" (this last one
+   is where the neutron gate's open status is actually printed — see §6 item 1
+   below and `tests/test_tagged.cpp:380`).
 5. Spectator boost matches `spectator.py` quantile-by-quantile at P_D = 0;
    rigidity R(⁶Li α) = 0.99813, R(⁷Li α) = 0.85571.
+   `tests/test_spectator.cpp`: "spectator: sampled distributions sit on the
+   analytic centres" (quantile match; see the file's own header comment on
+   how a C++ test pins the same analytic identities
+   `fastsim/tests/test_spectator.py` does, since there is no numpy reference
+   to run side by side here), "spectator: R(k=0) is a ratio of mass-to-charge
+   ratios" (the two rigidity numbers).
 6. Coherent: ⟨t⟩ = 1/B, acceptance = exp(−B c²), m-state relation a₀ = −2a₁.
-7. HFS truth identities on T2 output; HepMC3 round trip; PYTHIA cross section
-   matches `gen_dis_hfs.py` at identical settings (same 8.3 physics).
+   `tests/test_coherent.cpp`: "coherent: <|t|> = 1/B and the acceptance is
+   exp(-B c^2)", "coherent: the deformation a_2 scales, and a_0 = -2 a_1".
+7. HFS truth identities on T2 output (`tests/test_t2.cpp`: "T2 chain:
+   inclusive, 300 events, per-nucleon balance", which checks both
+   `hfs_sigma_empz_exact` and `hfs_sigma_empz_truth`); HepMC3 round trip
+   (`tests/test_t2.cpp`: "T2 chain: HepMC3 round trip through the full chain
+   (tagged ...)" and "... (coherent ...)"); the hadronic final state's mean
+   charged multiplicity in a fixed (x, Q²) window agrees with a stock PYTHIA
+   `WeakBosonExchange` run at `gen_dis_hfs.py`'s own settings to within 20 %
+   (`tests/test_pythia.cpp`: "pythia: the charged multiplicity agrees with a
+   stock WeakBosonExchange run in the same (x, Q2) window"; measured ratio
+   0.97, `docs/PYTHIA_BRIDGE.md` §10). **Rewritten 2026-09-05 (Phase E item
+   E3b)** — the original clause, "PYTHIA cross section matches
+   `gen_dis_hfs.py` at identical settings (same 8.3 physics)", is not
+   demonstrated anywhere in this tree and cannot be: the T2 bridge's hard
+   process comes from an in-memory `LHAup` at LHAup strategy 3, under which
+   PYTHIA's own `info.sigmaGen()` is not a physical cross section at all — the
+   accessor that exposes it, `PythiaBridge::pythia_sigma_gen_mb`
+   (`include/lipolgen/pythia_bridge.hpp:434`), says so in its own docstring
+   ("Meaningless as a physics number here … exposed only so that the example
+   can print the bookkeeping"). The physical cross section is computed
+   upstream by this generator's own kernel, never by PYTHIA in this
+   architecture, so there is no PYTHIA-side cross-section number left to
+   compare `gen_dis_hfs.py` against; the mean-charged-multiplicity check above
+   is what a same-settings shower/hadronization comparison CAN demonstrate,
+   and is demonstrated.
 8. Deterministic: same (seed, run, bunch) → identical events at any thread count.
+   `tests/test_pipeline.cpp`: "pipeline: threaded generation is bit-identical
+   to single-threaded"; also `tests/test_rng.cpp`: "rng: the sampled batch is
+   identical at 1 and 8 threads", "rng: whole events are identical at 1 and 8
+   threads"; `tests/test_rc_pipeline.cpp`: "T18b: threaded generation
+   reproduces the RC weights bit for bit"; `tests/test_t2.cpp`: "T2 chain:
+   determinism -- same seed gives the identical HepMC3 ...".
 
 ## 5. Conventions carried over verbatim
 

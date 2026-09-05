@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
 """VmcRadial prototype: Fourier-Bessel-transform the real VMC (AV18+UIX)
 two-cluster overlap tables at data/vmc/ into momentum space, and compare
 their momentum densities and tail fractions against LiPolGen's two-parameter

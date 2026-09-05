@@ -135,6 +135,48 @@ def test_real_document_reference_count():
     assert rc == 0
 
 
+def test_extra_documents_are_covered_and_clean():
+    """Phase E item E1: `docs/PHYSICS_CHANNELS.md` is not the only document
+    with more than a handful of `path:line` citations.  `docs/theory/
+    SPIN32_FINITE_GAMMA.md` (134: 19 named points, 115 ranges) and
+    `docs/PYTHIA_BRIDGE.md` (8 external PYTHIA upstream pointers) are both
+    covered by the same gate run, each labelled by name so a broken citation
+    in either is visible, not swallowed into the primary document's tally.
+    `docs/USAGE.md`, `docs/CONVENTIONS.md` and `docs/T2_CHAIN.md` carry none;
+    `docs/OPEN_ITEMS_SOLUTIONS.md` carries 3 (not "more than a handful") --
+    all four stay uncovered, on purpose; see this file's module docstring and
+    `docs/open_items/run_2026-09-03/phase_E_numbers.md` §E1 for the counts."""
+    gate = _load()
+    names = {p.rsplit("/", 1)[-1] for p, _ in gate.EXTRA_DOCS}
+    assert names == {"SPIN32_FINITE_GAMMA.md", "PYTHIA_BRIDGE.md"}, gate.EXTRA_DOCS
+    rc, out = _capture(gate.main, [])
+    assert rc == 0, out
+    assert "[SPIN32_FINITE_GAMMA.md]" in out, out
+    assert "[PYTHIA_BRIDGE.md]" in out, out
+    for label, min_n, min_ranges, min_ext in (
+        ("SPIN32_FINITE_GAMMA.md", 15, 90, 0),
+        ("PYTHIA_BRIDGE.md", 0, 0, 5),
+    ):
+        line = next(ln for ln in out.splitlines() if ln.endswith(f"[{label}]"))
+        assert ", 0 broken" in line, line
+        n = int(line.split()[0])
+        n_ranges = int(line.split(",")[1].split()[0])
+        n_ext = int(line.split(",")[2].split()[0])
+        assert n >= min_n, line
+        assert n_ranges >= min_ranges, line
+        assert n_ext >= min_ext, line
+
+
+def test_extra_document_missing_under_root_is_skipped_not_broken(gate, tmp_path):
+    """A test fixture tree (or any `ROOT` that is not this repository) does
+    not carry `docs/theory/SPIN32_FINITE_GAMMA.md` or `docs/PYTHIA_BRIDGE.md`
+    -- only the PRIMARY document is required to exist.  This is what keeps
+    every synthetic fixture in this file passing unchanged."""
+    rc, out, _ = _run(gate, tmp_path, "no citations here\n", {})
+    assert rc == 0, out
+    assert "SPIN32_FINITE_GAMMA" not in out and "PYTHIA_BRIDGE" not in out, out
+
+
 def test_real_document_range_fingerprints_are_all_live(gate):
     """Every entry in the sidecar is reached by a citation, and every citation
     has an entry.  A dead fingerprint hides the next drift exactly as a dead

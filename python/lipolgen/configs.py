@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """`lipolgen-configs` -- 6Li nucleon-position tables for a dipole-model code.
 
     lipolgen-configs --m +1 --n 100000 --theta-s 1.5707963 --phi-s 0 \

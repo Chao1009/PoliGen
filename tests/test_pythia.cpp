@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // P6 -- the PYTHIA 8 hadronization tier.  Every event here is built by hand:
 // the core generator (P3) is a concurrent work package, so the test owns its
 // own head-on-frame kinematics and pins the convention it uses.
@@ -15,6 +16,17 @@
 // Beams: 10 x 99.5 GeV/u 6Li -- the mid gamma-matched EIC configuration of
 // beams.default_configs("6Li"), the one the standing PYTHIA production of
 // PolarizedLithiumSim is made at.
+//
+// The whole file is behind the tier's own macro, the way `test_t2.cpp:45`
+// already is: every case below constructs a `PythiaBridge` or reads
+// `LIPOLGEN_PYTHIA8_XMLDOC`, neither of which exists when CMake was run
+// with -DLIPOLGEN_WITH_PYTHIA=OFF (or could not find `pythia8-config`).
+// Without it that configuration does not compile at all, so "the PYTHIA
+// cases are skipped when the tier is absent" was not true of the C++
+// suite -- only of the Python one.  With it the tier-off build drops
+// these cases from the binary; doctest reports the smaller total rather
+// than a failure.
+#ifdef LIPOLGEN_HAVE_PYTHIA8
 
 #include <algorithm>
 #include <cmath>
@@ -808,3 +820,5 @@ TEST_CASE("pythia: the implicit-target species follows Z F2p : N F2n") {
   CHECK(std::fabs(zn_got - 0.5) < 4.0 * std::sqrt(0.25 / zn_tried));
   CHECK(zn_got < got);
 }
+
+#endif  // LIPOLGEN_HAVE_PYTHIA8

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """LiPolGen -- doubly polarized e + 6Li / 7Li DIS event generator.
 
 The C++ core (`_lipolgen`, pybind11) is re-exported wholesale, so everything

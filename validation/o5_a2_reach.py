@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Open item O5: does 6Li's tensor a_2 survive EIC statistics, and does the
 P_zz flip separate it from the linearly-polarized-photon cos 2phi background?
 

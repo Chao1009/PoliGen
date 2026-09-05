@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Tier T1 -- struck cluster -> struck nucleon + partner spectator(s).
 // Every physics choice, formula and separation energy is in breakup.hpp.
 

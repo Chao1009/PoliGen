@@ -35,8 +35,8 @@ four-momentum freedom is an in-memory `Pythia8::LHAup` with
 **(2) Even through `LHAup`, PYTHIA forces the total final-state four-momentum
 to the *initialisation* beam total.**  `BeamRemnants::setKinematics` sets the
 remnant light-cone budget from `infoPtr->eCM()`
-(`BeamRemnants.cc:662`: `wPosRem = eCM; wNegRem = eCM;`, and `:935`:
-`wPosRem = eCM - (pSumOut.e() + pSumOut.pz())`), and `eCM` is fixed at `init()`
+(`BeamRemnants.cc:662,935`: `wPosRem = eCM; wNegRem = eCM;` at :662, and
+`wPosRem = eCM - (pSumOut.e() + pSumOut.pz())` at :935), and `eCM` is fixed at `init()`
 for a hard process.  Measured directly (50 events, LHAup with a target
 20 GeV above nominal and 0.2 GeV of p_T): the total final-state four-vector
 came out **identical in every event** and equal to the init beam total, not to

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Run-plan bookkeeping: the four standard plans against the polligen
 // reference table (validation/reference/bookkeeping.json, rtol 1e-12), the
 // spin-temperature pzz_true ladder, the relative-luminosity bias formulas and

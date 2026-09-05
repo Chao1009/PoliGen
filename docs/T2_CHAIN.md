@@ -146,17 +146,33 @@ and `tools/fullsim/README.md` (read-only references for this file):
 - **Smoke gate** (plans/05 5.D / 5.4): "HepMC3 -> abconv -> npsim,
   event-by-event 4-momentum/charge, 100-event smoke passes" -- this
   library's own event-by-event checks (`test_t2.cpp`) are the upstream half
-  of that gate; the `abconv`/`npsim` half is unrun here (no container in
-  this environment) and stays an open item below.
+  of that gate. **The `abconv`/`npsim` half PASSED 2026-09-02** (10/10
+  events through `npsim` directly and via `abconv`; see item 1 below,
+  `docs/OPEN_ITEMS_SOLUTIONS.md` §2 and `docs/DEVELOPMENT_PLAN.md`'s own
+  validation-matrix row for it).
 
 ## 3. Open items
 
-1. **`abconv` -> `npsim` -> EICrecon smoke (plans/05 5.D) is not run from
-   this repository.** `test_t2.cpp` and `generate_full` establish that the
-   HepMC3 file is well-formed and event-by-event conserving up to the
-   PythiaBridge tier; the 100-event `abconv`/`npsim` pass itself needs the
-   `eic_xl`/`jug_xl` containers of `tools/fullsim/README.md`, unavailable
-   here.
+1. **CLOSED (2026-09-02) -- `abconv` -> `npsim` smoke.** `test_t2.cpp` and
+   `generate_full` establish that the HepMC3 file is well-formed and
+   event-by-event conserving up to the PythiaBridge tier; the
+   `abconv`/`npsim` half, run once the `eic_xl`/`jug_xl` containers of
+   `tools/fullsim/README.md` were available, **PASSED: 10/10 events through
+   `npsim --compactFile epic_craterlake_10x100.xml` directly** (it accepts
+   the file as written -- 10-digit ion codes for the beam ⁶Li at status 4
+   and the alpha spectator at status 1 -- with EDM4hep `MCParticles`
+   carrying the full role chain) **and 10/10 via `abconv` first**
+   (`abconv -p 1`'s automatic energy detection cannot decode a ⁶Li ion --
+   per-nucleon energy comes out 0 -- but the manual preset
+   `abconv -p ip6_hiacc_100x10` works, and its output also runs through
+   `npsim` unchanged). `docs/OPEN_ITEMS_SOLUTIONS.md` §2 has the full
+   record (including the one cosmetic fix it found, `generated_mass` for a
+   massless electron); `docs/DEVELOPMENT_PLAN.md`'s own validation matrix
+   marks this row PASSED against the same date and count. Not run again by
+   every `pytest`/`lipolgen_tests` invocation -- it needs the external
+   `eic_xl`/`jug_xl` containers, which are not part of this repository's
+   own dependency tree -- so this paragraph is the record of the one time
+   it was.
 2. **CLOSED (2026-08-30) -- tagged conservation.** The complete fix named
    in the previous revision of this file ("the cluster's non-struck
    nucleon(s) should be emitted as `Role::PartnerSpectator`") is what the T1

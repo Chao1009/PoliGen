@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // xoshiro256** seeded via splitmix64 from (seed, run, bunch, event).
 #include "lipolgen/rng.hpp"
 #include <cmath>

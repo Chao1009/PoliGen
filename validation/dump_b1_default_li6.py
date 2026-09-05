@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Freeze `default_inclusive_kernel(LI6())`'s tensor slots as a 1e-12 gate.
 
 Design D section 8, Agent B "Step 0".  Nothing else in the tree stores what

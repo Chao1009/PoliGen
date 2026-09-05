@@ -50,6 +50,20 @@ Q10 = [
 
 
 def _grid_present():
+    # The `HAVE_PYTHIA8` guard is load-bearing and NOT redundant with the
+    # module-level `pytestmark` above: `needs_grid` calls this at IMPORT
+    # (collection) time, before any skip mark can take effect, and
+    # `pythia8_pdfdata_dir` is only bound into the module when the PYTHIA
+    # tier was compiled in.  Measured 2026-09-05 against a
+    # `-DLIPOLGEN_WITH_PYTHIA=OFF` build: without this line the whole run
+    # ends in `ERROR collecting python/tests/test_mstw_sf.py ...
+    # AttributeError: module 'lipolgen._lipolgen' has no attribute
+    # 'pythia8_pdfdata_dir'` and pytest exits 2, rather than the "skips
+    # wholesale when the PYTHIA 8 tier is not built" this module's own
+    # docstring promises.  A tier-on build (the shipped default) never sees
+    # this branch.
+    if not lg._lipolgen.HAVE_PYTHIA8:
+        return False
     d = lg._lipolgen.pythia8_pdfdata_dir()
     return bool(d) and os.path.isfile(os.path.join(d, "mstw2008lo.00.dat"))
 

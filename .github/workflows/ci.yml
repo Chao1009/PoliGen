@@ -1,0 +1,443 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# =============================================================================
+# THIS WORKFLOW HAS NEVER BEEN RUN ON GITHUB.  origin/master exists (last
+# pushed 2026-09-03, at a94fd6e); none of the 2026-09-03 run's commits and no
+# .github/ directory have ever been pushed, no Actions run exists, and no
+# line below has been executed by a GitHub runner.  What HAS been done, on 2026-09-05, on one
+# Ubuntu 22.04.5 machine (glibc 2.35, gcc 11.4.0, cmake 3.22.1, Python 3.11.4,
+# 8 cores):
+#
+#   * `.github/scripts/build_deps.sh` -- the whole dependency stack -- was run
+#     end to end into a scratch prefix (337.28 s), from the six upstream URLs
+#     tabulated in `docs/PACKAGING.md` section 1.1, every one of which was
+#     checked to return HTTP 200 that day; and LiPolGen was then configured,
+#     built and fully tested against THAT freshly built prefix rather than the
+#     author's existing one, in this workflow's own directory layout, with
+#     `source env.sh` unmodified.  Timings and tallies: `docs/PACKAGING.md`
+#     and `docs/open_items/run_2026-09-03/phase_E_numbers.md` section E4.
+#   * every other `run:` block here is the same shell the local flow uses, run
+#     by hand in the same order.
+#
+# What that does NOT establish, and what a first push therefore still has to
+# find out for itself:
+#   * that `actions/cache@v4` keeps and returns this 114 MiB prefix intact,
+#   * that GitHub's `ubuntu-22.04` image has every apt package named here,
+#   * how long a 4-core GitHub runner actually takes (the numbers in this file
+#     are measured on 8 cores; the runner figures are EXTRAPOLATIONS and say
+#     so at each site),
+#   * YAML/expression validity as GitHub parses it (never linted by GitHub).
+#
+# Deliberately NOT here: no `upload-artifact`, no release step, no registry
+# push, nothing that publishes.  The wheel job builds and verifies a wheel and
+# then throws it away -- see `docs/PACKAGING.md` on why distributing it is a
+# GPL-3.0-or-later act and therefore the author's decision, not CI's.
+# =============================================================================
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # The repository is checked out into a SUBDIRECTORY of the workspace so that
+  # `deps/` can be its sibling: `env.sh` resolves the dependency prefix as
+  # `<repo>/../deps/install` and nothing about that is configurable.  With
+  # `path: LiPolGen` the layout on the runner is exactly the layout on a
+  # developer machine, and `source env.sh` needs no CI-specific patching.
+  # NOTE the literals: `path:`, `working-directory:` and `python-version:`
+  # below spell `LiPolGen`, `deps/install` and `3.11` out rather than reading
+  # these variables.  `${{ env.* }}` IS documented as available in a step's
+  # `with:` and in `jobs.<id>.defaults.run`, but none of it has been parsed by
+  # GitHub even once (see the header), and a wrong context there fails the
+  # whole workflow at parse time for a reason no local check can catch.  The
+  # two variables stay because the `run:` blocks -- ordinary shell, no
+  # expression evaluation -- do use them.
+  REPO_DIR: LiPolGen
+  DEPS_PREFIX_REL: deps/install
+
+  # Versions live here and ONLY here: the cache key is built from them, so
+  # bumping one below is what invalidates the cache and triggers a rebuild.
+  HEPMC3_VERSION: "3.3.0"
+  LHAPDF_VERSION: "6.5.5"
+  PYTHIA_VERSION: "8317"
+  PY_VERSION: "3.11"
+  LHAPDF_SETS: "CT18NLO NNPDFpol11_100 EPPS21nlo_CT18Anlo_Li6"
+
+  # Bump the trailing -v<N> by hand to force a rebuild without changing a
+  # version (e.g. after editing `.github/scripts/build_deps.sh` in a way that
+  # changes what lands in the prefix -- the script is NOT hashed into the key,
+  # because most edits to it are comments).
+  DEPS_CACHE_KEY: >-
+    deps-ubuntu2204-py3.11-hepmc3.3.0-lhapdf6.5.5-pythia8317-CT18NLO.NNPDFpol11_100.EPPS21nlo_CT18Anlo_Li6-v1
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # 1. The dependency stack.  This is the expensive job and the reason the
+  #    other three exist as separate jobs at all: they share its cache.
+  #
+  #    MEASURED 2026-09-05, 8 cores, cold: `.github/scripts/build_deps.sh` ran
+  #    end to end in **337.28 s** (HepMC3 57.7 s, LHAPDF 49.6 s, the three PDF
+  #    sets ~12 s, PYTHIA ~218 s) -- more than half of that being HepMC3's and
+  #    PYTHIA's Python bindings, which nothing in this tree imports.  Per-stage
+  #    table and the caveats: `docs/PACKAGING.md` section 1.3.  On a 4-core
+  #    GitHub runner the parallel stages roughly double and the two serial
+  #    binding TUs do not, so a cache MISS should land near 8-12 min -- an
+  #    EXTRAPOLATION, not a measurement.  A cache HIT is a ~114 MiB restore,
+  #    i.e. under a minute, and the whole build step is skipped.
+  # ---------------------------------------------------------------------------
+  deps:
+    name: dependency stack (HepMC3 + LHAPDF + PYTHIA 8)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: LiPolGen
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: dependency cache
+        id: deps-cache
+        uses: actions/cache@v4
+        with:
+          # 431 MiB on disk, 114 MiB as the tar+zstd stream actions/cache
+          # stores (both MEASURED 2026-09-05 on the author's prefix).  Well
+          # inside a repository's 10 GiB cache budget as a single entry.
+          path: ${{ github.workspace }}/deps/install
+          key: ${{ env.DEPS_CACHE_KEY }}
+
+      - name: system packages
+        if: steps.deps-cache.outputs.cache-hit != 'true'
+        run: |
+          sudo apt-get update
+          # build-essential+cmake build all three; zlib1g-dev is what PYTHIA's
+          # `--with-gzip` links against.  Everything else the three configure
+          # scripts want is already in the ubuntu-22.04 image (this list has
+          # NOT been checked against that image -- see the header).
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake zlib1g-dev
+
+      - name: build the stack
+        if: steps.deps-cache.outputs.cache-hit != 'true'
+        run: |
+          "${REPO_DIR}/.github/scripts/build_deps.sh" \
+            "${GITHUB_WORKSPACE}/${DEPS_PREFIX_REL}" "$(nproc)"
+
+      - name: what the cache now holds
+        run: |
+          P="${GITHUB_WORKSPACE}/${DEPS_PREFIX_REL}"
+          du -sh "$P"
+          ls "$P/lib" "$P/share/LHAPDF"
+          "$P/bin/lhapdf-config" --version
+          "$P/bin/pythia8-config" --version
+
+  # ---------------------------------------------------------------------------
+  # 2. The real gate: build LiPolGen against that prefix and run everything.
+  #
+  #    MEASURED 2026-09-05, 8 cores, in a checkout whose sibling `deps/` was
+  #    the prefix the job above had just built from scratch -- i.e. this exact
+  #    layout, not the author's own prefix:
+  #      cmake configure                3.08 s
+  #      cmake --build -j8             95.93 s   0 warning/error lines
+  #      build/lipolgen_tests         154.81 s   400 cases / 17 240 262 asserts
+  #                                              / 1 skipped / 0 failed
+  #      python -m pytest python/tests 128.63 s   923 passed / 114 skipped
+  #      docs citation gate                       0 broken across 3 documents
+  #      SPDX header gate                         101 files, 0 missing
+  #    The doctest tallies are bit-for-bit those of the author's own prefix.
+  #    pytest reads 923/114 there against 925/112 in the author's working tree
+  #    because that copy had no `.git` and no sibling PolarizedLithiumSim
+  #    checkout; ON GITHUB the first of those two comes back (actions/checkout
+  #    creates a .git with an origin) and the second does not, so expect
+  #    924 passed / 113 skipped here -- a PREDICTION, not a measurement.
+  #    EXTRAPOLATED on a 4-core runner: 9-11 min for the job.
+  # ---------------------------------------------------------------------------
+  test:
+    name: build + C++ suite + pytest + doc gates
+    needs: deps
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        working-directory: LiPolGen
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: LiPolGen
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: restore the dependency cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ github.workspace }}/deps/install
+          key: ${{ env.DEPS_CACHE_KEY }}
+          # The `deps` job has already run and either hit or filled this key,
+          # so a miss here is a real fault (a cache eviction between jobs, or
+          # a key mismatch) and should stop the run rather than silently
+          # rebuild nothing and fail later at `find_package`.
+          fail-on-cache-miss: true
+
+      - name: system packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential cmake zlib1g-dev
+
+      - name: Python packages
+        run: |
+          # numpy: a hard runtime dependency of the bindings' array returns.
+          # pytest: the suite.  pyyaml: `--config-file` (test_cli.py skips
+          # without it).  pyhepmc: test_hepmc.py's `importorskip` reader --
+          # a DIFFERENT package from HepMC3's own `pyHepMC3` bindings, which
+          # nothing in this suite imports.  pybind11: needed at CONFIGURE
+          # time; CMakeLists.txt asks the interpreter for its cmakedir.
+          python -m pip install --upgrade pip
+          python -m pip install numpy pytest pyyaml pyhepmc "pybind11>=2.10"
+
+      - name: environment (source env.sh once, export to later steps)
+        run: |
+          # Each `run:` is a fresh shell, so `source env.sh` in one step is
+          # invisible to the next.  Sourcing it once and forwarding the five
+          # variables it sets through $GITHUB_ENV keeps every later step
+          # running under exactly the environment the local flow uses, with
+          # env.sh as the single source of truth for what those are.
+          source env.sh
+          {
+            echo "LIPOLGEN_DEPS=$LIPOLGEN_DEPS"
+            echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH"
+            echo "PYTHIA8DATA=$PYTHIA8DATA"
+            echo "LHAPDF_DATA_PATH=$LHAPDF_DATA_PATH"
+            echo "PYTHONPATH=$PYTHONPATH"
+          } >> "$GITHUB_ENV"
+          echo "$LIPOLGEN_DEPS/bin" >> "$GITHUB_PATH"
+
+      - name: configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: build
+        run: |
+          # `-Wall -Wextra -Wshadow` are on for every LiPolGen target; the
+          # tree builds with ZERO of them (measured), so any warning here is
+          # a regression and the log is worth reading even on success.
+          cmake --build build -j "$(nproc)" 2>&1 | tee build.log
+          n=$(grep -icE "warning|error" build.log || true)
+          echo "warning/error lines in the build log: $n"
+          if [ "$n" != "0" ]; then
+            echo "::warning::the build emitted $n warning/error lines; the tree builds clean locally"
+          fi
+
+      - name: C++ suite (doctest)
+        run: ./build/lipolgen_tests
+
+      - name: Python suite (pytest)
+        run: python -m pytest python/tests -q
+
+      - name: documentation citation gate
+        # Strict mode: every `path:line` citation in the covered documents must
+        # still point at what it claims.  Exits non-zero on any broken one.
+        run: python3 validation/check_physics_channels_links.py
+
+      - name: SPDX header gate
+        run: python3 validation/check_spdx_headers.py
+
+  # ---------------------------------------------------------------------------
+  # 3. The optional tier, absent.  `LIPOLGEN_WITH_PYTHIA=OFF` is a supported
+  #    configuration and the suites are supposed to SKIP the T2 tests, not
+  #    fail them -- so that is what this job asserts.
+  #
+  #    It is a real gate, not a formality: before 2026-09-05 this configuration
+  #    did not build at all (`hadronize_example`/`generate_full` failed to
+  #    link, `tests/test_pythia.cpp` failed to compile) and pytest ended in
+  #    `ERROR collecting python/tests/test_mstw_sf.py`.  All three are fixed;
+  #    this job is what stops them coming back.
+  #
+  #    MEASURED locally, 8 cores, 2026-09-05:
+  #      cmake --build -j8              93.38 s, 0 warnings
+  #      build/lipolgen_tests           377 cases / 17 223 404 asserts
+  #                                     / 1 skipped / 0 failed
+  #                                     (tier ON: 400 / 17 240 262)
+  #      pytest                         874 passed / 163 skipped / 0 failed
+  #                                     (tier ON: 925 / 112 -- the same 51
+  #                                     tests, skipped instead of run)
+  #    The counts are NOT asserted here: they move whenever a test is added.
+  #    What is asserted is that both suites exit 0 and that the skips carry
+  #    the tier's own reason string.
+  # ---------------------------------------------------------------------------
+  pythia-tier-absent:
+    name: PYTHIA tier off -- suites must skip, not fail
+    needs: deps
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        working-directory: LiPolGen
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: LiPolGen
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: restore the dependency cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ github.workspace }}/deps/install
+          key: ${{ env.DEPS_CACHE_KEY }}
+          fail-on-cache-miss: true
+
+      - name: system packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential cmake zlib1g-dev
+
+      - name: Python packages
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install numpy pytest pyyaml pyhepmc "pybind11>=2.10"
+
+      - name: environment
+        run: |
+          source env.sh
+          {
+            echo "LIPOLGEN_DEPS=$LIPOLGEN_DEPS"
+            echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH"
+            echo "PYTHIA8DATA=$PYTHIA8DATA"
+            echo "LHAPDF_DATA_PATH=$LHAPDF_DATA_PATH"
+            echo "PYTHONPATH=$PYTHONPATH"
+          } >> "$GITHUB_ENV"
+
+      - name: configure and build with the T2 tier off
+        run: |
+          # Into `build/`, the same directory the tier-on flow uses, because
+          # `python/tests/conftest.py` puts `<repo>/build/python` at the FRONT
+          # of sys.path unconditionally -- building elsewhere and pointing
+          # PYTHONPATH at it silently tests the wrong extension (measured:
+          # it reported the tier-ON tallies).  A fresh checkout has no
+          # `build/`, so there is nothing to collide with.
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DLIPOLGEN_WITH_PYTHIA=OFF
+          cmake --build build -j "$(nproc)"
+
+      - name: the tier really is off
+        run: |
+          python -c "
+          import lipolgen as lg
+          assert lg.HAVE_PYTHIA8 is False, 'PYTHIA tier is still on'
+          assert lg.HAVE_HEPMC3 and lg.HAVE_LHAPDF, 'the other two tiers must stay on'
+          print('HAVE_PYTHIA8 =', lg.HAVE_PYTHIA8)
+          "
+
+      - name: C++ suite (fewer cases, zero failures)
+        run: ./build/lipolgen_tests
+
+      - name: Python suite must SKIP the T2 tests, with a reason
+        run: |
+          set -o pipefail
+          python -m pytest python/tests -q -rs 2>&1 | tee pytest-tier-off.log
+          # `-rs` prints one line per skip reason.  If the T2 tests had been
+          # collected and run (or errored at import, as they did before
+          # 2026-09-05) this string would be absent.
+          grep -q "built without PYTHIA 8" pytest-tier-off.log
+          echo "T2 tests were skipped with the tier's own reason string."
+
+  # ---------------------------------------------------------------------------
+  # 4. The wheel.  Builds it, makes it relocatable, and proves the result
+  #    imports with the dependency prefix removed from the picture -- then
+  #    stops.  NOTHING is uploaded: an `auditwheel`-repaired wheel vendors
+  #    libHepMC3, libLHAPDF and libpythia8, which makes the wheel a GPL-3.0
+  #    combined work, and publishing it is a decision for the author.
+  #    `docs/PACKAGING.md` has the measured details.
+  #
+  #    MEASURED locally, 8 cores, 2026-09-05:
+  #      pip wheel . --no-deps          87.77 s -> 1 779 767 B
+  #      auditwheel repair               5.35 s -> 7 232 971 B,
+  #                                      tag manylinux_2_35_x86_64
+  # ---------------------------------------------------------------------------
+  wheel:
+    name: portable wheel (pip wheel + auditwheel repair)
+    needs: deps
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        working-directory: LiPolGen
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: LiPolGen
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: restore the dependency cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ github.workspace }}/deps/install
+          key: ${{ env.DEPS_CACHE_KEY }}
+          fail-on-cache-miss: true
+
+      - name: system packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential cmake zlib1g-dev
+
+      - name: build tooling
+        run: |
+          # `patchelf` is the PyPI wheel that ships the patchelf BINARY;
+          # auditwheel 6.x needs it on PATH and does not vendor it.
+          python -m pip install --upgrade pip
+          python -m pip install auditwheel patchelf
+          auditwheel --version
+          patchelf --version
+
+      - name: build the wheel
+        env:
+          LIPOLGEN_DEPS_PREFIX: ${{ github.workspace }}/deps/install
+        run: |
+          # CMakeLists.txt reads $LIPOLGEN_DEPS_PREFIX itself when the cache
+          # variable is unset, so no --config-settings is needed here.
+          pip wheel . --no-deps -w wheelhouse
+          ls -l wheelhouse
+
+      - name: what the raw wheel needs from outside itself
+        run: auditwheel show wheelhouse/*.whl
+
+      - name: vendor the third-party libraries in
+        run: |
+          auditwheel repair -w repaired wheelhouse/*.whl
+          ls -l repaired
+          python -m zipfile -l repaired/*.whl | grep -E "\.libs/|\.so"
+          auditwheel show repaired/*.whl
+
+      - name: the repaired wheel imports with nothing set
+        run: |
+          # A venv outside the checkout, an empty environment, and a working
+          # directory that is not the repo: if the extension still needed the
+          # dependency prefix on LD_LIBRARY_PATH this would fail to import.
+          python -m venv "$RUNNER_TEMP/wheeltest"
+          "$RUNNER_TEMP/wheeltest/bin/pip" install repaired/*.whl
+          cd "$RUNNER_TEMP"
+          env -i HOME="$RUNNER_TEMP" PATH=/usr/bin:/bin \
+            "$RUNNER_TEMP/wheeltest/bin/python" -c "
+          import lipolgen as lg
+          print('version', lg.__version__)
+          print('tiers', lg.HAVE_LHAPDF, lg.HAVE_HEPMC3, lg.HAVE_PYTHIA8)
+          r = lg.run(channel='inclusive', isotope='6Li', events=20000, seed=1)
+          print('mean x', float(r['x'].mean()))
+          "
+
+      - name: the wheel is NOT published
+        run: |
+          echo "Built and verified; not uploaded anywhere, by design."
+          echo "See docs/PACKAGING.md -- distributing it is a GPL-3.0-or-later act."

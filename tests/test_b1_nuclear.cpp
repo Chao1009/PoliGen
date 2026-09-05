@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // b1 of a two-cluster nucleus by convolution (b1_nuclear.hpp): the A = 2
 // validation gate of design D section 5, the analytic limits of section 6,
 // and the number placeholders of section 7.

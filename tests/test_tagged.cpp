@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Tagged mode: the two-cluster spin (x) spectator model.
 //
 // Structural identities that must hold for any such model (normalization,

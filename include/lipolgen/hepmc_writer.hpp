@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // HepMC3 Asciiv3 writer for lipolgen::Event records.
 //
 // Layout and the ion-spin attribute convention are documented in

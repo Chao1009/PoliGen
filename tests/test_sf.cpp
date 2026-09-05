@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Structure-function backends against the Python they are ported from:
 // PolarizedLithiumSim/fastsim/polli_fastsim/{structure,polarized,delta_models}.py
 // and their tests (test_structure_r.py, test_digitized_curves.py,

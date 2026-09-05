@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The PIPELINE half of the tensor-sector radiative corrections (rc.hpp):
 // the wiring, and the one gate everything else rests on.
 //

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // FSI as a per-event weight (fsi.hpp): the Glauber X-cluster distortion of
 // the tagged spectator spectrum.
 //

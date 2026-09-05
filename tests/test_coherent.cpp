@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Coherent (intact-6Li) channel: the scenario model, the analytic tagging
 // identities, the m-state relation of the deformation mechanism, the recoil
 // kinematics, and the breakup / veto table routing -- against

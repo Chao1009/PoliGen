@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The triton's nucleon spectral function.  Every coefficient, its provenance
 // and every physics choice is in triton_sf.hpp.
 

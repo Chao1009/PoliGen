@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Integration layer: the `Pipeline` end-to-end gates (plans/05 step 5.D).
 //
 // Per-event four-momentum and charge conservation for every channel, the

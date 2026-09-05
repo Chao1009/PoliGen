@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """`lipolgen-run` -- one command line for a whole LiPolGen run.
 
     lipolgen-run --isotope 6Li --config 1 --channel tagged-alpha \

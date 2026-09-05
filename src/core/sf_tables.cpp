@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Generated from PolarizedLithiumSim/fastsim/polli_fastsim/data/*.csv
 // by scripts kept out of the build: the CSVs are committed data (see
 // data/SOURCES.md in the Python repository) and are embedded verbatim,

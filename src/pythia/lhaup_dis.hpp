@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Internal header of the PYTHIA tier: the in-memory LHAup that carries one
 // DIS hard process, and the RndmEngine that routes PYTHIA's randomness
 // through lipolgen::Rng.  Not installed, not part of the public interface.

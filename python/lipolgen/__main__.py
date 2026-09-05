@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """`python -m lipolgen ...` == `lipolgen-run ...`."""
 
 import sys

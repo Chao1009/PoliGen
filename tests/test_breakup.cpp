@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Tier T1: the struck cluster resolved into a struck nucleon + partner
 // spectator(s).  See breakup.hpp for every physics choice these tests pin.
 

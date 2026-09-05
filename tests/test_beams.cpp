@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // plans/10: the EIC energy menu, and that nothing has drifted off it.
 // Ported from PolarizedLithiumSim/fastsim/tests/test_beams.py.
 //

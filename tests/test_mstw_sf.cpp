@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // A1 -- the MSTW2008 LO unpolarized backend (`include/lipolgen/mstw_sf.hpp`,
 // `src/pythia/mstw_sf.cpp`).
 //

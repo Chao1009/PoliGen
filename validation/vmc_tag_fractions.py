@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
 """What switching the cluster radial forms to the ANL VMC tables does to the
 TAGGED observables: Roman-Pot tag fractions and the tagged tensor asymmetry.
 

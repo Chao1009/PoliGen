@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Gate 1 (DEVELOPMENT_PLAN section 4.1): rho-matrix moments, all axes, exact.
 // Ported one-for-one from PolarizedLithiumSim/evgen/tests/test_spin.py.
 

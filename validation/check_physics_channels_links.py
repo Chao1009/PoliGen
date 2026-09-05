@@ -1,7 +1,15 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Gate for docs/PHYSICS_CHANNELS.md: every line citation must still point at
 what the row says it points at.  Run from the repository root; exit status 1
 lists every broken citation.
+
+Since 2026-09-05 (Phase E item E1) the same checks also cover
+docs/theory/SPIN32_FINITE_GAMMA.md and docs/PYTHIA_BRIDGE.md -- see EXTRA_DOCS
+below for why those two and not others, and how each gets its own allow-list.
+Every document's report is printed in turn (the primary document's line is
+unlabelled, exactly as before this change; an extra document's line carries
+`[filename]` so a broken citation says which document it is in).
 
 FOUR CITATION SHAPES ARE CHECKED, and each has its own rule.
 
@@ -89,12 +97,16 @@ C. `` `path:first-last` `` -- a RANGE, a block citation: 97 citations of 89
          An entry with no citation left in the document is reported too: a dead
          fingerprint is dead weight that hides the next drift.
 
-   R4 has a running cost, and it is the point: editing a block that
-   PHYSICS_CHANNELS.md cites breaks this gate until a human confirms the row
-   and re-records.  `--record-ranges` prints every entry it adds, changes or
+   R4 has a running cost, and it is the point: editing a block that a covered
+   document cites breaks this gate until a human confirms the row and
+   re-records.  `--record-ranges` prints every entry it adds, changes or
    drops.  The same sidecar holds the S3 use-site pins and the D fingerprints
-   below: 123 entries in all -- 89 blocks, 27 use-site lines (29 citations, two
-   pairs of which cite one line) and 7 upstream lines.
+   below, now SHARED across every document this gate covers (a block or
+   upstream line cited by more than one document hashes to one entry, not
+   one per document): 220 entries in all -- 181 blocks, 30 use-site lines
+   and 9 upstream lines, as of 2026-09-05 once docs/theory/
+   SPIN32_FINITE_GAMMA.md and docs/PYTHIA_BRIDGE.md joined
+   docs/PHYSICS_CHANNELS.md under this gate (EXTRA_DOCS, below).
 
 D. `` `File.cc:...` `` -- an EXTERNAL citation, a PYTHIA upstream source
    pointer that resolves outside this repository: 5 point citations naming 6
@@ -240,33 +252,33 @@ WIN = 2
 # the fix, each of the six covers exactly one citation and nothing else in its
 # file passes unpinned.
 ALLOW = {
-    ("include/lipolgen/xsec.hpp", 220, "g1_rank3"): (
+    ("include/lipolgen/xsec.hpp", 221, "g1_rank3"): (
         "no rank-3 (octupole) slot",
         "no such symbol exists in the tree, deliberately: the row cites the "
         "comment that states why there is no rank-3 slot"),
-    ("src/core/pipeline.cpp", 773, "coherent"): (
+    ("src/core/pipeline.cpp", 774, "coherent"): (
         "on the coherent channel the tensor signal is in the recoil",
         "the cited line is inside PipelineConfig::validate()'s refusal "
         "message; `coherent` there is the English word in that message, which "
         "is the text the row quotes"),
-    ("src/core/pipeline.cpp", 1692, "optics_lumi_factor"): (
+    ("src/core/pipeline.cpp", 1693, "optics_lumi_factor"): (
         "cfg_.lumi_pb * optics_lumi_factor()",
         "the row's claim is that luminosity mode multiplies the optics factor "
         "in, so it cites the multiplication, not the accessor (declared at "
-        "include/lipolgen/pipeline.hpp:779, cited there too)"),
-    ("src/core/rc.cpp", 1032, "is_tagged_channel"): (
+        "include/lipolgen/pipeline.hpp:780, cited there too)"),
+    ("src/core/rc.cpp", 1033, "is_tagged_channel"): (
         "is_tagged_channel(channel_)",
         "one of three consecutive branch lines of RcModel::exclusion_reason "
         "the row cites together; the neighbours are use sites in files that "
         "do not declare their symbol"),
-    ("src/core/breakup.cpp", 332, "proton_fraction"): (
+    ("src/core/breakup.cpp", 333, "proton_fraction"): (
         "proton_fraction(in.x, in.q2, 1, 3)",
         "the triton branch's own proton/neutron draw, which is what the row "
         "describes; the definition is generic over (Z, A)"),
-    ("src/pythia/pythia_bridge.cpp", 700, "dis_parton_fraction"): (
+    ("src/pythia/pythia_bridge.cpp", 701, "dis_parton_fraction"): (
         "dis_parton_fraction(q, p_n, &xi_tmp, 1.0, mq)",
         "the re-solve with the chosen quark's mass, cited beside the "
-        "definition at src/pythia/pythia_bridge.cpp:170 in the same row"),
+        "definition at src/pythia/pythia_bridge.cpp:171 in the same row"),
 }
 
 CTRL = {"if", "for", "while", "switch", "return", "else", "do", "case", "new",
@@ -689,26 +701,67 @@ def clip(s: str, n: int = 100) -> str:
     return s if len(s) <= n else s[:n - 1] + "…"
 
 
-def main(argv=None) -> int:
-    argv = list(sys.argv[1:] if argv is None else argv)
-    fix = "--fix" in argv
-    record = "--record-ranges" in argv
-    strict = "--loose" not in argv
-    if not DOC.exists():
-        print(f"missing {DOC}")
-        return 1
-    text = DOC.read_text()
-    cache: dict[str, Source | None] = {}
+# --------------------------------------------------------------- extra documents
+#
+# 2026-09-05 (Phase E, item E1).  `docs/PHYSICS_CHANNELS.md` is the document
+# this gate was built for, but it is not the only one carrying `path:line`
+# citations that drift the exact same way.  Measured that day, counting with
+# this file's own REF/RANGE/EXT regexes: `docs/USAGE.md`, `docs/CONVENTIONS.md`
+# and `docs/T2_CHAIN.md` carry NONE; `docs/OPEN_ITEMS_SOLUTIONS.md` carries 3
+# (1 range, 2 external) -- not "more than a handful", so it stays uncovered and
+# the count is recorded instead (`docs/open_items/run_2026-09-03/
+# phase_E_numbers.md` §E1); `docs/theory/SPIN32_FINITE_GAMMA.md` carries 134
+# (19 named points, 115 ranges) and `docs/PYTHIA_BRIDGE.md` carries 8 external
+# PYTHIA upstream pointers -- both extended here, each with its own
+# (possibly empty) allow-list, and both fixed to 0 broken on that date: 15
+# stale ranges in the theory note (drift since the Phase E code comments
+# shifted several of them -- exactly what that document's own top-matter says
+# happened, and until now nothing machine-checked it) and one PYTHIA_BRIDGE.md
+# citation pair (`BeamRemnants.cc:662`, `:935`) that had been written as two
+# separate citations with no inheritance rule for an external file name, so it
+# was checked by nothing at all; rewritten as the single comma-joined
+# `BeamRemnants.cc:662,935` docs/PHYSICS_CHANNELS.md already uses.
+#
+# A document in this list absent under `ROOT` is skipped rather than reported
+# missing: only the PRIMARY document (`DOC`) is required to exist, so a test
+# fixture tree that creates nothing but `docs/PHYSICS_CHANNELS.md` still
+# checks exactly what it always did.  Every range/use-site fingerprint below
+# lives in the SAME sidecar as the primary document's (`RANGES_REL`) -- a
+# block or upstream line cited by more than one document hashes to one entry
+# either way, which is the correct reading: the fact is the source line, not
+# which markdown file points at it.
+ALLOW_SPIN32: dict = {}
+ALLOW_PYTHIA_BRIDGE: dict = {}
+EXTRA_DOCS = [
+    ("docs/theory/SPIN32_FINITE_GAMMA.md", ALLOW_SPIN32),
+    ("docs/PYTHIA_BRIDGE.md", ALLOW_PYTHIA_BRIDGE),
+]
+
+
+def check_document(doc: Path, allow: dict, *, fix: bool, record: bool,
+                   strict: bool, cache: dict, recorded: dict, fresh: dict,
+                   seen: set, remap: dict, ext_dir):
+    """Check one document's citations against the live tree.
+
+    `cache` (path -> Source|None), `recorded` (the loaded sidecar, read-only
+    here), `fresh` (sha256 entries this run actually reached), `seen` (keys
+    reached this run) and `remap` (moved-key old -> new, `--fix` only) are
+    shared across every document `main()` processes in one invocation, since a
+    fingerprint or a "no longer cited anywhere" verdict is a property of the
+    whole run, not of one document.  Returns `(bad, new_text)`: `bad` is the
+    list of broken citations (empty means this document is clean) and
+    `new_text` is the possibly-rewritten document text (`None` when `--fix`
+    changed nothing), for the caller to write back.  Prints this document's
+    own report (mirroring the single-document gate's own tail) before
+    returning, so callers only need to aggregate the exit code and the
+    cross-document housekeeping (dead fingerprints, `--record-ranges`).
+    """
+    text = doc.read_text()
     bad: list[str] = []
     fixed: list[str] = []
     allowed: list[str] = []
     skipped: list[str] = []
     n = nr = nx = 0
-    recorded = load_ranges()
-    fresh: dict[str, dict] = {}
-    seen: set[str] = set()
-    remap: dict[str, str] = {}
-    ext_dir = pythia_source_dir()
 
     def source(path: str):
         if path not in cache:
@@ -880,10 +933,10 @@ def main(argv=None) -> int:
         # this citation, leaves every other citation of the same name in the
         # same file fully checked, and holds only while the line it names
         # still carries the pinned text.
-        key = (path, line, base) if (path, line, base) in ALLOW else \
-              (path, line, name) if (path, line, name) in ALLOW else None
+        key = (path, line, base) if (path, line, base) in allow else \
+              (path, line, name) if (path, line, name) in allow else None
         if key is not None:
-            pin, why = ALLOW[key]
+            pin, why = allow[key]
             if pin in src.lines[line - 1]:
                 allowed.append(f"{path}:{line}  `{name}` -- {why}")
                 return m.group(0)
@@ -891,7 +944,7 @@ def main(argv=None) -> int:
                        f"but the line no longer contains its pin {pin!r}; the "
                        f"block has moved, or the code changed")
             return m.group(0)
-        if any(p == path and nm in (base, name) for p, _, nm in ALLOW):
+        if any(p == path and nm in (base, name) for p, _, nm in allow):
             bad.append(f"{path}:{line}  `{name}` is allow-listed in this file "
                        f"at another line only; an exemption covers one "
                        f"citation, not a name")
@@ -979,14 +1032,64 @@ def main(argv=None) -> int:
         ext_check(m)
     new_text = RANGE.sub(range_repl, text)
     new_text = REF.sub(repl, new_text)
-    if fix and fixed:
-        DOC.write_text(new_text)
-        if remap:
-            # the block is byte-identical, only its line numbers moved, so the
-            # fingerprint is carried over rather than re-taken
-            moved = {remap[k]: v for k, v in recorded.items() if k in remap}
-            kept = {k: v for k, v in recorded.items() if k not in remap}
-            write_ranges({**kept, **moved})
+
+    mode = "strict" if strict else "loose"
+    label = "" if doc == DOC else f"  [{doc.name}]"
+    print(f"{n} references checked ({mode}), {nr} ranges, {nx} external, "
+          f"{len(bad)} broken"
+          + (f", {len(allowed)} allow-listed" if strict else "")
+          + (f", {len(skipped)} skipped" if skipped else "")
+          + (f", {len(fixed)} fixed" if fix else "")
+          + label)
+    for x in fixed:
+        print("  fixed", x)
+    for a in allowed:                     # an exemption you cannot see is a hole
+        print("  allowed", a)
+    for sk in skipped:                    # nor one you cannot see
+        print("  skipped", sk)
+    for b in bad:
+        print("  ", b)
+    return bad, (new_text if fix and fixed else None)
+
+
+def main(argv=None) -> int:
+    argv = list(sys.argv[1:] if argv is None else argv)
+    fix = "--fix" in argv
+    record = "--record-ranges" in argv
+    strict = "--loose" not in argv
+    if not DOC.exists():
+        print(f"missing {DOC}")
+        return 1
+
+    cache: dict[str, Source | None] = {}
+    recorded = load_ranges()
+    fresh: dict[str, dict] = {}
+    seen: set[str] = set()
+    remap: dict[str, str] = {}
+    ext_dir = pythia_source_dir()
+
+    overall_bad = False
+    for doc, allow in [(DOC, ALLOW)] + [(ROOT / p, a) for p, a in EXTRA_DOCS]:
+        if not doc.exists():
+            # Only the primary document is required; an extra document that
+            # does not exist under this ROOT (a test fixture tree, most of
+            # the time) is simply not checked -- see the note above EXTRA_DOCS.
+            continue
+        bad, new_text = check_document(doc, allow, fix=fix, record=record,
+                                       strict=strict, cache=cache,
+                                       recorded=recorded, fresh=fresh,
+                                       seen=seen, remap=remap, ext_dir=ext_dir)
+        if new_text is not None:
+            doc.write_text(new_text)
+        if bad:
+            overall_bad = True
+
+    if fix and remap:
+        # the block is byte-identical, only its line numbers moved, so the
+        # fingerprint is carried over rather than re-taken
+        moved = {remap[k]: v for k, v in recorded.items() if k in remap}
+        kept = {k: v for k, v in recorded.items() if k not in remap}
+        write_ranges({**kept, **moved})
     if ext_dir is None:
         # nothing was read, so nothing can be said: carry the external
         # fingerprints across untouched rather than dropping them.
@@ -995,9 +1098,14 @@ def main(argv=None) -> int:
                 fresh[k] = v
                 seen.add(k)
     if strict and not record:
-        for key in sorted(set(recorded) - seen - set(remap)):
-            bad.append(f"{key}  fingerprinted in {RANGES_REL} but no longer "
-                       f"cited by the document; drop it with --record-ranges")
+        dead = sorted(set(recorded) - seen - set(remap))
+        if dead:
+            overall_bad = True
+            print(f"{len(dead)} fingerprint(s) no longer cited by any "
+                  f"covered document:")
+            for key in dead:
+                print(f"   {key}  fingerprinted in {RANGES_REL} but no "
+                      f"longer cited; drop it with --record-ranges")
     if record:
         added = sorted(set(fresh) - set(recorded))
         dropped = sorted(set(recorded) - set(fresh))
@@ -1013,21 +1121,7 @@ def main(argv=None) -> int:
         print(f"{len(fresh)} fingerprints written to {RANGES_REL} "
               f"({len(added)} new, {len(changed)} changed, {len(dropped)} "
               f"dropped): cited BLOCKS, pinned USE SITES and EXTERNAL lines")
-    mode = "strict" if strict else "loose"
-    print(f"{n} references checked ({mode}), {nr} ranges, {nx} external, "
-          f"{len(bad)} broken"
-          + (f", {len(allowed)} allow-listed" if strict else "")
-          + (f", {len(skipped)} skipped" if skipped else "")
-          + (f", {len(fixed)} fixed" if fix else ""))
-    for x in fixed:
-        print("  fixed", x)
-    for a in allowed:                     # an exemption you cannot see is a hole
-        print("  allowed", a)
-    for sk in skipped:                    # nor one you cannot see
-        print("  skipped", sk)
-    for b in bad:
-        print("  ", b)
-    return 1 if bad else 0
+    return 1 if overall_bad else 0
 
 
 if __name__ == "__main__":

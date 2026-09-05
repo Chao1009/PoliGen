@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The reproducibility discipline of docs/CONVENTIONS.md: a counter-based
 // stream keyed by (seed, run, bunch, event), never a global RNG.  Same
 // (seed, run, bunch) -> identical events on any thread count.

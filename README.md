@@ -7,7 +7,11 @@ output with an ion-spin attribute convention, and a **pybind11** Python module
 that is a drop-in, ~100× faster replacement for the numpy generator
 `PolarizedLithiumSim/evgen/polligen` it was ported from.
 
-License: **GPL-3.0-or-later** (`LICENSE`).
+License: **GPL-3.0-or-later** (`LICENSE`). Every source file under
+`include/`, `src/`, `tests/`, `python/lipolgen/`, `python/bindings.cpp` and
+`validation/` carries an `SPDX-License-Identifier: GPL-3.0-or-later` line
+(`validation/check_spdx_headers.py` gates it). See `AUTHORS` for the
+copyright holder(s) and `CITATION.cff` for how to cite this software.
 
 ## What it generates
 
@@ -105,8 +109,18 @@ LIPOLGEN_DEPS_PREFIX=/path/to/deps/install pip install -e .
 
 `PYTHIA8DATA`/`LHAPDF_DATA_PATH` still need exporting at run time (see
 `docs/USAGE.md`); the wheel's RPATH points at this machine's deps prefix, so
-it is not relocatable as-is — `auditwheel repair` fixes that but pulls in
-GPL-3 redistribution terms for the combined work.
+it is not relocatable as-is. `auditwheel repair` makes it so — measured
+2026-09-05: it vendors HepMC3/LHAPDF/PYTHIA8 in, 1.70 MiB → 6.90 MiB, tag
+`manylinux_2_35_x86_64`, and the result imports on a machine with no deps
+prefix at all — but it pulls in GPL-3 redistribution terms for the combined
+work, and the two libraries' **data** trees still are not in the wheel.
+Commands and measurements: **`docs/PACKAGING.md`**.
+
+`.github/workflows/ci.yml` builds that whole dependency stack into a cache and
+runs both suites and both gates against it (plus a PYTHIA-tier-off build and
+the wheel). It has been exercised command-by-command on one Ubuntu 22.04
+machine and **never run on GitHub** — the file's own header says exactly what
+that leaves unverified.
 
 ## Use
 

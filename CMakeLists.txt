@@ -157,8 +157,39 @@ endif()
 
 # ---------------------------------------------------------------- examples
 file(GLOB LIPOLGEN_EXAMPLES CONFIGURE_DEPENDS examples/*.cpp)
+
+# An example that USES a tier cannot link when that tier is off -- the
+# conditional `target_link_libraries` below only stops the library being
+# added, it cannot stop the example's own calls into it.  Measured
+# 2026-09-05: with -DLIPOLGEN_WITH_PYTHIA=OFF, `hadronize_example` and
+# `generate_full` failed at link with `undefined reference to
+# lipolgen::PythiaBridge::...`, so that whole configuration did not build at
+# all.  Pair each tier with the public header only that tier's target
+# provides and skip an example that includes one of an absent tier; the
+# pairing is by header, not a hardcoded example list, so a new example needs
+# no edit here.  With all three tiers on -- the shipped default -- nothing
+# below is skipped and the generated build is unchanged.
+#
+# `file(READ)` is a configure-time read with no dependency edge: adding or
+# removing one of these includes in an existing example needs a reconfigure
+# (touching CMakeLists.txt or `cmake -S . -B build` again) to take effect.
+# Adding or deleting an example file is picked up by CONFIGURE_DEPENDS above.
 foreach(ex ${LIPOLGEN_EXAMPLES})
   get_filename_component(name ${ex} NAME_WE)
+  file(READ ${ex} LIPOLGEN_EX_SOURCE)
+  set(LIPOLGEN_EX_SKIP "")
+  if(NOT TARGET lipolgen_lhapdf AND LIPOLGEN_EX_SOURCE MATCHES "lipolgen/lhapdf_sf\\.hpp")
+    set(LIPOLGEN_EX_SKIP "LHAPDF")
+  elseif(NOT TARGET lipolgen_hepmc AND LIPOLGEN_EX_SOURCE MATCHES "lipolgen/hepmc_writer\\.hpp")
+    set(LIPOLGEN_EX_SKIP "HepMC3")
+  elseif(NOT TARGET lipolgen_pythia AND LIPOLGEN_EX_SOURCE MATCHES "lipolgen/pythia_bridge\\.hpp")
+    set(LIPOLGEN_EX_SKIP "PYTHIA 8")
+  endif()
+  if(LIPOLGEN_EX_SKIP)
+    message(STATUS
+      "example ${name}: NOT BUILT -- it uses the ${LIPOLGEN_EX_SKIP} tier, which is off")
+    continue()
+  endif()
   add_executable(${name} ${ex})
   target_link_libraries(${name} PRIVATE lipolgen_core)
   foreach(t lipolgen_lhapdf lipolgen_hepmc lipolgen_pythia)

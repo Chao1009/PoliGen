@@ -7,15 +7,19 @@ row 8. Audience: the LiPolGen authors and a theory co-author.
 No code is changed by this note; every statement about the generator carries a
 `file:line` that was read to write it. Those references were **re-resolved by
 hand on 2026-09-03**, after the Phase E code comments shifted several of them.
-`docs/theory/` is outside `validation/check_physics_channels_links.py`'s reach
-(that gate reads `docs/PHYSICS_CHANNELS.md` only), so they are not
-machine-checked: treat a `file:line` here as a pointer to a symbol, and grep for
-the symbol if the line does not look right.
+**As of 2026-09-05 this document IS machine-checked**:
+`validation/check_physics_channels_links.py` covers it (alongside
+`docs/PHYSICS_CHANNELS.md` and `docs/PYTHIA_BRIDGE.md`), strictly, with a
+sha256 fingerprint on every cited range so a code edit that moves or changes a
+cited block is caught rather than silently going stale the way the 15 ranges
+above did between 2026-09-03 and 2026-09-05. `python/tests/test_doc_link_gate.py`
+runs the gate over the real document in the suite, so a stale citation here
+fails `pytest`, not just a hand run of the script.
 
 Conventions of this note: `M` is the free nucleon mass (per-nucleon Bjorken `x`,
-`include/lipolgen/asymmetries.hpp:56-60`); `J` is the ion spin; `m` a projection
+`include/lipolgen/asymmetries.hpp:57-61`); `J` is the ion spin; `m` a projection
 on the fill axis `n̂(θ_S, φ_S)`; `φ' = φ − φ_S`; `λ_e = ±1` the electron helicity
-sign and `P_e` its magnitude (`include/lipolgen/xsec.hpp:120-127`). Papers cited
+sign and `P_e` its magnitude (`include/lipolgen/xsec.hpp:121-128`). Papers cited
 as `[n]` are listed in §7 with equation numbers.
 
 ---
@@ -25,13 +29,13 @@ as `[n]` are listed in §7 with equation numbers.
 Today the generator treats a J = 3/2 ion (⁷Li) with **rank 0, 1 and 2 only**: the
 unpolarized rate from `F1`/`F2`, a vector term `λ_e P_e (m/J) cos θ_S · A_∥`, and
 a rank-2 (alignment) block that reuses the spin-1 machinery verbatim — the same
-scalar `Q_NN(m) = [3m² − J(J+1)]/3` geometry (`include/lipolgen/xsec.hpp:22-28`,
-`src/core/xsec.cpp:167-172`), the same `b1 + (1−y)/(xy²) b2` kernel and the same
-optional exact finite-γ Cosyn kernel (`include/lipolgen/xsec.hpp:203-216`), fed
+scalar `Q_NN(m) = [3m² − J(J+1)]/3` geometry (`include/lipolgen/xsec.hpp:23-29`,
+`src/core/xsec.cpp:168-173`), the same `b1 + (1−y)/(xy²) b2` kernel and the same
+optional exact finite-γ Cosyn kernel (`include/lipolgen/xsec.hpp:204-217`), fed
 through the dedicated J = 3/2 slots `b1_32_func / b2_32_func / delta_32_func`
-(`include/lipolgen/xsec.hpp:217-225`, dispatched at `src/core/xsec.cpp:107-117`); the
+(`include/lipolgen/xsec.hpp:218-226`, dispatched at `src/core/xsec.cpp:108-118`); the
 rank-3 (octupole) sector is computed in the spin bookkeeping
-(`include/lipolgen/spin.hpp:93-101`, `src/core/spin.cpp:244-257`) but never
+(`include/lipolgen/spin.hpp:94-102`, `src/core/spin.cpp:246-259`) but never
 reaches the cross section. This note establishes two things. **(a)** The
 rank-≤2 truncation is *exact*, not an approximation, for every inclusive
 observable measured with an **unpolarized lepton beam** — A_zz, the cos 2φ
@@ -100,18 +104,18 @@ depend on the values 4/5, 2/3, 8/9 — every result below is anchored on the
 
 LiPolGen never stores ρ as 15 parameters. It stores an **axially symmetric fill**:
 populations p_m along one axis n̂(θ_S, φ_S), m ordered +J … −J
-(`include/lipolgen/spin.hpp:8-13`, `include/lipolgen/bookkeeping.hpp:58-67`).
+(`include/lipolgen/spin.hpp:9-14`, `include/lipolgen/bookkeeping.hpp:59-68`).
 An axially symmetric state has one non-zero parameter per multipole, so the 15
 parameters collapse to three numbers plus two angles. The three numbers are
-(`include/lipolgen/spin.hpp:17-20`, implemented at `src/core/spin.cpp:259-288`):
+(`include/lipolgen/spin.hpp:18-21`, implemented at `src/core/spin.cpp:261-290`):
 
         P_z = ⟨J_z⟩ / J                                    vector, l = 1        (5)
         T   = ⟨3J_z² − J(J+1)⟩ / 3                         alignment, l = 2     (6)
         R₃  = ⟨J_z³ − (41/20) J_z⟩ / (3/10)                octupole, l = 3      (7)
 
 all with respect to the fill axis, all dimensionless. Equation (6) is
-`tensor_polarization` (`src/core/spin.cpp:228-242`, the `j = 1.5` branch divides
-by 3); Eq. (7) is `octupole_moment` (`src/core/spin.cpp:244-257`, the operator
+`tensor_polarization` (`src/core/spin.cpp:230-244`, the `j = 1.5` branch divides
+by 3); Eq. (7) is `octupole_moment` (`src/core/spin.cpp:246-259`, the operator
 `J_z³ − (41/20)J_z` divided by 0.3). The operator in (7) is the standard rank-3
 spherical tensor for J = 3/2: T_30 ∝ 5J_z³ − [3J(J+1) − 1] J_z = 5J_z³ −
 (41/4)J_z, i.e. J_z³ − (41/20)J_z up to a factor 5.
@@ -128,18 +132,18 @@ that the stretched state |3/2, ±3/2⟩ has |T| = 1; its full physical range is
 [−1, +1]. **(ii)** R₃ is normalized on the *stretched* state, R₃(+3/2) = +1, but
 its physical range is [−3, +3], because the |m| = 1/2 states carry R₃ = ∓3. This
 is a deliberate choice, pinned by
-`tests/test_spin.cpp:137-140` ("pure m = +3/2 has all normalized moments = +1",
+`tests/test_spin.cpp:138-141` ("pure m = +3/2 has all normalized moments = +1",
 `spin32_populations(1,1,1) = (1,0,0,0)`); it is *not* a moment normalized to
 unit range, and any positivity check written against |R₃| ≤ 1 would be wrong.
 
 The J = 1 limit is a consistency check and is pinned in the code. For J = 1 the
 code uses P_zz = ⟨3J_z² − 2⟩ with no division by 3
-(`src/core/spin.cpp:268-274`), the Hoodbhoy–Jaffe–Manohar c_m = 3m² − 2 = (1, −2,
-1) convention (`include/lipolgen/spin.hpp:22`). The cross-section kernel then
+(`src/core/spin.cpp:269-275`), the Hoodbhoy–Jaffe–Manohar c_m = 3m² − 2 = (1, −2,
+1) convention (`include/lipolgen/spin.hpp:23`). The cross-section kernel then
 divides by 3 itself, `Q_NN = (3m² − J(J+1))/3 = c_m/3`
-(`src/core/xsec.cpp:167-172`), giving **one** rank-2 geometry for both spins
-(`include/lipolgen/xsec.hpp:22-28`, pinned at `tests/test_xsec.cpp:296-315` and
-against the HJM transcription digit-for-digit at `tests/test_xsec.cpp:317-334`).
+(`src/core/xsec.cpp:168-173`), giving **one** rank-2 geometry for both spins
+(`include/lipolgen/xsec.hpp:23-29`, pinned at `tests/test_xsec.cpp:297-316` and
+against the HJM transcription digit-for-digit at `tests/test_xsec.cpp:318-335`).
 So Q_NN is the same object for J = 1 and J = 3/2 — but T is not: T ≡ P_zz for
 J = 1 and T ≡ Q_NN for J = 3/2. That asymmetry is a live trap for anyone reading
 `AxisMoments::tensor` across the two isotopes, and the two example CLIs are
@@ -156,9 +160,9 @@ cross section moved (the plan runs at `lam_e = 0` and the kernel reads
 `measured_pzz` did.
 
 The exact map from moments to populations is a 4×4 linear solve,
-`spin32_populations(pz, t, o)` (`src/core/spin.cpp:304-322`), whose rows are
+`spin32_populations(pz, t, o)` (`src/core/spin.cpp:306-324`), whose rows are
 exactly the four weight vectors (1, m/J, Q_NN, R₃) of (8)
-(`src/core/spin.cpp:307-312`), round-tripped at `tests/test_spin.cpp:128-136`.
+(`src/core/spin.cpp:308-313`), round-tripped at `tests/test_spin.cpp:129-137`.
 
 ### 2.3 The covariant tensors of an axially symmetric fill
 
@@ -171,7 +175,7 @@ are the unique symmetric traceless tensors built from n̂:
 
 normalized so that with n̂ = ẑ one has S^z = P_z, t_zz = T, R_zzz = R₃.
 Equation (10) is exactly the code's stated form
-(`include/lipolgen/xsec.hpp:23-25`; line 23 carries the t_ij form itself, 24-25
+(`include/lipolgen/xsec.hpp:24-26`; line 23 carries the t_ij form itself, 24-25
 the Q_NN definition and t_geo/c_eff) and is [2] Eq. (9) with the pure-state
 scalar replaced by T: [2] Eq. (9) reads t^{αβ}(N, Λ_d) = (1/6)(g^{αβ} −
 p^α p^β/p² + 3N^α N^β) × (+1 for Λ_d = ±1, −2 for Λ_d = 0), whose rest-frame
@@ -195,10 +199,10 @@ inclusive DIS.
 ### 2.4 ⁷Li fill states as worked examples
 
 The **library-level** plan builders produce exactly one J = 3/2 plan,
-`helicity_flip_plan(1.5, …)` (`include/lipolgen/bookkeeping.hpp:150-151`,
-`src/core/bookkeeping.cpp:80-104`); `tensor_thirds_plan`,
+`helicity_flip_plan(1.5, …)` (`include/lipolgen/bookkeeping.hpp:151-152`,
+`src/core/bookkeeping.cpp:81-110`); `tensor_thirds_plan`,
 `transverse_tensor_plan` and `tensor_flip_plan` all hard-code spin 1
-(`src/core/bookkeeping.cpp:106-139`). The **example CLIs add one more by hand**:
+(`src/core/bookkeeping.cpp:107-140`). The **example CLIs add one more by hand**:
 `--plan pure` builds `pops = (1, 0, 0, 0)`, the stretched state |3/2, +3/2⟩,
 with an *unpolarized* electron at θ_S = 0
 (`examples/generate_full.cpp:128-134`, `examples/generate_tagged.cpp:119-124`).
@@ -208,9 +212,9 @@ octupole range today. It is protected by the theorem of §4 (`lam_e = 0`), so no
 number it has produced moves; but it is the reason the rank-3 sector cannot be
 waved away with "no run plan reaches it". Returning to `helicity_flip_plan`:
 its default branch
-(`use_explicit_pzz = false`, `include/lipolgen/bookkeeping.hpp:132-137`) is the
+(`use_explicit_pzz = false`, `include/lipolgen/bookkeeping.hpp:133-138`) is the
 spin-temperature (maximum-entropy) ladder p_m ∝ u^m
-(`src/core/bookkeeping.cpp:84`, `include/lipolgen/bookkeeping.hpp:196-207`). For
+(`src/core/bookkeeping.cpp:85`, `include/lipolgen/bookkeeping.hpp:198-208`). For
 J = 3/2 with ladder ratio u the three moments have closed forms — derived here
 and checked numerically against `populations_maxent`:
 
@@ -234,9 +238,9 @@ Worked values (u from bisection, moments from `moments_along_axis`):
 | "tensor-thirds" analogue, P_z = 0, alignment T | (1+T)/4, (1−T)/4, (1−T)/4, (1+T)/4 | 0 | T | **0** |
 
 The u = 3 row is the rational anchor already pinned by
-`tests/test_spin.cpp:219-228` (populations (27, 9, 3, 1)/40; P_z = 0.7,
+`tests/test_spin.cpp:220-229` (populations (27, 9, 3, 1)/40; P_z = 0.7,
 T = 0.4, R₃ = 0.2 exactly) and quoted in
-`include/lipolgen/bookkeeping.hpp:200-201`.
+`include/lipolgen/bookkeeping.hpp:201-202`.
 
 Three consequences for the run plans:
 
@@ -251,18 +255,18 @@ Three consequences for the run plans:
   statement of the theorem in §4.
 * **The explicit-P_zz branch silently sets R₃ = 0.** `helicity_flip_plan` with
   `use_explicit_pzz = true` calls `spin32_populations(pz, opt.pzz)`
-  (`src/core/bookkeeping.cpp:88`) and the third argument defaults to `o = 0.0`
-  (`include/lipolgen/spin.hpp:117-118`). That is a *choice of fill*, not a
+  (`src/core/bookkeeping.cpp:89`) and the third argument defaults to `o = 0.0`
+  (`include/lipolgen/spin.hpp:118-119`). That is a *choice of fill*, not a
   property of the physics. No C++ example CLI parses a `--pzz` flag, so the
   branch is unreachable from *them*; the Python API does expose it
   (`HelicityFlipOptions.use_explicit_pzz` and `.pzz`,
-  `python/bindings.cpp:1796-1797`), so a Python caller who sets `pzz` gets
+  `python/bindings.cpp:1797-1798`), so a Python caller who sets `pzz` gets
   R₃ = 0 silently today. If the rank-3 sector is ever switched on,
   `HelicityFlipOptions` needs an explicit `o` alongside `pzz` — and `RunPlan`
   needs somewhere to record it (§6.1).
 
 The in-situ ⁷Li polarimeter the pipeline uses is ⟨P₂(cos θ_k)⟩ = −T/5 for any
-fill (`tests/test_tagged.cpp:335-351`, `tests/test_pipeline.cpp:485-511`),
+fill (`tests/test_tagged.cpp:337-353`, `tests/test_pipeline.cpp:486-512`),
 i.e. it measures the rank-2 moment. **There is no rank-3 polarimeter in the
 generator**; R₃ would have to come from the fill model (14), not from a
 measurement.
@@ -345,7 +349,7 @@ Inverting the first pair:
 **The alignment weight in [6] is exactly the code's Q_NN of Eq. (8), with the
 same normalization.** This is the central mapping result of §3: the code's choice
 to extend `Q_NN = (3m² − J(J+1))/3` from J = 1 to J = 3/2 with T = ±1 on the
-stretched state (`src/core/xsec.cpp:167-172`) is precisely the normalization in
+stretched state (`src/core/xsec.cpp:168-173`) is precisely the normalization in
 which [6]'s b1 is the coefficient — no rescaling is needed.
 
 The same statement holds independently in [4]. [4] Eq. (23) gives the parton
@@ -385,7 +389,7 @@ and [4] and neither is the code's.
 
 **The code's own normalization**, which §3.5 and §6.4 need, is fixed by the rate
 terms themselves. The vector term the generator already computes is
-`w = λ_e P_e (m/J) cos θ_S · A_∥` (`src/core/xsec.cpp:266-268`), and the rank-3
+`w = λ_e P_e (m/J) cos θ_S · A_∥` (`src/core/xsec.cpp:267-269`), and the rank-3
 slot this note proposes is `w₃ = λ_e P_e R₃(m) P₃(cos θ_S) D g1_rank3/F1`
 (Eq. (45), used again in (49)). So the per-state helicity difference *in the
 code's slots* is (m/J) g1 + R₃(m) g1_rank3, and matching it term by term to
@@ -400,8 +404,8 @@ the code's tables. Equation (22′) is the map that makes §3.5's positivity bou
 and §6.4's test 7 evaluable on `SFTables` without rescaling.
 
 **The one sign that must be fixed by hand.** The generator's rank-2 rate term is
-`TENSOR_LL_SIGN · Q_NN · P₂(cos θ_S) · K / D_φ` (`src/core/xsec.cpp:256-259`)
-with `TENSOR_LL_SIGN = −1` (`include/lipolgen/constants.hpp:39`), i.e.
+`TENSOR_LL_SIGN · Q_NN · P₂(cos θ_S) · K / D_φ` (`src/core/xsec.cpp:257-260`)
+with `TENSOR_LL_SIGN = −1` (`include/lipolgen/constants.hpp:40`), i.e.
 
         F1^{(m)}|_code = F1 − Q_NN(m) · b1|_code                              (23)
 
@@ -410,7 +414,7 @@ defines δ_T f = f⁰ − (f^{+1} + f^{−1})/2 and b1 = (1/2) Σ e_i² (δ_T q_
 so b1 = F1^{(0)} − F1^{(1)}, which with (23) and Q_NN(1) − Q_NN(0) = 1 is an
 identity. It is also the sign of every published number: A_zz = −(2/3) b1/F1
 ([2] Eq. (27), HERMES [8]), which the code reproduces exactly at every y and is
-pinned at `tests/test_xsec.cpp:222-239` and `tests/test_xsec.cpp:241-254`, and
+pinned at `tests/test_xsec.cpp:223-240` and `tests/test_xsec.cpp:242-255`, and
 which `docs/CONVENTIONS.md:18-25` states as "b₁ > 0 means the m = 0 state has the
 LARGER cross section". Comparing (20) with (23),
 
@@ -447,7 +451,7 @@ In the convention-free objects of §3.2 this is simply
 For the code's toy inputs this is a **cheap, complete positivity test on any
 (b1_32, g1, g1_rank3) triple**, and it is strictly stronger than the two checks
 the generator has today (`InclusiveKernel::positivity_margin`,
-`include/lipolgen/xsec.hpp:323-325`, only tests W(φ) ≥ 0 in the azimuth). In the
+`include/lipolgen/xsec.hpp:324-326`, only tests W(φ) ≥ 0 in the azimuth). In the
 code's own slots — **all three** structure functions in the code normalization,
 `b1_32` with the code's sign of (23) and (g1, g1_rank3) carrying the weights the
 rate terms actually apply — it reads
@@ -695,7 +699,7 @@ survive, and the first of those is then set to zero by time-reversal invariance:
   for J = 3/2. `docs/open_items/physics_literature.md` §1's "Default: rank ≤ 2
   truncation" can be restated as a theorem with a citation. The generator's own
   numerical statement of this is already in place at
-  `tests/test_xsec.cpp:124-129`: an unpolarized electron on a J = 3/2 target with
+  `tests/test_xsec.cpp:125-130`: an unpolarized electron on a J = 3/2 target with
   zero rank-2 slots gives `w_avg == a1 == a2 == 0.0` exactly.
 * **Non-exactness where it matters.** *Every* λ_e-odd observable — A_∥, A_⊥ and
   the λ_e-odd azimuthal harmonics — receives the l = 1 **and** the l = 3
@@ -718,17 +722,17 @@ survive, and the first of those is then set to zero by time-reversal invariance:
 
 θ_q is the target-rest-frame angle between the virtual photon and the incoming
 electron; it vanishes as γ → 0. Equations (34) are `epsilon_gamma`
-(`include/lipolgen/asymmetries.hpp:62`) and `theta_q_cos_sin`
-(`src/core/xsec.cpp:11-17`). The spin axis at (θ_S, φ_S) to the **beam** has,
+(`include/lipolgen/asymmetries.hpp:63`) and `theta_q_cos_sin`
+(`src/core/xsec.cpp:12-18`). The spin axis at (θ_S, φ_S) to the **beam** has,
 in the **photon** frame with x̂ along the incoming lepton's transverse projection
-(`include/lipolgen/xsec.hpp:262-271`),
+(`include/lipolgen/xsec.hpp:263-272`),
 
         N = ( c s_S cos φ' + s c_S ,  s_S sin φ' ,  c c_S − s s_S cos φ' )     (35)
 
 with c, s = cos θ_q, sin θ_q and c_S, s_S = cos θ_S, sin θ_S, φ' = φ − φ_S.
-Equation (35) is verbatim `include/lipolgen/xsec.hpp:265-266`; the frame choice
+Equation (35) is verbatim `include/lipolgen/xsec.hpp:266-267`; the frame choice
 is the one that makes both finite-γ rows of [2] Table 1 come out, pinned at
-`tests/test_tensor_gamma.cpp:381` and `:406`.
+`tests/test_tensor_gamma.cpp:382` and `:406`.
 
 ### 5.2 The rank-2 block: unchanged in form, and already in the code
 
@@ -755,8 +759,8 @@ x = 2x_d ([2] Eq. (12)), and F2, b2 are per-nucleon-normalized so that the
 Callan–Gross relations read F2 = 2x F1 and b2 = 2x b1. [2] itself prints them as
 F2 = 2x_d F1 = x F1 and b2 = 2x_d b1 = x b1 ([2] Eq. (18)) in its own x = 2x_d.
 The generator uses the per-nucleon form throughout — x per nucleon
-(`include/lipolgen/asymmetries.hpp:56-60`) and `t.b2 = 2·x·t.b1` as the default
-(`src/core/xsec.cpp:115`) — so the note follows the code, and anyone comparing
+(`include/lipolgen/asymmetries.hpp:57-61`) and `t.b2 = 2·x·t.b1` as the default
+(`src/core/xsec.cpp:116`) — so the note follows the code, and anyone comparing
 against [2] must remember that the note's x is [2]'s x_d.
 
         F_[U T_LL,T] = −[ 2(1+γ²) b1 − (γ²/x)( b2/6 − b3/2 ) ]                (38a)
@@ -775,12 +779,12 @@ the code takes γ → 0 at whatever b2 and R it was handed. At γ → 0 alone:
         F_[UU,L]    → F2/x − 2F1 = 2 F1 R   (zero only at R = 0)
 
 which is exactly what the code's own header and its pinned test state
-(`include/lipolgen/xsec.hpp:98-102`, `src/core/xsec.cpp:28-31`, and
-`tests/test_tensor_gamma.cpp:151`, which pins the collapse explicitly "for any
+(`include/lipolgen/xsec.hpp:99-103`, `src/core/xsec.cpp:29-32`, and
+`tests/test_tensor_gamma.cpp:152`, which pins the collapse explicitly "for any
 b2"). The F_[UU,L] line is not a technicality: it is the same R that puts the
 (1 + εR) into the pinned **spin-1** identity A_zz(1 + εR) = −(2/3) b1/F1
-(`tests/test_xsec.cpp:222-239`; the J = 3/2 contrast has no 2/3, §5.4), and the
-generator's default `r_sigma_lt` (`src/core/xsec.cpp:40`) is not zero. Imposing
+(`tests/test_xsec.cpp:223-240`; the J = 3/2 contrast has no 2/3, §5.4), and the
+generator's default `r_sigma_lt` (`src/core/xsec.cpp:41`) is not zero. Imposing
 the two Callan–Gross relations on top — b2 = 2x b1 ([2] Eq. (18)) and R = 0 —
 recovers [2] Eqs. (25), (26) as printed.
 
@@ -789,16 +793,16 @@ built from the *spin-3/2* alignment via Eqs. (10) and (12) — numerically this 
 the single substitution Q_NN(m) = (3m² − 15/4)/3 = ±1 in place of the J = 1
 values (1/3, −2/3, 1/3), which is exactly what
 `InclusiveKernel::tensor_moments` already does off `ion().spin`
-(`src/core/xsec.cpp:167-172`). (ii) b1…b4 are spin-3/2 matrix elements with
+(`src/core/xsec.cpp:168-173`). (ii) b1…b4 are spin-3/2 matrix elements with
 their own values and their own sign convention (§3.4, Eq. (24)).
 
 **Therefore the generator's `b1_32_func / b2_32_func / delta_32_func` slots and
 the whole `tensor_gamma` machinery apply to ⁷Li verbatim.** Verified in code:
 `InclusiveKernel::tables` dispatches to the `_32` slots on `ion().spin == 1.5`
-(`src/core/xsec.cpp:107-117`) and fills b3, b4 for *every* spin
-(`src/core/xsec.cpp:118-121`); `tensor_harmonics_gamma` then calls
+(`src/core/xsec.cpp:108-118`) and fills b3, b4 for *every* spin
+(`src/core/xsec.cpp:119-122`); `tensor_harmonics_gamma` then calls
 `tensor_moments(state.m)`, `cosyn_tensor_sfs` and `cosyn_unpolarized_sfs` with
-no spin-dependent branch at all (`src/core/xsec.cpp:174-211`). Nothing in the
+no spin-dependent branch at all (`src/core/xsec.cpp:175-212`). Nothing in the
 finite-γ path is spin-1-specific. The only thing the J = 3/2 case lacks is a
 physics input for b1…b4 — which is `OPEN_ITEMS_SOLUTIONS.md` row 10 (b1 for
 A > 2), not row 8.
@@ -858,7 +862,7 @@ rank-3 functions are named so that they enter their channels with exactly the
 constants the vector functions enter theirs, which is what makes the rank-3
 block a literal copy of the vector block in the code. It is therefore also the
 rank-3 statement of the generator's own A₁/A₂ decomposition, `a_parallel_exact`
-(`include/lipolgen/asymmetries.hpp:68-80`): with A₁ = (g1 − γ²g2)/F1 and
+(`include/lipolgen/asymmetries.hpp:69-81`): with A₁ = (g1 − γ²g2)/F1 and
 A₂ = γ(g1 + g2)/F1 for the vector sector,
 
         A₁^{(3)} = ( g1_rank3 − γ² g2_rank3 ) / F1 ,
@@ -888,9 +892,9 @@ while the LT′ prefactor of (40) carries an explicit γ through (42). So at γ 
         w₃(γ = 0) = λ_e P_e · R₃ · P₃(cos θ_S) · D(y) · g1_rank3 / F1          (45)
 
 with D(y) the generator's own `depolarization_d`
-(`include/lipolgen/asymmetries.hpp:38-39`). Compare the vector term the code
+(`include/lipolgen/asymmetries.hpp:39-40`). Compare the vector term the code
 already computes, `w = λ_e P_e (m/J) cos θ_S · A_∥`
-(`include/lipolgen/xsec.hpp:18`, `src/core/xsec.cpp:265-269`): the rank-3 term is
+(`include/lipolgen/xsec.hpp:19`, `src/core/xsec.cpp:266-270`): the rank-3 term is
 the same expression with (m/J) → R₃ and P₁(cos θ_S) → P₃(cos θ_S). The
 leading-twist count checks out: F1, b1, g1, g1_rank3 — the four functions of [6]
 §3.1 (Eq. (17) above).
@@ -901,13 +905,13 @@ Collecting §5.2 and §5.3, the inclusive cross section for an electron of helic
 λ_e and polarization P_e on a J = 3/2 ion in an axially symmetric fill with
 moments (P_z, T, R₃) along n̂(θ_S, φ_S), at finite γ, in the generator's own
 variables and normalization
-(`include/lipolgen/xsec.hpp:12-20`, `src/core/xsec.cpp:282-284`):
+(`include/lipolgen/xsec.hpp:13-21`, `src/core/xsec.cpp:283-285`):
 
         dσ / (dx dQ² dφ)  =  [ σ_U(x, Q²) / 2π ] · W(φ')                       (46)
         W(φ') = 1 + w₀ + a₁ cos φ' + a₂ cos 2φ' + a₃ cos 3φ'
 
 with, writing D_γ = F_[UU,T] + ε F_[UU,L] for the exact denominator ([2] Eq. (16)
-and (37); `cosyn_unpolarized_sfs`, `src/core/xsec.cpp:38-41`),
+and (37); `cosyn_unpolarized_sfs`, `src/core/xsec.cpp:39-42`),
 
         w₀, a₁, a₂  ⊃  the rank-2 harmonics of (39)      [ unpolarized beam ]
         a₂          ⊃  −(1−y)/y² · 3Q_NN · sin²θ_S · Δ / D_φ   [ gluon transversity ]
@@ -933,7 +937,7 @@ Two immediate uses of (46)–(47):
         A_T^{(3/2)}(θ_S = 0) · (1 + εR)  =  − b1_32 / F1                       (48)
 
   The 2/3 of the spin-1 relation is not universal. It is the explicit `2.0/3.0`
-  in `azz()` (`src/core/asymmetries.cpp:84`) and the 1/Q with Q = 3T_LL of [2]
+  in `azz()` (`src/core/asymmetries.cpp:85`) and the 1/Q with Q = 3T_LL of [2]
   Eq. (19) — i.e. the spin-1 (1/3, −2/3) population weights of the thirds
   estimator, which have no J = 3/2 counterpart, because for J = 3/2
   Q_NN = ±1 exactly. If continuity with [2] Eq. (19) is wanted, *define*
@@ -941,7 +945,7 @@ Two immediate uses of (46)–(47):
   construction; what must not happen is quoting −(2/3) b1/F1 for a contrast that
   actually returns −b1/F1. §6.4 test 10 pins whichever definition is adopted.
   Either way, the ⁷Li analogue of `tensor_thirds_plan` does not exist in the
-  code yet (`src/core/bookkeeping.cpp:106-119` hard-codes spin 1).
+  code yet (`src/core/bookkeeping.cpp:107-120` hard-codes spin 1).
 * **A_∥ for J = 3/2.** From (45) and (47) the measured longitudinal asymmetry on
   a fill at θ_S = 0 is
 
@@ -960,42 +964,43 @@ This section is a design sketch, not an instruction; nothing here is implemented
 
 | where | add |
 |---|---|
-| `InclusiveKernel::Options` (`include/lipolgen/xsec.hpp:196-232`) | `SFFunc3 g1_rank3_func, g2_rank3_func;` and `bool rank3 = false;` — off by default, for the same reason `tensor_gamma` is (`include/lipolgen/xsec.hpp:203-216`): switching it on moves a published number with nothing on the analysis side to meet it |
-| `SFTables` (`include/lipolgen/xsec.hpp:130-144`) | `double g1_rank3 = 0.0, g2_rank3 = 0.0;` filled in `tables()` only for `ion().spin == 1.5`, in the same branch as the `_32` slots (`src/core/xsec.cpp:107-117`) |
-| `Amplitudes` (`include/lipolgen/xsec.hpp:154-159`) | `double a3 = 0.0;` — required by (43). `density()` and `positivity_margin()` (`src/core/xsec.cpp:282-289`) take it as one more term, but **`density_min` (`src/core/xsec.cpp:43-52`) changes algorithm, not just signature**: today it is an exact minimiser of a quadratic in c = cos φ′; with cos 3φ′ = 4c³ − 3c the stationary condition becomes a *cubic* in c, so it needs a cubic root solve (or a guarded grid scan over c ∈ [−1, 1] plus a Newton polish, with the endpoints kept) |
-| `InclusiveSampler::StateTables` (`include/lipolgen/sampler.hpp:207-214`) | `a3` and `a3n` vectors; `bound` becomes `1 + \|a1n\| + \|a2n\| + \|a3n\|`; `margin` from the new `density_min`. All of it is filled at `src/core/sampler.cpp:233-239` |
-| the per-event φ draw (`src/core/sampler.cpp:385-395`) | the accept–reject test is literally `u < 1 + a1n cos φ′ + a2n cos 2φ′` with `u` drawn against `bound`; both gain the cos 3φ′ term |
-| `InclusiveSampler::effective_modulation` (`src/core/sampler.cpp:304-321`) | a third numerator accumulator and an `a3` field on `EffectiveModulation` |
-| the per-category φ density (`src/core/sampler.cpp:479-481`) and `phi_histogram_pseudo` (`src/core/sampler.cpp:525-530`) | both evaluate `1 + w_avg + a1 cos φ′ + a2 cos 2φ′` by hand; the second also calls `density_min(a1, a2)` |
-| `InclusiveKernel` | `double octupole_moments(double m) const` returning `(m³ − (41/20)m)/0.3` for spin 3/2 and `0.0` otherwise, the exact analogue of `tensor_moments` (`src/core/xsec.cpp:167-172`) and consistent with `src/core/spin.cpp:244-257`. **Plural, mirroring `tensor_moments`**: a member named `octupole_moment` would hide the free function `lipolgen::octupole_moment(const CplxMatrix&, double)` (`include/lipolgen/spin.hpp:101`) inside the class scope |
-| `HelicityFlipOptions` (`include/lipolgen/bookkeeping.hpp:136-146`) | an explicit `o` beside `pzz`, since the explicit branch silently sets R₃ = 0 today (`src/core/bookkeeping.cpp:88`) |
-| `RunPlan` (`include/lipolgen/bookkeeping.hpp:88-128`) | **there is nowhere to record R₃ today.** The class carries `pe/pz/pzz` true + measured only, and `helicity_flip_plan` records just `.tensor` (`src/core/bookkeeping.cpp:101-103`), so the `HelicityFlipOptions::o` above has no destination. Add `o_true_` / `measured_o_`, recorded from `moments_along_axis(j, pops).octupole`, and give the smear block (`src/core/bookkeeping.cpp:32-40`) a policy — noting §2.4 that **there is no rank-3 polarimeter**, so the honest default is *not* a fourth `rng.normal()` draw but R₃ taken from the fill model (14) with its own systematic |
-| `python/bindings.cpp:1686-1688` | the two new `Options` members, beside the existing `b1_32_func` / `b2_32_func` / `delta_32_func` |
-| `python/bindings.cpp:1646-1655` | the `Amplitudes` binding gains `a3` — and this is a **breaking** change, not an addition: its `__iter__` and `__repr__` are a fixed 3-tuple, so every Python caller doing `w, a1, a2 = amps` breaks the day `a3` appears |
-| `python/bindings.cpp:1949-1950` | the `state_tables` dict export gains `a3`, `a3n` |
+| `InclusiveKernel::Options` (`include/lipolgen/xsec.hpp:197-233`) | `SFFunc3 g1_rank3_func, g2_rank3_func;` and `bool rank3 = false;` — off by default, for the same reason `tensor_gamma` is (`include/lipolgen/xsec.hpp:204-217`): switching it on moves a published number with nothing on the analysis side to meet it |
+| `SFTables` (`include/lipolgen/xsec.hpp:131-145`) | `double g1_rank3 = 0.0, g2_rank3 = 0.0;` filled in `tables()` only for `ion().spin == 1.5`, in the same branch as the `_32` slots (`src/core/xsec.cpp:108-118`) |
+| `Amplitudes` (`include/lipolgen/xsec.hpp:155-160`) | `double a3 = 0.0;` — required by (43). `density()` and `positivity_margin()` (`src/core/xsec.cpp:311-318`) take it as one more term, but **`density_min` (`src/core/xsec.cpp:44-53`) changes algorithm, not just signature**: today it is an exact minimiser of a quadratic in c = cos φ′; with cos 3φ′ = 4c³ − 3c the stationary condition becomes a *cubic* in c, so it needs a cubic root solve (or a guarded grid scan over c ∈ [−1, 1] plus a Newton polish, with the endpoints kept) |
+| `InclusiveSampler::StateTables` (`include/lipolgen/sampler.hpp:208-215`) | `a3` and `a3n` vectors; `bound` becomes `1 + \|a1n\| + \|a2n\| + \|a3n\|`; `margin` from the new `density_min`. All of it is filled at `src/core/sampler.cpp:234-240` |
+| the per-event φ draw (`src/core/sampler.cpp:386-396`) | the accept–reject test is literally `u < 1 + a1n cos φ′ + a2n cos 2φ′` with `u` drawn against `bound`; both gain the cos 3φ′ term |
+| `InclusiveSampler::effective_modulation` (`src/core/sampler.cpp:305-322`) | a third numerator accumulator and an `a3` field on `EffectiveModulation` |
+| the per-category φ density (`src/core/sampler.cpp:480-482`) and `phi_histogram_pseudo` (`src/core/sampler.cpp:526-531`) | both evaluate `1 + w_avg + a1 cos φ′ + a2 cos 2φ′` by hand; the second also calls `density_min(a1, a2)` |
+| `InclusiveKernel` | `double octupole_moments(double m) const` returning `(m³ − (41/20)m)/0.3` for spin 3/2 and `0.0` otherwise, the exact analogue of `tensor_moments` (`src/core/xsec.cpp:168-173`) and consistent with `src/core/spin.cpp:246-259`. **Plural, mirroring `tensor_moments`**: a member named `octupole_moment` would hide the free function `lipolgen::octupole_moment(const CplxMatrix&, double)` (`include/lipolgen/spin.hpp:102`) inside the class scope |
+| `HelicityFlipOptions` (`include/lipolgen/bookkeeping.hpp:137-147`) | an explicit `o` beside `pzz`, since the explicit branch silently sets R₃ = 0 today (`src/core/bookkeeping.cpp:89`) |
+| `RunPlan` (`include/lipolgen/bookkeeping.hpp:89-129`) | **there is nowhere to record R₃ today.** The class carries `pe/pz/pzz` true + measured only, and `helicity_flip_plan` records just `.tensor` (`src/core/bookkeeping.cpp:102-104`), so the `HelicityFlipOptions::o` above has no destination. Add `o_true_` / `measured_o_`, recorded from `moments_along_axis(j, pops).octupole`, and give the smear block (`src/core/bookkeeping.cpp:33-41`) a policy — noting §2.4 that **there is no rank-3 polarimeter**, so the honest default is *not* a fourth `rng.normal()` draw but R₃ taken from the fill model (14) with its own systematic |
+| `python/bindings.cpp:1687-1689` | the two new `Options` members, beside the existing `b1_32_func` / `b2_32_func` / `delta_32_func` |
+| `python/bindings.cpp:1647-1656` | the `Amplitudes` binding gains `a3` — and this is a **breaking** change, not an addition: its `__iter__` and `__repr__` are a fixed 3-tuple, so every Python caller doing `w, a1, a2 = amps` breaks the day `a3` appears |
+| `python/bindings.cpp:1950-1951` | the `state_tables` dict export gains `a3`, `a3n` |
 
 Naming: **use `g1_rank3`, never `g2`**, for [6]'s fourth function (§3.3); the
 name `g2` is already taken in `SFTables` by the twist-3 nucleon g2
-(`include/lipolgen/xsec.hpp:142`) and the collision would be silent and severe.
+(`include/lipolgen/xsec.hpp:143`) and the collision would be silent and severe.
 
 ### 6.2 Where the λ_e term enters
 
-`InclusiveKernel::amplitudes` (`src/core/xsec.cpp:213-275`). The rank-2 branch
-sits at `:247-263`; the λ_e-dependent vector block at `:265-273`. The rank-3 term
+`InclusiveKernel::amplitudes` (`src/core/xsec.cpp:214-276`). The rank-2 branch
+sits at `src/core/xsec.cpp:248-264`; the λ_e-dependent vector block at
+`src/core/xsec.cpp:266-274`. The rank-3 term
 belongs **inside the λ_e block**, gated on `helicity != 0.0` exactly as the
 vector term is, and structured like `tensor_harmonics_gamma`
-(`src/core/xsec.cpp:174-211`): build N from (35), evaluate the two projections of
+(`src/core/xsec.cpp:175-212`): build N from (35), evaluate the two projections of
 (43) as cubics in cos φ', and distribute the four harmonics into
 `w_avg`, `a1`, `a2`, `a3`.
 
 **Which finite-γ switch gates it: `target_mass`, not `tensor_gamma`.** This is
 the one place where the obvious guess is wrong, and getting it wrong is silent.
 `tensor_gamma` is the **b-sector (rank-2)** switch and defaults to *false*
-(`include/lipolgen/xsec.hpp:203-216`). The **vector** sector's finite-γ switch is
-`target_mass`, which defaults to **true** (`include/lipolgen/xsec.hpp:231`, with
-the rationale at `:182-185`) and routes `a_parallel` to `a_parallel_exact` =
-D_γ(A₁ + η A₂) with a Wandzura–Wilczek g2 table (`src/core/xsec.cpp:144-151`,
-`:123-130`). By (42) the rank-3 block is the rank-3 *copy* of that A₁/A₂
+(`include/lipolgen/xsec.hpp:204-217`). The **vector** sector's finite-γ switch is
+`target_mass`, which defaults to **true** (`include/lipolgen/xsec.hpp:232`, with
+the rationale at `include/lipolgen/xsec.hpp:183-186`) and routes `a_parallel` to `a_parallel_exact` =
+D_γ(A₁ + η A₂) with a Wandzura–Wilczek g2 table (`src/core/xsec.cpp:145-152`,
+`src/core/xsec.cpp:124-131`). By (42) the rank-3 block is the rank-3 *copy* of that A₁/A₂
 decomposition, so it must follow the same switch:
 
 * `target_mass == false` → Eq. (45) with `depolarization_d`, i.e.
@@ -1008,14 +1013,14 @@ decomposition, so it must follow the same switch:
   **zero as the stated default** until someone computes one, plus a
   `g2_rank3_scale` mirroring `g2_scale` so the twist-3 sensitivity can be
   measured the way the vector one already is
-  (`include/lipolgen/xsec.hpp:187-190`, members at `:226-228`).
+  (`include/lipolgen/xsec.hpp:188-191`, members at `:227-229`).
 
 Gating the rank-3 block on `tensor_gamma` instead would, at the code's own
 defaults, run the vector sector at finite γ while its rank-3 partner ran
 massless — silently dropping the very (42) structure this note derives — and
 would make a₃ appear only when an unrelated switch was set. **Leave
 `tensor_gamma` untouched.** The LT′ piece (cos φ′, O(γ)) belongs beside `a_perp`
-under the `with_perp` guard (`src/core/xsec.cpp:271-273`), which is where the
+under the `with_perp` guard (`src/core/xsec.cpp:272-274`), which is where the
 vector sector's own O(γ) transverse partner already lives.
 
 ### 6.3 Existing tests that must not move
@@ -1023,17 +1028,17 @@ vector sector's own O(γ) transverse partner already lives.
 Every one of these is either an unpolarized-beam identity (protected by the
 theorem) or a J = 1 identity (protected by the multipole not existing):
 
-* `tests/test_xsec.cpp:222-239` — `A_zz(θ_S=0)(1 + εR) = −(2/3) b1/F1`, exactly, at every y.
-* `tests/test_xsec.cpp:241-254` — "the program sign IS the literature sign".
-* `tests/test_xsec.cpp:256-277` — the thirds combination carries the sign of A_zz.
-* `tests/test_xsec.cpp:169-192` — the population-averaged cross section is the unpolarized one.
-* `tests/test_xsec.cpp:296-315`, `:317-334` — one rank-2 geometry for both spins; the J = 1 HJM transcription digit for digit.
-* `tests/test_xsec.cpp:336-359` — the spin-3/2 rate / cos-2φ ratio is spin-independent (a characterization test, and one that (20) now upgrades to a physics statement).
-* `tests/test_xsec.cpp:112-131` — the J = 3/2 vector sector, and `w_avg == a1 == a2 == 0.0` for an unpolarized electron on zero rank-2 slots. **This one is the theorem's own regression test** and must be extended, not replaced (see 6.4).
-* `tests/test_xsec.cpp:648-682` — `amplitudes` refuses a spin state of the wrong J.
+* `tests/test_xsec.cpp:223-240` — `A_zz(θ_S=0)(1 + εR) = −(2/3) b1/F1`, exactly, at every y.
+* `tests/test_xsec.cpp:242-255` — "the program sign IS the literature sign".
+* `tests/test_xsec.cpp:257-278` — the thirds combination carries the sign of A_zz.
+* `tests/test_xsec.cpp:170-193` — the population-averaged cross section is the unpolarized one.
+* `tests/test_xsec.cpp:297-316`, `:318-335` — one rank-2 geometry for both spins; the J = 1 HJM transcription digit for digit.
+* `tests/test_xsec.cpp:337-360` — the spin-3/2 rate / cos-2φ ratio is spin-independent (a characterization test, and one that (20) now upgrades to a physics statement).
+* `tests/test_xsec.cpp:113-132` — the J = 3/2 vector sector, and `w_avg == a1 == a2 == 0.0` for an unpolarized electron on zero rank-2 slots. **This one is the theorem's own regression test** and must be extended, not replaced (see 6.4).
+* `tests/test_xsec.cpp:649-683` — `amplitudes` refuses a spin state of the wrong J.
 * the whole of `tests/test_tensor_gamma.cpp`, in particular `:151` (γ → 0 collapse of the Cosyn SFs), `:381` and `:406` ([2] Table 1 rows 2 and 3).
-* `tests/test_spin.cpp:128-141`, `:203-228` — the J = 3/2 moment round trip and the (0.7, 0.4, 0.2) spin-temperature anchor.
-* `tests/test_reference.cpp:78-79` — the reference `b1_32_func` / `delta_32_func` values.
+* `tests/test_spin.cpp:129-142`, `:204-229` — the J = 3/2 moment round trip and the (0.7, 0.4, 0.2) spin-temperature anchor.
+* `tests/test_reference.cpp:79-80` — the reference `b1_32_func` / `delta_32_func` values.
 
 ### 6.4 New identity tests
 
@@ -1048,25 +1053,25 @@ theorem) or a J = 1 identity (protected by the multipole not existing):
    w_avg − w_avg|_{rank3 off} = λ_e P_e R₃ P₃(cos θ_S) D(y) g1_rank3/F1. At
    `target_mass = true` — the code's default — the same difference must
    *approach* that value as γ → 0, with a₁ = O(γ) and a₃ = O(γ³). Mirror of
-   `tests/test_tensor_gamma.cpp:151`.
+   `tests/test_tensor_gamma.cpp:152`.
 3. **Pure-state weights.** `kern.octupole_moments(m)` = (1, −3, 3, −1) for
    m = (3/2, 1/2, −1/2, −3/2), and `moments_along_axis(1.5, p).octupole` agrees
-   with the population-weighted sum. Mirror of `tests/test_xsec.cpp:296-315`.
+   with the population-weighted sum. Mirror of `tests/test_xsec.cpp:297-316`.
 4. **The population sum rule.** Averaging W(φ') over the 2J+1 pure states with
    equal weight returns the unpolarized cross section for **any** λ_e, because
    Σ_m m/J = Σ_m Q_NN(m) = Σ_m R₃(m) = 0. Extend
-   `tests/test_xsec.cpp:169-192` to LI7 with all four sectors live.
+   `tests/test_xsec.cpp:170-193` to LI7 with all four sectors live.
 5. **Magic angles.** The rank-3 rate term vanishes at P₃(cos θ_S) = 0, i.e.
    θ_S = 39.23°, 90° and 140.77° — the rank-3 analogue of the rank-2 magic
    angle (P₂ = 0 at θ_S = 54.74°) already tested at
-   `tests/test_xsec.cpp:387-408`. The two sets are disjoint, so no single axis
+   `tests/test_xsec.cpp:388-406`. The two sets are disjoint, so no single axis
    angle kills both rate terms: at 54.74° the rank-3 term survives at
    P₃ = −0.385, and at 90° the rank-2 term survives at P₂ = −1/2. The 90°
    case is nevertheless the useful one — it is the transverse-alignment
    geometry, whose fill has R₃ = 0 identically anyway (§2.4), so the rank-3
    sector is doubly absent from the cos 2φ run plan.
 6. **Spin-1 rejection.** A J = 1 kernel given a `g1_rank3_func` must throw, in
-   the spirit of `tests/test_xsec.cpp:648-682`: there is no l = 3 multipole for
+   the spirit of `tests/test_xsec.cpp:649-683`: there is no l = 3 multipole for
    spin 1, and silently ignoring the slot would be worse than failing.
 7. **Positivity.** Over the toy (x, Q²) grid, (27) holds for m = 3/2 and 1/2
    given the (b1_32, g1, g1_rank3) triple in use — evaluated in the **code's**
@@ -1084,7 +1089,7 @@ theorem) or a J = 1 identity (protected by the multipole not existing):
 10. **The J = 3/2 alignment contrast.** Whichever definition §5.4 adopts, pin it
     and pin the *absence* of the spin-1 2/3: for the ±1 contrast,
     A_T^{(3/2)}(θ_S = 0)(1 + εR) = −b1_32/F1 exactly at every y — the J = 3/2
-    mirror of `tests/test_xsec.cpp:222-239`, which pins the spin-1
+    mirror of `tests/test_xsec.cpp:223-240`, which pins the spin-1
     −(2/3) b1/F1 and must keep doing so unchanged.
 
 ---
@@ -1151,8 +1156,8 @@ theorem) or a J = 1 identity (protected by the multipole not existing):
 9. **P. Hoodbhoy, R. L. Jaffe, A. Manohar**, *Novel effects in deep inelastic
    scattering from spin-one hadrons*, Nucl. Phys. B **312**, 571 (1989). The
    spin-1 b1…b4 basis and the c_m = 3m² − 2 convention the generator's J = 1 path
-   transcribes (`include/lipolgen/spin.hpp:22`,
-   `include/lipolgen/asymmetries.hpp:8-20`). Not read directly; used through [2]
+   transcribes (`include/lipolgen/spin.hpp:23`,
+   `include/lipolgen/asymmetries.hpp:9-21`). Not read directly; used through [2]
    and [7].
 10. **W. Cosyn and C. Weiss**, *Semi-inclusive deep-inelastic scattering on a
     polarized spin-1 target. II. Deuteron and spectator nucleon tagging*,

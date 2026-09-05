@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // LiPolGen event record (tiers T0/T1; T2 particles are added by the PYTHIA tier).
 #pragma once
 #include <array>

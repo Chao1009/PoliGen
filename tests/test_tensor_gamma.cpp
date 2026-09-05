@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The exact finite-gamma tensor kernel (plans/08 D2, Cosyn et al.).
 //
 // `InclusiveKernel::Options::tensor_gamma` replaces the massless

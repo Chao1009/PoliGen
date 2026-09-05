@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // LHAPDF6 backends: `LhapdfSF` / `LhapdfG1` (declared in include/lipolgen/sf.hpp)
 // and `Epps21Ratio` (declared in include/lipolgen/lhapdf_sf.hpp).
 //

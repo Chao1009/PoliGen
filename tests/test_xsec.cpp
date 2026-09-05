@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Gate 2 (DEVELOPMENT_PLAN section 4.2): the doubly polarized master formula
 // must reproduce the analytic asymmetries sector by sector, and the finite-
 // gamma option must reproduce E143's own lab-frame factors.

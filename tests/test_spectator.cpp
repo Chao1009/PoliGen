@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Cluster-spectator kinematics and far-forward routing, against
 // validation/reference/spectator.json (rtol 1e-12, the boost is closed form)
 // and against the analytic identities fastsim/tests/test_spectator.py pins.

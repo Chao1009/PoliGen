@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Counter-based random stream: identical output for a given (seed, run, bunch, event)
 // regardless of thread count or generation order.
 #pragma once

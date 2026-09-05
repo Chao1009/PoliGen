@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // MSTW2008 LO unpolarized structure functions over `Pythia8::MSTWpdf`
 // (declared in include/lipolgen/mstw_sf.hpp).
 //

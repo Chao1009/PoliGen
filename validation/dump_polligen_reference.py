@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Dump numeric reference tables from the Python `polligen` generator.
 
 This script imports the EXISTING Python event generator `polligen`

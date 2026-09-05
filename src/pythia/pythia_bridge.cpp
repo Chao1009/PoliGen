@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Tier T2 -- PYTHIA 8 showering and hadronization of the gamma*-nucleon
 // system.  See docs/PYTHIA_BRIDGE.md for the physics and every
 // approximation; the header carries the two structural facts that force

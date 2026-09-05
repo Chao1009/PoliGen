@@ -311,6 +311,12 @@ class VmcRadial {
   VmcRadial() = default;
   VmcRadial(std::vector<double> k_gev, std::vector<double> psi, int l,
             std::string provenance = std::string());
+  /// With the table's own 1-sigma Monte Carlo error on psi.  `dpsi` must be
+  /// the same length as `psi` or empty; it is SIGNED and transforms exactly
+  /// like psi (see `scaled`), so psi + n dpsi is covariant under the global
+  /// phase convention.
+  VmcRadial(std::vector<double> k_gev, std::vector<double> psi,
+            std::vector<double> dpsi, int l, std::string provenance);
 
   /// psi_L(k), linearly interpolated; 0 outside [k.front(), k.back()].
   double operator()(double k) const;
@@ -319,16 +325,45 @@ class VmcRadial {
   bool empty() const { return k_.empty(); }
   const std::vector<double>& k() const { return k_; }
   const std::vector<double>& psi() const { return psi_; }
+  /// The 1-sigma Monte Carlo error of `psi`, point by point -- EMPTY when the
+  /// source file printed none (`li6.adr.fit`, `fdeut.av18`, CD-Bonn).
+  ///
+  /// THE ANL FILES CARRY THIS AND THE LIBRARY THREW IT AWAY until 2026-09-04
+  /// (open item C5.2): `AnlTable::err` was parsed by `read_anl_momentum` /
+  /// `read_anl_overlap` and then dropped on the floor by the two factories
+  /// below, so `ClusterWaveSource::VmcAV18` had no error band of any kind.
+  /// For a momentum file psi = s sqrt(rho), hence dpsi = s drho / (2 sqrt rho)
+  /// and 0 wherever rho <= 0.
+  ///
+  /// IT IS NOT AN INDEPENDENT-POINT ERROR.  Every point of an ANL table comes
+  /// from the SAME variational Monte Carlo walk, so the point-to-point
+  /// correlation is unknown and is neither 0 nor 1.  `shifted_by_sigma` takes
+  /// the FULLY CORRELATED reading (every point moved by n sigma in the same
+  /// direction), which is the conservative envelope on any smooth functional;
+  /// adding the same errors in quadrature gives the other extreme.  Quote
+  /// both, or quote the correlated one and say so.
+  const std::vector<double>& dpsi() const { return dpsi_; }
+  bool has_errors() const { return !dpsi_.empty(); }
   const std::string& provenance() const { return provenance_; }
 
   /// The same table times `factor` -- used to fix the (unobservable) global
-  /// phase of a multi-wave channel to psi_{Lmin}(k -> 0) > 0.
+  /// phase of a multi-wave channel to psi_{Lmin}(k -> 0) > 0.  `dpsi` is
+  /// scaled by the SAME factor, so a phase flip carries the band with it.
   VmcRadial scaled(double factor) const;
+  /// psi -> psi + n_sigma * dpsi, fully correlated across the table.  Returns
+  /// *this unchanged at n_sigma == 0 or with no errors, so the band's zero row
+  /// is bit for bit today's table.
+  VmcRadial shifted_by_sigma(double n_sigma) const;
   /// integral k^2 psi^2 dk over the table [GeV^3 x psi^2].
   double norm2() const;
+  /// The 1-sigma Monte Carlo error of `norm2()`, in the two limits the errors
+  /// admit: `correlated` = |d/dn integral k^2 (psi + n dpsi)^2 dk| at n = 0 =
+  /// |2 integral k^2 psi dpsi dk|, `quadrature` = sqrt(sum of the same
+  /// integrand's per-cell contributions squared).  Both are 0 with no errors.
+  void norm2_error(double* correlated, double* quadrature) const;
 
  private:
-  std::vector<double> k_, psi_;
+  std::vector<double> k_, psi_, dpsi_;
   int l_ = 0;
   std::string provenance_;
 };

@@ -5,6 +5,7 @@
 #include <cmath>
 #include <stdexcept>
 
+#include "lipolgen/cluster_config.hpp"  // VMC_DEUTERON_WAVE -- its one home
 #include "lipolgen/constants.hpp"
 #include "lipolgen/fsi.hpp"
 #include "lipolgen/numerics.hpp"
@@ -65,6 +66,25 @@ const Ion& NEUTRON_TARGET() {
   return i;
 }
 
+const Ion& DEUTERON_AV18() {
+  // Everything but the effective polarizations is `DEUTERON()` verbatim -- the
+  // same name, A, Z and spin, so nothing else about the DIS target moves and
+  // the ONLY difference between a `Hulthen` and a `VmcAV18` tagged-alpha run's
+  // struck-cluster kernel is the vector sector this constant sets.  The
+  // dilution is built through `vector_dilution_of` (beams.hpp), the one home of
+  // 1 - (3/2) P_D, from `deuteron_av18_p_d()`, the one home of the AV18
+  // deuteron's D-state probability -- no physics number is typed twice here.
+  // Function-local static, not a namespace-scope one: `deuteron_av18_p_d()`
+  // READS `fdeut.av18`, so this must not run before main().
+  static const Ion i = [] {
+    Ion d = DEUTERON();
+    d.eff_pol_p = vector_dilution_of(deuteron_av18_p_d());
+    d.eff_pol_n = d.eff_pol_p;
+    return d;
+  }();
+  return i;
+}
+
 void TaggedChannel::validate() const {
   double tot = 0.0;
   for (const Wave& w : waves) tot += w.prob;
@@ -93,33 +113,51 @@ namespace {
 /// With the global phase fixed by psi_0(k -> 0) > 0, sign(psi_2/psi_0) = -1
 /// below the S node -- the OPPOSITE of what the positive-definite Hulthen
 /// forms assume.
+std::vector<Wave> build_li6_vmc_waves(double n_sigma) {
+  const VmcRadial s_sign = vmc_from_overlap_k(data_path(VMC_LI6_OVERLAP), 0, 0);
+  const VmcRadial d_sign = vmc_from_overlap_k(data_path(VMC_LI6_OVERLAP), 1, 2);
+  VmcRadial s_tab = vmc_from_momentum(data_path(VMC_LI6_MOMENTUM), 1, 0, 0,
+                                      &s_sign);
+  VmcRadial d_tab = vmc_from_momentum(data_path(VMC_LI6_MOMENTUM), 1, 1, 2,
+                                      &d_sign);
+  // The Monte Carlo band (C5.2).  `shifted_by_sigma` returns the table
+  // unchanged at 0, so the default path is bit for bit what it always was.
+  // The SAME n_sigma is applied to both waves: they come from one variational
+  // walk, so a relative shift would be an invented anticorrelation.
+  const double p_d_int_0 =
+      d_tab.norm2() / (s_tab.norm2() + d_tab.norm2());
+  s_tab = s_tab.shifted_by_sigma(n_sigma);
+  d_tab = d_tab.shifted_by_sigma(n_sigma);
+  const double p_d_int_n =
+      d_tab.norm2() / (s_tab.norm2() + d_tab.norm2());
+  // Fix the (unobservable) GLOBAL phase to psi_0(k -> 0) > 0, so that the
+  // (observable) relative phase reads off as sign(psi_2).  li6.ad happens
+  // to print the alpha-d overlap with A00 < 0 at low k.
+  if (s_tab.psi().front() < 0.0) {
+    s_tab = s_tab.scaled(-1.0);
+    d_tab = d_tab.scaled(-1.0);
+  }
+  auto s = std::make_shared<const VmcRadial>(std::move(s_tab));
+  auto d = std::make_shared<const VmcRadial>(std::move(d_tab));
+  // P_D stays the FILE'S OWN PRINTED `VMC_P_D_LI6` at n_sigma = 0 (the
+  // trapezoid of the table is 0.0193516 against the printed 0.0193549, and
+  // the printed one is the number the library quotes), and the band moves it
+  // by the RATIO the shifted tables imply -- so the zero row is exactly
+  // today's and the band is the file's own error, not a requantisation.
+  const double p_d = VMC_P_D_LI6 * (p_d_int_n / p_d_int_0);
+  Wave ws;
+  ws.l = 0;
+  ws.prob = 1.0 - p_d;
+  ws.vmc = s;
+  Wave wd;
+  wd.l = 2;
+  wd.prob = p_d;
+  wd.vmc = d;
+  return std::vector<Wave>{ws, wd};
+}
+
 const std::vector<Wave>& li6_vmc_waves() {
-  static const std::vector<Wave> w = [] {
-    const VmcRadial s_sign = vmc_from_overlap_k(data_path(VMC_LI6_OVERLAP), 0, 0);
-    const VmcRadial d_sign = vmc_from_overlap_k(data_path(VMC_LI6_OVERLAP), 1, 2);
-    VmcRadial s_tab = vmc_from_momentum(data_path(VMC_LI6_MOMENTUM), 1, 0, 0,
-                                        &s_sign);
-    VmcRadial d_tab = vmc_from_momentum(data_path(VMC_LI6_MOMENTUM), 1, 1, 2,
-                                        &d_sign);
-    // Fix the (unobservable) GLOBAL phase to psi_0(k -> 0) > 0, so that the
-    // (observable) relative phase reads off as sign(psi_2).  li6.ad happens
-    // to print the alpha-d overlap with A00 < 0 at low k.
-    if (s_tab.psi().front() < 0.0) {
-      s_tab = s_tab.scaled(-1.0);
-      d_tab = d_tab.scaled(-1.0);
-    }
-    auto s = std::make_shared<const VmcRadial>(std::move(s_tab));
-    auto d = std::make_shared<const VmcRadial>(std::move(d_tab));
-    Wave ws;
-    ws.l = 0;
-    ws.prob = 1.0 - VMC_P_D_LI6;
-    ws.vmc = s;
-    Wave wd;
-    wd.l = 2;
-    wd.prob = VMC_P_D_LI6;
-    wd.vmc = d;
-    return std::vector<Wave>{ws, wd};
-  }();
+  static const std::vector<Wave> w = build_li6_vmc_waves(0.0);
   return w;
 }
 
@@ -132,23 +170,72 @@ const std::vector<Wave>& li6_vmc_waves() {
 /// alpha(0+) x t(1/2+) with L = 1 gives j = 1/2 or 3/2 and only j = 3/2 can
 /// build the 3/2- ground state, so it is a selection-rule zero carrying MC
 /// leakage at 3.5e-5 of the norm.  It is deliberately not loaded.
+std::vector<Wave> build_li7_vmc_waves(double n_sigma) {
+  auto p = std::make_shared<const VmcRadial>(
+      vmc_from_momentum(data_path(VMC_LI7_MOMENTUM), 0, 0, 1, nullptr)
+          .shifted_by_sigma(n_sigma));
+  Wave wp;
+  wp.l = 1;
+  wp.prob = 1.0;   // one wave: the band moves the SHAPE, never a probability
+  wp.vmc = p;
+  return std::vector<Wave>{wp};
+}
+
 const std::vector<Wave>& li7_vmc_waves() {
+  static const std::vector<Wave> w = build_li7_vmc_waves(0.0);
+  return w;
+}
+
+/// The AV18 deuteron as a TAGGED two-cluster channel (C5.4): psi_0 = u(k),
+/// psi_2 = w(k) from `fdeut.av18`'s own k-space block, with P_D the table's
+/// own D fraction rather than the `P_D_DEUTERON` scenario.
+///
+/// THE RELATIVE SIGN IS + AND THAT IS NOT AN ACCIDENT.  CDKS fix
+/// phi_L = i^L psi_L with phi_2 = -W and U, W >= 0 at low k, so psi_2 = +W:
+/// the physical deuteron carries sign(psi_2/psi_0) = +1, which is exactly what
+/// the positive-definite Hulthen forms assume.  Unlike the 6Li alpha-d case
+/// (where the VMC overlap flips the sign below the S node), switching this
+/// channel to AV18 changes the SHAPE and P_D and NOT the S-D interference
+/// sign.  `fdeut.av18` prints no MC errors, so this table carries no band.
+const std::vector<Wave>& deuteron_av18_waves() {
   static const std::vector<Wave> w = [] {
-    auto p = std::make_shared<const VmcRadial>(vmc_from_momentum(
-        data_path(VMC_LI7_MOMENTUM), 0, 0, 1, nullptr));
-    Wave wp;
-    wp.l = 1;
-    wp.prob = 1.0;
-    wp.vmc = p;
-    return std::vector<Wave>{wp};
+    const std::string path = data_path(VMC_DEUTERON_WAVE);
+    const FdeutTable t = read_fdeut_k(path);
+    VmcRadial s(t.k_gev, t.u, 0, path + " [k-block u(k)]");
+    VmcRadial d(t.k_gev, t.w, 2, path + " [k-block w(k), psi_2 = +W]");
+    const double n0 = s.norm2(), n2 = d.norm2();
+    const double p_d = n2 / (n0 + n2);
+    Wave ws;
+    ws.l = 0;
+    ws.prob = 1.0 - p_d;
+    ws.vmc = std::make_shared<const VmcRadial>(std::move(s));
+    Wave wd;
+    wd.l = 2;
+    wd.prob = p_d;
+    wd.vmc = std::make_shared<const VmcRadial>(std::move(d));
+    return std::vector<Wave>{ws, wd};
   }();
   return w;
 }
 
 }  // namespace
 
+namespace {
+/// Refuse a Monte Carlo band on a wave family that carries no errors -- a
+/// silently-ignored systematic is worse than none.
+void check_mc_sigma(double n_sigma, ClusterWaveSource source) {
+  if (n_sigma != 0.0 && source != ClusterWaveSource::VmcAV18) {
+    throw std::runtime_error(
+        "vmc_mc_sigma is the Monte Carlo band of the ANL VMC tables and has "
+        "no meaning for ClusterWaveSource::Hulthen (analytic forms carry no "
+        "MC error); set --cluster-wave vmc or leave it at 0");
+  }
+}
+}  // namespace
+
 TaggedChannel li6_alpha_channel(double beta, double p_d,
-                                ClusterWaveSource source) {
+                                ClusterWaveSource source, double vmc_mc_sigma) {
+  check_mc_sigma(vmc_mc_sigma, source);
   TaggedChannel c;
   c.base = LI6_ALPHA_TAG();
   c.j_ion = 1.0;
@@ -156,18 +243,34 @@ TaggedChannel li6_alpha_channel(double beta, double p_d,
   c.s_spec = 0.0;
   c.s_channel = 1.0;
   if (source == ClusterWaveSource::VmcAV18) {
-    c.waves = li6_vmc_waves();
+    c.waves = vmc_mc_sigma == 0.0 ? li6_vmc_waves()
+                                  : build_li6_vmc_waves(vmc_mc_sigma);
     c.label = "6Li alpha-tag (embedded d, VMC AV18+UX)";
   } else {
     c.waves = {Wave{0, 1.0 - p_d, beta, nullptr}, Wave{2, p_d, beta, nullptr}};
     c.label = "6Li alpha-tag (embedded d)";
   }
-  c.dis_target = DEUTERON();
+  // THE EMBEDDED DEUTERON FOLLOWS THE FLAG (C5.5b, 2026-09-04).  This line
+  // used to read `c.dis_target = DEUTERON()` unconditionally, which put the
+  // ANL VMC AV18+UX alpha-d overlap and the SCENARIO Hulthen deuteron in the
+  // same run: the relative motion came from one wave function and the
+  // embedded deuteron's spin transfer to the struck nucleon --
+  // `InclusiveKernel::g1a` -> `PolSF::g1_nucleus`, on THIS field -- from
+  // another, 2.069 % apart.  (The T1 breakup carries the SAME split
+  // independently, and through a different route: its deuteron branch reads no
+  // eff_pol at all, the dilution comes out of its own CG sampling, so it is
+  // `BreakupOptions::source` that closes it there, not this line.)  See
+  // `DEUTERON_AV18` (tagged.hpp) for what the replacement is and is not.
+  // `Hulthen` is `DEUTERON()`, bit for bit as it always was.
+  c.dis_target = source == ClusterWaveSource::VmcAV18 ? DEUTERON_AV18()
+                                                      : DEUTERON();
   c.validate();
   return c;
 }
 
-TaggedChannel li7_alpha_channel(double beta, ClusterWaveSource source) {
+TaggedChannel li7_alpha_channel(double beta, ClusterWaveSource source,
+                                double vmc_mc_sigma) {
+  check_mc_sigma(vmc_mc_sigma, source);
   TaggedChannel c;
   c.base = LI7_ALPHA_TAG();
   c.j_ion = 1.5;
@@ -175,30 +278,50 @@ TaggedChannel li7_alpha_channel(double beta, ClusterWaveSource source) {
   c.s_spec = 0.0;
   c.s_channel = 0.5;
   if (source == ClusterWaveSource::VmcAV18) {
-    c.waves = li7_vmc_waves();
+    c.waves = vmc_mc_sigma == 0.0 ? li7_vmc_waves()
+                                  : build_li7_vmc_waves(vmc_mc_sigma);
     c.label = "7Li alpha-tag (quasi-free t, VMC AV18+UX)";
   } else {
     c.waves = {Wave{1, 1.0, beta, nullptr}};
     c.label = "7Li alpha-tag (quasi-free t)";
   }
+  // The 7Li analogue of the line above, and it does NOT move with the flag --
+  // stated so it is not a second silent version of the same defect.  `TRITON()`
+  // is a Faddeev-family per-nucleon slot (0.86 / -0.028, mirroring `HE3()`),
+  // not a Hulthen construction, and this tree carries no AV18 triton wave
+  // function to switch it to: `data/vmc` has `fdeut.av18` for the deuteron and
+  // nothing for A = 3.  So `--cluster-wave vmc` selects the alpha-t RELATIVE
+  // motion here and leaves the triton's internal spin structure where it is.
   c.dis_target = TRITON();
   c.validate();
   return c;
 }
 
-TaggedChannel deuteron_channel(double beta, double p_d) {
+TaggedChannel deuteron_channel(double beta, double p_d,
+                               ClusterWaveSource source) {
   TaggedChannel c;
   c.base = DEUTERON_P_TAG();
   c.j_ion = 1.0;
   c.s_struck = 0.5;
   c.s_spec = 0.5;
   c.s_channel = 1.0;
-  c.waves = {Wave{0, 1.0 - p_d, beta, nullptr}, Wave{2, p_d, beta, nullptr}};
+  if (source == ClusterWaveSource::VmcAV18) {
+    c.waves = deuteron_av18_waves();
+    c.label = "d control (n struck, p tagged, AV18 fdeut)";
+  } else {
+    c.waves = {Wave{0, 1.0 - p_d, beta, nullptr}, Wave{2, p_d, beta, nullptr}};
+    c.label = "d control (n struck, p tagged)";
+  }
+  // Nothing to follow the flag with, and nothing that could drift: the struck
+  // object of the control channel is a FREE neutron, with no internal wave
+  // function on either setting.  `VmcAV18` moves the p-n relative motion (the
+  // waves above) and that is the whole of it.
   c.dis_target = NEUTRON_TARGET();
-  c.label = "d control (n struck, p tagged)";
   c.validate();
   return c;
 }
+
+double deuteron_av18_p_d() { return deuteron_av18_waves()[1].prob; }
 
 // ------------------------------------------------------------- TaggedModel
 

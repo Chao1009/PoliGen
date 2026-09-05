@@ -80,10 +80,14 @@
 /// * The tensor output carries a factor-of-several wave-function systematic:
 ///   this geometry gives Q_charge(6Li) = -0.615 fm^2 (model range
 ///   -0.615 .. -0.730) against the MEASURED -0.0818 (`LI6_QUADRUPOLE_FM2`,
-///   rc.hpp) and GFMC AV18+IL7's -0.20(6) (`LI6_QUADRUPOLE_GFMC_FM2`).
-///   `quadrupole_band_fm2()` returns all three and the writer stamps them;
-///   docs/OPEN_ITEMS_SOLUTIONS.md sec. 11's rule -- do not derive a published
-///   tensor input from these wave functions -- stands.
+///   rc.hpp) and GFMC AV18+IL7's -0.20(6) (`LI6_QUADRUPOLE_GFMC_FM2`, THIS
+///   header).  `quadrupole_band_fm2()` returns all three and the writer stamps
+///   them; docs/OPEN_ITEMS_SOLUTIONS.md sec. 11's rule -- do not derive a
+///   published tensor input from these wave functions -- stands.
+///   The 7.52x is TWO factors, not three: 3.317 to the eta-matched dial and
+///   2.269 from there to the measurement (T22b).  1/S_alpha-d = 1.171 is NOT
+///   the third -- both waves are divided by sqrt(s_alpha_d_) before the
+///   moments are taken, so it is already inside the -0.615.
 ///
 /// ------------------------------------------------------- units and hbar c
 ///
@@ -137,6 +141,27 @@ inline constexpr double LI6_R_POINT_VMC_FM = 2.4433;
 inline constexpr double LI6_QUADRUPOLE_GFMC_FM2     = -0.20;
 inline constexpr double LI6_QUADRUPOLE_GFMC_ERR_FM2 = 0.06;
 
+/// The MEASURED asymptotic D/S ratio of the alpha-d channel,
+/// eta = C_2/C_0 = -0.025 +- 0.006 (stat) +- 0.010 (syst).  George & Knutson,
+/// PRC 59, 598 (1999), from d + alpha elastic tensor analysing powers; other
+/// determinations lie in -0.01 .. -0.03.  The repo's own record is
+/// docs/PHYSICS_CHANNELS.md's reference [GK99] -- NOT physics_literature.md,
+/// which predates this citation and does not carry it.  The comparison point
+/// for `asymptotic_ds_ratio()`; nowhere else is it retyped.
+///
+/// READ THE BAND, NOT THE CENTRAL VALUE.  `asymptotic_ds_ratio()` is EXACTLY
+/// LINEAR in `quadrupole_dial_s()` (the dial multiplies R_2 by s and both
+/// waves by the same 1/sqrt(n(s)), so the wave RATIO carries s alone), which
+/// makes eta a one-to-one relabelling of the dial rather than an independent
+/// constraint on it.  Mapped through that line, +-1 sigma_comb = +-0.01166
+/// spans model Q_charge from -0.4005 fm^2 to +0.0298 fm^2 -- through ZERO, at
+/// eta = -0.01497, only 0.86 sigma from the central value.  Anything derived
+/// from the central eta alone is a point on a line that the error bar does not
+/// even pin the SIGN of.  Test T22b pins both edges.
+inline constexpr double LI6_ETA_DS_GK      = -0.025;
+inline constexpr double LI6_ETA_DS_GK_STAT = 0.006;
+inline constexpr double LI6_ETA_DS_GK_SYST = 0.010;
+
 /// The data tables this module reads, relative to `data_dir()`.  One home
 /// each; `tagged.hpp`'s `VMC_LI6_OVERLAP` is the fifth and is NOT retyped.
 inline const char* const VMC_HE4_DENSITY   = "vmc/density/he4.density";
@@ -146,7 +171,11 @@ inline const char* const VMC_DEUTERON_WAVE = "vmc/deuteron/fdeut.av18";
 
 /// The R window [fm] `asymptotic_ds_ratio()` averages over.  A CHOICE: below
 /// ~5 fm the Whittaker asymptotics have not set in, above ~9 fm the fit table
-/// has ended and the raw block is Monte Carlo noise.
+/// has ended and the raw block's D wave has run out of signal.  MEASURED on
+/// `li6.ad`'s own error column (2026-09-03), median (min) S/N per window:
+/// 6-8 fm    R_0 37.7 (24.9), R_2 13.5 (8.9)  -- NOT noise, this is the window
+/// 8-9.95 fm R_0 15.5 (9.0),  R_2  6.8 (3.0)
+/// 9.95-12   R_0  5.1 (2.8),  R_2  2.8 (1.4)  -- here it is.
 inline constexpr double kDsRatioRLoFm = 6.0;
 inline constexpr double kDsRatioRHiFm = 8.0;
 
@@ -354,6 +383,23 @@ RadialMoments radial_moments(const std::vector<double>& x,
 /// (q_matter_analytic_fm2(1), a = 6).
 double a2_from_quadrupole(double q_matter_fm2, int a, double t_abs, int m);
 
+/// The EXACT inverse of `a2_from_quadrupole` at m = +-1: the point-matter
+/// quadrupole [fm^2] a coefficient a_2(+-1)/|t| [GeV^-2] implies.
+///
+///     a_2(+-1) = -(q_matter / (2 a)) / (hbar c)^2 * |t| / 4
+///   =>  q_matter = -8 a (hbar c)^2 * (a_2 / |t|).
+///
+/// It exists so that a `CoherentScenario` can be ASKED what it assumes about
+/// the target rather than asserting it in prose (open item O4): with
+/// `CoherentScenario::a2_m_state(1.0, 1)` as the argument and a = 6 it returns
+/// the point-matter quadrupole of 6Li that `eps_b0` implies, which is TWICE
+/// the charge one for N = Z.  At the shipped eps_b0 = -0.08, slope_b = 50 that
+/// is -1.8691 fm^2 matter = -0.9345 fm^2 charge, i.e. 11.4x the measured
+/// `LI6_QUADRUPOLE_FM2` = -0.0818 fm^2 (T23a; sec. C4 of
+/// docs/open_items/run_2026-09-03/phase_C_numbers.md).  No new physics number:
+/// it is the same (G7)+(G8) map read backwards, with the same HBARC_GEV_FM.
+double quadrupole_from_a2_slope(double a2_over_t, int a);
+
 // -------------------------------------------------------------- the sampler
 
 /// Builds its grids ONCE in the constructor and is immutable afterwards --
@@ -405,12 +451,90 @@ class ClusterConfigSampler {
   /// over R = `kDsRatioRLoFm` .. `kDsRatioRHiFm`.  kappa and the Sommerfeld
   /// parameter eta_c are DERIVED from `LI6_ALPHA_TAG()` (spectator.hpp), not
   /// retyped: kappa = 0.3074 fm^-1, eta_c = 0.3002.  The naive R_2/R_0 is NOT
-  /// eta -- W_2/W_0 is 3.34 / 2.92 / 2.63 at R = 6 / 7 / 8 fm.  -0.05(1) for
-  /// the committed tables against the MEASURED -0.025 +- 0.006 +- 0.010
-  /// (George & Knutson, PRC 59, 598 (1999)): a real but MODERATE D-wave
-  /// excess, ~2x, not the 5-15x a naive ratio suggests.
+  /// eta -- W_2/W_0 is 3.34 / 2.92 / 2.63 at R = 6 / 7 / 8 fm.  -0.0482 for
+  /// the default tables (-0.0538 +- 0.0021 for `OverlapRaw`, propagating
+  /// li6.ad's own MC errors) against the MEASURED `LI6_ETA_DS_GK`
+  /// = -0.025 +- 0.006 +- 0.010: a real but MODERATE D-wave excess, ~2x, not
+  /// the 5-15x a naive ratio suggests.
+  ///
+  /// IT IS NOT AN INDEPENDENT CHECK ON A DIALLED CONFIGURATION.  The (G9)
+  /// dial scales R_2 by s and both waves by the same 1/sqrt(n(s)), so
+  /// eta(s) = s * eta(1) EXACTLY; running the dial to a target Q and then
+  /// reading eta back recovers the dial, not the wave function.  What that
+  /// buys is a budget leg anchored on a MEASUREMENT rather than on GFMC:
+  /// eta = -0.025 <-> Q_charge = -0.1842 fm^2, so 3.317x of the 7.52x gap is
+  /// "too much D wave" and the remaining 2.269x is everything else (T22b).
+  /// What it costs is that the leg inherits GK's error bar, which spans
+  /// Q_charge from -0.4005 to +0.0298 fm^2 -- through ZERO.  Quote the band.
   double asymptotic_ds_ratio() const;
+  /// The `quadrupole_target_fm2` to request so that `asymptotic_ds_ratio()`
+  /// lands on `eta_target` -- a CONVERTER onto the one existing dial, not a
+  /// second dial (open item C5.1, decided 2026-09-04).
+  ///
+  /// WHY THERE IS NO eta DIAL.  eta is EXACTLY LINEAR in `quadrupole_dial_s()`
+  /// (the dial multiplies R_2 by s and both waves by the same 1/sqrt(n(s)), so
+  /// the wave RATIO carries s alone), and `quadrupole_target_fm2` already
+  /// bisects that same s.  An `eta_target` option would therefore be a second
+  /// name for the SAME one-parameter family -- two knobs onto one physics
+  /// number, which docs/CONVENTIONS.md forbids -- and the two could be set to
+  /// contradictory values in one options object.  What was missing was not a
+  /// dial but the CONVERSION, which lived only as a number in a document
+  /// (sec. C1.4's -0.18557 fm^2 at eta = -0.025); this returns it, so the
+  /// George-Knutson band re-runs when an input moves instead of rotting.
+  ///
+  /// It uses the sampler's own PRE-DIAL moments and its current dial, so it is
+  /// correct on a dialled sampler too: s = dial_s * eta_target / eta_now.
+  /// THROWS if that s leaves [0, 1], i.e. if the requested eta is outside what
+  /// scaling this source's D wave can reach.  READ THE BAND: GK's
+  /// +-sqrt(stat^2 + syst^2) = +-0.011662 maps onto Q from -0.4005 fm^2 to
+  /// +0.0298 fm^2, THROUGH ZERO at 0.86 sigma (T22b), so a Q from a central
+  /// eta is a point on a line whose error bar does not pin its sign.
+  double quadrupole_for_eta(double eta_target) const;
   /// a_2(m) at |t| for THIS sampler's 6Li geometry.
+  ///
+  /// IT IS A COEFFICIENT, NOT A SENSITIVITY.  a_2 is LINEAR in |t| and the
+  /// coherent sample is exp(-B|t|) with B ~= 39-55 GeV^-2, so the value at
+  /// the |t| = 0.3 GeV^2 that gets quoted is 10.6x the modulation an
+  /// experiment would actually weight: at the MEASURED Q(6Li) the
+  /// information-weighted a_2 is kappa*sqrt(<t^2>) = 0.25 %, not 2.6 %.
+  /// Priced in validation/o5_a2_reach.py (open item O5): coherent J/psi over
+  /// the WHOLE Q^2 range with BOTH lepton channels at
+  /// Scenario::lumi_fb_per_nucleon = 10 fb^-1/u.  QUOTE IT AS A BAND AND
+  /// NEVER AS THE POINT -- S = 2.63 sigma at the band's LOW EDGE and
+  /// 2.84-3.29 sigma at its TOP, 3 sigma at 8.3-13.0 fb^-1/u, MARGINAL and
+  /// inside the {1, 10, 100} fb^-1/u band at both ends
+  /// (docs/OPEN_ITEMS_SOLUTIONS.md sec. 11.3b).  The uncorrected point
+  /// estimate, 2.62 sigma / 13.1 fb^-1/u, lands 0.3 % under the band's low
+  /// edge and may not be quoted alone: it omits a measured beam-energy
+  /// factor (UP, x1.12-1.16) and the decay-lepton acceptance x efficiency
+  /// (DOWN, unbounded below in this tree), which happen to cancel to 0.7 %.
+  /// WHETHER THE BAND'S TOP CROSSES 3 SIGMA IS NOT ESTABLISHED: the top is a
+  /// SPAN because the 7Li -> 6Li efficiency substitution straddles 1 when it
+  /// is read off entries that share a beam energy (`o5_a2_reach.py`,
+  /// `species_scaling_same_energy`).
+  /// (An earlier revision said 0.75 sigma / 160 fb^-1/u; that was ONE lepton
+  /// channel in ONE Q^2 window, docs/OPEN_ITEMS_SOLUTIONS.md sec. 11.3a.)
+  ///
+  /// AND READ IT WITH ITS LIMITATION.  `a2_from_quadrupole`, which this calls,
+  /// is a CLOSED FORM AND NOT A GOOD-WALKER DIPOLE-MODEL AMPLITUDE: the
+  /// target's quadrupole carried through the deuteron's published |t|
+  /// dependence, with no amplitude, no saturation and none of their
+  /// uncertainties, and with the MATTER quadrupole standing in for the
+  /// transverse GLUON anisotropy.  A dipole-model run could move the number
+  /// by x1.15 either way across the 3 sigma line.  FOUR further things are
+  /// UNESTABLISHED rather than uncertain: no detection efficiency exists
+  /// below Q^2 = 0.1 GeV^2 anywhere in this tree, where 85 % of the coherent
+  /// rate sits; no decay-lepton reconstruction efficiency exists in this tree
+  /// at all, which is what leaves the band OPEN BELOW (only its geometric
+  /// half is bounded, at 0.99); the 7Li -> 6Li efficiency substitution
+  /// straddles 1, which is what makes the band's top a span; and the
+  /// far-forward working point is unchosen -- at LiPolGen's own de-squeezed
+  /// 6Li tagging optics the band is 0.73-0.92 sigma with 3 sigma at
+  /// 106-167 fb^-1/u, OUTSIDE the {1, 10, 100} band at both ends, and that
+  /// last one is the single correction that on its own restores the NO.
+  /// docs/open_items/run_2026-09-03/phase_C_numbers.md
+  /// sec. C2 (C2.0 for the limitation, C2.8 for every assumption);
+  /// docs/OPEN_ITEMS_SOLUTIONS.md sec. 11.3.
   double a2_from_geometry(double t_abs, int m) const;
   /// eps_b0 equivalent: delta_perp_analytic_fm2(+1) [GeV^-2] divided by
   /// `gaussian_slope(sqrt(LI6_R2_POINT_FM2))` = 52.04 GeV^-2.  The MEASURED
@@ -530,6 +654,10 @@ class ClusterConfigSampler {
   std::vector<double> core_s_, core_rho_s_;    ///< recentred closed form
 
   RadialMoments ad_m_{}, np_m_{};
+  /// The alpha-d moments BEFORE the (G9) quadrupole dial (already normalized
+  /// to norm 1, already sign-fixed).  `quadrupole_for_eta` needs them: the
+  /// dial's own q_charge(s) closed form is built from the undialled table.
+  RadialMoments ad_m_base_{};
   double s_alpha_d_ = 0.0;      ///< the source table's own norm
   double dial_s_ = 1.0;
   double s2_alpha_ = 0.0;       ///< <s^2> after recentring

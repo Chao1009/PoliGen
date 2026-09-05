@@ -1,0 +1,624 @@
+{
+ "data/vmc/README.md:1-10": {
+  "sha256": "1fb52693a64a2de04ee207272dd82e5f3ea996de6574f701b5272ff57fd39459",
+  "first": "# VMC two-cluster overlap / momentum-distribution tables (R. B. Wiringa, ANL)",
+  "last": "file can be re-fetched and re-verified."
+ },
+ "data/vmc/README.md:65-103": {
+  "sha256": "58ff8b26610240a0e2731eb2fc341c7a87c62881104933cdd1f849012ce51c1b",
+  "first": "## Files fetched, one row per subdirectory",
+  "last": "| `momenta/momenta_index.html` | the directory listing itself, for the file inventory and the page'…"
+ },
+ "data/vmc/README.md:85-118": {
+  "sha256": "c723bc7ec77e06b78682be51085c93d06604dcd3b494955b85b879e11e3f7dab",
+  "first": "## `momenta/` — the cluster MOMENTUM DISTRIBUTIONS (fetched 2026-08-29, second pass)",
+  "last": "**What each family is good for.**  The momentum files carry |ψ_L|² only — a"
+ },
+ "docs/CONVENTIONS.md:114-117": {
+  "sha256": "bf5cd1c67bb18dd608ff62ddaa5b8ffc67481638631d358db29c73b14d7c2874",
+  "first": "- **Struck nucleon species.** Drawn `Z F2p(x, Q²) : N F2n(x, Q²)` at the",
+  "last": "  limit and is wrong wherever `F2n/F2p ≠ 1` (0.5 against a true 0.615 for 6Li"
+ },
+ "docs/CONVENTIONS.md:140-144": {
+  "sha256": "bb956c6885e5f0b712f86395c4b9a2e03e9a1d56d50a38fbb965f1e34968b0d3",
+  "first": "  come out of one code path; the EPPS21 depletion is the single stored number",
+  "last": "  modification alone; against CT18NLO it was 0.02979, 4.2 % shallower.  On"
+ },
+ "docs/CONVENTIONS.md:18-24": {
+  "sha256": "f35ed6f252a00c78ab9fbb2a8871f8054bd774a6170fa07b07f958e8c0dfcac2",
+  "first": "- **Tensor-sector sign.** `TENSOR_LL_SIGN = -1.0` since 2026-08-29 (author",
+  "last": "  with P_zz = n₊ + n₋ − 2n₀, i.e. b₁ > 0 means the m = 0 state has the LARGER"
+ },
+ "docs/CONVENTIONS.md:18-26": {
+  "sha256": "1b166ad4f0c88cddcba9ddc2ceb9837551053a507342efe3b0cfcec635c9ec0c",
+  "first": "- **Tensor-sector sign.** `TENSOR_LL_SIGN = -1.0` since 2026-08-29 (author",
+  "last": "  Hoodbhoy–Jaffe–Manohar — until that date, and setting the constant back is"
+ },
+ "docs/CONVENTIONS.md:237-239": {
+  "sha256": "3fdf426e67ab73b2f05da59956d200e817696c39e36b6d645e57a7b54a2d7a19",
+  "first": "  momentum.  `β = x/x_P` and `M_X²` are on the record.  X must be TIMELIKE on",
+  "last": "  `InclusiveGenerator`, never a clip."
+ },
+ "docs/CONVENTIONS.md:241-244": {
+  "sha256": "2703ca4e146e2e2c1b16e2c8003bc2cb703ce44ab2c663cd985d932ab5b69f7d",
+  "first": "  everywhere and is bit-compatible with every published number; the analytic",
+  "last": "  LITHIUM alpha-tag channels only, with the ANL VMC tables:"
+ },
+ "docs/CONVENTIONS.md:252-254": {
+  "sha256": "039c583c666bd30ca320cbf1f7106043b28be105ede8050fbcfbad3a1c7a672b",
+  "first": "  is |ψ_L|² and has no phase, but the **S–D relative sign is observable**: the",
+  "last": "  DOMINATES the tensor asymmetry (negating the D table flips A_zz^tag from"
+ },
+ "docs/CONVENTIONS.md:299-302": {
+  "sha256": "6a3c83fdc7a0b106f7bbaf8a708f5190b1a0ac58038091576f2dc05275c26771",
+  "first": "  (A = 3) / 20.0 % (A = 4) correlated continuum: its high-k tails there are",
+  "last": "  the deficit BE the branching.  `sample()` consumes a fixed 6 uniforms on"
+ },
+ "docs/DEVELOPMENT_PLAN.md:61-65": {
+  "sha256": "c243793dc9e98775b80cedbb46f12d5fbfafc754a9c24881a6e59a2a95bd4eaf",
+  "first": "| tier | content | source of truth |",
+  "last": "| T2 | PYTHIA 8 hadronization of γ*–nucleon with the nucleon's *actual* Fermi-smeared momentum; spe…"
+ },
+ "docs/HEPMC3_CONVENTION.md:6-12": {
+  "sha256": "95e30eaeaca535a27bfbd0d527ac88b4da91cc6b19090761f3b1e2bdec6aedcc",
+  "first": "**proposed convention for ion-spin states in HepMC3** flagged as open item",
+  "last": "prepared to propose it to the ePIC MC group."
+ },
+ "docs/HEPMC3_CONVENTION.md:95-121": {
+  "sha256": "caf5c84bcba70c190dc6dc1c5caff0caf1cc7848c05a75be02b14d93e82be445",
+  "first": "- **Role → status/PDG map**, complete, with the tier that writes each row:",
+  "last": "  `Role::Spectator`, not \"every status-1 nucleus\"."
+ },
+ "docs/PYTHIA_BRIDGE.md:137-161": {
+  "sha256": "bccc080785e6b376de090cbe635b7823228119f722d72e2e7013725e253eb59b",
+  "first": "**`m_q` is not always zero.**  `LesHouches:setQuarkMass = 1` (PYTHIA's",
+  "last": "scale.  The default is PYTHIA's NNPDF2.3 QCD+QED LO set."
+ },
+ "docs/PYTHIA_BRIDGE.md:145-146": {
+  "sha256": "92f0ccd03229eb6369e9c22435d368f02e597c9eef965215ae0dcdf52985ed07",
+  "first": "pure Lorentz transformation in every event: worst |λ − 1| = 1.2 × 10⁻¹³ over",
+  "last": "400 events."
+ },
+ "docs/PYTHIA_BRIDGE.md:172-181": {
+  "sha256": "ab37df560327216b275e984339cbbd12ad522551938d0b1c355436f26c4d50a7",
+  "first": "**The neutron is not an isospin relabelling of the proton run.**",
+  "last": "Both share one `RndmEngine` and both are initialised in ~0.34 s."
+ },
+ "docs/PYTHIA_BRIDGE.md:185-215": {
+  "sha256": "01b943a00e1868655b1995e4f20afbfa7cfc217c420c18455644195f26828700",
+  "first": "## 4. The LHA record",
+  "last": "record is honest and so τ decays and the weak shower see it if they ever fire."
+ },
+ "docs/PYTHIA_BRIDGE.md:20-40": {
+  "sha256": "7dbcf76c826c809ea704d3145bca8cba3da12536fae5cfa8e39a67bdfff67a46",
+  "first": "Two facts about PYTHIA 8.317 fix the whole design.",
+  "last": "for a hard process.  Measured directly (50 events, LHAup with a target"
+ },
+ "docs/PYTHIA_BRIDGE.md:219-230": {
+  "sha256": "3b5ce577cc55cb40ee9288cec4fef3ec83e40bb51e3b590d0866d7a8db6c4038",
+  "first": "## 5. The frame map",
+  "last": "rest-frame momentum sum is zero, the transformed sum is exactly `H_w`."
+ },
+ "docs/PYTHIA_BRIDGE.md:280-347": {
+  "sha256": "4fab94905c527111ca529255a95f0a4075fdefc3f0477dbd7b5c4daba99e5263",
+  "first": "## 7. Exact PYTHIA settings",
+  "last": "  during `init()`."
+ },
+ "docs/PYTHIA_BRIDGE.md:343-347": {
+  "sha256": "8ba87a42076aedd939f907073cc68dd673b0e5dc8c5201dc1505c0bf230183f0",
+  "first": "- Randomness: PYTHIA draws through a `Pythia8::RndmEngine` backed by the",
+  "last": "  during `init()`."
+ },
+ "docs/PYTHIA_BRIDGE.md:360-375": {
+  "sha256": "5e5c4f225f4395bb88824bae2d8184f68a42927056f2c13367108a875622367e",
+  "first": "1. `Σ (E − p_z)_hadrons = 2 E_e y + m_N²/(E_N + p_Nz)`",
+  "last": "exact for any target and is checked at rtol 10⁻¹⁰."
+ },
+ "docs/PYTHIA_BRIDGE.md:429-432": {
+  "sha256": "dbc8f1051b21c299f0ff2193b5db13d365e63b4d276721bdd6251224802a25a9",
+  "first": "| hadronization + HepMC3 Asciiv3 write | **6 200 events/s** (16.5 MB / 5000 events) |",
+  "last": "| worst \\|λ − 1\\| | 1.2 × 10⁻¹³ |"
+ },
+ "docs/PYTHIA_BRIDGE.md:462-498": {
+  "sha256": "bfac32fc250d169adff2ec21097247e533c478490dfd9ca7250277a9e0d0e63a",
+  "first": "## 12. The coherent tier: a γ*–Pomeron beam (`Beams:idA = 990`)",
+  "last": "and produced **at its own** `ζ_q = (Q² + m_q²)/(M_X² + Q²)` (P2 of §3)."
+ },
+ "docs/PYTHIA_BRIDGE.md:473-475": {
+  "sha256": "d28a861103475bfb7bc774f07a7b0bf2cebcf91e1897b8559e2dd75f1266a6f8",
+  "first": "for a virtual photon, but **990 is a legal user beam**: `BeamSetup.cc:869-875`",
+  "last": "handling — so the beam remnant is a **single antiquark**, automatically"
+ },
+ "docs/PYTHIA_BRIDGE.md:500-530": {
+  "sha256": "7a0d1895a624b2851deb94df475c9c46049292445ac4795502d97c00c4559655",
+  "first": "### The flavour draw, and the two silent traps",
+  "last": "   cost of clamping every flavour weight to that Q²."
+ },
+ "docs/PYTHIA_BRIDGE.md:534-543": {
+  "sha256": "41b6be95f2dcdfc91a1fb29fdb091113fbf58974b9132cd1612356f8d5f0ddfc",
+  "first": "PYTHIA's hadronization vetoes a γ*–Pomeron string with too little mass for",
+  "last": "separate channel.  The T2 chain test re-measures the table per run and pins"
+ },
+ "docs/PYTHIA_BRIDGE.md:543-544": {
+  "sha256": "1ec7fcc46ec97da71005b19267b94f9cf93f014f2f4e8f21a1368a24d97b9f2f",
+  "first": "separate channel.  The T2 chain test re-measures the table per run and pins",
+  "last": "veto = 0 at `M_X ≥ 1.4`."
+ },
+ "docs/PYTHIA_BRIDGE.md:558-590": {
+  "sha256": "2394c4f4932059627afbafb938b0b8e2300163f4d985a11a446ad6fc4837813b",
+  "first": "### The electron-beam-mass shift, and the compensated surrogate",
+  "last": "|---|---|"
+ },
+ "docs/PYTHIA_BRIDGE.md:97-135": {
+  "sha256": "9e4f724207841e4e335f2087e157a30987bb5596bfe9bf4cb1014df620ae3a7f",
+  "first": "## 2. The ξ solution",
+  "last": "same `x`."
+ },
+ "docs/T2_CHAIN.md:102-106": {
+  "sha256": "e774b2feb3629343699685add1e0f6b2a7d4f37cdbed7adda1a4d729f8c9bf64",
+  "first": "* the closed-form collinear `hfs_sigma_empz_truth` is now approximate at the",
+  "last": "  failing, not the record."
+ },
+ "docs/T2_CHAIN.md:41-45": {
+  "sha256": "e5809185c9b6d55fcc9a30257e2543c53e2172370828682abb1b00c553834a3f",
+  "first": "| `Spectator` | `Final` (1) | T0 (tagged) | the tagged cluster; outgoing, **never read or written b…",
+  "last": "| `HadronicX` (pdg 92) | `Final` -> **demoted to `Intermediate` (3) by `hadronize()`** | T0 | docum…"
+ },
+ "docs/T2_CHAIN.md:79-96": {
+  "sha256": "d6762c669042b4f79af944cc040a5f808a446c349748031092f0f93ca47d8f9f",
+  "first": "with **no caller-side hook**. The bridge's first-priority branch takes",
+  "last": "old record and prints its honest residual: 0.186 relative, charge wrong by 1."
+ },
+ "docs/USAGE.md:1028-1219": {
+  "sha256": "90a7c095fadc0dee726f4abe18f015cbe6f0854a37ea71d93e4fac3e9aa7eeef",
+  "first": "## 5. Far-forward routing",
+  "last": "  `rc_tensor_lo`/`rc_tensor_hi`/`rc_tail`. **Every other CLI plan is"
+ },
+ "docs/USAGE.md:11-50": {
+  "sha256": "2899d979d6d1405b4601caf874dbb78f7626d6c569e0d01da40a1b29a8c71f22",
+  "first": "### Installing the Python package with pip",
+  "last": "license header (see `docs/OPEN_ITEMS_SOLUTIONS.md` §12–13 and `docs/open_items/engineering.md` §C)."
+ },
+ "docs/USAGE.md:1247-1400": {
+  "sha256": "ab508a7b007bf4750078430b97585afdd6dd1a4562cc9c6c954734eaee5d0244",
+  "first": ">   lithium channel is **unbound** — ⁵Li and ⁵He are resonances above the",
+  "last": "  the tensor part of those peaks is **unknown, not zero**."
+ },
+ "docs/USAGE.md:147-484": {
+  "sha256": "43600c82dcbf45007fb4131952ee94af0d6b660dcce591084b551a248e96e5e5",
+  "first": "## 2a. b₁ backends for the inclusive channel — `--b1-model`",
+  "last": "in the ⁶Li observable and not a normalisation the 100 % band would absorb."
+ },
+ "docs/USAGE.md:768-774": {
+  "sha256": "295056a3e251fa3f9f9600719aa648bf6097d3dc6710cc0e266235f7e106b68e",
+  "first": "| ⁷Li | tagging optics | 0.9805 | 0.9993 | 0.9927 | 0.9992 | 0.9941 | 0.9992 |",
+  "last": "Reach the tables directly when you want them: `VmcRadial`,"
+ },
+ "docs/USAGE.md:794-802": {
+  "sha256": "6d27ba15d241fcc608f01fec7817877fb043267b4fb6ab09881f8c4e1dd0ae34",
+  "first": "| ⁷Li α | quasi-free t | d, or two n | sequential two-body at the AME2020 S_n(³H) = 6.2572 MeV / S(…",
+  "last": "Balance at T1: **whole nucleus**,"
+ },
+ "docs/open_items/physics_literature.md:108-112": {
+  "sha256": "590126d6d6102339410e72817fecf6527aa61f733b64f635e5c60af28cc750c9",
+  "first": "| Slides' \"1/3\" | **1.00** | 0.333 | Naive α+d, no D-state, no cluster loss. **16% too big.** |",
+  "last": "**Recommendation (whole-nucleus convention, no Z or N factor):**"
+ },
+ "docs/open_items/physics_literature.md:132-140": {
+  "sha256": "e1f53a42b072dc598fb7f94976fcadc06a8476043e7f3683655ac2b55a69c478",
+  "first": "**(b) HERMES, [arXiv:hep-ex/0506018](https://arxiv.org/abs/hep-ex/0506018), PRL 95 (2005) 242001.**…",
+  "last": "**(d) Independent fourth check, POLRAD 2.0** ([arXiv:hep-ph/9706516](https://arxiv.org/abs/hep-ph/9…"
+ },
+ "docs/open_items/physics_literature.md:155-161": {
+  "sha256": "aa2bb1a91d948c3bd69694e822fccb1e52bae6f2bb73c23033c178787ba0e054",
+  "first": "| **H. Mäntysaari, F. Salazar, B. Schenke, C. Shen, W. Zhao, [arXiv:2408.13213](https://arxiv.org/a…",
+  "last": "**What does *not* exist, checked several ways:** no coherent diffraction, exclusive VM, or DVCS cal…"
+ },
+ "docs/open_items/physics_literature.md:81-85": {
+  "sha256": "f3a8a56d0eecf99a7ca139723eaf9ce23e758ff1ef839f88c0832aae58be8bab",
+  "first": "> W_FSI(p_spec) = |∫d³r e^{i p·r} φ_{αd}(r) · Π_{i∈spectator}[1 − Γ(**b**₁−**b**_i, z₁−z_i)]|² / |φ…",
+  "last": "**Two structural points specific to LiPolGen.** (a) FSI matters above p_spec ≈ 300 MeV and is stron…"
+ },
+ "docs/open_items/vmc_reconciliation.md:120-131": {
+  "sha256": "6c3e2d98b5705cc297530121c2e155de05998a4d7d1ef9a1468c414fff138765",
+  "first": "on the same structure.  Fixing the unobservable global phase by ψ₀(k → 0) > 0:",
+  "last": "it — a structure no two-parameter form can carry.  It matters: at P_D ≈ 0.019"
+ },
+ "docs/open_items/vmc_reconciliation.md:180-188": {
+  "sha256": "22075f34b177d812e40d7cef779d7edc8b5eac384abbfe07a2d8f00b70ab8535",
+  "first": "| k [GeV] | hulthen β=0.30 | hulthen P_D=VMC | VMC AV18 | VMC D-sign flipped | VMC − hulthen |",
+  "last": "| 0.4001 | 0.3325 | 0.3435 | 0.0779 | -0.0822 | -0.2545 |"
+ },
+ "docs/surveys/beagle_survey.md:120-127": {
+  "sha256": "391b3f7c691b4bb3566cd5a807b27875dba987b9551d3e994abaee9753ea6d38",
+  "first": "### 2f. The eD mode with spectator tagging — where it lives",
+  "last": "- **No FSI at all in eD** (paper, §II)."
+ },
+ "docs/surveys/beagle_survey.md:96-100": {
+  "sha256": "80f14ec31ee874eb8300519e612ed527e1c1d51cb0df49f2a7985d656786869a",
+  "first": "`DT_FER4M` at `src/dpmjet3.0-5F-new.f:5533` dispatches (L5583–5588):",
+  "last": "- `IFMDIST = -1` → `DT_DFERMIO` (`:17069`), the ancient \"largest of three random numbers\" DPMJET ha…"
+ },
+ "include/lipolgen/beams.hpp:24-40": {
+  "sha256": "1898de319b33e0b448259f473f130cd9c3b8573e3e703ba9ba5c284fe0c55141",
+  "first": "/// 7Li's 40.8 / 99.5 / 117.9 are DERIVED from the physical (AME2020) nuclear",
+  "last": "double nucleus_mass(const std::string& name, int a, int z);"
+ },
+ "include/lipolgen/beams.hpp:95-96": {
+  "sha256": "1508e0fa708220555dce35155c4f7f25c741daf23a359d218329f391dbce713e",
+  "first": "inline constexpr double P_D_LI6 = 0.0867;",
+  "last": "/// The deuteron's own D-state probability (AV18-like)."
+ },
+ "include/lipolgen/bookkeeping.hpp:140-141": {
+  "sha256": "c2ddb777959a7125de8be94ea5bacea984c0ace6f8b0cf05007a9d26b6266879",
+  "first": "  double theta_s = 0.0;",
+  "last": "  double phi_s = 0.0;"
+ },
+ "include/lipolgen/bookkeeping.hpp:153-155": {
+  "sha256": "1c8917144dd2d04b0d6bea4903cf07e4df89be233bc4026f86c0a8325da19f31",
+  "first": "/// Spin-1 A_zz run plan: equal-thirds fills (pz, +pzz), (-pz, +pzz) and the",
+  "last": "/// canonical thirds estimator exact.  Electron unpolarized."
+ },
+ "include/lipolgen/bookkeeping.hpp:158-159": {
+  "sha256": "fe1e60ebd90a022f923e572f5baf0ecc90889814f10d0e667c4633977bb1b7a0",
+  "first": "RunPlan tensor_thirds_plan(double pz, double pzz, double rel_lumi_offset = 0.0,",
+  "last": "                           double theta_s = 0.0, double phi_s = 0.0,"
+ },
+ "include/lipolgen/bookkeeping.hpp:16-31": {
+  "sha256": "379487ad450188d2a131f777d6858de99f7496596c6b9cf8eef0b633d3f28281",
+  "first": "/// THREE LUMINOSITY FACTORS MULTIPLY AND NONE IS THE OTHER",
+  "last": "/// `test_the_sampler_cross_sections_are_share_invariant`)."
+ },
+ "include/lipolgen/bookkeeping.hpp:42-44": {
+  "sha256": "0178dd6434d262085d37fca34937c25a727ca7b995d52e79f5f1779e8f64bf76",
+  "first": "///  * polarimetry scale: measured = true * (1 + delta_p_over_p * gauss),",
+  "last": "///    (delta P/P ~ 3 %, plans/04 #5)."
+ },
+ "include/lipolgen/cluster.hpp:8-21": {
+  "sha256": "8f7dfe89b34539c30a5b0599612dc7f556cec6bd8c75ea167b70c50f8108def4",
+  "first": "/// (evgen/polligen/tagged.py:126,101).",
+  "last": "/// simulation's spectator sampler quantile by quantile."
+ },
+ "include/lipolgen/cluster_config.hpp:18-70": {
+  "sha256": "9422418a437521b367c8ebd4ec3776a739e4a9b98a8d9f617f955e74e96cae5d",
+  "first": "/// 6Li(1+) is a rigid alpha(0+) core plus a deuteron with relative orbital",
+  "last": "///"
+ },
+ "include/lipolgen/coherent.hpp:488-489": {
+  "sha256": "abebdfecbc4fea71982183da202f9b3ab8e6a0d9fd78969dd1fee00be95624d5",
+  "first": "  /// deformation coefficient 2 a_2 PLUS the flat gluon-transversity term",
+  "last": "  /// amp * P_zz (`money_cos2phi_coherent.py` injects 1 + amp P_zz cos 2phi)."
+ },
+ "include/lipolgen/coherent.hpp:531-537": {
+  "sha256": "d55149603fea3f45641d93a5804c362020c074625d328e203776a85a570da9fc",
+  "first": "/// (plans/08 D8) draws x_P log-uniform over a fixed decade and uses it for",
+  "last": "/// just the virtual photon and M_X^2 = -Q^2 in 100 % of events."
+ },
+ "include/lipolgen/fsi.hpp:132-135": {
+  "sha256": "35b241d3ce1f5e87fbd721eb15ea934fb4779db44e234e205663e75c8685b3b0",
+  "first": "/// THE OPEN PHYSICS INPUT.  sigma_XN(W) is the weakest number in the model.",
+  "last": "/// row is arguably the realistic one.  The default is 40 mb (free hadron) and"
+ },
+ "include/lipolgen/fsi.hpp:161-165": {
+  "sha256": "bee6e9451c5dde479f67f804399c727e29780df4cf2cf91a36189f9ef2df6525",
+  "first": "/// `HBARC_GEV_FM` (constants.hpp, docs/CONVENTIONS.md).  The prototype",
+  "last": "inline constexpr double HBAR_C_GEV_FM = HBARC_GEV_FM;"
+ },
+ "include/lipolgen/fsi.hpp:169-176": {
+  "sha256": "cd3d31696b3c88b146f874b97f057ff9675daff2ccf5649a2003475e517f5a2b",
+  "first": "/// a^2 [fm^2] of the Gaussian POINT-NUCLEON density of a spectator cluster,",
+  "last": "/// (it IS the point scatterer), and an unknown cluster throws."
+ },
+ "include/lipolgen/generator.hpp:21-27": {
+  "sha256": "9789ee921d448ca354d56234b2fb5e68d046022a5ea47df1c98026fc9fedcfe0",
+  "first": "///   is EXACTLY the covariant Bacchetta et al. (JHEP 02 (2007) 093) azimuth",
+  "last": "///   is that the generator and the reconstruction agree."
+ },
+ "include/lipolgen/numerics.hpp:25-27": {
+  "sha256": "c4aabd936c68cc60f02dd366e5003949bf9ecdf100e775fe1f90078a23287d95",
+  "first": "/// NumPy's pairwise summation (numpy/core/src/umath/loops_utils.h.src,",
+  "last": "/// trapezoid integral bit-identical to `np.trapz`."
+ },
+ "include/lipolgen/pipeline.hpp:12-38": {
+  "sha256": "2347d4c3e778177b4b9a6f6e1a23bd2910d2327fec89d1906eff05b6b80e7b63",
+  "first": "/// ---------------------------------------------------------------------------",
+  "last": "///                    p_z = (1 - x_P) A p_u; X = k + P_ion - k' - P_recoil is"
+ },
+ "include/lipolgen/pipeline.hpp:260-272": {
+  "sha256": "9fb03aba6576975a80bba63f800378576a8eac2efe5906577c2ba8ae785758e9",
+  "first": "/// Fidelity tier of the final state a run writes (DEVELOPMENT_PLAN.md 2).",
+  "last": "/// The switch does nothing on the inclusive and coherent channels, which have"
+ },
+ "include/lipolgen/pipeline.hpp:404-417": {
+  "sha256": "64aae19ad6678bad503e1ccb5c0342bd3cd5c033d8596961dd0d3f8db3fa6957",
+  "first": "/// object, so the partial cancellation `b1_nuclear.hpp` relies on for its",
+  "last": "struct PipelineConfig {"
+ },
+ "include/lipolgen/pipeline.hpp:544-554": {
+  "sha256": "490909a18d87b33fbdc3685c87691fae14c5658ebc63e2211ed946f7ef1545ef",
+  "first": "  /// NOT refuse the coherent channel -- `RcModel::applies()` decides and the",
+  "last": "  /// The `Pipeline` constructor refuses a range in which it would."
+ },
+ "include/lipolgen/pythia_bridge.hpp:131-139": {
+  "sha256": "7da37a9255073f733e00163b5846e9ca5c862644a28a20afaca4a0b3eff39c3f",
+  "first": "  /// P1, AND THE DEFAULT: p with probability Z F2p(x, Q2) / (Z F2p + N F2n)",
+  "last": "  Proton,"
+ },
+ "include/lipolgen/pythia_bridge.hpp:276-291": {
+  "sha256": "5dbaf57f2e72de41146f8fea0fd61cc5ec99eef0fa3afccb8c797dc918e20b65",
+  "first": "  /// DEPRECATED (2026-08-30, superseded by the T1 tier).  Hook: pick the",
+  "last": "  /// `PythiaBridgeStats::n_cluster_fallback`."
+ },
+ "include/lipolgen/pythia_bridge.hpp:31-35": {
+  "sha256": "4e51309de34fa94a68d5447c90517b9b2e872e1c8d953e739ba56d2dea5a45af",
+  "first": "/// Because the hard process arrives through LHAup, **all `PhaseSpace:*`",
+  "last": "/// phase space is the core generator's; PYTHIA only showers and hadronizes."
+ },
+ "include/lipolgen/rc.hpp:153-160": {
+  "sha256": "78b79c4278535e4b171f0ba3f39f70ff1e7ca88f4cedd5ac116356683dd6fad6",
+  "first": "/// w_tensor/a1_tensor/a2_tensor` hold.  At an UNPOLARISED beam and along it",
+  "last": "/// DIS one -- see `RcModel::tensor_fraction`.  The band is then"
+ },
+ "include/lipolgen/rc.hpp:200-207": {
+  "sha256": "f1df66b413a50ee65ca1befab67a66283265062c7bc550910c5bb7f92b3dfd78",
+  "first": "///     transfers to 6Li is untested, and is the largest unquantified",
+  "last": "///     part), and the clipped fraction is reported per run and per event"
+ },
+ "include/lipolgen/rc.hpp:281-360": {
+  "sha256": "2be17fe8bbb7b82d3c3c53d573156e3eb2e1fc571aebcb66ba3082202f0f0726",
+  "first": "/// So the real basis of the anchor is \"THE PANEL'S LOWEST-x VALUE, CARRIED",
+  "last": "  virtual double fm(double t_gev2) const = 0;"
+ },
+ "include/lipolgen/sampler.hpp:25-28": {
+  "sha256": "5984f27f22c0e04bfe369d99625a6dfbf61b18493f21b2ffa88ff7fda5176a2b",
+  "first": "/// (+z) beam axis in the HEAD-ON frame, phi = atan2(p_y, p_x) of e', in",
+  "last": "/// `azimuth_wrt_lepton_plane`).  generator.hpp builds e' from this angle."
+ },
+ "include/lipolgen/sf.hpp:151-157": {
+  "sha256": "580917edf93d5f8caf3b2d75fdb0b57c6a00bdcaed515b68a2098f17b58fa636",
+  "first": "/// Wandzura-Wilczek g2(x) = -g1(x) + int_x^1 du g1(u)/u at fixed Q2.",
+  "last": "double g2_ww(const std::function<double(double, double)>& g1, double x,"
+ },
+ "include/lipolgen/sf.hpp:310-324": {
+  "sha256": "f2e7dbc8dc2128e63f24735ba39598ae038e27983625f869689dc3965da5c4fa",
+  "first": "/// <1 - R_unpol> of the EPPS21 baseline over POLEMC_VALENCE_WINDOW.",
+  "last": "inline constexpr double EMC_VALENCE_DEPLETION_EPPS21 = 0.031052077003862335;"
+ },
+ "include/lipolgen/sf.hpp:319-322": {
+  "sha256": "d535fa6eda3379381e53a5951efe781448848b0eb84bcc7489140fe45902af2b",
+  "first": "/// (the grid's SetDesc reads \"EPPS21+CT18ANLO\"), so taking the ratio against",
+  "last": "/// 0.029788812318099069, 4.2 % shallower -- half the size of the ln-A isotope"
+ },
+ "include/lipolgen/sf.hpp:329-331": {
+  "sha256": "992024d4f1147192b0e27d4e80c308862251f0e12dfd6868fbe07ddb29d48159",
+  "first": "/// Cloet-Bentz-Thomas polarized EMC ratio for 7Li, TRANSFERRED to `baseline`;",
+  "last": "/// R^{(3/2 1)}_{As}."
+ },
+ "include/lipolgen/sf.hpp:42-44": {
+  "sha256": "c0f1ac342aa345e323429f5dd271ddbf791273431a4c29bf32b56c96a476fdbd",
+  "first": "/// R = sigma_L/sigma_T, simplified R1990-like magnitude (TOY).  The DEFAULT R",
+  "last": "/// magnitude (0.14-0.18 over the acceptance), not a fit."
+ },
+ "include/lipolgen/spin.hpp:18-20": {
+  "sha256": "79f3eb4fdd1c9deac08ab4a5d61945acbe7b8009a27ee62750ec399790df5824",
+  "first": "///   tensor   J=1     Pzz  = <3 J_z^2 - 2> = p+ + p- - 2 p0,  in [-2, +1]",
+  "last": "///   octupole J=3/2   O    = <J_z^3 - (41/20) J_z>/(3/10)"
+ },
+ "include/lipolgen/tagged.hpp:364-375": {
+  "sha256": "3d97f453b9d712200fe24c792728240f97d6ed5ce9c3b763dc305a98c7cf52a0",
+  "first": "/// CONVENTION (the one physics choice this file makes that the Python does not",
+  "last": "/// carried explicitly rather than hidden."
+ },
+ "include/lipolgen/tagged.hpp:471-475": {
+  "sha256": "2299186020a9c0bc9ec07471d835af3189aecfb6b55e942673b04a6a009047a6",
+  "first": "/// One tagged event, before it is turned into an `Event` record.",
+  "last": "  double m_ion = 0.0, m_struck = 0.0;"
+ },
+ "include/lipolgen/tagged.hpp:53-59": {
+  "sha256": "e28c403ca70b6ec0fd5e0d87cd5690ddac4604397b646058d510fe4876577289",
+  "first": "// P_D_LI6 and P_D_DEUTERON are NOT defined here.  Since 2026-08-29 they live",
+  "last": "// and agree to 1.22e-5.  The names, values and meanings are unchanged."
+ },
+ "pythia8:BeamParticle.cc:178": {
+  "sha256": "7c436ad300b53e025cda074668b1b8c5d49386eb9992e7339f422b23a68d97d0",
+  "first": "  else if (particleDataPtr->isMeson(idBeamAbs) || idBeamAbs == 990)",
+  "last": "  else if (particleDataPtr->isMeson(idBeamAbs) || idBeamAbs == 990)",
+  "src": "pythia8317"
+ },
+ "pythia8:BeamRemnants.cc:662": {
+  "sha256": "2aaa4b8fb23d5eafc27e6fc1f584bed5b766a73bdff72170f5b64419c885804b",
+  "first": "    wPosRem = eCM;",
+  "last": "    wPosRem = eCM;",
+  "src": "pythia8317"
+ },
+ "pythia8:BeamRemnants.cc:935": {
+  "sha256": "84e2a9aed4d8af6ac6edff1f78b5ab91790af4bf4837fd838c868783bd9aad62",
+  "first": "    wPosRem = eCM - (pSumOut.e() + pSumOut.pz());",
+  "last": "    wPosRem = eCM - (pSumOut.e() + pSumOut.pz());",
+  "src": "pythia8317"
+ },
+ "pythia8:BeamSetup.cc:645": {
+  "sha256": "62656ccf73cef2c4a18ec29f2b51e7ff3fd1874e2fb130a56ec8128c00a40cb4",
+  "first": "    pAnow = pAinit + beamShapePtr->deltaPA();",
+  "last": "    pAnow = pAinit + beamShapePtr->deltaPA();",
+  "src": "pythia8317"
+ },
+ "pythia8:BeamSetup.cc:869-875": {
+  "sha256": "e7f2af5f148e36e5ae006ef7b1e0f06a7936bd28f8fdf83dc535e97d257829e6",
+  "first": "  // Hadron-hadron collisions OK, with Pomeron counted as hadron.",
+  "last": "  if (isHadronA && isHadronB) return true;",
+  "src": "pythia8317"
+ },
+ "pythia8:ProcessLevel.cc:645": {
+  "sha256": "aaba588e97ebdd9f08af68861317e1fcb6d45d14ccd96c160ac29be52f92498a",
+  "first": "  if (eCM != eCMold && doVarEcm) {",
+  "last": "  if (eCM != eCMold && doVarEcm) {",
+  "src": "pythia8317"
+ },
+ "pythia8:Pythia.cc:662": {
+  "sha256": "2fd6648431f4c4644216d787ae55306d83dc769040c91a68bcb7201f7824cd88",
+  "first": "  if (beamSetup.doVarEcm && doHardProc) {",
+  "last": "  if (beamSetup.doVarEcm && doHardProc) {",
+  "src": "pythia8317"
+ },
+ "python/lipolgen/__init__.py:238-243": {
+  "sha256": "6a87043399bdfc364f5721ecd9548488019b8e44019b598194a9b64114455fb4",
+  "first": "    \"t-peak+ll\": _lipolgen.RcTailModel.TPeakPlusLL,",
+  "last": "         \"cos2phi\", \"tensor-flip\", \"flip\")"
+ },
+ "python/lipolgen/__init__.py:249": {
+  "sha256": "42d1b3c1373ae738b90a7b6be6ecae2ac5f61b83ae6be3e1d9c25b4e27493adc",
+  "line": "def ion_spin(isotope):",
+  "name": "isotope"
+ },
+ "python/lipolgen/__init__.py:424": {
+  "sha256": "6e8d4548e6f69e6314bba0668e7b1547bd834f31f40a0b5a4cdc0e76c21ba6df",
+  "line": "    if b1_model is not None:",
+  "name": "b1_model"
+ },
+ "python/lipolgen/__init__.py:457": {
+  "sha256": "c8c6b8b1f6e0e97adaddb6d72a6a797fc2e2a16f2420869d61a8b5facd3c762b",
+  "line": "            setattr(sc, k, float(v))",
+  "name": "setattr"
+ },
+ "python/lipolgen/cli.py:604": {
+  "sha256": "1d2f24498096c3b3855a2ea8b882f003dd6d6cae4a8b164319b6b93399cb564d",
+  "line": "    if p.rc_model is not None:",
+  "name": "rc_model"
+ },
+ "python/lipolgen/export.py:1-39": {
+  "sha256": "9a7941751f485145c52a6d05a32afbaf7291513225f788763c07c2b4bf69f5d8",
+  "first": "\"\"\"numpy exporters in the schemas `PolarizedLithiumSim/evgen/polligen` uses.",
+  "last": "`columns_from_events` always builds them."
+ },
+ "src/core/breakup.cpp:157": {
+  "sha256": "f60fd6f0545f3ebd293329406d5b674863fdd68e5468eaec27730782b35bf6e2",
+  "line": "  grid_ = linspace(1e-4, opt_.k_max, opt_.n_grid);",
+  "name": "n_grid"
+ },
+ "src/core/breakup.cpp:208": {
+  "sha256": "67f299b0af3fd3f0f888f4ef7f1567535e0dce6bd45c253659b4795492577fc2",
+  "line": "  if (in.species == ClusterSpecies::Nucleon) {",
+  "name": "Nucleon"
+ },
+ "src/core/breakup.cpp:235": {
+  "sha256": "c01a5b95b87b835aee189b3aa8dc82633d138a3b6386b6361c46de0ba1e6b694",
+  "line": "  if (in.species == ClusterSpecies::Deuteron) {",
+  "name": "Deuteron"
+ },
+ "src/core/breakup.cpp:278": {
+  "sha256": "564a9509b1c75ccc86b1546a0b8d88264c40e87a04e8c3560797e3aee17991c8",
+  "line": "  } else if (tsf_) {",
+  "name": "tsf_"
+ },
+ "src/core/coherent.cpp:278-279": {
+  "sha256": "5523f99c9734044e427cc9c7f635e5b8fa8838c2baaaf84347feffe9fa2b9bc5",
+  "first": "  // 6Li: TUNL A=6 (Tilley et al. NPA 708:3).  7Li: recomputed from",
+  "last": "  // `nuclear_mass`, which reproduces the evaluated values."
+ },
+ "src/core/fsi.cpp:190": {
+  "sha256": "198549f609752faffa266f44b4faf085fb57f1d6b6b5077346aed28bf4b14d0a",
+  "line": "  if (opt_.variant == FsiVariant::GlauberNucleon) {",
+  "name": "GlauberNucleon"
+ },
+ "src/core/pipeline.cpp:531": {
+  "sha256": "b759141159d6b71cd6d1c2ecf3f3ad41233f2134d9e01943218cbeebbf591b69",
+  "line": "  if (b1_model == B1Model::Miller) {",
+  "name": "B1Model"
+ },
+ "src/core/pipeline.cpp:669": {
+  "sha256": "ad29b4f734d2daf50ededfb2ff603d6de41d1b8da319bc33d14c67c502ab492a",
+  "line": "  scenario.validate();",
+  "name": "scenario"
+ },
+ "src/core/pipeline.cpp:852": {
+  "sha256": "571044c1fb8fd3dc133d4a2f8c4f1fbbd0fef9e236c70ca707037264bd62b307",
+  "line": "    sopt.grid = cfg_.grid;",
+  "name": "grid"
+ },
+ "src/core/pipeline.cpp:928": {
+  "sha256": "6143e100b50564bab6c2de1fe2548dfaaaff508e2a54ab925c5ecf6b7d57c068",
+  "line": "      bo.beta = cfg_.cluster_beta;",
+  "name": "beta"
+ },
+ "src/core/pipeline.cpp:957": {
+  "sha256": "d19f53dd5ad472c8c3bfea196c1f40e4a25fc417a5bd7012b4b2a26ec5000ee3",
+  "line": "    dis_sampler_ = std::make_shared<InclusiveSampler>(kernel, beams_,",
+  "name": "InclusiveSampler"
+ },
+ "src/core/rc.cpp:953": {
+  "sha256": "b60bee31f2fda72f8c59a0a73193e2e84f3614d1b12002aa780e10347da9a3e4",
+  "line": "  if (!(opt_.a_transfer_frac >= 0.0)) {",
+  "name": "a_transfer_frac"
+ },
+ "src/core/rc.cpp:983": {
+  "sha256": "5009280770b03aefea7eb15f1bf67ba919db95aaaf02b5c6c7ba5cdb99bdb7d4",
+  "line": "    if (c.lam_e != 0 && c.pe != 0.0) {",
+  "name": "lam_e"
+ },
+ "src/core/rc.cpp:994": {
+  "sha256": "8ca9c2cd13378d06e5a2812adb119f8a056f9b89246c0e391cf264c4fdc16db8",
+  "line": "  if (channel_ == Channel::CoherentLi6) {",
+  "name": "CoherentLi6"
+ },
+ "src/core/sampler.cpp:224": {
+  "sha256": "6dc4c4df16a23e5ab1832edf80bad5d373ab0218574d112de58d447ca227ecdf",
+  "line": "                                               with_perp_);",
+  "name": "with_perp_"
+ },
+ "src/core/sampler.cpp:41": {
+  "sha256": "0929d2ce38f733f070ebb51950f3b5bcc6bab5ec4701d5a92bb759506560e39e",
+  "line": "  g.q2_edges = logspace(std::log10(q2_min), std::log10(q2_max),",
+  "name": "q2_edges"
+ },
+ "src/core/tagged.cpp:265": {
+  "sha256": "e7e5360a52730a1ec0851735f54353fd716b9c858971c77cc6306bf871139a4b",
+  "line": "  c.dis_target = source == ClusterWaveSource::VmcAV18 ? DEUTERON_AV18()",
+  "name": "dis_target"
+ },
+ "src/core/tagged.cpp:295": {
+  "sha256": "ee577230c4f1328ee9efedbe4d7f9991b238680699b21eb317974da2fc1e7c2f",
+  "line": "  c.dis_target = TRITON();",
+  "name": "dis_target"
+ },
+ "src/core/tagged.cpp:319": {
+  "sha256": "ac2315c786599dd06200aa2cc2c77e6c1faebbcc296681f67599df7f902fe2f6",
+  "line": "  c.dis_target = NEUTRON_TARGET();",
+  "name": "dis_target"
+ },
+ "src/core/triton_sf.cpp:90": {
+  "sha256": "56060d7d30b471adb38700dd81fac5bacaffe1394ea9ec372597cbab2bfb4cdf",
+  "line": "  const double k0 = k_gev / HBARC_GEV_FM;",
+  "name": "HBARC_GEV_FM"
+ },
+ "src/core/xsec.cpp:108": {
+  "sha256": "e8c79ddd7fd7508a6252541519aafcd6678f7e230126737772a347430b55b117",
+  "line": "    b1f = &b1_32_func_;",
+  "name": "b1_32_func_"
+ },
+ "src/core/xsec.cpp:254": {
+  "sha256": "e97b5246b719dceed17aff7596918084016274d5279e80e4105ed8b68cc0d99b",
+  "line": "    if (tensor_gamma_) {",
+  "name": "tensor_gamma_"
+ },
+ "src/core/xsec.cpp:258": {
+  "sha256": "3f5c5443c61994b443e556c40510c021c51dfffa50f8736b2bc6eda02471236a",
+  "line": "      out.a2 = out.a2 + h.h2;",
+  "name": "a2"
+ },
+ "src/core/xsec.cpp:265-269": {
+  "sha256": "726a9aef0cde30b87c94940ec3f788ee0f41ada97ad5bf6d85235e4a6c2bdc59",
+  "first": "    }",
+  "last": "    // (RcScope::TensorRate) and `with_delta` is what buys it back"
+ },
+ "src/pythia/pythia_bridge.cpp:381": {
+  "sha256": "2999725965df4bd52acfa19cde97d0752e9fb0fba24ca6f4fc53a46e9bbe5f1d",
+  "line": "  if (const Particle* pip = ev.find(Role::Pomeron)) {",
+  "name": "Pomeron"
+ },
+ "tests/test_tagged.cpp:336-353": {
+  "sha256": "baccc10d87451a586c15f368f1086ba8f219b05c29af6257027e93abb6e5da03",
+  "first": "TEST_CASE(\"tagged: 7Li P2 moments and the <P2> = -T/5 polarimeter\") {",
+  "last": "}"
+ }
+}

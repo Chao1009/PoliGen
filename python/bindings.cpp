@@ -729,6 +729,17 @@ PYBIND11_MODULE(_lipolgen, m) {
   m.attr("ALPHA_D_VECTOR_POLARIZATION") = ALPHA_D_VECTOR_POLARIZATION;
   m.attr("DEUTERON_VECTOR_POLARIZATION") = DEUTERON_VECTOR_POLARIZATION;
   m.attr("LI6_CLUSTER_POLARIZATION") = LI6_CLUSTER_POLARIZATION;
+  m.attr("LI6_POLARIZATION_VMC_SIX_BODY") = LI6_POLARIZATION_VMC_SIX_BODY;
+  m.def("vector_dilution_of", &vector_dilution_of, py::arg("p_d"),
+        "1 - (3/2) P_D -- the ONE home of the vector-dilution expression "
+        "(C5.5b).  ALPHA_D_VECTOR_POLARIZATION, DEUTERON_VECTOR_POLARIZATION, "
+        "li6_cluster_polarization and the AV18 embedded deuteron "
+        "(DEUTERON_AV18, tagged.hpp) are all this function.");
+  m.def("li6_cluster_polarization", &li6_cluster_polarization,
+        py::arg("p_d_alpha_d"), py::arg("p_d_deuteron"),
+        "(1 - 1.5 P_D^{alpha-d})(1 - 1.5 P_D^d) -- the ONE home of the "
+        "cluster-picture product.  LI6_CLUSTER_POLARIZATION is this at "
+        "(P_D_LI6, P_D_DEUTERON).");
   m.attr("LI6_NAIVE_ONE_THIRD") = LI6_NAIVE_ONE_THIRD;
 
   // numerics.hpp -- the NumPy primitives, exposed for the bit-level tests
@@ -2339,6 +2350,20 @@ static void bind_tagged(py::module_& m) {
       .def_property_readonly("k", [](const VmcRadial& v) {
         return copy_array(v.k());
       })
+      .def_property_readonly("dpsi", [](const VmcRadial& v) {
+        return copy_array(v.dpsi());
+      })
+      .def_property_readonly("has_errors", &VmcRadial::has_errors)
+      .def("shifted_by_sigma", &VmcRadial::shifted_by_sigma,
+           py::arg("n_sigma"),
+           "psi -> psi + n_sigma * dpsi, fully correlated across the table.")
+      .def("norm2_error", [](const VmcRadial& v) {
+        double cor = 0.0, quad = 0.0;
+        v.norm2_error(&cor, &quad);
+        return py::make_tuple(cor, quad);
+      }, "(correlated, quadrature) 1-sigma MC error of norm2() -- the two "
+         "limits the ANL errors admit, since the point-to-point correlation "
+         "of one variational walk is unknown.")
       .def_property_readonly("psi", [](const VmcRadial& v) {
         return copy_array(v.psi());
       })
@@ -2395,15 +2420,34 @@ static void bind_tagged(py::module_& m) {
       .def("validate", &TaggedChannel::validate);
   m.def("li6_alpha_channel", &li6_alpha_channel,
         py::arg("beta") = BETA_DEFAULT, py::arg("p_d") = P_D_LI6,
-        py::arg("source") = ClusterWaveSource::Hulthen);
+        py::arg("source") = ClusterWaveSource::Hulthen,
+        py::arg("vmc_mc_sigma") = 0.0,
+        "`vmc_mc_sigma` is the ANL tables' own 1-sigma Monte Carlo band, "
+        "fully correlated across k and the same on both waves; 0 is today's "
+        "table bit for bit and it THROWS on Hulthen.");
   m.def("li7_alpha_channel", &li7_alpha_channel, py::arg("beta") = BETA_DEFAULT,
-        py::arg("source") = ClusterWaveSource::Hulthen);
+        py::arg("source") = ClusterWaveSource::Hulthen,
+        py::arg("vmc_mc_sigma") = 0.0);
   m.attr("VMC_N_ALPHA_D_LI6") = VMC_N_ALPHA_D_LI6;
   m.attr("VMC_P_D_LI6") = VMC_P_D_LI6;
   m.attr("VMC_S_ALPHA_D_LI6") = VMC_S_ALPHA_D_LI6;
   m.attr("VMC_S_ALPHA_T_LI7") = VMC_S_ALPHA_T_LI7;
+  m.attr("LI6_CLUSTER_POLARIZATION_VMC") = LI6_CLUSTER_POLARIZATION_VMC;
   m.def("deuteron_channel", &deuteron_channel, py::arg("beta") = BETA_DEFAULT,
-        py::arg("p_d") = P_D_DEUTERON);
+        py::arg("p_d") = P_D_DEUTERON,
+        py::arg("source") = ClusterWaveSource::Hulthen,
+        "`source = VmcAV18` swaps the analytic Hulthen pair at the scenario "
+        "P_D_DEUTERON = 0.045 for the exact AV18 deuteron of fdeut.av18 at "
+        "its own P_D (`deuteron_av18_p_d()`).");
+  m.def("deuteron_av18", []() { return DEUTERON_AV18(); },
+        "The embedded deuteron of ClusterWaveSource.VmcAV18: beams.deuteron() "
+        "with eff_pol = vector_dilution_of(deuteron_av18_p_d()) = 0.913600 "
+        "instead of the scenario 0.9325.  li6_alpha_channel() puts this on "
+        "dis_target under VmcAV18, so the flag means ONE deuteron everywhere "
+        "it is read (C5.5b).");
+  m.def("deuteron_av18_p_d", &deuteron_av18_p_d,
+        "P_D of the AV18 deuteron from fdeut.av18's own k-space block "
+        "(derived, never typed; the file's r-space header prints 0.057599).");
 
   py::class_<TaggedModel>(m, "TaggedModel")
       .def(py::init<TaggedChannel, double, std::size_t, std::size_t>(),
@@ -2543,7 +2587,11 @@ static void bind_cluster_config(py::module_& m) {
   m.attr("LI6_R_POINT_VMC_FM") = LI6_R_POINT_VMC_FM;
   m.attr("LI6_QUADRUPOLE_GFMC_FM2") = LI6_QUADRUPOLE_GFMC_FM2;
   m.attr("LI6_QUADRUPOLE_GFMC_ERR_FM2") = LI6_QUADRUPOLE_GFMC_ERR_FM2;
+  m.attr("LI6_ETA_DS_GK") = LI6_ETA_DS_GK;
+  m.attr("LI6_ETA_DS_GK_STAT") = LI6_ETA_DS_GK_STAT;
+  m.attr("LI6_ETA_DS_GK_SYST") = LI6_ETA_DS_GK_SYST;
   m.attr("LI6_R2_POINT_FM2") = LI6_R2_POINT_FM2;
+  m.attr("LI6_QUADRUPOLE_FM2") = LI6_QUADRUPOLE_FM2;
   m.attr("VMC_HE4_DENSITY") = VMC_HE4_DENSITY;
   m.attr("VMC_LI6_DENSITY") = VMC_LI6_DENSITY;
   m.attr("VMC_LI6_AD_FIT") = VMC_LI6_AD_FIT;
@@ -2696,6 +2744,12 @@ static void bind_cluster_config(py::module_& m) {
         py::arg("a"), py::arg("t_abs"), py::arg("m"),
         "a_2(m) at |t| from the m = +-1 point-matter quadrupole; the m = 0 "
         "value follows internally from delta_0 = -2 delta_{+-1}.");
+  m.def("quadrupole_from_a2_slope", &quadrupole_from_a2_slope,
+        py::arg("a2_over_t"), py::arg("a"),
+        "The EXACT inverse of a2_from_quadrupole at m = +-1: the point-matter "
+        "quadrupole [fm^2] that a coefficient a_2(+-1)/|t| [GeV^-2] implies.  "
+        "Feed it CoherentScenario.a2_m_state(1.0, 1) with a = 6 to read back "
+        "what a scenario's eps_b0 assumes about Q(6Li).");
 
   py::class_<ClusterConfigSampler>(m, "ClusterConfigSampler",
       "Nucleon-position configurations of a polarized 6Li in the alpha + d "
@@ -2724,6 +2778,11 @@ static void bind_cluster_config(py::module_& m) {
       .def("delta_perp_analytic_fm2",
            &ClusterConfigSampler::delta_perp_analytic_fm2, py::arg("m"))
       .def("asymptotic_ds_ratio", &ClusterConfigSampler::asymptotic_ds_ratio)
+      .def("quadrupole_for_eta", &ClusterConfigSampler::quadrupole_for_eta,
+           py::arg("eta_target"),
+           "The quadrupole_target_fm2 that puts asymptotic_ds_ratio() on "
+           "`eta_target`.  A CONVERTER onto the one existing dial, not a "
+           "second dial: eta is exactly linear in quadrupole_dial_s().")
       .def("a2_from_geometry", &ClusterConfigSampler::a2_from_geometry,
            py::arg("t_abs"), py::arg("m"))
       .def("eps_b0_equivalent", &ClusterConfigSampler::eps_b0_equivalent)
@@ -3312,6 +3371,84 @@ static void bind_coherent(py::module_& m) {
   m.def("gaussian_slope", &gaussian_slope, py::arg("r_rms_fm"));
   m.attr("COHERENT_T_MAX_DEFAULT") = COHERENT_T_MAX_DEFAULT;
   m.attr("COHERENT_MX_MIN_DEFAULT") = COHERENT_MX_MIN_DEFAULT;
+  py::class_<EstarlightLi6Row>(m, "EstarlightLi6Row")
+      .def_readonly("vm", &EstarlightLi6Row::vm)
+      .def_readonly("sigma_nb", &EstarlightLi6Row::sigma_nb)
+      .def_readonly("sigma_q7_nb", &EstarlightLi6Row::sigma_q7_nb)
+      .def_readonly("sigma_rmeas_nb", &EstarlightLi6Row::sigma_rmeas_nb)
+      .def_readonly("b_fit", &EstarlightLi6Row::b_fit)
+      .def_readonly("branching", &EstarlightLi6Row::branching)
+      .def_readonly("b_rmeas", &EstarlightLi6Row::b_rmeas)
+      .def_readonly("branching_all", &EstarlightLi6Row::branching_all)
+      .def("__repr__", [](const EstarlightLi6Row& r) {
+        return std::string("EstarlightLi6Row(") + r.vm + ", sigma_nb=" +
+               std::to_string(r.sigma_nb) + ")";
+      });
+  m.def("estarlight_li6_coherent", &estarlight_li6_coherent,
+        py::return_value_policy::reference,
+        "The eSTARlight unpolarized coherent VM baseline for e 10 GeV x 6Li "
+        "99.5 GeV/u (open item 11.1); see coherent.hpp for the caveats.");
+  m.attr("COHERENT_JPSI_EFF_IR8_LI7") = COHERENT_JPSI_EFF_IR8_LI7;
+  m.attr("COHERENT_JPSI_EFF_IR8_LI7_E_ION_GEV") =
+      COHERENT_JPSI_EFF_IR8_LI7_E_ION_GEV;
+  m.attr("COHERENT_JPSI_EFF_IR8_LI7_W_MEAN_GEV") =
+      COHERENT_JPSI_EFF_IR8_LI7_W_MEAN_GEV;
+  py::class_<Chang26EffEnergyRow>(m, "Chang26EffEnergyRow")
+      .def_readonly("e_electron_gev", &Chang26EffEnergyRow::e_electron_gev)
+      .def_readonly("e_ion_gev", &Chang26EffEnergyRow::e_ion_gev)
+      .def_readonly("efficiency", &Chang26EffEnergyRow::efficiency)
+      .def("__repr__", [](const Chang26EffEnergyRow& r) {
+        return std::string("Chang26EffEnergyRow(") +
+               std::to_string(r.e_electron_gev) + " x " +
+               std::to_string(r.e_ion_gev) + ", eff=" +
+               std::to_string(r.efficiency) + ")";
+      });
+  m.def("chang26_he3_energy_scan", &chang26_he3_energy_scan,
+        py::return_value_policy::reference,
+        "arXiv:2511.05638 sec. V.B: the SAME far-forward efficiency as "
+        "COHERENT_JPSI_EFF_IR8_LI7, measured on e+3He at three EIC energy "
+        "configurations.  The only lever on the beam-energy dependence "
+        "this tree has, and open item O5 needs one: the 0.1775 is a TOP-"
+        "energy number applied at 10 x 99.5 GeV/u.");
+  py::class_<Chang26SpeciesEffRow>(m, "Chang26SpeciesEffRow")
+      .def_readonly("nucleus", &Chang26SpeciesEffRow::nucleus)
+      .def_readonly("a", &Chang26SpeciesEffRow::a)
+      .def_readonly("z", &Chang26SpeciesEffRow::z)
+      .def_readonly("e_ion_gev", &Chang26SpeciesEffRow::e_ion_gev)
+      .def_readonly("efficiency", &Chang26SpeciesEffRow::efficiency)
+      .def("__repr__", [](const Chang26SpeciesEffRow& r) {
+        return std::string("Chang26SpeciesEffRow(") + r.nucleus +
+               ", eff=" + std::to_string(r.efficiency) + ")";
+      });
+  m.def("chang26_species_efficiency", &chang26_species_efficiency,
+        py::return_value_policy::reference,
+        "arXiv:2511.05638 p. 4's species list, with Fig. 2's beam "
+        "energies.  Every row is at the SAME rigidity A/Z x E = 275 "
+        "GeV/e -- and that is ALL it fixes: at fixed rigidity E/u = R Z/A "
+        "and p_z = Z R both still vary (E/u 118-183 GeV/u, Z 1-8), so the "
+        "A-ordering is NOT a species lever on its own.  Read off the four "
+        "rows that share a beam energy (2D, 4He, 12C, 16O at 137, "
+        "bracketing 6Li's own 137.5), the 7Li -> 6Li substitution open "
+        "item O5 makes is x0.99-1.33 -- it straddles 1.");
+  py::class_<EstarlightLi6Q2Row>(m, "EstarlightLi6Q2Row")
+      .def_readonly("vm", &EstarlightLi6Q2Row::vm)
+      .def_readonly("q2_floor_gev2", &EstarlightLi6Q2Row::q2_floor_gev2)
+      .def_readonly("sigma_nb", &EstarlightLi6Q2Row::sigma_nb)
+      .def_readonly("b_fit", &EstarlightLi6Q2Row::b_fit)
+      .def_readonly("sigma_rmeas_nb", &EstarlightLi6Q2Row::sigma_rmeas_nb)
+      .def_readonly("b_rmeas", &EstarlightLi6Q2Row::b_rmeas)
+      .def_readonly("w_mean_gev", &EstarlightLi6Q2Row::w_mean_gev)
+      .def("__repr__", [](const EstarlightLi6Q2Row& r) {
+        return std::string("EstarlightLi6Q2Row(") + r.vm + ", Q2 > " +
+               std::to_string(r.q2_floor_gev2) + ", sigma_nb=" +
+               std::to_string(r.sigma_nb) + ")";
+      });
+  m.def("estarlight_li6_q2_floors", &estarlight_li6_q2_floors,
+        py::return_value_policy::reference,
+        "The 2026-09-04 photoproduction scan: the same eSTARlight runs with "
+        "MIN_GAMMA_Q2 lowered to 0.01 and to no floor at all.  Q^2 < 0.1 "
+        "GeV^2 carries most of the coherent rate and was absent from the "
+        "0.1 < Q^2 < 100 window the rest of the chain was priced with.");
   py::class_<CoherentXpomModel>(m, "CoherentXpomModel")
       .def(py::init<>())
       .def_readwrite("m_x_min", &CoherentXpomModel::m_x_min)
@@ -3340,6 +3477,14 @@ static void bind_coherent(py::module_& m) {
       .def("tag_acceptance_angular", &CoherentScenario::tag_acceptance_angular,
            py::arg("sigma_theta"), py::arg("p_per_nucleon"),
            py::arg("a_beam") = 6, py::arg("n_sigma") = 10.0)
+      .def("delta_b_m", &CoherentScenario::delta_b_m, py::arg("m"),
+           "Delta B_m [GeV^-2], the cos 2(Phi - Phi_S) coefficient of the m "
+           "state's |F|^2 slope.  THE definition of Delta B in this library: "
+           "eps_b0 = 2 Delta B_{+-1}/B = -Delta B_0/B.")
+      .def("slope_at_azimuth", &CoherentScenario::slope_at_azimuth,
+           py::arg("phi_rel"), py::arg("m"),
+           "B + Delta B_m cos 2 phi_rel [GeV^-2]; every a_2 is its "
+           "first-order expansion.")
       .def("a2_deformation", &CoherentScenario::a2_deformation,
            py::arg("t_abs"), py::arg("pzz"))
       .def("cos2phi_coefficient_deformation",
@@ -3562,6 +3707,14 @@ static void bind_pipeline(py::module_& m) {
       .def(py::init<>())
       .def_readwrite("beta", &BreakupOptions::beta)
       .def_readwrite("p_d", &BreakupOptions::p_d)
+      .def_readwrite("source", &BreakupOptions::source,
+                     "ClusterWaveSource of the DEUTERON the T1 breakup "
+                     "resolves into.  Hulthen (default) = the analytic S + D "
+                     "pair at p_d; VmcAV18 = the exact AV18 fdeut deuteron at "
+                     "its own P_D = 0.057600.  Pipeline forwards "
+                     "PipelineConfig.cluster_wave here so the spin the record "
+                     "carries and the g1 the rate uses are one deuteron "
+                     "(C5.5b).  The triton path is not affected.")
       .def_readwrite("kappa_nn", &BreakupOptions::kappa_nn)
       .def_readwrite("k_max", &BreakupOptions::k_max)
       .def_readwrite("nk", &BreakupOptions::nk)
@@ -3668,6 +3821,12 @@ static void bind_pipeline(py::module_& m) {
       .def_readwrite("pot_config", &PipelineConfig::pot_config)
       .def_readwrite("cluster_beta", &PipelineConfig::cluster_beta)
       .def_readwrite("p_d", &PipelineConfig::p_d)
+      .def_readwrite("cluster_vmc_mc_sigma",
+                     &PipelineConfig::cluster_vmc_mc_sigma,
+                     "ANL VMC Monte Carlo band in units of the tables' own "
+                     "printed 1 sigma, fully correlated across k.  0 = today "
+                     "bit for bit; validate() refuses it off a lithium "
+                     "alpha-tag channel with cluster_wave = VmcAV18.")
       .def_readwrite("cluster_wave", &PipelineConfig::cluster_wave,
                      "ClusterWaveSource for the lithium alpha-tag channels; "
                      "Hulthen by default (bit-compatible), VmcAV18 swaps in "

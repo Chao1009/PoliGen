@@ -39,9 +39,44 @@
   eff_pol_n = LI6_CLUSTER_POLARIZATION/3`, so `Z·P_p = N·P_n = 0.81123`.  The
   two D-state probabilities live in **`beams.hpp`** — one source of truth, as
   in `polli_fastsim.beams` — and `tagged.hpp` uses those names rather than
-  keeping copies, so the INCLUSIVE effective polarization and the TAGGED S/D
-  interference of `li6_alpha_channel` are the same wave function seen in two
-  experiments.  The deuteron slot carries `DEUTERON_VECTOR_POLARIZATION =
+  keeping copies, so **on the Hulthén default** the INCLUSIVE effective
+  polarization and the TAGGED S/D interference of `li6_alpha_channel` are the
+  same wave function seen in two experiments — measured 2026-09-04, they agree
+  to **1.22e−5** (0.869950 against the tagged model's 0.869939, a closed form
+  against a grid quadrature).  **Under `--cluster-wave vmc` they do not**: the
+  tagged α–d wave becomes the ANL VMC overlap at `VMC_P_D_LI6` = 0.019355 and
+  the inclusive constant does not follow, so the two differ by **+11.61 %** in
+  the vector sector and **+6.58 %** in the rank-2 one (`LI6_B1_RANK2_TRANSFER`
+  = 0.921947 against the VMC channel's `tensor_dilution` = 0.982576).  It is
+  **not closed by substitution and that is the finding**: feeding
+  `VMC_P_D_LI6` into the product gives `LI6_CLUSTER_POLARIZATION_VMC` =
+  0.905427, **6.8 % above** the one ab-initio number for this observable
+  (`LI6_POLARIZATION_VMC_SIX_BODY` = 0.848, Wiringa PRC 89 (2014) 024305
+  Table I), where the shipped 0.811228 is 4.3 % **below** it; adding the AV18
+  deuteron's own P_D = 0.057600 gives 0.887076, still 4.6 % above.  The
+  product 1 − 1.5 P_D × 1 − 1.5 P_D therefore spans **0.811 … 0.905** on the
+  wave functions in this tree, the ab-initio answer sits inside that, and the
+  FORMULA carries the error, not the choice of P_D.  Author decision
+  2026-09-04: the default stays 0.811228, the drift is documented at 11.61 %
+  rather than "fixed", and no inclusive ⁶Li polarization is quoted without the
+  band 0.81–0.91 (`docs/open_items/run_2026-09-03/phase_C_numbers.md` §C5.5,
+  pinned in `tests/test_tagged.cpp` **T26**).  The drift is between a tagged
+  row and an inclusive row of one programme, never inside one run — **and that
+  sentence was false when it was first written (§C5.5b, 2026-09-04).**  A
+  `--cluster-wave vmc` tagged-α run did hold two deuteron wave functions:
+  the ANL VMC AV18+UX α–d overlap for the RELATIVE motion, and the scenario
+  Hulthén deuteron (P_D = 0.045) for the embedded deuteron in both places a
+  run reads it — `TaggedChannel::dis_target`, i.e. the struck cluster's g₁,
+  and `BreakupOptions`, i.e. the T1 struck-nucleon spin draw.  Every polarized
+  tagged-α observable was **+2.069 %** high against the AV18 deuteron
+  (P_D = 0.057600) belonging to that overlap.  Since 2026-09-04 both follow
+  the flag (`DEUTERON_AV18()`, `BreakupOptions::source`), the opt-in path moved
+  by −2.027 %, the Hulthén default is bit for bit, and a `vmc` run's
+  whole-nucleus reading is one Hamiltonian's: 0.887076.  `validate()` now also
+  **refuses** `cluster_wave` on `Inclusive` and `CoherentLi6`, where it is
+  never read — accepting it unread was how the 11.61 % above reached a user
+  who thought they had asked for a VMC ⁶Li (**T27**, and the pipeline test).
+  The deuteron slot carries `DEUTERON_VECTOR_POLARIZATION =
   1 − 1.5 P_D_DEUTERON = 0.9325` verbatim, so per-nucleon
   g₁(⁶Li)/g₁(d) = (1 − 1.5 P_D_LI6)/3 = 0.290 exactly (the deuteron's own D
   state cancels between the two isoscalar ions).  The retired Cloet
@@ -116,7 +151,20 @@
   **±5 %** systematic: three tabulations span that (0.819481 from the 2014
   `li6_ad1.momentum`, 0.856 from the 2004 `li6.ad`, 0.863 from Wiringa et al.,
   PRC 89 (2014) 024305), entries 1 and 3 being the same year and Hamiltonian
-  family, so the spread is not a version difference anyone can name.  It is a
+  family, so the spread is not a version difference anyone can name.
+  **THREE NUMBERS SPAN THREE DIFFERENT AMOUNTS — measured 2026-09-04 (§C5.3),
+  and "N_αd 5 %, P_D 7 %" was quoting two of them about a third.**  N_αd spans
+  **5.311 %** (0.819481 → 0.863), the D-wave NORM spans **7.181 %** (0.015861 →
+  0.017), and P_D — the *ratio* every tagged observable actually uses — spans
+  only **2.729 %** (0.0193549 → 0.0198830).  And the ±5 % PROPAGATES TO ALMOST
+  NOTHING outside b₁: `TaggedModel` renormalises each wave to its own P_L, so
+  N_αd cancels out of the tagged sector exactly and only the ratio survives,
+  worth **0.048 %** on `tensor_dilution` and **0.082 %** on `vector_dilution`
+  across the three readings.  In b₁ it is exactly linear and therefore exactly
+  ±5 % (`docs/open_items/run_2026-09-02/phase_D_numbers.md` § "The ±5 % N_αd
+  systematic (design §2.1) and the Q4 knob" — the knob is **Q4**, and that
+  file has no §Q3; the citation said Q3 until 2026-09-04).  Pinned in
+  `tests/test_tagged.cpp` **T26**.  It is a
   knob (`Li6ConvolutionOptions::norm_target`), and the default reading is the
   conservative one: the 18 % of ⁶Li that is not α+d gets b₁ = 0.
   `VMC_S_ALPHA_D_LI6` = 0.81971 is the file's *total* block and is a THIRD,

@@ -44,10 +44,47 @@ double nucleus_mass(const std::string& name, int a, int z);
 // ONE SOURCE OF TRUTH for the two D-state probabilities the 6Li cluster
 // picture is built from.  They live HERE, in the module every spin consumer
 // already includes, and `tagged.hpp` uses these names rather than keeping its
-// own copies, so the INCLUSIVE effective polarization below and the TAGGED
-// S/D interference of `li6_alpha_channel` cannot drift apart: they are the
-// same wave function seen in two experiments (`polli_fastsim.beams`, which
-// `polligen.tagged` re-exports from).
+// own copies (`polli_fastsim.beams`, which `polligen.tagged` re-exports from).
+//
+// "THE INCLUSIVE AND TAGGED 6Li CANNOT DRIFT APART" IS TRUE OF THE DEFAULT AND
+// FALSE OF `ClusterWaveSource::VmcAV18` (open item C5.5, measured 2026-09-04).
+// On the Hulthen default the two ARE one wave function: `LI6_CLUSTER_POLA-
+// RIZATION`'s alpha-d factor 1 - 1.5 P_D_LI6 = 0.869950 and the tagged
+// `TaggedModel(li6_alpha_channel()).vector_dilution()` = 0.869939 agree to
+// 1.22e-5 (a grid quadrature against a closed form).  Under `--cluster-wave
+// vmc` the tagged channel's alpha-d wave is the ANL VMC overlap with
+// P_D = `VMC_P_D_LI6` = 0.019355, whose vector dilution is 0.970966 -- and the
+// inclusive constant below does NOT move, so the two differ by +11.61 %.  The
+// same drift in the rank-2 sector is +6.58 % (`LI6_B1_RANK2_TRANSFER` = 0.9219
+// against the VMC channel's tensor_dilution 0.9826).
+//
+// IT IS NOT CLOSED BY SUBSTITUTION, AND THAT IS THE POINT.  Feeding
+// `VMC_P_D_LI6` into the product below gives 0.905427, which is 6.8 % ABOVE
+// the one ab initio number for this very observable (Wiringa PRC 89:024305
+// Table I, 0.848 -- see `LI6()` in beams.cpp), while the shipped 0.811228 is
+// 4.3 % BELOW it.  Adding the AV18 deuteron's own P_D too (`deuteron_av18_p_d`
+// = 0.057600, open item C5.4) gives 0.887076, still 4.6 % above.  So the
+// product 1 - 1.5 P_D x 1 - 1.5 P_D spans 0.811 .. 0.905 depending on which
+// wave functions it is fed, the ab initio answer sits in the middle of that,
+// and the FORMULA is what carries the error, not the choice of P_D.
+// AUTHOR DECISION 2026-09-04: the default stays 0.811228 (it is the closer of
+// the two to 0.848 and it is pinned bit for bit in validation/reference/), the
+// drift under `--cluster-wave vmc` is DOCUMENTED at 11.61 % rather than
+// "fixed", and nothing quotes an inclusive 6Li polarization without the band
+// 0.81 .. 0.91.  Numbers: docs/open_items/run_2026-09-03/phase_C_numbers.md
+// sec. C5.5.
+//
+// WHAT *IS* CLOSED, AND WAS NOT (sec. C5.5b, 2026-09-04).  The 11.61 % above is
+// between two RUNS and is left standing.  Inside ONE `--cluster-wave vmc`
+// tagged-alpha run there was a SECOND, smaller and strictly wrong split: the
+// alpha-d relative motion came from the ANL VMC AV18+UX overlap while the
+// EMBEDDED deuteron stayed on `P_D_DEUTERON` = 0.045 in both places a run reads
+// it, so every polarized tagged-alpha observable was 2.069 % high against the
+// AV18 deuteron of that same Hamiltonian.  That one is fixed: `DEUTERON_AV18()`
+// and `BreakupOptions::source` (tagged.hpp, breakup.hpp) follow the flag, and
+// such a run's whole-nucleus reading is now
+// `li6_cluster_polarization(VMC_P_D_LI6, deuteron_av18_p_d())` = 0.887076, one
+// Hamiltonian end to end.  `LI6_CLUSTER_POLARIZATION` below is untouched.
 
 /// alpha-d relative D-state probability.  Chosen so that the embedded
 /// deuteron's vector dilution 1 - (3/2) P_D reproduces the 0.87 of
@@ -60,21 +97,52 @@ inline constexpr double P_D_LI6 = 0.0867;
 inline constexpr double P_D_DEUTERON = 0.045;
 
 /// Vector depolarization 1 - (3/2) P_D of a spin-1 system with D-state
-/// probability P_D.  The deuteron slot below carries the second of these
-/// verbatim, so the two ions are built from one expression and their ratio is
-/// exact rather than rounded.
-inline constexpr double ALPHA_D_VECTOR_POLARIZATION = 1.0 - 1.5 * P_D_LI6;
+/// probability P_D.  THE ONE HOME OF THE EXPRESSION (C5.5b, 2026-09-04): it
+/// used to be retyped at four sites and is now written once, so a wave
+/// function's P_D and the dilution it implies cannot drift apart.  Every value
+/// below is bit for bit what the literal gave -- it is the same expression,
+/// constexpr-evaluated.
+constexpr double vector_dilution_of(double p_d) { return 1.0 - 1.5 * p_d; }
+
+/// The two dilutions the shipped cluster picture is built from.  The deuteron
+/// slot below carries the second of these verbatim, so the two ions are built
+/// from one expression and their ratio is exact rather than rounded.
+inline constexpr double ALPHA_D_VECTOR_POLARIZATION =
+    vector_dilution_of(P_D_LI6);
 inline constexpr double DEUTERON_VECTOR_POLARIZATION =
-    1.0 - 1.5 * P_D_DEUTERON;
+    vector_dilution_of(P_D_DEUTERON);
 
 /// WHOLE-NUCLEUS vector polarization of the two polarized nucleons of 6Li in
 /// the cluster picture (author decision 2026-08-29, plans/04 #6).  The 6Li
 /// spin is carried by the alpha-d relative motion and by the deuteron inside
 /// it, so a nucleon of that deuteron is polarized along the 6Li spin by the
-/// PRODUCT of the two dilutions -- 0.86995 x 0.9325 = 0.81123.  The alpha
-/// contributes nothing (J = 0).
+/// PRODUCT of the two dilutions.  The alpha contributes nothing (J = 0).
+///
+/// THE ONE HOME OF THE FORMULA (C5.5).  It exists as a function so that the
+/// alternative wave-function readings above can be written down without
+/// retyping (1 - 1.5 P) anywhere: `LI6_CLUSTER_POLARIZATION` is this at
+/// (P_D_LI6, P_D_DEUTERON) and `LI6_CLUSTER_POLARIZATION_VMC` (tagged.hpp) is
+/// the same function at the VMC alpha-d P_D.  Multiplication order is the
+/// pre-2026-09-04 one, so the default is bit for bit unchanged.
+constexpr double li6_cluster_polarization(double p_d_alpha_d,
+                                          double p_d_deuteron) {
+  return vector_dilution_of(p_d_alpha_d) * vector_dilution_of(p_d_deuteron);
+}
+
+/// 0.86995 x 0.9325 = 0.81123.
 inline constexpr double LI6_CLUSTER_POLARIZATION =
-    ALPHA_D_VECTOR_POLARIZATION * DEUTERON_VECTOR_POLARIZATION;
+    li6_cluster_polarization(P_D_LI6, P_D_DEUTERON);
+
+/// The SIX-BODY VMC answer for the same whole-nucleus quantity, ab initio:
+/// R. B. Wiringa et al., PRC 89 (2014) 024305, Table I -> 0.848.  It is NOT
+/// what the library uses (the cluster product is), and it is the reference
+/// point that decides C5.5: the shipped 0.811228 is 4.3 % below it and the
+/// "consistent" VMC alpha-d reading 0.905427 is 6.8 % ABOVE it, so making the
+/// cluster formula consistent with the tagged VMC wave function would move the
+/// inclusive number AWAY from the only ab initio anchor there is.  Quoted in
+/// `LI6()` (beams.cpp) since 2026-08-29; given a name here so the band can be
+/// checked instead of read.
+inline constexpr double LI6_POLARIZATION_VMC_SIX_BODY = 0.848;
 
 /// The retired alternative, kept reachable and pinned: Cloet's slides use
 /// P_p = P_n = 1/3, i.e. a whole-nucleus Z*P_p = N*P_n = 1 -- one fully

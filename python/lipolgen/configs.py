@@ -35,6 +35,53 @@ own values are design_G_cluster_config.md sec. 8.  Never quote a tensor number
 from these tables without the band; see
 docs/open_items/run_2026-09-02/design_G_cluster_config.md sec. 2.7.
 
+That ~7.5 is TWO factors, not three (measured 2026-09-03,
+docs/open_items/run_2026-09-03/phase_C_numbers.md sec. C1): 3.3165 from the
+model to the dial setting that matches the MEASURED asymptotic D/S ratio, times
+2.2686 from there to the measurement.  1/S_alpha-d = 1.1706 is NOT a third
+factor -- both waves are divided by sqrt(S_alpha-d) before the moments are
+taken, so it is already inside the -0.615.  And the leg's error bar is the
+physics: George & Knutson's +-0.011662 on eta maps, through a dial that eta is
+EXACTLY linear in, to a model Q from -0.4005 fm^2 to +0.0298 fm^2 -- through
+ZERO.  Quote it as 3.32x (1 sigma: 1.54x .. sign change) or not at all.
+
+AND `a2_at_t0p3` IS A COEFFICIENT, NOT A SENSITIVITY (measured 2026-09-04,
+phase_C_numbers.md sec. C2 / OPEN_ITEMS_SOLUTIONS.md sec. 11.3; arithmetic in
+validation/o5_a2_reach.py).  It is a_2 at |t| = 0.3 GeV^2 and the coherent
+sample lives at |t| ~ 1/B ~ 0.026, so the modulation the EIC would see is
+kappa*sqrt(<t^2>) = 0.25 % at the MEASURED Q, a factor 10.6 smaller.  Priced:
+coherent J/psi over the whole Q^2 range with both lepton channels is MARGINAL
+at one EIC year, inside the {1, 10, 100} fb^-1/u band.  QUOTE IT AS A BAND:
+S = 2.63 sigma at the band's LOW EDGE and 2.84 .. 3.29 sigma at its TOP, with
+3 sigma at 8.3 .. 13.0 fb^-1/u (sec. 11.3b).  The detection efficiency in that
+chain is a 7Li number at 7Li's own TOP energy used at 10 x 99.5 (x1.12-1.16
+UP, on the same paper's own 3He energy scan) while the chain carries NO
+decay-lepton acceptance or reconstruction efficiency at all (DOWN, unbounded
+below in this tree).  Those two cancel to 0.7 %, which is why the uncorrected
+point estimate -- 2.62 sigma, 3 sigma at 13.1 fb^-1/u -- lands 0.3 % under the
+band's low edge, and why neither the point nor either edge may be quoted
+alone.  WHETHER THE BAND'S TOP CROSSES 3 SIGMA IS NOT ESTABLISHED: the top is
+a span because the 7Li -> 6Li efficiency substitution straddles 1 once it is
+read off entries that share a beam energy (sec. 11.3b, `o5_a2_reach.py`).
+(An earlier revision of this docstring said "NOT MEASURABLE ... 0.75 sigma,
+160 fb^-1/u"; that was one lepton channel in one Q^2 window,
+OPEN_ITEMS_SOLUTIONS.md sec. 11.3a.)
+
+READ THAT NUMBER WITH ITS LIMITATION.  It comes from `a2_from_quadrupole`,
+which is a CLOSED FORM AND NOT A GOOD-WALKER DIPOLE-MODEL AMPLITUDE: the
+target's quadrupole through the deuteron's published |t| dependence, with no
+amplitude, no saturation and none of their uncertainties, and with the MATTER
+quadrupole standing in for the transverse GLUON anisotropy.  FOUR things are
+also unestablished rather than uncertain: no detection efficiency exists below
+Q^2 = 0.1 GeV^2 anywhere in this tree, where 85 % of the rate sits; no
+decay-lepton reconstruction efficiency exists in this tree at all (only its
+geometric half is bounded, at 0.99), which is what leaves the band open below;
+the 7Li -> 6Li efficiency substitution straddles 1, which is what makes the
+band's top a span; and the far-forward working point is unchosen -- the LAST
+is the single correction that on its own restores the NO (at LiPolGen's own
+de-squeezed 6Li tagging optics the band is 0.73-0.92 sigma with 3 sigma at
+106-167 fb^-1/u).
+
 `lipolgen-run` is untouched: this is a separate console entry point, not a
 flag on it, because adding subparsers there would change its parse behaviour.
 """

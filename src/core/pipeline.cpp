@@ -385,6 +385,55 @@ void PipelineConfig::validate() const {
   if (!(fsi_sigma_mb >= 0.0)) {
     throw std::runtime_error("PipelineConfig: fsi_sigma_mb must be >= 0");
   }
+  // C5.5b.  THE SAME RULE, ONE LEVEL UP: `cluster_wave` itself is read ONLY
+  // where a channel has cluster relative waves, i.e. on the three tagged
+  // channels (`Pipeline`'s `is_tagged` branch is the only reader).  On
+  // `Inclusive` and `CoherentLi6` it was ACCEPTED and never read -- exactly the
+  // "silently ignored flag" C5.4 named as a defect on the deuteron control,
+  // and the mechanism by which C5.5's 11.61 % inclusive-vs-tagged drift used to
+  // reach a user: they set the flag wanting a "VMC 6Li" inclusive row, nothing
+  // refused it, and they got `LI6_CLUSTER_POLARIZATION` = 0.811228 with no
+  // warning.  The asymmetry with `cluster_vmc_mc_sigma` (refused for a 0.02 %
+  // effect two lines below) had no defence: this one is worth 11.61 %.
+  //
+  // WHAT THE REFUSAL DOES NOT CLAIM.  It does not make an inclusive VMC 6Li
+  // available -- there is none, and C5.5 is the argument that substituting
+  // `VMC_P_D_LI6` into `LI6_CLUSTER_POLARIZATION` would move it AWAY from the
+  // one ab initio anchor.  It converts a silent 11.61 % into an error message.
+  if (cluster_wave != ClusterWaveSource::Hulthen && !is_tagged(channel)) {
+    throw std::runtime_error(
+        std::string("PipelineConfig: cluster_wave selects the CLUSTER RELATIVE "
+                    "wave function of a tagged channel and is never read on ")
+        + pipeline_channel_name(channel)
+        + " -- the inclusive 6Li effective polarization "
+          "(LI6_CLUSTER_POLARIZATION = 0.811228) and the coherent form factors "
+          "do not follow it, so accepting it would promise a VMC row and "
+          "deliver the shipped one, 11.61 % away in the vector sector (open "
+          "item C5.5).  Leave it at Hulthen, or run a tagged channel");
+  }
+  // C5.2.  A KNOB THAT DID NOT RUN MAY NOT BE RECORDED AS IF IT HAD -- the
+  // same rule the b1 band scales are refused under.  The MC band exists only
+  // where a table carries printed 1-sigma errors, which is the two `momenta/`
+  // files and nothing else: the Hulthen forms are analytic and `fdeut.av18`
+  // (the deuteron control's VmcAV18 wave) prints none.
+  if (cluster_vmc_mc_sigma != 0.0) {
+    if (cluster_wave != ClusterWaveSource::VmcAV18) {
+      throw std::runtime_error(
+          "PipelineConfig: cluster_vmc_mc_sigma is the ANL VMC tables' own "
+          "Monte Carlo band and needs cluster_wave = VmcAV18 (the analytic "
+          "Hulthen forms carry no MC error)");
+    }
+    if (channel != PipelineChannel::TaggedLi6Alpha
+        && channel != PipelineChannel::TaggedLi7Alpha) {
+      throw std::runtime_error(
+          std::string("PipelineConfig: cluster_vmc_mc_sigma needs a lithium "
+                      "alpha-tag channel, got ")
+          + pipeline_channel_name(channel)
+          + " (only li6_ad1.momentum and li7_at3.momentum print MC errors; "
+            "the deuteron control's fdeut.av18 does not, so the band would be "
+            "recorded without having run)");
+    }
+  }
   // rc.hpp.  NOTE what is deliberately NOT here: a channel refusal.  Unlike
   // FSI, `--rc` is legal on every channel -- `RcModel::applies()` returns
   // false on `CoherentLi6`, the weights are exactly 1.0 and the run PRINTS
@@ -790,10 +839,13 @@ Pipeline::Pipeline(PipelineConfig config, RunPlan plan)
   if (is_tagged(cfg_.channel)) {
     channel_.reset(new TaggedChannel(
         cfg_.channel == PipelineChannel::TaggedLi6Alpha
-            ? li6_alpha_channel(cfg_.cluster_beta, cfg_.p_d, cfg_.cluster_wave)
+            ? li6_alpha_channel(cfg_.cluster_beta, cfg_.p_d, cfg_.cluster_wave,
+                                cfg_.cluster_vmc_mc_sigma)
             : cfg_.channel == PipelineChannel::TaggedLi7Alpha
-                  ? li7_alpha_channel(cfg_.cluster_beta, cfg_.cluster_wave)
-                  : deuteron_channel(cfg_.cluster_beta, P_D_DEUTERON)));
+                  ? li7_alpha_channel(cfg_.cluster_beta, cfg_.cluster_wave,
+                                      cfg_.cluster_vmc_mc_sigma)
+                  : deuteron_channel(cfg_.cluster_beta, P_D_DEUTERON,
+                                     cfg_.cluster_wave)));
     model_ = std::make_shared<TaggedModel>(*channel_);
     StruckClusterOptions sopt = cfg_.struck;
     sopt.scenario = cfg_.scenario;
@@ -874,6 +926,12 @@ Pipeline::Pipeline(PipelineConfig config, RunPlan plan)
       // or the T1 tier would describe a different nucleus from the T0 one
       // (docs/CONVENTIONS.md: no physics number is defined twice).
       bo.beta = cfg_.cluster_beta;
+      // ... and ONE WAVE-FUNCTION FAMILY (C5.5b).  Same rule, same sentence
+      // as the comment above: the breakup carries a deuteron of its own and
+      // it must be the run's deuteron.  Before 2026-09-04 only `beta` was
+      // forwarded, so `--cluster-wave vmc` left the T1 struck-nucleon spin
+      // draw on the Hulthen deuteron while the rate moved to the AV18 one.
+      bo.source = cfg_.cluster_wave;
       if (!bo.f2) bo.f2 = dis_sampler_->kernel().nuclear_f2().base();
       // --triton-sf ciofi-simula: the spectral function is built HERE, at
       // the run's own `cluster_beta` and the breakup's own `k_max`, so the

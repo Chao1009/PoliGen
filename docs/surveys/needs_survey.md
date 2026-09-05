@@ -219,7 +219,7 @@ Open/blocking items:
 ### 3.4 Coherent / intact-recoil channel
 
 - Process: `e + ⁶Li → e' + X + ⁶Li(g.s.)`, A/Z = 2 so the recoil is **exactly at beam rigidity** — the only handle is the Roman-Pot near-beam p_T tail (`coherent.py:1-11`).
-- Everything is a scenario with explicit bands (`coherent.py:105-109`): `f0 = 0.04` (×2÷2), `x_coh = 0.01`, `slope_b = 50 GeV⁻²` (band 40–60), flat gluon-transversity `amp = 0.01` (band 3e-3…1e-2), deformation `eps_b0 = −0.08` (band −0.04…−0.13).
+- Everything is a scenario with explicit bands (`coherent.py:105-109`): `f0 = 0.04` (×2÷2), `x_coh = 0.01`, `slope_b = 50 GeV⁻²` (band 40–60), flat gluon-transversity `amp = 0.01` (band 3e-3…1e-2), deformation `eps_b0 = −0.08` (band −0.04…−0.13). *(Annotation 2026-09-04, and it applies to LiPolGen's inherited copy too — this line is a record of upstream and is not rewritten: `eps_b0 = −0.08` implies a ⁶Li charge quadrupole of −0.9345 fm², **11.4× the measured −0.0818**, and −(0.04…0.13) is a **deuteron** band. The ⁶Li band is −(0.0070…0.0527). `docs/open_items/run_2026-09-03/phase_C_numbers.md` §C4.)*
 - `f_coh(x) = f0/(1+(x/x_coh)²)`, `dσ/dt ∝ exp(−B|t|)`, `acc = exp(−B p_T,cut²)`, `⟨|t|⟩_tagged = p_T,cut² + 1/B` (`coherent.py:111-130`).
 - **No calculation exists for any polarized A > 2 nucleus** (`plans/04:211-230`, #18); ⁷Li has **no scenario at all** because ε_B0 cannot be linearly rescaled (it gives −2.2 to −4.5, |ΔB₀| > B).
 - Blocks the coherent electron side and x_P/M_X binning (`plans/08:386`, D8); pairing the inclusive map with log-uniform x_P gives β = x/x_P > 1 for 58% of events.

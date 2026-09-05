@@ -63,6 +63,75 @@ const std::vector<MantysaariRow>& mantysaari_a2_deuteron() {
   return t;
 }
 
+const std::vector<EstarlightLi6Row>& estarlight_li6_coherent() {
+  // docs/open_items/run_2026-09-02/estarlight_li6.md, tables 2a / 2b / 5.
+  // b_rmeas is the sec. 2b slope column; branching_all adds J/psi -> mu+mu-
+  // (eSTARlight's own JpsiBree + JpsiBrmumu).  Both added 2026-09-04.
+  //          vm      sigma  sigma(Q2>0.7)  sigma(R=2.589)  B_fit  BR
+  static const std::vector<EstarlightLi6Row> t = {
+      {"jpsi",   1.773,        0.605,           1.255,      38.9, 0.0597,
+       55.0, 0.11932},
+      {"phi",   30.16,         1.897,          22.08,       39.2, 0.49,
+       54.8, 0.49},
+      {"rho",  506.4,         15.32,          379.5,        38.6, 1.0,
+       54.1, 1.0}};
+  return t;
+}
+
+const std::vector<EstarlightLi6Q2Row>& estarlight_li6_q2_floors() {
+  // docs/open_items/run_2026-09-02/estarlight_li6.md sec. 2f, measured
+  // 2026-09-04 with the SAME build, beams and seed as sec. 2a / 2b, only
+  // MIN_GAMMA_Q2 changed.  The 0.1 rows reproduce sec. 2a / 2b exactly, which
+  // is what makes the rest of the scan comparable.
+  //         vm   Q2 floor   sigma      B     sigma(R=2.589)   B(R=2.589)  <W>
+  static const std::vector<EstarlightLi6Q2Row> t = {
+      {"jpsi",  0.1,      1.773,    38.9,      1.255,       55.0,  32.20},
+      {"jpsi",  0.01,     3.348,    39.2,      2.371,       55.0,  32.13},
+      {"jpsi",  0.0,     11.971,    38.8,      8.458,       54.6,  30.20},
+      {"phi",   0.1,     30.16,     39.2,     22.08,        54.8,  20.51},
+      {"phi",   0.01,   103.182,    39.3,     76.122,       55.1,  20.31},
+      {"phi",   0.0,    654.344,    38.9,    482.952,       54.4,  17.39},
+      {"rho",   0.1,    506.4,      38.6,    379.5,         54.1,  17.85},
+      {"rho",   0.01,  2285.0,      38.9,   1750.0,         54.1,  17.42},
+      {"rho",   0.0,  17823.0,      38.7,  13736.0,         54.0,  14.45}};
+  return t;
+}
+
+const std::vector<Chang26EffEnergyRow>& chang26_he3_energy_scan() {
+  // arXiv:2511.05638 sec. V.B, e+3He, quoted verbatim in coherent.hpp.  The
+  // top row is the same measurement as COHERENT_JPSI_EFF_IR8_LI7's, on 3He
+  // instead of 7Li (both are entries of the same p. 4 list); the other two
+  // are the SAME nucleus at lower collision energy, which is the only lever
+  // on the beam-energy dependence this tree has.
+  //           E_e     E_ion    efficiency
+  static const std::vector<Chang26EffEnergyRow> t = {
+      {18.0,   183.0,   0.3223},
+      {10.0,   100.0,   0.5438},
+      { 5.0,    41.0,   0.9977}};
+  return t;
+}
+
+const std::vector<Chang26SpeciesEffRow>& chang26_species_efficiency() {
+  // arXiv:2511.05638 p. 4: "The global detection efficiency as the increasing
+  // nucleon number, from deuterium to oxygen, is 47.12 %, 32.23 %, 29.42 %,
+  // 17.75 %, 12.37 %, 6.36 %, 1.59 %, respectively", with the beam energies
+  // of Fig. 2's legend.  Every row is at A/Z x E = 275 GeV/e -- each nucleus
+  // at its own top energy Z/A x 275 -- and THAT IS ALL IT FIXES: E/u and
+  // Z x E vary down the list, so the A-ordering is NOT a species lever on its
+  // own (retracted 2026-09-04; see the header comment on this table).  The
+  // 7Li row IS COHERENT_JPSI_EFF_IR8_LI7.
+  //        nucleus   A   Z   E_ion   efficiency
+  static const std::vector<Chang26SpeciesEffRow> t = {
+      {"2D",    2,  1,  137.0,  0.4712},
+      {"3He",   3,  2,  183.0,  0.3223},
+      {"4He",   4,  2,  137.0,  0.2942},
+      {"7Li",   7,  3,  118.0,  0.1775},
+      {"9Be",   9,  4,  122.0,  0.1237},
+      {"12C",  12,  6,  137.0,  0.0636},
+      {"16O",  16,  8,  137.0,  0.0159}};
+  return t;
+}
+
 double CoherentScenario::coherent_fraction(double x) const {
   const double r = x / x_coh;
   return f0 / (1.0 + r * r);
@@ -92,6 +161,17 @@ double CoherentScenario::tag_acceptance_angular(double sigma_theta,
                                                 double n_sigma) const {
   const double cut = n_sigma * sigma_theta * a_beam * p_per_nucleon;
   return std::exp(-slope_b * cut * cut);
+}
+
+double CoherentScenario::delta_b_m(int m) const {
+  // The convention is DEFINED on `eps_b0` (coherent.hpp): eps_b0 =
+  // delta_{+-1}/B and Delta B_m = delta_m/2, with delta_0 = -2 delta_{+-1}.
+  const double db1 = 0.5 * eps_b0 * slope_b;
+  return m == 0 ? -2.0 * db1 : db1;
+}
+
+double CoherentScenario::slope_at_azimuth(double phi_rel, int m) const {
+  return slope_b + delta_b_m(m) * std::cos(2.0 * phi_rel);
 }
 
 double CoherentScenario::a2_deformation(double t_abs, double pzz) const {

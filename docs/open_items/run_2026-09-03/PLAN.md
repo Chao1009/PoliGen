@@ -36,6 +36,12 @@ against that baseline.
   header. Python bindings expose every new option and a pytest gates it.
 - `validation/check_physics_channels_links.py --fix` runs at the end of every
   phase that moves a line number, and its output is reviewed, not trusted.
+  A phase that edits a block `docs/PHYSICS_CHANNELS.md` cites by RANGE, a
+  PINNED USE-SITE line (rule S3) or a PYTHIA upstream line (rule D) also
+  re-reads the citing row and re-records the fingerprint (`--record-ranges`);
+  the gate refuses to bless an edited block or line on its own. Run the gate
+  with `env.sh` sourced, or the six external citations are skipped rather than
+  checked — it says which, by name.
 - Every phase ends with: suites green, docs updated, ONE git commit, and
   `STATUS.md` updated. **Do NOT push; the user pushes.**
 - Author decisions are **collected with their evidence and surfaced to the
@@ -178,17 +184,112 @@ conditions; A1–A7 are those seven.
   linearly-polarised-photon cos 2φ background. The document says this is
   answerable today; it is the question that decides whether the collaboration is
   worth proposing, so it comes before the ask is finalised.
+  *(Answered 2026-09-04, `phase_C_numbers.md` §C2 / `OPEN_ITEMS_SOLUTIONS.md`
+  §11.3: **MARGINAL — it survives, barely, and as a BAND** — S = 2.63 σ at
+  the band's low edge and 2.84 … 3.29 σ at its top, 3 σ at 8.3 … 13.0 fb⁻¹/u,
+  inside the {1, 10, 100} band at both ends, over the whole Q² range with both
+  lepton channels. Whether the top crosses 3 σ is **not established**
+  (§11.3c): the ⁷Li → ⁶Li efficiency substitution that sets it is undetermined
+  in direction, ×0.99–1.33. a₂ ∝ |t| on an e^{−B|t|} sample is only a 0.25 %
+  modulation, but that is 2.6 σ on 4.2e5 events. The separation is **free**
+  and survives Q² → 0 — the P_zz flip is a 1.50× gain, not a cost. **Read the
+  number with its limitation: `a2_from_quadrupole` is a CLOSED FORM, not a
+  Good–Walker dipole-model amplitude** (§C2.0) — no amplitude, no saturation,
+  matter quadrupole as a proxy for the gluon one; a dipole run could move it
+  by ×1.15 either way across the 3 σ line. And what is still not established
+  is not statistics: no detection efficiency exists below Q² = 0.1, where
+  85 % of the rate is; **no decay-lepton reconstruction efficiency exists in
+  this tree at all**; and the far-forward working point is unchosen — the last
+  is the **single correction that on its own restores a NO**. So C6 finalises
+  the ask **on photoproduction**, with all three gaps stated.
+  The first pass of this bullet read "it does not survive, in J/ψ — 0.75 σ,
+  160 fb⁻¹/u … C6 should not finalise the ask as drafted"; that was computed
+  from one lepton channel in one Q² window and is withdrawn,
+  `OPEN_ITEMS_SOLUTIONS.md` §11.3a.
+  **The second pass then shipped its MARGINAL verdict on an efficiency chain
+  with two defects of comparable size and opposite sign, in neither case in
+  its own "complete" assumption list** — ε_det taken at ⁷Li's TOP energy
+  18 × 117.9 and applied to a ⁶Li sample at 10 × 99.5 (×1.12–1.16 UP, by that
+  paper's own ³He energy scan), and no decay-lepton acceptance or
+  reconstruction efficiency in the chain at all (DOWN, geometry 0.99 and
+  bounded, reconstruction efficiency unbounded here). **They cancel to 0.7 %**,
+  which is why the point barely moved and why the verdict is now a band;
+  `OPEN_ITEMS_SOLUTIONS.md` §11.3b, `phase_C_numbers.md` §C2.3c. That pass
+  also repaired a claim — "every single conservatism on its own leaves 3 σ
+  inside the band" — that was **false at two of the three sites printing it**,
+  the de-squeezed optics row being the counterexample.)*
+  *(And the C1 bullet above carries a premise §C1 measured false: the ±0.012
+  band's near edge is **+0.030 fm², the wrong sign**, not −0.05, so the leg is
+  "3.32× (1 σ: 1.54× … sign change)", not 1.5×–12×. Left as written — this is a
+  record of the brief, not of a result.)*
 - **C3** O2 — the `li6.adr.fit` R₂ node near 1.07–1.1 fm, real or fit artefact;
   it decides the honest default between `FitRescaled` and `OverlapRaw`.
 - **C4** O4 — `coherent.hpp` uses ΔB without defining it; define it and
   re-decide `eps_b0` and its band for ⁶Li.
+  *(DONE 2026-09-04, `phase_C_numbers.md` §C4. ΔB is defined once at the
+  declaration — |F_m|² = exp(−|t|[B + ΔB_m cos2(Φ−Φ_S)]), ΔB_m = δ_m/2 — and the
+  old label was off **by a sign**, not a factor 2. The band was re-decided:
+  eps_b0 = −0.08 implies Q_charge(⁶Li) = **−0.9345 fm², 11.42× the measured**,
+  the ⁶Li band is −(0.0070…0.0527), and the default is **kept** with the cost
+  written down because it is a reference gate.)*
 - **C5** The VMC inputs: the α–d asymptotic D/S ratio (η = −0.048 model against
   −0.025 measured) with a dial that actually constrains it; the parsed-then-
   discarded Monte-Carlo errors; the 5 % N_αd and 7 % P_D spreads; the Hulthén-
   pinned deuteron control channel; and the inclusive-vs-tagged P_D split under
   `--cluster-wave vmc`.
+  *(DONE 2026-09-04, `phase_C_numbers.md` §C5. **C5.1** no η dial — η is exactly
+  linear in the quadrupole dial, so a converter (`quadrupole_for_eta`) was added
+  instead. **C5.2** the MC errors are carried and are **negligible** (0.02 % on
+  the tagged tensor observable). **C5.3** propagated — and this bullet's own
+  framing needs the correction: N_αd spans 5.311 %, the D-wave **norm** 7.181 %,
+  and P_D (the ratio) only **2.729 %**. **C5.4** the deuteron control reaches
+  AV18, opt-in; the flag had been silently ignored there. **C5.5** the split is
+  real (+11.61 % / +6.58 %) but "two channels of one run" is **false** — one run
+  builds one channel — and substituting the VMC P_D moves the inclusive number
+  6.8 % **above** the ab-initio 0.848, so it is documented, not closed.
+  **C5.5b (2026-09-04)** that correction was itself half wrong: "nothing inside
+  one run is inconsistent" was **false** — a `--cluster-wave vmc` α-tag run held
+  the VMC α–d overlap and the 0.045 scenario deuteron together, worth
+  **+2.069 %** on every polarized tagged-α observable, in `dis_target` and in
+  the T1 breakup. Both now follow the flag (`DEUTERON_AV18`,
+  `BreakupOptions::source`): opt-in path −2.027 %, default bit for bit, `vmc`
+  whole-nucleus reading **0.887076**. `validate()` now also **refuses**
+  `cluster_wave` on `inclusive`/`coherent`, where it is never read.)*
 - **C6** Reconcile the two disagreeing committed copies of the Mäntysaari ask
   into one, informed by C2. **Drafted, not sent** — sending is the user's.
+  *(DONE 2026-09-04, `phase_C_numbers.md` §C6.* The two copies disagreed by
+  one number (3 % vs 4 % on the α+d model's point-radius match — both correct,
+  against different reference radii). Reconciled into ONE canonical draft,
+  `docs/open_items/run_2026-09-03/mantysaari_collaboration_draft.md`; both
+  earlier copies now point to it instead of restating the ask: in each of them
+  the ask blockquote and its two editor's notes were **DELETED**, not annotated
+  — a duplicated artefact is reconciled and the superseded copies are replaced,
+  or the disagreement stays in the tree beside the file that resolves it. The
+  rest of each document is untouched, and the rule (with why it differs from
+  how the retracted C1 premise annotated above is handled) is stated in
+  `phase_C_numbers.md` §C6.2. Informed by
+  C2/O5: the letter's original request (c) asked for exactly the channel O5
+  prices, and O5's second pass makes that channel **marginally measurable**
+  (2.63 σ at the band's low edge and 2.84–3.29 σ at its top, 3 σ at
+  8.3–13.0 fb⁻¹/u), so (c) stays a request to
+  perform the calculation and moves to **photoproduction**, with the four
+  unestablished factors written inside the ask (the Q² < 0.1 efficiency, the
+  ⁷Li → ⁶Li species transfer — undetermined in direction, and what makes the
+  band's top a span — the missing decay-lepton factor, and the working
+  point) — requests (a) and (b) are
+  unaffected, being channel-independent. *(An intermediate version rewrote (c)
+  into "is this worth pursuing at all", on the first pass's 0.75 σ; withdrawn,
+  `OPEN_ITEMS_SOLUTIONS.md` §11.3a.)* **O3 bookkeeping**
+  (§11's O3, blocked on the same collaboration): still unanswerable in the
+  form asked (no GFMC configuration table exists in this tree, and the split
+  is a property of a Good–Walker amplitude, not a one-body density), but a
+  genuinely correlated input already committed (`he4.dd`, an α → d+d overlap)
+  bounds the SIZE of 4-body correlation on a comparable position-space moment
+  at **+18.2 % (variance) / +8.7 % (rms)** against the uncorrelated-product
+  null, `validation/o3_alpha_correlation_bound.py` — a several-to-twenty-
+  percent effect, not a factor of several, though not a measurement of the
+  split itself. **Still not sent** — the canonical draft says so at its own
+  top. No code, no test, no reference JSON changed.)*
 
 ## Phase D — what the repository-wide sweep found that the documents missed
 

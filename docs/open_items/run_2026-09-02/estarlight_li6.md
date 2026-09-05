@@ -161,7 +161,17 @@ defines in its Eq. (2).
 The fitted slopes reproduce the analytic Gaussian value B = R_G²/(3ħc²) to 4 %
 (⁶Li 40.70 predicted vs 38.6–39.2 fitted; ⁷Li 45.11 vs 43.1–43.9); the small
 deficit is the |t_min| ≈ (E_pom/γ)² floor and the Q² dependence folded in by
-the electroproduction flux, not a fit artefact.  **The slope is set by the
+the electroproduction flux, not a fit artefact.
+
+> *(Annotation, 2026-09-04, §C2 of `run_2026-09-03/phase_C_numbers.md`.)* "to
+> 4 %" is the φ row alone. Recomputed against B_analytic = 40.7026 GeV⁻² the
+> three ⁶Li deviations are **−3.69 % (φ), −4.43 % (J/ψ), −5.17 % (ρ)** — all
+> one-sided, as the two named causes require, but spanning **3.7–5.2 %**. The
+> numbers in the table above are unchanged; only the summary sentence was
+> loose. The corrected form is in `OPEN_ITEMS_SOLUTIONS.md` §11.1 and
+> `PHYSICS_CHANNELS.md` §9, and is pinned in `tests/test_coherent.cpp` T10a
+> together with the fitted slopes themselves, which now live in code as
+> `estarlight_li6_coherent()` (`coherent.hpp`) rather than only here.  **The slope is set by the
 density alone and is identical for all three vector mesons to 1.5 %** — there
 is no VM-dependent slope in eSTARlight for a coherent target.
 
@@ -215,10 +225,178 @@ before any branching fraction, acceptance or efficiency):
 
 LiPolGen carries **no default integrated luminosity** — `PipelineConfig::lumi_pb`
 is 0.0 (`include/lipolgen/pipeline.hpp:323`) and every example takes `--lumi`
-from the command line — so these are quoted per fb⁻¹.  Multiply by
+from the command line — so these are quoted per fb⁻¹.
+
+> *(Annotation, 2026-09-04.)* The *analysis*-side default does exist and is
+> what open item O5 was priced with: `Scenario::lumi_fb_per_nucleon` = 10
+> fb⁻¹/**nucleon**, band {1, 10, 100}. Per **nucleus** that is 10/6 = 1.667
+> fb⁻¹ of e+⁶Li, so the "per fb⁻¹" column above must be multiplied by 1.667,
+> not by 10, to read one EIC year. `phase_C_numbers.md` §C2 does that, and the
+> whole rate chain (× branching × efficiency × the |t| and Q² windows) is
+> `validation/o5_a2_reach.py`.  Multiply by
 `Optics::lumi_fraction` for the far-forward working point actually used
-(1 at the Yellow Report envelopes, 0.1467 at the ⁶Li 5 × 41 tagging point,
+(1 at the Yellow Report envelopes, 0.1467 at the ⁶Li 5 × 41 tagging point and
+**0.0781 at the ⁶Li 10 × 100 one, which is the configuration these runs are**,
 `docs/USAGE.md`).  With the measured-radius density the ⁶Li rates drop 25–29 %.
+> *(Annotation, 2026-09-04.)* **O5 does NOT apply that factor, and says so
+> with its size** (`validation/o5_a2_reach.py` §2, `phase_C_numbers.md` §C2.8
+> item 8). The reason is that the two numbers are alternatives rather than
+> multipliers: O5's efficiency is arXiv:2511.05638's **IR-8 secondary-focus**
+> number, and that paper's own argument for IR-8 (its p. 4) is that the
+> secondary focus buys the low-p_T far-forward acceptance **without** the
+> β*_x de-squeeze that costs luminosity in IR-6 — which is exactly what
+> `Optics::lumi_fraction` prices. Multiplying both would charge the same
+> acceptance problem twice, at two mutually exclusive machine configurations.
+> If the tensor run must instead share LiPolGen's own de-squeezed tagging
+> optics, every O5 significance multiplies by √0.0781 = **0.279** and every
+> 3 σ luminosity by **12.8**; that is the single largest open choice in the
+> item and it is stated, not hidden — and it is the **one** correction that on
+> its own restores O5's original NO.
+>
+> *(Second annotation, 2026-09-04, third pass.)* Two more things ride on that
+> same efficiency and pull opposite ways, and neither was stated anywhere
+> until now. It is a **⁷Li number at ⁷Li's own TOP energy, 18 × 117.9 GeV/u**
+> — §2a's ⁷Li row for those beams, ⟨W⟩ = 43.2 — applied to the ⁶Li 10 × 99.5
+> sample of ⟨W⟩ = 30.2 above: **×1.12–1.16 UP**, on arXiv:2511.05638's own
+> ³He energy scan (its §V.B: 32.23 / 54.38 / 99.77 % at 183 / 100 / 41 GeV/u),
+> ~~plus ×1.16–1.22 for ⁷Li → ⁶Li at fixed rigidity~~ — **retracted
+> 2026-09-04, fourth pass**: fixing the rigidity fixes neither E/u nor Z, and
+> read off the four species entries that share a beam energy the ⁷Li → ⁶Li
+> substitution is ×0.99–1.33, straddling 1 (`OPEN_ITEMS_SOLUTIONS.md` §11.3c).
+> And it counts scattered
+> **nuclei** only — the paper's own p. 4 says the simulation carries no
+> detector efficiency and no reconstructed-distribution acceptance — so an
+> O5-style chain σ × BR(ℓℓ) × ε has **no decay-lepton acceptance and no
+> reconstruction efficiency in it at all**: DOWN, geometry bounded at 0.99,
+> reconstruction efficiency unbounded in this tree. `OPEN_ITEMS_SOLUTIONS.md`
+> §11.3b, `phase_C_numbers.md` §C2.3c.
+
+---
+
+### 2f. The Q² floor is not a physics window — the photoproduction scan
+
+*(Run 2026-09-04, open item O5. Same build, same beams, same seed 5574531,
+same `BREAKUP_MODE`/`QUANTUM_GLAUBER`/`PROD_MODE`; **only `MIN_GAMMA_Q2`
+changed.** 2×10⁵ events per default-density row, 10⁵ per measured-radius row.
+The `MIN_GAMMA_Q2 = 0.1` rows below reproduce §2a and §2b to every digit
+printed there — σ, B, ⟨|t|⟩, ⟨W⟩ and ⟨Q²⟩ — which is what makes the rest of
+the scan comparable.)*
+
+**`MIN_GAMMA_Q2 = 0.1` was never a physics choice.** §1 says where it came
+from: *"this is arXiv:2511.05638's range verbatim"* — an **acceptance study's
+kinematic range**, copied so the ⁷Li cross-check would be configuration-
+identical. It is not eSTARlight's Q² reach. **Q² < 0.1 GeV² is most of the
+rate** — that part is measured below and is the whole point of this section.
+*(That it is also where coherent vector-meson production off nuclei is
+normally measured is this note's own attribution, not something sourced in
+this tree: the one such measurement the tree cites, STAR's ρ⁰
+[arXiv:2204.01625](https://arxiv.org/abs/2204.01625), is ultraperipheral and
+therefore at Q² ≈ 0, and arXiv:2511.05638 is an EIC acceptance study whose
+range is the 0.1 < Q² < 100 one at issue. Nothing below depends on the
+attribution; the rate does.)*
+
+⁶Li, 10 GeV e × 99.5 GeV/u. `MIN_GAMMA_Q2 = 0` means **no floor at all**:
+eSTARlight then integrates from its own kinematic limit
+Q²_min = (m_e E_γ)²/(E_e(E_e − E_γ)) ≈ 10⁻⁹ GeV², which is the whole
+quasi-real region. (`_fixedQ2Range` is still on, because `MAX_GAMMA_Q2` ≠ 0;
+`photonNucleusCrossSection::Q2arraylimits` then clamps only the upper end.)
+
+| VM | `MIN_GAMMA_Q2` | σ_coh | ×(0.1) | B [GeV⁻²] | ⟨\|t\|⟩ | ⟨Q²⟩ | ⟨W⟩ |
+|---|---|---|---|---|---|---|---|
+| J/ψ | 0.1 | **1.773 nb** | 1.000 | 38.94 | 0.0254 | 0.906 | 32.20 |
+| J/ψ | 0.05 | 2.239 nb | 1.263 | 38.98 | 0.0254 | 0.731 | 32.17 |
+| J/ψ | 0.01 | **3.348 nb** | 1.888 | 39.16 | 0.0253 | 0.500 | 32.13 |
+| J/ψ | 0.001 | 4.953 nb | 2.794 | 39.22 | 0.0253 | 0.342 | 32.12 |
+| J/ψ | 0.0001 | 6.560 nb | 3.700 | 39.20 | 0.0253 | 0.260 | 32.12 |
+| J/ψ | **0 (none)** | **11.971 nb** | **6.752** | 38.78 | 0.0255 | 0.143 | 30.20 |
+| φ | 0.1 | 30.159 nb | 1.000 | 39.15 | 0.0253 | 0.292 | 20.51 |
+| φ | 0.01 | 103.182 nb | 3.421 | 39.33 | 0.0253 | 0.112 | 20.31 |
+| φ | **0 (none)** | **654.344 nb** | **21.696** | 38.89 | 0.0255 | 0.018 | 17.39 |
+| ρ⁰ | 0.1 | 506.441 nb | 1.000 | 38.64 | 0.0256 | 0.240 | 17.85 |
+| ρ⁰ | 0.01 | 2285.0 nb | 4.512 | 38.86 | 0.0255 | 0.082 | 17.42 |
+| ρ⁰ | **0 (none)** | **17823 nb** | **35.190** | 38.72 | 0.0256 | 0.011 | 14.45 |
+
+and the same scan on the **patched, measured-radius** build (R = 2.589 fm,
+§2b), 10⁵ events per row:
+
+| VM | `MIN_GAMMA_Q2` | σ_coh | ×(0.1) | B [GeV⁻²] | ⟨\|t\|⟩ |
+|---|---|---|---|---|---|
+| J/ψ | 0.1 | **1.255 nb** | 1.000 | 54.98 | 0.0181 |
+| J/ψ | 0.01 | 2.371 nb | 1.889 | 55.02 | 0.0181 |
+| J/ψ | **0 (none)** | **8.458 nb** | **6.739** | 54.59 | 0.0182 |
+| φ | 0.1 | 22.080 nb | 1.000 | 54.82 | 0.0182 |
+| φ | 0.01 | 76.122 nb | 3.448 | 55.07 | 0.0181 |
+| φ | **0 (none)** | **482.952 nb** | **21.874** | 54.37 | 0.0183 |
+| ρ⁰ | 0.1 | 379.513 nb | 1.000 | 54.11 | 0.0184 |
+| ρ⁰ | 0.01 | 1750.0 nb | 4.611 | 54.11 | 0.0184 |
+| ρ⁰ | **0 (none)** | **13736 nb** | **36.194** | 54.04 | 0.0184 |
+
+**Three things this settles.**
+
+1. **The rate multiplier is 6.75 for J/ψ**, 21.7 for φ, 35.2 for ρ⁰ — and it
+   is a *flux* effect, not a density one: the two densities give 6.752 and
+   6.739 for J/ψ, which agree to 0.2 %. The lighter the meson the larger the
+   multiplier, because eSTARlight's VM Q² suppression ∼(M_V²/(M_V² + Q²))ⁿ
+   sets in at a lower Q². It is bounded by the log: at the 10⁻⁹ GeV² kinematic
+   floor the flux ∫dQ²/Q² has run out of decades.
+2. **The |t| slope does not move.** J/ψ 38.94 → 38.78 GeV⁻² (−0.4 %),
+   ⟨|t|⟩ 0.0254 → 0.0255, and the same at the measured radius (54.98 → 54.59).
+   So the **recoil-nucleus p_T spectrum, which is what the far-forward
+   acceptance of §3 item 5 cuts on, is the same sample.** That is the single
+   fact that makes an efficiency measured at 0.1 < Q² < 100 even arguably
+   transferable below 0.1.
+3. **⟨W⟩ falls**, 32.2 → 30.2 GeV for J/ψ (median 30.0 → 27.4), and much more
+   for the light mesons (φ 20.5 → 17.4, ρ 17.8 → 14.4). By
+   arXiv:2511.05638's own Fig. 2 the tagging efficiency *rises* as W falls in
+   this range, so the transfer is if anything conservative on the W axis.
+   *(Annotation, 2026-09-04, §C2.3c: this Fig. 2 argument was invoked here for
+   a 32.2 → 30.2 GeV shift and **never** for the far larger 43.2 → 30.2 GeV
+   shift that separates the ⁷Li 18 × 117.9 sample the 17.75 % efficiency was
+   measured on from the ⁶Li 10 × 99.5 sample it is applied to. That one is a
+   BEAM-ENERGY change, the same paper measures it in its §V.B, and it is worth
+   ×1.12–1.16 — also upward. Both are now in code as
+   `EstarlightLi6Q2Row::w_mean_gev` and `chang26_he3_energy_scan()`.)*
+
+**Closure check on the partition.** Running the *complementary* window
+directly — `MIN_GAMMA_Q2 = 0`, `MAX_GAMMA_Q2 = 0.1` — gives **10.199 nb**
+against 11.971 − 1.773 = **10.198 nb**, i.e. the two sub-windows add to the
+whole to 1 part in 10⁴, the last digit eSTARlight prints. And σ is
+`N_EVENTS`- and seed-independent as §1 says it is: the no-floor run repeated
+at `RND_SEED = 90210` with 3 000 events instead of 5574531 with 2 × 10⁵
+returns 11.971 nb, unchanged in all five digits. (Numerically the integration
+is a 1000-step Simpson rule on a logarithmic Q² grid,
+`photonNucleusCrossSection::integrated_Q2_dep`, so the ~11 decades from the
+kinematic floor to 100 GeV² get ≈ 90 steps each.)
+
+**What it does NOT settle, and this must ride with every use of it: there is
+no detection efficiency below Q² = 0.1 anywhere in this tree.** §3 item 5
+already records that the paper's 17.75 % is not reproducible here; the new
+fact is that the paper's *sample* was generated with 0.1 < Q² < 100 (its p. 3,
+§IV), so **no point of that efficiency was ever evaluated in the region that
+carries 85 % of the J/ψ rate.** Applying it there is an extrapolation. It is
+bounded in two ways — the efficiency is a *recoil-nucleus* tagging acceptance
+("tagging efficiency × acceptance", their Figs. 2 and 5) and so does **not**
+require the scattered electron, which at Q² < 0.1 goes down the beam pipe;
+and the recoil kinematics are unchanged (point 2) — but neither bound is a
+measurement.
+
+The scan is in code as `estarlight_li6_q2_floors()` (`coherent.hpp`), pinned
+in `tests/test_coherent.cpp` **T10c** and `python/tests/test_o5_reach.py`, and
+priced in `validation/o5_a2_reach.py`. It is what turns open item O5's answer
+from **NO** into **MARGINAL** (`phase_C_numbers.md` §C2).
+
+**Reproduction.** Exactly §7, with `MIN_GAMMA_Q2` edited in `slight.in`:
+
+```bash
+sed -i 's/^MIN_GAMMA_Q2 = 0.1/MIN_GAMMA_Q2 = 0./' slight.in
+$S/build/e_starlight | tee run.log && grep 'Total cross section' run.log
+```
+
+The J/ψ → μ⁺μ⁻ branching used by O5's "both leptons" row comes from the same
+generator: `PROD_PID = 443013` reports 106.801 pb generated against a 1.792 nb
+total, i.e. 0.05960, and eSTARlight's own `starlightconstants.h` has
+`JpsiBree = 0.05971`, `JpsiBrmumu = 0.05961`. Their sum, 0.11932, is
+`EstarlightLi6Row::branching_all`.
 
 ---
 

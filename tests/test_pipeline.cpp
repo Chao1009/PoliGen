@@ -1157,3 +1157,52 @@ TEST_CASE("pipeline: the tagged pipeline runs on the VMC cluster waves") {
     CHECK_CLOSE(frac, row.expect, 0.05);
   }
 }
+
+// C5.5b.  `cluster_wave` is refused where it is NEVER READ.
+//
+// The flag selects the CLUSTER RELATIVE wave function, and `Pipeline`'s
+// `is_tagged` branch is its only reader.  On `Inclusive` and `CoherentLi6` it
+// used to be accepted and silently ignored -- exactly the defect C5.4 named on
+// the deuteron control, and the route by which C5.5's 11.61 % inclusive-vs-
+// tagged drift reached a user: they asked for a "VMC 6Li" inclusive row,
+// nothing refused it, and they got LI6_CLUSTER_POLARIZATION = 0.811228.  The
+// same `validate()` already refuses `cluster_vmc_mc_sigma`, a 0.02 % effect.
+TEST_CASE("pipeline: cluster_wave is refused on the channels that never read it") {
+  struct Row { PipelineChannel ch; const char* iso; bool tagged; };
+  const Row rows[] = {
+      {PipelineChannel::Inclusive,       "6Li", false},
+      {PipelineChannel::CoherentLi6,     "6Li", false},
+      {PipelineChannel::TaggedLi6Alpha,  "6Li", true},
+      {PipelineChannel::TaggedLi7Alpha,  "7Li", true},
+      {PipelineChannel::TaggedDeuteronP, "d",   true},
+  };
+  for (const Row& row : rows) {
+    const std::string iso = row.iso;
+    CAPTURE(iso);
+    CAPTURE(pipeline_channel_name(row.ch));
+    PipelineConfig cfg;
+    cfg.channel = row.ch;
+    cfg.isotope = iso;
+    cfg.n_events = 10;
+    // Hulthen -- the default -- is legal everywhere, on every channel.
+    cfg.cluster_wave = ClusterWaveSource::Hulthen;
+    CHECK_NOTHROW(cfg.validate());
+    cfg.cluster_wave = ClusterWaveSource::VmcAV18;
+    if (row.tagged) {
+      CHECK_NOTHROW(cfg.validate());
+    } else {
+      CHECK_THROWS_AS(cfg.validate(), std::runtime_error);
+    }
+  }
+  // It is refused for being UNREAD, not for being VMC: `cluster_vmc_mc_sigma`
+  // stays refused on the deuteron control (fdeut.av18 prints no MC errors)
+  // even though `cluster_wave` itself is legal there.
+  PipelineConfig d;
+  d.channel = PipelineChannel::TaggedDeuteronP;
+  d.isotope = "d";
+  d.n_events = 10;
+  d.cluster_wave = ClusterWaveSource::VmcAV18;
+  CHECK_NOTHROW(d.validate());
+  d.cluster_vmc_mc_sigma = 1.0;
+  CHECK_THROWS_AS(d.validate(), std::runtime_error);
+}

@@ -26,7 +26,10 @@ code path.
 
 **The honest framing, up front.** The α+d two-body truncation of the ANL VMC
 overlap reproduces the ⁶Li *size* to 3–4 % and overshoots the ⁶Li *quadrupole*
-by a factor 7.5–8.9 against measurement (§2.7, §8). The sampler is therefore a **geometry generator whose
+by a factor 7.5–8.9 against measurement (§2.7, §8) — of which, on the default
+source, **3.32× is "too much D wave" measured against the α–d asymptotic D/S
+ratio and the remaining 2.27× is everything else** (§2.7, two factors, not
+three; the leg's own 1 σ runs from 1.54× to a sign change). The sampler is therefore a **geometry generator whose
 tensor output is a model input carrying an explicit factor-of-several band**,
 not a prediction of Q(⁶Li). `docs/OPEN_ITEMS_SOLUTIONS.md` §11's rule — do not
 derive tensor inputs from these wave functions — is *quantified* here rather
@@ -319,7 +322,9 @@ factor **7.5** against measurement and **3.1** against the GFMC AV18+IL7 value
 (**8.9** and **3.6** for the noisier `FitRaw` shapes). Both have the same
 root: S_αd = 0.854, so 15 % of the ⁶Li wave function is not α+d at all, and the
 model gives the two clusters their *free* internal wave functions inside a
-nucleus that compresses and polarizes them.
+nucleus that compresses and polarizes them. (For the quadrupole the 15 % is
+**not** a free multiplier: the code divides both waves by √S_αd before taking
+the moments, so 1/S_αd = 1.17 is already in the −0.615 — see the budget below.)
 
 **The asymptotic D/S ratio, done properly.** R₂/R₀ at finite R is *not* the
 asymptotic D/S ratio η ≡ C₂/C₀, which is defined through the Whittaker
@@ -350,6 +355,56 @@ re-worded accordingly. Expose the number as `asymptotic_ds_ratio()` on the
 analytic layer, with a doctest that reproduces −0.05 from the `FitRescaled`
 tables (κ, η_c and the 6–8 fm window fixed in the header, the Whittaker ratio
 from the standard `W_{−η,L+1/2}(z) = e^{−z/2} z^{L+1} U(L+1+η, 2L+2, z)`).
+
+**The η → dial → Q link, added 2026-09-03 (closes O1).** The paragraph above
+compares η to a measurement and stops there; this one turns it into a leg of
+the quadrupole budget, which is what O1 asked for. Numbers and their
+reproduction: `docs/open_items/run_2026-09-03/phase_C_numbers.md` §C1; pinned
+in `tests/test_cluster_config.cpp` **T22b**.
+
+The (G9) dial mutates the D wave *in place* (`cluster_config.cpp:398-435`:
+`for (double& v : ad_f2_) v *= dial_s_ * inv;`) and `asymptotic_ds_ratio()`
+reads the mutated waves afterwards. The common `1/√n(s)` cancels in a ratio of
+the two waves, so
+
+> **η(s) = s · η(1) exactly** (verified to 1e−13) — η is the dial in different
+> units, not an independent check on a dialled configuration.
+
+That is what lets the first leg of the 7.5× be derived from a **measured**
+observable instead of from the GFMC number:
+
+| leg | ratio | value |
+|---|---|---|
+| model → the η-matched dial (Q = −0.18557 fm², η = −0.02507) | −0.615448 / −0.18557 | **3.3165288362** |
+| η-matched → the measurement (`LI6_QUADRUPOLE_FM2`) | −0.18557 / −0.0818 | **2.26858190709** |
+| **product** | −0.615448 / −0.0818 | **7.52381731215** |
+
+**It is TWO factors, not three.** 1/S_αd = 1/0.8542 = **1.1706** is *not* a
+third one: `cluster_config.cpp:369-374` divides **both** waves by
+`sqrt(s_alpha_d_)` *before* the moments are recomputed, so it is **already
+inside the −0.615**. Multiplying it in gives 3.3165 × 1.1706 × 2.2686 = **8.808**,
+which overshoots the measured 7.524 by 17 %. Read 1.17× as a **ceiling on what
+any coherent missing-component model could add**, never as a multiplier.
+
+**And the precision is not physics — the band is.** George & Knutson give
+η = −0.025 ± 0.006 ± 0.010, σ_comb = 0.011662. Because η is linear in s, that
+maps straight onto model Q:
+
+| η | dial s | model Q_charge |
+|---|---|---|
+| −0.025 − σ_comb = −0.036662 | 0.760367 | **−0.400475 fm²** (1.54× the model) |
+| −0.025 | 0.518499 | −0.184216 fm² |
+| **−0.014971** | 0.310490 | **0** — Q changes SIGN, at 0.86 σ |
+| −0.025 + σ_comb = −0.013338 | 0.276632 | **+0.029758 fm²** (wrong sign) |
+
+So the "3.32× leg" has a 1 σ range running from **1.54× to a sign change**.
+Quote it as *3.32× (1 σ: 1.54× … sign change)* or not at all. The same
+linearity run backwards shows η cannot separate the two literature values:
+Q = −0.0818 implies η = −0.019439 (**+0.48 σ**) and Q = −0.20 implies
+η = −0.025854 (**−0.07 σ**) — both inside GK's 1 σ. What survives is the
+qualitative conclusion, which is enough for O1: the D-wave excess is
+**moderate and measured**, so the residual 2.27× belongs to cluster
+polarization and the missing 15 %, not to an ANL convention error.
 
 **Which one is the sampler expected to reproduce? Neither, and that is the
 point.** The sampler must reproduce, to MC precision, the quadrupole *of the
@@ -396,7 +451,9 @@ and `validate()` throws** rather than silently returning the nearest root.
 
 **Systematics list for the model quadrupole** (each already sized in this
 document, none of them removable inside the α+d truncation): the missing 15 %
-non-α+d component (§2.7); free vs in-medium cluster wave functions (§2.7);
+non-α+d component (§2.7 — but note its 1/S_αd = 1.17 is **already inside** the
+−0.615, so 1.17× is a *ceiling* on what a coherent version of it could add, not
+a factor to apply); free vs in-medium cluster wave functions (§2.7);
 `FitRescaled` vs `FitRaw` vs `OverlapRaw` shape choice (§8, ±9 %); the
 `li6.adr.fit` truncation at 9.95 fm (§3.1, +0.6 % of ⟨R²⟩ missing relative to the
 raw block's tail); the diagonal truncation of §2.6 (no effect on 𝒬, ≈ 3 % on the
@@ -462,6 +519,12 @@ Three conclusions the design hands to §11 and to `plans/06`:
    wave-function systematic; at the measured quadrupole it is **6× too large**.
    This design does **not** change `eps_b0` — that is a separate, reviewed
    decision — but it is now a documented finding with a derivation.
+   *(Annotation 2026-09-04, `run_2026-09-03/phase_C_numbers.md` §C4: taken, and
+   the "6×" is the B = 52.04 figure. At the scenario's **own** B = 50 the
+   default is **11.42×** the measured quadrupole — read as an implied
+   Q_charge(⁶Li) = −0.9345 fm² — and 1.52× this design's −0.615. The default is
+   kept and the cost recorded; the ΔB convention below is settled as reading
+   (C).)*
 
 Also flag for that decision: `coherent.hpp:105–107`'s docstring calls `eps_b0`
 "ΔB₀/B of the m = 0 state" while `a2_m_state` (`coherent.cpp:110–116`) ties it to
@@ -481,7 +544,12 @@ as if it were the only one; the review proposed (C)'s −1. Under the docstring'
 "the label and the code differ by a factor −2" is not established. The correct
 finding is therefore weaker and more useful: **`coherent.hpp` uses the symbol
 ΔB without defining it**, and O4 must fix the *convention* before touching any
-factor. Use the code (`a2_m_state`) as the operative definition, and phrase the
+factor. *(Annotation 2026-09-04: fixed. **(C) is the reading that holds** —
+ΔB_m ≡ δ_m/2 is what a Gaussian transverse profile gives, and with the anchor's
+1 + 2a₂cos2Φ normalisation it yields a₂(m) = −(ΔB_m/2)|t| exactly, i.e.
+eps_b0 = **−1** × ΔB₀/B. (A) conflates two conventions at once by reading a₂ as
+the full cos 2Φ coefficient rather than half of it. `coherent.hpp` now carries
+that definition and `delta_b_m()` implements it; T10b gates it.)* Use the code (`a2_m_state`) as the operative definition, and phrase the
 docstring repair in the one quantity that carries no convention at all:
 **eps_b0 = δ_{±1}/B with δ_{±1} = ⟨x²⟩ − ⟨y²⟩ per nucleon in the m = ±1 state**
 (= Q_matter(±1)/(2A), (G7)), which is exactly what
@@ -1368,33 +1436,128 @@ array helper), `CMakeLists.txt` (the one-line `lipolgen-configs` shim, §6),
   component plus (b) core/cluster polarization (a free deuteron's own quadrupole
   and a free α–d D wave inside a nucleus that compresses and polarizes both),
   amplified into Q by the r⁴ weight of (G4) and by the fact that 𝒬 is *linear*
-  in the D amplitude. Still open: how a moderate D-wave excess and a 15 %
-  missing component together make a factor 7.5 in Q. **The rule stands
+  in the D amplitude. ~~Still open: how a moderate D-wave excess and a 15 %
+  missing component together make a factor 7.5 in Q.~~ **CLOSED 2026-09-03,
+  §2.7 and `run_2026-09-03/phase_C_numbers.md` §C1, T22b.** It is **two**
+  factors: **3.3165** from the model to the η-matched dial (η is exactly
+  linear in `quadrupole_dial_s()`, so a *measured* observable supplies the leg)
+  × **2.2686** from there to the measurement = **7.5238**, identically. The
+  15 % missing component is **not** a third factor — 1/S_αd = 1.1706 is already
+  inside the −0.615, because both waves are divided by √S_αd before the moments
+  are taken; the three-factor product 8.808 overshoots by 17 %. Read 1.17× as a
+  *ceiling* on a coherent missing-component contribution. **And read the band,
+  not the leg**: GK's ±σ_comb = ±0.011662 on η maps to model Q from −0.4005 fm²
+  to **+0.0298 fm² — through zero at 0.86 σ** — so the 3.32× leg's own 1 σ range
+  runs from 1.54× to a sign change, and η cannot even separate the measured
+  −0.0818 (+0.48 σ) from GFMC's −0.20 (−0.07 σ). **The rule stands
   regardless — do not quote a tensor number from the sampler without the band.**
-* **O2.** Does the smoothed `li6.adr.fit` R₂ node near 1.1 fm reflect
+* **O2.** ~~Does the smoothed `li6.adr.fit` R₂ node near 1.1 fm reflect
   antisymmetrization at short α–d distance, or is it a fit artefact? It
   contributes little to 𝒬 (the r⁴ weight kills it) but it decides whether
-  `FitRescaled` or `OverlapRaw` is the honest default.
-* **O3.** The α core is sampled as an uncorrelated product of one-body
-  densities. GFMC ⁴He *configurations* (with correlations) exist and are what
-  arXiv:2605.00454 actually uses; how much does the incoherent/coherent split
-  move when correlations are restored? Unanswerable from our side.
-* **O4.** `CoherentScenario::eps_b0`'s band, and the fact that **`coherent.hpp`
-  uses the symbol ΔB without defining it** (§2.8): under three defensible
-  readings of ΔB_m the docstring's "ΔB₀/B" is off from `a2_m_state` by −2, by
-  −1, or not at all. Fix the *convention* first, and phrase the repaired
-  docstring in the unambiguous quantity **eps_b0 = δ_{±1}/B with δ_{±1} =
-  ⟨x²⟩−⟨y²⟩ per nucleon** — which is exactly `eps_b0_equivalent()`. Note also
-  that the ⁶Li estimates are quoted at B = 52.0 GeV⁻² while the deuteron
-  reference point that motivated the band uses B_d = 33.1 GeV⁻². A separate,
-  reviewed decision — flagged, not taken here.
-* **O5.** Whether the ⁶Li a₂ at the measured quadrupole (+0.026 at |t| = 0.3,
-  ~10× below the deuteron's and opposite in sign) survives the EIC's
-  statistics at all, and how it separates from the linearly-polarized-photon
-  cos 2φ background (`physics_literature.md`'s two-mechanism warning). This is
-  the question that decides whether the whole collaboration is worth
-  proposing, and it is answerable *today* from §2.8 plus a rate estimate — do
-  that before writing the letter.
+  `FitRescaled` or `OverlapRaw` is the honest default.~~ **CLOSED 2026-09-03,
+  `run_2026-09-03/phase_C_numbers.md` §C3, T22c — and the second sentence's
+  premise was FALSE.** The node is **real**: averaged over the fit's inner
+  negative lobe the *raw* `li6.ad` R₂ is **−1.869e−3 ± 5.625e−4, i.e. 3.3 σ
+  below zero**, and the raw block's own node (MC-resampled) sits at
+  **1.119 fm, 68 % CL [1.089, 1.153]** against the fit's **1.0648 fm** — a
+  ~1.6 σ position shift, no tension in existence. But it **decides nothing**:
+  the whole region r < 1.5 fm is **−0.09 % of q_int** and 0.5 % of the D-wave
+  norm on every source. What separates the two sources is the **2–9 fm shape**
+  (84 % of the ⟨R²⟩ gap is inside the fit's own domain), where the fit sits
+  **−2.7 σ** off the raw's own MC error in the 6–8 fm η window. **Author
+  decision: `FitRescaled` stays the default** — neither source is closer to the
+  one measured quantity in play (−2.0 σ vs −2.4 σ against GK), the choice moves
+  Q by 8.7 % inside a band that is already a factor 7.5 wide, and the raw block
+  is rough at ≈1 σ per point (mean |Δ²R|/σ = 0.6–1.0, against 0.02–0.17 for the
+  fit) which a *sampler* would turn into structure. Cost of that decision,
+  stated: an 8.7 % / 11.5 % bias in Q and η **in the direction that
+  under-states the D-wave excess** relative to the raw overlap.
+* **O3. PARTIALLY BOUNDED 2026-09-04**, `OPEN_ITEMS_SOLUTIONS.md` §11.5,
+  `validation/o3_alpha_correlation_bound.py`. The α core is sampled as an
+  uncorrelated product of one-body densities. GFMC ⁴He *configurations* (with
+  correlations) exist and are what arXiv:2605.00454 actually uses; how much
+  does the incoherent/coherent split move when correlations are restored?
+  **Still unanswerable from our side** — no configuration table exists in
+  this tree for any nucleus, and the split is a property of a Good–Walker
+  amplitude's fluctuation, not of a one-body density. What a genuinely
+  correlated input already in the tree (`data/vmc/bonus_other_clusters/
+  he4.dd`, an α → d+d overlap of the same wavefunction) DOES bound: its own
+  relative-motion second moment against the uncorrelated-product prediction
+  for the identical observable (the α's two-half centroid separation,
+  ⟨D²⟩ = (4/3)R₁² exactly) comes out **+18.2 % in variance, +8.7 % in rms** —
+  a several-to-twenty-percent effect, not a factor of several, though a
+  different observable than the split itself.
+* ~~**O4.** `CoherentScenario::eps_b0`'s band, and the fact that
+  **`coherent.hpp` uses the symbol ΔB without defining it** (§2.8)…~~
+  **CLOSED 2026-09-04, `run_2026-09-03/phase_C_numbers.md` §C4, T10b + T23.**
+  ΔB is now defined once, at the `eps_b0` declaration:
+  |F_m|² = exp(−|t|[B + ΔB_m cos 2(Φ−Φ_S)]) with ΔB_m = δ_m/2, so
+  a₂(m) = −(ΔB_m/2)|t| and **eps_b0 = δ_{±1}/B = +2ΔB_{±1}/B = −ΔB₀/B**.
+  Reading **(C)** of the table in §2.8 is the one that holds: the old label
+  "ΔB₀/B" was off **by a sign**, not by a factor 2, and the code was right.
+  `CoherentScenario::delta_b_m(m)` is its single code home.
+  **The band was re-derived and it is worse than "deuteron-sized".** Inverting
+  the map (`quadrupole_from_a2_slope`) on eps_b0 = −0.08 at B = 50 gives an
+  implied Q_charge(⁶Li) = **−0.9345 fm²**, **11.42×** the measured −0.0818 and
+  1.52× even this design's own −0.615; a₂(±1, |t| = 0.3) = **+0.300**, larger
+  in magnitude than the *deuteron's* own digitized −0.28. The honest ⁶Li band
+  is **−(0.0070 … 0.0527)** at B = 50 — §C1's factor-7.5 quadrupole budget —
+  and the old −(0.04 … 0.13) contains only its α+d model row. Author decision:
+  the default **stays −0.08** (it is pinned in `validation/reference/`), the
+  cost is written down, and no coherent tensor number is published from one
+  eps_b0 row. The B mismatch this bullet flags is also settled: eps_b0 and
+  `slope_b` are **not independent** — the physics is the product δ = eps_b0·B
+  — so a `slope_b` scan at fixed eps_b0 moves a₂ by ±20 % for no reason.
+* ~~**O5.**~~ **ANSWERED 2026-09-04 — MARGINAL for J/ψ.**
+  `docs/open_items/run_2026-09-03/phase_C_numbers.md` §C2,
+  `OPEN_ITEMS_SOLUTIONS.md` §11.3, arithmetic in `validation/o5_a2_reach.py`,
+  pinned in `python/tests/test_o5_reach.py` and `tests/test_coherent.cpp`
+  **T10a** / **T10c**. Coherent J/ψ at `Scenario::lumi_fb_per_nucleon` =
+  10 fb⁻¹/u (hence 10/6 = 1.667 fb⁻¹ of e+⁶Li), **σ = 11.971 nb over the whole
+  Q² range** (`estarlight_li6.md` §2f — the 1.773 nb everyone had been quoting
+  is the 0.1 < Q² < 100 window, an acceptance study's kinematic range, and it
+  omits 85 % of the rate), **J/ψ → e⁺e⁻ and μ⁺μ⁻ (0.11932)**,
+  arXiv:2511.05638's 17.75 % efficiency and `tensor_flip_plan(0.6)` on the
+  background-immune ⟨P_zz²⟩ = 0.81 gives **N = 4.22 × 10⁵ → δa₂(0.3) = 0.0100
+  against +0.0263, i.e. 2.62 σ**; **3 σ needs 13.1 fb⁻¹/u**, inside the
+  {1, 10, 100} band — **and quote it as a BAND, never as that point:
+  S = 2.63 σ at the band's low edge and 2.84 … 3.29 σ at its top, 3 σ at
+  8.3 … 13.0 fb⁻¹/u** (§11.3b–c), because that 17.75 % is a ⁷Li number at ⁷Li's
+  own TOP energy applied at 10 × 99.5 (×1.12–1.16 UP, on the same paper's ³He
+  energy scan) while the chain carries no decay-lepton acceptance or
+  reconstruction efficiency at all (DOWN, unbounded below here). Those two
+  cancel to 0.7 %, so the uncorrected point lands 0.3 % under the band's low
+  edge. **The band's TOP is a span and whether it crosses 3 σ is NOT
+  established** (§11.3c): the ⁷Li → ⁶Li efficiency substitution is undetermined
+  in direction, ×0.99–1.33. **This section's own +0.026 is still a coefficient, not a
+  sensitivity:** it is quoted at |t| = 0.3 and the coherent sample lives at
+  |t| ≈ 1/B, so the information-weighted modulation is κ√⟨t²⟩ = **0.25 %**, a
+  factor 10.6 smaller — but on the sample that would actually be taken
+  (B = 38.8, ā₂ = 0.32 %) that is ā₂√(2⟨P_zz²⟩N) = 2.6 σ. The
+  separation from the photon-polarisation cos 2φ is *not* the obstacle — the
+  tensor term is odd in P_zz and the photon term even, the two-fill difference
+  is **1.50× better** than a single +0.6 fill, and both handles survive
+  Q² → 0. §2.7's factor 7.5 still sets the scale: the same sample gives 19.7 σ
+  at this geometry's own Q = −0.615 and 6.4 σ at GFMC's −0.20.
+  **READ ALL OF THAT WITH ITS LIMITATION: `a2_from_quadrupole` is a CLOSED
+  FORM, not a Good–Walker dipole-model amplitude** — no amplitude, no
+  saturation, none of their uncertainties, and the *matter* quadrupole
+  standing in for the transverse *gluon* one; a dipole run could move it by
+  ×1.15 either way across the 3 σ line (§C2.0). And two things are not
+  established rather than merely uncertain: **no detection efficiency exists
+  below Q² = 0.1 GeV²** in any source this tree has seen, **no decay-lepton
+  reconstruction efficiency exists in this tree at all** (only its geometric
+  half is bounded, at 0.99), and the far-forward working point is unchosen —
+  **the last being the single correction that on its own restores the NO** (at
+  LiPolGen's own de-squeezed ⁶Li tagging optics the band is 0.73–0.92 σ with
+  3 σ at 106–167 fb⁻¹/u).  A fourth is unestablished beside them: the
+  ⁷Li → ⁶Li efficiency substitution, ×0.99–1.33, which is what makes the
+  band's top a span (§11.3c). **The letter is written on that basis** — a
+  photoproduction J/ψ measurement, with both gaps stated. *(This bullet
+  previously read "the answer is NO for J/ψ … 0.75 σ … do not write the letter
+  as drafted — the statistics are in ρ⁰ and φ". That came from one lepton
+  channel in one Q² window and is withdrawn; `OPEN_ITEMS_SOLUTIONS.md`
+  §11.3a.)*
 
 **How the graft would consume the table.** Our writer emits one line per
 configuration in `he3.dat`'s own layout, in fm, ion rest frame, c.m. at the
@@ -1406,37 +1569,22 @@ Good–Walker loop is unchanged; the amplitude uses only x and y. One set per
 m ∈ {+1, 0, −1} plus one unpolarized set; a₂ comes out of the Φ dependence of
 ⟨A⟩ exactly as in their Fig. 2.
 
-**The ask, in one paragraph.**
-
-> We have built an α+d configuration sampler for polarized ⁶Li that emits
-> nucleon-position tables in exactly the format `Nucleons::InitializeTarget`
-> reads for ³He (positions in fm, c.m. at the origin, one configuration per
-> line), with the polarization axis and the substate m = +1, 0, −1 applied and
-> recorded. The α core comes from your ANL VMC/GFMC ⁴He one-body density, the
-> p–n pair from AV18 u(r), w(r) with the full m_S angular correlation (your
-> Eqs. (7)–(8), which we reproduce exactly), and the α–d separation from the
-> ANL VMC α–d overlap with the L = 2 orientation correlated to m through the
-> CG recoupling. Three concrete requests, in increasing size. **(a)** Would you
-> share the ⁴He GFMC nucleon configurations used in arXiv:2605.00454? Our α
-> core is currently an uncorrelated product of one-body densities, which is the
-> weakest part of the sampler and the one part you already have solved.
-> **(b)** Would you accept a ~30-line generalization of the `A == 3` branch to
-> an `-configfile/-configid` option for any A? We can send the patch; it makes
-> the code A-agnostic and removes the 13698-configuration bound. **(c)** The
-> polarized-deuteron machinery of arXiv:2408.13213 is not in any public branch
-> of the repository — would you run your existing polarized setup on our ⁶Li
-> configuration tables, or release that branch? Two honest caveats we would
-> want your view on before you spend time: our α+d model reproduces the ⁶Li
-> point radius to 4 % but overshoots Q(⁶Li) by a factor ≈ 7.5 (measured
-> −0.0818 fm², our α+d geometry −0.615…−0.730 fm², **GFMC AV18+IL7 −0.20(6) fm²**,
-> Pastore *et al.*, PRC 87, 035503 (2013)), so the tensor amplitude carries a
-> factor-of-several systematic that we would carry explicitly as a band. The
-> α–d asymptotic D/S ratio of the overlap we use is η ≈ −0.05 against the
-> measured −0.025(12), so the excess is a real but moderate D-wave effect rather
-> than a convention error. And a closed-form quadrupole → a₂ map that reproduces
-> your published deuteron a₂(m = ±1) to 8 % at every |t| predicts that ⁶Li's
-> a₂ is ~10× smaller than the deuteron's **and of the opposite sign**, because
-> Q(⁶Li) < 0. That sign flip is the interesting measurement and it is also the
-> reason the effect is small — we would rather establish that together, before
-> either side commits person-months.
-
+**The ask itself is reconciled into ONE canonical draft** —
+`docs/open_items/run_2026-09-03/mantysaari_collaboration_draft.md` (task C6,
+2026-09-04) — which supersedes the paragraph that stood here (and the copy in
+`OPEN_ITEMS_SOLUTIONS.md` §11.2, which disagreed with it by one number: "4 %"
+here vs "3 %" there on the α+d model's point-radius agreement, both correct
+against different reference radii, both now stated together in the canonical
+file). **It is not sent; sending is the author's decision.** The two
+editor's notes that stood here (2026-09-03 on the factor-7.5 decomposition,
+2026-09-04 on O5) are folded into that file's own §§2–4 rather than repeated;
+in one line each: the "factor ≈ 7.5" is two factors, 3.3165 × 2.2686, not
+three (§2.7 above); and O5's answer means the letter's own request (c) —
+asking the group to run their polarised J/ψ setup on our ⁶Li tables — asks
+for a channel that is **marginally measurable** (2.63 σ at the band's low edge
+and 2.84–3.29 σ at its top, 3 σ at 8.3–13.0 fb⁻¹/u; §11.3c), so the canonical
+draft keeps that request and moves it to
+**photoproduction**, with the two things this repository cannot settle stated
+inside the ask. *(An intermediate version called the channel "blind" and
+withdrew the request; that came from one lepton channel in one Q² window,
+`OPEN_ITEMS_SOLUTIONS.md` §11.3a.)*

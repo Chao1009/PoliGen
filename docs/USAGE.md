@@ -648,10 +648,98 @@ functions for the two **lithium alpha tags** — magnitudes from
 `data/vmc/momenta/`, the S–D relative sign from `data/vmc/li6_alpha_d/li6.ad`
 — and then **ignores `cluster_beta` and `p_d`**: the shape is the table's, and
 P_D(⁶Li) is a property of the wave function (1.935 %, against the 8.67 %
-scenario placeholder).  The deuteron control channel is always Hulthen.  Data
+scenario placeholder).  Data
 files are found at `$LIPOLGEN_DATA_DIR`, else the compiled-in
 `${CMAKE_SOURCE_DIR}/data`; the tables are zero past 5 fm⁻¹ = 0.9866 GeV, so
 no spectator is drawn beyond that.
+
+**Since 2026-09-04 the flag also reaches the deuteron control channel** (open
+item C5.4).  It used to be **silently ignored** there — the comment said "there
+is no VMC d → p+n cluster table, the deuteron IS the cluster", which is true of
+the `momenta/` files and false of `data/vmc/deuteron/fdeut.av18`, whose u(k)
+and w(k) *are* the p–n relative S and D waves.  `--cluster-wave vmc` now builds
+the control from that table at its own P_D = **0.057600**
+(`deuteron_av18_p_d()`, +28 % over the scenario `P_D_DEUTERON` = 0.045):
+
+| deuteron control | P_D | `vector_dilution` | `tensor_dilution` |
+|---|---|---|---|
+| Hulthén (default, bit for bit) | 0.045 | 0.932494769 | 0.959488074 |
+| AV18 `fdeut` | 0.0575998920 | 0.913594777 | 0.948145618 |
+| change | +28.00 % | **−2.03 %** | **−1.18 %** |
+
+The relative S–D sign does **not** flip: CDKS fix φ₂ = −W with φ_L = i^L ψ_L,
+so the physical deuteron has ψ₂ = +W > 0 at low k, which is what the
+positive-definite Hulthén forms already assume — the *opposite* of the ⁶Li α–d
+case.  Hulthén stays the default because the control's job is to be the
+Cosyn–Weiss tagged limit of the same analytic family the ⁶Li channel is built
+from, and because `fdeut.av18` prints no MC errors (so the AV18 row carries no
+band of its own).
+
+That rationale — *switching only one thing would make the control and the
+channel it controls two different wave-function families* — is what §C5.5b
+then had to apply to the opt-in path as well: until 2026-09-04
+`--cluster-wave vmc` made the **control's** deuteron AV18 and left the ⁶Li α
+channel's **embedded** deuteron on the 0.045 scenario, which is the same split
+one level down.  It does not any more; see the paragraph below.
+
+**The ANL Monte Carlo band, `vmc_mc_sigma` / `cluster_vmc_mc_sigma`** (open
+item C5.2).  The ANL momentum files print a 1σ error column per point; until
+2026-09-04 the readers parsed it and threw it away, so `VmcAV18` had no error
+band at all.  `VmcRadial` now carries `dpsi()`, `shifted_by_sigma(n)` and
+`norm2_error()` (which returns the **correlated** and the **quadrature** limit,
+because one variational walk fixes neither), and the run-level knob is
+
+```cpp
+cfg.cluster_wave = ClusterWaveSource::VmcAV18;
+cfg.cluster_vmc_mc_sigma = +1.0;    // or -1.0; 0 (default) is bit for bit
+```
+```python
+ch = lipolgen._lipolgen.li6_alpha_channel(
+    source=lipolgen._lipolgen.ClusterWaveSource.VmcAV18, vmc_mc_sigma=1.0)
+```
+
+It shifts every point of both waves by the same n·σ (fully correlated — the
+conservative envelope) and moves P_D by the ratio the shifted norms imply.
+`validate()` **refuses** it off a lithium α-tag channel or on `Hulthen`, by the
+same rule the b₁ band scales are refused under: a knob that did not run may not
+be recorded as if it had.  Measured, it is small: **0.47 % / 1.62 %**
+(correlated) on the S/D norms, **1.1 %** on P_D per σ, and **0.02 %** on the
+tagged `tensor_dilution` — against 6.6 % for the Hulthén → VMC choice itself.
+There is no CLI flag; set the config field.
+
+**The embedded deuteron follows the flag too — since 2026-09-04** (open item
+C5.5b).  A ⁶Li α-tag run reads the embedded deuteron's own wave function in
+**two** places besides the α–d relative motion: `TaggedChannel::dis_target`,
+which is the struck cluster's g₁, and the T1 `BreakupOptions`, which is the
+struck-nucleon spin draw.  Until 2026-09-04 **neither** followed
+`--cluster-wave vmc`: the relative motion came from the ANL VMC AV18+UX
+overlap and the embedded deuteron stayed on the scenario Hulthén
+P_D = 0.045, so every polarized tagged-α observable came out **+2.069 %**
+high against the AV18 deuteron (P_D = 0.057600, `deuteron_av18_p_d()`) that
+belongs to that overlap — two deuteron wave-function families inside one run.
+Both now follow it (`DEUTERON_AV18()`; `BreakupOptions::source`).
+
+| ⁶Li α tag, `--cluster-wave vmc` | embedded-deuteron dilution | whole-nucleus reading |
+|---|---|---|
+| before 2026-09-04 | 0.932500 (scenario Hulthén) | 0.905427 (α–d VMC × scenario d) |
+| **now** | **0.913600** (AV18 `fdeut`) | **0.887076** (both AV18) |
+| change | **−2.027 %** | −2.027 % |
+
+The Hulthén default is untouched, bit for bit.  ⁷Li deliberately does **not**
+move: there is no AV18 A = 3 wave function in this tree, so on the α–t channel
+the flag selects the relative motion alone.
+
+**And the inclusive constants do NOT follow the flag.** Under
+`--cluster-wave vmc` a tagged row and an inclusive row of the same programme
+describe ⁶Li with wave functions whose vector dilutions differ by **+11.61 %**
+and whose rank-2 transfers differ by **+6.58 %** (open item C5.5).  Since
+2026-09-04 `validate()` **refuses** `cluster_wave` on `--channel inclusive` and
+`--channel coherent`, where it is never read: accepting it unread was how that
+11.61 % reached someone who had asked for a "VMC ⁶Li" row and got the shipped
+0.811228 with no warning.  Substituting the VMC P_D into
+`LI6_CLUSTER_POLARIZATION` is **not** the fix: it gives 0.905427, 6.8 % *above*
+the ab-initio six-body VMC 0.848, where the shipped 0.811228 is 4.3 % below it.
+**Quote no inclusive ⁶Li polarization without the band 0.81 … 0.91.**
 
 What it changes (40 k events, 10 × 99.5 GeV/u; full tables and the derivation
 in `docs/open_items/vmc_reconciliation.md`):
@@ -872,6 +960,58 @@ all. Cells that cannot fit `m_x_min` below `x_pom_max` carry no coherent rate.
 the range where `1 + c₂ cos 2(φ_t − φ_S)` stays positive (0.245 GeV² at
 P_zz = −2, 0.495 at P_zz = +1) is refused — `CoherentScenario::positivity_margin`
 is the coherent twin of `InclusiveKernel::positivity_margin`.
+
+### ΔB, `eps_b0`, and what the shipped scenario assumes about Q(⁶Li)
+
+**ΔB is defined once**, at the `eps_b0` declaration (open item O4, closed
+2026-09-04; before that the header used the symbol in three docstrings and
+defined it nowhere):
+
+    |F_m(|t|, Φ)|² = exp(−|t| [B + ΔB_m cos 2(Φ − Φ_S)]),   ΔB_m = δ_m/2
+
+with δ_m = ⟨x²⟩ − ⟨y²⟩ per nucleon in state m.  Expanding to first order
+against the anchor's `1 + 2 a₂ cos 2Φ` normalisation gives
+**a₂(m) = −(ΔB_m/2)|t| = −(δ_m/4)|t|**, which is `a2_m_state` exactly, so
+
+    eps_b0 ≡ δ_{±1}/B = +2 ΔB_{±1}/B = −1 × ΔB₀/B.
+
+The pre-2026-09-04 label "relative slope modulation ΔB₀/B of the m = 0 state"
+was off **by a sign**, not by a factor 2; the code was right.
+`CoherentScenario::delta_b_m(m)` and `slope_at_azimuth(φ, m)` are the only
+places ΔB is computed.
+
+**Ask the scenario what it assumes.**  `quadrupole_from_a2_slope`
+(`cluster_config.hpp`) is the exact inverse of `a2_from_quadrupole`:
+
+```python
+sc = lipolgen._lipolgen.CoherentScenario()
+q_matter = lipolgen.quadrupole_from_a2_slope(sc.a2_m_state(1.0, 1), 6)
+0.5 * q_matter            # -0.9345 fm^2 -- the CHARGE quadrupole it implies
+```
+
+At the shipped `eps_b0` = −0.08, `slope_b` = 50 that is **11.42×** the measured
+`LI6_QUADRUPOLE_FM2` = −0.0818 fm² and 1.52× even the α+d model's −0.615, and
+a₂(±1, |t| = 0.3) = **+0.300** — larger in magnitude than the **deuteron's**
+own digitized −0.28, for a nucleus whose quadrupole is 3.5× smaller.  The
+honest ⁶Li band at this B, from `quadrupole_band_fm2()` through the same map:
+
+| Q_charge assumed | `eps_b0` at B = 50 | a₂(±1, 0.3) | \|t\| at \|c₂\| = 1, P_zz = −2 |
+|---|---|---|---|
+| measured −0.0818 | **−0.0070** | +0.0263 | 2.800 GeV² |
+| GFMC −0.20(6) | **−0.0171** | +0.0642 | 1.146 |
+| α+d model −0.6154 | **−0.0527** | +0.1976 | 0.372 |
+| **shipped −0.08** | **−0.08** | **+0.3000** | **0.245** |
+
+so `COHERENT_T_MAX_DEFAULT` = 0.2 is a consequence of the oversized `eps_b0`,
+not of the target.  **The default is deliberately unchanged** (it is pinned in
+`validation/reference/coherent.json`), and the cost is: every *generated*
+coherent tensor number is **11.4×** the measured-quadrupole expectation.
+**Never publish a single `eps_b0` row** — band it, and say which quadrupole the
+row assumes.  Finally, **`eps_b0` and `slope_b` are not independent**: every
+observable uses the product δ = `eps_b0`·B, so scanning `slope_b` over {40, 60}
+at fixed `eps_b0` moves a₂ by ±20 % for no physical reason.  Band δ.
+Numbers and the decision: `docs/open_items/run_2026-09-03/phase_C_numbers.md`
+§C4.
 
 **A hadronizer on this channel is an ordinary configuration** (since
 2026-08-30; the old refusal and its `hadronize_coherent` opt-in are gone).
@@ -1485,7 +1625,10 @@ Q_charge lands on the requested value — **linear in the D amplitude through
 the S–D interference term (95 % of Q), not `sqrt(target/model)`**, which
 misses by 7×. This is a **deformation dial, not a wave function**: it exists
 so a downstream consumer can ask for the measured tensor moment without
-believing the α+d model's own value. The reachable range for the default
+believing the α+d model's own value. **η is EXACTLY linear in this dial**
+(η(s) = s·η(1), to 1e−13), because the dial scales R₂ in place and
+`asymptotic_ds_ratio()` divides the two waves afterwards — so reading η back
+off a dialled configuration recovers the dial, not the wave function. The reachable range for the default
 source is s ∈ [0, 1] mapping to Q_charge ∈ **[−0.615, +0.270] fm²** — at
 s = 0 the α–d interference term vanishes and only the deuteron's own
 +0.270 fm² survives, at s = 1 the wave functions are unmodified. `validate()`
@@ -1508,9 +1651,9 @@ variant in `docs/open_items/run_2026-09-02/phase_G_numbers.md`):
 | Q_matter(±1) / Q_matter(0) | −1.2309 fm² / +2.4618 fm² |
 | Q_charge(+1) (this geometry) | −0.6154 fm² |
 | δ⊥ per nucleon (transverse axis) | −0.1026 fm² |
-| eps_b0 equivalent (B = 52.04 GeV⁻²) | −0.0506 |
+| eps_b0 equivalent (B = 52.04 GeV⁻²) | −0.0506 (−0.0527 at `CoherentScenario::slope_b` = 50 — see the ΔB note below) |
 | a₂(±1) at \|t\| = 0.3 GeV² | +0.1976 |
-| asymptotic η (D/S, Whittaker-divided) | −0.0482 (measured −0.025 ± 0.006 ± 0.010) |
+| asymptotic η (D/S, Whittaker-divided) | −0.0482 (measured `LI6_ETA_DS_GK` = −0.025 ± 0.006 ± 0.010; `OverlapRaw` gives −0.0538 ± 0.0021 stat) |
 
 **The caveats, which the CLI prints on every run and the sidecar stamps.**
 The α+d truncation reproduces the ⁶Li point radius to **3 %** — r_rms
@@ -1524,7 +1667,47 @@ Always quote `quadrupole_band_fm2()`, never one number, and never derive a
 published tensor input from these wave functions —
 `docs/OPEN_ITEMS_SOLUTIONS.md` §11's rule stands. The asymptotic D/S ratio η
 says the excess is a real but *moderate* ≈ 2× effect, not the 5–15× a naive
-R₂/R₀ ratio would suggest (§2.1 of `phase_G_numbers.md`). The α core is an
+R₂/R₀ ratio would suggest (§2.1 of `phase_G_numbers.md`).
+
+That 7.5× is **two factors, not three**: **3.3165** from the model to the dial
+setting that matches the *measured* η, × **2.2686** from there to the
+measurement. The missing ≈15 % non-α+d component (1/S_αd = 1.1706) is **not** a
+third factor — both waves are divided by √S_αd before the moments are taken, so
+it is already inside the −0.615. **Quote the band, not the leg**: the measured
+η carries ±0.011662, and mapped through the (exactly linear) dial that spans
+model Q from −0.4005 fm² to **+0.0298 fm² — through zero**. So the 3.32× is
+*3.32× (1 σ: 1.54× … sign change)*, and η cannot separate the measured
+−0.0818 fm² (+0.48 σ) from GFMC's −0.20 (−0.07 σ).
+`docs/open_items/run_2026-09-03/phase_C_numbers.md` §C1 has the derivation;
+`LI6_ETA_DS_GK` / `_STAT` / `_SYST` are the single home of the measurement.
+
+**Driving the one dial from η: `quadrupole_for_eta`** (open item C5.1,
+2026-09-04). η has deliberately **no dial of its own** — it is exactly linear
+in `quadrupole_dial_s()`, so an `eta_target` option would be a second name for
+the same one-parameter family, which `docs/CONVENTIONS.md` forbids and which
+could be set to contradict `quadrupole_target_fm2` in one options object. What
+was missing was the *conversion*, which lived only as a typed number in a
+document; it is now a method:
+
+```python
+s = lipolgen.ClusterConfigSampler()
+q = s.quadrupole_for_eta(lipolgen.LI6_ETA_DS_GK)   # -> -0.1842160147 fm^2
+o = lipolgen._lipolgen.ClusterConfigOptions(); o.quadrupole_target_fm2 = q
+lipolgen.ClusterConfigSampler(o).asymptotic_ds_ratio()   # -0.025, to 1e-12
+```
+
+It uses the sampler's own **pre-dial** moments and its current dial, so it is
+exact on an already-dialled sampler, and it **throws** rather than clipping
+when the requested η is out of reach. Feed it the GK band and it re-derives
+the sign change from the tables: −0.0366619 → **−0.4004752 fm²**, −0.025 →
+−0.1842160 fm², −0.0133381 → **+0.0297575 fm², the wrong sign**.
+
+The default α–d source is `FitRescaled` by **author decision**, not because the
+smoothed `li6.adr.fit` R₂ node near 1.07 fm is preferred: that node is **real**
+in the raw block (3.3 σ) and irrelevant either way (r < 1.5 fm is −0.09 % of
+q_int). `OverlapRaw` moves Q_charge by +8.7 % and η by +11.5 %, inside a band
+that is already a factor 7.5 wide; `phase_C_numbers.md` §C3 has the cost of
+each choice. The α core is an
 **uncorrelated** product of one-body densities (`min_nn_separation_fm = 0`
 by default). Switching the hard core on (`--min-nn-separation 0.9`, what
 arXiv:2605.00454 imposes) **moves ⟨r²⟩ by ≈ +2 %** — 6.573 fm² against the

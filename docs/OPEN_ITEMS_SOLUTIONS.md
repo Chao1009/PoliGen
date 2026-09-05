@@ -17,7 +17,7 @@ the recommended solution, effort, and status. Ordered by leverage.
 | 8 | Spin-3/2 SF basis (plans/04 #14) | **implemented as a theory note** — Jaffe–Manohar NPB 321 (1989); explicit J=3/2 functions arXiv:2209.12161 Eqs. 19a–d; rank-≤2 truncation is *exact* for unpolarized-beam inclusive observables; the finite-γ J = 3/2 decomposition and the full list of code changes needed if the rank-3 sector is ever switched on are written up, with no default behaviour change | done | `docs/theory/SPIN32_FINITE_GAMMA.md` |
 | 9 | Tensor-sector RC (plans/04 #10) | **implemented 2026-09-03** — `rc.hpp`/`rc.cpp`, opt-in `--rc tensor-band`: the two-sided band `rc_tensor_lo`/`rc_tensor_hi` on the tensor part of the rate (δ log-linear, 0.30 at x = 0.01 → 0.015 at x = 0.16) plus `rc_tail`, POLRAD's t-peak elastic tail with its tensor part and the unpolarised quasi-elastic tail. Weight-only, on `Event::rc_weights` and never on `Event::weight`; `--rc off` is byte-identical | done | numbers in §9 below |
 | 10 | b₁ for A > 2 (plans/04 #9) | **implemented 2026-09-03 as an OPT-IN backend; its A = 2 gate CLOSED the same day** — `b1_nuclear.hpp`/`b1_nuclear.cpp`, `--b1-model li6-convolution`: the **four**-term α–d convolution on the Cosyn–Dong–Kumano–Sargsian kernel (the struck-α orbital term is not optional, it is ≈ 0.5 × the struck-d one). The default stays `Li6B1(MillerB1)`, bit for bit. **The A = 2 validation gate PASSES**: read where design §5.4's checklist ends — MSTW2008 LO (CDKS's own PDF, now reachable as `MstwSF` from PYTHIA's own grid) at CDKS Eq. (21)'s δ-function — G3a passes on all three landmarks and G3b's peak ratio is **0.843243**, inside the factor-2 window; with the real CD-Bonn wave function as well, **1.000338**. Four conditions travel with that: **the lift is about a configuration, not about a build** — the shipped default `ToyF2` gives **0.440**, outside the window, so quote numbers made with `--b1-unpol mstw` and not the default backend's; it is marginal at Eq. (17)'s κ = 1 (0.520); the CD-Bonn agreement is below the reference's own digitization error and is not three-digit agreement with CDKS; and **the gate is A = 2** — so the **mandatory ±100 % band stays**. G3a's own pass is **qualified** by its counting ceiling (§10, "G3a's stated limitation"). The ⁶Li publication ban is lifted. Of the seven close conditions five are done and two are author decisions (Miller's normalisation; the ⁶Li R default) | 10–15 d, ~9 spent | **gate closed**, band mandatory — §10 below |
-| 11 | Coherent ⁶Li amplitude (plans/04 #18) | **both halves in-tree** — eSTARlight ⁶Li unpolarized rates/slope (2026-09-02, `estarlight_li6.md`) settle `slope_b = 50 ± 10` GeV⁻² as citable and put a **lower bound** of 1.0e-3 on `f0` (the all-VM 3.0e-2 is not an upper bound — ρ/φ sit below the M_X floor); both recorded in `coherent.hpp`; the α+d configuration sampler (2026-09-03, `cluster_config.hpp`, `phase_G_numbers.md`) predicts ⁶Li's tensor a₂ ~10× smaller than the deuteron's and of **opposite sign** | done / done / collab | §11 below; Mäntysaari-group ask drafted, not yet sent |
+| 11 | Coherent ⁶Li amplitude (plans/04 #18) | **both halves in-tree** — eSTARlight ⁶Li unpolarized rates/slope (2026-09-02, `estarlight_li6.md`) settle `slope_b = 50 ± 10` GeV⁻² as citable and put a **lower bound** of 1.0e-3 on `f0` (the all-VM 3.0e-2 is not an upper bound — ρ/φ sit below the M_X floor); both recorded in `coherent.hpp`, with the cross sections themselves now in code as `estarlight_li6_coherent()`; the α+d configuration sampler (2026-09-03, `cluster_config.hpp`, `phase_G_numbers.md`) predicts ⁶Li's tensor a₂ ~10× smaller than the deuteron's and of **opposite sign**. **2026-09-04, §11.3: that a₂ is MARGINALLY measurable in coherent J/ψ — a BAND, S = 2.63 σ at the low edge and 2.84 … 3.29 σ at the top, 3 σ at 8.3 … 13.0 fb⁻¹/u, inside the {1, 10, 100} band at both ends; whether the top crosses 3 σ is NOT established (§11.3c)**, once the photoproduction region (Q² < 0.1 = 85 % of the rate, `estarlight_li6.md` §2f, `estarlight_li6_q2_floors()`) and the μ⁺μ⁻ channel are included. a₂ ∝ \|t\| on an e^{−B\|t\|} sample really is only a 0.25 % modulation — but on 4.2e5 events that is 2.6 σ. The photon-polarisation background separates for free and the separation survives Q² → 0 (the P_zz flip is a 1.50× *gain*). **Everything here is a closed-form map, not a dipole-model amplitude** (§11.3, §C2.0). *(§11.3a: the first pass said "NOT measurable — 0.75 σ, 160 fb⁻¹/u"; that used one lepton channel in one Q² window and is withdrawn.)* *(§11.3c: the fourth pass then found the band's TOP resting on an **unquantified factor presented as quantified** — a ⁷Li → ⁶Li efficiency substitution read off a list whose A-ordering is confounded with E/u and Z; read off the four entries that share a beam energy it **straddles 1**, so the top is a span, 2.84 … 3.29 σ, and the crossing of 3 σ is withdrawn.)* *(§11.3b: the second pass had shipped that verdict on an efficiency chain with **two defects of comparable size and opposite sign, neither in its own "complete" assumption list** — ε_det applied at ⁷Li's TOP energy 18 × 117.9 to a ⁶Li sample at 10 × 99.5, worth ×1.12–1.16 UP by the same paper's own ³He energy scan; and **no decay-lepton acceptance or reconstruction efficiency in the chain at all**, DOWN and unbounded below. They cancel to 0.7 %, which is why the point barely moved and why quoting either alone is worse than quoting neither.)* What is still open is not statistics: **no detection efficiency exists below Q² = 0.1 anywhere in this tree**; **no decay-lepton reconstruction efficiency exists in it at all** (only the geometry can be bounded, and it is 0.99 — not the problem); and the far-forward working point is unchosen — **that last is the single correction that on its own restores a NO**, taking the whole band to 0.73–0.92 σ at 106–167 fb⁻¹/u | done / done / **ask stands, on photoproduction** | §11 below — O1/O2/O4/O5 CLOSED/ANSWERED (§§11.2–11.4), O3 partially bounded offline at +18 %/+9 % (§11.5); the Mäntysaari-group ask is **reconciled into one canonical draft** (task C6, `docs/open_items/run_2026-09-03/mantysaari_collaboration_draft.md`), **not sent — sending is the author's decision** |
 | 12 | Packaging | **implemented 2026-09-02** — `pyproject.toml` (scikit-build-core) in-tree, `pip install -e .` works (66 s); one copy of each `.so` in `lipolgen/`, `$ORIGIN`+deps-prefix RPATH, data/vmc vendored; portable wheel still needs `auditwheel` + GPL-3 terms | done | see §12–13 below |
 | 13 | License | **GPL-3.0-or-later** (forced by HepMC3/LHAPDF; matches MCnet norms) | 0 | author to confirm |
 
@@ -889,13 +889,21 @@ F₁ᵈ: ~3e−4 of term (2d).
   **20** (1979) 381.)* Every number is `--b1-band-scale 0/1/2`,
   and `--b1-alpha-d-dwave-weight 0/1/2` is the shape variant reported next to
   it.
-* **±5 % on N_αd, unexplained.** Three tabulations of the α–d spectroscopic
-  factor span 5 %: **0.819481** (2014 `li6_ad1.momentum`, the default, and now
-  the single home `VMC_N_ALPHA_D_LI6` that `VMC_P_D_LI6` is expressed through),
-  0.856 (2004 `li6.ad`) and 0.863 (Wiringa et al., PRC **89** (2014) 024305
-  §III: 0.846 + 0.017). Entries 1 and 3 are the same year and the same
-  Hamiltonian family, so this is **not** a version difference anyone can name.
-  b₁ is exactly linear in `norm_target`, so it is a flat ±5 % (T12).
+* **±5 % on N_αd, unexplained — and now PROPAGATED (2026-09-04, §C5.3).**
+  Three tabulations of the α–d spectroscopic factor span 5 %: **0.819481**
+  (2014 `li6_ad1.momentum`, the default, and now the single home
+  `VMC_N_ALPHA_D_LI6` that `VMC_P_D_LI6` is expressed through), 0.856 (2004
+  `li6.ad`) and 0.863 (Wiringa et al., PRC **89** (2014) 024305 §III:
+  0.846 + 0.017). Entries 1 and 3 are the same year and the same Hamiltonian
+  family, so this is **not** a version difference anyone can name. b₁ is
+  exactly linear in `norm_target`, so it is a flat ±5 % (T12).
+  **Three numbers span three different amounts, and "N_αd 5 %, P_D 7 %" was
+  quoting two of them about a third**: N_αd spans **5.311 %**, the D-wave
+  *norm* spans **7.181 %**, and P_D — the ratio every tagged observable
+  actually uses — spans only **2.729 %**. Outside b₁ the propagation is nearly
+  nothing: `TaggedModel` renormalises each wave to its own P_L, so N_αd cancels
+  exactly and the three readings move `tensor_dilution` by **0.048 %** and
+  `vector_dilution` by **0.082 %** (T26, `phase_C_numbers.md` §C5.3).
 * **Q4 — suppression or renormalisation?** The default gives the 18 % of ⁶Li
   that is not α+d **b₁ = 0**; `use_spectroscopic_factor = false` renormalises
   instead and is ×1/N_αd = **1.2203** on the whole answer. Both are defensible,
@@ -987,10 +995,21 @@ a close and not a deferral.
 * **x = 0.50 is a factor 9 low** on the verdict row, for the zero-position
   reason recorded above. No clause of G3 sees it.
 * **The ±5 % N_αd spread is still unexplained** (0.819481 / 0.856 / 0.863 from
-  three tabulations, two of them the same year and Hamiltonian family).
+  three tabulations, two of them the same year and Hamiltonian family) —
+  unexplained, but since 2026-09-04 **propagated**: 5.311 % on N_αd, 7.181 % on
+  the D-wave norm, 2.729 % on P_D, and only 0.048 % on the tagged tensor
+  observable (§C5.3, T26). It is a real ±5 % in b₁ and a rounding error
+  everywhere else.
 * **Q6, Q4 and Q8 are unchanged** by this phase: `LI6_B1_RANK2_TRANSFER` is
   still tied to the Hulthén-scenario P_D, `use_spectroscopic_factor` is still a
   1.22 fork, and there is still nothing to validate an A = 6 b₁ against.
+  *(2026-09-04, §C5.5: the size of the Q6 gap is now measured. Under
+  `--cluster-wave vmc` the tagged model's `tensor_dilution` is 0.982576 against
+  `LI6_B1_RANK2_TRANSFER` = 0.921947, i.e. **+6.58 %**, and the vector sector
+  drifts **+11.61 %**. Deliberately NOT closed by substitution: the
+  "consistent" reading of the inclusive polarization, 0.905427, sits **6.8 %
+  above** the ab-initio six-body VMC 0.848 where the shipped 0.811228 is 4.3 %
+  **below** it, so the formula carries the error, not the choice of P_D.)*
 * **The default wave function is still AV18**, deliberately: making `kCdBonn`
   the default of `DeuteronConvolutionB1` is a strong argument — that object
   exists to reproduce CDKS's figure and CDKS used CD-Bonn — but it would move
@@ -1029,7 +1048,9 @@ own window), e 10 GeV × ⁶Li 99.5 GeV/u:
 
 The fitted slope is VM-independent to 1.5 % (there is no VM-dependent slope in
 a coherent Gaussian-form-factor calculation) and reproduces the analytic
-B = R_G²/(3ħc²) to 4 %. The ⁷Li cross-check against arXiv:2511.05638 (identical
+B = R_G²/(3ħc²) to **3.7–5.2 %**, one-sided (φ −3.69 %, J/ψ −4.43 %, ρ −5.17 %
+against 40.7026 — corrected 2026-09-04 from "4 %", which is the φ row alone;
+pinned in `tests/test_coherent.cpp` T10a). The ⁷Li cross-check against arXiv:2511.05638 (identical
 configuration, same commit-era code, same Q² window, same beam) agrees with
 every *shape* statement the paper makes — no diffractive minimum, the |t| slope
 and the Fourier-transform width read off its Figs. 6–7 — but the paper quotes
@@ -1124,6 +1145,38 @@ gives **η = −0.048** against the measured **η = −0.025 ± 0.006 ± 0.010**
 (George & Knutson, PRC 59, 598 (1999)): a real but *moderate* ≈ 2× D-wave
 excess, not the 5–15× a naive ratio suggests — which demotes an ANL
 normalization/phase-convention error as the leading explanation (design O1).
+
+**The 7.5× decomposed, and its error bar (added 2026-09-03; closes O1).**
+Numbers and reproduction in
+`docs/open_items/run_2026-09-03/phase_C_numbers.md` §C1, pinned in
+`tests/test_cluster_config.cpp` **T22b** and its pytest mirror. The (G9) dial
+scales R₂ in place and `asymptotic_ds_ratio()` reads the mutated waves after,
+so **η(s) = s·η(1) exactly** — which lets a *measured* observable, not the GFMC
+number, supply the first leg:
+
+| leg | ratio | value |
+|---|---|---|
+| model → the η-matched dial (Q = −0.18557 fm², η = −0.02507 ≈ GK) | −0.615448 / −0.18557 | **3.3165288362** |
+| η-matched → measured (`LI6_QUADRUPOLE_FM2`) | −0.18557 / −0.0818 | **2.26858190709** |
+| **product** | −0.615448 / −0.0818 | **7.52381731215** |
+
+**Two factors, not three.** The missing ≈15 % enters as 1/S_αd = 1/0.8542 =
+1.1706, and that is **already inside the −0.615**: `cluster_config.cpp:369-374`
+divides *both* waves by √S_αd before the moments are recomputed. Writing it as a
+third factor gives 8.808, which overshoots the measured 7.524 by **17 %**.
+1.17× is a **ceiling** on what a coherent missing-component model could add, not
+a multiplier.
+
+**The band is the physics, not the 3.32.** σ_comb(GK) = 0.011662, and because η
+is linear in the dial that maps straight onto model Q: **−0.4005 fm²** at one
+edge (1.54× the model), **+0.0298 fm²** at the other — the interval passes
+through **zero at η = −0.014971, 0.86 σ from the central value**. So the leg is
+*3.32× (1 σ: 1.54× … sign change)*. Run backwards, η implies −0.019439 for the
+measured Q (**+0.48 σ**) and −0.025854 for GFMC's (**−0.07 σ**): both inside
+GK's 1 σ, so **η cannot discriminate between them**. What O1 gets is the
+qualitative result only — the D-wave excess is moderate *and measured*, so the
+residual 2.27× is cluster polarization plus the missing component.
+
 The sampler does not paper over the gap: `quadrupole_band_fm2()` returns all
 three numbers together and the writer stamps them on every output, and
 **the rule stands — do not derive a published tensor input from this
@@ -1168,74 +1221,580 @@ below. Their Good–Walker loop is unchanged; the amplitude uses only x and y.
 One set per m ∈ {+1, 0, −1} plus one unpolarized set; a₂ comes out of the Φ
 dependence of ⟨A⟩ exactly as in their Fig. 2.
 
-**The exact ask to send the Mäntysaari group** (`design_G_cluster_config.md`
-§10, verbatim):
-
-> We have built an α+d configuration sampler for polarized ⁶Li that emits
-> nucleon-position tables in exactly the format `Nucleons::InitializeTarget`
-> reads for ³He (positions in fm, c.m. at the origin, one configuration per
-> line), with the polarization axis and the substate m = +1, 0, −1 applied and
-> recorded. The α core comes from your ANL VMC/GFMC ⁴He one-body density, the
-> p–n pair from AV18 u(r), w(r) with the full m_S angular correlation (your
-> Eqs. (7)–(8), which we reproduce exactly), and the α–d separation from the
-> ANL VMC α–d overlap with the L = 2 orientation correlated to m through the
-> CG recoupling. Three concrete requests, in increasing size. **(a)** Would you
-> share the ⁴He GFMC nucleon configurations used in arXiv:2605.00454? Our α
-> core is currently an uncorrelated product of one-body densities, which is the
-> weakest part of the sampler and the one part you already have solved.
-> **(b)** Would you accept a ~30-line generalization of the `A == 3` branch to
-> an `-configfile/-configid` option for any A? We can send the patch; it makes
-> the code A-agnostic and removes the 13698-configuration bound. **(c)** The
-> polarized-deuteron machinery of arXiv:2408.13213 is not in any public branch
-> of the repository — would you run your existing polarized setup on our ⁶Li
-> configuration tables, or release that branch? Two honest caveats we would
-> want your view on before you spend time: our α+d model reproduces the ⁶Li
-> point radius to 3 % but overshoots Q(⁶Li) by a factor ≈ 7.5 (measured
-> −0.0818 fm², our α+d geometry −0.615…−0.730 fm², **GFMC AV18+IL7 −0.20(6) fm²**,
-> Pastore *et al.*, PRC 87, 035503 (2013)), so the tensor amplitude carries a
-> factor-of-several systematic that we would carry explicitly as a band. The
-> α–d asymptotic D/S ratio of the overlap we use is η ≈ −0.05 against the
-> measured −0.025(12), so the excess is a real but moderate D-wave effect rather
-> than a convention error. And a closed-form quadrupole → a₂ map that reproduces
-> your published deuteron a₂(m = ±1) to 8 % at every |t| predicts that ⁶Li's
-> a₂ is ~10× smaller than the deuteron's **and of the opposite sign**, because
-> Q(⁶Li) < 0. That sign flip is the interesting measurement and it is also the
-> reason the effect is small — we would rather establish that together, before
-> either side commits person-months.
+**The ask itself is reconciled into ONE canonical draft** —
+`docs/open_items/run_2026-09-03/mantysaari_collaboration_draft.md` (task C6,
+2026-09-04) — which supersedes the paragraph that stood here (and the copy
+in `design_G_cluster_config.md` §10, which disagreed with it by one number:
+"3 %" here vs "4 %" there on the α+d model's point-radius agreement, both
+correct against different reference radii, both now stated together in the
+canonical file). **It is not sent; sending is the author's decision.** The
+two editor's notes that stood here (2026-09-03 on the factor-7.5 decomposition,
+2026-09-04 on O5) are folded into that file's own §§2–4 rather than repeated;
+what they found, in one line each: the "factor ≈ 7.5" is two factors,
+3.3165 × 2.2686, not three (§C1 below); and §11.3's O5 answer means the
+letter's own request (c) — asking the group to run their polarised J/ψ setup
+on our ⁶Li tables — asks for a channel that is **marginally measurable**
+(the band of §11.3b–c: 2.63 σ at its low edge, 2.84–3.29 σ at its top, 3 σ at
+8.3–13.0 fb⁻¹/u), so the canonical draft keeps that
+request and moves it to **photoproduction**, Q² < 0.1, with the two things
+this repository cannot settle stated inside the ask. *(An intermediate version
+said the channel was "blind" and withdrew the request; that came from one
+lepton channel in one Q² window and is corrected in §11.3a.)*
 
 **What remains open.** The tensor cos 2Φ prediction above (a₂(±1) ≈ +0.026 at
 the measured Q, opposite sign and ~10× smaller than the deuteron's) is a
 closed-form estimate from the geometry's own point-matter quadrupole — **it is
 not yet a coherent-diffraction amplitude from a dipole-model run**, and it
-cannot become one without the actual `subnucleondiffraction` graft (ask (b)
-and (c) above): the Good–Walker amplitude, its Φ-averaging and its own
+cannot become one without the actual `subnucleondiffraction` graft (requests
+(a)/(b) of the canonical draft above): the Good–Walker amplitude, its Φ-averaging and its own
 statistical and saturation-model uncertainties are not reproduced by
 `a2_from_quadrupole`, which only carries the target's quadrupole moment
-through the deuteron's own published |t| dependence. Also still open, in the
-design's own numbering: **O1** how a moderate (≈2×) D-wave excess and a
-missing ≈15 % non-α+d component together produce the observed 7.5× gap in Q;
-**O2** whether the smoothed `li6.adr.fit` R₂ node near 1.1 fm is a real
-short-range effect or a fit artefact (decides the honest default between
-`FitRescaled` and `OverlapRaw`); **O3** how much an uncorrelated α core (vs.
-GFMC ⁴He configurations with correlations) moves the incoherent/coherent
-split; **O4** the `eps_b0` convention (`coherent.hpp` uses ΔB without
-defining it — a separate, reviewed decision, not taken here); **O5** whether
-the ⁶Li a₂ survives EIC statistics at all and separates from the
-linearly-polarized-photon cos 2φ background (`physics_literature.md`'s
-two-mechanism warning) — answerable today from the numbers above plus a rate
-estimate, and the question that decides whether the collaboration is worth
-proposing.
+through the deuteron's own published |t| dependence. **§11.3 now prices that
+limitation**: a dipole-model run would have to move the signal by a factor
+**4.0** to bring coherent J/ψ to 3 σ at 10 fb⁻¹/u — equivalently a factor 16 in
+luminosity. Also still open, in the
+design's own numbering: ~~**O1**~~ **CLOSED 2026-09-03** — the 7.5× gap is
+**two** factors, 3.3165 (model → η-matched dial, from the *measured* D/S ratio)
+× 2.2686 (→ measurement), and the missing 15 % is *not* a third factor because
+1/S_αd = 1.1706 is already inside the −0.615; the leg's own 1 σ runs from 1.54×
+to a **sign change** in Q (see above and §C1 of the phase-C numbers);
+~~**O2**~~ **CLOSED 2026-09-03** — the `li6.adr.fit` R₂ node **is real** (the
+raw `li6.ad` R₂ over the fit's inner lobe is **3.3 σ below zero**; raw node
+1.119 fm [1.089, 1.153] against the fit's 1.0648 fm) but it **does not decide
+the default**: r < 1.5 fm is −0.09 % of q_int. `FitRescaled` **stays the
+default by author decision** — the two sources differ by 8.7 % in Q inside a
+band already a factor 7.5 wide, neither is closer to GK (−2.0 σ vs −2.4 σ), and
+the raw block is rough at ≈1 σ per point (`phase_C_numbers.md` §C3); **O3
+PARTIALLY BOUNDED 2026-09-04, §11.5 below** — how much an uncorrelated α core
+(vs. GFMC ⁴He configurations with correlations) moves the incoherent/coherent
+split is still unanswerable from this repository (no configuration table
+exists here for any nucleus), but a genuinely correlated α → d+d overlap
+already in the tree (`he4.dd`) bounds the SIZE of 4-body correlation on a
+comparable position-space moment at +18 % (variance) / +9 % (rms) against the
+uncorrelated-product null — a several-to-twenty-percent effect, not a factor
+of several; ~~**O4**~~ **CLOSED 2026-09-04** — ΔB is now defined once, at the
+`eps_b0` declaration (|F_m|² = exp(−|t|[B + ΔB_m cos2(Φ−Φ_S)]), ΔB_m = δ_m/2,
+so a₂(m) = −(ΔB_m/2)|t| and **eps_b0 = δ_{±1}/B = 2ΔB_{±1}/B = −ΔB₀/B**: the
+old label "ΔB₀/B" was off by a **sign**, not a factor 2), with
+`CoherentScenario::delta_b_m()` as its single code home. And the band was
+re-decided: `eps_b0` = −0.08 implies a ⁶Li charge quadrupole of **−0.9345 fm²**,
+**11.42×** the measured −0.0818 and 1.52× even the α+d model's −0.615, so it is
+a **deuteron** number; the honest ⁶Li band is **−(0.0070 … 0.0527)** at
+`slope_b` = 50. **Author decision: the default stays** (it is a reference gate)
+and the cost is recorded — every *generated* coherent tensor number is 11.4×
+the measured-quadrupole expectation, and `COHERENT_T_MAX_DEFAULT` = 0.2 is a
+consequence of that oversized `eps_b0` (the positivity edge would sit at
+|t| = 2.8 GeV² at the measured quadrupole). `phase_C_numbers.md` §C4, T10b/T23;
+~~**O5**~~ **ANSWERED 2026-09-04, and the answer is MARGINAL — as a BAND** — §11.3
+below and `phase_C_numbers.md` §C2. Coherent J/ψ at one EIC year, over the
+**whole** Q² range and with **both** lepton channels, gives **2.63 σ at the
+band's low edge and 2.84 … 3.29 σ at its top** on the a₂ this section predicts,
+with 3 σ at **8.3 … 13.0 fb⁻¹/u** — inside the {1, 10, 100} fb⁻¹/u band at both
+ends. Whether the top crosses 3 σ is **not established** (§11.3c). The separation from the photon-polarisation cos 2φ
+is **not** the obstacle: it is free, it survives Q² → 0, and the P_zz flip is
+a 1.50× *gain*. a₂ ∝ |t| on an e^{−B|t|} sample really is only a **0.25 %**
+modulation rather than the 2.6 % that a₂(0.3) suggests — but 0.25 % on
+4.2 × 10⁵ events is 2.6 σ. *(The first pass of §11.3 read "NO for J/ψ,
+0.75 σ, 160 fb⁻¹/u". That was computed from **one** lepton channel in
+**one** Q² window and is withdrawn; §11.3a records what moved and by how
+much.)* **This is the item that was said to decide whether the collaboration
+is worth proposing; it no longer decides against it, and what it leaves open
+is not statistics but an efficiency nobody has measured below Q² = 0.1.**
+
+### 11.3 O5 — **MARGINAL: the a₂ is a 2.6 σ (low edge) to 2.8–3.3 σ (top) measurement in coherent J/ψ at one EIC year**
+
+**Answered 2026-09-04; the answer was revised the same day, and §11.3a says
+what moved.** Numbers, every assumption and the reproduction in
+`docs/open_items/run_2026-09-03/phase_C_numbers.md` §C2; the arithmetic is
+`validation/o5_a2_reach.py` (self-checking), pinned in
+`python/tests/test_o5_reach.py` and `tests/test_coherent.cpp` **T10a** /
+**T10c**. Every number it multiplies is read from code:
+`a2_from_quadrupole` at the *measured* `LI6_QUADRUPOLE_FM2`; the
+`estarlight_li6_coherent()` and `estarlight_li6_q2_floors()` tables in
+`coherent.hpp` — the single code home of §11.1's cross sections and of the
+2026-09-04 photoproduction scan; `COHERENT_JPSI_EFF_IR8_LI7`; `Scenario` /
+`tensor_flip_plan`; and `tagging_optics` / `yr_optics`.
+
+**THE DECIDING NUMBER.** Coherent J/ψ off tensor-polarised ⁶Li, at
+`Scenario::lumi_fb_per_nucleon` = 10 fb⁻¹/u ("one EIC year"; band {1, 10, 100};
+there is **no Li luminosity in any source this repository has seen**,
+`needs_survey.md` §3.8), hence 10/6 = 1.667 fb⁻¹ of e+⁶Li; **σ_coh = 11.971 nb
+over the whole Q² range** (`estarlight_li6.md` §2f — 6.75× the 1.773 nb of the
+0.1 < Q² < 100 window, which was an acceptance study's kinematic range, not a
+physics one); **J/ψ → e⁺e⁻ *and* μ⁺μ⁻ (0.11932)**;
+`COHERENT_JPSI_EFF_IR8_LI7` = 0.1775 (a ⁷Li number, used as a stand-in);
+`tensor_flip_plan(0.6)`, i.e. P_zz = {+0.6, −1.2} at equal shares, on the
+**background-immune** ⟨P_zz²⟩ = 0.81 rather than the optimal 0.90 —
+
+> **N = 4.22 × 10⁵ reconstructed events → δa₂(|t| = 0.3 GeV²) = 0.0100 against
+> a predicted a₂ = +0.0263. S = 2.62 σ. Three sigma needs 13 fb⁻¹/u, INSIDE
+> the {1, 10, 100} fb⁻¹/u band and close to one EIC year.** *(That row is the
+> UNCORRECTED point and may not be quoted alone — see the band below.)* With a *perfect*
+> detector it is 6.21 σ. On the measured-radius density, 1.58 σ and
+> 36 fb⁻¹/u — still inside the band.
+
+**AND THAT ROW IS THE MIDDLE OF A BAND, NOT THE ANSWER — §11.3b.** ε_det above
+was applied at the wrong beam energy and carried no decay-lepton factor at all.
+Correcting both:
+
+> **S = 2.63 σ at the band's LOW EDGE and 2.84 … 3.29 σ at its TOP, 3 σ at
+> 8.3 … 13.0 fb⁻¹/u — inside the {1, 10, 100} fb⁻¹/u band at BOTH ends, and
+> OPEN below**, because the per-lepton reconstruction efficiency is unbounded
+> in this tree. The 2.62 σ point lands 0.3 % under the band's low edge, because
+> the two omissions cancel to 0.7 %. **The TOP is a span, not an edge, and
+> whether it crosses 3 σ is NOT established** — §11.3c.
+
+### 11.3a What the first pass got wrong, and by how much
+
+The first pass of this section said **"NO … 0.75 σ … 3 σ needs 160 fb⁻¹/u …
+the measurement does not exist at any luminosity the EIC is quoted at."** Two
+restrictions, both artefacts rather than physics, produced that:
+
+1. **One lepton channel.** The row used J/ψ → e⁺e⁻ only. The section's own
+   prose said, three lines below its headline, that "adding μ⁺μ⁻ gains √2" —
+   and 160/2 = **80 fb⁻¹/u is inside the band**, so the write-up refuted its
+   own conclusion before any new run was made. `branching_all` = 0.11932
+   (eSTARlight's own `JpsiBree` + `JpsiBrmumu`) is now in `coherent.hpp`.
+2. **One Q² window.** σ = 1.773 nb is 0.1 < Q² < 100 GeV², which
+   `estarlight_li6.md` §1 states is *"arXiv:2511.05638's range verbatim"* — an
+   acceptance study's kinematic range. Q² < 0.1 was absent from the whole
+   chain, and it is most of the rate. A fresh
+   eSTARlight run of the same build, beams and seed (§2f; the Q² > 0.1 rows
+   reproduce §2a/§2b to every printed digit) gives **11.971 nb with no floor
+   at all — 6.75× — with the |t| slope unchanged to 0.4 %.** 85 % of the
+   coherent J/ψ rate is below Q² = 0.1.
+
+Together: **×13.5 in rate, 0.749 σ → 2.62 σ, 160 fb⁻¹/u → 13.1 fb⁻¹/u** (that
+point is the band's uncorrected middle, not the answer; §11.3b–c). The
+ladder, one correction at a time, is `phase_C_numbers.md` §C2.4a. Two smaller
+things were wrong beside them: the self-check pinned the verdict on the
+restricted row (`assert lumi_for_3sigma_jpsi > 100.0`, which could never
+fail); and the headline ⟨P_zz²⟩ = 0.90 was the *optimal* two-fill combination
+while the separation argument below requires the background-immune difference,
+0.81. Both are fixed, and the pin now runs in both directions.
+
+### 11.3b What the SECOND pass got wrong: the efficiency chain, in both directions
+
+*(2026-09-04, third pass. `phase_C_numbers.md` §C2.3c and §C2.8 items 3a/3b/3c;
+`validation/o5_a2_reach.py` §3b; `coherent.hpp`'s two new tables; pinned in
+`tests/test_coherent.cpp` **T10d** and in `python/tests/test_o5_reach.py`.)*
+
+The MARGINAL verdict survives. The chain it rested on had **two defects of
+comparable size and opposite sign, and §11.3's own "every assumption" list —
+`phase_C_numbers.md` §C2.8 — carried neither.**
+
+**(1) ε_det was applied at the wrong beam energy, in the one direction the
+write-up never hedged.** `COHERENT_JPSI_EFF_IR8_LI7` = 0.1775 is a ⁷Li number
+at **18 × 117.9 GeV/u — that nucleus's own top energy** — and this tree's
+configuration-identical eSTARlight row for those beams has ⟨W⟩ = 43.2 GeV. The
+O5 rate sample is ⁶Li at **10 × 99.5**, ⟨W⟩ = 30.2. arXiv:2511.05638 measures
+exactly that dependence in its §V.B, on ³He: **32.23 % at 18 × 183, 54.38 % at
+10 × 100, 99.77 % at 5 × 41** (verified against the PDF; in code as
+`chang26_he3_energy_scan()`). d ln ε/d ln E_ion = **−0.866** and **−0.681**.
+**Direction UP; size ×1.122–1.158 for the 117.9 → 99.5 step**, i.e.
+ε_det = 0.199–0.206 rather than 0.1775. ~~The ⁷Li → ⁶Li substitution beside it
+is worth a further ×1.16–1.22 at fixed rigidity — the paper's own species list
+is entirely at `A/Z × E` = 275 GeV/e (`chang26_species_efficiency()`), so its
+A-ordering is a species lever on its own.~~ **RETRACTED 2026-09-04, fourth pass
+— that is a non sequitur and the ×1.16–1.22 was an unquantified factor
+presented as quantified. §11.3c.**
+
+**It is not the paper's own 1.687.** 54.38/32.23 is their 183 → 100 ratio, a
+step **3.56× larger in ln E** than this transfer needs; carried whole it gives
+3.40 σ and 3 σ at 7.8 fb⁻¹/u, by using the wrong lever arm. *(The tree already
+invoked the same Fig. 2 W-dependence for the far smaller 32.2 → 30.2 GeV
+Q²-floor shift and called it "conservative on the W axis", while never invoking
+it for the 43.2 → 30.2 GeV beam-energy shift; `coherent.hpp` recorded "none at
+10 × 99.5" with neither the direction nor the size. Both now carry both.)*
+
+**(2) There was no decay-lepton acceptance anywhere in the chain.** The chain
+is σ × BR(ℓ⁺ℓ⁻) × ε_recoil, and ε_recoil is the fraction of scattered
+**nuclei** in the far-forward acceptance — *"32.23 % of the scattered ³He
+nuclei occur within a safe distance from the beam"* — under a simulation whose
+own p. 4 says it *"only accounts for the acceptance effect and does not
+incorporate the efficiencies of the detector. Additionally, we did not account
+for the efficiency and acceptance of the reconstructed distribution"*. So there
+was **no central-detector acceptance and no reconstruction efficiency for the
+e⁺e⁻/μ⁺μ⁻ pair at all**. Direction **DOWN**.
+
+**Bounded, in part.** At 10 × 99.5 a J/ψ at ⟨W⟩ = 30.2 comes from an
+E_γ = 2.29 GeV lab photon and sits at y = −0.39 — nearly at rest — so its two
+1.548 GeV leptons are central. Using this repository's **own**
+`Scenario::eta_max` = 3.5 (documented there for the *scattered electron*,
+because there is no decay-lepton acceptance in this tree), and SCHC transverse
+decay as the pessimistic weighting: **A_geom = 0.994 at ⟨W⟩, never below 0.89
+anywhere the beams can reach**. The geometry is not where the factor is. **The
+per-lepton reconstruction efficiency is UNBOUNDED HERE** — nothing in this
+repository supplies one. The 0.95/track used to draw the band's low end is the
+sibling `../PolarizedLithiumSim`'s `HfsModel(eff_track=0.95)`, which that file
+itself labels a stand-in.
+
+**(3) They partly cancel, and that is the finding.** ×1.122 against ×0.897 is
+**1.007**. A reader told only about the beam energy moves the verdict up; a
+reader told only about the leptons moves it down; both together move it by
+0.7 %. That is precisely why leaving both out of a list that claimed
+completeness was a defect rather than a rounding.
+
+**(4) A self-contradiction, printed at two of three sites.** *"Every single
+conservatism on its own leaves 3 σ inside the band"* is false: the de-squeezed
+optics row is a counterexample, and `validation/o5_a2_reach.py` printed that
+sentence **three lines below** its own bullet saying the optics put 3 σ "back
+outside the band". `mantysaari_collaboration_draft.md` repeated it uncorrected
+**and omitted the optics row from its ladder entirely**. §C2.4a stated the
+exception inside the same sentence as the claim. All three now carry the
+exception as an exception, and the draft's ladder has the optics row.
+
+**The verdict as the third pass left it, and the pin it wrote.** S =
+2.63 … 3.15 σ, 3 σ at 9.1 … 13.0 fb⁻¹/u, inside {1, 10, 100} at both ends and
+**open below**. `Optics::lumi_fraction` = 0.0781 remains **the single
+correction that on its own restores a NO**, and it does so at both ends of the
+band. The self-check no longer pins a point (`2.0 < S < 3.0`); it pins the
+band, both directions, the cancellation, the fact that the beam factor is
+*not* 1.687, and the optics exception — and nine mutations of that claim were
+checked to make it fail. **The 3.15 σ top did not survive §11.3c: read the
+corrected band there, 2.63 σ at the low edge and 2.84 … 3.29 σ at the top,
+3 σ at 8.3 … 13.0 fb⁻¹/u, optics 0.73–0.92 σ at 106–167 fb⁻¹/u.**
+
+**The band is asymmetric in what it protects.** *"3 σ inside the {1, 10, 100}
+band"* survives a pair acceptance × efficiency all the way down to **0.117** —
+a detector reconstructing about one J/ψ in eight. *"MARGINAL rather than NO"*
+only survives down to **0.52**. Quote the two with that asymmetry attached.
+
+**Why: the |t| slope, not the modelling.** a₂ is *linear* in |t| and the
+coherent sample is e^{−B|t|} with B = 39–55, so the information-weighted
+modulation is κ√⟨t²⟩ = **0.25 %** at B = 50, not the 2.6 % that a₂(0.3)
+suggests — a factor **10.6**, and it follows from the coherent form factor
+alone. The |t| window is *not* where anything is lost: |t| < 0.2 GeV²
+(`COHERENT_T_MAX_DEFAULT`) keeps 99.995 % of the rate and 99.72 % of the
+Fisher information.
+
+**And it is §11.2's own factor 7.5 that sets the scale.** The same J/ψ sample
+gives **19.7 σ** at this α+d geometry's own Q = −0.615 fm², **6.4 σ** at
+GFMC's −0.20, and **2.6 σ** at the measured −0.0818. ⁶Li is attractive
+precisely because Q(⁶Li) is a *near-null* against the deuteron's +0.286 — and
+this is the price of that: **near-null is expensive.** What it is not, on
+these numbers, is unmeasurable.
+
+**The separation is free, and is not the problem.** Two independent handles.
+(a) The tensor modulation is about the **spin axis**, the photon-polarisation
+one about the **photon's linear-polarisation direction** (the lepton plane at
+Q² > 0), which is uniform in the lab relative to a fixed vertical φ_S — so it
+averages to zero in a spin-referenced histogram under a φ_γ-uniform
+acceptance. (b) The tensor term is **odd** in P_zz (exactly: a₂(0) = −2a₂(±1)
+makes Σ_m p_m a₂(m) = P_zz a₂(±1) identically) and the photon term is
+**even**, so the two-fill difference is background-free at first order, and it
+cancels a relative-luminosity offset because each fill's amplitude is a
+self-normalised ratio. **Cost: negative.** Against the optimal use of the same
+two fills the background-immune difference loses 5.4 % in δ; against putting
+the whole luminosity into one +0.6 fill it **gains 1.50×**, because the
+m = 0-rich fill carries |P_zz| = 1.2. The residual — the two fills' φ-averaged
+|t| spectra differ only at second order in ε = |`eps_b0_equivalent()`| =
+0.0067, i.e. by 1.13e−3 at |t| = 0.2 and 2.26e−5 averaged — matches √(2/N)
+only for a background amplitude A_γ above **1.9 (J/ψ), 0.13 (φ), 0.017 (ρ⁰)**
+on the whole-Q² samples (7.1 / 0.60 / 0.10 on the smaller 0.1 < Q² < 100
+ones). **No magnitude for A_γ exists anywhere in this tree**
+(`physics_literature.md` records the mechanism, STAR arXiv:2204.01625, not a
+number), which is why the argument rests on parity and not on a size; for ρ⁰
+it means binning in |t| is mandatory.
+
+**BOTH HANDLES SURVIVE Q² → 0**, which is what lets the photoproduction region
+be used at all. Below Q² = 0.1 the scattered electron is not detected and φ_γ
+is unknown event by event; neither handle needs it — (a) is a statement about
+a *spin-axis* histogram under a φ_γ-uniform acceptance, and (b) never
+references the lepton plane. *(The premise that the photon effect "dies as Q²
+rises" is not supported here and is not used: the virtual photon's
+linear-polarisation degree is a function of **y**, not a decreasing function
+of Q². What Q² > 0.7 buys is that the scattered electron is detected, so φ_γ
+is known event by event — measurability, not suppression, and it is a control
+this argument never needed.)*
+
+**The light mesons have more statistics, and it does not change the ask.**
+With the same assumptions and no Q² floor: **φ 39 σ** (8.3 σ over
+0.1 < Q² < 100, 2.1 σ inside LiPolGen's own Q² > 0.7 window) and
+**ρ⁰ 293 σ** (49 σ / 8.6 σ). But both sit **below**
+`COHERENT_MX_MIN_DEFAULT` = 1.2 GeV, so the shipped coherent channel carries
+no rate there at all; ρ⁰ is the channel in which the photon-polarisation
+cos 2φ has actually been *observed* (STAR's ρ⁰ ultraperipheral measurement —
+this tree records the reference, not its channel and not its magnitude), and
+where the P_zz-flip residual first bites, now at A_γ ≈ 0.02; and it is where
+the closed-form map is **least** defensible — a large, strongly absorbed
+dipole at ⟨W⟩ = 14–18 GeV, where black-disc absorption saturates the very
+anisotropy the map is linear in, validated only against a **J/ψ** calculation.
+J/ψ being measurable is what makes that irrelevant to the ask.
+
+**VERDICT: MARGINAL — as a BAND — and the ask stands.** Concretely:
+
+1. **The ⁶Li tensor a₂ in coherent J/ψ is a 2.6 σ (band low edge) to
+   2.8–3.3 σ (band top) measurement at one EIC year, with 3 σ at
+   8.3–13.0 fb⁻¹/u** (§11.3b–c; the 2.62 σ / 13.1 fb⁻¹/u point is the
+   uncorrected middle of that band, not the answer, and whether the top
+   crosses 3 σ is **not established**). Propose the collaboration on that channel —
+   which is also the only channel the published calculation covers, so the
+   theory ask stays the easy one. *(This replaces "do not propose the
+   collaboration on the ⁶Li tensor a₂ in coherent J/ψ; the measurement does
+   not exist at any luminosity the EIC is quoted at", which was written from
+   the restricted row of §11.3a and is withdrawn.)*
+2. **Propose it as a photoproduction measurement.** Q² < 0.1 is 85 % of the
+   rate, and it is also where [Mant24]'s own Fig. 4 lives — the digitised
+   deuteron a₂ this whole map is validated against is a *photoproduction*
+   calculation, so the request now matches the published kinematics better
+   than the first draft did.
+3. **Say what is missing, because it is not statistics.** No detection
+   efficiency exists below Q² = 0.1 in any source this tree has seen; **no
+   decay-lepton reconstruction efficiency exists in this tree at all** (§11.3b
+   — the geometric half is bounded at 0.99 and is not the problem); and the
+   far-forward working point is unchosen — at LiPolGen's own de-squeezed ⁶Li
+   tagging optics (`lumi_fraction` = 0.0781 at 10 × 100) the whole band becomes
+   0.73–0.92 σ with 3 σ at 106–167 fb⁻¹/u. **That last one is the single
+   correction that on its own restores the NO**; the others widen the band.
+   Say also that the ⁷Li → ⁶Li efficiency substitution the whole chain rests on
+   is **undetermined in direction** (×0.99–1.33, §11.3c) and is what makes the
+   band's top a span. All four are the collaboration's and the detector groups'
+   to supply. Say also that the ε_det used is a **top-energy ⁷Li** number
+   applied at 10 × 99.5, i.e. conservative by ×1.12–1.16 on the beam-energy
+   axis alone — the recipient will find that themselves otherwise.
+4. The cheap thing still worth doing is the **sign**: ⁶Li's a₂ is predicted
+   **positive** where the deuteron's is negative, and a sign is one bit. A
+   2.6 σ sample does deliver that bit.
+
+**THE LIMITATION RIDES WITH THE NUMBER.** All of the above is built on
+`a2_from_quadrupole`, a **closed form and not a dipole-model amplitude**: it
+carries the target's quadrupole through [Mant24]'s published |t| dependence
+(reproducing their a₂(m = ±1) to 8 % with zero free parameters) and contains
+no Good–Walker average, no amplitude, no saturation model, none of their
+uncertainties, and it uses the *matter* quadrupole as a proxy for the
+transverse **gluon** anisotropy. A dipole-model run could move the signal by a
+factor; it would now have to move it **up by 1.15** to bring coherent J/ψ to
+3 σ at 10 fb⁻¹/u, **down by 1.31** to fall back to 2 σ, or up by 1.91 to reach
+5 σ — equivalently, the luminosity would have to change by 1.31 in the first
+case, which is the 13.1 fb⁻¹/u of the band's uncorrected middle. The first pass of this paragraph quoted
+4.0 / 6.7 / 16; those belonged to the restricted row of §11.3a.
 
 **The rule of this section is unchanged and is now quantified rather than
 repealed: do not derive a tensor input for a published observable from these
-wave functions.** The α+d truncation reproduces the ⁶Li point radius to 3 %
+wave functions.** And since 2026-09-04 there is a second rule beside it:
+**do not quote a₂(|t| = 0.3) = +0.026 as "the ⁶Li tensor signal" without the
+sample it would be measured on.** The coherent sample lives at |t| ≈ 1/B, so
+the observable is κ√⟨t²⟩ = **0.25 %**, a factor 10.6 smaller. That factor is
+real; what it is not is a verdict — the modulation on the sample that would
+actually be taken is ā₂ = κ√⟨t²⟩ = **0.32 %** at that sample's own B = 38.8,
+and 0.0032 × √(2 × 0.81 × 4.22 × 10⁵) = 2.6 σ, so
+O5 comes out MARGINAL (§11.3, §11.3a). The α+d truncation reproduces the ⁶Li point radius to 3 %
 (4 % against the VMC `li6.density` value) but
-overshoots Q(⁶Li) by **7.5×** (model −0.615…−0.730 fm² against the measured
+overshoots Q(⁶Li) by **7.5×** — **3.3165 × 2.2686, two factors and not three**,
+the first of them anchored on the *measured* asymptotic D/S ratio and carrying
+that measurement's error bar, which spans model Q from −0.4005 fm² to
+**+0.0298 fm², through zero** (model −0.615…−0.730 fm² against the measured
 −0.0818 and GFMC AV18+IL7's −0.20(6), Pastore *et al.*, PRC 87, 035503
 (2013)). `quadrupole_band_fm2()` returns all three and the writer stamps them;
 the `quadrupole_target_fm2` dial can put the geometry on the measured Q, but
 it is a **deformation dial, not a wave function**, and the sidecar labels it
 as one.
+
+### 11.3c What the THIRD pass got wrong: the species leg, and the band's TOP
+
+*(2026-09-04, **fourth pass**. `phase_C_numbers.md` §C2 fourth-pass changelog;
+`validation/o5_a2_reach.py` §3b(b) and `species_scaling_same_energy`;
+`coherent.hpp`'s `chang26_species_efficiency()` comment; pinned in
+`tests/test_coherent.cpp` T10d and in `python/tests/test_o5_reach.py`.)*
+
+**The MARGINAL verdict, its band's LOW edge and "inside {1, 10, 100} at both
+ends" all survive. The band's TOP does not.**
+
+**(1) A non sequitur, at every site that carried it.** *"Every entry is at the
+same rigidity, so its A-ordering is a species lever on its own"* —
+`o5_a2_reach.py` (twice), `coherent.hpp` (twice), `python/bindings.cpp`,
+`phase_C_numbers.md` §C2.3c(b) and §C2.8 item 3a, `STATUS.md`, this section's
+§11.3b, and the name of a `tests/test_coherent.cpp` TEST_CASE. **RETRACTED.** Eliminating rigidity
+does not leave species alone. At fixed R = A E/Z the per-nucleon energy is
+E/u = R Z/A and the total beam momentum is p_z = Z R, and **both still vary
+down the list**: E/u from 118 GeV/u (⁷Li) to 183 (³He), Z from 1 to 8, p_z from
+274 to 2192 GeV. The chain's *own other leg* puts d ln ε/d ln E at −0.68 … −0.87,
+so the list's **×1.55 spread in E/u is worth ×1.35–1.46 in ε** — the size of
+the entire claimed species gain. The list is a **joint (A, Z, E/u) lever**; the
+chain asserted the decomposition and never tested it.
+
+**(2) The one validation was mis-specified, and the direction it was read as
+giving is withdrawn.** The form is ε = exp(−B(A)·p_T,cut²) with p_T,cut
+inverted from ⁷Li (0.1958 GeV). The criterion arXiv:2511.05638 states is
+*"within a safe distance **from the beam**"* — a cut on the **angle** — so
+p_T,cut = θ·p_z = θ·Z·R and **it carries the charge**. ³He and ⁴He are Z = 2;
+⁷Li is Z = 3. The shipped test applied ⁷Li's Z = 3 cut to the Z = 2 pair, and
+its own comment said *"same Z"* without noticing it was the **wrong** Z. Three
+readings of the one table, and **nothing in the table picks between them**:
+
+| reading | on ³He/⁴He | on the list's absolute values |
+|---|---|---|
+| p_T,cut ∝ Z — the geometric criterion taken literally | pred **1.0967** vs measured **1.0955**: **0.1 %** | badly wrong — pred/meas 1.95 (²D), 2.00 (⁴He), 0.21 (⁹Be) |
+| p_T,cut Z-independent | pred 1.2309 vs 1.0955 — this is the shipped one, "overstates by 12 %" | **fits the light end** — pred/meas **1.003** (²D), **1.034** (⁴He), **1.047** (⁹Be); ³He off by **16 %**, which is what its E/u = 183 against the family's 137 is worth on the chain's own scan (an **18–22 %** shortfall). It is a *local* form, not a description of the list: ¹²C off by 32 %, ¹⁶O by ×3.1 |
+
+The shipped reading is the only one of the three that yields the directional
+instruction **"Read the low end"**, printed at three sites. **That instruction
+is deleted**, and `tests/test_coherent.cpp` now carries the Z-corrected
+prediction beside the wrong-Z one.
+
+**(3) The four entries the chain never used.** ⁶Li's own fixed-rigidity energy
+is Z/A × 275 = **137.5 GeV/u**, and **four** of the seven entries — ²D, ⁴He,
+¹²C, ¹⁶O, at A = 2, 4, 12, 16 — sit at **137 GeV/u**. They bracket A = 6 with
+**no energy step at all**, and ⁴He → ¹²C is the adjacent pair. The same closed
+forms on that same-energy set give
+
+> ε(⁶Li, 137 GeV/u) = **0.1763 … 0.2366** against ⁷Li's 0.1775, i.e.
+> **×0.993 … ×1.333 — it STRADDLES 1.** log R_G gives ×1.004, the p_T
+> threshold anchored at ¹²C gives ×0.993, log A ×1.130, and linear-in-A
+> ×1.333.
+
+against the ×1.160 … ×1.219 the confounded reading gave. **The direction of the
+⁷Li → ⁶Li substitution is not established, let alone its size.**
+
+**The corrected verdict.** The band's low edge is untouched, and so is
+everything that rests on it:
+
+> **S = 2.63 σ at the band's LOW EDGE and 2.84 … 3.29 σ at its TOP, with
+> 3 σ at 8.3 … 13.0 fb⁻¹/u — INSIDE the {1, 10, 100} fb⁻¹/u band at both ends
+> on every form, and OPEN below.** MARGINAL stands.
+>
+> **"The band's TOP just crosses 3 σ" is NOT ESTABLISHED and is withdrawn.**
+> The top straddles 3 σ: two of the five forms put it at 2.84 and 2.86, two at
+> 3.03 and 3.04, one at 3.29.
+
+`_self_check` and `test_o5_reach.py` no longer pin a scalar top. There is no
+`significance_hi`, no `lumi_for_3sigma_lo` and no `band_factor_hi` key left in
+the returned dict — a `KeyError` is the cheapest way to stop the point coming
+back — and the pin is
+
+```python
+assert res["significance_hi_min"] < 3.0 < res["significance_hi_max"]
+```
+
+which **fails if "the top crosses 3 σ" is ever re-asserted as established**,
+because that means the top's low reading has been pushed above 3.
+
+The de-squeezed-optics rung moves with the top: the band there is
+**0.73–0.92 σ with 3 σ at 106–167 fb⁻¹/u**, still outside {1, 10, 100} at both
+ends, so `Optics::lumi_fraction` remains the single correction that on its own
+restores a NO.
+
+### 11.4 O4 and the VMC inputs — ΔB defined, and four opt-in knobs (2026-09-04)
+
+Full record and every number: `docs/open_items/run_2026-09-03/phase_C_numbers.md`
+§C4 and §C5, pinned in `tests/test_coherent.cpp` **T10b**,
+`tests/test_cluster_config.cpp` **T23**, `tests/test_tagged.cpp`
+**T24**/**T25**/**T26** and mirrored in `python/tests/test_module.py`. **No
+shipped default moved and `validation/reference/*.json` is untouched.**
+
+* **O4 — ΔB is defined, once**, at `CoherentScenario::eps_b0`:
+  |F_m|² = exp(−|t|[B + ΔB_m cos 2(Φ−Φ_S)]) with ΔB_m = δ_m/2, hence
+  a₂(m) = −(ΔB_m/2)|t| and **eps_b0 = δ_{±1}/B = 2ΔB_{±1}/B = −ΔB₀/B**. The old
+  label was off by a **sign**. `delta_b_m()` / `slope_at_azimuth()` are its code
+  home; `quadrupole_from_a2_slope()` inverts the map so a scenario can be
+  *asked* what it assumes. **eps_b0 = −0.08 assumes Q_charge(⁶Li) = −0.9345 fm²,
+  11.42× the measured value**, and a₂(±1, 0.3) = +0.300 — bigger than the
+  *deuteron's* own −0.28. Honest ⁶Li band **−(0.0070 … 0.0527)** at B = 50.
+  Author decision: default kept, cost recorded, and `eps_b0`/`slope_b` are
+  flagged as **not independent** (band the product δ = eps_b0·B, never eps_b0
+  alone).
+* **C5.1 — no η dial.** η is exactly linear in `quadrupole_dial_s()`, so an
+  `eta_target` option would be a second name for one knob. Added instead:
+  `ClusterConfigSampler::quadrupole_for_eta()`, a converter that re-derives
+  §11.2's whole GK band (−0.4005 / −0.1842 / **+0.0298**, through zero) from the
+  tables instead of from typed numbers.
+* **C5.2 — the MC errors are carried, and they are negligible.** The ANL 1σ
+  columns were parsed and dropped; `VmcRadial` now carries `dpsi()`,
+  `shifted_by_sigma()` and `norm2_error()` (correlated **and** quadrature, since
+  one variational walk fixes neither), with `vmc_mc_sigma` /
+  `PipelineConfig::cluster_vmc_mc_sigma` as the band knob (refused where no
+  errors exist). Measured: **0.47 %** / 1.62 % on the S/D norms, **1.1 %** on
+  P_D per σ, and **0.02 %** on the tagged tensor observable — against 6.6 % for
+  the wave-function choice and a factor 7.5 for the quadrupole.
+* **C5.3 — the 5 % is propagated.** N_αd spans 5.311 %, the D-wave *norm*
+  7.181 %, P_D only **2.729 %**; outside b₁ (exactly linear, exactly ±5 %) it is
+  worth **0.048 %** on `tensor_dilution`.
+* **C5.4 — the deuteron control reaches AV18, opt-in.** `fdeut.av18`'s u(k),
+  w(k) *are* the p–n relative waves, so `--cluster-wave vmc` was being silently
+  ignored on that channel; it now selects P_D = **0.0576** (+28 % over the
+  scenario 0.045), worth −2.0 % / −1.2 % on the channel's vector/tensor
+  dilutions. The relative S–D sign does **not** flip (ψ₂ = +W), unlike ⁶Li.
+* **C5.5 — the split is real, the framing was not, and substitution is worse.**
+  It is **not** two channels of one run (a `Pipeline` builds exactly one
+  channel); it is a tagged row and an inclusive row of one programme, which is
+  worse because nothing can notice it. Size: **+11.61 %** vector, **+6.58 %**
+  rank-2. But the "consistent" inclusive value 0.905427 sits **6.8 % above** the
+  ab-initio six-body VMC **0.848** where the shipped 0.811228 is 4.3 % below it,
+  so the cluster product — not the choice of P_D — carries the error. Author
+  decision: default kept, drift documented, and **no inclusive ⁶Li polarization
+  is quoted without the band 0.81 … 0.91**.
+* **C5.5b — the claim C5.5 shipped was false, and C5.4 is what made it false.**
+  "Nothing *inside* one run is inconsistent" went to five sites and was wrong:
+  `li6_alpha_channel` set `dis_target = DEUTERON()` **unconditionally**, and
+  the T1 `ClusterBreakup` built its deuteron at `P_D_DEUTERON` = 0.045, so a
+  `--cluster-wave vmc` α-tag run took the α–d **relative motion** from the ANL
+  VMC AV18+UX overlap and the **embedded deuteron** from the 0.045 scenario —
+  two deuteron wave-function families in one run, with every polarized
+  tagged-α observable **+2.069 %** high (0.9325 against the AV18 deuteron's
+  0.9136001620; exact, because g₁A is linear in the effective polarization).
+  C5.4's own rationale forbids it: *switching only the control would make the
+  control and the channel it controls two different wave-function families*.
+  **Fixed:** `DEUTERON_AV18()` and `BreakupOptions::source` follow the flag, so
+  it means one deuteron everywhere it is read; the opt-in path moved −2.027 %,
+  the Hulthén default is bit for bit, and a `vmc` run's whole-nucleus reading
+  is **0.887076** — one Hamiltonian end to end, and C5.5's own third table row.
+  **And the secondary defect:** `validate()` accepted `cluster_wave` on
+  `Inclusive` and `CoherentLi6`, where it is never read — the mechanism by
+  which C5.5's 11.61 % reached a user who thought they had asked for a VMC
+  ⁶Li. It is now refused, as `cluster_vmc_mc_sigma` (a 0.02 % effect) already
+  was. `phase_C_numbers.md` §C5.5b, **T27**.
+
+### 11.5 O3 — what is bounded offline, and C6 — the collaboration ask reconciled (2026-09-04)
+
+**O3, partially bounded.** The question — how much would the
+incoherent/coherent split move if the α core were sampled from genuine
+correlated GFMC ⁴He configurations instead of an uncorrelated product of
+one-body densities — stays **unanswerable from this repository** in the form
+it was asked: no configuration table for any nucleus is in this tree, and the
+split is a property of a Good–Walker amplitude's configuration-to-
+configuration fluctuation, which nothing here computes. What *can* be
+bounded with data already committed: `data/vmc/bonus_other_clusters/he4.dd`
+is a genuinely correlated VMC overlap of the same ⁴He wavefunction onto an
+α → d+d channel (Forest *et al.*, PRC 54, 646 (1996), the same method as
+`li6.ad`/`li7.at`). `validation/o3_alpha_correlation_bound.py` compares its
+own relative-motion second moment to the analytic prediction of an
+**uncorrelated** product of `he4.density` for the identical observable — the
+separation between the centroids of the α's two 2-nucleon halves, ⟨D²⟩ =
+(4/3)R₁² exactly, independent of recentring and of which 2-2 partition is
+chosen (worked in the module's own docstring) — and measures the correlated
+value **18.2 % above** that null in variance (**8.7 %** in rms; r_rms 1.809 fm
+correlated vs. 1.664 fm uncorrelated). **Reading**: genuine 4-body correlation
+is a several-to-twenty-percent effect on this kind of position-space moment
+in this nucleus, not a factor of several — small next to the factor-7.5
+quadrupole gap (§11.2) — but this is a different observable standing in for
+the one O3 actually asks about, and it does not close O3. What genuinely
+needs the configurations: the incoherent/coherent split itself.
+
+**C6 — the collaboration ask, reconciled.** Two committed copies of the
+Mäntysaari-group ask disagreed (this section's former paragraph and
+`design_G_cluster_config.md` §10's, by one number: "3 %" vs "4 %" on the
+α+d model's point-radius agreement — both correct, against different
+reference radii). §11.2 above now points to the single reconciled draft,
+`docs/open_items/run_2026-09-03/mantysaari_collaboration_draft.md`, which is
+informed by §11.3's O5 answer: the letter's original request (c) asked the
+group to run their polarised J/ψ machinery on this repository's ⁶Li
+configuration tables, and §11.3 shows that channel is **marginally
+measurable** — as a **BAND**, never as a point: **2.63 σ at the band's low
+edge and 2.84–3.29 σ at its top, with 3 σ at 8.3–13.0 fb⁻¹/u**, inside the
+{1, 10, 100} band at both ends and open below, and with the crossing of 3 σ at
+the top **not established** (§11.3b–c; the 2.62 σ / 13.1 fb⁻¹/u point is the
+band's uncorrected middle and may not be quoted alone). The
+reconciled draft keeps requests (a) and (b) (the GFMC configurations and the
+code generalization — both channel-independent, and (a) is the only route to
+closing O3 above) and keeps (c) as a request to perform the calculation, moved
+to **photoproduction** (Q² < 0.1, which is 85 % of the rate and where
+[Mant24]'s own Fig. 4 lives), stating the deciding band and the four
+unestablished factors plainly. *(An intermediate version of this paragraph
+said the channel was "blind at any EIC luminosity this repository has ever
+quoted" and rewrote (c) into a question about whether to bother; §11.3a is the
+record of why that was withdrawn.)* **It is not sent. Sending it, in whatever form, is the author's
+decision**, and the draft says so at its own top.
 
 ## 12–13. Engineering
 

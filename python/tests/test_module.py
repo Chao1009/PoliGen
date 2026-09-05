@@ -1,5 +1,6 @@
 """The module imports, and the bound surface is the one docs/USAGE.md uses."""
 
+import math
 import os
 import re
 
@@ -501,3 +502,278 @@ def test_fsi_weight_reaches_hepmc_weights0(tmp_path):
     for ev, ln in zip(events, wlines):
         assert ev.weight != 1.0
         assert float(ln[1]) == pytest.approx(ev.weight, rel=1e-9)
+
+
+# ------------------------------- open items C4, C5.1 - C5.5 (2026-09-04)
+#
+# The Python mirrors of tests/test_coherent.cpp T10b,
+# tests/test_cluster_config.cpp T23 and tests/test_tagged.cpp T24-T26.
+# Numbers: docs/open_items/run_2026-09-03/phase_C_numbers.md sections C4, C5.
+
+
+def test_c4_delta_b_is_defined_and_eps_b0_is_a_deuteron_number():
+    sc = lg._lipolgen.CoherentScenario()
+    # a_2(m) = -(Delta B_m / 2)|t|, exactly, at every m
+    for t in (0.01, 0.05, 0.2, 0.3):
+        for m in (0, 1, -1):
+            assert sc.a2_m_state(t, m) == pytest.approx(
+                -0.5 * sc.delta_b_m(m) * t, rel=1e-14)
+    # eps_b0 = 2 Delta B_{+-1}/B = -Delta B_0/B (the old label was off by a sign)
+    assert sc.eps_b0 == pytest.approx(2.0 * sc.delta_b_m(1) / sc.slope_b,
+                                      rel=1e-14)
+    assert sc.eps_b0 == pytest.approx(-sc.delta_b_m(0) / sc.slope_b, rel=1e-14)
+    # slope_at_azimuth IS the definition, and its phi average is B
+    assert sc.slope_at_azimuth(0.0, 0) == pytest.approx(
+        sc.slope_b + sc.delta_b_m(0), rel=1e-14)
+    assert sc.slope_at_azimuth(math.pi / 4.0, 1) == pytest.approx(
+        sc.slope_b, abs=1e-12)
+    # the shipped default implies a 6Li quadrupole 11.4x the measured one
+    q_matter = lg.quadrupole_from_a2_slope(sc.a2_m_state(1.0, 1), 6)
+    assert q_matter == pytest.approx(-1.8690781872, rel=1e-9)
+    assert 0.5 * q_matter / lg.LI6_QUADRUPOLE_FM2 == pytest.approx(
+        11.4246832958, rel=1e-9)
+    # and the measured-6Li band it should be compared against
+    s = lg.ClusterConfigSampler()
+    band = s.quadrupole_band_fm2()
+    eps = [-4.0 * lg.a2_from_quadrupole(2.0 * q, 6, 1.0, 1) / sc.slope_b
+           for q in band]
+    assert eps[0] == pytest.approx(-0.0070023, rel=1e-4)
+    assert eps[1] == pytest.approx(-0.0171209, rel=1e-4)
+    assert eps[2] == pytest.approx(-0.0526853, rel=1e-4)
+    assert abs(sc.eps_b0) > abs(eps[2])
+    # eps_b0 and slope_b are NOT independent: the physics is their product
+    hi = lg._lipolgen.CoherentScenario()
+    hi.slope_b = 60.0
+    assert (lg.quadrupole_from_a2_slope(hi.a2_m_state(1.0, 1), 6) / q_matter
+            == pytest.approx(1.2, rel=1e-12))
+
+
+def test_c5_1_eta_is_a_converter_not_a_second_dial():
+    s = lg.ClusterConfigSampler()
+    q = s.quadrupole_for_eta(lg.LI6_ETA_DS_GK)
+    assert q == pytest.approx(-0.1842160146606, rel=1e-9)
+    o = lg._lipolgen.ClusterConfigOptions()
+    o.quadrupole_target_fm2 = q
+    d = lg.ClusterConfigSampler(o)
+    assert d.asymptotic_ds_ratio() == pytest.approx(lg.LI6_ETA_DS_GK, rel=1e-12)
+    # exact on a dialled sampler too, because eta is linear in the dial
+    assert d.quadrupole_for_eta(lg.LI6_ETA_DS_GK) == pytest.approx(q, rel=1e-12)
+    # the GK band spans a SIGN CHANGE in Q
+    sig = math.hypot(lg.LI6_ETA_DS_GK_STAT, lg.LI6_ETA_DS_GK_SYST)
+    assert s.quadrupole_for_eta(lg.LI6_ETA_DS_GK - sig) == pytest.approx(
+        -0.4004752268, rel=1e-9)
+    assert s.quadrupole_for_eta(lg.LI6_ETA_DS_GK + sig) > 0.0
+    with pytest.raises(RuntimeError):
+        s.quadrupole_for_eta(-0.10)
+
+
+@pytest.mark.skipif(not _have_vmc(), reason="data/vmc is not present")
+def test_c5_2_the_vmc_tables_carry_their_monte_carlo_band():
+    L = lg._lipolgen
+    c0 = L.li6_alpha_channel(source=L.ClusterWaveSource.VmcAV18)
+    for w in c0.waves:
+        assert w.vmc.has_errors
+        assert len(w.vmc.dpsi) == len(w.vmc.psi)
+        cor, quad = w.vmc.norm2_error()
+        assert cor > quad > 0.0
+    cor, quad = c0.waves[1].vmc.norm2_error()
+    assert cor / c0.waves[1].vmc.norm2() == pytest.approx(0.016176, rel=1e-2)
+    # n_sigma = 0 is bit for bit the cached table
+    assert L.li6_alpha_channel(source=L.ClusterWaveSource.VmcAV18,
+                               vmc_mc_sigma=0.0).waves[1].prob \
+        == c0.waves[1].prob
+    # the band: P_D moves ~1.1 % per sigma, the tensor dilution 0.02 %
+    m0 = L.TaggedModel(c0)
+    mp = L.TaggedModel(L.li6_alpha_channel(
+        source=L.ClusterWaveSource.VmcAV18, vmc_mc_sigma=1.0))
+    assert mp.channel.waves[1].prob / lg.VMC_P_D_LI6 == pytest.approx(
+        1.011346, rel=1e-4)
+    assert abs(mp.tensor_dilution() / m0.tensor_dilution() - 1.0) < 3e-4
+    # a band that would be silently ignored is refused
+    with pytest.raises(RuntimeError):
+        L.li6_alpha_channel(source=L.ClusterWaveSource.Hulthen,
+                            vmc_mc_sigma=1.0)
+    cfg = lg.make_config(channel="tagged-alpha", events=10)
+    cfg.cluster_vmc_mc_sigma = 1.0
+    with pytest.raises(RuntimeError):
+        cfg.validate()
+    cfg.cluster_wave = L.ClusterWaveSource.VmcAV18
+    cfg.validate()
+
+
+@pytest.mark.skipif(not _have_vmc(), reason="data/vmc is not present")
+def test_c5_4_the_deuteron_control_on_av18():
+    L = lg._lipolgen
+    assert L.deuteron_av18_p_d() == pytest.approx(0.0575998919874, rel=1e-9)
+    assert L.deuteron_av18_p_d() / lg.P_D_DEUTERON == pytest.approx(1.28,
+                                                                    rel=1e-4)
+    h = L.TaggedModel(L.deuteron_channel())
+    v = L.TaggedModel(L.deuteron_channel(source=L.ClusterWaveSource.VmcAV18))
+    assert h.channel.waves[1].prob == lg.P_D_DEUTERON
+    assert v.channel.waves[1].prob == L.deuteron_av18_p_d()
+    assert v.vector_dilution() / h.vector_dilution() - 1.0 == pytest.approx(
+        -0.020268, rel=1e-3)
+    assert v.tensor_dilution() / h.tensor_dilution() - 1.0 == pytest.approx(
+        -0.011822, rel=1e-3)
+    # the relative S-D sign does NOT flip: psi_2 = +W for the real deuteron
+    assert v.channel.waves[0].vmc(0.05) > 0.0
+    assert v.channel.waves[1].vmc(0.05) > 0.0
+    assert not v.channel.waves[1].vmc.has_errors
+
+
+@pytest.mark.skipif(not _have_vmc(), reason="data/vmc is not present")
+def test_c5_5_the_inclusive_tagged_drift_and_why_substitution_is_not_the_fix():
+    L = lg._lipolgen
+    # on the Hulthen default the two ARE one wave function
+    hul = L.TaggedModel(L.li6_alpha_channel())
+    assert hul.vector_dilution() == pytest.approx(1.0 - 1.5 * lg.P_D_LI6,
+                                                  rel=2e-5)
+    assert lg.LI6_CLUSTER_POLARIZATION == lg.li6_cluster_polarization(
+        lg.P_D_LI6, lg.P_D_DEUTERON)
+    # under VmcAV18 they drift: +11.61 % vector, +6.58 % rank-2
+    vmc = L.TaggedModel(L.li6_alpha_channel(
+        source=L.ClusterWaveSource.VmcAV18))
+    assert vmc.vector_dilution() / hul.vector_dilution() - 1.0 \
+        == pytest.approx(0.116131, rel=1e-4)
+    assert vmc.tensor_dilution() / lg.LI6_B1_RANK2_TRANSFER - 1.0 \
+        == pytest.approx(0.065762, rel=1e-4)
+    assert lg.LI6_CLUSTER_POLARIZATION_VMC / lg.LI6_CLUSTER_POLARIZATION - 1.0 \
+        == pytest.approx(0.116119, rel=1e-4)
+    # substitution is NOT the fix: it moves AWAY from the ab initio anchor
+    ab = lg.LI6_POLARIZATION_VMC_SIX_BODY
+    assert lg.LI6_CLUSTER_POLARIZATION / ab - 1.0 == pytest.approx(-0.04336,
+                                                                   rel=1e-3)
+    assert lg.LI6_CLUSTER_POLARIZATION_VMC / ab - 1.0 == pytest.approx(
+        +0.06772, rel=1e-3)
+    both = lg.li6_cluster_polarization(lg.VMC_P_D_LI6, L.deuteron_av18_p_d())
+    assert both == pytest.approx(0.8870761569, rel=1e-8)
+    assert abs(lg.LI6_CLUSTER_POLARIZATION / ab - 1.0) \
+        < abs(lg.LI6_CLUSTER_POLARIZATION_VMC / ab - 1.0)
+
+
+@pytest.mark.skipif(not _have_vmc(), reason="data/vmc is not present")
+def test_c5_5b_one_run_one_deuteron():
+    """`--cluster-wave vmc` selects ONE deuteron everywhere it is read.
+
+    Until 2026-09-04 the alpha-d relative motion came from the ANL VMC
+    AV18+UX overlap while the EMBEDDED deuteron stayed on the scenario
+    Hulthen P_D = 0.045 in both places a tagged-alpha run reads it -- the
+    struck cluster's g1 and the T1 spin draw -- so every polarized
+    tagged-alpha observable was 2.069 % high against the wave function the
+    flag claims to select.
+    """
+    L = lg._lipolgen
+    h = L.li6_alpha_channel()
+    v = L.li6_alpha_channel(source=L.ClusterWaveSource.VmcAV18)
+    # the default is beams.DEUTERON() itself, bit for bit
+    assert h.dis_target.eff_pol_p == lg.deuteron().eff_pol_p
+    assert h.dis_target.eff_pol_p == lg.DEUTERON_VECTOR_POLARIZATION
+    # the VMC one is the same Ion with the AV18 D state, and nothing else
+    assert (v.dis_target.name, v.dis_target.A, v.dis_target.Z,
+            v.dis_target.spin) == (h.dis_target.name, h.dis_target.A,
+                                   h.dis_target.Z, h.dis_target.spin)
+    assert v.dis_target.eff_pol_p == lg.vector_dilution_of(
+        L.deuteron_av18_p_d())
+    assert v.dis_target.eff_pol_n == v.dis_target.eff_pol_p
+    # the size that was wrong, and it is EXACT: g1A is linear in eff_pol
+    was_high = h.dis_target.eff_pol_p / v.dis_target.eff_pol_p
+    assert was_high - 1.0 == pytest.approx(0.0206872095, rel=1e-8)
+    k_now = L.InclusiveKernel(v.dis_target)
+    k_before = L.InclusiveKernel(lg.deuteron())
+    for x, q2 in ((0.05, 2.0), (0.1, 5.0), (0.3, 10.0), (0.5, 20.0)):
+        assert k_before.tables(x, q2).g1 / k_now.tables(x, q2).g1 \
+            == pytest.approx(was_high, rel=1e-12)
+    # the T1 breakup follows too.  `BreakupOptions.source` defaults to
+    # Hulthen and `Pipeline` forwards `cluster_wave` into it; the model it
+    # builds is `deuteron_channel(beta, p_d, source)`, and the gate is that
+    # the dilution the SPIN DRAW implies is the one the RATE uses.  (The
+    # `ClusterBreakup` object itself is checked in C++ T27.)
+    assert L.BreakupOptions().source == L.ClusterWaveSource.Hulthen
+    assert L.TaggedModel(L.deuteron_channel()).vector_dilution() \
+        == pytest.approx(h.dis_target.eff_pol_p, rel=1e-5)
+    assert L.TaggedModel(L.deuteron_channel(
+        source=L.ClusterWaveSource.VmcAV18)).vector_dilution() \
+        == pytest.approx(v.dis_target.eff_pol_p, rel=1e-5)
+    assert L.deuteron_av18().eff_pol_p == v.dis_target.eff_pol_p
+    # what one --cluster-wave vmc run now says 6Li's polarization is: C5.5's
+    # THIRD row, 0.887076, not the mongrel 0.905427 it used to be
+    whole = L.TaggedModel(v).vector_dilution() * v.dis_target.eff_pol_p
+    assert whole == pytest.approx(
+        lg.li6_cluster_polarization(lg.VMC_P_D_LI6, L.deuteron_av18_p_d()),
+        rel=2e-5)
+    assert whole / lg.LI6_CLUSTER_POLARIZATION_VMC - 1.0 == pytest.approx(
+        -0.020270, rel=2e-3)
+    # 7Li deliberately does not move: no AV18 A = 3 wave function exists here
+    assert L.li7_alpha_channel(source=L.ClusterWaveSource.VmcAV18) \
+        .dis_target.eff_pol_p == L.li7_alpha_channel().dis_target.eff_pol_p
+
+
+def test_c5_5b_cluster_wave_is_refused_where_it_is_never_read():
+    L = lg._lipolgen
+    for channel, isotope, tagged in (("inclusive", "6Li", False),
+                                     ("coherent", "6Li", False),
+                                     ("tagged-alpha", "6Li", True),
+                                     ("tagged-d-p", "d", True)):
+        cfg = lg.make_config(isotope=isotope, channel=channel, events=10)
+        cfg.validate()                      # Hulthen is legal everywhere
+        cfg.cluster_wave = L.ClusterWaveSource.VmcAV18
+        if tagged:
+            cfg.validate()
+        else:
+            with pytest.raises(RuntimeError):
+                cfg.validate()
+
+
+def test_shifted_by_sigma_is_the_identity_without_errors():
+    """`VmcRadial.shifted_by_sigma` is bound in `python/bindings.cpp` and was
+    covered only indirectly, through `li6_alpha_channel(vmc_mc_sigma=...)`.
+    A table built from Python carries no error column, so every shift of it
+    must return the table unchanged -- that is what makes the band's zero row
+    bit for bit today's numbers.
+    """
+    L = lg._lipolgen
+    k = [0.0, 0.1, 0.2, 0.4]
+    psi = [1.0, 0.6, 0.25, 0.05]
+    v = L.VmcRadial(k, psi, 0, "hand-built, no MC error column")
+    assert not v.has_errors and list(v.dpsi) == []
+    for n in (0.0, 1.0, -3.0):
+        s = v.shifted_by_sigma(n)
+        assert list(s.psi) == psi
+        assert list(s.k) == k
+        assert s.l == v.l
+        assert s.provenance == v.provenance
+        assert s.norm2() == v.norm2()
+
+
+@pytest.mark.skipif(not _have_vmc(), reason="data/vmc is not present")
+def test_shifted_by_sigma_moves_psi_by_n_times_dpsi_fully_correlated():
+    """On a real ANL table: psi -> psi + n*dpsi elementwise and in the SAME
+    direction at every k (the fully correlated envelope, not a per-point
+    error), dpsi itself is carried through unchanged so the band can be
+    re-applied, the provenance records the shift, and n = 0 returns the table
+    itself.  The `vmc_mc_sigma` run knob must agree with it point by point.
+    """
+    L = lg._lipolgen
+    w = L.li6_alpha_channel(source=L.ClusterWaveSource.VmcAV18).waves[1].vmc
+    assert w.has_errors
+    psi, dpsi = list(w.psi), list(w.dpsi)
+    assert any(d != 0.0 for d in dpsi)
+
+    assert list(w.shifted_by_sigma(0.0).psi) == psi
+    assert w.shifted_by_sigma(0.0).provenance == w.provenance
+
+    for n in (1.0, -1.0, 2.5):
+        s = w.shifted_by_sigma(n)
+        assert list(s.k) == list(w.k)
+        assert s.l == w.l
+        assert list(s.dpsi) == dpsi           # the band survives the shift
+        assert "sigma_MC" in s.provenance and "CORRELATED" in s.provenance
+        assert len(s.psi) == len(psi)
+        for a, b, d in zip(list(s.psi), psi, dpsi):
+            assert a == pytest.approx(b + n * d, rel=0, abs=1e-15)
+
+    # what `--cluster-vmc-mc-sigma` does IS this function, not a second path
+    shifted = L.li6_alpha_channel(source=L.ClusterWaveSource.VmcAV18,
+                                  vmc_mc_sigma=1.0).waves[1].vmc
+    assert list(shifted.psi) == pytest.approx(list(w.shifted_by_sigma(1.0).psi),
+                                              rel=1e-15, abs=0)

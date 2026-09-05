@@ -105,18 +105,89 @@ def test_analytic_predictors_reproduce_the_design(sampler):
 def test_the_quadrupole_band_is_mandatory_and_computed(sampler):
     band = sampler.quadrupole_band_fm2()
     assert len(band) == 3
-    assert band[0] == pytest.approx(-0.0818)              # measured, TUNL
+    assert band[0] == pytest.approx(lg.LI6_QUADRUPOLE_FM2)  # measured, TUNL
     assert band[1] == pytest.approx(lg.LI6_QUADRUPOLE_GFMC_FM2)
     assert band[2] == pytest.approx(0.5 * sampler.q_matter_analytic_fm2(1))
     # the model overshoots the measurement by a factor ~7.5
     assert 6.0 < abs(band[2] / band[0]) < 9.0
     # and it MOVES with the dial rather than being a literal
     o = lg.ClusterConfigOptions()
-    o.quadrupole_target_fm2 = -0.0818
+    o.quadrupole_target_fm2 = lg.LI6_QUADRUPOLE_FM2
     dialed = lg.ClusterConfigSampler(o)
-    assert dialed.quadrupole_band_fm2()[2] == pytest.approx(-0.0818, abs=1e-9)
+    assert dialed.quadrupole_band_fm2()[2] == pytest.approx(
+        lg.LI6_QUADRUPOLE_FM2, abs=1e-9)
     assert dialed.quadrupole_dial_s() == pytest.approx(0.4032, abs=1e-3)
     assert sampler.quadrupole_dial_s() == 1.0
+
+
+def test_eta_rides_the_dial_and_the_two_factor_q_budget(sampler):
+    """C++ T22b, mirrored.  The (G9) dial mutates R_2 in place and
+    asymptotic_ds_ratio() reads the mutated waves, so eta is EXACTLY linear in
+    the dial and the quadrupole budget is TWO factors, not three."""
+    q0 = sampler.quadrupole_band_fm2()[2]
+    eta0 = sampler.asymptotic_ds_ratio()
+    assert q0 == pytest.approx(-0.615448256134, rel=1e-11)
+    assert eta0 == pytest.approx(-0.0482160903696, rel=1e-11)
+
+    o = lg.ClusterConfigOptions()
+    o.quadrupole_target_fm2 = -0.18557        # the eta-matched ANCHOR
+    s = lg.ClusterConfigSampler(o)
+    assert s.quadrupole_dial_s() == pytest.approx(0.520019565622, rel=1e-11)
+    assert s.asymptotic_ds_ratio() == pytest.approx(-0.02507331037, rel=1e-11)
+    assert s.quadrupole_band_fm2()[2] == pytest.approx(-0.18557, abs=1e-12)
+    assert s.eps_b0_equivalent() == pytest.approx(-0.0152637033625, rel=1e-11)
+    assert s.a2_from_geometry(0.3, 1) == pytest.approx(0.0595705416512,
+                                                      rel=1e-11)
+    # exact linearity: eta(s) = s * eta(1), to machine precision
+    assert s.asymptotic_ds_ratio() == pytest.approx(
+        s.quadrupole_dial_s() * eta0, rel=1e-13)
+
+    # the budget: two factors that telescope onto the documented 7.5
+    f_eta = q0 / s.quadrupole_band_fm2()[2]
+    f_res = s.quadrupole_band_fm2()[2] / lg.LI6_QUADRUPOLE_FM2
+    assert f_eta == pytest.approx(3.3165288362, rel=1e-11)
+    assert f_res == pytest.approx(2.26858190709, rel=1e-11)
+    assert f_eta * f_res == pytest.approx(7.52381731215, rel=1e-11)
+    # 1/S_alpha-d is ALREADY inside q0 -- a ceiling, never a third factor
+    assert 1.0 / sampler.s_alpha_d() == pytest.approx(1.1706416896, rel=1e-10)
+    assert f_eta * (1.0 / sampler.s_alpha_d()) * f_res == pytest.approx(
+        8.80769421057, rel=1e-11)
+
+
+def test_the_gk_eta_band_spans_a_sign_change_in_q():
+    """THE BAND IS THE PHYSICS.  George & Knutson give eta = -0.025(6)(10);
+    mapped through the (linear) dial that is Q_charge from -0.4005 fm^2 to
+    +0.0298 fm^2 -- through zero, at 0.86 sigma."""
+    sig = math.hypot(lg.LI6_ETA_DS_GK_STAT, lg.LI6_ETA_DS_GK_SYST)
+    assert lg.LI6_ETA_DS_GK == pytest.approx(-0.025)
+    assert sig == pytest.approx(0.0116619037897, rel=1e-11)
+
+    def dialed(target):
+        o = lg.ClusterConfigOptions()
+        o.quadrupole_target_fm2 = target
+        return lg.ClusterConfigSampler(o)
+
+    far = dialed(-0.4004752268)
+    assert far.asymptotic_ds_ratio() == pytest.approx(lg.LI6_ETA_DS_GK - sig,
+                                                      rel=1e-10)
+    near = dialed(0.0297575059)
+    assert near.asymptotic_ds_ratio() == pytest.approx(lg.LI6_ETA_DS_GK + sig,
+                                                       rel=1e-10)
+    assert near.quadrupole_band_fm2()[2] > 0.0        # the WRONG sign
+    zero = dialed(1e-9)                               # 0.0 is the OFF sentinel
+    assert zero.asymptotic_ds_ratio() == pytest.approx(-0.0149706307015,
+                                                       rel=1e-10)
+    assert abs(zero.asymptotic_ds_ratio() - lg.LI6_ETA_DS_GK) < sig
+
+    # so eta cannot tell the measured Q from the GFMC one: +0.48 and -0.07 sigma
+    meas = dialed(lg.LI6_QUADRUPOLE_FM2)
+    gfmc = dialed(lg.LI6_QUADRUPOLE_GFMC_FM2)
+    assert (meas.asymptotic_ds_ratio() - lg.LI6_ETA_DS_GK) / sig == \
+        pytest.approx(0.476854105339, rel=1e-9)
+    assert (gfmc.asymptotic_ds_ratio() - lg.LI6_ETA_DS_GK) / sig == \
+        pytest.approx(-0.0732566724846, rel=1e-8)
+    assert abs(meas.asymptotic_ds_ratio() - lg.LI6_ETA_DS_GK) < sig
+    assert abs(gfmc.asymptotic_ds_ratio() - lg.LI6_ETA_DS_GK) < sig
 
 
 def test_a2_from_quadrupole_reproduces_the_published_deuteron():
@@ -293,7 +364,8 @@ def test_cli_writes_a_table_and_a_filled_sidecar(tmp_path):
     for entry in meta["inputs"]:
         assert entry["md5"] is not None and len(entry["md5"]) == 32
     assert meta["git"] is None or len(meta["git"]) == 40
-    assert meta["quadrupole_band_fm2"]["measured"] == pytest.approx(-0.0818)
+    assert meta["quadrupole_band_fm2"]["measured"] == pytest.approx(
+        lg.LI6_QUADRUPOLE_FM2)
     assert meta["caveats"]
     m = json.loads(mom.read_text())
     s = lg.ClusterConfigSampler()

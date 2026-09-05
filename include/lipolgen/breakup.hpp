@@ -32,7 +32,9 @@
 ///   * The internal relative momentum comes from the deuteron's OWN wave
 ///     function -- the `deuteron_channel()` `TaggedModel`, i.e. exactly the
 ///     S + D Hulthen forms of `cluster.hpp` at P_D = `P_D_DEUTERON` = 0.045
-///     and the deuteron's kappa = sqrt(2 mu S_d) = 45.7 MeV.  The draw is the
+///     and the deuteron's kappa = sqrt(2 mu S_d) = 45.7 MeV, or, on
+///     `BreakupOptions::source` = `VmcAV18`, the exact AV18 deuteron at its
+///     own P_D = 0.057600.  The draw is the
 ///     m_S-dependent joint density |A_{m_sc}(m_S; k, khat)|^2, NOT the
 ///     spherical marginal: the D wave correlates khat with the spin, and that
 ///     correlation is what makes the struck nucleon's polarization and its
@@ -48,6 +50,11 @@
 ///     nucleon polarization of the textbook deuteron comes out of the sampling
 ///     rather than being imposed on it.  `Particle::pol` carries the SAMPLED
 ///     +-1 helicity label (LHEF SPINUP), not the expectation value.
+///     THAT IS ALSO THE CONSISTENCY GATE ON `source`: the dilution this draw
+///     implies must equal the one the RATE is computed with,
+///     `TaggedChannel::dis_target.eff_pol_*` -- 0.932495 against 0.9325 on
+///     `Hulthen` and 0.913595 against 0.913600 on `VmcAV18`, a grid
+///     quadrature against a closed form both times (T27).
 ///
 /// ---------------------------------------------------------------------------
 /// THE TRITON (7Li alpha tag).  TWO models, selected by
@@ -198,6 +205,25 @@ struct BreakupResult {
 struct BreakupOptions {
   double beta = BETA_DEFAULT;      ///< short-range scale of the radial forms
   double p_d = P_D_DEUTERON;       ///< deuteron D-state probability (0.045)
+  /// WHICH DEUTERON THE T1 BREAKUP RESOLVES INTO (C5.5b, 2026-09-04).
+  /// `Hulthen` (the default) is the analytic S + D pair at `p_d` above, bit
+  /// for bit what this module always did; `VmcAV18` is the exact AV18
+  /// deuteron of `fdeut.av18` at its own P_D = 0.057600 and then IGNORES
+  /// `beta` and `p_d` -- the same table `deuteron_channel(.., VmcAV18)` and
+  /// `DEUTERON_AV18()` use.
+  ///
+  /// IT EXISTS BECAUSE THIS MODULE CARRIES A DEUTERON WAVE FUNCTION OF ITS
+  /// OWN.  `Pipeline` already forwards `cluster_beta` here for exactly that
+  /// reason ("the T1 tier would describe a different nucleus from the T0
+  /// one"), and until 2026-09-04 the wave-function FAMILY was not forwarded:
+  /// a `--cluster-wave vmc` tagged-alpha run drew its struck-nucleon spin
+  /// from the Hulthen deuteron at P_D = 0.045 while its rate was computed on
+  /// the AV18 one, 2.0688 % apart, inside one run.
+  ///
+  /// THE TRITON PATH IS DELIBERATELY NOT AFFECTED: this tree has no AV18
+  /// A = 3 wave function to switch to, so the 7Li sequential/spectral
+  /// branches stay where they are on either setting.
+  ClusterWaveSource source = ClusterWaveSource::Hulthen;
   double kappa_nn = KAPPA_NN_VIRTUAL;
   double k_max = 1.2;              ///< internal-momentum grid ceiling [GeV]
   std::size_t nk = 280, nc = 96;   ///< the deuteron model's own grid

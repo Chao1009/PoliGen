@@ -817,6 +817,11 @@ inside data), `data/vmc/deuteron/fdeut.av18` (likewise).
    shifts every one of them. `run_2026-09-03/PLAN.md:37` already schedules
    `--fix` at the end of each phase; this is the concrete reason it is needed
    here.
+   *(Superseded 2026-09-04: the ±2 window is gone. The gate is STRICT by
+   default — the anchor must land on the line that declares the name — and
+   `b1_nuclear.hpp:11-28` is itself now a fingerprinted RANGE citation, so
+   editing that block fails the gate until the row is re-read and
+   `--record-ranges` is run. See `phase_C_numbers.md` §§C7–C8.)*
 4. **`validation/b1_li6_table.py`'s emitted footer (`:243-248`) is generated
    text.** It is not prose in a document; every future report carries it. It is
    the one ban site that will silently re-appear after the lift if only the

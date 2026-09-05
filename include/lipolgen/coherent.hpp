@@ -91,6 +91,258 @@ struct MantysaariRow {
 };
 const std::vector<MantysaariRow>& mantysaari_a2_deuteron();
 
+/// One eSTARlight coherent vector-meson row for e 10 GeV x 6Li 99.5 GeV/u
+/// (LiPolGen beam configuration 1), the EXTERNAL unpolarized rate baseline of
+/// open item 11.1.  Run 2026-09-02 at commit
+/// 939b11a24499398392d959db81c7502aeec91046, 2e5 events per channel; the run
+/// log, the input files and the adversarial re-check are
+/// docs/open_items/run_2026-09-02/estarlight_li6.md (sec. 2a, 2b, 2e, 5).
+/// This is the SINGLE code home of those cross sections; every other mention
+/// in the tree is prose quoting it.
+///
+/// `sigma_nb` is over the 0.1 < Q^2 < 100 GeV^2 window (which is
+/// arXiv:2511.05638's ACCEPTANCE-STUDY range verbatim -- a kinematic range
+/// copied from that paper, NOT a physics window, and NOT eSTARlight's full
+/// Q^2 reach) at eSTARlight's DEFAULT light-nucleus
+/// density, R_G = 1.2 A^{1/3} = 2.1805 fm.  Most of the coherent rate is
+/// BELOW it: see `estarlight_li6_q2_floors()`, where removing the 0.1 GeV^2
+/// floor multiplies sigma by 6.75 (J/psi), 21.7 (phi), 35.2 (rho).
+/// `sigma_q7_nb` is the same run
+/// restricted to Q^2 > 0.7 GeV^2, LiPolGen's own generator window (sec. 5);
+/// `sigma_rmeas_nb` is the 0.1 < Q^2 < 100 run with the Angeli-Marinova
+/// measured rms charge radius 2.589 fm patched in (sec. 2b) -- the SAME
+/// physics with a different density, and the leading rate systematic, +-30 %.
+/// `b_fit` is the maximum-likelihood dN/d|t| slope of that same default-
+/// density sample over 0 < |t| < 0.10 GeV^2, and it must be used WITH
+/// `sigma_nb` (a larger radius raises B by 41 % and lowers sigma by 29 %:
+/// sigma and B are not independent knobs).  `branching` is the decay actually
+/// reconstructed, as quoted in sec. 2e: J/psi -> e+e- (0.0597), phi -> K+K-
+/// (0.49), rho -> pi pi (1.0); the J/psi row deliberately does NOT include
+/// mu+mu- -- `branching_all` is the field that does, and it is what a J/psi
+/// analysis reconstructing both leptons actually has (1.4137x the reach).
+///
+/// CAVEATS THAT RIDE WITH EVERY ROW (estarlight_li6.md sec. 6): one
+/// spherically symmetric Gaussian density, so NO alpha+d clustering, NO
+/// polarization axis and NO diffractive minimum at any A; unpolarized
+/// throughout, so it constrains neither of this scenario's two tensor
+/// mechanisms (the flat gluon-transversity amplitude, the m = 0 slope
+/// modulation); no saturation.  A rate and slope baseline, never an
+/// imaging one.
+struct EstarlightLi6Row {
+  const char* vm;          ///< "jpsi" | "phi" | "rho"
+  double sigma_nb;         ///< 0.1 < Q^2 < 100 GeV^2, R_G = 2.1805 fm
+  double sigma_q7_nb;      ///< Q^2 > 0.7 GeV^2, same density
+  double sigma_rmeas_nb;   ///< 0.1 < Q^2 < 100 GeV^2, R = 2.589 fm
+  double b_fit;      ///< fitted B [GeV^-2] at the default density
+  double branching;        ///< branching fraction of the quoted decay
+  /// B [GeV^-2] of the SAME run at the measured radius R = 2.589 fm, i.e. the
+  /// slope that belongs with `sigma_rmeas_nb` (sec. 2b).  Added 2026-09-04:
+  /// it had lived only in prose and in a dict inside
+  /// validation/o5_a2_reach.py, so a re-fit of sec. 2b could not reach it.
+  double b_rmeas;
+  /// Branching fraction of EVERY reconstructible decay of the same VM, as
+  /// eSTARlight itself defines them (starlightconstants.h): J/psi
+  /// JpsiBree + JpsiBrmumu = 0.05971 + 0.05961 = 0.11932, i.e. BOTH lepton
+  /// channels; phi -> K+K- and rho -> pi pi have no second channel, so this
+  /// equals `branching` for those two.  Verified 2026-09-04 by running
+  /// PROD_PID = 443013: eSTARlight reports 106.801 pb generated against a
+  /// 1.792 nb total, i.e. 0.05960.  A J/psi analysis that reconstructs both
+  /// leptons has sqrt(branching_all / branching) = 1.4137x the reach of one
+  /// that does not -- sqrt(2) to 0.05 %.
+  double branching_all;
+};
+const std::vector<EstarlightLi6Row>& estarlight_li6_coherent();
+
+/// GLOBAL far-forward detection efficiency for COHERENT J/psi off 7Li at
+/// 18 x 118 GeV/u through the IR-8 secondary focus, arXiv:2511.05638 p. 4
+/// (Chang et al., PRD 113 (2026) 032018): "The global detection efficiency as
+/// the increasing nucleon number, from deuterium to oxygen, is 47.12 %,
+/// 32.23 %, 29.42 %, 17.75 %, ..." -- 7Li is the fourth entry.
+///
+/// WHAT IT IS.  "tagging efficiency x acceptance" (their Figs. 2 and 5 axis)
+/// for the INTACT RECOIL NUCLEUS in the Roman Pots at the secondary focus.
+/// It is not an electron-arm efficiency and does not require the scattered
+/// electron to be seen, and the paper states it "only accounts for the
+/// acceptance effect and does not incorporate the efficiencies of the
+/// detector.  Additionally, we did not account for the efficiency and
+/// acceptance of the reconstructed distribution" (p. 4, sec. IV).
+///
+/// SO IT IS A RECOIL-NUCLEUS NUMBER AND NOTHING ELSE.  It carries NO
+/// central-detector acceptance and NO reconstruction efficiency for the
+/// DECAY LEPTONS of the vector meson.  A chain of the form
+/// sigma x BR(l+l-) x COHERENT_JPSI_EFF_IR8_LI7 is therefore missing a
+/// factor A_ll x eps_ll <= 1, direction DOWN.  What is bounded: the
+/// GEOMETRIC part, which `o5_lepton_pair_acceptance()` in
+/// validation/o5_a2_reach.py computes from this tree's own
+/// `Scenario::eta_max` = 3.5 and the sample's own <W>, is 0.99 at
+/// <W> = 30.2 GeV and never below 0.89 anywhere in the accessible W range --
+/// the geometry is NOT where the factor is.  What is NOT bounded anywhere in
+/// this tree: the per-lepton tracking/PID/reconstruction efficiency.  See
+/// phase_C_numbers.md sec. C2.8 item 3b.
+///
+/// AND IT IS A TOP-ENERGY NUMBER.  18 x 117.9 GeV/u is 7Li's own top energy
+/// (Z/A x 275), NOT the 10 x 99.5 GeV/u of `estarlight_li6_coherent()`; this
+/// tree's configuration-identical eSTARlight row for those beams has
+/// <W> = 43.2 GeV against 30.2 for the 6Li sample the reach is priced on.
+/// The efficiency is NOT flat in beam energy: `chang26_he3_energy_scan()`
+/// below is the same paper measuring exactly that dependence, and it rises
+/// steeply as the energy falls.  Applying 0.1775 at 10 x 99.5 is therefore
+/// CONSERVATIVE, by a factor the scan puts at 1.12-1.16 for the energy step
+/// alone (o5_a2_reach.py, `beam_energy_scaling`).
+///
+/// WHAT IT IS NOT.  There is no 6Li number anywhere; open item O5 uses this
+/// as a STAND-IN for 6Li and for all three vector mesons, and every table it
+/// enters is also printed at efficiency 1.  THE SIZE AND THE SIGN OF THAT
+/// SUBSTITUTION ARE NOT ESTABLISHED.  Until 2026-09-04 this comment said it
+/// was "worth a further 1.16-1.22 UP" because the species list is at fixed
+/// rigidity and 6Li is lighter than 7Li.  That was a non sequitur and is
+/// RETRACTED: fixing the rigidity A/Z x E does NOT hold E/u or the total
+/// momentum fixed (see `chang26_species_efficiency()`), and read off the four
+/// entries that DO share a beam energy the substitution is x0.99 to x1.33 --
+/// it straddles 1, and its direction is undetermined
+/// (`o5_a2_reach.py`, `species_scaling_same_energy`).  Stated, not applied.
+/// Their sample was generated with 0.1 < Q^2 < 100 GeV^2, so no point of it
+/// was ever evaluated in the photoproduction region Q^2 < 0.1 that carries
+/// most of the rate (`estarlight_li6_q2_floors()`): applying it there is an
+/// EXTRAPOLATION, bounded but unmeasured.  See validation/o5_a2_reach.py and
+/// docs/open_items/run_2026-09-03/phase_C_numbers.md sec. C2.
+///
+/// The single code home of that number; before 2026-09-04 it was a literal
+/// inside validation/o5_a2_reach.py.
+inline constexpr double COHERENT_JPSI_EFF_IR8_LI7 = 0.1775;
+
+/// The ION beam energy `COHERENT_JPSI_EFF_IR8_LI7` was measured at [GeV/u]:
+/// 7Li's own top energy, Z/A x 275 = 117.857, which arXiv:2511.05638 writes
+/// as "18 x 118".  `beams.hpp` derives the same 117.9 from the AME2020
+/// masses.  Recorded beside the efficiency because the efficiency is NOT
+/// flat in it and open item O5 applies it at 99.5.
+inline constexpr double COHERENT_JPSI_EFF_IR8_LI7_E_ION_GEV = 117.9;
+
+/// <W> of THIS tree's configuration-identical eSTARlight run at those beams
+/// (7Li J/psi, 18 x 117.9, estarlight_li6.md sec. 2a) [GeV].  The 6Li sample
+/// open item O5 prices sits at 30.2 (no Q^2 floor) / 32.2 (Q^2 > 0.1), i.e.
+/// LOWER -- and by the same paper's Fig. 2 lower W means HIGHER efficiency,
+/// the same direction as the beam-energy step.  Neither is a measurement of
+/// the transfer; both say it is conservative.
+inline constexpr double COHERENT_JPSI_EFF_IR8_LI7_W_MEAN_GEV = 43.2;
+
+/// One (collision energy, global far-forward efficiency) point of
+/// arXiv:2511.05638 sec. V.B -- the SAME quantity as
+/// `COHERENT_JPSI_EFF_IR8_LI7`, measured on e+3He at three EIC energy
+/// configurations instead of one.  Verbatim (p. 5-6): "At the top collision
+/// energy, 32.23 % of the scattered 3He nuclei occur within a safe distance
+/// from the beam ... At the energy of 10 x 100 GeV^2, the total detection
+/// efficiency is 54.38 % ... For the lowest collision energy, 5 GeV electron
+/// beams on 41 GeV 3He beams, the detection efficiency is 99.77 %."
+///
+/// WHY IT IS HERE.  It is the ONLY measurement of the beam-energy dependence
+/// of this efficiency that this tree has seen, and open item O5 applies a
+/// TOP-energy 7Li number to a 10 x 99.5 GeV/u 6Li sample.  The dependence is
+/// steep and one-directional -- d ln(eff)/d ln(E_ion) = -0.866 between the
+/// first two points and -0.681 between the last two -- so the transfer is
+/// conservative, and now by a stated amount rather than by assertion.
+/// `validation/o5_a2_reach.py` reads this table; `phase_C_numbers.md`
+/// sec. C2.8 item 3a is the write-up.
+///
+/// CAVEATS.  (1) 3He, not Li: this bounds the ENERGY lever only, at fixed
+/// species.  (2) The electron energy moves with the ion energy at all three
+/// points, so the two cannot be separated here.  (3) The efficiency is
+/// bounded above by 1, so the slope must flatten -- which is why the two
+/// local slopes differ and why o5_a2_reach.py carries both as a band rather
+/// than fitting one power law.  (4) The paper labels the lower two points by
+/// the nominal PROTON configuration ("10 x 100", "5 x 41") and its text says
+/// "5 GeV electron beams on 41 GeV 3He beams", i.e. those ion energies are
+/// NOT Z/A-scaled the way the top one (183 = 2/3 x 275) is; `e_ion_gev` below
+/// is what the paper's own text says the ion beam was.
+struct Chang26EffEnergyRow {
+  double e_electron_gev;   ///< electron beam energy [GeV]
+  double e_ion_gev;        ///< 3He beam energy [GeV/nucleon], as the paper states it
+  double efficiency;       ///< global far-forward tagging efficiency x acceptance
+};
+const std::vector<Chang26EffEnergyRow>& chang26_he3_energy_scan();
+
+/// One (nucleus, beam energy, global far-forward efficiency) entry of
+/// arXiv:2511.05638's p. 4 species list -- the list
+/// `COHERENT_JPSI_EFF_IR8_LI7` is the fourth entry of -- with the beam energy
+/// each was measured at, from Fig. 2's own legend.
+///
+/// THE ONE FACT THIS TABLE EXISTS TO MAKE CHECKABLE: every entry is at the
+/// SAME MAGNETIC RIGIDITY.  A/Z x e_ion_gev = 274.0 to 275.3 GeV/e across all
+/// seven, because each nucleus is at its own top energy Z/A x 275.  So the
+/// fall from 47.12 % (2D) to 1.59 % (16O) is NOT a rigidity effect.
+///
+/// AND THAT IS ALL IT MAKES CHECKABLE.  Until 2026-09-04 this comment, and
+/// four other sites, went on: "so its A-ordering is a species lever on its
+/// own".  IT IS NOT, and the sentence is RETRACTED.  Holding A/Z x E fixed
+/// eliminates rigidity and NOTHING ELSE: at fixed R the per-nucleon energy is
+/// E/u = R Z/A and the total beam momentum is p_z = Z R, so BOTH still vary
+/// down the list -- E/u from 118 GeV/u (7Li) to 183 (3He), Z from 1 to 8,
+/// p_z from 274 to 2192 GeV.  The list is a JOINT (A, Z, E/u) lever, and
+/// nothing in this table decomposes it.  The size of the confound is not
+/// small: `chang26_he3_energy_scan()` measures d ln(eff)/d ln(E_ion) =
+/// -0.68 to -0.87, so the list's own x1.55 spread in E/u is worth up to
+/// x1.46 in the efficiency -- the whole size of the "species gain" that was
+/// being read off it.
+///
+/// WHAT CAN BE READ WITHOUT THAT CONFOUND: the FOUR entries that share a
+/// beam energy, 2D, 4He, 12C and 16O at 137 GeV/u.  6Li's own fixed-rigidity
+/// energy is Z/A x 275 = 137.5, so those four bracket A = 6 with NO energy
+/// step at all, and 4He -> 12C is the adjacent pair.  Read that way the
+/// 7Li -> 6Li substitution open item O5 has to make is x0.99 to x1.33 -- it
+/// STRADDLES 1 (`o5_a2_reach.py`, `species_scaling_same_energy`), against the
+/// x1.16-1.22 the confounded reading gave.
+///
+/// NOT A FIT.  Every one of the seven entries is carried, because it takes
+/// all of them to see both the rigidity statement and the E/u confound that
+/// rides with it.  The paper publishes no uncertainty on any of them.
+struct Chang26SpeciesEffRow {
+  const char* nucleus;   ///< "2D" | "3He" | "4He" | "7Li" | "9Be" | "12C" | "16O"
+  int a;                 ///< mass number
+  int z;                 ///< proton number
+  double e_ion_gev;      ///< beam energy [GeV/nucleon], Fig. 2's legend
+  double efficiency;     ///< global tagging efficiency x acceptance, p. 4
+};
+const std::vector<Chang26SpeciesEffRow>& chang26_species_efficiency();
+
+/// One (vector meson, Q^2 floor) row of the 2026-09-04 PHOTOPRODUCTION scan:
+/// the same eSTARlight configuration as `estarlight_li6_coherent()` (same
+/// commit 939b11a24499398392d959db81c7502aeec91046, same beams, same seed
+/// 5574531, same BREAKUP_MODE / QUANTUM_GLAUBER), re-run with MIN_GAMMA_Q2
+/// lowered.  2e5 events per default-density row, 1e5 per measured-radius row.
+///
+/// WHY IT EXISTS.  `estarlight_li6_coherent()`'s `sigma_nb` is the
+/// 0.1 < Q^2 < 100 GeV^2 window, which is arXiv:2511.05638's ACCEPTANCE-STUDY
+/// kinematic range copied verbatim -- not a physics window.  Q^2 < 0.1 GeV^2
+/// was absent from the whole chain, and it is most of the rate: 6.75x for
+/// J/psi, 21.7x for phi, 35.2x for rho.  (The one coherent vector-meson
+/// measurement this tree cites, STAR's rho0 arXiv:2204.01625, is
+/// ultraperipheral -- Q^2 ~ 0.  Whether photoproduction is where coherent
+/// J/psi is "normally" measured is not sourced here; the rate is.)  `q2_floor_gev2 = 0` means NO lower cut, i.e.
+/// eSTARlight's own kinematic limit Q^2_min = (m_e E_gamma)^2 /
+/// (E_e (E_e - E_gamma)) ~ 1e-9 GeV^2 -- the whole quasi-real region.
+///
+/// WHAT DOES NOT CHANGE.  The |t| slope: 38.9 -> 38.8 GeV^-2 for J/psi
+/// between the 0.1 floor and no floor, 0.4 %, so the recoil pT spectrum the
+/// far-forward acceptance cuts on is the same sample.  <W> falls from 32.2 to
+/// 30.2 GeV (J/psi), which by arXiv:2511.05638's own Fig. 2 moves the tagging
+/// efficiency UP, not down -- but see `COHERENT_JPSI_EFF_IR8_LI7`: no point
+/// of that efficiency was ever evaluated below Q^2 = 0.1.
+struct EstarlightLi6Q2Row {
+  const char* vm;            ///< "jpsi" | "phi" | "rho"
+  double q2_floor_gev2;      ///< MIN_GAMMA_Q2; 0 = no floor (kinematic limit)
+  double sigma_nb;           ///< default density R_G = 2.1805 fm
+  double b_fit;              ///< MLE slope over 0 < |t| < 0.10 GeV^2, same run
+  double sigma_rmeas_nb;     ///< same floor at R = 2.589 fm (patched build)
+  double b_rmeas;            ///< MLE slope of that run
+  /// <W> = sqrt(m_p^2 + 2 m_p E_gamma - Q^2) averaged over generated
+  /// events, the W of arXiv:2511.05638's own Eq. (2) [GeV]
+  /// (estarlight_li6.md sec. 2f).  In code since 2026-09-04 because the
+  /// efficiency transfer argument -- both the Q^2-floor leg and the
+  /// beam-energy leg -- runs on it, and it lived only in prose.
+  double w_mean_gev;
+};
+const std::vector<EstarlightLi6Q2Row>& estarlight_li6_q2_floors();
+
 /// Scenario parameters for coherent diffractive e+6Li (SCENARIO).
 struct CoherentScenario {
   /// Coherent fraction of the DIS rate at x -> 0; band {0.02, 0.08}.
@@ -112,8 +364,81 @@ struct CoherentScenario {
   /// FLAT cos 2phi' modulation of the coherent yield at P_zz = 1 (the
   /// gluon-transversity "exotic glue" scenario); band 3e-3 .. 1e-2.
   double amp = 0.01;
-  /// Relative slope modulation Delta B_0/B of the m = 0 state -- the
-  /// DEFORMATION mechanism; band -(0.04 .. 0.13).
+  /// The DEFORMATION mechanism's one number.  A SCENARIO, and (open item O4,
+  /// closed 2026-09-04) one whose shipped value is NOT a 6Li number.
+  ///
+  /// DELTA B, DEFINED HERE AND NOWHERE ELSE.  Before 2026-09-04 this header
+  /// used the symbol Delta B in three docstrings and never defined it, which
+  /// left the label "Delta B_0/B" ambiguous at the level of a sign
+  /// (docs/open_items/run_2026-09-02/design_G_cluster_config.md sec. 2.8 lists
+  /// the three defensible readings).  The definition, once:
+  ///
+  ///     |F_m(|t|, Phi)|^2 = exp(-|t| [B + Delta B_m cos 2(Phi - Phi_S)])
+  ///
+  /// with Phi the azimuth of the momentum transfer about the beam, Phi_S the
+  /// spin azimuth, B = `slope_b` the phi-averaged slope and Delta B_m the
+  /// cos 2Phi coefficient OF THE SLOPE, in GeV^-2.  For a Gaussian transverse
+  /// profile that is exactly Delta B_m = delta_m / 2 with
+  /// delta_m = <x^2> - <y^2> per nucleon in state m (design (G7)), and
+  /// expanding to first order in Delta B |t| against the anchor's
+  /// 1 + 2 a_2 cos 2Phi normalization gives
+  ///
+  ///     a_2(m) = -(Delta B_m / 2) |t| = -(delta_m / 4) |t|
+  ///
+  /// which is `a2_m_state` exactly.  `delta_b_m(m)` is the single code home of
+  /// Delta B_m and `slope_at_azimuth` is the slope above; nothing else in the
+  /// tree recomputes either.
+  ///
+  /// SO WHAT eps_b0 IS: eps_b0 = delta_{+-1} / B, i.e.
+  ///
+  ///     eps_b0 = +2 Delta B_{+-1} / B = -1 x Delta B_0 / B.
+  ///
+  /// The pre-2026-09-04 label "relative slope modulation Delta B_0/B of the
+  /// m = 0 state" was therefore off BY A SIGN, not by a factor 2; the code was
+  /// right and the label was wrong.  eps_b0 < 0 with P_zz > 0 gives a_2 > 0.
+  ///
+  /// eps_b0 AND `slope_b` ARE NOT INDEPENDENT.  Every observable here uses the
+  /// PRODUCT delta_{+-1} = eps_b0 * slope_b (a2_deformation is
+  /// -(P_zz/4) eps_b0 B |t|), and delta is the physics -- a transverse
+  /// second-moment difference, fixed by the target's quadrupole and NOT by how
+  /// steep its form factor is.  So a `slope_b` scan over the band {40, 60} at
+  /// FIXED eps_b0 moves a_2 by +-20 % for no physical reason.  Band delta (or
+  /// eps_b0 and slope_b together, anticorrelated), never eps_b0 alone.
+  ///
+  /// THE DEFAULT IS A DEUTERON-SIZED NUMBER, AND IT IS 11.4x TOO BIG FOR 6Li.
+  /// Inverting the map (`quadrupole_from_a2_slope`, cluster_config.hpp) on
+  /// eps_b0 = -0.08 at B = 50 gives delta_{+-1} = -4.0 GeV^-2, i.e. an implied
+  /// 6Li CHARGE quadrupole of -0.9345 fm^2 and a_2(+-1, |t| = 0.3) = +0.300 --
+  /// larger in magnitude than the DEUTERON's own digitized -0.26 at the same
+  /// |t|, for a nucleus whose measured quadrupole (`LI6_QUADRUPOLE_FM2` =
+  /// -0.0818 fm^2) is 3.5x SMALLER than the deuteron's.  The measured 6Li
+  /// band, from `quadrupole_band_fm2()` through `a2_from_quadrupole` at this
+  /// B = 50 (docs/open_items/run_2026-09-03/phase_C_numbers.md sec. C4):
+  ///
+  ///     measured    Q = -0.0818 fm^2  ->  eps_b0 = -0.0070
+  ///     GFMC        Q = -0.20(6) fm^2 ->  eps_b0 = -0.0171 (-0.0120..-0.0223)
+  ///     alpha+d VMC Q = -0.6154 fm^2  ->  eps_b0 = -0.0527
+  ///
+  /// so the honest 6Li band is -(0.0070 .. 0.0527) -- the factor 7.5
+  /// quadrupole budget of sec. C1, no wider and no narrower -- and the shipped
+  /// -0.08 sits 1.52x ABOVE the top of it.  The old band -(0.04 .. 0.13) is a
+  /// DEUTERON band: it was set from the deuteron's own eps_b0 = +0.105 at the
+  /// deuteron's own B_d = 33.1 GeV^-2, at the opposite SIGN, and never rescaled
+  /// to 6Li.  Exactly, because "does not overlap" would be wrong: the old band
+  /// contains the alpha+d model row 0.0527 and NOTHING else of 6Li -- the GFMC
+  /// 0.0171 and the measured 0.0070 are both below its floor 0.04 (T10b).
+  ///
+  /// AUTHOR DECISION 2026-09-04, recorded not taken silently: the default
+  /// STAYS -0.08, because it is pinned bit-for-bit in
+  /// validation/reference/*.json and this run may not move a reference gate.
+  /// The cost is stated in one line: every GENERATED coherent tensor number
+  /// (a2_deformation, cos2phi_coefficient, the sampled azimuth) is 11.4x the
+  /// measured-quadrupole expectation, and `COHERENT_T_MAX_DEFAULT` = 0.2 is
+  /// itself a consequence of that -- the positivity edge |c_2| = 1 sits at
+  /// |t| = 0.245 GeV^2 at eps_b0 = -0.08, P_zz = -2, and would sit at
+  /// |t| = 2.8 GeV^2 at the measured-quadrupole -0.0070.  Nothing published
+  /// from this channel may quote a single eps_b0 row: band it, and say which
+  /// quadrupole the row assumes.
   double eps_b0 = -0.08;
 
   /// f_coh(x) = f0 / (1 + (x/x_coh)^2).
@@ -131,11 +456,22 @@ struct CoherentScenario {
   double tag_acceptance_angular(double sigma_theta, double p_per_nucleon,
                                 int a_beam = 6, double n_sigma = 10.0) const;
 
+  /// Delta B_m [GeV^-2], the cos 2(Phi - Phi_S) coefficient of the m state's
+  /// |F|^2 slope, in the convention DEFINED on `eps_b0` above and nowhere
+  /// else: Delta B_{+-1} = eps_b0 B / 2 and Delta B_0 = -eps_b0 B.  `m` is 0
+  /// or +-1 (anything non-zero reads as +-1, as in `a2_m_state`).
+  double delta_b_m(int m) const;
+  /// The m state's slope at azimuth `phi_rel` = Phi - Phi_S [rad]:
+  /// B + Delta B_m cos 2 phi_rel [GeV^-2].  This IS the definition; every
+  /// a_2 below is its first-order expansion.
+  double slope_at_azimuth(double phi_rel, int m) const;
+
   /// Ensemble cos 2phi' coefficient a_2 of the coherent yield at |t| from the
   /// slope-modulation (deformation) mechanism.  Per pure m state
-  /// a_2(m) ~ (Delta B_m/2)|t| with a_2(0) = -2 a_2(+-1); the population
-  /// average is a_2 = -(P_zz/4) eps_b0 B |t|.  Exact only as |t| -> 0, where
-  /// the m-state phi-averaged rates are equal (see RATE_WEIGHT_SYST).
+  /// a_2(m) = -(Delta B_m/2)|t| with a_2(0) = -2 a_2(+-1) (`delta_b_m`); the
+  /// population average is a_2 = -(P_zz/4) eps_b0 B |t|.  Exact only as
+  /// |t| -> 0, where the m-state phi-averaged rates are equal (see
+  /// RATE_WEIGHT_SYST).
   double a2_deformation(double t_abs, double pzz) const;
   /// The cos 2phi_t COEFFICIENT of 1 + c_2 cos 2(phi_t - phi_S) from the
   /// deformation mechanism: c_2 = 2 a_2 (the anchor's Eq. (9) normalization).
@@ -145,7 +481,8 @@ struct CoherentScenario {
   double a2_tagged(double pt_cut, double pzz) const;
   /// a_2 of a PURE m state: a_2(0) = -2 a_2(+-1), normalized so that the
   /// population average over p_m reproduces `a2_deformation`.  This is the
-  /// m-state relation the tests pin.
+  /// m-state relation the tests pin, and it is identically
+  /// -(`delta_b_m(m)`/2) |t| -- the operative definition of Delta B.
   double a2_m_state(double t_abs, int m) const;
   /// TOTAL cos 2(phi_t - phi_S) coefficient of the coherent yield: the
   /// deformation coefficient 2 a_2 PLUS the flat gluon-transversity term

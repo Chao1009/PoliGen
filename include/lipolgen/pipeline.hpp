@@ -453,13 +453,73 @@ struct PipelineConfig {
   // --- tagged channels ----------------------------------------------------
   double cluster_beta = BETA_DEFAULT;  ///< short-range scale of the radial waves
   double p_d = P_D_LI6;                ///< D-state probability (6Li alpha tag)
-  /// Which family of radial forms the lithium alpha-tag channels use.
-  /// `Hulthen` is the default and keeps every published number bit-for-bit;
-  /// `VmcAV18` swaps in the ANL VMC tables and then IGNORES `cluster_beta`
-  /// and `p_d` for those two channels (`docs/CONVENTIONS.md`).  The deuteron
-  /// control channel is always Hulthen -- there is no VMC d -> p+n cluster
-  /// table, the deuteron IS the cluster.
+  /// Which family of radial forms the tagged channels use.  `Hulthen` is the
+  /// default and keeps every published number bit-for-bit; `VmcAV18` swaps in
+  /// the ANL VMC tables and then IGNORES `cluster_beta` and `p_d`
+  /// (`docs/CONVENTIONS.md`).
+  ///
+  /// EXACTLY WHERE IT REACHES, AND WHERE IT DOES NOT.  Read this before
+  /// quoting anything made with it.
+  ///
+  /// IT REACHES (all three tagged channels; `validate()` REFUSES it anywhere
+  /// else, see below):
+  ///   * the CLUSTER RELATIVE wave function -- alpha-d (6Li), alpha-t (7Li),
+  ///     p-n (the d control) -- which is what the flag is named for;
+  ///   * SINCE 2026-09-04 the deuteron control (open item C5.4).  The comment
+  ///     here used to say the control "is always Hulthen -- there is no VMC
+  ///     d -> p+n cluster table, the deuteron IS the cluster".  True of the
+  ///     `momenta/` files and FALSE of `data/vmc/deuteron/fdeut.av18`, whose
+  ///     u(k) and w(k) ARE the p-n relative S and D waves; the flag was being
+  ///     SILENTLY IGNORED there, the same defect the b1 knobs are refused for.
+  ///     It now selects the exact AV18 deuteron at its own P_D = 0.057600
+  ///     instead of the analytic pair at the scenario `P_D_DEUTERON` = 0.045
+  ///     (-2.03 % on that channel's vector dilution, -1.18 % on its tensor
+  ///     one);
+  ///   * SINCE 2026-09-04 the EMBEDDED DEUTERON of the 6Li alpha tag, in BOTH
+  ///     places a run reads it (open item C5.5b): `TaggedChannel::dis_target`
+  ///     -- the struck cluster's g1 -- is `DEUTERON_AV18()` (tagged.hpp), and
+  ///     `BreakupOptions::source` -- the T1 struck-nucleon spin draw -- is
+  ///     this field.  It used to reach NEITHER, so a `--cluster-wave vmc` run
+  ///     took the alpha-d RELATIVE motion from the ANL VMC AV18+UX overlap and
+  ///     the embedded deuteron from the 0.045 scenario: two deuteron
+  ///     wave-function families in one run, with every polarized tagged-alpha
+  ///     observable 2.069 % HIGH against the wave function this flag says it
+  ///     selects.  Fixing it moved that opt-in path by -2.027 % and left the
+  ///     Hulthen default bit for bit (T27).
+  ///
+  /// IT DOES NOT REACH:
+  ///   * the 7Li TRITON's internal spin structure (`TRITON()`, a Faddeev-family
+  ///     per-nucleon slot).  Not an oversight and not silent: this tree has no
+  ///     AV18 A = 3 wave function to switch it to, so on 7Li the flag selects
+  ///     the alpha-t relative motion and nothing else;
+  ///   * the 6Li INCLUSIVE constants (`LI6_CLUSTER_POLARIZATION` = 0.811228,
+  ///     `LI6_B1_RANK2_TRANSFER` = 0.921947), which are not read on a tagged
+  ///     channel at all.  A `VmcAV18` tagged row and an inclusive row of one
+  ///     PROGRAMME therefore describe 6Li with wave functions whose vector
+  ///     dilutions differ by 11.61 % and whose rank-2 transfers differ by
+  ///     6.58 % (C5.5) -- band any comparison of the two.  Since 2026-09-04
+  ///     `validate()` REFUSES this field on `Inclusive` and `CoherentLi6`
+  ///     rather than accepting it unread, because accepting it was the route
+  ///     by which that 11.61 % reached someone who thought they had asked for
+  ///     a VMC 6Li.
+  ///
+  /// WHAT ONE `VmcAV18` 6Li RUN THEREFORE SAYS THE WHOLE-NUCLEUS POLARIZATION
+  /// IS: 0.887076 = `li6_cluster_polarization(VMC_P_D_LI6,
+  /// deuteron_av18_p_d())`, one Hamiltonian end to end, against the shipped
+  /// default's 0.811228.  Neither reproduces the ab initio six-body
+  /// `LI6_POLARIZATION_VMC_SIX_BODY` = 0.848 (+4.6 % and -4.3 %); the cluster
+  /// PRODUCT is what carries that error and C5.5 is the argument.
   ClusterWaveSource cluster_wave = ClusterWaveSource::Hulthen;
+  /// Monte Carlo band of the ANL VMC tables, in units of their own printed
+  /// 1-sigma error column, fully correlated across k (`li6_alpha_channel`,
+  /// open item C5.2).  0 = today bit for bit.  `validate()` REFUSES it unless
+  /// the run is a lithium alpha-tag channel on `cluster_wave = VmcAV18`: the
+  /// Hulthen forms carry no MC error and `fdeut.av18` prints none, so anywhere
+  /// else the knob would be recorded in the metadata without having run.
+  /// Measured: +-1 sigma moves the tagged tensor dilution by 0.02 %, i.e. the
+  /// ANL statistics are NOT the systematic that matters (the wave-function
+  /// choice, worth 6.6 %, is).
+  double cluster_vmc_mc_sigma = 0.0;
   StruckClusterOptions struck;         ///< struck-cluster DIS options
   /// Final-state interaction of the DIS debris X with the tagged spectator,
   /// as a PER-EVENT WEIGHT on `Event::weight` (never a shift of any

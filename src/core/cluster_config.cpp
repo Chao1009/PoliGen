@@ -271,6 +271,12 @@ double a2_from_quadrupole(double q_matter_fm2, int a, double t_abs, int m) {
   return -0.25 * delta_gev2 * t_abs;
 }
 
+double quadrupole_from_a2_slope(double a2_over_t, int a) {
+  if (a <= 0) throw std::runtime_error("quadrupole_from_a2_slope: A must be > 0");
+  return -8.0 * static_cast<double>(a) * HBARC_GEV_FM * HBARC_GEV_FM
+         * a2_over_t;
+}
+
 // ----------------------------------------------------------------- options
 
 void ClusterConfigOptions::validate() const {
@@ -392,6 +398,7 @@ void ClusterConfigSampler::build_tables() {
   ad_f0_ = a0;
   ad_f2_ = a2;
   ad_m_ = radial_moments(ad_x_, ad_f0_, ad_f2_);
+  ad_m_base_ = ad_m_;
 
   // ------------------------------------------- the (G9) quadrupole dial
   const double lam2 = opt_.alpha_d_scale * opt_.alpha_d_scale;
@@ -750,6 +757,34 @@ double ClusterConfigSampler::eps_b0_equivalent() const {
   const double delta_gev2 =
       delta_perp_analytic_fm2(1) / (HBARC_GEV_FM * HBARC_GEV_FM);
   return delta_gev2 / gaussian_slope(std::sqrt(LI6_R2_POINT_FM2));
+}
+
+double ClusterConfigSampler::quadrupole_for_eta(double eta_target) const {
+  const double eta_now = asymptotic_ds_ratio();
+  if (!(std::fabs(eta_now) > 0.0)) {
+    throw std::runtime_error("quadrupole_for_eta: this source's eta is zero, "
+                             "so no dial setting reaches a target");
+  }
+  // eta(s) = s eta(1) EXACTLY, so the dial that lands on eta_target is the
+  // current dial scaled by the ratio of the etas.
+  const double s = dial_s_ * (eta_target / eta_now);
+  if (!(s >= 0.0 && s <= 1.0)) {
+    std::ostringstream e;
+    e << "quadrupole_for_eta: eta = " << eta_target << " needs the (G9) dial "
+      << "s = " << s << ", outside [0, 1]; this source reaches eta in [0, "
+      << eta_now / dial_s_ << "]";
+    throw std::runtime_error(e.str());
+  }
+  // The dial's OWN q_charge(s) (cluster_config.cpp, the (G9) bisection), on
+  // the pre-dial moments.  Not a second copy of the map: the same five lines
+  // are what the bisection inverts.
+  const double lam2 = opt_.alpha_d_scale * opt_.alpha_d_scale;
+  const double qi = lam2 * ad_m_base_.q_int, qd = lam2 * ad_m_base_.q_dd;
+  const double pd = ad_m_base_.p_d();
+  const double n = 1.0 - (1.0 - s * s) * pd;
+  const double q = (s * qi + s * s * qd) / n;
+  const double pdp = s * s * pd / n;
+  return 0.5 * ((4.0 / 3.0) * q + 2.0 * q_d_fm2_ * (1.0 - 0.9 * pdp));
 }
 
 double ClusterConfigSampler::match_li6_radius(double target_rms_fm) const {

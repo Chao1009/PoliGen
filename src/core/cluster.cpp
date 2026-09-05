@@ -462,16 +462,53 @@ double VmcRadial::operator()(double k) const {
   return np_interp(k, k_, psi_);
 }
 
+VmcRadial::VmcRadial(std::vector<double> k_gev, std::vector<double> psi,
+                     std::vector<double> dpsi, int l, std::string provenance)
+    : VmcRadial(std::move(k_gev), std::move(psi), l, std::move(provenance)) {
+  if (!dpsi.empty() && dpsi.size() != psi_.size()) {
+    throw std::runtime_error("VmcRadial: dpsi must match psi or be empty");
+  }
+  dpsi_ = std::move(dpsi);
+}
+
 VmcRadial VmcRadial::scaled(double factor) const {
-  std::vector<double> p(psi_);
+  std::vector<double> p(psi_), d(dpsi_);
   for (double& v : p) v *= factor;
-  return VmcRadial(k_, std::move(p), l_, provenance_);
+  for (double& v : d) v *= factor;
+  return VmcRadial(k_, std::move(p), std::move(d), l_, provenance_);
+}
+
+VmcRadial VmcRadial::shifted_by_sigma(double n_sigma) const {
+  if (n_sigma == 0.0 || dpsi_.empty()) return *this;
+  std::vector<double> p(psi_);
+  for (std::size_t i = 0; i < p.size(); ++i) p[i] += n_sigma * dpsi_[i];
+  std::ostringstream prov;
+  prov << provenance_ << " [+" << n_sigma
+       << " sigma_MC, FULLY CORRELATED across the table]";
+  return VmcRadial(k_, std::move(p), dpsi_, l_, prov.str());
 }
 
 double VmcRadial::norm2() const {
   std::vector<double> y(k_.size());
   for (std::size_t i = 0; i < k_.size(); ++i) y[i] = k_[i] * k_[i] * psi_[i] * psi_[i];
   return trapezoid(y, k_);
+}
+
+void VmcRadial::norm2_error(double* correlated, double* quadrature) const {
+  double cor = 0.0, quad = 0.0;
+  if (!dpsi_.empty()) {
+    // d/dn integral k^2 (psi + n dpsi)^2 dk at n = 0, cell by cell, so the
+    // two limits use exactly the same cells and the same quadrature.
+    for (std::size_t i = 1; i < k_.size(); ++i) {
+      const double a = 2.0 * k_[i - 1] * k_[i - 1] * psi_[i - 1] * dpsi_[i - 1];
+      const double b = 2.0 * k_[i] * k_[i] * psi_[i] * dpsi_[i];
+      const double cell = 0.5 * (a + b) * (k_[i] - k_[i - 1]);
+      cor += cell;
+      quad += cell * cell;
+    }
+  }
+  if (correlated != nullptr) *correlated = std::fabs(cor);
+  if (quadrature != nullptr) *quadrature = std::sqrt(quad);
 }
 
 std::vector<double> vmc_sign_steps(const std::vector<double>& x,
@@ -495,7 +532,12 @@ VmcRadial vmc_from_overlap_k(const std::string& path, int column, int l) {
   }
   std::vector<double> k(t.x.size());
   for (std::size_t i = 0; i < t.x.size(); ++i) k[i] = t.x[i] * kHbarCGeVfm;
-  return VmcRadial(std::move(k), t.col[static_cast<std::size_t>(column)], l,
+  // The overlap block's own 1-sigma MC error column travels with the
+  // amplitude (C5.2); it is empty only if the file printed none.
+  std::vector<double> dpsi;
+  const std::size_t c = static_cast<std::size_t>(column);
+  if (c < t.err.size() && t.err[c].size() == t.x.size()) dpsi = t.err[c];
+  return VmcRadial(std::move(k), t.col[c], std::move(dpsi), l,
                    path + " [k-space block, column " + std::to_string(column)
                        + "]");
 }
@@ -565,7 +607,14 @@ VmcRadial vmc_from_momentum(const std::string& path, int block, int column,
     }
   }
 
+  // psi = s sqrt(rho), so the file's own 1-sigma drho becomes
+  // dpsi = s drho / (2 sqrt(rho)) -- SIGNED, so it transforms with psi under
+  // the global phase (C5.2).  Empty if the file printed no error column.
+  const std::size_t ic = static_cast<std::size_t>(column);
+  const bool have_err = ic < t.err.size() && t.err[ic].size() == t.x.size();
+  const std::vector<double>* drho = have_err ? &t.err[ic] : nullptr;
   std::vector<double> k(t.x.size()), psi(t.x.size());
+  std::vector<double> dpsi(have_err ? t.x.size() : 0);
   for (std::size_t i = 0; i < t.x.size(); ++i) {
     k[i] = t.x[i] * kHbarCGeVfm;
     std::size_t below = 0;
@@ -575,7 +624,10 @@ VmcRadial vmc_from_momentum(const std::string& path, int block, int column,
     const std::size_t flips = below > anchor_below ? below - anchor_below
                                                    : anchor_below - below;
     const double s = anchor_sign * ((flips % 2 == 0) ? 1.0 : -1.0);
-    psi[i] = s * std::sqrt(std::fmax(rho[i], 0.0));
+    const double r = std::fmax(rho[i], 0.0);
+    psi[i] = s * std::sqrt(r);
+    if (have_err) dpsi[i] = r > 0.0 ? s * (*drho)[i] / (2.0 * std::sqrt(r))
+                                    : 0.0;
   }
   std::string prov = path + " [block " + std::to_string(block) + ", column "
                      + std::to_string(column) + ", psi = sqrt(rho)";
@@ -588,8 +640,8 @@ VmcRadial vmc_from_momentum(const std::string& path, int block, int column,
     }
     prov += " fm^-1)";
   }
-  prov += "]";
-  return VmcRadial(std::move(k), std::move(psi), l, prov);
+  prov += have_err ? ", 1-sigma MC errors carried]" : "]";
+  return VmcRadial(std::move(k), std::move(psi), std::move(dpsi), l, prov);
 }
 
 // ---------------------------------------------------------------- the waves

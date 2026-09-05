@@ -94,7 +94,14 @@ def build_parser():
                    default=None,
                    help="cluster radial forms: 'hulthen' (default, "
                         "bit-compatible) or 'vmc' (ANL VMC tables; ignores "
-                        "--cluster-beta and --p-d on the lithium alpha tags)")
+                        "--cluster-beta and --p-d on the lithium alpha tags).  "
+                        "TAGGED CHANNELS ONLY -- refused on --channel "
+                        "inclusive / coherent, where it is never read (their "
+                        "6Li constants do not follow it, 11.61 %% away).  On "
+                        "tagged-alpha it also selects the EMBEDDED deuteron "
+                        "(AV18 fdeut, P_D = 0.0576), which is -2.03 %% on the "
+                        "polarised observables against what that path gave "
+                        "before 2026-09-04")
     p.add_argument("--triton-sf", choices=sorted(TRITON_SFS), default=None,
                    help="triton spectral function of the 7Li alpha tag's T1 "
                         "breakup: 'hulthen' (default, the sequential "

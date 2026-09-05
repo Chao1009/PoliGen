@@ -92,6 +92,9 @@ OPTICS = {
 #: bit-compatible with every published number; "vmc" swaps in the ANL VMC
 #: tables (see docs/CONVENTIONS.md and docs/open_items/vmc_reconciliation.md)
 #: and then ignores `cluster_beta` and `p_d` on the lithium alpha tags.
+#: It is read on the TAGGED channels only and `PipelineConfig.validate`
+#: refuses it elsewhere; on the 6Li alpha tag it selects the embedded
+#: deuteron as well as the alpha-d relative motion (C5.5b).
 CLUSTER_WAVES = {
     "hulthen": _lipolgen.ClusterWaveSource.Hulthen,
     "vmc": _lipolgen.ClusterWaveSource.VmcAV18,

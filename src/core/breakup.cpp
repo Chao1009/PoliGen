@@ -129,9 +129,16 @@ ClusterBreakup::ClusterBreakup(BreakupOptions opt) : opt_(std::move(opt)) {
                       std::make_shared<const ToyF2>());
   tsf_ = opt_.triton_sf;   // null = the sequential triton branch, bit for bit
 
-  // --- the deuteron's own wave function, S + D at P_D_DEUTERON ------------
+  // --- the deuteron's own wave function ------------------------------------
+  // S + D Hulthen at `p_d` (= P_D_DEUTERON by default), or the exact AV18
+  // deuteron on `source` = VmcAV18.  IT FOLLOWS `source` BECAUSE THE RATE
+  // DOES: `li6_alpha_channel`'s `dis_target` is `DEUTERON_AV18()` on that
+  // setting, and a run whose struck-nucleon spin label came from one deuteron
+  // and whose g1 came from another would be inconsistent with itself by
+  // 2.0688 % (C5.5b).  `Hulthen` is bit for bit what this line always built.
   dmodel_ = std::unique_ptr<TaggedModel>(new TaggedModel(
-      deuteron_channel(opt_.beta, opt_.p_d), opt_.k_max, opt_.nk, opt_.nc));
+      deuteron_channel(opt_.beta, opt_.p_d, opt_.source), opt_.k_max, opt_.nk,
+      opt_.nc));
   ms_deuteron_ = m_values(1.0);
   dpop_.resize(ms_deuteron_.size());
   for (std::size_t i = 0; i < ms_deuteron_.size(); ++i) {

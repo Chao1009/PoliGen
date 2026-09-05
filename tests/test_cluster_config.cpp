@@ -936,7 +936,9 @@ TEST_CASE("T21 R-hat is conditioned on m_S, not on the m_S-summed density") {
 TEST_CASE("T22 the asymptotic D/S ratio, Whittaker-divided") {
   const ClusterConfigSampler& s = default_sampler();
   const double eta = s.asymptotic_ds_ratio();
-  MESSAGE("T22 eta = " << eta << " (FitRescaled), measured -0.025(12)");
+  MESSAGE("T22 eta = " << eta << " (FitRescaled), measured "
+          << LI6_ETA_DS_GK << " +- " << LI6_ETA_DS_GK_STAT << " +- "
+          << LI6_ETA_DS_GK_SYST);
   CHECK_CLOSE_AT(eta, -0.05, 0.0, 0.01);
   // The naive R_2/R_0 is NOT eta: W_2/W_0 is ~3 over this window, so the
   // table's ratio is ~-0.14 while eta is ~-0.048.
@@ -945,12 +947,202 @@ TEST_CASE("T22 the asymptotic D/S ratio, Whittaker-divided") {
   CHECK_CLOSE_AT(naive, -0.149, 0.0, 0.01);
   CHECK(std::fabs(naive / eta) > 2.5);
   // ~2x the measured value, not 5-15x: a real but MODERATE D-wave excess.
-  CHECK(std::fabs(eta / -0.025) < 3.0);
-  CHECK(std::fabs(eta / -0.025) > 1.2);
+  CHECK(std::fabs(eta / LI6_ETA_DS_GK) < 3.0);
+  CHECK(std::fabs(eta / LI6_ETA_DS_GK) > 1.2);
   ClusterConfigOptions o;
   o.alpha_d_source = AlphaDSource::OverlapRaw;
   CHECK_CLOSE_AT(ClusterConfigSampler(o).asymptotic_ds_ratio(), -0.054, 0.0,
                  0.01);
+}
+
+// ---------------------------------------------------------------------- T22b
+
+// The eta -> dial -> Q linkage, and the TWO-factor quadrupole budget.
+//
+// `cluster_config.cpp`'s (G9) dial mutates ad_f2_ in place -- R_2 -> s R_2,
+// both waves -> /sqrt(n(s)) -- and `asymptotic_ds_ratio()` reads ad_f2_/ad_f0_
+// AFTERWARDS.  The 1/sqrt(n(s)) cancels in that ratio, so
+//
+//     eta(s) = s * eta(1)      EXACTLY, to machine precision,
+//
+// and eta is a relabelling of the dial, not an independent check on it.  That
+// is what lets a MEASURED observable, rather than the GFMC number, supply the
+// first leg of the Q budget -- and, in the same breath, what makes the leg's
+// error bar enormous.  Every literal below is a REGRESSION ANCHOR.
+TEST_CASE("T22b eta rides the quadrupole dial: the TWO-factor Q budget") {
+  const ClusterConfigSampler& base = default_sampler();
+  const double eta0 = base.asymptotic_ds_ratio();
+  const double q0   = base.quadrupole_band_fm2()[2];
+  CHECK_CLOSE(eta0, -0.0482160903696, 1e-9);
+  CHECK_CLOSE(q0, -0.615448256134, 1e-9);
+  CHECK(base.quadrupole_dial_s() == 1.0);
+
+  // The eta-matched anchor.  -0.18557 fm^2 is the target that puts eta on
+  // George & Knutson's central value to 0.3 %; the exact eta = -0.025 root is
+  // -0.1842160147 fm^2 and is pinned below.  NOT a measurement of Q.
+  ClusterConfigOptions o;
+  o.quadrupole_target_fm2 = -0.18557;
+  const ClusterConfigSampler s(o);
+  CHECK_CLOSE(s.quadrupole_dial_s(), 0.520019565622, 1e-9);
+  CHECK_CLOSE(s.asymptotic_ds_ratio(), -0.02507331037, 1e-9);
+  CHECK_CLOSE(s.quadrupole_band_fm2()[2], -0.18557, 1e-12);
+  CHECK_CLOSE(s.eps_b0_equivalent(), -0.0152637033625, 1e-9);
+  CHECK_CLOSE(s.a2_from_geometry(0.3, 1), 0.0595705416512, 1e-9);
+  CHECK_CLOSE(s.p_d_alpha_d(), 0.00551970830165, 1e-9);
+  // the exact linearity, at machine precision -- the mechanism itself
+  CHECK_CLOSE(s.asymptotic_ds_ratio(), s.quadrupole_dial_s() * eta0, 1e-13);
+  CHECK_CLOSE(s.asymptotic_ds_ratio(), LI6_ETA_DS_GK, 3e-3);
+
+  // ---- the budget.  TWO factors, referencing the constants, and their
+  // product is the documented 7.5 IDENTICALLY (it telescopes).
+  const double f_eta = q0 / s.quadrupole_band_fm2()[2];             // 3.317
+  const double f_res = s.quadrupole_band_fm2()[2] / LI6_QUADRUPOLE_FM2;
+  CHECK_CLOSE(f_eta, 3.3165288362, 1e-10);
+  CHECK_CLOSE(f_res, 2.26858190709, 1e-10);
+  CHECK_CLOSE(f_eta * f_res, q0 / LI6_QUADRUPOLE_FM2, 1e-12);
+  CHECK_CLOSE(f_eta * f_res, 7.52381731215, 1e-10);
+  // and the GFMC leg the design already states, from the same two numbers
+  CHECK_CLOSE(q0 / LI6_QUADRUPOLE_GFMC_FM2, 3.07724128067, 1e-10);
+
+  // ---- 1/S_alpha-d is NOT a third factor.  cluster_config.cpp divides BOTH
+  // a0 and a2 by sqrt(s_alpha_d_) BEFORE ad_m_ is recomputed, so the 1.1706
+  // is ALREADY INSIDE q0.  It is a CEILING on what any coherent missing-
+  // component model could add, never a multiplier: the three-factor product
+  // overshoots the measured ratio by 17 %.
+  CHECK_CLOSE(1.0 / base.s_alpha_d(), 1.1706416896, 1e-10);
+  CHECK_CLOSE(f_eta * (1.0 / base.s_alpha_d()) * f_res, 8.80769421057, 1e-10);
+  CHECK(f_eta * (1.0 / base.s_alpha_d()) * f_res
+        > 1.15 * (q0 / LI6_QUADRUPOLE_FM2));
+
+  // ---- THE BAND IS THE PHYSICS, NOT THE CENTRAL VALUE.  eta is linear in s,
+  // so GK's +-1 sigma_comb maps straight onto a Q interval -- and that
+  // interval CROSSES ZERO.  The "3.317x" leg is really 1.54x at one edge and
+  // a SIGN CHANGE at the other.
+  const double sig = std::sqrt(LI6_ETA_DS_GK_STAT * LI6_ETA_DS_GK_STAT
+                               + LI6_ETA_DS_GK_SYST * LI6_ETA_DS_GK_SYST);
+  CHECK_CLOSE(sig, 0.0116619037897, 1e-10);
+  {
+    ClusterConfigOptions f;                       // the far edge
+    f.quadrupole_target_fm2 = -0.4004752268;
+    const ClusterConfigSampler sf(f);
+    CHECK_CLOSE(sf.asymptotic_ds_ratio(), LI6_ETA_DS_GK - sig, 1e-9);
+    CHECK_CLOSE(q0 / f.quadrupole_target_fm2, 1.53679482512, 1e-10);
+  }
+  {
+    ClusterConfigOptions n;                       // the near edge
+    n.quadrupole_target_fm2 = 0.0297575059;
+    const ClusterConfigSampler sn(n);
+    CHECK_CLOSE(sn.asymptotic_ds_ratio(), LI6_ETA_DS_GK + sig, 1e-9);
+    // the WRONG SIGN against the measurement, still inside 1 sigma of GK
+    CHECK(sn.quadrupole_band_fm2()[2] > 0.0);
+    CHECK(LI6_QUADRUPOLE_FM2 < 0.0);
+  }
+  // Q_charge passes through zero at eta = -0.014971, 0.86 sigma from GK
+  {
+    // 0.0 is the OFF sentinel for the dial, so approach the crossing from
+    // the positive side -- 1e-9 fm^2 moves s by 2e-12.
+    ClusterConfigOptions z;
+    z.quadrupole_target_fm2 = 1e-9;
+    const ClusterConfigSampler sz(z);
+    CHECK_CLOSE(sz.quadrupole_dial_s(), 0.310490348485, 1e-10);
+    CHECK_CLOSE(sz.asymptotic_ds_ratio(), -0.0149706307015, 1e-9);
+    CHECK_CLOSE((sz.asymptotic_ds_ratio() - LI6_ETA_DS_GK) / sig, 0.860011322286, 1e-9);
+    CHECK(std::fabs(sz.asymptotic_ds_ratio() - LI6_ETA_DS_GK) < sig);
+  }
+
+  // ---- so eta does NOT discriminate between the two literature Q values:
+  // both sit inside GK's 1 sigma_comb, at +0.48 and -0.07 sigma.
+  ClusterConfigOptions m;
+  m.quadrupole_target_fm2 = LI6_QUADRUPOLE_FM2;
+  const ClusterConfigSampler sm(m);
+  CHECK_CLOSE(sm.asymptotic_ds_ratio(), -0.0194389733018, 1e-9);
+  CHECK_CLOSE((sm.asymptotic_ds_ratio() - LI6_ETA_DS_GK) / sig, 0.476854105339, 1e-9);
+  ClusterConfigOptions g;
+  g.quadrupole_target_fm2 = LI6_QUADRUPOLE_GFMC_FM2;
+  const ClusterConfigSampler sg(g);
+  CHECK_CLOSE(sg.asymptotic_ds_ratio(), -0.0258543122665, 1e-9);
+  CHECK_CLOSE((sg.asymptotic_ds_ratio() - LI6_ETA_DS_GK) / sig, -0.0732566724846, 1e-8);
+  CHECK(std::fabs(sm.asymptotic_ds_ratio() - LI6_ETA_DS_GK) < sig);
+  CHECK(std::fabs(sg.asymptotic_ds_ratio() - LI6_ETA_DS_GK) < sig);
+}
+
+// ---------------------------------------------------------------------- T22c
+
+// Open item O2, settled by measurement: the `li6.adr.fit` R_2 node near 1.07 fm
+// is REAL in the raw `li6.ad` block -- and it decides nothing.
+//
+// O2 as written ("it decides whether FitRescaled or OverlapRaw is the honest
+// default") has a FALSE premise, and this case pins both halves of why.
+TEST_CASE("T22c the R_2 node is real in the raw data, and costs nothing") {
+  auto node_of = [](AlphaDSource src) {
+    ClusterConfigOptions o;
+    o.alpha_d_source = src;
+    const ClusterConfigSampler s(o);
+    const std::vector<double>& x = s.alpha_d_grid();
+    const std::vector<double>& f2 = s.alpha_d_wave(2);
+    // The LAST crossing below the outer positive lobe.  `OverlapRaw` has one
+    // extra, noise-induced crossing near 0.53 fm -- its R_2 there is
+    // +1.5e-3 +- 2.5e-3, i.e. consistent with zero -- so "the first sign
+    // change" is not a well-defined question on the raw block.
+    double node = 0.0;
+    for (std::size_t i = 1; i < x.size(); ++i) {
+      if (x[i] > 0.4 && x[i] < 2.0 && f2[i - 1] * f2[i] < 0.0) {
+        node = x[i - 1] + (x[i] - x[i - 1]) * (-f2[i - 1]) / (f2[i] - f2[i - 1]);
+      }
+    }
+    return node;
+  };
+  // BOTH tables change sign; the smoothed fit's node sits 0.054 fm inside the
+  // raw block's.  (The global-phase flip is applied to both waves, so it
+  // cannot move a node.)
+  CHECK_CLOSE(node_of(AlphaDSource::FitRescaled), 1.06484697577, 1e-10);
+  CHECK_CLOSE(node_of(AlphaDSource::FitRaw), 1.06484697577, 1e-10);
+  CHECK_CLOSE(node_of(AlphaDSource::OverlapRaw), 1.11891335406, 1e-10);
+
+  // (i) the node SURVIVES the raw block's own Monte Carlo errors: averaged
+  // over the fit's inner negative lobe the raw R_2 is 3.3 sigma below zero.
+  const std::vector<AnlTable> t = read_anl_overlap(data_path(VMC_LI6_OVERLAP));
+  const std::vector<double>& rx = t[1].x;
+  const std::vector<double>& r2 = t[1].col[1];
+  const std::vector<double>& e2 = t[1].err[1];
+  REQUIRE(!e2.empty());
+  double num = 0.0, den = 0.0;
+  for (std::size_t i = 0; i < rx.size(); ++i) {
+    if (rx[i] >= 1.065) break;
+    num += r2[i] / (e2[i] * e2[i]);
+    den += 1.0 / (e2[i] * e2[i]);
+  }
+  const double wmean = num / den, werr = 1.0 / std::sqrt(den);
+  CHECK_CLOSE(wmean, -1.86947e-3, 1e-5);
+  CHECK_CLOSE(werr, 5.62461e-4, 1e-5);
+  CHECK(wmean / werr < -3.0);            // a fit artefact would sit at zero
+
+  // (ii) and it is IRRELEVANT: the r^4 weight of (G4) gives the whole region
+  // inside 1.5 fm less than 0.1 % of q_int and 0.5 % of the D-wave norm, on
+  // EVERY source.  Nothing about the default follows from the node.
+  for (AlphaDSource src : {AlphaDSource::FitRescaled, AlphaDSource::OverlapRaw,
+                           AlphaDSource::FitRaw}) {
+    ClusterConfigOptions o;
+    o.alpha_d_source = src;
+    const ClusterConfigSampler s(o);
+    const std::vector<double>& x = s.alpha_d_grid();
+    const std::vector<double>& f0 = s.alpha_d_wave(0);
+    const std::vector<double>& f2 = s.alpha_d_wave(2);
+    double qi_in = 0.0, qi_all = 0.0, n2_in = 0.0, n2_all = 0.0;
+    for (std::size_t i = 1; i < x.size(); ++i) {
+      const double h = x[i] - x[i - 1];
+      const double q = 0.5 * h * (f0[i] * f2[i] * std::pow(x[i], 4)
+                                  + f0[i - 1] * f2[i - 1] * std::pow(x[i - 1], 4));
+      const double n = 0.5 * h * (f2[i] * f2[i] * x[i] * x[i]
+                                  + f2[i - 1] * f2[i - 1] * x[i - 1] * x[i - 1]);
+      qi_all += q;
+      n2_all += n;
+      if (x[i] < 1.5) { qi_in += q; n2_in += n; }
+    }
+    CHECK(std::fabs(qi_in / qi_all) < 1e-3);
+    CHECK(n2_in / n2_all < 6e-3);
+  }
+  CHECK_CLOSE(default_sampler().s_alpha_d(), 0.8542323487, 1e-9);
 }
 
 // ------------------------------------------------ the sec. 8 numbers, pinned
@@ -993,4 +1185,53 @@ TEST_CASE("the design's sec. 8 table, all three alpha-d sources") {
   CHECK_CLOSE(ad / (ad + deut), 0.769, 2e-3);
   CHECK_CLOSE(std::fabs(s.q_int_fm2()) / std::fabs(s.q_int_fm2() + s.q_dd_fm2()),
               0.952, 2e-3);
+}
+
+// ------------------------------------------------------- open items C5.1, O4
+//
+// T23.  `quadrupole_for_eta` is a CONVERTER onto the one existing dial, not a
+// second dial: it reproduces the (G9) bisection's own answer, it is exact on
+// a dialled sampler too, and it re-derives sec. C1.3's George-Knutson band
+// (whose near edge changes the SIGN of Q) from the tables instead of from a
+// typed number.  `quadrupole_from_a2_slope` is the exact inverse of
+// `a2_from_quadrupole`.  phase_C_numbers.md sec. C4, sec. C5.1.
+TEST_CASE("T23 eta -> quadrupole is a converter, and the a_2 map inverts") {
+  const ClusterConfigSampler base;
+  const double eta0 = base.asymptotic_ds_ratio();
+  CHECK_CLOSE(eta0, -0.0482160903696, 1e-9);
+
+  // (a) round trip: ask for the Q that lands on the MEASURED eta, dial to it,
+  // and read eta back.  This is sec. C1.4's -0.1842160147 fm^2, now derived.
+  const double q_gk = base.quadrupole_for_eta(LI6_ETA_DS_GK);
+  CHECK_CLOSE(q_gk, -0.1842160146606, 1e-9);
+  ClusterConfigOptions o;
+  o.quadrupole_target_fm2 = q_gk;
+  const ClusterConfigSampler dialled(o);
+  CHECK_CLOSE(dialled.asymptotic_ds_ratio(), LI6_ETA_DS_GK, 1e-12);
+  CHECK_CLOSE(dialled.quadrupole_dial_s(), 0.5184991111550, 1e-9);
+  // (b) it is exact on a dialled sampler: the same request returns the same Q.
+  CHECK_CLOSE(dialled.quadrupole_for_eta(LI6_ETA_DS_GK), q_gk, 1e-12);
+  // (c) eta is EXACTLY linear in the dial, which is why one knob suffices.
+  CHECK_CLOSE(dialled.asymptotic_ds_ratio(),
+              dialled.quadrupole_dial_s() * eta0, 1e-12);
+  // (d) THE BAND, re-derived: +-sigma_comb spans a SIGN CHANGE in Q.
+  const double sig = std::sqrt(LI6_ETA_DS_GK_STAT * LI6_ETA_DS_GK_STAT
+                               + LI6_ETA_DS_GK_SYST * LI6_ETA_DS_GK_SYST);
+  CHECK_CLOSE(base.quadrupole_for_eta(LI6_ETA_DS_GK - sig), -0.4004752268,
+              1e-9);
+  CHECK_CLOSE(base.quadrupole_for_eta(LI6_ETA_DS_GK + sig), +0.0297575059,
+              1e-8);
+  CHECK(base.quadrupole_for_eta(LI6_ETA_DS_GK + sig) > 0.0);
+  // (e) unreachable requests THROW rather than clipping.
+  CHECK_THROWS(base.quadrupole_for_eta(-0.10));
+  CHECK_THROWS(base.quadrupole_for_eta(+0.01));
+
+  // (f) `quadrupole_from_a2_slope` inverts `a2_from_quadrupole` exactly.
+  for (double q : {-1.8690781872, -0.16360, 0.53934}) {
+    for (int a : {2, 6}) {
+      const double kappa = a2_from_quadrupole(q, a, 1.0, 1);
+      CHECK_CLOSE(quadrupole_from_a2_slope(kappa, a), q, 1e-12);
+    }
+  }
+  CHECK_THROWS(quadrupole_from_a2_slope(1.0, 0));
 }

@@ -22,6 +22,7 @@
 #include "json_min.hpp"
 #include "lipolgen/asymmetries.hpp"
 #include "lipolgen/beams.hpp"
+#include "lipolgen/breakup.hpp"
 #include "lipolgen/constants.hpp"
 #include "lipolgen/event.hpp"
 #include "lipolgen/rng.hpp"
@@ -1128,8 +1129,13 @@ TEST_CASE("tagged: the Hulthen path is untouched by the VMC backend") {
                                   deuteron_channel()}) {
     for (const Wave& w : ch.waves) CHECK(!w.vmc);
   }
-  // there is no VmcAV18 overload of `deuteron_channel` at all -- the deuteron
-  // IS the cluster, there is no d -> p + n two-cluster table
+  // ... and the DEFAULT control channel carries no table either.  (This
+  // comment used to read "there is no VmcAV18 overload of `deuteron_channel`
+  // at all -- the deuteron IS the cluster, there is no d -> p + n two-cluster
+  // table".  C5.4 disproved that on 2026-09-04: `fdeut.av18`'s u(k) and w(k)
+  // ARE the p-n relative S and D waves, and `deuteron_channel(.., VmcAV18)`
+  // now builds from them.  What this loop checks is unchanged and is the
+  // point -- the DEFAULT is the analytic pair to the last bit.)
   const TaggedChannel d = deuteron_channel();
   const double kappa = d.base.kappa();
   for (const Wave& w : d.waves) {
@@ -1168,4 +1174,295 @@ TEST_CASE("tagged: the VMC S-D interference flips sign below the S node") {
     CHECK(h.radial_table(0)[i] > 0.0);
     CHECK(h.radial_table(2)[i] > 0.0);
   }
+}
+
+// ================================================== open items C5.2 - C5.5
+//
+// T24.  The ANL Monte Carlo errors are CARRIED, not parsed and dropped, and
+// the band they buy is measured rather than asserted.
+// docs/open_items/run_2026-09-03/phase_C_numbers.md sec. C5.2.
+TEST_CASE("T24 the VMC tables carry their Monte Carlo band") {
+  if (!vmc_data_present()) {
+    MESSAGE("data/vmc not present -- skipping");
+    return;
+  }
+  const TaggedChannel c0 =
+      li6_alpha_channel(BETA_DEFAULT, P_D_LI6, ClusterWaveSource::VmcAV18);
+  REQUIRE(c0.waves.size() == 2);
+  for (const Wave& w : c0.waves) {
+    REQUIRE(w.vmc);
+    CHECK(w.vmc->has_errors());
+    CHECK(w.vmc->dpsi().size() == w.vmc->psi().size());
+    // dpsi is SIGNED and carries psi's sign, so psi + n dpsi is covariant
+    // under the global-phase flip the pair is fixed with.
+    for (std::size_t i = 0; i < w.vmc->psi().size(); ++i) {
+      if (w.vmc->psi()[i] != 0.0) {
+        CHECK(w.vmc->psi()[i] * w.vmc->dpsi()[i] > 0.0);
+      }
+    }
+    double cor = 0.0, quad = 0.0;
+    w.vmc->norm2_error(&cor, &quad);
+    CHECK(cor > quad);                     // correlated is the envelope
+    CHECK(cor / w.vmc->norm2() < 0.02);    // and it is a 2 % effect at most
+  }
+  // The two limits, pinned: S wave 0.47 % / 0.11 %, D wave 1.62 % / 0.40 %.
+  {
+    double cor = 0.0, quad = 0.0;
+    c0.waves[0].vmc->norm2_error(&cor, &quad);
+    CHECK_CLOSE(cor / c0.waves[0].vmc->norm2(), 0.004705, 1e-2);
+    CHECK_CLOSE(quad / c0.waves[0].vmc->norm2(), 0.001085, 1e-2);
+    c0.waves[1].vmc->norm2_error(&cor, &quad);
+    CHECK_CLOSE(cor / c0.waves[1].vmc->norm2(), 0.016176, 1e-2);
+    CHECK_CLOSE(quad / c0.waves[1].vmc->norm2(), 0.003974, 1e-2);
+  }
+  // n_sigma = 0 is bit for bit the cached table.
+  CHECK(li6_alpha_channel(BETA_DEFAULT, P_D_LI6, ClusterWaveSource::VmcAV18,
+                          0.0).waves[1].prob == c0.waves[1].prob);
+  // THE BAND, on the observables.  P_D moves ~1.1 % per sigma; the tagged
+  // tensor dilution moves 0.02 %.  The ANL statistics are NOT the systematic
+  // that matters -- the wave-function choice, 6.6 %, is (T26).
+  const TaggedModel m0(c0);
+  const TaggedModel mp(li6_alpha_channel(BETA_DEFAULT, P_D_LI6,
+                                         ClusterWaveSource::VmcAV18, +1.0));
+  const TaggedModel mm(li6_alpha_channel(BETA_DEFAULT, P_D_LI6,
+                                         ClusterWaveSource::VmcAV18, -1.0));
+  CHECK_CLOSE(mp.channel().waves[1].prob / VMC_P_D_LI6, 1.011346, 1e-4);
+  CHECK_CLOSE(mm.channel().waves[1].prob / VMC_P_D_LI6, 0.988851, 1e-4);
+  CHECK(std::fabs(mp.tensor_dilution() / m0.tensor_dilution() - 1.0) < 3e-4);
+  CHECK_CLOSE(mp.tensor_dilution() / m0.tensor_dilution() - 1.0, -2.012e-4,
+              2e-2);
+  CHECK_CLOSE(mm.tensor_dilution() / m0.tensor_dilution() - 1.0, +1.977e-4,
+              2e-2);
+  // A band that would be silently ignored is REFUSED.
+  CHECK_THROWS(li6_alpha_channel(BETA_DEFAULT, P_D_LI6,
+                                 ClusterWaveSource::Hulthen, 1.0));
+  CHECK_THROWS(li7_alpha_channel(BETA_DEFAULT, ClusterWaveSource::Hulthen,
+                                 1.0));
+  // 7Li is one wave: the band moves the SHAPE and never a probability.
+  CHECK(li7_alpha_channel(BETA_DEFAULT, ClusterWaveSource::VmcAV18, 1.0)
+            .waves[0].prob == 1.0);
+}
+
+// T25.  The deuteron control on the exact AV18 wave function (C5.4).
+TEST_CASE("T25 the deuteron control channel, Hulthen against AV18") {
+  if (!vmc_data_present()) {
+    MESSAGE("data/vmc not present -- skipping");
+    return;
+  }
+  // The k-space block's own D fraction reproduces the file's r-space header
+  // `dstate` = 0.057599 to 1.55e-5 relative -- the reader and the convention
+  // validated by the file against itself.  The residual is the file's own
+  // r-space/k-space quadrature spread and NOT print rounding: 0.05759989
+  // would print as 0.057600 at the header's six figures, not as 0.057599.
+  CHECK_CLOSE(deuteron_av18_p_d(), 0.057599, 2e-5);
+  CHECK(std::fabs(deuteron_av18_p_d() / 0.057599 - 1.0) > 1e-6);
+  CHECK_CLOSE(deuteron_av18_p_d(), 0.0575998919874, 1e-9);
+  // ... and it is 28 % ABOVE the scenario P_D_DEUTERON the control is pinned
+  // to.
+  CHECK_CLOSE(deuteron_av18_p_d() / P_D_DEUTERON, 1.28000, 1e-4);
+
+  const TaggedModel h(deuteron_channel());
+  const TaggedModel v(deuteron_channel(BETA_DEFAULT, P_D_DEUTERON,
+                                       ClusterWaveSource::VmcAV18));
+  CHECK(v.channel().waves[1].prob == deuteron_av18_p_d());
+  CHECK_CLOSE(h.vector_dilution(), 0.932494769, 1e-6);
+  CHECK_CLOSE(v.vector_dilution(), 0.913594777, 1e-6);
+  CHECK_CLOSE(v.vector_dilution() / h.vector_dilution() - 1.0, -0.020268, 1e-3);
+  CHECK_CLOSE(h.tensor_dilution(), 0.959488074, 1e-6);
+  CHECK_CLOSE(v.tensor_dilution(), 0.948145618, 1e-6);
+  CHECK_CLOSE(v.tensor_dilution() / h.tensor_dilution() - 1.0, -0.011822, 1e-3);
+  // THE RELATIVE S-D SIGN DOES NOT FLIP.  CDKS fix phi_2 = -W and
+  // phi_L = i^L psi_L, so the physical deuteron has psi_2 = +W > 0 at low k,
+  // which is what the positive-definite Hulthen forms already assume.  This
+  // is the OPPOSITE of the 6Li alpha-d case (see the S-node test above).
+  CHECK(v.channel().waves[0].vmc->psi()[1] > 0.0);
+  CHECK(v.channel().waves[1].vmc->psi()[1] > 0.0);
+  // fdeut.av18 prints no MC error column, so this table carries no band.
+  CHECK(!v.channel().waves[1].vmc->has_errors());
+  // Hulthen stays bit for bit the default.
+  CHECK(h.channel().waves[1].prob == P_D_DEUTERON);
+}
+
+// T26.  C5.3 (the N_ad / P_D spreads) and C5.5 (the inclusive-tagged drift),
+// in one place because they are the same question asked of two constants.
+TEST_CASE("T26 the alpha-d normalisation spread, and the inclusive drift") {
+  if (!vmc_data_present()) {
+    MESSAGE("data/vmc not present -- skipping");
+    return;
+  }
+  // --- C5.3.  THREE NUMBERS SPAN THREE DIFFERENT AMOUNTS, and the document
+  // that says "N_ad 5 %, P_D 7 %" is quoting two of them about a third: the
+  // 7 % belongs to the D-wave NORM, and P_D -- the RATIO the tagged sector
+  // actually uses -- spans only 2.7 %.
+  struct Row { double s, d; };
+  const Row r14{0.80362, 0.015861};   // 2014 li6_ad1.momentum, the default
+  const Row r04{0.838, 0.017};        // 2004 li6.ad, as printed
+  const Row rw{0.846, 0.017};         // Wiringa PRC 89 (2014) 024305
+  CHECK_CLOSE(r14.s + r14.d, VMC_N_ALPHA_D_LI6, 1e-15);
+  CHECK_CLOSE((rw.s + rw.d) / (r14.s + r14.d) - 1.0, 0.05311, 1e-3);
+  CHECK_CLOSE(r04.d / r14.d - 1.0, 0.07181, 1e-3);
+  const double p14 = r14.d / (r14.s + r14.d);
+  const double p04 = r04.d / (r04.s + r04.d);
+  const double pw = rw.d / (rw.s + rw.d);
+  CHECK_CLOSE(p14, VMC_P_D_LI6, 1e-15);
+  CHECK_CLOSE(p04 / p14 - 1.0, 0.02729, 1e-3);
+  // ... and IT PROPAGATES TO ALMOST NOTHING here: `TaggedModel` renormalises
+  // each wave to its own P_L, so N_ad drops out of every tagged observable
+  // and only the RATIO survives.  0.05 % on the tensor dilution.
+  TaggedChannel c = li6_alpha_channel(BETA_DEFAULT, P_D_LI6,
+                                      ClusterWaveSource::VmcAV18);
+  const TaggedModel m14(c);
+  c.waves[0].prob = 1.0 - p04;
+  c.waves[1].prob = p04;
+  const TaggedModel m04(c);
+  c.waves[0].prob = 1.0 - pw;
+  c.waves[1].prob = pw;
+  const TaggedModel mw(c);
+  CHECK_CLOSE(m04.tensor_dilution() / m14.tensor_dilution() - 1.0, -4.84e-4,
+              5e-2);
+  CHECK_CLOSE(m04.vector_dilution() / m14.vector_dilution() - 1.0, -8.16e-4,
+              5e-2);
+  CHECK(std::fabs(mw.tensor_dilution() / m14.tensor_dilution() - 1.0) < 1e-3);
+
+  // --- C5.5.  On the HULTHEN default the inclusive constant and the tagged
+  // model ARE one wave function, to 1.22e-5.
+  const TaggedModel hul(li6_alpha_channel());
+  CHECK_CLOSE(hul.vector_dilution(), ALPHA_D_VECTOR_POLARIZATION, 2e-5);
+  CHECK_CLOSE(LI6_CLUSTER_POLARIZATION,
+              li6_cluster_polarization(P_D_LI6, P_D_DEUTERON), 1e-15);
+  // Under VmcAV18 they DRIFT: +11.61 % vector, +6.58 % rank-2.
+  CHECK_CLOSE(m14.vector_dilution() / hul.vector_dilution() - 1.0, 0.116131,
+              1e-4);
+  CHECK_CLOSE(m14.tensor_dilution() / LI6_B1_RANK2_TRANSFER - 1.0, 0.065762,
+              1e-4);
+  CHECK_CLOSE(LI6_CLUSTER_POLARIZATION_VMC / LI6_CLUSTER_POLARIZATION - 1.0,
+              0.116119, 1e-4);
+  // AND SUBSTITUTION IS NOT THE FIX.  The "consistent" reading overshoots the
+  // ab initio six-body VMC number by 6.8 % where the shipped one undershoots
+  // it by 4.3 %; adding the AV18 deuteron's own P_D leaves 4.6 % over.
+  CHECK_CLOSE(LI6_CLUSTER_POLARIZATION / LI6_POLARIZATION_VMC_SIX_BODY - 1.0,
+              -0.04336, 1e-3);
+  CHECK_CLOSE(LI6_CLUSTER_POLARIZATION_VMC / LI6_POLARIZATION_VMC_SIX_BODY
+                  - 1.0,
+              +0.06772, 1e-3);
+  const double both = li6_cluster_polarization(VMC_P_D_LI6,
+                                               deuteron_av18_p_d());
+  CHECK_CLOSE(both, 0.8870761569, 1e-8);
+  CHECK_CLOSE(both / LI6_POLARIZATION_VMC_SIX_BODY - 1.0, +0.04608, 1e-3);
+  CHECK(std::fabs(LI6_CLUSTER_POLARIZATION / LI6_POLARIZATION_VMC_SIX_BODY
+                  - 1.0)
+        < std::fabs(LI6_CLUSTER_POLARIZATION_VMC
+                        / LI6_POLARIZATION_VMC_SIX_BODY - 1.0));
+}
+
+
+// T27.  C5.5b -- ONE RUN, ONE DEUTERON.
+//
+// `--cluster-wave vmc` selects the ANL VMC AV18+UX alpha-d overlap for the
+// alpha-d RELATIVE motion.  Until 2026-09-04 the two places a tagged-alpha run
+// reads the EMBEDDED deuteron's own wave function did not follow it:
+//
+//   * `TaggedChannel::dis_target` was `DEUTERON()` unconditionally, so the
+//     struck cluster's g1 (`InclusiveKernel::g1a` -> `PolSF::g1_nucleus`) used
+//     the SCENARIO `P_D_DEUTERON` = 0.045, i.e. 1 - 1.5 P_D = 0.9325;
+//   * the T1 `ClusterBreakup` drew the struck-nucleon spin from the Hulthen
+//     deuteron at the same 0.045.
+//
+// The AV18 deuteron belonging to that overlap has P_D = 0.0575998919874
+// (`deuteron_av18_p_d`, T25), i.e. 0.9136 -- so every polarized tagged-alpha
+// observable under the flag was 2.069 % HIGH against the wave function the flag
+// claims to select, and the run held two deuteron wave-function families.  This
+// pins that it now holds one, and that the Hulthen default is untouched.
+TEST_CASE("T27 the embedded deuteron follows --cluster-wave") {
+  if (!vmc_data_present()) {
+    MESSAGE("data/vmc not present -- skipping");
+    return;
+  }
+  // --- what the two DIS targets are.
+  const TaggedChannel h = li6_alpha_channel();
+  const TaggedChannel v = li6_alpha_channel(BETA_DEFAULT, P_D_LI6,
+                                            ClusterWaveSource::VmcAV18);
+  // the default is `DEUTERON()` itself, bit for bit
+  CHECK(h.dis_target.eff_pol_p == DEUTERON().eff_pol_p);
+  CHECK(h.dis_target.eff_pol_n == DEUTERON().eff_pol_n);
+  CHECK(h.dis_target.eff_pol_p == DEUTERON_VECTOR_POLARIZATION);
+  // and the VMC one differs from it in the effective polarizations ALONE
+  CHECK(v.dis_target.name == DEUTERON().name);
+  CHECK(v.dis_target.A == DEUTERON().A);
+  CHECK(v.dis_target.Z == DEUTERON().Z);
+  CHECK(v.dis_target.spin == DEUTERON().spin);
+  CHECK(v.dis_target.eff_pol_p == vector_dilution_of(deuteron_av18_p_d()));
+  CHECK(v.dis_target.eff_pol_n == v.dis_target.eff_pol_p);
+  CHECK_CLOSE(v.dis_target.eff_pol_p, 0.9136001620189, 1e-12);
+
+  // --- THE SIZE THAT WAS WRONG.  2.0687 %, and it is EXACT rather than
+  // approximate: g1A = Z P_p g1p + N P_n g1n is linear in the effective
+  // polarization, so the whole polarized sector carried one factor.
+  const double was_high = DEUTERON().eff_pol_p / v.dis_target.eff_pol_p;
+  CHECK_CLOSE(was_high - 1.0, 0.0206872095, 1e-8);
+  const InclusiveKernel k_now(v.dis_target);
+  const InclusiveKernel k_before(DEUTERON());
+  const double xs[4] = {0.05, 0.1, 0.3, 0.5};
+  const double q2s[4] = {2.0, 5.0, 10.0, 20.0};
+  for (int i = 0; i < 4; ++i) {
+    CHECK_CLOSE(k_before.tables(xs[i], q2s[i]).g1
+                    / k_now.tables(xs[i], q2s[i]).g1,
+                was_high, 1e-12);
+    CHECK_CLOSE(k_before.a_parallel(k_before.tables(xs[i], q2s[i]), xs[i],
+                                    q2s[i], 0.5)
+                    / k_now.a_parallel(k_now.tables(xs[i], q2s[i]), xs[i],
+                                       q2s[i], 0.5),
+                was_high, 1e-12);
+  }
+
+  // --- THE T1 BREAKUP FOLLOWS TOO, and the gate is the identity breakup.hpp
+  // states: the dilution the spin DRAW implies is the one the RATE uses.
+  BreakupOptions bo;
+  const ClusterBreakup bh(bo);
+  CHECK(bh.options().source == ClusterWaveSource::Hulthen);
+  CHECK_CLOSE(bh.deuteron_model().vector_dilution(), h.dis_target.eff_pol_p,
+              1e-5);
+  bo.source = ClusterWaveSource::VmcAV18;
+  const ClusterBreakup bv(bo);
+  CHECK_CLOSE(bv.deuteron_model().vector_dilution(), v.dis_target.eff_pol_p,
+              1e-5);
+  CHECK(bv.deuteron_model().channel().waves[1].prob == deuteron_av18_p_d());
+  // ... and the two are 2.0688 % apart, which is what a run that mixed them
+  // would have been wrong by.
+  CHECK_CLOSE(bh.deuteron_model().vector_dilution()
+                  / bv.deuteron_model().vector_dilution() - 1.0,
+              0.0206879, 1e-4);
+
+  // --- WHAT ONE `--cluster-wave vmc` RUN NOW SAYS 6Li's POLARIZATION IS.
+  // alpha-d from the VMC overlap x the AV18 deuteron = C5.5's THIRD table row,
+  // 0.887076 -- not the mongrel 0.905427 (VMC alpha-d x scenario deuteron)
+  // it used to be.  Both are still readings of the cluster PRODUCT and neither
+  // reproduces the ab initio 0.848; that is C5.5 and it is unchanged.
+  const TaggedModel mv(v);
+  CHECK_CLOSE(mv.vector_dilution() * v.dis_target.eff_pol_p,
+              li6_cluster_polarization(VMC_P_D_LI6, deuteron_av18_p_d()),
+              2e-5);
+  CHECK_CLOSE(mv.vector_dilution() * v.dis_target.eff_pol_p, 0.887075, 1e-5);
+  // ... i.e. 2.027 % BELOW the mongrel, which is the whole size of the repair.
+  CHECK_CLOSE(mv.vector_dilution() * v.dis_target.eff_pol_p
+                  / LI6_CLUSTER_POLARIZATION_VMC - 1.0,
+              -0.020270, 2e-3);
+  // the Hulthen run's own reading is `LI6_CLUSTER_POLARIZATION`, as it was
+  const TaggedModel mh(h);
+  CHECK_CLOSE(mh.vector_dilution() * h.dis_target.eff_pol_p,
+              LI6_CLUSTER_POLARIZATION, 2e-5);
+
+  // --- AND THE 7Li CHANNEL DELIBERATELY DOES NOT MOVE: there is no AV18
+  // A = 3 wave function in this tree to switch the triton's internal spin
+  // structure to, so the flag selects the alpha-t relative motion alone.
+  CHECK(li7_alpha_channel().dis_target.eff_pol_p == TRITON().eff_pol_p);
+  CHECK(li7_alpha_channel(BETA_DEFAULT, ClusterWaveSource::VmcAV18)
+            .dis_target.eff_pol_p == TRITON().eff_pol_p);
+  CHECK(li7_alpha_channel(BETA_DEFAULT, ClusterWaveSource::VmcAV18)
+            .dis_target.eff_pol_n == TRITON().eff_pol_n);
+  // the control channel's struck object is a free neutron on both settings
+  CHECK(deuteron_channel().dis_target.eff_pol_n == NEUTRON_TARGET().eff_pol_n);
+  CHECK(deuteron_channel(BETA_DEFAULT, P_D_DEUTERON,
+                         ClusterWaveSource::VmcAV18)
+            .dis_target.eff_pol_n == NEUTRON_TARGET().eff_pol_n);
 }

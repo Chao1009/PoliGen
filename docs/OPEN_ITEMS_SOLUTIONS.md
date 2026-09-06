@@ -34,7 +34,7 @@ the configuration, sample, energy or knob it was measured at.
 
 | # | item | state | the deciding number, with its window | where |
 |---|---|---|---|---|
-| 1 | VMC α+d / α+t cluster wave functions | **opt-in shipped** (`--cluster-wave vmc`; Hulthén default bit for bit) **+ author decisions rows 9, 10, 11** | ⁶Li α-tag fraction **0.0249 → 0.0348** (×1.40) at 10 × 99.5 on the YR high-acceptance envelope, 0.2530 → 0.2485 on the tagging optics; the shipped whole-nucleus ⁶Li polarization is **0.811228** against the ab-initio **0.848**, so **no inclusive ⁶Li polarization may be quoted without the band 0.81 … 0.91** | §1; `phase_C_numbers.md` §§C5.4–C5.5b |
+| 1 | VMC α+d / α+t cluster wave functions | **opt-in shipped** (`--cluster-wave vmc`; Hulthén default bit for bit) **+ author decisions rows 9, 10, 11** | ⁶Li α-tag fraction **0.0249 → 0.0348** (×1.40) at 10 × 99.5 on the YR high-acceptance envelope, 0.2551 → 0.2486 (regenerated 2026-09-06; pre-fix sample 0.2530 → 0.2485) on the tagging optics; the shipped whole-nucleus ⁶Li polarization is **0.811228** against the ab-initio **0.848**, so **no inclusive ⁶Li polarization may be quoted without the band 0.81 … 0.91** | §1; `phase_C_numbers.md` §§C5.4–C5.5b |
 | 2 | ePIC chain gate (HepMC3 → abconv → npsim) | **closed** | **10/10** events through `npsim`, directly and via `abconv -p ip6_hiacc_100x10`, with the writer fix that puts m_e = 0.51099895 MeV in `generated_mass` | §2; `T2_CHAIN.md` |
 | 3 | Tensor sign `TENSOR_LL_SIGN` | **author decision — `STATUS.md` row 22** (carried forward, confirm only) | **−1**, the value four independent sources give for A_zz = −(2/3) b₁/F₁; the code has shipped it since 2026-08-29 while two documents still read "author to confirm" | §3–4; `AUTHOR_DECISIONS.md` §B1 |
 | 4 | ⁶Li / ⁷Li effective polarizations | **author decision — row 23** | whole-nucleus VMC **0.85 ± 0.03** for ⁶Li (0.848, Wiringa 2014 Table I) against the shipped cluster-picture **0.811228**; ⁷Li 0.866 / −0.037 | §3–4; `AUTHOR_DECISIONS.md` §B6 |
@@ -96,26 +96,59 @@ behind a Cloudflare challenge). Findings:
   production input = `momenta/` magnitudes + `overlap_old/` S–D sign.
 - **Implemented**: `VmcRadial` backend, `ClusterWaveSource::VmcAV18`
   (`--cluster-wave vmc`); default stays Hulthén. Measured at 10×99.5: ⁶Li α tag
-  0.0249 → **0.0348** (YR high-acceptance, ×1.40), 0.253 → 0.249 (tagging optics);
-  ⁷Li 0.973 → 0.998. Tagged A_zz^tag(k) roughly halves (P_D 0.087 → 0.019 plus shape);
-  the S–D interference sign flips below the S node at 0.134 GeV, currently outside
-  every Roman-Pot acceptance.
+  0.0264 → **0.0348** (YR high-acceptance, ×1.315), 0.255 → 0.249 (tagging optics)
+  — regenerated 2026-09-06 on the fixed S–D sign; the Hulthén samples read
+  0.0249 / 0.253 and the ratio ×1.40 before;
+  ⁷Li 0.973 → 0.998. Tagged A_zz^tag(k) shrinks with P_D (0.087 → 0.019 plus
+  shape); the S–D interference sign flips below the S node at 0.134 GeV, currently
+  outside every Roman-Pot acceptance.
+  **Corrected 2026-09-06** — this line read *"roughly halves"*, which was measured
+  against the pre-fix curve. The tagged sector's own S–D interference sign was
+  inverted until 2026-09-06 (`src/core/tagged.cpp` `build_amp2` summed ψ_L where
+  the partial-wave amplitude needs φ_L = i^L ψ_L, so the relative phase
+  `(-1)^floor(L/2)` — `+1` on L = 0, **`−1` on L = 2** — was missing;
+  `docs/benchmarking/07_cw_sign_investigation.md`). Re-measured on the fixed
+  library at the same optics, the VMC/Hulthén ratio of A_zz^tag runs
+  **0.430 / 0.273 / 0.209 / 0.113 / −0.200** at k = 0.1979 / 0.2495 / 0.3012 /
+  0.4001 / 0.4990 GeV (it read 0.535 / 0.398 / 0.348 / 0.234 / −0.554 before), so
+  the shrink is a factor **2.3 at k = 0.20 falling to 8.8 at k = 0.40** — not a
+  halving. **Both curves are now negative** across the accepted window; the tag
+  fractions, ⟨k⟩ and P_D on this line are spin-blind and did not move.
 - Consequence for the physics case: the ⁶Li α-tag acceptance is entirely a
   p_T-tail measurement, so the published tag fractions and the tagged A_zz
   curves were re-run on VMC (`validation/vmc_tag_fractions.py`,
   `docs/open_items/vmc_reconciliation.md` "Impact on the tagged pipeline",
-  `docs/USAGE.md`): ⁶Li tag fraction 0.0249 → 0.0348 (YR high-acceptance),
-  0.2530 → 0.2485 (tagging optics); ⁷Li 0.9730 → 0.9981; ⁶Li A_zz^tag at
-  k = 0.20 GeV +0.845 → +0.452; P_D 0.0867 → 0.01935. Because no single β
-  reproduces the VMC shape (Pauli node + window-dependent tail), the Hulthén
+  `docs/USAGE.md`): ⁶Li tag fraction 0.0264 → 0.0348 (YR high-acceptance),
+  0.2551 → 0.2486 (tagging optics; the ⁶Li Hulthén samples were regenerated
+  2026-09-06 on the fixed S–D sign and read 0.0249 / 0.2530 before, a re-drawn
+  category average); ⁷Li 0.9730 → 0.9981; ⁶Li A_zz^tag at
+  k = 0.20 GeV **−1.207 → −0.519** (**corrected 2026-09-06**; it read
+  `+0.845 → +0.452`, the pre-fix pair, until the tagged sector's S–D
+  interference sign was fixed — one `(-1)^floor(L/2)` in `src/core/tagged.cpp`
+  `build_amp2`, the observable relative part of φ_L = i^L ψ_L, which was
+  missing entirely; `docs/benchmarking/07_cw_sign_investigation.md`,
+  `docs/open_items/run_2026-09-06/phase_CW_numbers.md`). Measured at the
+  k = 0.1979 GeV cell — the grid point nearest 0.20 — on
+  `azz_tensor_curve_weighted` at `default_configs("6Li")[1]`,
+  `yr_optics(..., high_acceptance = true)`, `n_phi = 32`: **−1.2069** Hulthén
+  β = 0.30 and **−0.5191** VMC AV18, against +0.8450 and +0.4518 before. **The
+  Hulthén → VMC statement this bullet makes survives the fix and every other
+  number on this line is unchanged**: the tag fractions and P_D are spin-blind,
+  and the spin-blind accepted rate is **unmoved across the fix to ≤ 4.0e−16
+  relative (1–2 ulp; the VMC channel is bit-identical)** — measured as the
+  acceptance-weighted Σ_M n_M k² at `n_phi = 32`, giving an accepted fraction
+  of **0.0246759321488** (Hulthén β = 0.30) and **0.0338102276258** (VMC
+  AV18). Digits beyond those are summation-order dependent, not physics.
+  P_D 0.0867 → 0.01935. Because no single β reproduces the VMC shape (Pauli node + window-dependent tail), the Hulthén
   β band is retired as the cluster-wave systematic rather than widened — the
   `--cluster-beta` knob itself stays (Hulthén is still the default radial
   form), but the quoted systematic is now the VMC-vs-Hulthén difference
   shown above, not a scan over β. Confirmed at the other two reference
   configurations (`validation/vmc_tag_fractions.py --configs 0,1,2`,
   `docs/USAGE.md`): the ⁶Li YR high-acceptance tag fraction moves
-  0.0286 → 0.0365 at 5×41 and 0.0266 → 0.0349 at 18×275, so the
-  Hulthén→VMC shift is not a single-energy artifact.
+  0.0301 → 0.0365 at 5×41 and 0.0279 → 0.0348 at 18×275 (regenerated
+  2026-09-06 on the fixed S–D sign; 0.0286 → 0.0365 and 0.0266 → 0.0349
+  before), so the Hulthén→VMC shift is not a single-energy artifact.
 
 ## 2. Chain gate — **CLOSED** (passed)
 
@@ -2172,7 +2205,9 @@ shipped default moved and `validation/reference/*.json` is untouched.**
   w(k) *are* the p–n relative waves, so `--cluster-wave vmc` was being silently
   ignored on that channel; it now selects P_D = **0.0576** (+28 % over the
   scenario 0.045), worth −2.0 % / −1.2 % on the channel's vector/tensor
-  dilutions. The relative S–D sign does **not** flip (ψ₂ = +W), unlike ⁶Li.
+  dilutions. The relative S–D sign does **not** flip (the **stored** ψ₂ = +W),
+  unlike ⁶Li — but the amplitude sums φ₂ = i²ψ₂ = **−W**, which `build_amp2`
+  did not apply until 2026-09-06 (`07_cw_sign_investigation.md`).
 * **C5.5 — the split is real, the framing was not, and substitution is worse.**
   It is **not** two channels of one run (a `Pipeline` builds exactly one
   channel); it is a tagged row and an inclusive row of one programme, which is
@@ -2202,6 +2237,30 @@ shipped default moved and `validation/reference/*.json` is untouched.**
   which C5.5's 11.61 % reached a user who thought they had asked for a VMC
   ⁶Li. It is now refused, as `cluster_vmc_mc_sigma` (a 0.02 % effect) already
   was. `phase_C_numbers.md` §C5.5b, **T27**.
+
+> **§11.4 checked against the 2026-09-06 S–D interference fix — no number in
+> the five C5 bullets above inherits it.** The tagged sector's partial-wave
+> amplitude was summing ψ_L where it needs φ_L = i^L ψ_L
+> (`src/core/tagged.cpp` `build_amp2`, one missing `(-1)^floor(L/2)`;
+> `docs/benchmarking/07_cw_sign_investigation.md`), which flips the S–D
+> interference and therefore every *angle-differential* tagged quantity. Every
+> quantity these bullets quote is **angle-integrated**, and `∫Θ₀Θ₂ dc = 0` by
+> L-orthogonality, so the flipped cross term integrates away and only the
+> 96-cell midpoint-quadrature residual of that zero survives. Re-measured:
+> **C5.2**'s tagged tensor observable `0.982575817 → 0.982575872`
+> (+5.6e−8 relative, against the 0.02 % the bullet reports); **C5.3**'s
+> `tensor_dilution` sensitivities likewise, being differences of such values;
+> **C5.4**'s `−2.0 % / −1.2 %` on the control's vector/tensor dilutions
+> **unchanged to every printed digit** (−2.02683 % / −1.18214 %, from
+> −2.02682 % / −1.18214 %); **C5.5**'s `0.905427`, `0.811228`, `0.848` and
+> `0.887076` are closed forms in D-state probabilities (`beams.hpp`
+> `li6_cluster_polarization`, `constexpr`) and never reach `build_amp2` at
+> all; **C5.5b**'s **+2.069 %** re-measures as **1.020687624664** against
+> **1.020687500612** — unmoved in the seventh figure. What *did* move is the
+> spectator-differential observable these bullets do not quote: ⁶Li
+> A_zz^tag(k = 0.20 GeV) went **+0.845 → −1.207** (Hulthén) and
+> **+0.452 → −0.519** (VMC); see §1 and
+> `docs/open_items/run_2026-09-06/phase_CW_numbers.md`.
 
 ### 11.5 O3 — what is bounded offline, and C6 — the collaboration ask reconciled (2026-09-04)
 

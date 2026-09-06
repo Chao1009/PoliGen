@@ -773,7 +773,57 @@ def boost_spectator_dump(channel, configs):
     return rows
 
 
+PROVENANCE_NOTE_TAGGED = (
+    "The li6_alpha and deuteron `model` blocks are dumped from the FIXED "
+    "LiPolGen C++ library (validation/repin_tagged_from_lipolgen.py), not "
+    "from polligen.  polligen's tagged._amp2_table omits the i^L "
+    "partial-wave phase and therefore carries the INVERTED S-D interference "
+    "sign; regenerating those blocks from it would re-bake the bug the "
+    "2026-09-06 fix removed.  See "
+    "docs/benchmarking/07_cw_sign_investigation.md and "
+    "docs/open_items/run_2026-09-06/phase_CW_numbers.md.  Everything else in "
+    "this file -- including li7_alpha's model block, one L = 1 wave with "
+    "nothing to interfere with -- is still polligen's."
+)
+
+
+# Spin-1 tagged channels whose `model` block this script MUST NOT write.
+#
+# 2026-09-06: the tagged sector's S-D interference sign was inverted -- the
+# partial-wave sum needs phi_L = i^L psi_L and had no phase at all.  The C++
+# was fixed (src/core/tagged.cpp `build_amp2`); `polligen.tagged._amp2_table`
+# (tagged.py:243-248) was NOT, and still carries the missing phase, so
+# anything this script computes for an S+D channel's `model` block is the
+# refuted sign.  Those two blocks are re-pinned from the FIXED LiPolGen by
+# `validation/repin_tagged_from_lipolgen.py` and CARRIED THROUGH here.
+#
+# `li7_alpha` has one L = 1 wave -- the common i is a global phase, nothing
+# interferes, nothing moved -- so its block is still polligen's and is
+# rewritten normally.
+#
+# See docs/benchmarking/07_cw_sign_investigation.md.
+TAGGED_MODEL_NOT_FROM_POLLIGEN = ("li6_alpha", "deuteron")
+
+
+def _carried_tagged_models():
+    """The re-pinned `model` blocks already on disk, keyed by channel."""
+    path = OUT / "tagged.json"
+    if not path.is_file():
+        raise SystemExit(
+            "validation/reference/tagged.json is missing and its %s model "
+            "blocks cannot be regenerated from polligen (inverted S-D sign, "
+            "see docs/benchmarking/07_cw_sign_investigation.md).  Restore the "
+            "file, or rebuild it with "
+            "validation/repin_tagged_from_lipolgen.py."
+            % ", ".join(TAGGED_MODEL_NOT_FROM_POLLIGEN))
+    with open(path) as fh:
+        doc = json.load(fh)
+    return {k: doc["channels"][k]["model"]
+            for k in TAGGED_MODEL_NOT_FROM_POLLIGEN}
+
+
 def build_tagged():
+    carried = _carried_tagged_models()
     channels = {
         "li6_alpha": tagged.li6_alpha_channel(),
         "li7_alpha": tagged.li7_alpha_channel(),
@@ -782,7 +832,9 @@ def build_tagged():
     beam_species = {"li6_alpha": "6Li", "li7_alpha": "7Li", "deuteron": "d"}
 
     out = {"channels": {}, "P_D_LI6": tagged.P_D_LI6,
-           "P_D_DEUTERON": tagged.P_D_DEUTERON}
+           "P_D_DEUTERON": tagged.P_D_DEUTERON,
+           "provenance": "LiPolGen post-fix, formerly polligen",
+           "provenance_note": PROVENANCE_NOTE_TAGGED}
     for key, channel in channels.items():
         cfgs = beams.default_configs(beam_species[key])
         cfg_dicts = [{"electron_energy": c.electron_energy,
@@ -805,7 +857,8 @@ def build_tagged():
             },
             "waves": wave_dump(key, channel),
             "beam_configs": cfg_dicts,
-            "model": tagged_model_dump(channel),
+            "model": (carried[key] if key in carried
+                      else tagged_model_dump(channel)),
             "boost_spectator": boost_spectator_dump(channel, cfg_dicts),
         }
     return out
@@ -815,6 +868,62 @@ doc("tagged.json",
     "`polligen.tagged` (PolarizedLithiumSim/evgen/polligen/tagged.py) using\n"
     "the DEFAULT channel constructors (all default beta=0.30, and for 6Li\n"
     "p_d=tagged.P_D_LI6, for the deuteron control p_d=tagged.P_D_DEUTERON).\n\n"
+    "**THIS FILE NO LONGER TRACKS polligen FOR THE SPIN-1 MODEL BLOCKS "
+    "(2026-09-06).**\n"
+    "`polligen.tagged._amp2_table` (tagged.py:243-248) sums the partial "
+    "waves with\n"
+    "NO `i^L`: it feeds `psi_L` into an amplitude that needs "
+    "`phi_L = i^L psi_L`.\n"
+    "For an S+D channel that is not a global phase -- it is +1 on L=0 and -1 "
+    "on\n"
+    "L=2 -- so polligen's tagged sector carries the S-D interference sign\n"
+    "INVERTED, against Cosyn-Weiss II Eq. (6.12) (by up to 2.74 in an "
+    "asymmetry\n"
+    "whose whole range is [-2, 1]), against LiPolGen's own deuteron "
+    "quadrupole\n"
+    "sign gate, and against LiPolGen's own b1 sector, which applies the "
+    "phase\n"
+    "explicitly.  LiPolGen fixed it on 2026-09-06 "
+    "(`src/core/tagged.cpp`\n"
+    "`build_amp2`, one `(-1)^floor(L/2)`); polligen was NOT touched and "
+    "still\n"
+    "carries the bug.  Regenerating `channels.li6_alpha.model` or\n"
+    "`channels.deuteron.model` from polligen would therefore re-bake the "
+    "refuted\n"
+    "sign and the rtol-1e-12 gate would go on certifying it.\n\n"
+    "Those two blocks are instead RE-PINNED from the fixed C++ library by\n"
+    "`validation/repin_tagged_from_lipolgen.py` (provenance `\"LiPolGen post-fix,\n"
+    "formerly polligen\"`, recorded in the file's own `provenance` /\n"
+    "`provenance_note` keys), and `dump_polligen_reference.py` carries them\n"
+    "through unchanged rather than overwriting them.  What moved in the re-pin,\n"
+    "MEASURED 2026-09-06 as the re-pinned file against the pre-fix dump\n"
+    "(`git show HEAD:validation/reference/tagged.json`), not copied from the\n"
+    "investigation's own table: `n_of_kc` (up to +725% on 6Li, +19215% on the\n"
+    "AV18 deuteron control), `struck_populations` (up to 0.86 absolute),\n"
+    "`p2_moment` (sign flip, x1.28 to x2.03), `p2_moment_mixture_uniform`\n"
+    "(-5.3160743e-05 -> -5.2153460e-05 on 6Li, 1.9e-2 rel; -5.3694953e-05 ->\n"
+    "-5.3337762e-05 on the deuteron, 6.7e-3 rel -- it is gated at 1e-9, so it had\n"
+    "to be re-pinned too), `norm` (up to 5.8e-5 rel: 6Li M=0 1.000026689626 ->\n"
+    "0.999968571520; 4.0e-5 on the deuteron), `population_integrated` (up to\n"
+    "3.0e-6 abs: 6Li M=0 0.947966373524 -> 0.947963349333) and the dilutions\n"
+    "(<=4.3e-6 rel).  Until 2026-09-06 this list read `norm` \"+2e-5\" and\n"
+    "`population_integrated` \"<=5e-7 abs\" and did not mention\n"
+    "`p2_moment_mixture_uniform` at all -- three figures taken from\n"
+    "`07_cw_sign_investigation.md` section 6.1 rather than measured here, where\n"
+    "that section records the last one as not moving.  Reason, derivations and\n"
+    "the full before/after tables: `docs/benchmarking/07_cw_sign_investigation.md`\n"
+    "and `docs/open_items/run_2026-09-06/phase_CW_numbers.md`.\n\n"
+    "EVERYTHING ELSE IN THE FILE IS STILL polligen's, untouched: `waves`,\n"
+    "`base`, `beam_configs`, `boost_spectator`, `P_D_LI6`, `P_D_DEUTERON`, "
+    "the\n"
+    "channel scalars, and the WHOLE of `channels.li7_alpha.model` -- 7Li "
+    "alpha-tag\n"
+    "is a single L=1 wave, so the common `i` is a global phase, and the fix\n"
+    "moves its `n_of_kc` and `p2_moment` by exactly zero (measured, "
+    "bit for bit).\n"
+    "The re-pin script re-checks that block against the live C++ at rtol "
+    "1e-12\n"
+    "instead of overwriting it.  No other reference JSON moved.\n\n"
     "`channels.<li6_alpha|li7_alpha|deuteron>`: built by\n"
     "`tagged.li6_alpha_channel()` / `li7_alpha_channel()` / "
     "`deuteron_channel()` (tagged.py:181,188,195). `base` is the underlying\n"
@@ -1261,6 +1370,14 @@ def main():
     files = mine + [f for f in doc_.get("files", []) if f not in mine]
     gens = dict(doc_.get("generators", {}))
     for f in mine:
+        # tagged.json's spin-1 model blocks are re-pinned from the fixed C++
+        # (TAGGED_MODEL_NOT_FROM_POLLIGEN above) and only carried through
+        # here, so the file's OWNER stays the re-pin script.  Claiming it
+        # would send the next reader back to polligen's inverted S-D sign.
+        if f == "tagged.json":
+            gens.setdefault(f, "LiPolGen/validation/"
+                               "repin_tagged_from_lipolgen.py")
+            continue
         gens[f] = "LiPolGen/validation/dump_polligen_reference.py"
     write_json("_manifest.json", {
         "generator": "LiPolGen/validation/dump_polligen_reference.py",

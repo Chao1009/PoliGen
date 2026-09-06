@@ -73,9 +73,9 @@ The mapping is total in both directions, and was checked row by row on
 | 6 the published `A_zz(Born)` column is wrong ×3.253983 | §B11 | **republished beside the original 2026-09-06**; the choice (leave / delete the old column) is still open |
 | 7 the Gakh–Shekhovtsova δ(x) shape is rejected | §B14 | decided on the record |
 | 8 `eps_b0` stays −0.08 | §B5 | open (cost recorded) |
-| 9 the tagged deuteron control keeps Hulthén | §B9 | open |
-| 10 `LI6_CLUSTER_POLARIZATION` stays 0.811228 | §B6 | open (band mandatory) |
-| 11 the embedded deuteron follows `--cluster-wave` | §B10 | applied — confirm or revert |
+| 9 the tagged deuteron control keeps Hulthén | §B9 | open — **evidence moved 2026-09-06**, see the box in §B9(c): the Cosyn–Weiss gate now runs on AV18, and `tagged.json`'s spin-1 model blocks are re-pinned from this library. No decision taken |
+| 10 `LI6_CLUSTER_POLARIZATION` stays 0.811228 | §B6 | open (band mandatory) — **checked 2026-09-06 against the S–D interference fix: does not inherit it.** 0.811228 = (1 − 1.5 P_D^{αd})(1 − 1.5 P_D^{d}) is a closed form in two D-state probabilities, and P_D is a norm, phase-blind |
+| 11 the embedded deuteron follows `--cluster-wave` | §B10 | applied — confirm or revert. **Re-measured 2026-09-06**: §B10(d)'s +2.069 % is unmoved by the S–D interference fix (1.020687624664 vs 1.020687500612) |
 | 12 the coherent \|t\| ceiling stays 0.2, on the anchor range | §B16 | applied — confirm |
 | 13 the author's name | §B22 | open — a placeholder ships |
 | 14 push `ci.yml`, or not (coupled to pushing the run) | §B23 | open |
@@ -310,6 +310,22 @@ Carried forward: `OPEN_ITEMS_SOLUTIONS.md` row 4 still reads "author to
 confirm" on the 2026-08-29 closure (whole-nucleus P_p = P_n = 0.85 ± 0.03
 for ⁶Li, 0.87 / −0.03 for ⁷Li) and does not point at this row.
 
+> **(c)'s LAST NUMBER HAS MOVED, 2026-09-06 — the leg is unchanged in
+> direction and TIGHTER.** The "same wave function in two experiments" residual
+> is now **7.84e−6**, not 1.22e−5: the tagged `vector_dilution()` re-measures
+> **0.8699431789** against the closed form 0.869950 (6.82e−6 absolute) after
+> the tagged S–D interference sign fix
+> (`../../benchmarking/07_cw_sign_investigation.md`;
+> `../run_2026-09-06/phase_CW_numbers.md`). The dilution is angle-integrated,
+> so the fix moves only the 96-cell midpoint-quadrature residual of
+> `∫Θ₀Θ₂ dc = 0` — **+11.61 % / +6.58 %**, the two numbers the decision turns
+> on, are unchanged: re-measured **0.116126** vector (0.116131 pre-fix) and
+> **0.065762** rank-2 (unmoved at six decimals), both inside `T26`'s 1e−4 pins
+> on 0.116131 / 0.065762.
+> **No decision leg changed and the row stays open**; what changed is one
+> measured residual. Live sites carrying the new pair: `CONVENTIONS.md:93`,
+> `PHYSICS_CHANNELS.md`, `beams.hpp`, `tagged.hpp`.
+
 **(d)** (i): nothing moves; the 11.61 % split stands between runs. (ii)–(iv):
 every inclusive ⁶Li g₁ / A_∥ scales by new/0.811228 (×1.1161, ×1.0935,
 ×1.0453); `validation/reference/beams.json` and `xsec.json` (both carry
@@ -451,9 +467,31 @@ be the Cosyn–Weiss tagged limit of the analytic family the ⁶Li channel is
 built from; `fdeut.av18` prints no MC errors, so the AV18 row carries no band;
 `validation/reference/tagged.json` pins Hulthén. The evidence favours (i).
 
+> **(c) HAS MOVED, 2026-09-06 — two of its four legs changed, and they pull
+> opposite ways.** (1) *"The control's job is to be the Cosyn–Weiss tagged
+> limit"*: the Cosyn–Weiss gate **now runs on AV18**, not on Hulthén
+> (`../../benchmarking/07_cw_sign_investigation.md` §8). CW's TABLE II is
+> quoted for AV18, and the Hulthén pair's f₂/f₀ **never reaches √2** anywhere
+> on the grid, so it cannot carry CW's landmarks — the old gate's agreement
+> with "k = 0.30 GeV" was a coincidence of β = 0.30. That leg now argues
+> **for** (ii), or at least says the control is already AV18 where it matters.
+> (2) *"`tagged.json` pins Hulthén"*: still true, but the two spin-1 `model`
+> blocks were **deliberately re-pinned on 2026-09-06** from this library
+> rather than from `polligen` (whose `_amp2_table` carries the S–D sign bug),
+> so "the reference pins it" is now a statement about a file this project
+> generates, not an external port gate. That leg is **weaker** than it was.
+> Legs (3) *no MC errors* and (4) *the analytic family* are untouched. **The
+> row stays open**; what changed is the evidence, not a decision.
+
 **(d)** (ii): P_D +28 %, **−2.03 %** / **−1.18 %** on the channel's vector /
 tensor dilutions; the relative S–D sign does not flip; `tagged.json` moves at
-rtol 1e−12.
+rtol 1e−12. *(**Re-measured 2026-09-06** after the S–D interference fix: the
+two percentages are **unchanged to every printed digit** — −2.02683 % vector
+and −1.18214 % tensor, against −2.02682 % / −1.18214 % before — because both
+dilutions are angle-integrated and the S–D cross term drops out of them by
+L-orthogonality. And *"the relative S–D sign does not flip"* is still true of
+the **stored** ψ₂ = +W, which is what it was about; what changed is that the
+**amplitude** now applies φ_L = i^L ψ_L, which it did not before.)*
 
 **(e)** (i): close the row. (ii): the deuteron-channel default in
 `tagged.hpp` (`DEUTERON_AV18()`) / `breakup.hpp` (`BreakupOptions::source`),
@@ -472,7 +510,11 @@ wave-function families in one channel; `DEUTERON_AV18()` and
 everywhere it is read.
 
 **(d)** The defect was **+2.069 %** on every polarized tagged-α observable
-under the flag (exact, 1.020687209533 at every (x, Q²)); the repair moved the
+under the flag (exact, 1.020687209533 at every (x, Q²) — *re-measured
+2026-09-06 after the S–D interference fix as the ratio of the two channels'
+`vector_dilution`: **1.020687624664** against **1.020687500612** before, i.e.
++2.069 % on both, unmoved in the seventh figure, because the dilutions are
+angle-integrated*); the repair moved the
 opt-in path by **−2.027 %**; the Hulthén default is bit for bit (0 reference
 JSONs, 0 pre-existing assertions moved; +45 assertions added). A `vmc` run's
 whole-nucleus reading is 0.887076 (0.886169 ± 0.0011 end to end on 400 k

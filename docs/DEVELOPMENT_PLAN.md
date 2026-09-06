@@ -122,8 +122,18 @@ of 2026-09-05 (Phase E item E3c) — added where the row previously named none.
    err_azz", "closure: cos2phi moment unbiased, spread within 15%", "closure:
    the Azz relative-luminosity bias is -(2/3) delta / Pzz", "closure: the
    A_par relative-luminosity bias is delta/(2 Pe Pz)".
-4. Tagged: Cosyn–Weiss deuteron limit (P₂ factorization < 1e-5, peak k = 0.31 GeV,
-   A_T∥ extremes +1/−2); ⁶Li S-wave = inclusive deuteron; ⁷Li ⟨P₂⟩ = −T/5;
+4. Tagged: Cosyn–Weiss deuteron limit (**rewritten 2026-09-06** — it now runs on
+   the **AV18** control CW's TABLE II is quoted for, and checks Eq. (6.12) as an
+   *identity*, `max|A_zz^wf − CW| < 1e−12`, measured 8.88e−16 over 280 × 96 cells
+   on both deuteron controls; CW's own k landmarks 0.298 / 1.035 GeV; TABLE II's
+   three rows −1.937 / +0.999 / +0.967 against −2 / +1 / +1; the whole curve
+   inside [−2, 1]. It read *"P₂ factorization < 1e-5, peak k = 0.31 GeV, A_T∥
+   extremes +1/−2"*, which ran on the **Hulthén** pair — a channel whose f₂/f₀
+   never reaches √2 — and applied a spurious `A_T∥ = −2 · A_zz^wf` mapping. **The
+   mapping is +1**, and the −2 the old gate applied was hiding an inverted S–D
+   interference sign in `TaggedModel::build_amp2`, now fixed;
+   `docs/benchmarking/07_cw_sign_investigation.md`); ⁶Li S-wave = inclusive
+   deuteron; ⁷Li ⟨P₂⟩ = −T/5;
    P_p = 0.866 and P_n ≈ −0.037 (the neutron half is an *open* gate, report it).
    `tests/test_tagged.cpp`: "tagged: the Cosyn-Weiss deuteron tensor gate (CW
    TABLE II)", "tagged: the 6Li S-wave limit reduces to the inclusive

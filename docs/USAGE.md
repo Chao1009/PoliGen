@@ -1300,14 +1300,31 @@ the control from that table at its own P_D = **0.057600**
 
 | deuteron control | P_D | `vector_dilution` | `tensor_dilution` |
 |---|---|---|---|
-| Hulthén (default, bit for bit) | 0.045 | 0.932494769 | 0.959488074 |
-| AV18 `fdeut` | 0.0575998920 | 0.913594777 | 0.948145618 |
+| Hulthén (default, bit for bit) | 0.045 | 0.932496109 | 0.959488878 |
+| AV18 `fdeut` | 0.0575998920 | 0.913595979 | 0.948146339 |
 | change | +28.00 % | **−2.03 %** | **−1.18 %** |
+
+*(The four dilutions were re-measured on the fixed library 2026-09-06 and moved
+in the 7th decimal — 0.932494769 / 0.959488074 / 0.913594777 / 0.948145618
+before.  They are angle-integrated, so `∫Θ₀Θ₂ dc = 0` by L-orthogonality kills
+the S–D cross term the sign fix flips and only the 96-cell midpoint-quadrature
+residual of that zero survives: measured 0.932496109312 / 0.959488878164 /
+0.913595978560 / 0.948146339359, the two percentages **−2.026832 %** and
+**−1.182144 %**, unchanged to five decimals.  P_D does not move at all — it is
+a norm.  `tests/test_tagged.cpp` T25 pins all four at rtol 1e−6.)*
 
 The relative S–D sign does **not** flip: CDKS fix φ₂ = −W with φ_L = i^L ψ_L,
 so the physical deuteron has ψ₂ = +W > 0 at low k, which is what the
-positive-definite Hulthén forms already assume — the *opposite* of the ⁶Li α–d
-case.  Hulthén stays the default because the control's job is to be the
+positive-definite Hulthén forms already assume for the **stored** ψ — the
+*opposite* of the ⁶Li α–d case.  **What that does not license (corrected
+2026-09-06):** ψ₂ = +W is not what the partial-wave amplitude sums.
+`TaggedModel::build_amp2` consumes **φ_L = i^L ψ_L**, so it needs
+φ₂ = i²ψ₂ = **−W**, and until 2026-09-06 it applied no phase at all — the
+tagged sector's S–D interference sign was therefore inverted, against
+Cosyn–Weiss II Eq. (6.12) (`src/core/tagged.cpp` `build_amp2`, one
+`(-1)^floor(L/2)`; `docs/benchmarking/07_cw_sign_investigation.md`).  `rad_[2]`
+and `Wave::psi()` are **not** negated, so ψ₂ = +W remains the stored convention
+this paragraph is about.  Hulthén stays the default because the control's job is to be the
 Cosyn–Weiss tagged limit of the same analytic family the ⁶Li channel is built
 from, and because `fdeut.av18` prints no MC errors (so the AV18 row carries no
 band of its own).
@@ -1397,10 +1414,45 @@ in `docs/open_items/vmc_reconciliation.md`):
 | ⁶Li ⟨k⟩ / P(k>0.2) / P(k>0.45) | 0.1219 / 0.1476 / 0.0157 | 0.1225 / 0.2410 / 0.0019 |
 | ⁷Li ⟨k⟩ / P(k>0.3) / P(k>0.45) | 0.2893 / 0.3527 / 0.1555 | 0.1864 / 0.2111 / 0.0114 |
 | ⁶Li P_D | 0.0867 | 0.01935 |
-| ⁶Li tag fraction, YR high-acceptance | 0.0249 | 0.0348 |
-| ⁶Li tag fraction, tagging optics | 0.2530 | 0.2485 |
+| ⁶Li tag fraction, YR high-acceptance | 0.0264 | 0.0348 |
+| ⁶Li tag fraction, tagging optics | 0.2551 | 0.2486 |
 | ⁷Li tag fraction, YR high-acceptance | 0.9730 | 0.9981 |
-| ⁶Li A_zz^tag at k = 0.20 GeV | +0.845 | +0.452 |
+| ⁶Li A_zz^tag at k = 0.20 GeV | **−1.207** | **−0.519** |
+
+> **A_zz^tag row corrected 2026-09-06.**  It read `+0.845 | +0.452` until the
+> S–D interference sign of the tagged amplitude was fixed
+> (`src/core/tagged.cpp` `build_amp2`, one `(-1)^floor(L/2)`: the partial-wave
+> sum needs φ_L = i^L ψ_L and had no phase at all).  Measured at k = 0.1979 GeV
+> — the grid cell nearest 0.20 — on the acceptance-weighted curve at
+> `default_configs("6Li")[1]` and `yr_optics(..., high_acceptance = true)`,
+> `n_phi = 32`: **−1.2069** (Hulthén β = 0.30) and **−0.5191** (VMC AV18),
+> against +0.8450 and +0.4518 before.  The magnitude of the change is the
+> whole observable: A_zz^wf lives in [−2, 1] and the sign flip moves it by up
+> to 2.74.  ⟨k⟩, P(k>·) and P_D are spin-blind and unchanged to the digits
+> shown, and the spin-blind accepted rate is **unmoved across the fix to
+> ≤ 4.0e−16 relative (1–2 ulp; the VMC channel is bit-identical)** — measured
+> as the acceptance-weighted Σ_M n_M k² at `n_phi = 32`, giving an accepted
+> fraction of **0.0246759321488** (Hulthén β = 0.30) and **0.0338102276258**
+> (VMC AV18). Digits beyond those are summation-order dependent, not physics.
+>
+> **The two ⁶Li tag-fraction rows DID move, and the claim that they did not is
+> withdrawn (2026-09-06, verification pass).**  They read `0.0249` and `0.2530`
+> until this edit.  They are 40 k-event SAMPLES at the `tensor-thirds` fill —
+> a category average whose EXPECTATION is the uniform-M mix integral and IS
+> invariant, measured unmoved to all 15 digits (**0.024675932148828** Hulthén
+> β = 0.30, **0.033810227625842** VMC AV18, the equal-thirds average
+> reproducing it to +3.1e−9) — but whose SAMPLE is re-drawn, ~77 % of events
+> taking a different (k, cos θ_k); at 40 k events the two readings sit 1.4σ
+> (YR high-acceptance, 0.0249 → 0.0264) and 0.7σ (tagging, 0.2530 → 0.2551)
+> apart, on binomial σ_diff of 1.1e−3 and 3.1e−3 for two independent samples.  A single tensor-polarised fill is not invariant at all: measured on
+> the ⁶Li Hulthén channel at these optics, the `tensor-thirds` categories go
+> **0.028127 → 0.018403** (azz±, −34.6 %) and **0.017775 → 0.037222** (azz0,
+> +109 %), and the `--pz 0.7` max-entropy ladder of `helicity-flip`
+> (0.751567 / 0.196866 / 0.051567) goes **0.027030 → 0.020396**, −24.5 %.
+> ⁷Li does not move at all.
+> Reason and derivations:
+> `docs/benchmarking/07_cw_sign_investigation.md`; before/after tables:
+> `docs/open_items/run_2026-09-06/phase_CW_numbers.md`.
 
 **Roman-Pot tag fractions, Hulthén β = 0.30 vs VMC, at the three configurations
 (40000 events, seed 20260829):** `validation/vmc_tag_fractions.py --events
@@ -1410,10 +1462,25 @@ separately per isotope).
 
 | isotope | optics | 5 × 40.8 GeV/u Hulthén | VMC | 10 × 99.5 GeV/u Hulthén | VMC | 18 × 137.5/117.9 GeV/u Hulthén | VMC |
 |---|---|---|---|---|---|---|---|
-| ⁶Li | YR high-acceptance | 0.0286 | 0.0365 | 0.0249 | 0.0348 | 0.0266 | 0.0349 |
-| ⁶Li | tagging optics | 0.3410 | 0.3175 | 0.2530 | 0.2485 | 0.3115 | 0.2905 |
+| ⁶Li | YR high-acceptance | 0.0301 | 0.0365 | 0.0264 | 0.0348 | 0.0279 | 0.0348 |
+| ⁶Li | tagging optics | 0.3451 | 0.3185 | 0.2551 | 0.2486 | 0.3145 | 0.2911 |
 | ⁷Li | YR high-acceptance | 0.9660 | 0.9981 | 0.9730 | 0.9981 | 0.9787 | 0.9981 |
 | ⁷Li | tagging optics | 0.9805 | 0.9993 | 0.9927 | 0.9992 | 0.9941 | 0.9992 |
+
+**This table was REGENERATED on the fixed library, 2026-09-06** (the command
+above, unchanged, on the post-`build_amp2`-fix build).  The ⁶Li rows read
+`0.0286 | 0.0365 | 0.0249 | 0.0348 | 0.0266 | 0.0349` and
+`0.3410 | 0.3175 | 0.2530 | 0.2485 | 0.3115 | 0.2905` before, and a scratch
+build of the pre-fix `HEAD` reproduced those exactly when the rows were checked
+on 2026-09-06; **every ⁷Li row is unchanged, digit for
+digit**, because ⁷Li is one L = 1 wave and does not move at all.  The ⁶Li rows
+are a `tensor-thirds` category average, so what moved is the SAMPLE and not the
+expectation — the uniform-M mix accepted fraction is unmoved to all 15 digits
+(0.024675932148828 Hulthén β = 0.30, 0.033810227625842 VMC AV18) — but the
+published digits are no longer the pre-fix ones, which is why they are
+regenerated rather than annotated.  For what a single tensor-polarised fill
+does (up to −24.5 % at the CLI's own default fill), see the correction box
+above and `docs/open_items/vmc_reconciliation.md`.
 
 The cluster-wave systematic is quoted as the difference between a
 `--cluster-wave hulthen` run and a `--cluster-wave vmc` run; the Hulthén β

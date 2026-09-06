@@ -24,6 +24,7 @@
 #include "lipolgen/asymmetries.hpp"
 #include "lipolgen/beams.hpp"
 #include "lipolgen/breakup.hpp"
+#include "lipolgen/cluster_config.hpp"   // VMC_DEUTERON_WAVE
 #include "lipolgen/constants.hpp"
 #include "lipolgen/event.hpp"
 #include "lipolgen/rng.hpp"
@@ -90,6 +91,38 @@ std::size_t argmax_abs(const std::vector<double>& v) {
   return best;
 }
 
+/// Is the AV18 deuteron k-space table on disk?  The Cosyn-Weiss gate runs on
+/// `data/vmc/deuteron/fdeut.av18` -- CW's OWN wave function -- which is a
+/// different file from the `vmc/momenta/` overlaps `vmc_data_present` guards.
+bool fdeut_av18_present() {
+  std::ifstream f(data_path(VMC_DEUTERON_WAVE));
+  return static_cast<bool>(f);
+}
+
+/// The k at which `radial_table(2)/radial_table(0)` first crosses `target`,
+/// by linear interpolation between grid cells.  Restricted to
+/// |ratio - target| < 1 so the blow-up at the S-wave node (k = 0.4130 GeV on
+/// AV18, where f0 changes sign) is never mistaken for a crossing.  NaN if the
+/// ratio never crosses.
+double k_where_ratio(const TaggedModel& m, double target) {
+  const std::vector<double>& f0 = m.radial_table(0);
+  const std::vector<double>& f2 = m.radial_table(2);
+  double prev_r = 0.0, prev_k = 0.0;
+  bool have = false;
+  for (std::size_t i = 0; i < m.nk(); ++i) {
+    const double r = f2[i] / f0[i];
+    if (!std::isfinite(r) || std::fabs(r - target) > 1.0) { have = false; continue; }
+    if (have && (prev_r - target) * (r - target) <= 0.0 && prev_r != r) {
+      const double t = (target - prev_r) / (r - prev_r);
+      return prev_k + t * (m.k()[i] - prev_k);
+    }
+    prev_r = r;
+    prev_k = m.k()[i];
+    have = true;
+  }
+  return std::nan("");
+}
+
 double quantile(std::vector<double> v, double q) {
   std::sort(v.begin(), v.end());
   const double pos = q * static_cast<double>(v.size() - 1);
@@ -130,6 +163,19 @@ TEST_CASE("tagged: channel construction against polligen") {
 }
 
 TEST_CASE("tagged: the model grid and its tables against polligen") {
+  // 2026-09-06 RE-PIN.  `li6_alpha` and `deuteron` no longer read polligen's
+  // numbers: polligen's `tagged._amp2_table` sums psi_L with no i^L, i.e. the
+  // INVERTED S-D interference sign this file's `build_amp2` fix removed, so
+  // those two `model` blocks are dumped from the FIXED C++ by
+  // validation/repin_tagged_from_lipolgen.py and the file's own
+  // `provenance` key reads "LiPolGen post-fix, formerly polligen".
+  // `li7_alpha`'s block is still polligen's -- one L = 1 wave, the common i
+  // is a global phase, and the fix moves its n_of_kc and p2_moment by
+  // exactly zero (measured, bit for bit) -- so for THAT channel this is
+  // still the port gate it always was.  Everything outside `model` (waves,
+  // base, beam_configs, boost_spectator, P_D_*) is untouched polligen.
+  // docs/benchmarking/07_cw_sign_investigation.md section 7.2;
+  // docs/open_items/run_2026-09-06/phase_CW_numbers.md.
   jsonmin::Value ref;
   if (!load_tagged(ref)) {
     MESSAGE("tagged.json not found -- skipping");
@@ -442,23 +488,50 @@ TEST_CASE("tagged: the 6Li S-wave limit reduces to the inclusive deuteron") {
 // ------------------------------------------------ deuteron control (CW gate)
 
 TEST_CASE("tagged: the deuteron S/D interference shape") {
+  // RE-PINNED 2026-09-06 with the `build_amp2` i^L fix
+  // (docs/benchmarking/07_cw_sign_investigation.md).  The OLD gate asserted
+  // an interior peak, `0.2 < k[argmax|A_zz|] < 0.45`, and it was an artefact
+  // of the inverted S-D sign: with psi_2 summed in place of phi_2 the curve
+  // was CW Eq. (6.12) at MINUS f2/f0, which turns over at f2/f0 = 1/sqrt(2)
+  // (k = 0.3098 GeV on this channel).  With the phase applied the Hulthen
+  // pair's |A_zz| is MONOTONE in k across the whole grid -- measured: 279 of
+  // 279 steps non-decreasing, zero decreasing, worst drop 0.000e+00 -- and
+  // saturates at CW's +1 as f2/f0 -> 1.2866, so the maximum sits at the top
+  // cell k = 1.2 and there is no interior peak to pin.  The threshold
+  // suppression and the O(1) CW window are unchanged statements and survive.
   const TaggedModel& m = deut_model();
   const std::size_t ic = argmin_abs(m.c(), 0.0);
   const std::vector<double> a = azz_tensor_curve(m, ic);
   double thresh = 0.0, best = 0.0;
-  std::size_t jbest = 0;
+  std::size_t jbest = 0, ndec = 0;
+  double worst_drop = 0.0;
   for (std::size_t ik = 0; ik < m.nk(); ++ik) {
     if (m.k()[ik] < 0.02) thresh = std::fmax(thresh, std::fabs(a[ik]));
     if (std::fabs(a[ik]) > best) { best = std::fabs(a[ik]); jbest = ik; }
+    if (ik > 0 && std::fabs(a[ik]) < std::fabs(a[ik - 1])) {
+      ++ndec;
+      worst_drop = std::fmax(worst_drop, std::fabs(a[ik - 1]) - std::fabs(a[ik]));
+    }
   }
   CHECK(thresh < 0.02);                      // D-wave threshold suppression
-  double window = 0.0;
+                                             // MEASURED 0.006418
+  double window = 0.0, window_lo = 1e300;
   for (std::size_t ik = 0; ik < m.nk(); ++ik) {
-    if (m.k()[ik] > 0.25 && m.k()[ik] < 0.5) window = std::fmax(window, std::fabs(a[ik]));
+    if (m.k()[ik] > 0.25 && m.k()[ik] < 0.5) {
+      window = std::fmax(window, std::fabs(a[ik]));
+      window_lo = std::fmin(window_lo, std::fabs(a[ik]));
+    }
   }
   CHECK(window > 0.45);                      // O(1) in the CW window
-  CHECK(m.k()[jbest] > 0.2);
-  CHECK(m.k()[jbest] < 0.45);
+  CHECK_CLOSE_AT(window, 0.957798, 0.0, 1e-5);      // MEASURED
+  CHECK_CLOSE_AT(window_lo, 0.731102, 0.0, 1e-5);   // MEASURED
+  // monotone: the whole point of the corrected sign on this channel
+  CHECK(ndec == 0);
+  CHECK(worst_drop == 0.0);
+  CHECK(jbest == m.nk() - 1);
+  CHECK_CLOSE_AT(m.k()[jbest], 1.2, 0.0, 1e-12);
+  CHECK_CLOSE_AT(a[jbest], +0.996607, 0.0, 1e-5);   // MEASURED, -> CW's +1
+  CHECK(a[jbest] < 1.0 + 1e-12);             // CW's stated ceiling
   // integrated over all angles the wf tensor asymmetry vanishes: the
   // observable lives in the angular structure (midpoint residual ~ dc^2)
   for (double mm : {1.0, 0.0}) {
@@ -489,63 +562,124 @@ TEST_CASE("tagged: the struck-neutron polarization of the triplet") {
   }
 }
 
-TEST_CASE("tagged: the Cosyn-Weiss deuteron tensor gate (CW TABLE II)") {
-  // Cosyn-Weiss II (arXiv:2603.23700) p. 35, Eq. (6.12)-(6.13): a ratio of
-  // quadratic forms in the S and D radials times (1 - 3 cos^2 theta_k) =
-  // -2 P2(cos theta_k), taking values in [-2, 1], the quadratic form peaking
-  // at +1 where f2/f0 = sqrt(2) (k = 0.30 GeV for AV18).  Our A_zz^wf maps
-  // onto theirs as A_T|| = -2 A_zz^wf.
-  const TaggedModel& m = deut_model();
-  std::vector<double> p2(m.nc());
-  for (std::size_t i = 0; i < m.nc(); ++i) p2[i] = 0.5 * (3.0 * m.c()[i] * m.c()[i] - 1.0);
+TEST_CASE("tagged: the Cosyn-Weiss deuteron tensor gate (CW TABLE II)"
+          * doctest::skip(!fdeut_av18_present())) {
+  REQUIRE(fdeut_av18_present());   // the decorator already guaranteed it
+  // Cosyn-Weiss II (arXiv:2603.23700) p. 35, Eqs. (6.11)-(6.14) and TABLE II.
+  // REWRITTEN 2026-09-06 -- docs/benchmarking/07_cw_sign_investigation.md
+  // section 8, alongside the `build_amp2` i^L fix.
+  //
+  // THE MAPPING IS +1, NOT -2.  A_T|| = sqrt(2/3) P_[T_LL,U]/P_[U,U], and with
+  // CW Eq. (2.30b) {T_LL,T_LT,T_TT} = W(Lambda) x {1/3,0,0}, W = (1,-2,1), the
+  // (+1,+1,-2) combination of P_[U](T_D) gives sqrt(6)/3 = sqrt(2/3) times the
+  // same ratio.  A_T|| IS our A_zz^wf.  The (1 - 3cos^2 theta_k) = -2 P2 factor
+  // is INSIDE A_zz^wf already; CW's "-2" is the value at theta_k = 0, where the
+  // Lambda = +-1 densities have a node (Eq. 6.13), not a conversion factor.
+  // The old gate applied it a second time and so double-counted.
+  //
+  // TABLE II is quoted for the AV18 radial wave functions, so the CW rows run
+  // on the AV18 control.  The Hulthen pair carries only the two statements that
+  // do not depend on which wave function it is -- the old gate ran CW's k
+  // landmarks on Hulthen, whose f2/f0 never reaches sqrt(2) anywhere on the
+  // grid (it tops out at 1.2866), and its "peak at 0.3098 GeV vs CW's 0.30"
+  // was a coincidence at f2/f0 = 0.7053, i.e. CW's Eq. (6.14) MINIMUM read
+  // through a flipped f2 and called Eq. (6.13)'s maximum.
+  const TaggedModel v(deuteron_channel(BETA_DEFAULT, P_D_DEUTERON,
+                                       ClusterWaveSource::VmcAV18));
+  const TaggedModel& h = deut_model();
 
-  // (a) the P2 factorization is EXACT: A_zz^wf / P2 does not depend on the
-  //     angle bin at fixed k.  Cells within 1e-3 of the P2 zero are excluded,
-  //     where the ratio is unbounded and says nothing.
-  const std::size_t ik = argmin_abs(m.k(), 0.30);
-  CHECK_CLOSE_AT(m.k()[ik], 0.3012, 0.0, 5e-4);
-  double rmin = 1e300, rmax = -1e300, rsum = 0.0;
-  std::size_t nr = 0;
-  for (std::size_t ic = 0; ic < m.nc(); ++ic) {
-    if (std::fabs(p2[ic]) <= 1e-3) continue;
-    const double r = azz_tensor_curve(m, ic)[ik] / p2[ic];
-    rmin = std::fmin(rmin, r);
-    rmax = std::fmax(rmax, r);
-    rsum += r;
-    ++nr;
-  }
-  CHECK(rmax - rmin < 1e-5);
-  CHECK_CLOSE_AT(rsum / nr, 0.99940, 0.0, 1e-4);
-
-  // (b) the k envelope reaches its maximum 1 at f2/f0 = sqrt(2)
-  const std::size_t ic0 = argmax_abs(m.c());   // nearest cell to theta_k = 0
-  const std::vector<double> curve0 = azz_tensor_curve(m, ic0);
-  std::vector<double> envelope(m.nk());
-  for (std::size_t i = 0; i < m.nk(); ++i) envelope[i] = curve0[i] / p2[ic0];
-  std::size_t j = 0;
-  for (std::size_t i = 1; i < m.nk(); ++i) if (envelope[i] > envelope[j]) j = i;
-  CHECK_CLOSE_AT(envelope[j], 1.0, 0.0, 1e-3);
-  CHECK_CLOSE_AT(m.k()[j], 0.3098, 0.0, 5e-4);
-  CHECK_CLOSE_AT(m.k()[j], 0.30, 0.0, 0.02);   // against CW's 0.30 GeV
-
-  // (c) A_T|| = -2 A_zz^wf against CW TABLE II's +1 and -2.  The outermost
-  //     cos theta_k cell is 0.9896, not 1, so the exact extremes come through
-  //     the P2 factorization pinned in (a).
-  const std::size_t ic90 = argmin_abs(m.c(), 0.0);
-  const double a_par_90 = -2.0 * azz_tensor_curve(m, ic90)[j];
-  const double a_par_0 = -2.0 * azz_tensor_curve(m, ic0)[j];
-  CHECK_CLOSE_AT(a_par_90, 0.9997, 0.0, 1e-3);       // CW: +1
-  CHECK_CLOSE_AT(a_par_0, -1.9378, 0.0, 2e-3);       // cell centre
-  CHECK_CLOSE_AT(-2.0 * envelope[j] * 1.0, -2.0, 0.0, 3e-3);   // CW: -2
-  CHECK_CLOSE_AT(-2.0 * envelope[j] * (-0.5), 1.0, 0.0, 3e-3); // CW: +1
-  // and the whole curve stays inside CW's stated range [-2, 1]
-  for (std::size_t ic = 0; ic < m.nc(); ++ic) {
-    for (double v : azz_tensor_curve(m, ic)) {
-      if (std::isnan(v)) continue;
-      CHECK(-2.0 * v > -2.001);
-      CHECK(-2.0 * v < 1.001);
+  // ---- (a) the mapping, as an IDENTITY on every cell of the grid.
+  // A_zz^wf(k,c) == [(2 f0 + f2/sqrt2)(f2/sqrt2)/(f0^2+f2^2)] (1 - 3 cos^2),
+  // with f_L the model's own normalized radial tables.  Machine precision:
+  // this is the whole of Eq. (6.12), not a shape comparison.
+  for (const TaggedModel* m : {&v, &h}) {
+    double worst = 0.0;
+    const std::vector<double>& n1 = m->n_of_kc(1.0);
+    const std::vector<double>& n0 = m->n_of_kc(0.0);
+    const std::vector<double>& nm = m->n_of_kc(-1.0);
+    for (std::size_t ik = 0; ik < m->nk(); ++ik) {
+      const double f0 = m->radial_table(0)[ik], f2 = m->radial_table(2)[ik];
+      const double r = f2 / f0;
+      if (!std::isfinite(r)) continue;
+      const double q = (2.0 + r / std::sqrt(2.0)) * (r / std::sqrt(2.0))
+                       / (1.0 + r * r);
+      for (std::size_t ic = 0; ic < m->nc(); ++ic) {
+        const std::size_t j = ik * m->nc() + ic;
+        const double a = (n1[j] + nm[j] - 2.0 * n0[j]) / (n1[j] + nm[j] + n0[j]);
+        const double c = m->c()[ic];
+        worst = std::fmax(worst, std::fabs(a - q * (1.0 - 3.0 * c * c)));
+      }
     }
+    CHECK(worst < 1e-12);          // MEASURED 8.882e-16 on BOTH channels
+                                   // (2.740e+00 before the fix)
   }
+
+  // ---- (b) the P2 factorization is exact: A_zz^wf/P2 is a function of k alone.
+  // (The old gate's (a); it is a real property and it survives untouched, only
+  // moved onto AV18 and re-pinned to the corrected value.)
+  std::vector<double> p2(v.nc());
+  for (std::size_t i = 0; i < v.nc(); ++i) p2[i] = 0.5 * (3.0 * v.c()[i] * v.c()[i] - 1.0);
+  const std::size_t ik30 = argmin_abs(v.k(), 0.30);
+  CHECK_CLOSE_AT(v.k()[ik30], 0.3012, 0.0, 5e-4);
+  double rmin = 1e300, rmax = -1e300;
+  for (std::size_t ic = 0; ic < v.nc(); ++ic) {
+    if (std::fabs(p2[ic]) <= 1e-3) continue;
+    const double r = azz_tensor_curve(v, ic)[ik30] / p2[ic];
+    rmin = std::fmin(rmin, r); rmax = std::fmax(rmax, r);
+  }
+  CHECK(rmax - rmin < 1e-5);                                  // MEASURED 1.2e-14
+  CHECK_CLOSE_AT(0.5 * (rmin + rmax), -1.99928, 0.0, 1e-4);   // MEASURED -1.999276
+                                                              // (+0.636821 before)
+
+  // ---- (c) CW's OWN k landmarks, on CW's own wave function.
+  // "Eq. (6.13) [f2/f0 = +sqrt2] is satisfied for k = 0.30 GeV"
+  // "Eq. (6.14) [f2/f0 = -1/sqrt2] is satisfied only at k ~ 1 GeV"
+  //   MEASURED on the model grid: 0.298121 GeV and 1.034872 GeV
+  //   (raw fdeut.av18 k-block: 0.2984 GeV and 1.0257 GeV)
+  CHECK_CLOSE_AT(k_where_ratio(v, +std::sqrt(2.0)), 0.30, 0.0, 0.01);
+  CHECK_CLOSE_AT(k_where_ratio(v, -1.0 / std::sqrt(2.0)), 1.00, 0.0, 0.05);
+
+  // ---- (d) TABLE II's two extremes, through the P2 factorization, with the
+  // +1 mapping and NO extra factor anywhere.
+  const std::size_t ic0 = argmax_abs(v.c());          // |c| = 0.989583
+  const std::vector<double> env = [&] {
+    std::vector<double> e(v.nk());
+    const std::vector<double> curve = azz_tensor_curve(v, ic0);
+    for (std::size_t i = 0; i < v.nk(); ++i) e[i] = curve[i] / p2[ic0];
+    return e;
+  }();
+  std::size_t jlo = 0, jhi = 0;
+  for (std::size_t i = 1; i < v.nk(); ++i) {
+    if (env[i] < env[jlo]) jlo = i;
+    if (env[i] > env[jhi]) jhi = i;
+  }
+  CHECK_CLOSE_AT(env[jlo], -2.0, 0.0, 1e-3);          // MEASURED -1.999864, CW: -2
+  CHECK_CLOSE_AT(v.k()[jlo], 0.2968, 0.0, 5e-4);      //  at f2/f0 = +1.3942 (-> sqrt2)
+  CHECK_CLOSE_AT(env[jhi], +1.0, 0.0, 1e-3);          // MEASURED +0.999997, CW: +1
+  CHECK_CLOSE_AT(v.k()[jhi], 1.0366, 0.0, 5e-4);      //  at f2/f0 = -0.7056 (-> -1/sqrt2)
+  CHECK_CLOSE_AT(env[jlo] * (-0.5), +1.0, 0.0, 1e-3); // the theta = pi/2 row of TABLE II
+
+  // ---- (e) TABLE II row by row, at the actual cell centres.
+  const std::size_t ic90 = argmin_abs(v.c(), 0.0);    // |c| = 0.010417
+  CHECK_CLOSE_AT(azz_tensor_curve(v, ic0)[ik30],  -1.93712, 0.0, 1e-4);  // CW -2 at the cell centre; residual 2.8e-6 (2e-3 was x722 slack)
+  CHECK_CLOSE_AT(azz_tensor_curve(v, ic90)[ik30], +0.99931, 0.0, 1e-4);  // CW +1 at the cell centre; residual 2.8e-6
+  const std::size_t ik100 = argmin_abs(v.k(), 1.00);
+  CHECK_CLOSE_AT(azz_tensor_curve(v, ic0)[ik100], +0.96734, 0.0, 2e-3);  // CW +1
+
+  // ---- (f) the whole curve stays inside CW's stated range [-2, 1].
+  for (std::size_t ic = 0; ic < v.nc(); ++ic)
+    for (double x : azz_tensor_curve(v, ic)) {
+      if (std::isnan(x)) continue;
+      CHECK(x > -2.001);
+      CHECK(x <  1.001);
+    }
+
+  // ---- (g) REGRESSION GUARD.  The pre-2026-09-06 amplitude summed psi_2 = +W
+  // with no i^L, which is CW Eq. (6.12) evaluated at MINUS f2/f0.  Pin the sign
+  // that distinguishes them, so the old behaviour cannot come back silently:
+  // at k = 0.30 GeV, theta_k ~ 0, on AV18, CW is NEGATIVE (-1.937); the old
+  // code gave +0.617.
+  CHECK(azz_tensor_curve(v, ic0)[ik30] < -1.5);
 }
 
 TEST_CASE("tagged: the acceptance-weighted curve reduces to the cell curve") {
@@ -583,9 +717,19 @@ TEST_CASE("tagged: the acceptance-weighted curve reduces to the cell curve") {
   CHECK(hi <= 1.0);
   CHECK(wsum > 0.0);
   CHECK(wabs / wsum > 0.5);        // longitudinal at the YR optics
+  // RE-PINNED 2026-09-06: BOTH signs flip with the `build_amp2` i^L fix
+  // (docs/benchmarking/07_cw_sign_investigation.md section 7.1).  The
+  // STATEMENT is unchanged and is the one worth keeping -- the YR optics
+  // sculpt the sample into the longitudinal half of the sphere, where P2 has
+  // the opposite sign to the theta_k = 90 deg cell, so the acceptance-weighted
+  // curve is the cell curve's mirror.  Only the polarity of the pair moved:
+  // was ref -0.4915 / weighted +0.5226, now ref +0.8966 / weighted -0.9533.
   const std::size_t jk = argmin_abs(m.k(), 0.30);
-  CHECK(ref[jk] < -0.4);                                   // the 90 deg curve
-  CHECK(azz_tensor_curve_weighted(m, eps)[jk] > 0.4);      // opposite sign
+  CHECK(ref[jk] > 0.4);                                    // the 90 deg curve
+  CHECK(azz_tensor_curve_weighted(m, eps)[jk] < -0.4);     // opposite sign
+  CHECK_CLOSE_AT(ref[jk], +0.896640, 0.0, 1e-5);                     // MEASURED
+  CHECK_CLOSE_AT(azz_tensor_curve_weighted(m, eps)[jk], -0.953283,
+                 0.0, 1e-5);                                         // MEASURED
 }
 
 // ----------------------------------------------------- sampling and records
@@ -1254,16 +1398,29 @@ TEST_CASE("T25 the deuteron control channel, Hulthen against AV18" *
   const TaggedModel v(deuteron_channel(BETA_DEFAULT, P_D_DEUTERON,
                                        ClusterWaveSource::VmcAV18));
   CHECK(v.channel().waves[1].prob == deuteron_av18_p_d());
-  CHECK_CLOSE(h.vector_dilution(), 0.932494769, 1e-6);
-  CHECK_CLOSE(v.vector_dilution(), 0.913594777, 1e-6);
+  // RE-PINNED 2026-09-06 with the `build_amp2` i^L fix
+  // (docs/benchmarking/07_cw_sign_investigation.md).  The dilutions are
+  // ANGLE-INTEGRATED, so L-orthogonality kills the S-D cross term and the
+  // physics does not move; what moves is the 96-cell midpoint quadrature
+  // residual of the integral int Theta_0 Theta_2 dc = 0, whose SIGN the
+  // phase flips.  That is 1.4e-6 relative on the vector dilutions -- just
+  // past this gate's 1e-6 -- and 8e-7 on the tensor ones.  Pre-fix, for the
+  // record: vector 0.932494769 / 0.913594777, tensor 0.959488074 /
+  // 0.948145618.  The v/h RATIOS are unchanged to every digit they pin.
+  CHECK_CLOSE(h.vector_dilution(), 0.932496109, 1e-6);   // MEASURED 0.932496109312
+  CHECK_CLOSE(v.vector_dilution(), 0.913595979, 1e-6);   // MEASURED 0.913595978560
   CHECK_CLOSE(v.vector_dilution() / h.vector_dilution() - 1.0, -0.020268, 1e-3);
-  CHECK_CLOSE(h.tensor_dilution(), 0.959488074, 1e-6);
-  CHECK_CLOSE(v.tensor_dilution(), 0.948145618, 1e-6);
+  CHECK_CLOSE(h.tensor_dilution(), 0.959488878, 1e-6);   // MEASURED 0.959488878164
+  CHECK_CLOSE(v.tensor_dilution(), 0.948146339, 1e-6);   // MEASURED 0.948146339359
   CHECK_CLOSE(v.tensor_dilution() / h.tensor_dilution() - 1.0, -0.011822, 1e-3);
   // THE RELATIVE S-D SIGN DOES NOT FLIP.  CDKS fix phi_2 = -W and
   // phi_L = i^L psi_L, so the physical deuteron has psi_2 = +W > 0 at low k,
-  // which is what the positive-definite Hulthen forms already assume.  This
-  // is the OPPOSITE of the 6Li alpha-d case (see the S-node test above).
+  // which is what the positive-definite Hulthen forms already assume OF THE
+  // STORED TABLE -- the two CHECKs below are on `vmc->psi()`, which is what
+  // this paragraph is about.  It does NOT license summing psi_2 into the
+  // amplitude: `build_amp2` consumes phi_L = i^L psi_L, i.e. phi_2 = -W, and
+  // applied no phase at all until 2026-09-06 (the re-pin above).  This is the
+  // OPPOSITE of the 6Li alpha-d case (see the S-node test above).
   CHECK(v.channel().waves[0].vmc->psi()[1] > 0.0);
   CHECK(v.channel().waves[1].vmc->psi()[1] > 0.0);
   // fdeut.av18 prints no MC error column, so this table carries no band.
@@ -1312,7 +1469,9 @@ TEST_CASE("T26 the alpha-d normalisation spread, and the inclusive drift" *
   CHECK(std::fabs(mw.tensor_dilution() / m14.tensor_dilution() - 1.0) < 1e-3);
 
   // --- C5.5.  On the HULTHEN default the inclusive constant and the tagged
-  // model ARE one wave function, to 1.22e-5.
+  // model ARE one wave function, to 7.84e-6 (0.869950 closed form against the
+  // measured 0.8699431789; 1.22e-5 before the 2026-09-06 S-D sign fix moved
+  // the quadrature residual).  The CHECK below stays at 2e-5.
   const TaggedModel hul(li6_alpha_channel());
   CHECK_CLOSE(hul.vector_dilution(), ALPHA_D_VECTOR_POLARIZATION, 2e-5);
   CHECK_CLOSE(LI6_CLUSTER_POLARIZATION,

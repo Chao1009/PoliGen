@@ -360,6 +360,28 @@ Flat arrays over pseudo-events, all length N: `cell`, `w` (pb weight), `x`, `q2`
 These are what a replacement generator must reproduce.
 
 - **`test_tagged.py:730-785` `test_cosyn_weiss_tensor_gate`** — the strongest external gate. Against Cosyn–Weiss II Eq. (6.12): the P₂(cosθ_k) angular factorization is exact (`ratios.max() − ratios.min() < 1e-5`, mean `0.99940 ± 1e-4`); the radial quadratic form peaks at 1.000 at k = 0.3098 GeV against CW's 0.30 GeV for AV18 (`abs=0.02`); `A_T∥ = −2 A_zz^wf` gives **+0.9997** and **−2.000** against CW TABLE II's +1 and −2; the whole curve stays inside CW's stated [−2, 1].
+  *(**CORRECTION 2026-09-06 — do NOT reproduce this gate.** It is wrong twice
+  over, and LiPolGen's `docs/benchmarking/07_cw_sign_investigation.md` settled
+  both. (i) **The mapping is `A_T∥ = +1 · A_zz^wf`, not −2** — CW's −2 is the
+  value of their own angular factor at θ_k = 0, a node of the Λ = ±1 densities
+  (CW Eq. 6.13), which `A_zz^wf` already carries; applying it again
+  double-counts. (ii) The peak *"at 1.000 at k = 0.3098 GeV"* is on the
+  **Hulthén** pair, whose f₂/f₀ never reaches √2 anywhere on the grid — it is
+  matching CW Eq. (6.14)'s **minimum** at f₂/f₀ = 1/√2 while calling it
+  Eq. (6.13)'s **maximum** at √2, and it agrees with CW's "0.30 GeV" only by a
+  coincidence of β = 0.30 on a channel that is not AV18. Together those two
+  errors hid an **inverted S–D interference sign** in the partial-wave sum
+  (`polligen/tagged.py:243-248` `_amp2_table` omits the i^L phase, exactly as
+  LiPolGen's `build_amp2` did until 2026-09-06). The three pass values quoted
+  above — `0.99940`, `k = 0.3098 GeV`, `+0.9997 / −2.000` — are all pre-fix.
+  **What a replacement generator must reproduce instead** is CW Eq. (6.12) as
+  an *identity* on the **AV18** wave function CW quote TABLE II for:
+  LiPolGen's rewritten gate measures `max|A_zz^wf − CW| = 8.881784e−16` over
+  all 280 × 96 = 26 880 cells (it was **2.740499e+00**), CW's own k landmarks
+  at 0.298121 and 1.034872 GeV, and TABLE II's three rows at
+  −1.937124 / +0.999313 / +0.967340 against −2 / +1 / +1. LiPolGen's gate is
+  `tests/test_tagged.cpp` "tagged: the Cosyn-Weiss deuteron tensor gate
+  (CW TABLE II)"; the sibling was **not** modified.)*
 - **`test_tensor_convention.py:49-69`** — the only literature anchor for the tensor sector: `A_zz(θ_S=0)·(1 + ε(y)R) == TENSOR_LL_SIGN·(2/3)·b₁/F₁` **exactly and at every y**, rel 1e-12, at six (x,Q²) points. Its docstring corrects a widely-quoted form that *"double-counts R … and misses by a factor 1.17"*. `:72-84` asserts `TENSOR_LL_SIGN == +1.0` with a message naming plans/08 D1 as the switch. `:87-107` checks the kernel's thirds combination `(w₊+w₋−2w₀)/(3+Σw)` reproduces `azz` including sign, and `w₊ = ½·azz`. `:110-131` proves the Δ sector is sign-independent. `:133-167` pins the unified rank-2 geometry for both spins.
 - **`test_xsec_identity.py`** — sector-by-sector identity at rtol 1e-12: `test_vector_sector_matches_a_parallel` (`:41-53`, `(w₊−w₋)/(2+w₊+w₋) == P_e·a_parallel`), `test_vector_sector_spin32` (`:56`), `test_tensor_sector_matches_azz` (`:72`), `test_transverse_tensor_matches_a_cos2phi` (`:87`), `test_dsigma_reduces_to_unpolarized` (`:103`), `test_g2_ww_analytic_power_law` (`:119`), `test_identities_on_grid_backends` (`:181`, actually running CT18NLO + NNPDFpol11_100), and four R-sensitivity tests (`:273-379`).
 - **`test_pseudoexp.py`** — estimator closure with tolerances: `test_apar_closure` and `test_azz_closure` assert the trial mean equals truth to `4·std/√ntrials` (`:88-89`, `:108-109`); `test_azz_relative_lumi_bias` / `test_apar_relative_lumi_bias` assert the **naive** estimator's bias equals the closed forms `−(2/3)δ/P_zz` and `δ/(2 P_e P_z)` to `5·se`, and that the lumi-corrected estimator is unbiased (`:133-134`, `:155-156`); `test_cos2phi_fit_unbiased_with_holey_acceptance` (`:190-218`) removes two asymmetric φ sectors and requires the binned fit unbiased at 5·se while the naive moment fails by >10·se.
@@ -383,7 +405,7 @@ A drop-in replacement would have to pass, in this order:
 2. **Reproduce ρ moments exactly** for arbitrary axes and populations, J = 1 and 3/2, including the max-entropy fill model and its positivity limits.
 3. **Estimator closure at pseudo-experiment scale**: pulls unbiased and spreads within 15% of the three analytic error formulas across ~65 x-bins per isotope, plus the two closed-form relative-luminosity biases and their exact removal.
 4. **Azimuthal-amplitude recovery with holey acceptance**, since a naive moment estimator demonstrably fails there.
-5. **The Cosyn–Weiss deuteron limit of the tagged mode**, quantitatively: the P₂(cosθ_k) factorization, the k = 0.30 GeV peak of the quadratic form, and A_T∥ ∈ [−2, +1] with the two TABLE II extrema.
+5. **The Cosyn–Weiss deuteron limit of the tagged mode**, quantitatively: the P₂(cosθ_k) factorization, the k = 0.30 GeV peak of the quadratic form, and A_T∥ ∈ [−2, +1] with the two TABLE II extrema. *(**Restated 2026-09-06** — as written this asks a replacement to reproduce a gate that is wrong; see the correction under §5.2. The requirement is CW Eq. (6.12) as an identity on **AV18** with the mapping `A_T∥ = +1 · A_zz^wf`, which LiPolGen now meets at 8.88e−16 over 26 880 cells.)*
 6. **The unpolarized spectator spectrum against BeAGLE e+d** — bulk routing to better than 2 points, with the p_T tail carried as a one-sided upward band (a new generator with VMC overlaps would need to *close* this, not just bracket it).
 7. **⁷Li forward limits**: P_p = 0.866 **and P_n = −0.037** — the neutron half is currently untested and the model disagrees (−0.028), so this is an open gate a new generator should actually pass.
 8. **HFS truth identities** on any sample it produces: `Σ = 2E_e y + m²/(E_N+p_N)` and `|Σp_T,h| = p_T,e`; and the perfect-response kinematic methods recovering truth to 5×10⁻³ (Q²_e to 10⁻⁹).
@@ -417,7 +439,7 @@ The suite defines expected behaviour at **three distinct tiers**, and this matte
 | anchor | file:line | pinned value |
 |---|---|---|
 | Cosyn et al. EPJ A 61 (2025) 83 Eq. (27) | `test_tensor_convention.py:61-69` | `A_zz·(1+ε(y)R) == ±(2/3)b₁/F₁`, rel 1e-12 |
-| Cosyn–Weiss arXiv:2603.23700 Eq. 6.12/6.13, TABLE II | `test_tagged.py:730-785` | `A_T∥` extremes **+0.9997 / −1.9378** vs published +1 / −2 |
+| Cosyn–Weiss arXiv:2603.23700 Eq. 6.12/6.13, TABLE II | `test_tagged.py:730-785` | `A_T∥` extremes **+0.9997 / −1.9378** vs published +1 / −2. ***Superseded 2026-09-06** — both the −2 mapping and the sibling's missing i^L are wrong (see §5.2's correction). LiPolGen's replacement checks Eq. (6.12) as an identity on AV18: 8.881784e−16 over 26 880 cells, was 2.740499e+00.* |
 | **Hoodbhoy–Jaffe–Manohar NPB 312:571 (1989) Eq. (30)** | `test_recopseudo.py:545-577` | `A = −[(1−y)/y²]⟨c_eff⟩sin²θ_S·Δ/D_φ`, written out *"from the paper rather than taken from the code"*, rtol 1e-12 |
 | E143 PRD 58:112003 lab-frame ε/D/η | `test_target_mass.py:87-112` | rebuilt from random (E, E′, θ), rel 1e-12 over 64 draws |
 | Kuraev–Fadin / Skrzypek LL spectrum | `test_radiative.py:40-46` | `t = (2α/π)(L−1)` with α = 1/137.035999; `S(t) = 1+3t/8+O(t²)` |

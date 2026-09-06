@@ -1454,6 +1454,16 @@ Monte-Carlo error is now reportable, propagatable and **negligible**; recording
 that it is negligible is the result, and it is the first time the band could be
 computed at all. Pinned in **T24**.
 
+> **Checked 2026-09-06 against the S–D interference fix — this section does not
+> inherit it.** The *"tagged tensor observable"* of the last column is
+> `tensor_dilution`, which is angle-integrated and therefore phase-blind up to
+> quadrature: the n_σ = 0 row's **0.982575817** re-measures as
+> **0.982575872**, a shift of **+5.6e−8 relative** — three orders of magnitude
+> below the 0.02 % this section reports and four below the 6.6 % it is compared
+> against. Every Δ in the last column is a *difference* of two such values and
+> moves less still. The conclusion — the ANL Monte-Carlo error is negligible —
+> stands unchanged.
+
 ### C5.3 N_αd 5 %, P_D 7 % — three numbers spanning three different amounts
 
 **The premise needs a correction before it can be propagated.** The three
@@ -1508,6 +1518,17 @@ channel.
 | `vector_dilution` | 0.932494769 | 0.913594777 | **−2.027 %** |
 | `tensor_dilution` | 0.959488074 | 0.948145618 | **−1.182 %** |
 
+> **Re-measured 2026-09-06 after the S–D interference fix — the table's
+> conclusions are unmoved and its last two rows shift in the 7th decimal.**
+> Both dilutions are angle-integrated and `∫Θ₀Θ₂ dc = 0` by L-orthogonality,
+> so the S–D cross term the fix flips cannot survive the integral; what is left
+> is the 96-cell midpoint-quadrature residual of that zero. Post-fix:
+> `vector_dilution` **0.932496109** (Hulthén) / **0.913595979** (AV18), still
+> **−2.02683 %** (it was −2.02682 %); `tensor_dilution` **0.959488878** /
+> **0.948146339**, still **−1.18214 %** (unchanged to five decimals). P_D does
+> not move at all — it is a norm, and norms are phase-blind. The four values in
+> the table above are kept as measured on 2026-09-04.
+
 **Two validations came free.** (1) The k-block's own D fraction reproduces the
 file's *r-space* header `dstate` = 0.057599 to **1.55e−5** relative — the
 reader and the units convention checked by the file against itself. That
@@ -1518,6 +1539,24 @@ U, W ≥ 0 at low k, so the physical deuteron has ψ₂ = +W > 0 — exactly wha
 positive-definite Hulthén forms already assume. This is the **opposite** of the
 ⁶Li α–d case, where the VMC overlap flips the sign below the S node. A first
 draft of this section claimed the sign flips here too; it does not.
+
+> **CORRECTION, 2026-09-06 — validation (2) is true and its unstated corollary
+> was false, and this is the THIRD site that carried the false step.**
+> `07_cw_sign_investigation.md` §5 named two (`include/lipolgen/tagged.hpp` and
+> `src/core/tagged.cpp`); this paragraph is a third, in the same words.
+> **What stays true:** CDKS do fix φ_L = i^L ψ_L with φ₂ = −W; U, W ≥ 0 at low
+> k; the physical deuteron does have **ψ₂ = +W > 0**; the positive-definite
+> Hulthén forms do assume exactly that; and switching this channel to AV18
+> genuinely does not flip the *stored* relative sign, unlike ⁶Li. Every clause
+> above survives. **What it was silently taken to license, and does not:** that
+> ψ₂ may then be summed straight into the partial-wave amplitude.
+> `TaggedModel::build_amp2` consumes **φ**, not ψ, and until 2026-09-06 it
+> applied **no phase at all** — so the tagged sector's S–D interference sign
+> was inverted and CW Eq. (6.12) came out evaluated at *minus* f₂/f₀. Fixed
+> with one line, the phase `(-1)^floor(L/2)`; `rad_[2]` and `Wave::psi()` were
+> **not** negated, so ψ₂ = +W remains the stored convention this paragraph
+> describes. **Nothing in this section's table moves measurably** — see the
+> re-measurement note under it.
 
 **AUTHOR DECISION: Hulthén stays the default, AV18 is opt-in.** Reasons: the
 default is bit-for-bit pinned across `validation/reference/tagged.json`; the
@@ -1574,6 +1613,17 @@ the tagged model's `vector_dilution()` = 0.869939 against the inclusive
 constant's α–d factor 0.869950 — **1.22e−5**, a grid quadrature against a closed
 form. Under `--cluster-wave vmc` the tagged side moves and the inclusive
 constant does not.
+
+> **Re-measured 2026-09-06 after the S–D interference fix — the claim holds and
+> the residual SHRINKS.** `vector_dilution()` is angle-integrated, so
+> `∫Θ₀Θ₂ dc = 0` by L-orthogonality removes the cross term the fix flips and
+> only the 96-cell midpoint-quadrature residual of that zero moves: measured
+> **0.8699431789** against the same closed form 0.869950, i.e. **7.84e−6**
+> relative (6.82e−6 absolute), where this paragraph's 0.869939 / **1.22e−5**
+> was the pre-fix pair. The 2026-09-04 numbers above are kept as measured.
+> Live sites carrying the new pair: `CONVENTIONS.md`, `PHYSICS_CHANNELS.md`,
+> `beams.hpp`, `tagged.hpp`, `tests/test_tagged.cpp` (comment; the CHECK stays
+> at 2e−5).
 
 **Third — and this is the finding — substitution is not the fix.** The one
 *ab-initio* number for this very observable is the six-body VMC of Wiringa
@@ -1687,6 +1737,15 @@ family. So the same +2.0688 % sat in the RECORD as well as in the rate:
 | Hulthén deuteron, P_D = 0.045 | 0.932494769 | |
 | AV18 `fdeut` deuteron | 0.913594777 | **+2.0688 %** apart |
 
+> **Re-measured 2026-09-06 after the S–D interference fix — the two dilutions
+> move in the 7th decimal and the +2.0688 % does not.** Both are
+> angle-integrated, so only the 96-cell midpoint-quadrature residual of
+> `∫Θ₀Θ₂ dc = 0` moves: **0.932496109312** (Hulthén, P_D = 0.045) and
+> **0.913595978560** (AV18 `fdeut`), **1.020687624722** apart against
+> **1.020687500574** before — +2.0688 % on both, unmoved in the seventh figure.
+> The two values in the table are kept as measured on 2026-09-04;
+> `docs/USAGE.md` §C5.4, `include/lipolgen/breakup.hpp` and T25 carry the new
+> digits.
 Note what this means for the record: the deuteron branch of `ClusterBreakup`
 does **not** read `eff_pol_*` at all — the effective polarization *comes out of*
 the CG sampling (`breakup.hpp`'s own `⟨2m₁⟩ = (1 − 1.5 P_D) m_S` identity), so

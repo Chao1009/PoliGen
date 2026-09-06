@@ -159,6 +159,30 @@ with the tensor sector anywhere in the tree is C-7, and it is a comment.
 | E-17 | **Wiringa *et al.*, PRC 89 (2014) 024305 Table I** (VMC AV18+UX polarizations) | ⁷Li whole-nucleus P_p = +0.866, P_n = −0.037; ⁶Li cluster product 0.81123 = (1−1.5P_D^{αd})(1−1.5P_D^{d}) | `tests/test_beams.cpp` "the effective polarizations are per nucleon"; `tests/test_sf.cpp` "ToyG1 and the nuclear g1A" | 1e-14 / 1e-13 | that the effective polarizations are stored per nucleon and reassemble to the published whole-nucleus values, and that ⁶Li's comes from the **same two D-state probabilities the tagged sector uses** rather than a hard-coded literal | the neutron half: `DEVELOPMENT_PLAN.md` §4 row 4 calls P_n ≈ −0.037 an **open** gate, and `tests/test_tagged.cpp` "7Li triton polarization and the forward-limit gate" is where that open status is printed |
 | E-18 | **George–Knutson band ↔ quadrupole dial ↔ a₂ map** (composite) | the two-factor Q budget (3.317 × 2.269 = 7.524), the η ↔ dial exact linearity, the GK ±1σ mapping | `tests/test_cluster_config.cpp` T22b, T23, "the design's sec. 8 table, all three alpha-d sources" | 1e-9 … 1e-13 | that the ⁶Li quadrupole is an **explicitly dialled, banded** input and that every downstream number (a₂, ε_b0, P_D^{αd}) moves with it coherently | it is a *bookkeeping* validation of a model band, not a physics check |
 
+> **E-1 CORRECTED AND STRENGTHENED, 2026-09-06.** **Row E-1 of the table above** records the gate as it
+> stood on the survey date. Its criterion (c) — *"A_T∥ = −2 A_zz^wf reaches
+> CW's +1 and −2"* — was **wrong twice over**, and `07_cw_sign_investigation.md`
+> settled both: the mapping is **`A_T∥ = +1 · A_zz^wf` exactly**, and the −2 the
+> gate applied was masking an **inverted S–D interference sign** in
+> `TaggedModel::build_amp2` (the partial-wave sum consumed ψ_L where it needs
+> φ_L = i^L ψ_L). The three quoted pass values inherit that: the mean ratio
+> **0.99940**, the envelope peak at **k = 0.3098 GeV**, and the extremes
+> **0.9997 / −2** are all pre-fix, and the peak was matching CW's Eq. (6.14)
+> *minimum* at f₂/f₀ = 1/√2 while calling it Eq. (6.13)'s *maximum* at √2 — on
+> the **Hulthén** pair, whose f₂/f₀ never reaches √2 anywhere on the grid.
+> **The gate was rewritten (`07` §8) and the code fixed** with one
+> `(-1)^floor(L/2)` in `build_amp2`. It now runs on the **AV18** control CW
+> quote TABLE II for, and criterion (a) is Eq. (6.12) as an *identity*:
+> measured `max|A_zz^wf − CW| = 8.881784e−16` over all 280 × 96 = 26 880 cells
+> on both deuteron controls, against **2.740499e+00** before. CW's own k
+> landmarks reproduce at **0.298121** and **1.034872 GeV** (CW: "0.30",
+> "≈ 1"), TABLE II's three rows at **−1.937124 / +0.999313 / +0.967340**
+> against −2 / +1 / +1, and the curve stays inside CW's [−2, 1]. **This row's
+> last column — "the single strongest external physics check in the tree" —
+> is now true in a way it was not**: nothing in the rewritten gate is a
+> self-consistency restatement.
+
+
 ---
 
 ## 6. Table F — CHAIN: software-interface checks
@@ -198,6 +222,7 @@ traceable, so they belong in the baseline.
 | E-2 verdict row (T1v, 5v) | `LIPOLGEN_HAVE_PYTHIA8` **and** `mstw2008lo.00.dat` on disk | **MEASURED.** `T1r` prints: "VERDICT ROW MEASURED: MSTW2008 LO is on disk under `…/deps/install/share/Pythia8/pdfdata`, so T1v ran and G3b's 0.843243 was checked in THIS build." |
 | E-2 CT18NLO row, D-5 | `LIPOLGEN_HAVE_LHAPDF` | compiled in (`libLiPolGenLHAPDF.so` present) |
 | E-13, B-2 VMC cases | `data/vmc/*` present | present and committed (1.1 MB) |
+
 | Table A | `LIPOLGEN_REFERENCE_DIR` populated | populated (8 JSON files, `_manifest.json` dated 2026-09-04) |
 | F-1, F-2 | external `eic_xl`/`jug_xl` containers | **not runnable from this tree**; the 2026-09-02 pass is recorded in prose |
 

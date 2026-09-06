@@ -71,7 +71,7 @@ enable. The report is regenerated, never hand-edited.
 | # | benchmark | tier | effort | what it buys |
 |---|---|---|---|---|
 | 1 | **EPIOS Table II source modes vs `spin1_populations`** | T5/T1 | hours | the FIRST external anchor on the spin bookkeeping (today only a polligen self-pin); also shows the `ladder` fill is the wrong model for an EIC ion beam |
-| 2 | **Cosyn–Weiss II Table II — re-derive the A_T∥ ↔ A_zz^wf mapping** | T2 | hours to read, unknown to fix | **blocker.** The verification says the tree's −2 factor has no basis, the correct mapping is +1, and on the AV18 control the gate would FAIL by the sign of the S–D interference — the correlation that drives A_zz^tag. See §5 |
+| 2 | **Cosyn–Weiss II Table II — re-derive the A_T∥ ↔ A_zz^wf mapping** | T2 | hours to read, unknown to fix | **blocker — RESOLVED AND FIXED 2026-09-06.** The verification says the tree's −2 factor has no basis, the correct mapping is +1, and on the AV18 control the gate would FAIL by the sign of the S–D interference — the correlation that drives A_zz^tag. See §5. All of it confirmed by `07_cw_sign_investigation.md` and fixed in one line of `src/core/tagged.cpp` `build_amp2`; Eq. (6.12) now holds as an identity (8.88e−16 over 26 880 cells, was 2.74) and ⁶Li A_zz^tag(0.20 GeV) moved +0.8450 → −1.2069 / +0.4518 → −0.5191 |
 | 3 | **HERMES b₁ᵈ Table II as an assertion** (six rows, transcribed) | T2 | low | converts the only measurement of the target observable from a comment into a gate; forces registry row 2 against data |
 | 4 | **NMC F₂(⁶Li)/F₂(D), HEPData ins394050** (24 points, CC0) | T3 | ½ day | the only ⁶Li DIS measurement; tests the EPPS21 baseline (χ² = 4.63/4 measured in the survey). Divide by the isoscalar nucleon — the wrong denominator gives a plausible EMC curve 9× too large |
 | 5 | **UVa ⁶Li Fourier–Bessel charge density** (7 coefficients) | T3 | hours | a data-derived C0 form factor; its zero at 2.695 fm⁻¹ and the diffraction minimum at 2.828 both sit OUTSIDE the tree's asserted [2.9, 3.3] window |
@@ -96,6 +96,28 @@ table exists and the digitization error is stated on the row.
    `b1_nuclear.hpp:335` (which writes +U W/√2, the CDKS sign) may carry the
    opposite sign from the tagged sector. **This is being re-derived
    independently before anything is changed.**
+
+   > **RESOLVED AND APPLIED, 2026-09-06** (`07_cw_sign_investigation.md`,
+   > `../open_items/run_2026-09-06/phase_CW_numbers.md`). Every clause of this
+   > item was confirmed. The mapping is **+1**, exactly and for every θ_k, f₂/f₀
+   > and α_p; CW's −2 is the value of their angular factor at θ_k = 0, which
+   > `A_zz^wf` already carries. `build_amp2` did lack the i^L phase, the tagged
+   > S–D interference sign was inverted, and `b1_nuclear` was the sector in the
+   > right. **Fixed with one line** in `src/core/tagged.cpp` `build_amp2` — the
+   > phase `(-1)^floor(L/2)`, the observable relative part of φ_L = i^L ψ_L —
+   > and `rad_[2]` / `Wave::psi()` were **not** negated, so ψ₂ = +W stays the
+   > stored convention and the two tests asserting it still pass. Measured on
+   > the fixed library: `max|A_zz^wf − CW Eq. (6.12)| = 8.881784e−16` over all
+   > 280 × 96 = 26 880 grid cells on **both** deuteron controls, against
+   > **2.740499e+00** before; TABLE II's three rows −1.937124 / +0.999313 /
+   > +0.967340 against CW's −2 / +1 / +1 (they read +0.617024 / −0.318307 /
+   > −1.656113 before). The shipped observable moved: ⁶Li A_zz^tag at
+   > k = 0.20 GeV, acceptance-weighted at the YR high-acceptance optics,
+   > **+0.8450 → −1.2069** (Hulthén β = 0.30) and **+0.4518 → −0.5191**
+   > (VMC AV18). ⁷Li does not move at all (one L = 1 wave), and neither does
+   > the spin-blind rate (≤ 4.0e−16 relative). The gate itself is rewritten on
+   > the **AV18** control CW quote TABLE II for, per `07` §8, and carries a
+   > regression guard.
 2. **George–Knutson** — technique misattributed at every site (see #8).
 3. **eSTARlight** — the claim line "benchmarks `coherent.hpp`'s channel rate"
    is false: eSTARlight is exclusive ρ/φ/J/ψ with 85–97 % of its rate at

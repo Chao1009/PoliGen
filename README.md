@@ -43,7 +43,7 @@ is measured, and no number here stands without the window it was measured in.**
 
 | selector | default | what the other value adds | measured, with its window |
 |---|---|---|---|
-| `--cluster-wave {hulthen,vmc}` | `hulthen`, bit for bit | ANL VMC AV18 α+d / α+t tables, and the AV18 deuteron everywhere the run reads one | ⁶Li α-tag fraction **0.0249 → 0.0348** at 10 × 99.5 on the YR high-acceptance envelope; on the α-tag channel the opt-in path moves every polarized observable by **−2.027 %**; refused on `inclusive`/`coherent`, where it is never read |
+| `--cluster-wave {hulthen,vmc}` | `hulthen`, bit for bit | ANL VMC AV18 α+d / α+t tables, and the AV18 deuteron everywhere the run reads one | ⁶Li α-tag fraction **0.0264 → 0.0348** at 10 × 99.5 on the YR high-acceptance envelope (40 k events, seed 20260829, regenerated 2026-09-06 on the fixed S–D sign — the Hulthén sample read 0.0249 before, a re-drawn `tensor-thirds` category average whose expectation is unmoved to 15 digits); on the α-tag channel the opt-in path moves every polarized observable by **−2.027 %**; refused on `inclusive`/`coherent`, where it is never read |
 | `--pzz-mode {ladder,typed}` | `ladder`, bit for bit (it is the branch that was already there) | `--plan helicity-flip` honours the typed `--pzz` instead of the max-entropy ladder at `--pz`, and REFUSES a value outside the plan's domain with the edge named rather than clamping | inclusive config 1, 100 000 events, seed 20260713, `--pz 0.7 --pe 0.7`, `--pzz 0.5` against the ladder: **on ⁷Li no observable moves** (rank-2 identically zero; σ agrees to 1 ulp, A_∥ to 6 × 10⁻¹⁴ of its own error) while **0.1060 %** of events re-cell on last-bit arithmetic; on **⁶Li** σ **−0.0023527 %** and A_∥ **−4.27 × 10⁻⁶ σ_stat** on the shipped `miller` (22–36× less on the opt-in b₁ models). The **recorded alignment** moves 0.4 → 0.5 (⁷Li) / 0.409403 → 0.5 (⁶Li), i.e. **−20 % / −18.12 %** on δ(A_zz) and δ(cos 2φ) at fixed N |
 | `--triton-sf {hulthen,ciofi-simula}` | `hulthen`, bit for bit | the Ciofi–Simula three-channel A = 3 spectral function | S₀ = **0.6525, untuned** |
 | `--fsi {off,glauber-cluster,glauber-nucleon}` | `off` | a Glauber survival **weight** on `Event::weight` — never a momentum shift | the two variants are **not** one: **99.50 %** of events differ by more than **1 %** (\|w_nucleon/w_cluster − 1\| > 0.01), ratio to **68.5**, on `tagged-6Li-alpha`, 20 000 events, seed 1234, `tensor-thirds`, **σ_XN = 40 mb** — one end of the mandatory 20–40 mb band |
@@ -106,9 +106,27 @@ or through `--config-file` — is refused rather than silently resolved).
   phase, so read them off the gates and not off this line.
 - Kernel, ρ-moments, tagged densities, spectator boosts, coherent scenario and
   bookkeeping agree with `polligen` (run 16, tensor sign to the literature
-  convention) at **rtol 1e-12** against `validation/reference/*.json`.
-- External anchors reproduced: Cosyn Eq. 27, Cosyn–Weiss deuteron TABLE II
-  (+1/−2), Cosyn 2025 Table 1 finite-γ rows, ⁷Li ⟨P₂⟩ = −T/5, P_p = 0.866.
+  convention) at **rtol 1e-12** against `validation/reference/*.json` — with
+  one deliberate exception since 2026-09-06: the two spin-1 `model` blocks of
+  `validation/reference/tagged.json` are dumped from **this** library, because
+  `polligen`'s `tagged._amp2_table` carries the S–D interference bug fixed
+  below and cannot be the reference for it (`validation/README.md`).
+- External anchors reproduced: Cosyn Eq. 27, **Cosyn–Weiss deuteron Eq. (6.12)
+  and TABLE II**, Cosyn 2025 Table 1 finite-γ rows, ⁷Li ⟨P₂⟩ = −T/5,
+  P_p = 0.866.
+  **Corrected 2026-09-06** — this line read *"TABLE II (+1/−2)"*, naming the
+  two published A_T∥ values as though `A_T∥ = −2 · A_zz^wf` were the mapping.
+  It is not: the mapping is **`A_T∥ = +1 · A_zz^wf` exactly**, and CW's −2 is
+  the value of their own angular factor at θ_k = 0 (a node of the Λ = ±1
+  densities, CW Eq. 6.13), which `A_zz^wf` already carries. Acting on it twice
+  hid an inverted S–D interference sign in `TaggedModel::build_amp2`, now
+  fixed (one `(-1)^floor(L/2)`, the observable relative part of φ_L = i^L ψ_L;
+  `docs/benchmarking/07_cw_sign_investigation.md`). **The anchor is stronger
+  than it was**: Eq. (6.12) now holds as an identity, not a shape match —
+  measured `max|A_zz^wf − CW Eq. (6.12)| = 8.88e−16` over all 280 × 96 grid
+  cells on both deuteron controls (it was 2.74 before), and TABLE II's three
+  rows come out −1.937 / +0.999 / +0.967 at the cell centres against CW's
+  −2 / +1 / +1, on the AV18 wave function CW actually quote.
 - ePIC chain gate passed: HepMC3 → `npsim` (direct, and via `abconv -p ip6_hiacc_100x10`).
 - Throughput, single core: T0 inclusive 2.8 M ev/s, tagged 1.0 M, coherent
   2.3 M; +PYTHIA 33–44 k ev/s; HepMC3 writing ~7 k ev/s; Python columnar ~5×10⁵ ev/s.

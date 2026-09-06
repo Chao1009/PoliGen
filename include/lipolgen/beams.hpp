@@ -51,8 +51,11 @@ double nucleus_mass(const std::string& name, int a, int z);
 // FALSE OF `ClusterWaveSource::VmcAV18` (open item C5.5, measured 2026-09-04).
 // On the Hulthen default the two ARE one wave function: `LI6_CLUSTER_POLA-
 // RIZATION`'s alpha-d factor 1 - 1.5 P_D_LI6 = 0.869950 and the tagged
-// `TaggedModel(li6_alpha_channel()).vector_dilution()` = 0.869939 agree to
-// 1.22e-5 (a grid quadrature against a closed form).  Under `--cluster-wave
+// `TaggedModel(li6_alpha_channel()).vector_dilution()` = 0.8699431789 agree to
+// 7.84e-6 (a grid quadrature against a closed form; 6.82e-6 absolute).
+// Re-measured 2026-09-06 on the fixed tagged S-D interference sign, which
+// moves the quadrature residual by +4.3e-6: it read 0.869939 / 1.22e-5
+// before.  Under `--cluster-wave
 // vmc` the tagged channel's alpha-d wave is the ANL VMC overlap with
 // P_D = `VMC_P_D_LI6` = 0.019355, whose vector dilution is 0.970966 -- and the
 // inclusive constant below does NOT move, so the two differ by +11.61 %.  The

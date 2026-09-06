@@ -57,7 +57,9 @@ class FsiWeight;
 // DEFAULT the inclusive effective polarization of 6Li
 // (`LI6_CLUSTER_POLARIZATION`, the two dilutions multiplied) and the tagged
 // S/D interference below are the same wave function seen in two experiments
-// and agree to 1.22e-5.  The names, values and meanings are unchanged.
+// and agree to 7.84e-6 (0.869950 closed form against the model's
+// 0.8699431789; it was 1.22e-5 before the 2026-09-06 S-D sign fix moved the
+// quadrature residual).  The names, values and meanings are unchanged.
 //
 // UNDER `ClusterWaveSource::VmcAV18` THEY DO DRIFT APART, by +11.61 % in the
 // vector sector and +6.58 % in the rank-2 one (open item C5.5, measured
@@ -227,8 +229,14 @@ TaggedChannel li7_alpha_channel(
 /// two-parameter analytic pair at the SCENARIO `P_D_DEUTERON` = 0.045;
 /// `VmcAV18` is the exact AV18 deuteron of `data/vmc/deuteron/fdeut.av18`,
 /// psi_0 = u(k), psi_2 = +w(k) (CDKS phi_2 = -W and phi_L = i^L psi_L, so the
-/// PHYSICAL relative sign is the + the Hulthen forms already carry), at that
+/// STORED relative sign is the + the Hulthen forms already carry), at that
 /// table's own P_D and ignoring `beta` and `p_d` (open item C5.4, 2026-09-04).
+/// The AMPLITUDE is built from phi, not psi: `TaggedModel::build_amp2` applies
+/// (-1)^floor(L/2) to each wave, so the S-D interference the observables see
+/// is CDKS's.  Before 2026-09-06 that phase was missing and every tagged
+/// spin-1 channel shipped the opposite S-D sign -- Cosyn-Weiss II Eq. (6.12)
+/// refuted at 2.74 in an asymmetry whose whole range is [-2, 1]
+/// (docs/benchmarking/07_cw_sign_investigation.md).
 /// The pipeline comment "there is no VMC d -> p+n cluster table, the deuteron
 /// IS the cluster" was true of the `momenta/` files and FALSE of this one:
 /// u and w ARE the p-n relative S and D waves.

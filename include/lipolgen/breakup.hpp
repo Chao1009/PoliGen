@@ -53,9 +53,12 @@
 ///     +-1 helicity label (LHEF SPINUP), not the expectation value.
 ///     THAT IS ALSO THE CONSISTENCY GATE ON `source`: the dilution this draw
 ///     implies must equal the one the RATE is computed with,
-///     `TaggedChannel::dis_target.eff_pol_*` -- 0.932495 against 0.9325 on
-///     `Hulthen` and 0.913595 against 0.913600 on `VmcAV18`, a grid
-///     quadrature against a closed form both times (T27).
+///     `TaggedChannel::dis_target.eff_pol_*` -- 0.932496 against 0.9325 on
+///     `Hulthen` and 0.913596 against 0.913600 on `VmcAV18`, a grid
+///     quadrature against a closed form both times (T27).  (0.932495 /
+///     0.913595 until the 2026-09-06 tagged S-D sign fix moved the 96-cell
+///     quadrature residual by 1.4e-6 / 1.3e-6; measured 0.932496109312 and
+///     0.913595978560.)
 ///
 /// ---------------------------------------------------------------------------
 /// THE TRITON (7Li alpha tag).  TWO models, selected by

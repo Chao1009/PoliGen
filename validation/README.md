@@ -176,6 +176,51 @@ every ion at that configuration is gamma-matched to.
 the DEFAULT channel constructors (all default beta=0.30, and for 6Li
 p_d=tagged.P_D_LI6, for the deuteron control p_d=tagged.P_D_DEUTERON).
 
+**THIS FILE NO LONGER TRACKS polligen FOR THE SPIN-1 MODEL BLOCKS (2026-09-06).**
+`polligen.tagged._amp2_table` (tagged.py:243-248) sums the partial waves with
+NO `i^L`: it feeds `psi_L` into an amplitude that needs `phi_L = i^L psi_L`.
+For an S+D channel that is not a global phase -- it is +1 on L=0 and -1 on
+L=2 -- so polligen's tagged sector carries the S-D interference sign
+INVERTED, against Cosyn-Weiss II Eq. (6.12) (by up to 2.74 in an asymmetry
+whose whole range is [-2, 1]), against LiPolGen's own deuteron quadrupole
+sign gate, and against LiPolGen's own b1 sector, which applies the phase
+explicitly.  LiPolGen fixed it on 2026-09-06 (`src/core/tagged.cpp`
+`build_amp2`, one `(-1)^floor(L/2)`); polligen was NOT touched and still
+carries the bug.  Regenerating `channels.li6_alpha.model` or
+`channels.deuteron.model` from polligen would therefore re-bake the refuted
+sign and the rtol-1e-12 gate would go on certifying it.
+
+Those two blocks are instead RE-PINNED from the fixed C++ library by
+`validation/repin_tagged_from_lipolgen.py` (provenance `"LiPolGen post-fix,
+formerly polligen"`, recorded in the file's own `provenance` /
+`provenance_note` keys), and `dump_polligen_reference.py` carries them
+through unchanged rather than overwriting them.  What moved in the re-pin,
+MEASURED 2026-09-06 as the re-pinned file against the pre-fix dump
+(`git show HEAD:validation/reference/tagged.json`), not copied from the
+investigation's own table: `n_of_kc` (up to +725% on 6Li, +19215% on the
+AV18 deuteron control), `struck_populations` (up to 0.86 absolute),
+`p2_moment` (sign flip, x1.28 to x2.03), `p2_moment_mixture_uniform`
+(-5.3160743e-05 -> -5.2153460e-05 on 6Li, 1.9e-2 rel; -5.3694953e-05 ->
+-5.3337762e-05 on the deuteron, 6.7e-3 rel -- it is gated at 1e-9, so it had
+to be re-pinned too), `norm` (up to 5.8e-5 rel: 6Li M=0 1.000026689626 ->
+0.999968571520; 4.0e-5 on the deuteron), `population_integrated` (up to
+3.0e-6 abs: 6Li M=0 0.947966373524 -> 0.947963349333) and the dilutions
+(<=4.3e-6 rel).  Until 2026-09-06 this list read `norm` "+2e-5" and
+`population_integrated` "<=5e-7 abs" and did not mention
+`p2_moment_mixture_uniform` at all -- three figures taken from
+`07_cw_sign_investigation.md` section 6.1 rather than measured here, where
+that section records the last one as not moving.  Reason, derivations and
+the full before/after tables: `docs/benchmarking/07_cw_sign_investigation.md`
+and `docs/open_items/run_2026-09-06/phase_CW_numbers.md`.
+
+EVERYTHING ELSE IN THE FILE IS STILL polligen's, untouched: `waves`,
+`base`, `beam_configs`, `boost_spectator`, `P_D_LI6`, `P_D_DEUTERON`, the
+channel scalars, and the WHOLE of `channels.li7_alpha.model` -- 7Li alpha-tag
+is a single L=1 wave, so the common `i` is a global phase, and the fix
+moves its `n_of_kc` and `p2_moment` by exactly zero (measured, bit for bit).
+The re-pin script re-checks that block against the live C++ at rtol 1e-12
+instead of overwriting it.  No other reference JSON moved.
+
 `channels.<li6_alpha|li7_alpha|deuteron>`: built by
 `tagged.li6_alpha_channel()` / `li7_alpha_channel()` / `deuteron_channel()` (tagged.py:181,188,195). `base` is the underlying
 `polli_fastsim.spectator.ClusterChannel` (spectator.py:111): `m_spec`

@@ -58,6 +58,12 @@ the rtol-1e−12 gates did not move.
   Hulthén embedded deuteron together — **+2.069 %** on every polarized tagged-α
   observable (ratio **1.020687209533**, exact at every (x, Q²)). Both now follow
   `--cluster-wave`; the opt-in path is **−2.027 %**, the default **bit for bit**.
+  *(**Re-measured 2026-09-06** after the tagged sector's S–D interference sign
+  was fixed: **+2.069 % survives** — the ratio of the two channels'
+  `vector_dilution` is **1.020687624664**, against **1.020687500612** before,
+  because both dilutions are angle-integrated and the flipped S–D cross term
+  integrates to zero. The **−2.027 %** likewise: −2.02683 % against
+  −2.02682 %.)*
 * AV18 deuteron **P_D = 0.057600**; a `vmc` whole-nucleus reading is
   **0.887076** (measured end to end at 0.886169 ± 0.0011 on 400 k events)
   against the ab-initio **0.848** and the shipped **0.811228**.
@@ -168,6 +174,22 @@ and one do, since C5.4 (§10 and §8).
 6. **O3 in the form asked** — the α–d split from GFMC configurations — remains
    unanswerable here: this tree has no GFMC configurations. What exists is a
    bound on the *size* of the effect.
+6b. **A shipped tensor number was wrong and is now fixed — found after this
+   run closed.** On 2026-09-06 the tagged sector's S–D interference sign was
+   shown inverted: `TaggedModel::build_amp2` summed ψ_L where a partial-wave
+   amplitude needs φ_L = i^L ψ_L, so the relative phase `(-1)^floor(L/2)` was
+   missing (`../../benchmarking/07_cw_sign_investigation.md`, three
+   independent derivations). **⁶Li A_zz^tag(k = 0.20 GeV), acceptance-weighted
+   at the YR high-acceptance optics, moved +0.8450 → −1.2069 (Hulthén β = 0.30)
+   and +0.4518 → −0.5191 (VMC AV18)** — the corrected VMC column is, digit for
+   digit, the `vmc-flipD` *control* column this run published. Cosyn–Weiss II
+   Eq. (6.12) now holds as an identity, `max|A_zz − CW| = 8.881784e−16` over
+   26 880 cells against **2.740499e+00** before. **Nothing in this summary's
+   own numbers moves**: ⁷Li does not move at all (one L = 1 wave), the
+   spin-blind rate does not move (≤ 4.0e−16 relative), and every dilution,
+   effective polarization and b₁ number here is angle-integrated or a closed
+   form in P_D. Record: `../run_2026-09-06/phase_CW_numbers.md`.
+
 7. **Nothing was pushed, published or sent.** `ci.yml` has never been parsed by
    GitHub (no cache round-trip, no runner-image apt set, no real 4-core
    timings); no wheel was uploaded, and its two data trees are still outside it

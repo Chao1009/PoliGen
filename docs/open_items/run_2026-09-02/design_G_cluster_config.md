@@ -202,6 +202,13 @@ not be gated as equal**:
   gap for the sibling constant: the closed form gives 0.921970 against the
   0.9219467 quadrature, and the repo's own rule is that the two are **"pinned to
   each other at 1e-4 and not asserted equal."** Follow that precedent.
+  *(**Correction, 2026-09-06**, beside the original: the quadrature now reads
+  **0.9219490**, not 0.9219467 — the tagged S–D interference sign fix
+  (`src/core/tagged.cpp` `build_amp2`,
+  `../../benchmarking/07_cw_sign_investigation.md`) moves this 96-cell
+  quadrature residual by +2.46e−6.  The gap against the closed form, and with
+  it the argument and the 1e−4 rule, are unchanged; `constants.hpp` carries the
+  new digits.)*
 * `li6_alpha_channel(..., VmcAV18)` fixes P_D at `VMC_P_D_LI6` = **0.01935**
   (the `momenta/li6_ad1` file) and *ignores* its `p_d` argument
   (`tagged.hpp:113–115`), whereas this sampler's default P_D is the `li6.ad`

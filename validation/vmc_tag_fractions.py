@@ -37,6 +37,88 @@ WAVES = ("hulthen", "vmc")
 K_ROWS = (0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.40, 0.50)
 
 
+# Text carried in the GENERATOR so a regeneration reproduces it (the document
+# says "do not hand-edit", and vmc_reconcile.py rewrites everything above the
+# APPEND marker while this script rewrites everything below it).
+TAG_FRACTION_INVARIANCE_NOTE = (
+    "**What the 2026-09-06 S–D sign fix does and does not do to this "
+    "table.**  The ⁶Li rows are a `tensor-thirds` CATEGORY AVERAGE and "
+    "the ⁷Li rows a single L = 1 channel, so their EXPECTATION is "
+    "invariant under the fix — measured, not argued: the uniform-M mix "
+    "accepted fraction (model integral, acceptance-weighted Σ_M n_M k² "
+    "at `n_phi = 32`, YR high-acceptance, `--config 1`) is "
+    "**0.024675932148828** (Hulthén β = 0.30) and "
+    "**0.033810227625842** (VMC AV18), unmoved across the fix to all 15 "
+    "digits, and the equal-thirds category average reproduces it and moves "
+    "by **+3.1e-6 relative — a per-M norm-residual effect (Σ n_M k² differs by 5e-5 between M = 0 and ±1), not summation order; the pooled category average equals the uniform mix to 2.2e-16 on both builds).  ⁷Li does not "
+    "move at all (`n_of_kc` bit-identical).  What the fix DOES move is (i) "
+    "the SAMPLE — ~77 % of events draw a different (k, cos θ_k), so "
+    "the printed digits are re-drawn from the same expectation: the ⁶Li "
+    "rows read **0.0249** (YR high-acceptance) and **0.2530** (tagging) on "
+    "the PRE-FIX build at these settings — 1.4σ and 0.7σ of the difference of "
+    "two independent 40000-event samples (binomial σ_diff 1.1e−3 and "
+    "3.1e−3); and (ii) any SINGLE tensor-polarised fill, which is no category "
+    "average at all.  Measured on the ⁶Li Hulthén channel at the same "
+    "optics: the `tensor-thirds` categories go **0.028127 → 0.018403** "
+    "(azz±, −34.6 %) and **0.017775 → 0.037222** (azz0, +109 %), "
+    "and the `--pz 0.7` max-entropy ladder of `helicity-flip` (populations "
+    "0.751567 / 0.196866 / 0.051567) goes **0.027030 → 0.020396**, "
+    "−24.5 %.  “Tag fractions are unaffected” is a statement "
+    "about a spin-blind or category-averaged fill only.")
+
+CORRECTION_RECORD_2026_09_06 = [
+    "",
+    "> **CORRECTION RECORD, 2026-09-06 — the A_zz columns above are the "
+    "FIXED ones, and every A_zz this document published between 2026-08-29 "
+    "and 2026-09-06 carried the opposite S–D interference sign.**",
+    "> `TaggedModel::build_amp2` summed the partial waves as ψ_L where the "
+    "amplitude needs φ_L = i^L ψ_L, so the observable relative phase "
+    "`(-1)^floor(L/2)` — `+1` on L = 0, **`−1` on L = 2** — was "
+    "missing and Cosyn–Weiss II Eq. (6.12) came out evaluated at **minus** "
+    "f₂/f₀ (`src/core/tagged.cpp` `build_amp2`; "
+    "`docs/benchmarking/07_cw_sign_investigation.md`, three independent "
+    "derivations, verdict certain).",
+    ">",
+    "> The pre-fix table, kept as it was published (40000 events, seed "
+    "20260829, same optics and cells):",
+    ">",
+    "> | k [GeV] | hulthen β=0.30 | hulthen P_D=VMC | VMC AV18 | VMC "
+    "D-sign flipped |",
+    "> |---|---|---|---|---|",
+    "> | 0.1979 | 0.8450 | 0.5108 | 0.4518 | −0.5191 |",
+    "> | 0.2495 | 0.6551 | 0.4639 | 0.2604 | −0.2899 |",
+    "> | 0.3012 | 0.5226 | 0.4296 | 0.1819 | −0.1993 |",
+    "> | 0.4001 | 0.3325 | 0.3435 | 0.0779 | −0.0822 |",
+    "> | 0.4990 | 0.2349 | 0.2840 | −0.1302 | 0.1170 |",
+    ">",
+    "> **The `vmc-flipD` control column of that table is, digit for digit, "
+    "the physics column of the table above, and its old physics column is "
+    "the new control** — this document's designated control on the S–D "
+    "relative sign was the physical answer all along.  What the fix does NOT "
+    "change: the S-node position, the `vmc_from_momentum` sign "
+    "reconstruction, P_D, ⟨k⟩, and the spin-blind accepted rate, "
+    "**unmoved to ≤ 4.0e−16 relative (1–2 ulp; the VMC channel "
+    "bit-identical)** — the acceptance-weighted Σ_M n_M k² at "
+    "`n_phi = 32` gives an accepted fraction of **0.0246759321488** "
+    "(Hulthén β = 0.30) and **0.0338102276258** (VMC AV18); digits "
+    "beyond those are summation-order dependent.  The tag fractions are "
+    "invariant only as an EXPECTATION — see the note under the tag-fraction "
+    "table above, which measures what a single tensor-polarised fill does.",
+    ">",
+    "> The sentence under **The S–D relative sign** above "
+    "(“negating the D table alone flips A_zz^tag …”, `:133-136` "
+    "as this file is generated) was itself inverted until 2026-09-06 "
+    "and now reads −0.52 → +0.45; it is fixed in the "
+    "GENERATOR (`validation/vmc_reconcile.py`), not in this file, which "
+    "is rewritten in full by `--markdown`.  The box this record "
+    "replaces cited that sentence as `:131-133`, already two lines off: "
+    "a line citation into a generated file drifts with every "
+    "regeneration, so the section heading is the anchor here.  Full "
+    "before/after: "
+    "`docs/open_items/run_2026-09-06/phase_CW_numbers.md`.",
+]
+
+
 def load():
     build = ROOT / "build" / "python"
     if build.is_dir():
@@ -273,6 +355,11 @@ def write_markdown(path, moments, tf, rows, n_events, seed):
             f"(`--config 1`), seed {seed}; `tensor-thirds` plan for ⁶Li, "
             "`helicity-flip` for ⁷Li (J = 3/2 has no equal-thirds pattern).",
             "",
+            "Everything below is measured on the LiPolGen library that ran "
+            "the script — i.e. since 2026-09-06 on the FIXED tagged "
+            "S–D interference sign.  The correction record under the "
+            "A_zz table carries the pre-fix table and the fix.",
+            "",
             "### Moments on the `TaggedModel` grid (k ∈ [1e-4, 1.2] GeV, 280 cells)",
             "",
             "| channel | ⟨k⟩ [GeV] | P(k>0.2) | P(k>0.3) | P(k>0.45) | P_D |",
@@ -292,21 +379,28 @@ def write_markdown(path, moments, tf, rows, n_events, seed):
             body.append(f"| {iso} | {optics} | `{h[3]}` | {h[0]:.4f} "
                         f"| {v[0]:.4f} | {v[0]/max(h[0],1e-12):.3f} |")
 
+    body += ["", TAG_FRACTION_INVARIANCE_NOTE]
+
     body += ["", "### Tagged tensor asymmetry A_zz^tag(k), ⁶Li, YR high-acceptance", "",
              "`hulthen-P_D_vmc` is the analytic shapes at the VMC D-state "
              "probability (it isolates the P_D change from the shape change); "
-             "`vmc-flipD` is the VMC channel with the D-wave table negated (the "
-             "control on the S–D relative sign, the one input a momentum "
-             "density cannot supply).  NaN below k ≈ 0.17 GeV: the Roman-Pot "
-             "envelope accepts nothing there.",
+             "`vmc-flipD` is the VMC channel with the D-wave table negated — "
+             "the control on the S–D relative sign, the one input a "
+             "momentum density cannot supply, and **since the 2026-09-06 "
+             "sign fix it is also, digit for digit, the column this "
+             "document published as the physics until that date** (see "
+             "the correction record below).  NaN below k ≈ 0.17 GeV: "
+             "the Roman-Pot envelope accepts nothing there.",
              "",
              "| k [GeV] | hulthen β=0.30 | hulthen P_D=VMC | VMC AV18 "
-             "| VMC D-sign flipped | VMC − hulthen |",
+             "| VMC D-sign flipped (= the PRE-FIX physics column) "
+             "| VMC − hulthen |",
              "|---|---|---|---|---|---|"]
     for k, vals in rows:
         body.append("| %.4f | " % k
                     + " | ".join("%.4f" % v for v in vals)
                     + " | %+.4f |" % (vals[2] - vals[0]))
+    body += CORRECTION_RECORD_2026_09_06
     body.append("")
     path.write_text(text + "\n".join(body) + "\n")
 

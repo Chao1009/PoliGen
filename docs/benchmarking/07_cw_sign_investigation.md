@@ -341,10 +341,51 @@ before applying the phase.
 | `population_integrated`, all channels, all M | — | — | ≤ 5e−07 abs |
 | `p2_moment_mixture_uniform` | −5.425347e−05 | −5.425347e−05 | 0 |
 
+> **CORRECTION, 2026-09-06 (verification pass) — the last two rows are wrong at
+> the magnitudes they quote, and the paragraph below oversold three claims.**
+> Re-measured as the re-pinned `validation/reference/tagged.json` against
+> `git show HEAD:validation/reference/tagged.json` (the pre-fix dump), and
+> independently on the library with the stored L = 2 table negated:
+>
+> | quantity | channel | shipped | i^L-applied | move |
+> |---|---|---|---|---|
+> | `population_integrated` | ⁶Li Hulthén, M = 0, m_S = 0 | 0.947966373524 | 0.947963349333 | **3.02e−06 abs** |
+> | `population_integrated` | deuteron Hulthén, M = 0, m_S = 0 | 0.972992754631 | 0.972991682225 | 1.07e−06 abs |
+> | `norm` | ⁶Li Hulthén, M = 0 | 1.000026689626 | 0.999968571520 | **5.81e−05 rel** |
+> | `norm` | deuteron Hulthén, M = 0 | 1.000018994706 | 0.999979287452 | 3.97e−05 rel |
+> | `p2_moment_mixture_uniform` | ⁶Li Hulthén | −5.3160743e−05 | −5.2153460e−05 | **1.89e−02 rel** |
+> | `p2_moment_mixture_uniform` | deuteron Hulthén | −5.3694953e−05 | −5.3337762e−05 | 6.65e−03 rel |
+> | `p2_moment_mixture_uniform` | ⁶Li VMC | −5.4245146e−05 | −5.4220571e−05 | 4.53e−04 rel |
+> | `p2_moment_mixture_uniform` | ⁷Li | −4.3408664e−05 | −4.3408664e−05 | **0** |
+>
+> So `population_integrated` is ≤ **3.0e−06** abs, not ≤ 5e−07; `norm` is up to
+> **5.8e−05** rel, not 2e−5; and `p2_moment_mixture_uniform` moves on every
+> spin-1 channel — the row's −5.425347e−05 pair is the ⁶Li VMC value to seven
+> figures and is not a "does not move" entry at all. All four quantities had to
+> be **re-pinned** in `validation/reference/tagged.json`, which is what the
+> re-pin record now says (`validation/README.md`, generated from
+> `dump_polligen_reference.py`). ⁷Li is the one exact zero.
+
 The residuals are the 96-cell midpoint quadrature of `∫Θ_0 Θ_2 dc = 0`, nothing
-more. **The tagged tensor dilution does not move**, so `LI6_B1_RANK2_TRANSFER`,
-the effective polarizations, the tag fractions and the inclusive sector are all
-untouched. So is `norm` at the 2e−5 level (see §7 — it still trips a 1e−9 gate).
+more. **The tagged tensor dilution does not move** beyond that residual
+(+2.5e−6 on the ⁶Li Hulthén channel, against the 1e−4 at which
+`LI6_B1_RANK2_TRANSFER` is pinned), so `LI6_B1_RANK2_TRANSFER`, the effective
+polarizations and the inclusive sector are untouched. `norm` moves by up to
+**5.8e−05** relative (see §7 — it trips a 1e−9 gate and was re-pinned).
+
+> **The tag fractions are NOT in that list — corrected 2026-09-06.** A tag
+> fraction is spin-blind only for a spin-blind or category-averaged fill. The
+> uniform-M mix accepted fraction is unmoved to all 15 digits
+> (**0.024675932148828** Hulthén β = 0.30, **0.033810227625842** VMC AV18,
+> acceptance-weighted Σ_M n_M k² at `n_phi = 32`, YR high-acceptance,
+> `default_configs("6Li")[1]`), and the equal-thirds `tensor-thirds` average
+> reproduces it to +3.1e−9. For a **tensor-polarised** fill the tag fraction is
+> the same acceptance-weighted integral as A_zz^tag and moves with it: measured
+> on the ⁶Li Hulthén channel at those optics, `tensor-thirds` categories
+> **0.028127 → 0.018403** (azz±) and **0.017775 → 0.037222** (azz0), and the
+> `--pz 0.7` max-entropy ladder of `helicity-flip` **0.027030 → 0.020396**
+> (−24.5 %); ⁶Li VMC 0.035296 → 0.032155, deuteron Hulthén 0.025802 → 0.021492,
+> deuteron AV18 0.022175 → 0.019407. ⁷Li does not move at all.
 
 **⁷Li moves by exactly zero**: one L = 1 wave, no interference. `n_of_kc`
 identical to the bit; `p2_moment(M) = −0.1999349117 / +0.1998480944` unchanged.
@@ -430,13 +471,32 @@ which already applies `φ_L = i^L ψ_L`, and only *reads* the tagged channel's
 `Wave::vmc` tables (which the fix leaves untouched — see §7). **No b₁ number
 moves**: not `b1_default_li6.json`, not the CDKS shape gate, not
 `alpha_d_quadrupole_fm2`, not `LI6_B1_RANK2_TRANSFER`. The inclusive sector,
-the coherent channel, the RC sector, tag fractions, `boost_spectator`, the
-sampler's rates (`population_integrated`) and every dilution are unaffected.
+the coherent channel, `boost_spectator` and every dilution beyond its
+quadrature residual are unaffected.
+
+> **CORRECTION, 2026-09-06 (verification pass) — three items were wrongly in
+> that list.** (1) **The RC sector is spin-dependent and does move.**
+> `RcModel::tagged_tau` (`src/core/rc.cpp:1565-1580`) reads
+> `TaggedModel::n_of_kc(M, k, c)` per ion projection — only the M-average is
+> isotropic — so under `--rc tensor-band` on a spin-1 tagged channel
+> `rc_tensor_lo/hi` move in **every** event (max 0.488 absolute) and the
+> band-clip count moves 96 → 248 (⁶Li Hulthén), 32 → 20 (⁶Li VMC) and 57 → 129
+> (deuteron), measured over 20 000-event runs on a pre-fix build against this
+> tree. RC on ⁷Li is unreachable (refused under any ⁷Li plan). (2) **Tag
+> fractions** are invariant only for a spin-blind or category-averaged fill —
+> see the box in §6.1. (3) **`population_integrated` itself moves** by up to
+> 3.0e−06 absolute, and the polarised per-category cross sections it normalises
+> move with it: σ_per_category_pb 590826.8808411484 → 590826.8764129529 (⁶Li
+> Hulthén, 7.5e−9 relative) and 581694.0988441816 → 581694.0940292849 (deuteron
+> Hulthén, 8.3e−9). Physically null, but it is a bound, not a zero.
 
 What *does* change at event level: `TaggedModel::sample_kc` draws from
 `|A_{m_S}(M; k, c)|² k²`, so the generated correlation between the ion
 projection `M`, the struck-cluster projection `m_S` and the spectator direction
-`cos θ_k` flips. Rates do not move; the angular correlation does. That is the
+`cos θ_k` flips. The SPIN-BLIND rate does not move — unmoved to ≤ 4.0e−16
+relative, 1–2 ulp, the VMC channel bit-identical — while a polarised category's
+cross section moves at the 1e−8 level through the `population_integrated`
+quadrature residual above; the angular correlation is what changes. That is the
 whole point of the observable.
 
 ---

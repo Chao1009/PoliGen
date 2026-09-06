@@ -26,6 +26,21 @@ It is also the ONLY place a human-facing warning can live: `src/core` has no
 prints "a_2 == 0 for a longitudinal axis" from here while C++ simply returns
 0, which is the correct value there.
 
+NOT AFFECTED BY THE 2026-09-06 TAGGED S-D SIGN FIX -- checked, not assumed.
+That fix is one phase, (-1)^floor(L/2), inside `TaggedModel::build_amp2`
+(docs/benchmarking/07_cw_sign_investigation.md), and it flips every
+ANGLE-DIFFERENTIAL tagged quantity: 6Li A_zz^tag(k = 0.20 GeV) moved +0.845 ->
+-1.207 (hulthen) and +0.452 -> -0.519 (vmc).  Nothing this module emits goes
+through that code path.  `moments()`'s `tensor_dilution` is
+`ClusterConfigSampler::tensor_dilution` (src/core/cluster_config.cpp:718),
+which is the CLOSED FORM 1 - 0.9*p_d_alpha_d() -- a function of one D-state
+probability, and a probability is a norm, so it is phase-blind.  The
+quadrupole, radius, a2 and eps_b0 legs below are geometry and carry no spin
+amplitude at all.  Do not confuse this `tensor_dilution` with the tagged
+sector's grid-integrated `TaggedModel::tensor_dilution`, which is a different
+quantity computed a different way (and which moves only by its 96-cell
+quadrature residual, <= 4.3e-6 relative).
+
 CAVEAT, PRINTED ON EVERY RUN.  The alpha+d truncation reproduces the 6Li point
 radius to ~4 % but OVERSHOOTS Q(6Li): with the DEFAULT source Q_charge(model)
 = -0.615 fm^2 against the measured -0.0818 and GFMC AV18+IL7's -0.20(6), a

@@ -2841,6 +2841,21 @@ static void bind_tagged(py::module_& m) {
         return move_array2(std::vector<double>(t.n_of_kc(m_ion)),
                            static_cast<py::ssize_t>(t.nc()));
       }, py::arg("m_ion"))
+      .def("struck_populations", [](const TaggedModel& t, double m_ion) {
+        // (n_mS, nk, nc), the same shape polligen's TaggedModel returns.
+        // Exposed 2026-09-06 so validation/repin_tagged_from_lipolgen.py can
+        // dump the reference through the INSTALLED module rather than
+        // reimplementing build_amp2 in Python.
+        const std::vector<std::vector<double>> p = t.struck_populations(m_ion);
+        std::vector<double> flat;
+        flat.reserve(p.size() * t.nk() * t.nc());
+        for (const std::vector<double>& row : p)
+          flat.insert(flat.end(), row.begin(), row.end());
+        return move_array3(std::move(flat),
+                           static_cast<py::ssize_t>(t.nk()),
+                           static_cast<py::ssize_t>(t.nc()));
+      }, py::arg("m_ion"),
+         "p(m_S | M, k, cos theta_k) on the model grid, shape (n_mS, nk, nc).")
       .def("population_integrated", [](const TaggedModel& t, double m_ion) {
         return move_array(t.population_integrated(m_ion));
       }, py::arg("m_ion"))

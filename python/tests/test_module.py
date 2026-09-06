@@ -615,7 +615,10 @@ def test_c5_4_the_deuteron_control_on_av18():
         -0.020268, rel=1e-3)
     assert v.tensor_dilution() / h.tensor_dilution() - 1.0 == pytest.approx(
         -0.011822, rel=1e-3)
-    # the relative S-D sign does NOT flip: psi_2 = +W for the real deuteron
+    # the relative S-D sign does NOT flip: psi_2 = +W for the real deuteron.
+    # That is the STORED convention these two asserts read; the amplitude sums
+    # phi_2 = i^2 psi_2 = -W, which build_amp2 applies since 2026-09-06
+    # (docs/benchmarking/07_cw_sign_investigation.md).
     assert v.channel.waves[0].vmc(0.05) > 0.0
     assert v.channel.waves[1].vmc(0.05) > 0.0
     assert not v.channel.waves[1].vmc.has_errors

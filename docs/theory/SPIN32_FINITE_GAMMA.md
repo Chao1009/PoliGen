@@ -274,7 +274,7 @@ Three consequences for the run plans:
   needs somewhere to record it (§6.1).
 
 The in-situ ⁷Li polarimeter the pipeline uses is ⟨P₂(cos θ_k)⟩ = −T/5 for any
-fill (`tests/test_tagged.cpp:337-353`, `tests/test_pipeline.cpp:486-512`),
+fill (`tests/test_tagged.cpp:383-399`, `tests/test_pipeline.cpp:486-512`),
 i.e. it measures the rank-2 moment. **There is no rank-3 polarimeter in the
 generator**; R₃ would have to come from the fill model (14), not from a
 measurement.

@@ -839,8 +839,21 @@ been assuming `sign(psi_2/psi_0) = +1` everywhere.  The S node at 0.134 GeV
 sits INSIDE the sampled range, so the VMC S–D interference changes sign across
 it — a structure no two-parameter form can carry.  It matters: at P_D ≈ 0.019
 the pure-D term is negligible and the interference, linear in √P_D, dominates
-the tensor asymmetry.  Negating the D table alone flips A_zz^tag from +0.45 to
-−0.52 at k = 0.20 GeV (the `vmc-flipD` control below).
+the tensor asymmetry.  Negating the D table alone flips A_zz^tag from **−0.52
+to +0.45** at k = 0.20 GeV (the `vmc-flipD` control below) — measured on the
+fixed library, acceptance-weighted at the YR high-acceptance optics, in the
+k = 0.1979 GeV cell: shipped **−0.5191**, D-negated **+0.4518**.
+
+**This sentence read "from +0.45 to −0.52" until 2026-09-06, and the polarity
+was inverted, not the interval.**  `TaggedModel::build_amp2` summed the
+partial waves as ψ_L where the amplitude needs φ_L = i^L ψ_L, so the observable
+relative phase `(-1)^floor(L/2)` — `+1` on L = 0, **`−1` on L = 2** — was
+missing and every A_zz^tag in this document carried Cosyn–Weiss II Eq. (6.12)
+evaluated at **minus** f₂/f₀ (`src/core/tagged.cpp` `build_amp2`;
+`docs/benchmarking/07_cw_sign_investigation.md`, three independent derivations,
+verdict certain; before/after `docs/open_items/run_2026-09-06/phase_CW_numbers.md`).
+The **stored** ψ₂ = +W convention is unchanged and still right; what was
+missing was the phase the amplitude applies to it.
 
 The one reassurance: the Roman-Pot envelope accepts nothing below k ≈ 0.17 GeV,
 which is ABOVE the S node, so in the accepted window the VMC interference has

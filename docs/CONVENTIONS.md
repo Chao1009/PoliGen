@@ -89,9 +89,12 @@ knobs recorded nowhere at all
   in `polli_fastsim.beams` — and `tagged.hpp` uses those names rather than
   keeping copies, so **on the Hulthén default** the INCLUSIVE effective
   polarization and the TAGGED S/D interference of `li6_alpha_channel` are the
-  same wave function seen in two experiments — measured 2026-09-04, they agree
-  to **1.22e−5** (0.869950 against the tagged model's 0.869939, a closed form
-  against a grid quadrature).  **Under `--cluster-wave vmc` they do not**: the
+  same wave function seen in two experiments — measured 2026-09-04 and
+  re-measured 2026-09-06 on the fixed S–D interference sign, they agree
+  to **7.84e−6** (0.869950 against the tagged model's **0.8699431789**, a closed
+  form against a grid quadrature; 6.82e−6 absolute).  *(The pre-fix pair was
+  0.869939 and 1.22e−5: the fix moves the 96-cell quadrature residual by
+  +4.3e−6 and nothing else here — the dilution is angle-integrated.)*  **Under `--cluster-wave vmc` they do not**: the
   tagged α–d wave becomes the ANL VMC overlap at `VMC_P_D_LI6` = 0.019355 and
   the inclusive constant does not follow, so the two differ by **+11.61 %** in
   the vector sector and **+6.58 %** in the rank-2 one (`LI6_B1_RANK2_TRANSFER`
@@ -325,9 +328,17 @@ knobs recorded nowhere at all
   Two files per wave because they carry different things.  A momentum density
   is |ψ_L|² and has no phase, but the **S–D relative sign is observable**: the
   interference term of `n_M(k, k̂)` goes as ψ₀ψ₂ and, at P_D ≈ 0.019, it
-  DOMINATES the tensor asymmetry (negating the D table flips A_zz^tag from
-  +0.45 to −0.52 at k = 0.20 GeV).  The signed `overlap_old` amplitudes supply
-  it.  `vmc_from_momentum` does not copy sign(A_L(k)) point by point — it
+  DOMINATES the tensor asymmetry (negating the D table flips A_zz^tag by 0.97
+  at k = 0.20 GeV).  The signed `overlap_old` amplitudes supply
+  it.  **The two numbers swapped roles on 2026-09-06.**  This sentence read
+  "flips A_zz^tag from +0.45 to −0.52"; the shipped answer is now **−0.5191**
+  and negating the D table gives **+0.4518** — measured at the k = 0.1979 GeV
+  cell, acceptance-weighted at the YR high-acceptance optics.  The claim
+  itself did not move; what moved is which side of it the code is on, because
+  the tagged amplitude was summing ψ₂ where it needed φ₂ = i²ψ₂ = −ψ₂
+  (`src/core/tagged.cpp` `build_amp2`;
+  `docs/benchmarking/07_cw_sign_investigation.md`;
+  `docs/open_items/run_2026-09-06/phase_CW_numbers.md`).  `vmc_from_momentum` does not copy sign(A_L(k)) point by point — it
   reduces the reference to its zero CROSSINGS below 3 fm⁻¹ (⁶Li: one S node at
   0.678 fm⁻¹ = 0.134 GeV, one D node at 2.25 fm⁻¹ = 0.444 GeV, both confirmed
   bin-for-bin by minima of the momentum file's own ρ_L) and anchors the phase

@@ -123,8 +123,10 @@ inline constexpr double B1_CDKS_TABLE_TO_PER_NUCLEON = 1.0;
 /// `TaggedModel(li6_alpha_channel()).tensor_dilution()` evaluated at
 /// `P_D_LI6` (beams.hpp), pinned in tests/test_tagged.cpp (plans/08 D9).
 /// It is a QUADRATURE over the channel and not a closed form: the closed form
-/// 1 - (9/10) P_D gives 0.921970 against the 0.9219467 measured, so the two
-/// are pinned to each other at 1e-4 and not asserted equal.
+/// 1 - (9/10) P_D gives 0.921970 against the 0.9219490 measured, so the two
+/// are pinned to each other at 1e-4 and not asserted equal.  (0.9219467 until
+/// the 2026-09-06 tagged S-D sign fix, which moves this quadrature residual by
+/// +2.46e-6 -- against a 1e-4 pin, so the constant itself does not move.)
 inline constexpr double LI6_B1_RANK2_TRANSFER = 0.921947;
 /// The pre-2026-08-28 VECTOR dilution 1 - (3/2) P_D -- the wrong rank for b1.
 inline constexpr double LI6_B1_LEGACY_TRANSFER = 0.87;

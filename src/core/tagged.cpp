@@ -191,10 +191,16 @@ const std::vector<Wave>& li7_vmc_waves() {
 /// psi_2 = w(k) from `fdeut.av18`'s own k-space block, with P_D the table's
 /// own D fraction rather than the `P_D_DEUTERON` scenario.
 ///
-/// THE RELATIVE SIGN IS + AND THAT IS NOT AN ACCIDENT.  CDKS fix
+/// THE STORED RELATIVE SIGN IS + AND THAT IS NOT AN ACCIDENT.  CDKS fix
 /// phi_L = i^L psi_L with phi_2 = -W and U, W >= 0 at low k, so psi_2 = +W:
 /// the physical deuteron carries sign(psi_2/psi_0) = +1, which is exactly what
-/// the positive-definite Hulthen forms assume.  Unlike the 6Li alpha-d case
+/// the positive-definite Hulthen forms assume.  What that does NOT license is
+/// summing psi straight into a partial-wave amplitude: `build_amp2` consumes
+/// phi, not psi, and applies (-1)^floor(L/2) itself (the relative part of
+/// phi_L = i^L psi_L), so the AMPLITUDE's S-D interference is the CDKS one
+/// while the stored table keeps psi_2 = +W.  Before 2026-09-06 that phase was
+/// missing and the tagged sector shipped the opposite S-D interference sign
+/// (docs/benchmarking/07_cw_sign_investigation.md).  Unlike the 6Li alpha-d case
 /// (where the VMC overlap flips the sign below the S node), switching this
 /// channel to AV18 changes the SHAPE and P_D and NOT the S-D interference
 /// sign.  `fdeut.av18` prints no MC errors, so this table carries no band.
@@ -409,8 +415,14 @@ std::vector<std::vector<double>> TaggedModel::build_amp2(double m_ion) const {
     const int ml_int = static_cast<int>(std::lround(m_l));
     std::vector<std::vector<double>> ang(rad.size(), std::vector<double>(nc));
     for (std::size_t w = 0; w < rad.size(); ++w) {
+      // phi_L = i^L psi_L.  Parity fixes L mod 2 inside one channel, so the
+      // common i^(L mod 2) is an unobservable GLOBAL phase and the observable
+      // RELATIVE phase is real: (-1)^floor(L/2).  Identical rule to
+      // ClusterPartialWave::from_vmc / from_uw (src/core/b1_nuclear.cpp:249,
+      // :270), which is why the b1 and tagged sectors then agree.
+      const double phase = ((l_of[w] / 2) % 2 == 0) ? 1.0 : -1.0;
       for (std::size_t ic = 0; ic < nc; ++ic) {
-        ang[w][ic] = cg_of[w] * theta_lm(l_of[w], ml_int, c_[ic]);
+        ang[w][ic] = phase * cg_of[w] * theta_lm(l_of[w], ml_int, c_[ic]);
       }
     }
     std::vector<double>& tab = out[i];

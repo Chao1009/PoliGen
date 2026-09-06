@@ -14,27 +14,27 @@
   "first": "## `momenta/` — the cluster MOMENTUM DISTRIBUTIONS (fetched 2026-08-29, second pass)",
   "last": "**What each family is good for.**  The momentum files carry |ψ_L|² only — a"
  },
- "docs/CONVENTIONS.md:165-168": {
+ "docs/CONVENTIONS.md:168-171": {
   "sha256": "bf5cd1c67bb18dd608ff62ddaa5b8ffc67481638631d358db29c73b14d7c2874",
   "first": "- **Struck nucleon species.** Drawn `Z F2p(x, Q²) : N F2n(x, Q²)` at the",
   "last": "  limit and is wrong wherever `F2n/F2p ≠ 1` (0.5 against a true 0.615 for 6Li"
  },
- "docs/CONVENTIONS.md:191-195": {
+ "docs/CONVENTIONS.md:194-198": {
   "sha256": "bb956c6885e5f0b712f86395c4b9a2e03e9a1d56d50a38fbb965f1e34968b0d3",
   "first": "  come out of one code path; the EPPS21 depletion is the single stored number",
   "last": "  modification alone; against CT18NLO it was 0.02979, 4.2 % shallower.  On"
  },
- "docs/CONVENTIONS.md:309-311": {
+ "docs/CONVENTIONS.md:312-314": {
   "sha256": "3fdf426e67ab73b2f05da59956d200e817696c39e36b6d645e57a7b54a2d7a19",
   "first": "  momentum.  `β = x/x_P` and `M_X²` are on the record.  X must be TIMELIKE on",
   "last": "  `InclusiveGenerator`, never a clip."
  },
- "docs/CONVENTIONS.md:361-363": {
+ "docs/CONVENTIONS.md:372-374": {
   "sha256": "f04a60e7f41f903283d8776a21b7167f0068fde8a2f729dff110de5546c92654",
   "first": "  n₁(k) is Eq. (76) for A = 3 and Eq. (75)/Table A.3 for A = 4; k in fm⁻¹ is",
   "last": "  single definition since 2026-09-01, with `coherent.hpp`'s `GEV_PER_FM_INV`"
  },
- "docs/CONVENTIONS.md:497-498": {
+ "docs/CONVENTIONS.md:508-509": {
   "sha256": "79eb7bbe3851888930155576aa86ac57e39a7207d90d5e533133eea1b33a12cf",
   "first": "- **Luminosity shares.** `Optics::lumi_fraction` multiplies COUNTS and never",
   "last": "  cross sections (`PipelineConfig::apply_optics_lumi_fraction`, default true) —"
@@ -174,7 +174,7 @@
   "first": "### Installing the Python package with pip",
   "last": "`docs/OPEN_ITEMS_SOLUTIONS.md` §12–13 and `docs/open_items/engineering.md` §C)."
  },
- "docs/USAGE.md:1428-1436": {
+ "docs/USAGE.md:1495-1503": {
   "sha256": "c8958c6536993541d5bf2508013977038b638531c53ac6057b128baf57c0188b",
   "first": "### Tier T1 — the struck cluster is resolved (the default)",
   "last": "* its `Role::PartnerSpectator` fragments (status 1, **on shell** at their"
@@ -184,22 +184,22 @@
   "first": "X (pdg 92). The balance is **per-nucleon**, `k + P_N = k' + X`, exactly as",
   "last": "number the generator could emit was made on the toy** — including after the"
  },
- "docs/USAGE.md:1860-2051": {
+ "docs/USAGE.md:1927-2118": {
   "sha256": "90a7c095fadc0dee726f4abe18f015cbe6f0854a37ea71d93e4fac3e9aa7eeef",
   "first": "## 5. Far-forward routing",
   "last": "  `rc_tensor_lo`/`rc_tensor_hi`/`rc_tail`. **Every other CLI plan is"
  },
- "docs/USAGE.md:1941-1947": {
+ "docs/USAGE.md:2008-2014": {
   "sha256": "cfa42994d7893afe53474900d5ca86ee2ae2bea465e3bb6860fbbbb5a36be9b1",
   "first": "## 7. Checks you get for free",
   "last": "```"
  },
- "docs/USAGE.md:2079-2254": {
+ "docs/USAGE.md:2146-2321": {
   "sha256": "bbdd1278f468f565c73cf305f63c207937553f88d38d5a8c3ab94badc5cc725d",
   "first": ">   lithium channel is **unbound** — ⁵Li and ⁵He are resonances above the",
   "last": "  the tensor part of those peaks is **unknown, not zero**."
  },
- "docs/USAGE.md:2514-2521": {
+ "docs/USAGE.md:2581-2588": {
   "sha256": "9cf755a3c8b97c0b7abde6620cc7250bf839feba9aff18acc6a0239127260383",
   "first": "## 8. Command-line generators",
   "last": "```"
@@ -229,10 +229,10 @@
   "first": "on the same structure.  Fixing the unobservable global phase by ψ₀(k → 0) > 0:",
   "last": "it — a structure no two-parameter form can carry.  It matters: at P_D ≈ 0.019"
  },
- "docs/open_items/vmc_reconciliation.md:180-188": {
-  "sha256": "22075f34b177d812e40d7cef779d7edc8b5eac384abbfe07a2d8f00b70ab8535",
-  "first": "| k [GeV] | hulthen β=0.30 | hulthen P_D=VMC | VMC AV18 | VMC D-sign flipped | VMC − hulthen |",
-  "last": "| 0.4001 | 0.3325 | 0.3435 | 0.0779 | -0.0822 | -0.2545 |"
+ "docs/open_items/vmc_reconciliation.md:197-206": {
+  "sha256": "b02b2afa554d367df6b221e0cf094966b5430bec09d624810d0ce0be59c66508",
+  "first": "| k [GeV] | hulthen β=0.30 | hulthen P_D=VMC | VMC AV18 | VMC D-sign flipped (= the PRE-FIX physics…",
+  "last": "| 0.4990 | -0.5851 | -0.4214 | 0.1170 | -0.1302 | +0.7021 |"
  },
  "docs/surveys/beagle_survey.md:120-127": {
   "sha256": "391b3f7c691b4bb3566cd5a807b27875dba987b9551d3e994abaee9753ea6d38",
@@ -279,7 +279,7 @@
   "first": "/// 7Li's 40.8 / 99.5 / 117.9 are DERIVED from the physical (AME2020) nuclear",
   "last": "double nucleus_mass(const std::string& name, int a, int z);"
  },
- "include/lipolgen/beams.hpp:96-97": {
+ "include/lipolgen/beams.hpp:99-100": {
   "sha256": "1508e0fa708220555dce35155c4f7f25c741daf23a359d218329f391dbce713e",
   "first": "inline constexpr double P_D_LI6 = 0.0867;",
   "last": "/// The deuteron's own D-state probability (AV18-like)."
@@ -499,20 +499,20 @@
   "first": "/// Normalized rank-3 moment for J=3/2: <Jz^3 - (41/20) Jz>/(3/10).",
   "last": "double octupole_moment(const CplxMatrix& rho, double j = 1.5);"
  },
- "include/lipolgen/tagged.hpp:365-376": {
+ "include/lipolgen/tagged.hpp:373-384": {
   "sha256": "3d97f453b9d712200fe24c792728240f97d6ed5ce9c3b763dc305a98c7cf52a0",
   "first": "/// CONVENTION (the one physics choice this file makes that the Python does not",
   "last": "/// carried explicitly rather than hidden."
  },
- "include/lipolgen/tagged.hpp:472-476": {
+ "include/lipolgen/tagged.hpp:480-484": {
   "sha256": "2299186020a9c0bc9ec07471d835af3189aecfb6b55e942673b04a6a009047a6",
   "first": "/// One tagged event, before it is turned into an `Event` record.",
   "last": "  double m_ion = 0.0, m_struck = 0.0;"
  },
- "include/lipolgen/tagged.hpp:54-60": {
-  "sha256": "e28c403ca70b6ec0fd5e0d87cd5690ddac4604397b646058d510fe4876577289",
+ "include/lipolgen/tagged.hpp:54-62": {
+  "sha256": "b4fa8b5f608a91a59fef65f8522ca3469f768d0a2f49967afb7afc74d5e3a524",
   "first": "// P_D_LI6 and P_D_DEUTERON are NOT defined here.  Since 2026-08-29 they live",
-  "last": "// and agree to 1.22e-5.  The names, values and meanings are unchanged."
+  "last": "// quadrature residual).  The names, values and meanings are unchanged."
  },
  "include/lipolgen/xsec.hpp:121-128": {
   "sha256": "d26a7929edca447a3fe0923d4ce5803dd0e2ec99c95abd00d76717f241c889b5",
@@ -683,7 +683,7 @@
   "line": "            setattr(sc, k, float(v))",
   "name": "setattr"
  },
- "python/lipolgen/cli.py:1346": {
+ "python/lipolgen/cli.py:1368": {
   "sha256": "1d2f24498096c3b3855a2ea8b882f003dd6d6cae4a8b164319b6b93399cb564d",
   "line": "    if p.rc_model is not None:",
   "name": "rc_model"
@@ -868,17 +868,17 @@
   "first": "  std::vector<std::vector<double>> a(4, std::vector<double>(4, 0.0));",
   "last": "    a[3][i] = (ms[i] * ms[i] * ms[i] - (41.0 / 20.0) * ms[i]) / 0.3;"
  },
- "src/core/tagged.cpp:266": {
+ "src/core/tagged.cpp:272": {
   "sha256": "e7e5360a52730a1ec0851735f54353fd716b9c858971c77cc6306bf871139a4b",
   "line": "  c.dis_target = source == ClusterWaveSource::VmcAV18 ? DEUTERON_AV18()",
   "name": "dis_target"
  },
- "src/core/tagged.cpp:296": {
+ "src/core/tagged.cpp:302": {
   "sha256": "ee577230c4f1328ee9efedbe4d7f9991b238680699b21eb317974da2fc1e7c2f",
   "line": "  c.dis_target = TRITON();",
   "name": "dis_target"
  },
- "src/core/tagged.cpp:320": {
+ "src/core/tagged.cpp:326": {
   "sha256": "ac2315c786599dd06200aa2cc2c77e6c1faebbcc296681f67599df7f902fe2f6",
   "line": "  c.dis_target = NEUTRON_TARGET();",
   "name": "dis_target"
@@ -1038,12 +1038,12 @@
   "first": "  // the J = 3/2 anchor: pz = 0.7 gives tensor 0.4 and octupole 0.2 exactly,",
   "last": "}"
  },
- "tests/test_tagged.cpp:337-353": {
+ "tests/test_tagged.cpp:383-399": {
   "sha256": "91465246b606bf5d72bee050ad6c9f6fabf36034acb042184a270310fd0f413f",
   "first": "TEST_CASE(\"tagged: 7Li P2 moments and the <P2> = -T/5 polarimeter\") {",
   "last": "                 -moments_along_axis(1.5, pv2).tensor / 5.0, 0.0, tol);"
  },
- "tests/test_tagged.cpp:337-354": {
+ "tests/test_tagged.cpp:383-400": {
   "sha256": "baccc10d87451a586c15f368f1086ba8f219b05c29af6257027e93abb6e5da03",
   "first": "TEST_CASE(\"tagged: 7Li P2 moments and the <P2> = -T/5 polarimeter\") {",
   "last": "}"

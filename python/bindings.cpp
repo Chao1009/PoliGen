@@ -621,6 +621,17 @@ py::dict columns_to_dict(Columns& c, const Pipeline& p, std::uint64_t n,
   // and by nothing at all in any other npz key, so without this one they are
   // indistinguishable files.
   meta["b1_unpol"] = knob("b1_unpol").meta_value();
+  // Which R = sigma_L/sigma_T the b1 convolution's numerator AND the kernel
+  // that carries its denominator were BOTH built from (`RSource`; CLI
+  // --r-source).  Same provenance rule and the same unconditional write:
+  // "unset" and "r1998" differ by -0.6847 % in sigma_pb and by up to
+  // +26.4 % in the tensor weight at the standard points (y = 0.5, Q2 = 2.5,
+  // x = 0.10; docs/open_items/run_2026-09-06/phase_A_numbers.md sec. A1), so
+  // without this key the two are indistinguishable files.  The row is Read
+  // or Refused at every value but `sigma-lt`, where it is NotRead and this
+  // key carries the label -- which is honest: that run IS bit-identical to
+  // the unset one.
+  meta["r_source"] = knob("r_source").meta_value();
   // ... and the SENTENCE, on every run and every channel, from the one
   // definition the CLI run banner also prints (`rank2_input_report`).  This
   // is the key that makes a 7Li tensor run self-describing: before it, an npz
@@ -2286,6 +2297,10 @@ static void bind_bookkeeping(py::module_& m) {
 
   py::class_<HelicityFlipOptions>(m, "HelicityFlipOptions")
       .def(py::init<>())
+      // `--pzz-mode` IS this bool: false = "ladder" (the default max-entropy
+      // fill at pz), true = "typed" (the caller's pzz through
+      // spin1_populations / spin32_populations).  `lipolgen.make_plan` is the
+      // one place the mode string becomes this flag.
       .def_readwrite("use_explicit_pzz", &HelicityFlipOptions::use_explicit_pzz)
       .def_readwrite("pzz", &HelicityFlipOptions::pzz)
       .def_readwrite("theta_s", &HelicityFlipOptions::theta_s)
@@ -3982,6 +3997,44 @@ static void bind_pipeline(py::module_& m) {
       .value("Custom", B1UnpolSource::Custom);
   m.def("b1_unpol_name", &b1_unpol_name, py::arg("source"));
 
+  py::enum_<RSource>(m, "RSource",
+      "Which R = sigma_L/sigma_T is threaded into BOTH halves of the 6Li "
+      "tensor weight (CLI --r-source).  The shipped observable is a RATIO -- "
+      "A_zz = -(2/3) K/D_phi with K = b1 + (1-y)/(x y^2) b2 and "
+      "D_phi = F1 + (1-y)/(x y^2) F2 -- whose numerator's R is "
+      "Li6ConvolutionOptions.r_func and whose denominator's is "
+      "InclusiveKernel.Options.r_func.  This selector is the ONE hook "
+      "default_inclusive_kernel puts in both, so whichever R is named the two "
+      "halves are the same choice.  Read by b1_model = Li6Convolution ONLY "
+      "(PipelineConfig.validate refuses the rest, the b1_unpol rule "
+      "verbatim).\n"
+      "  Unset     the DEFAULT: NOTHING is installed, both hooks stay null "
+      "and each consumer resolves its own r_sigma_lt.  Today bit for bit, by "
+      "construction -- the branch is not taken.\n"
+      "  SigmaLt   ONE r_sigma_lt object in both.  MEASURED bit-identical to "
+      "Unset (0 ulp) on b1, K/D_phi, A_zz and the cos 2phi amplitude at all "
+      "six standard points; it is the wiring's own test, not a physics "
+      "variation.\n"
+      "  R1998     ONE r1998 object in both -- the A = 2 gate's R, on the "
+      "numerator AND the denominator.  MEASURED against Unset at y = 0.5, "
+      "Q2 = 2.5 on the 6Li li6-convolution tensor weight K/D_phi (and so on "
+      "A_zz, which is -(2/3) of it): -3.8357 % / +26.3988 % / +3.3518 % at "
+      "x = 0.05 / 0.10 / 0.30, against option (ii)'s (r1998 in the numerator "
+      "alone) -5.5148 % / +24.6099 % / +2.6629 %; the cos 2phi amplitude, "
+      "whose numerator carries no R at all, moves by -8.3268 % / -6.7268 % / "
+      "-3.1441 % where (ii) leaves it EXACTLY unchanged -- the pure "
+      "denominator effect.  The weight's shift is y-DEPENDENT here and "
+      "y-INDEPENDENT under (ii): at x = 0.05, Q2 = 2.5 it runs -5.4705 % at "
+      "y = 0.1 to +2.3678 % at y = 0.9, straddling zero, against (ii)'s flat "
+      "-5.5148 %.  And unlike --b1-unpol this one moves the unpolarised rate "
+      "too (sigma_pb -0.6847 % on a 2000-event 6Li run at x_max 0.95), "
+      "because the kernel's r_func reaches F1, F_L, D(y) and ToyG1 "
+      "(docs/open_items/run_2026-09-06/phase_A_numbers.md sec. A1).")
+      .value("Unset", RSource::Unset)
+      .value("SigmaLt", RSource::SigmaLt)
+      .value("R1998", RSource::R1998);
+  m.def("r_source_name", &r_source_name, py::arg("source"));
+
   // The `set_pythia_hadronizer` arrangement (bindings.cpp header note): the
   // OPTIONAL tier's object is built HERE, where the tier is visible, and put
   // into the config.  `lipolgen_core` links neither PYTHIA nor LHAPDF, so
@@ -4435,6 +4488,14 @@ static void bind_pipeline(py::module_& m) {
           "The UnpolSF b1_unpol names.  Assigning one sets b1_unpol = Custom; "
           "assigning None clears it back to Toy.  For the named backends use "
           "set_b1_unpol(config, source), which builds them.")
+      .def_readwrite("r_source", &PipelineConfig::r_source,
+                     "RSource: the ONE R = sigma_L/sigma_T threaded into BOTH "
+                     "Li6ConvolutionOptions.r_func (the tensor weight's "
+                     "numerator) and InclusiveKernel.Options.r_func (its "
+                     "denominator, and the unpolarised rate).  Unset is the "
+                     "default and installs nothing, which is today bit for "
+                     "bit.  Read by b1_model = Li6Convolution ONLY; "
+                     "validate() refuses any other value elsewhere.")
       .def_readwrite("unpol_sf", &PipelineConfig::unpol_sf,
                      "UnpolSfSource: which UNPOLARISED backend EVERY kernel "
                      "this config builds takes its F2 from -- inclusive, "
@@ -4545,13 +4606,16 @@ static void bind_pipeline(py::module_& m) {
   // the kernel's own ToyF2, shared as ONE object.
   m.def("default_inclusive_kernel", [](const Ion& ion, B1Model model,
                                        double band_scale, double w_alpha_d,
-                                       std::shared_ptr<UnpolSF> b1_unpol) {
+                                       std::shared_ptr<UnpolSF> b1_unpol,
+                                       RSource r_source) {
     return std::const_pointer_cast<InclusiveKernel>(
         default_inclusive_kernel(ion, model, band_scale, w_alpha_d,
-                                 std::move(b1_unpol)));
+                                 std::move(b1_unpol), nullptr, nullptr,
+                                 r_source));
   }, py::arg("ion"), py::arg("model") = B1Model::Miller,
      py::arg("band_scale") = 1.0, py::arg("w_alpha_d") = 1.0,
-     py::arg("b1_unpol") = nullptr);
+     py::arg("b1_unpol") = nullptr,
+     py::arg("r_source") = RSource::Unset);
 
   m.def("momentum_residual", &momentum_residual, py::arg("ev"));
   m.def("momentum_scale", &momentum_scale, py::arg("ev"));
@@ -4613,6 +4677,7 @@ static void bind_pipeline(py::module_& m) {
       .def_readwrite("pzz", &KnobRunContext::pzz)
       .def_readwrite("pe", &KnobRunContext::pe)
       .def_readwrite("rel_lumi_offset", &KnobRunContext::rel_lumi_offset)
+      .def_readwrite("pzz_mode", &KnobRunContext::pzz_mode)
       .def_readwrite("t2_bound", &KnobRunContext::t2_bound)
       .def_readwrite("t2_pomeron", &KnobRunContext::t2_pomeron)
       .def_readwrite("pom_set", &KnobRunContext::pom_set)

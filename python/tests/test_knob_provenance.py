@@ -88,20 +88,21 @@ class Spec:
         self.plan_name, self.j = plan_name, j
         self.pz, self.pzz, self.pe, self.full = pz, pzz, pe, full
 
-    def plan(self, pz=None, pzz=None, pe=None, rel=0.0):
+    def plan(self, pz=None, pzz=None, pe=None, rel=0.0, pzz_mode="ladder"):
         return lg.make_plan(self.plan_name, j=self.j,
                             pz=self.pz if pz is None else pz,
                             pzz=self.pzz if pzz is None else pzz,
                             pe=self.pe if pe is None else pe,
-                            rel_lumi_offset=rel)
+                            rel_lumi_offset=rel, pzz_mode=pzz_mode)
 
-    def context(self, pz=None, pzz=None, pe=None, rel=0.0):
+    def context(self, pz=None, pzz=None, pe=None, rel=0.0, pzz_mode="ladder"):
         c = _l.KnobRunContext()
         c.plan_name = self.plan_name
         c.pz = self.pz if pz is None else pz
         c.pzz = self.pzz if pzz is None else pzz
         c.pe = self.pe if pe is None else pe
         c.rel_lumi_offset = rel
+        c.pzz_mode = pzz_mode
         return c
 
 
@@ -131,7 +132,8 @@ SPECS = [
          "helicity-flip", 1.5, pe=0.0, full=False),
 ]
 #: which knobs the plan-axis specs sweep
-PLAN_AXIS_KNOBS = ("pz", "pzz", "pe", "rel_lumi_offset", "pol_sf", "unpol_sf",
+PLAN_AXIS_KNOBS = ("pz", "pzz", "pzz_mode", "pe", "rel_lumi_offset", "pol_sf",
+                   "unpol_sf",
                    "rc", "rc_delta_low_x", "rc_fq_scale", "rc_scope")
 
 
@@ -194,12 +196,21 @@ class V:
     """
 
     def __init__(self, knob, label, base=None, var=None, base_post=None,
-                 post=None, plan=None, lhapdf=False, alts=None):
+                 post=None, plan=None, base_plan=None, lhapdf=False,
+                 alts=None):
         self.knob, self.label = knob, label
         self.base = base or {}
         self.var = var or {}
         self.base_post, self.post = base_post, post
-        self.plan = plan or {}
+        # `base_plan` moves the BASELINE's fill, `plan` the variant's on top
+        # of it, so a cell can vary one plan knob at a NON-DEFAULT setting of
+        # another -- `--pzz` under `--pzz-mode typed` is the case that needs
+        # it, and it is the cell that gates the 2026-09-06 reach rule (--pzz
+        # is read by helicity-flip at `typed` and not at `ladder`).  Without
+        # it the variant would differ from its baseline in TWO knobs and a
+        # refusal could not be attributed.
+        self.base_plan = base_plan or {}
+        self.plan = dict(self.base_plan, **(plan or {}))
         self.lhapdf = lhapdf
         self.alts = alts
 
@@ -233,6 +244,21 @@ VARIANTS = [
     # --- the spin fill ---------------------------------------------------
     V("pz", "0.7 -> 0.5", plan=dict(pz=0.5)),
     V("pzz", "0.6 -> 0.4", plan=dict(pzz=0.4)),
+    # `--pzz` UNDER `--pzz-mode typed`, the cell that gates the 2026-09-06
+    # reach rule.  At the default `ladder` `helicity_flip_plan` does not read
+    # `--pzz` at all and the row says not-read; at `typed` it builds the fill
+    # from it and the row must say read.  On the three tensor plans the mode
+    # changes nothing and this cell is the plain `pzz` cell again.  (On the
+    # J = 3/2 specs the BASE is refused -- 0.6 is outside that domain by 0.02
+    # -- so the cell skips and says so, which is the refusal itself on the
+    # record.)
+    V("pzz", "0.6 -> 0.4 at --pzz-mode typed",
+      base_plan=dict(pzz_mode="typed"), plan=dict(pzz=0.4)),
+    # `--pzz-mode` itself: ladder -> typed.  Read under helicity-flip (two
+    # different fills), not-read under the three tensor factories, which have
+    # no ladder branch; refused where the typed value is outside the plan's
+    # domain, which is exactly the J = 3/2 specs at the CLI's own --pzz 0.6.
+    V("pzz_mode", "ladder -> typed", plan=dict(pzz_mode="typed")),
     V("pe", "-> 0.35", plan=dict(pe=0.35)),
     V("rel_lumi_offset", "0 -> 0.02", plan=dict(rel=0.02)),
     # --- beams, statistics, routing: THE THREE ROUTE KNOBS ----------------
@@ -286,6 +312,21 @@ VARIANTS = [
       var=dict(b1_unpol="ct18nlo"), lhapdf=True),
     V("b1_unpol", "toy -> ct18nlo on li6-convolution (x_max .95)", base=CONV,
       var=dict(CONV, b1_unpol="ct18nlo"), base_post=XM, post=XM, lhapdf=True),
+    # `--r-source`, the ONE R hook into BOTH halves of the tensor weight.
+    # THREE CELLS, because the axis has three statuses and each is a
+    # different claim: refused off li6-convolution (the b1_unpol rule), READ
+    # at r1998 (it moves the tensor weight AND, unlike --b1-unpol, the
+    # unpolarised rate), and NOT-READ at sigma-lt -- which names the value
+    # `resolve_r`'s null branch already resolves to, so it installs the
+    # shared object and changes nothing.  That last cell is the one that
+    # would catch a row claiming `read` of an axis whose second value is
+    # inert.
+    V("r_source", "unset -> r1998 on the default b1_model",
+      var=dict(r_source="r1998")),
+    V("r_source", "unset -> r1998 on li6-convolution (x_max .95)", base=CONV,
+      var=dict(CONV, r_source="r1998"), base_post=XM, post=XM),
+    V("r_source", "unset -> sigma-lt on li6-convolution (x_max .95)",
+      base=CONV, var=dict(CONV, r_source="sigma-lt"), base_post=XM, post=XM),
     # --- the tagged cluster ----------------------------------------------
     V("cluster_wave", "hulthen -> vmc", var=VMC),
     V("cluster_vmc_mc_sigma", "0 -> 1 on hulthen",
@@ -449,9 +490,10 @@ def cache():
 
 
 def _baseline(cache, spec, v):
-    key = (spec.tag, repr(sorted(v.base.items())), id(v.base_post))
+    key = (spec.tag, repr(sorted(v.base.items())), id(v.base_post),
+           repr(sorted(v.base_plan.items())))
     if key not in cache:
-        cache[key] = _run(spec, v.base, v.base_post, {})
+        cache[key] = _run(spec, v.base, v.base_post, v.base_plan)
     return cache[key]
 
 

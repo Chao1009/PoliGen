@@ -349,6 +349,15 @@ const char* b1_unpol_name(B1UnpolSource s) {
   return "unknown";
 }
 
+const char* r_source_name(RSource s) {
+  switch (s) {
+    case RSource::Unset:   return "unset";
+    case RSource::SigmaLt: return "sigma-lt";
+    case RSource::R1998:   return "r1998";
+  }
+  return "unknown";
+}
+
 const char* unpol_sf_name(UnpolSfSource s) {
   switch (s) {
     case UnpolSfSource::Toy:     return "toy";
@@ -878,6 +887,33 @@ void PipelineConfig::validate() const {
                        "b1_unpol_sf or leave b1_unpol at Toy"));
     }
   }
+  // --r-source: the ONE R hook `default_inclusive_kernel` threads into the
+  // `Li6Convolution` numerator (`Li6ConvolutionOptions::r_func`) AND the
+  // kernel that carries the tensor weight's denominator
+  // (`InclusiveKernel::Options::r_func`).  The `b1_unpol` provenance rule
+  // verbatim, and only its clause (1) applies: `r_sigma_lt` and `r1998` both
+  // live in the CORE (`sf.hpp`), so there is no optional tier to be missing
+  // and no clause (2).  Only the `Li6Convolution` branch installs the hook --
+  // `Miller` is a ratio model with no F1 of its own and `Cdks` carries the
+  // digitized column, so neither has a numerator R to share -- while
+  // `meta["r_source"]` is written unconditionally, so any other model would
+  // claim an R that never touched the rate.  Nothing more is needed for the
+  // channel, the isotope or the caller-supplied kernel: `b1_model =
+  // li6-convolution` is ALREADY refused off the inclusive channel, off 6Li
+  // and beside a `kernel` a few clauses above, so this one condition is the
+  // whole reach rule.
+  if (r_source != RSource::Unset && b1_model != B1Model::Li6Convolution) {
+    throw std::runtime_error(
+        std::string("PipelineConfig: r_source = ") + r_source_name(r_source) +
+        " is read ONLY by b1_model = li6-convolution -- it is the ONE R the "
+        "alpha-d convolution's own F1 and the kernel's F1/F_L/D(y) are both "
+        "built from, and miller (a ratio model with no F1 of its own) and "
+        "cdks (a digitized column) have no numerator R to share -- got "
+        "b1_model = " + b1_model_name(b1_model) +
+        ".  The flag would not reach the rate but WOULD reach "
+        "meta[\"r_source\"], so it is refused rather than recorded as a "
+        "variation that did not run");
+  }
   // --unpol-sf / --pol-sf: the structure-function backend of EVERY kernel
   // this config builds (`UnpolSfSource`, `PolSfSource`).  Five clauses, all
   // of them the rules already enforced above, and the last two new because
@@ -1051,14 +1087,14 @@ void PipelineConfig::validate() const {
 
 std::shared_ptr<const InclusiveKernel> default_inclusive_kernel(const Ion& ion) {
   return default_inclusive_kernel(ion, B1Model::Miller, 1.0, 1.0, nullptr,
-                                  nullptr, nullptr);
+                                  nullptr, nullptr, RSource::Unset);
 }
 
 std::shared_ptr<const InclusiveKernel> default_inclusive_kernel(
     const Ion& ion, B1Model model, double band_scale, double w_alpha_d,
     std::shared_ptr<const UnpolSF> b1_unpol,
     std::shared_ptr<const UnpolSF> unpol_sf,
-    std::shared_ptr<const PolSF> pol_sf) {
+    std::shared_ptr<const PolSF> pol_sf, RSource r_source) {
   InclusiveKernel::Options opt;
   // ONE UnpolSF, shared: the core must not link LHAPDF or PYTHIA (sf.hpp),
   // so an `LhapdfSF` / `MstwSF` only ever enters through the `unpol_sf`
@@ -1130,6 +1166,30 @@ std::shared_ptr<const InclusiveKernel> default_inclusive_kernel(
       // else -- which `PipelineConfig::validate()` refuses outright rather
       // than resolve silently.
       o.unpol = b1_unpol ? std::move(b1_unpol) : f2;
+      // `--r-source`: ONE R OBJECT INTO BOTH HALVES OF THE RATIO.  The
+      // shipped tensor observable is K/D_phi (`azz`, asymmetries.hpp); its
+      // numerator's R is `Li6ConvolutionOptions::r_func` and its
+      // denominator's is this kernel's own `Options::r_func`, and until this
+      // branch existed the only way to move one was to move it ALONE.  Here
+      // one `RFunc` is built and COPIED into both, so whichever R is named
+      // the two halves are the same choice -- registry option (iii) of
+      // STATUS.md row 3, priced in
+      // docs/open_items/run_2026-09-06/phase_A_numbers.md sec. A1.
+      //
+      // `Unset` DOES NOT ENTER HERE AT ALL.  That is deliberate: leaving both
+      // hooks null is bit for bit the pre-flag tree by construction, not by
+      // an argument that an explicit `r_sigma_lt` closure resolves to the
+      // same double as `resolve_r`'s null branch.  (It does -- `SigmaLt` is
+      // measured bit-identical to `Unset` on every tensor observable at the
+      // standard points, sec. A1 -- but the DEFAULT does not rely on it.)
+      if (r_source != RSource::Unset) {
+        const RFunc r =
+            (r_source == RSource::R1998)
+                ? RFunc([](double x, double q2) { return r1998(x, q2); })
+                : RFunc([](double x, double q2) { return r_sigma_lt(x, q2); });
+        o.r_func = r;
+        opt.r_func = r;
+      }
       const auto b = std::make_shared<const Li6ConvolutionB1>(std::move(o));
       opt.b1_func = [b, band_scale](double x, double q2, double f1) {
         return band_scale * b->b1(x, q2, f1);
@@ -1524,7 +1584,7 @@ Pipeline::Pipeline(PipelineConfig config, RunPlan plan)
                                   ion, cfg_.b1_model, cfg_.b1_band_scale,
                                   cfg_.b1_alpha_d_dwave_weight,
                                   cfg_.b1_unpol_sf, cfg_.unpol_sf_obj,
-                                  cfg_.pol_sf_obj);
+                                  cfg_.pol_sf_obj, cfg_.r_source);
     dis_sampler_ = std::make_shared<InclusiveSampler>(kernel, beams_,
                                                       cfg_.scenario, cfg_.grid);
   }
@@ -1975,8 +2035,39 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
   const bool is_tflip = (pn == "tensor-flip" || pn == "flip");
   const bool named = is_thirds || is_flip || is_perp || is_tflip;
   const bool plan_reads_pz = is_thirds || is_flip;
-  const bool plan_reads_pzz = is_thirds || is_perp || is_tflip;
   const bool plan_reads_rel = is_thirds || is_flip || is_tflip;
+  // DID THIS FILL COME FROM THE LADDER?  Measured from the plan itself, not
+  // taken from the context, because a C++ caller supplies no `pzz_mode` and
+  // a guess is exactly what `KnobRunContext`'s header forbids: the ladder
+  // branch IS `populations_maxent(J, P_z)`, so comparing this run's own
+  // populations against it answers the question with no second source of
+  // truth.  It also gets the coincidence right in the only way the matrix
+  // accepts: a typed P_zz that reproduces the ladder's populations double
+  // for double did not move the file, and `--pzz` is then NOT read whatever
+  // was typed.
+  //
+  // Since 2026-09-06 `--pzz-mode typed` makes `helicity_flip_plan` read
+  // `--pzz` (`HelicityFlipOptions::use_explicit_pzz`), so this row is no
+  // longer "the three tensor plans and nobody else".
+  const double flip_j =
+      plan_.categories().empty() ? 0.0 : plan_.categories().front().j;
+  bool fill_is_ladder = false;
+  if (is_flip && !plan_.categories().empty()) {
+    try {
+      fill_is_ladder = plan_.categories().front().populations ==
+                       populations_maxent(flip_j, plan_.pz_true());
+    } catch (const std::exception&) {
+      fill_is_ladder = false;
+    }
+  }
+  // A fill below spin 1 has NO rank-2 moment at all, so neither branch of
+  // `helicity_flip_plan` reads `--pzz` there (the j = 1/2 branch ignores it).
+  const bool flip_reads_pzz =
+      is_flip && flip_j >= 1.0 - 1e-9 && !fill_is_ladder;
+  const bool plan_reads_pzz = is_thirds || is_perp || is_tflip || flip_reads_pzz;
+  const std::string flip_fill_clause =
+      ctx.pzz_mode.empty() ? std::string("a max-entropy fill")
+                           : ("--pzz-mode " + ctx.pzz_mode);
   const std::string by_plan =
       named ? ("not read by plan " + pn + ": ")
             : std::string("not read by this run's plan: ");
@@ -2187,20 +2278,146 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
     add("pzz", "--pzz", fmt_g(pzz_v),
         plan_reads_pzz ? KnobStatus::Read : KnobStatus::NotRead,
         plan_reads_pzz
-            ? ("the fill's rank-2 moment; this run's plan carries " +
+            ? (std::string(is_flip
+                               ? "the fill's rank-2 moment, read here because "
+                                 "this fill is NOT the max-entropy ladder: "
+                                 "--pzz-mode typed built it with "
+                                 "spin1_populations / spin32_populations at "
+                                 "the typed value, and this run's plan "
+                                 "carries "
+                               : "the fill's rank-2 moment; this run's "
+                                 "plan carries ") +
                std::string(plan_.categories().empty() ||
                                    std::fabs(plan_.categories().front().j -
                                              1.5) > 1e-9
                                ? "P_zz = "
                                : "T = ") +
                fmt_g(plan_.pzz_true()))
-            : (by_plan +
-               "helicity_flip_plan leaves HelicityFlipOptions::"
-               "use_explicit_pzz false and builds its fill from the "
-               "MAX-ENTROPY ladder at --pz, so the alignment this run "
-               "carries is " + fmt_g(plan_.pzz_true()) + " and not what was "
-               "typed"),
+            : (is_flip
+                   ? ("not read by plan " + pn + " at " + flip_fill_clause +
+                      ": helicity_flip_plan leaves HelicityFlipOptions::"
+                      "use_explicit_pzz false and builds its fill from the "
+                      "MAX-ENTROPY ladder at --pz, so the alignment this run "
+                      "carries is " + fmt_g(plan_.pzz_true()) + " and not "
+                      "what was typed" +
+                      (fill_is_ladder
+                           ? std::string("; MEASURED, this run's populations "
+                                         "ARE populations_maxent(J, --pz) "
+                                         "double for double")
+                           : std::string("; this fill carries no rank-2 "
+                                         "moment at all below spin 1")) +
+                      ".  --pzz-mode typed honours the typed value, and "
+                      "refuses it outside the plan's domain")
+                   : (by_plan + "its factory builds no rank-2 moment "
+                                "(bookkeeping.hpp) -- unreachable today: the "
+                                "other three factories all take P_zz")),
         false);
+    // `--pzz-mode`, THE FILL SELECTOR (2026-09-06).  Which of
+    // `helicity_flip_plan`'s two branches built this run's populations:
+    // "ladder" (`use_explicit_pzz = false`, the max-entropy fill at --pz --
+    // the shipped default and bit for bit the tree before the flag existed)
+    // or "typed" (`= true`, the typed --pzz through spin1_populations /
+    // spin32_populations, which REFUSE a value outside the plan's domain
+    // rather than clamp to its edge).
+    //
+    // MEASURED, NOT TABULATED -- the `RouteReach` rule applied to a fill.
+    // The row rebuilds the OTHER mode's plan at this run's own (J, P_z, P_e)
+    // and compares the populations it would have used, doubles to doubles,
+    // because "another value would give another file" is a question about
+    // THIS fill and not about plan names: at J = 1 the populations are fixed
+    // uniquely by (P_z, P_zz), so a typed P_zz that reproduces the ladder's
+    // own alignment reproduces the whole fill and the row must say not-read,
+    // while at J = 3/2 the two differ in R_3 even at equal T.  A counter-mode
+    // the domain REFUSES is read: it does not give this file either.
+    if (!ctx.pzz_mode.empty()) {
+      // A CONTEXT THAT NAMES A MODE THAT DOES NOT EXIST IS A CALLER ERROR,
+      // and it is refused here rather than reported: every value this table
+      // writes is a claim about what the run did, so a third string silently
+      // reported as the ladder would be exactly the defect the table exists
+      // to prevent.  Empty stays legal -- it means "not supplied", and the
+      // row is then omitted.
+      if (ctx.pzz_mode != "ladder" && ctx.pzz_mode != "typed") {
+        throw std::runtime_error(
+            "KnobRunContext::pzz_mode is \"" + ctx.pzz_mode +
+            "\"; the only fills helicity_flip_plan has are \"ladder\" "
+            "(HelicityFlipOptions::use_explicit_pzz false, the default) and "
+            "\"typed\" (true).  Leave it empty to omit the row instead");
+      }
+      const bool typed_now = (ctx.pzz_mode == "typed");
+      KnobStatus st = KnobStatus::NotRead;
+      std::string why;
+      if (!is_flip) {
+        why = by_plan +
+              "only helicity_flip_plan has two fills to choose between "
+              "(HelicityFlipOptions::use_explicit_pzz, bookkeeping.hpp); the "
+              "three tensor factories build their categories from the typed "
+              "P_zz directly and have no max-entropy branch, so both modes "
+              "leave this run's fill exactly as it is";
+      } else {
+        HelicityFlipOptions other_opt;
+        other_opt.use_explicit_pzz = !typed_now;   // the OTHER mode
+        other_opt.pzz = std::isnan(ctx.pzz) ? plan_.pzz_true() : ctx.pzz;
+        const std::string rank2 =
+            (std::fabs(flip_j - 1.5) < 1e-9) ? "T" : "P_zz";
+        std::string other_side;
+        std::string counted = "the other mode's fill cannot be built";
+        bool moves = true;
+        try {
+          const RunPlan other = helicity_flip_plan(
+              flip_j, plan_.pz_true(), plan_.pe_true(), other_opt);
+          const std::vector<double>& a =
+              plan_.categories().front().populations;
+          const std::vector<double>& b = other.categories().front().populations;
+          std::size_t ndiff = (a.size() != b.size()) ? a.size() : 0;
+          if (a.size() == b.size()) {
+            for (std::size_t i = 0; i < a.size(); ++i)
+              if (a[i] != b[i]) ++ndiff;
+          }
+          moves = ndiff != 0;
+          // THE COUNT, not the rounded moment: the two fills can print the
+          // same P_zz at %g and still be different doubles (a typed P_zz set
+          // to the ladder's own moment is built by the closed form of
+          // `spin1_populations` and the ladder by `populations_maxent`'s
+          // bisection), and it is the POPULATIONS that the weights are built
+          // from.
+          counted = std::to_string(ndiff) + " of " +
+                    std::to_string(a.size()) +
+                    " populations are different doubles";
+          other_side = std::string(typed_now ? "the max-entropy ladder at "
+                                               "this P_z would give "
+                                             : "the typed P_zz would give ") +
+                       rank2 + " = " + fmt_g(other.pzz_true());
+        } catch (const std::exception& e) {
+          // The counter-value is outside the plan's domain.  That is not
+          // "did not move": it is a fill this run cannot have at all.
+          other_side = std::string(typed_now ? "the max-entropy ladder"
+                                             : "the typed P_zz") +
+                       " is REFUSED at this fill -- " + std::string(e.what());
+          moves = true;
+        }
+        st = moves ? KnobStatus::Read : KnobStatus::NotRead;
+        why = moves
+                  ? ("which of helicity_flip_plan's two fills this run "
+                     "carries: " +
+                     std::string(typed_now
+                                     ? "typed reads --pzz through "
+                                       "spin1_populations / "
+                                       "spin32_populations"
+                                     : "ladder builds populations_maxent at "
+                                       "--pz and does NOT read --pzz") +
+                     ", and this run's alignment is " + rank2 + " = " +
+                     fmt_g(plan_.pzz_true()) + " while " + other_side +
+                     " -- MEASURED here by rebuilding the other mode's fill: " +
+                     counted)
+                  : ("not read at this fill: both modes build the SAME "
+                     "populations here, double for double (" + counted +
+                     "; " + other_side +
+                     "), so the fill -- and every weight built from it -- is "
+                     "the same whichever mode is named");
+      }
+      add("pzz_mode", "--pzz-mode", ctx.pzz_mode, st, why,
+          ctx.pzz_mode == "ladder");
+    }
     if (!std::isnan(ctx.rel_lumi_offset)) {
       add("rel_lumi_offset", "--rel-lumi-offset", fmt_g(ctx.rel_lumi_offset),
           plan_reads_rel ? KnobStatus::Read : KnobStatus::NotRead,
@@ -2409,6 +2626,51 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
              : std::string("read ONLY by b1_model = li6-convolution, so "
                            "validate() refuses any value but toy here"),
         c.b1_unpol == d.b1_unpol);
+    // `--r-source`, the ONE R hook into BOTH halves of the tensor weight.
+    // Same reach as `b1_unpol` and for the same reason -- only the
+    // `Li6Convolution` branch of `default_inclusive_kernel` installs it --
+    // but a WIDER effect where it is read: it sets the kernel's own
+    // `Options::r_func` as well, so it moves the unpolarised rate too, which
+    // `b1_unpol` deliberately does not.
+    // THREE STATUSES ON ONE AXIS, and the middle one is measured, not
+    // reasoned: `sigma-lt` NAMES the value both null hooks already resolve
+    // to (`resolve_r`, sf.hpp), so it installs the shared object and changes
+    // nothing.  It is LABELLED rather than refused -- it names a member of
+    // the R family, not a variation of a term that did not run -- which is
+    // the `--pol-sf` precedent, and the criterion stated once at
+    // `KnobProvenance`.
+    const bool r_inert = conv && c.r_source == RSource::SigmaLt;
+    add("r_source", "--r-source",
+        c.kernel ? std::string("caller-supplied kernel")
+        : no_rank2 ? std::string(rank2_none_label())
+                   : std::string(r_source_name(c.r_source)),
+        !conv ? KnobStatus::Refused
+        : r_inert ? KnobStatus::NotRead
+                  : KnobStatus::Read,
+        r_inert
+            ? std::string("not read at r_source = sigma-lt: the hook IS "
+                          "installed in both halves, but resolve_r's null "
+                          "branch (sf.hpp) IS r_sigma_lt, so naming it "
+                          "reproduces the unset run exactly -- MEASURED "
+                          "2026-09-06 bit-identical in sigma_pb, in all three "
+                          "per-category cross sections and in every generated "
+                          "column (6Li inclusive, li6-convolution, 2000 "
+                          "events, seed 7, x_max 0.95), and in b1, K/D_phi, "
+                          "A_zz and the cos 2phi amplitude at all six "
+                          "standard points x = 0.05/0.10/0.30 x Q2 = 2.5/5 "
+                          "for y = 0.1, 0.5 and 0.9")
+        : conv ? std::string("ONE R = sigma_L/sigma_T into BOTH the alpha-d "
+                             "convolution's F1 (Li6ConvolutionOptions::"
+                             "r_func, the tensor weight's numerator) and this "
+                             "kernel's F1/F_L/D(y)/ToyG1 (InclusiveKernel::"
+                             "Options::r_func, its denominator), so the "
+                             "ratio's two halves are the same choice; unset "
+                             "installs neither and is today bit for bit")
+               : std::string("read ONLY by b1_model = li6-convolution (miller "
+                             "is a ratio model with no F1 of its own, cdks a "
+                             "digitized column), so validate() refuses any "
+                             "value but unset here"),
+        c.r_source == d.r_source);
   }
 
   // ----------------------------------------------------- the tagged cluster
@@ -2611,9 +2873,18 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
     band_row("rc_delta_low_x", "--rc-delta-low-x", fmt_g(o.delta_low_x),
              "the low-x band edge; 0.30 is the conservative end of "
              "Gakh-Shekhovtsova's uncited 10-30 %, 0.19 the residual HERMES "
-             "achieved", o.delta_low_x == od.delta_low_x);
+             "achieved -- and 0.113 is what that source's panel READS at "
+             "x = 0.00966, the x nearest this anchor's 0.01, so the default "
+             "errs WIDE by x2.65 (priced 2026-09-06: half-width on A_zz at "
+             "x = 0.01, Q2 = 5 is 1.358e-04 / 1.205e-04 / 5.117e-05 at "
+             "0.30 / 0.266 / 0.113, unmoved at x >= 0.16)",
+             o.delta_low_x == od.delta_low_x);
     band_row("rc_delta_high_x", "--rc-delta-high-x", fmt_g(o.delta_high_x),
-             "the high-x band edge (E12-13-011)",
+             "the high-x band edge (E12-13-011); the record names NO "
+             "alternative value to band it against -- the 1.5 % is in the "
+             "unpublished proposal only and the published companion has no "
+             "RC discussion, so the only alternative stated anywhere is "
+             "'cite it by page or drop the anchor' (checked 2026-09-06)",
              o.delta_high_x == od.delta_high_x);
     band_row("rc_x_low", "", fmt_g(o.x_low), "the low-x band anchor",
              o.x_low == od.x_low);

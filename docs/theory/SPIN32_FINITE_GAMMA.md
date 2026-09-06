@@ -132,7 +132,7 @@ that the stretched state |3/2, ±3/2⟩ has |T| = 1; its full physical range is
 [−1, +1]. **(ii)** R₃ is normalized on the *stretched* state, R₃(+3/2) = +1, but
 its physical range is [−3, +3], because the |m| = 1/2 states carry R₃ = ∓3. This
 is a deliberate choice, pinned by
-`tests/test_spin.cpp:138-141` ("pure m = +3/2 has all normalized moments = +1",
+`tests/test_spin.cpp:141-144` ("pure m = +3/2 has all normalized moments = +1",
 `spin32_populations(1,1,1) = (1,0,0,0)`); it is *not* a moment normalized to
 unit range, and any positivity check written against |R₃| ≤ 1 would be wrong.
 
@@ -160,9 +160,9 @@ cross section moved (the plan runs at `lam_e = 0` and the kernel reads
 `measured_pzz` did.
 
 The exact map from moments to populations is a 4×4 linear solve,
-`spin32_populations(pz, t, o)` (`src/core/spin.cpp:306-324`), whose rows are
+`spin32_populations(pz, t, o)` (`src/core/spin.cpp:335-353`), whose rows are
 exactly the four weight vectors (1, m/J, Q_NN, R₃) of (8)
-(`src/core/spin.cpp:308-313`), round-tripped at `tests/test_spin.cpp:129-137`.
+(`src/core/spin.cpp:337-342`), round-tripped at `tests/test_spin.cpp:132-140`.
 
 ### 2.3 The covariant tensors of an axially symmetric fill
 
@@ -199,7 +199,7 @@ inclusive DIS.
 ### 2.4 ⁷Li fill states as worked examples
 
 The **library-level** plan builders produce exactly one J = 3/2 plan,
-`helicity_flip_plan(1.5, …)` (`include/lipolgen/bookkeeping.hpp:151-152`,
+`helicity_flip_plan(1.5, …)` (`include/lipolgen/bookkeeping.hpp:167-168`,
 `src/core/bookkeeping.cpp:81-110`); `tensor_thirds_plan`,
 `transverse_tensor_plan` and `tensor_flip_plan` all hard-code spin 1
 (`src/core/bookkeeping.cpp:107-140`). The **example CLIs add one more by hand**:
@@ -212,9 +212,10 @@ octupole range today. It is protected by the theorem of §4 (`lam_e = 0`), so no
 number it has produced moves; but it is the reason the rank-3 sector cannot be
 waved away with "no run plan reaches it". Returning to `helicity_flip_plan`:
 its default branch
-(`use_explicit_pzz = false`, `include/lipolgen/bookkeeping.hpp:133-138`) is the
+(`use_explicit_pzz = false`, i.e. `--pzz-mode ladder`,
+`include/lipolgen/bookkeeping.hpp:133-154`) is the
 spin-temperature (maximum-entropy) ladder p_m ∝ u^m
-(`src/core/bookkeeping.cpp:85`, `include/lipolgen/bookkeeping.hpp:198-208`). For
+(`src/core/bookkeeping.cpp:85`, `include/lipolgen/bookkeeping.hpp:214-224`). For
 J = 3/2 with ladder ratio u the three moments have closed forms — derived here
 and checked numerically against `populations_maxent`:
 
@@ -238,9 +239,9 @@ Worked values (u from bisection, moments from `moments_along_axis`):
 | "tensor-thirds" analogue, P_z = 0, alignment T | (1+T)/4, (1−T)/4, (1−T)/4, (1+T)/4 | 0 | T | **0** |
 
 The u = 3 row is the rational anchor already pinned by
-`tests/test_spin.cpp:220-229` (populations (27, 9, 3, 1)/40; P_z = 0.7,
+`tests/test_spin.cpp:223-232` (populations (27, 9, 3, 1)/40; P_z = 0.7,
 T = 0.4, R₃ = 0.2 exactly) and quoted in
-`include/lipolgen/bookkeeping.hpp:201-202`.
+`include/lipolgen/bookkeeping.hpp:217-218`.
 
 Three consequences for the run plans:
 
@@ -253,15 +254,22 @@ Three consequences for the run plans:
   analogue of the A_zz thirds plan and of the transverse cos 2φ plan are free of
   the rank-3 sector by construction, for any T — which is the run-plan
   statement of the theorem in §4.
-* **The explicit-P_zz branch silently sets R₃ = 0.** `helicity_flip_plan` with
-  `use_explicit_pzz = true` calls `spin32_populations(pz, opt.pzz)`
+* **The explicit-P_zz branch sets R₃ = 0, and since 2026-09-06 it is a
+  command-line switch.** `helicity_flip_plan` with `use_explicit_pzz = true`
+  calls `spin32_populations(pz, opt.pzz)`
   (`src/core/bookkeeping.cpp:89`) and the third argument defaults to `o = 0.0`
   (`include/lipolgen/spin.hpp:118-119`). That is a *choice of fill*, not a
   property of the physics. No C++ example CLI parses a `--pzz` flag, so the
-  branch is unreachable from *them*; the Python API does expose it
+  branch is unreachable from *them*; the Python API exposes it
   (`HelicityFlipOptions.use_explicit_pzz` and `.pzz`,
-  `python/bindings.cpp:1811-1812`), so a Python caller who sets `pzz` gets
-  R₃ = 0 silently today. If the rank-3 sector is ever switched on,
+  `python/bindings.cpp:1822-1823`) and `lipolgen-run --pzz-mode typed` now
+  reaches it too, so a caller who sets `pzz` gets R₃ = 0 — no longer silently:
+  the run banner names the fill the other mode would have built, and the
+  provenance table's `pzz_mode` row says which branch ran. **The R₃ = 0 of the
+  typed branch is the one thing neither the banner nor that row states**, and
+  it is the reason this bullet stays: R₃ reaches only λ_e-odd observables (§4),
+  so on the A_∥ plan the typed fill is exactly the rank-3-clean alternative
+  §6 prices, not a neutral relabelling of the ladder. If the rank-3 sector is ever switched on,
   `HelicityFlipOptions` needs an explicit `o` alongside `pzz` — and `RunPlan`
   needs somewhere to record it (§6.1).
 
@@ -415,7 +423,7 @@ so b1 = F1^{(0)} − F1^{(1)}, which with (23) and Q_NN(1) − Q_NN(0) = 1 is an
 identity. It is also the sign of every published number: A_zz = −(2/3) b1/F1
 ([2] Eq. (27), HERMES [8]), which the code reproduces exactly at every y and is
 pinned at `tests/test_xsec.cpp:223-240` and `tests/test_xsec.cpp:242-255`, and
-which `docs/CONVENTIONS.md:68-69` states as "b₁ > 0 means the m = 0 state has the
+which `docs/CONVENTIONS.md:72-73` states as "b₁ > 0 means the m = 0 state has the
 LARGER cross section". Comparing (20) with (23),
 
         b1_32|_code  =  − b1^{[6]}  =  − Σ_q e_q² [ f1LL^q + f1LL^q̄ ]         (24)
@@ -972,11 +980,11 @@ This section is a design sketch, not an instruction; nothing here is implemented
 | `InclusiveSampler::effective_modulation` (`src/core/sampler.cpp:305-322`) | a third numerator accumulator and an `a3` field on `EffectiveModulation` |
 | the per-category φ density (`src/core/sampler.cpp:480-482`) and `phi_histogram_pseudo` (`src/core/sampler.cpp:526-531`) | both evaluate `1 + w_avg + a1 cos φ′ + a2 cos 2φ′` by hand; the second also calls `density_min(a1, a2)` |
 | `InclusiveKernel` | `double octupole_moments(double m) const` returning `(m³ − (41/20)m)/0.3` for spin 3/2 and `0.0` otherwise, the exact analogue of `tensor_moments` (`src/core/xsec.cpp:168-173`) and consistent with `src/core/spin.cpp:246-259`. **Plural, mirroring `tensor_moments`**: a member named `octupole_moment` would hide the free function `lipolgen::octupole_moment(const CplxMatrix&, double)` (`include/lipolgen/spin.hpp:102`) inside the class scope |
-| `HelicityFlipOptions` (`include/lipolgen/bookkeeping.hpp:137-147`) | an explicit `o` beside `pzz`, since the explicit branch silently sets R₃ = 0 today (`src/core/bookkeeping.cpp:89`) |
+| `HelicityFlipOptions` (`include/lipolgen/bookkeeping.hpp:153-163`) | an explicit `o` beside `pzz`, since the explicit branch silently sets R₃ = 0 today (`src/core/bookkeeping.cpp:89`) |
 | `RunPlan` (`include/lipolgen/bookkeeping.hpp:89-129`) | **there is nowhere to record R₃ today.** The class carries `pe/pz/pzz` true + measured only, and `helicity_flip_plan` records just `.tensor` (`src/core/bookkeeping.cpp:102-104`), so the `HelicityFlipOptions::o` above has no destination. Add `o_true_` / `measured_o_`, recorded from `moments_along_axis(j, pops).octupole`, and give the smear block (`src/core/bookkeeping.cpp:33-41`) a policy — noting §2.4 that **there is no rank-3 polarimeter**, so the honest default is *not* a fourth `rng.normal()` draw but R₃ taken from the fill model (14) with its own systematic |
-| `python/bindings.cpp:1701-1703` | the two new `Options` members, beside the existing `b1_32_func` / `b2_32_func` / `delta_32_func` |
-| `python/bindings.cpp:1661-1670` | the `Amplitudes` binding gains `a3` — and this is a **breaking** change, not an addition: its `__iter__` and `__repr__` are a fixed 3-tuple, so every Python caller doing `w, a1, a2 = amps` breaks the day `a3` appears |
-| `python/bindings.cpp:1964-1965` | the `state_tables` dict export gains `a3`, `a3n` |
+| `python/bindings.cpp:1712-1714` | the two new `Options` members, beside the existing `b1_32_func` / `b2_32_func` / `delta_32_func` |
+| `python/bindings.cpp:1672-1681` | the `Amplitudes` binding gains `a3` — and this is a **breaking** change, not an addition: its `__iter__` and `__repr__` are a fixed 3-tuple, so every Python caller doing `w, a1, a2 = amps` breaks the day `a3` appears |
+| `python/bindings.cpp:1975-1976` | the `state_tables` dict export gains `a3`, `a3n` |
 
 Naming: **use `g1_rank3`, never `g2`**, for [6]'s fourth function (§3.3); the
 name `g2` is already taken in `SFTables` by the twist-3 nucleon g2
@@ -1037,7 +1045,7 @@ theorem) or a J = 1 identity (protected by the multipole not existing):
 * `tests/test_xsec.cpp:113-132` — the J = 3/2 vector sector, and `w_avg == a1 == a2 == 0.0` for an unpolarized electron on zero rank-2 slots. **This one is the theorem's own regression test** and must be extended, not replaced (see 6.4).
 * `tests/test_xsec.cpp:649-683` — `amplitudes` refuses a spin state of the wrong J.
 * the whole of `tests/test_tensor_gamma.cpp`, in particular `:151` (γ → 0 collapse of the Cosyn SFs), `:381` and `:406` ([2] Table 1 rows 2 and 3).
-* `tests/test_spin.cpp:129-142`, `:204-229` — the J = 3/2 moment round trip and the (0.7, 0.4, 0.2) spin-temperature anchor.
+* `tests/test_spin.cpp:132-145`, `:207-232` — the J = 3/2 moment round trip and the (0.7, 0.4, 0.2) spin-temperature anchor.
 * `tests/test_reference.cpp:79-80` — the reference `b1_32_func` / `delta_32_func` values.
 
 ### 6.4 New identity tests

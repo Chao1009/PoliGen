@@ -172,25 +172,30 @@ def test_the_cli_prints_the_block_on_a_7li_inclusive_run():
 
 
 def test_the_run_banner_says_which_moments_the_fill_actually_has():
-    """`--pzz` is read by the three spin-1 tensor plans ONLY.
+    """`--pzz` is read by the three spin-1 tensor plans always, and by
+    `helicity-flip` only at `--pzz-mode typed`.
 
-    `helicity_flip_plan` leaves `use_explicit_pzz` false and takes the
-    max-entropy ladder at `--pz`, so `--plan helicity-flip --pzz 0.6` has
-    always produced T = 0.4 at J = 3/2 with nothing saying so.  The banner
-    now prints the plan's OWN recorded moments, which closes that without
-    moving any fill.
+    At the DEFAULT `--pzz-mode ladder` `helicity_flip_plan` leaves
+    `use_explicit_pzz` false and takes the max-entropy ladder at `--pz`, so
+    `--plan helicity-flip --pzz 0.6` produced T = 0.4 at J = 3/2 with nothing
+    saying so until 2026-09-05.  The banner prints the plan's OWN recorded
+    moments -- and, since 2026-09-06, the mode and the fill the OTHER mode
+    would have built -- which closes that without moving any fill.  The
+    DEFAULT fill is unchanged, and that is what this test checks first.
     """
     out = subprocess.run(
         [sys.executable, "-m", "lipolgen.cli", "--isotope", "7Li",
          "--plan", "helicity-flip", "--pzz", "0.6", "--events", "100"],
         capture_output=True, text=True, check=True).stdout
     assert "fill helicity-flip: J = 1.5, P_z = 0.7, T = 0.4" in out
-    assert "--pzz is not read by this plan" in out
+    assert "--pzz-mode ladder (the default)" in out
+    assert "--pzz = 0.6 is NOT read" in out
     out6 = subprocess.run(
         [sys.executable, "-m", "lipolgen.cli", "--events", "100"],
         capture_output=True, text=True, check=True).stdout
     assert "fill tensor-thirds: J = 1, P_z = 0.7, P_zz = 0.6" in out6
-    assert "not read by this plan" not in out6
+    assert "NOT read" not in out6
+    assert "--pzz-mode" not in out6
 
 
 # ------------------------------------------------------------------- G3

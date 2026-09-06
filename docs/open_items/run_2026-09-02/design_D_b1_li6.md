@@ -1504,9 +1504,20 @@ outcome for a first-mover calculation and is much better than a tuned number.
 > Eq. (21)'s δ-function. It is NOT lifted for the numbers this clause names:
 > the ⁶Li tables then standing in `OPEN_ITEMS_SOLUTIONS.md` were made with the
 > `ToyF2` library stand-in, whose own G3b is 0.440 and outside the acceptance
-> window, so they must be **regenerated under `--b1-unpol mstw` before they are
-> quoted as physics** (`OPEN_ITEMS_SOLUTIONS.md` §10, "The ⁶Li numbers — a
-> ToyF2 measurement, NOT covered by the lift until rerun").
+> window, so they had to be **regenerated under `--b1-unpol mstw` before they
+> were quoted as physics**.
+> **DONE ON 2026-09-06, and as a BAND rather than on one backend**
+> (`../run_2026-09-06/phase_A_li6_tables.md`; `OPEN_ITEMS_SOLUTIONS.md` §10,
+> "The ⁶Li numbers — REGENERATED AS A BAND on 2026-09-06"): the same
+> observables at the same (x, Q²) points with the same options over
+> `--b1-unpol {toy, ct18nlo, mstw}` × `--unpol-sf {toy, ct18nlo, mstw}`, which
+> reproduces the `toy` column to every printed digit and puts a
+> three-wide envelope around it (`--unpol-sf` is exactly flat on x·b₁; two of
+> the nine cells are refused by name). **What may be quoted is that envelope
+> inside the mandatory ±100 % A > 2 band, never one row** — and at x ≤ 0.1 the
+> backend spread (×2.32, ×2.22) is **wider than ±100 %**, so the two bands do
+> not contain one another there. One row is pinned at rtol 1e-12 by
+> `python/tests/test_li6_unpol_band.py`.
 > Items 0 and 4 are independent to 0.07 % (0.271689 × 1.91519 × 1.61951 =
 > 0.842682 predicted against 0.843243 measured), and item 5 supplies exactly
 > the residual 1.186 that was left over — no fudge factor was tuned anywhere.

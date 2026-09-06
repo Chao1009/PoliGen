@@ -274,6 +274,19 @@ recorded moments on every run —
 
 — and the `--pzz` help says which plans read it.
 
+**SUPERSEDED IN PART, 2026-09-06** (this note is left as measured on its own
+date; the change is recorded here so a reader does not act on a stale banner).
+The fill above is still the DEFAULT and still bit for bit, but it is now
+`--pzz-mode ladder`, and `--pzz-mode typed` honours the typed value —
+refusing, with the edge named, one outside the plan's domain rather than
+clamping (`--pzz 0.6` at `--pz 0.7` is outside the J = 3/2 domain by 0.02).
+The banner's parenthetical is therefore no longer "`--pzz` is not read by this
+plan" but names the mode and the fill the other mode would have built. What
+honouring it costs — the effect this note could not state — is measured in
+`../run_2026-09-06/phase_A_numbers.md` §A3: **on ⁷Li no observable moves** (σ
+to 1 ulp) while 0.1060 % of a 100 000-event sample re-cells, and on ⁶Li σ
+moves −0.0023527 %.
+
 ### D1.6 Defect F4 — the three-line segfault
 
 `ClusterPartialWave::k` and `::phi` are two public vectors that Python assigns

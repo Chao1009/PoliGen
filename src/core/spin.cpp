@@ -294,9 +294,38 @@ std::array<double, 3> spin1_populations(double pz, double pzz) {
   const double p_zero = (1.0 - pzz) / 3.0;
   const double p_minus = (2.0 - 3.0 * pz + pzz) / 6.0;
   std::array<double, 3> pops{{p_plus, p_zero, p_minus}};
-  for (double p : pops) {
-    if (p < -1e-12) {
-      throw std::runtime_error("unphysical (pz, pzz): negative population");
+  for (std::size_t i = 0; i < pops.size(); ++i) {
+    if (pops[i] < -1e-12) {
+      // SAY WHICH EDGE WAS CROSSED -- the rule `spin32_populations` below has
+      // followed since 2026-09-05 (`phase_D_li7_rank2.md` sec. 1.5, defect
+      // F3), applied at spin 1 because `--pzz-mode typed` made this branch
+      // reachable from the command line on 2026-09-06.  "unphysical
+      // (pz, pzz): negative population" was correct and useless: it named
+      // neither the offending m nor the value of P_zz this P_z admits.
+      //
+      // The three populations are fixed UNIQUELY by (1, pz, pzz) -- the
+      // closed form above IS the inverse of the three moment equations -- so
+      // this is a DOMAIN, not a solver failure.  p(0) = (1 - pzz)/3 >= 0 and
+      // p(+-1) = (2 +- 3 pz + pzz)/6 >= 0 are exactly
+      //
+      //     3|pz| - 2 <= pzz <= 1        (hence |pz| <= 1)
+      //
+      // and the J = 3/2 domain is SMALLER than this one: (pz, pzz) =
+      // (0.7, 0.6) is inside here (0.1 <= pzz <= 1) and outside there by
+      // 0.02 in T (0.26 <= T <= 0.58).
+      const double lo = 3.0 * std::fabs(pz) - 2.0;
+      char buf[640];
+      std::snprintf(
+          buf, sizeof(buf),
+          "spin1_populations: unphysical (pz = %g, pzz = %g) -- p(m = %s) = "
+          "%g < 0.  The three populations are fixed UNIQUELY by (1, pz, pzz), "
+          "so this is a DOMAIN, not a solver failure: p(0) = (1 - pzz)/3 and "
+          "p(+-1) = (2 +- 3 pz + pzz)/6, whence %g <= pzz <= 1 at this pz "
+          "(so |pz| <= 1 at all).  The J = 3/2 domain is SMALLER: at J = 3/2 "
+          "the same pz admits %g <= T <= %g",
+          pz, pzz, (i == 0 ? "+1" : i == 1 ? "0" : "-1"), pops[i], lo,
+          1.8 * std::fabs(pz) - 1.0, 1.0 - 0.6 * std::fabs(pz));
+      throw std::runtime_error(buf);
     }
   }
   for (double& p : pops) p = p < 0.0 ? 0.0 : (p > 1.0 ? 1.0 : p);

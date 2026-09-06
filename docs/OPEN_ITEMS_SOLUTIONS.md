@@ -71,8 +71,8 @@ the board above is the state and the deciding number.
 | 11 | Coherent ⁶Li amplitude (plans/04 #18) | **both halves in-tree** — eSTARlight ⁶Li unpolarized rates/slope (2026-09-02, `estarlight_li6.md`) settle `slope_b = 50 ± 10` GeV⁻² as citable and put a **lower bound** of 1.0e-3 on `f0` (the all-VM 3.0e-2 is not an upper bound — ρ/φ sit below the M_X floor); both recorded in `coherent.hpp`, with the cross sections themselves now in code as `estarlight_li6_coherent()`; the α+d configuration sampler (2026-09-03, `cluster_config.hpp`, `phase_G_numbers.md`) predicts ⁶Li's tensor a₂ ~10× smaller than the deuteron's and of **opposite sign**. **2026-09-04, §11.3: that a₂ is MARGINALLY measurable in coherent J/ψ — a BAND, S = 2.63 σ at the low edge and 2.84 … 3.29 σ at the top, 3 σ at 8.3 … 13.0 fb⁻¹/u, inside the {1, 10, 100} band at both ends; whether the top crosses 3 σ is NOT established (§11.3c)**, once the photoproduction region (Q² < 0.1 = 85 % of the rate, `estarlight_li6.md` §2f, `estarlight_li6_q2_floors()`) and the μ⁺μ⁻ channel are included. a₂ ∝ \|t\| on an e^{−B\|t\|} sample really is only a 0.25 % modulation — but on 4.2e5 events that is 2.6 σ. The photon-polarisation background separates for free and the separation survives Q² → 0 (the P_zz flip is a 1.50× *gain*). **Everything here is a closed-form map, not a dipole-model amplitude** (§11.3, §C2.0). *(§11.3a: the first pass said "NOT measurable — 0.75 σ, 160 fb⁻¹/u"; that used one lepton channel in one Q² window and is withdrawn.)* *(§11.3c: the fourth pass then found the band's TOP resting on an **unquantified factor presented as quantified** — a ⁷Li → ⁶Li efficiency substitution read off a list whose A-ordering is confounded with E/u and Z; read off the four entries that share a beam energy it **straddles 1**, so the top is a span, 2.84 … 3.29 σ, and the crossing of 3 σ is withdrawn.)* *(§11.3b: the second pass had shipped that verdict on an efficiency chain with **two defects of comparable size and opposite sign, neither in its own "complete" assumption list** — ε_det applied at ⁷Li's TOP energy 18 × 117.9 to a ⁶Li sample at 10 × 99.5, worth ×1.12–1.16 UP by the same paper's own ³He energy scan; and **no decay-lepton acceptance or reconstruction efficiency in the chain at all**, DOWN and unbounded below. They cancel to 0.7 %, which is why the point barely moved and why quoting either alone is worse than quoting neither.)* What is still open is not statistics: **no detection efficiency exists below Q² = 0.1 anywhere in this tree**; **no decay-lepton reconstruction efficiency exists in it at all** (only the geometry can be bounded, and it is 0.99 — not the problem); and the far-forward working point is unchosen — **that last is the single correction that on its own restores a NO**, taking the whole band to 0.73–0.92 σ at 106–167 fb⁻¹/u | done / done / **ask stands, on photoproduction** | §11 below — O1/O2/O4/O5 CLOSED/ANSWERED (§§11.2–11.4), O3 partially bounded offline at +18 %/+9 % (§11.5); the Mäntysaari-group ask is **reconciled into one canonical draft** (task C6, `docs/open_items/run_2026-09-03/mantysaari_collaboration_draft.md`), **not sent — sending is the author's decision**; **D5 (2026-09-04): the \|t\| ceiling STAYS 0.2 and its stated reason changed** — the anchor range (\|t\| ≤ 0.30, a property of the input table) is now primary and positivity is stated as secondary and contingent, because the positivity edge is `t_positivity_edge` = 0.245 GeV² only at the shipped `eps_b0` and would be **2.80** at the measured quadrupole; `--coherent-t-max` and the whole coherent block are now in the npz `meta` — §11.6 |
 | 12 | Packaging | **implemented 2026-09-02** — `pyproject.toml` (scikit-build-core) in-tree, `pip install -e .` works (66 s); one copy of each `.so` in `lipolgen/`, `$ORIGIN`+deps-prefix RPATH, data/vmc vendored; portable wheel still needs `auditwheel` + GPL-3 terms | done | see §12–13 below |
 | 13 | License | **GPL-3.0-or-later** (forced by HepMC3/LHAPDF; matches MCnet norms) | 0 | author to confirm — `STATUS.md` decision **row 24**, `AUTHOR_DECISIONS.md` §B21; E2 stamped the identifier onto 101 files on the strength of it |
-| 14 | Structure-function backend injection (the 2026-09-03 sweep's **D2**, filed as `sf-backend-injection`) | **implemented 2026-09-04** — `--unpol-sf {toy,mstw,ct18nlo}` reaches **every kernel the pipeline builds**, the tagged struck-cluster kernel included, which had **no** structure-function slot of any kind before (and which `PipelineConfig::kernel` never reached either). **`--pol-sf {toy,nnpdfpol}` does not have that reach and never could** — it reaches the inclusive and tagged kernels only where the fill also carries `lam_e·P_e ≠ 0`, and not the coherent channel at all, whose rate is spin-independent; under `tensor-thirds`, this CLI's own default plan, it is read on **no** channel. It is *labelled, not credited*, wherever it did not run (`pol_sf_is_read(config, plan)`, §15.3). Both default to the toy backends and are then **bit for bit**, proved per channel by `np.array_equal`. Measured price of the toy on ⁶Li at config 1: accepted σ **×0.7985** (ct18nlo) / **×0.7934** (mstw), run-level A_zz ×1.2524 / ×1.2604 — and the shipped `ToyG1`'s g₁ⁿ has the **WRONG SIGN** over roughly 0.25 < x < 0.6. R and the EMC hook are deliberately **not** covered and stay hard-locked | 1 session | done — §14 below |
-| 15 | ⁷Li rank-2 (tensor) input (the 2026-09-03 sweep's **D1**) | **the ZERO is now LOUD; the b₁ is DEFERRED, deliberately** — a ⁷Li inclusive run's tensor term, cos 2φ amplitude and A_zz have always been *exactly* 0 (`default_inclusive_kernel` fills a rank-2 slot for spin 1 only) while `meta` recorded `b1_model = "miller"`, a backend that did not run, and no run-surface line said anything. Now: an unconditional banner block, `meta["rank2_input"]`, and `b1_model` / `b1_unpol` = `"none (spin 3/2: no rank-2 input)"`; plus four run-surface defects (F2 the spin-1 plans at J = 3/2, F3 the population-domain message, F4 a three-line segfault, F5 the silently ignored `--pzz`). **No b₁(⁷Li) was implemented**: the α–t convolution is worked out and measured **in `phase_D_li7_rank2.md`, not here** — 2.99 ± 0.02 × ⁶Li's orbital term, and the ⟨r²⟩/P-wave character of the same wave function agrees with Q(⁷Li) to 13 % — but its **sign flips with the unpolarised backend** the A = 2 gate tells you to use, so shipping it would publish a tensor asymmetry whose direction is a flag. **Both numbers are the research note's, quoted, not re-measured and not in the code; and the 13 % "gate" is NOT COMMITTED** — its reference Q(⁷Li) = −4.00(3) fm² is quoted from memory of the standard compilations, is absent from this tree and must be sourced first (§15.4, author decision D11) | loud zero 1 session; b₁ ~1 week after the decision | **blocked on author decision D2** (one unpolarised backend, for both isotopes) — §15 below |
+| 14 | Structure-function backend injection (the 2026-09-03 sweep's **D2**, filed as `sf-backend-injection`) | **implemented 2026-09-04** — `--unpol-sf {toy,mstw,ct18nlo}` reaches **every kernel the pipeline builds**, the tagged struck-cluster kernel included, which had **no** structure-function slot of any kind before (and which `PipelineConfig::kernel` never reached either). **`--pol-sf {toy,nnpdfpol}` does not have that reach and never could** — it reaches the inclusive and tagged kernels only where the fill also carries `lam_e·P_e ≠ 0`, and not the coherent channel at all, whose rate is spin-independent; under `tensor-thirds`, this CLI's own default plan, it is read on **no** channel. It is *labelled, not credited*, wherever it did not run (`pol_sf_is_read(config, plan)`, §15.3). Both default to the toy backends and are then **bit for bit**, proved per channel by `np.array_equal`. Measured price of the toy on ⁶Li at config 1: accepted σ **×0.7985** (ct18nlo) / **×0.7934** (mstw), run-level A_zz ×1.2524 / ×1.2604 — and the shipped `ToyG1`'s g₁ⁿ has the **WRONG SIGN** over roughly 0.25 < x < 0.6. R and the EMC hook are deliberately **not** covered by *these two* selectors; the EMC hook stays hard-locked everywhere, and R did too until 2026-09-06, when `--r-source` opened it on ONE path — `--b1-model li6-convolution`, where it is the shared hook of registry row 3's option (iii) and is refused everywhere else (§10) | 1 session | done — §14 below |
+| 15 | ⁷Li rank-2 (tensor) input (the 2026-09-03 sweep's **D1**) | **the ZERO is now LOUD; the b₁ is DEFERRED, deliberately** — a ⁷Li inclusive run's tensor term, cos 2φ amplitude and A_zz have always been *exactly* 0 (`default_inclusive_kernel` fills a rank-2 slot for spin 1 only) while `meta` recorded `b1_model = "miller"`, a backend that did not run, and no run-surface line said anything. Now: an unconditional banner block, `meta["rank2_input"]`, and `b1_model` / `b1_unpol` = `"none (spin 3/2: no rank-2 input)"`; plus four run-surface defects (F2 the spin-1 plans at J = 3/2, F3 the population-domain message, F4 a three-line segfault, F5 the silently ignored `--pzz` — no longer silent, and since 2026-09-06 no longer ignored either at the opt-in `--pzz-mode typed`, whose cost is measured in `docs/open_items/run_2026-09-06/phase_A_numbers.md` §A3). **No b₁(⁷Li) was implemented**: the α–t convolution is worked out and measured **in `phase_D_li7_rank2.md`, not here** — 2.99 ± 0.02 × ⁶Li's orbital term, and the ⟨r²⟩/P-wave character of the same wave function agrees with Q(⁷Li) to 13 % — but its **sign flips with the unpolarised backend** the A = 2 gate tells you to use, so shipping it would publish a tensor asymmetry whose direction is a flag. **Both numbers are the research note's, quoted, not re-measured and not in the code; and the 13 % "gate" is NOT COMMITTED** — its reference Q(⁷Li) = −4.00(3) fm² is quoted from memory of the standard compilations, is absent from this tree and must be sourced first (§15.4, author decision D11) | loud zero 1 session; b₁ ~1 week after the decision | **blocked on author decision D2** (one unpolarised backend, for both isotopes) — §15 below |
 
 ## 1. Cluster wave functions — the biggest physics correction — **OPT-IN SHIPPED** (rows 9, 10, 11 open)
 
@@ -531,6 +531,36 @@ The band **peaks near x = 0.063, not at the lowest x**: δ(x) is still rising
 there while |A_zz| has not yet fallen. The largest RC systematic on `A_zz`
 sits in the *middle* of the low-x range.
 
+> **⚠ The `A_zz` column of that table — and therefore its `τ` and `w_hi − 1`
+> columns — carries the ×3.253983 deuteron-b₁ `A_zz`** of the WARNING further
+> down (`run_2026-09-03/phase_B_numbers.md` §B3.2), exactly as
+> `run_2026-09-02/phase_C_numbers.md` §8.2's does. The `δ(x)` column is
+> **unaffected** — it is `rc_delta` alone.
+>
+> **REPUBLISHED BESIDE IT ON 2026-09-06 (registry row 6 / §B11).** The table
+> above stays as published, labelled as what it was computed with; the same
+> five points with the **shipped** kernel's ⁶Li b₁ (`Li6B1(MillerB1)`, i.e.
+> `InclusiveKernel::tables`' own `b1`/`b2`) are:
+>
+> | x | δ(x) | `A_zz` | `τ` | `w_hi − 1` | half-width δ·\|A_zz\| |
+> |---|---|---|---|---|---|
+> | 0.010 | 0.30000 | −4.528242e−04 | −2.264634e−04 | −6.793901e−05 | 1.358472e−04 |
+> | 0.063 | 0.11081 | −1.316774e−03 | −6.588209e−04 | **−7.300143e−05** | **1.459067e−04** |
+> | 0.100 | 0.06331 | −1.528923e−03 | −7.650466e−04 | −4.843711e−05 | 9.680016e−05 |
+> | 0.160 | 0.01500 | −1.280460e−03 | −6.406404e−04 | −9.609605e−06 | 1.920691e−05 |
+> | 0.300 | 0.01500 | −4.871661e−05 | −2.435890e−05 | −3.653835e−07 | 7.307492e−07 |
+>
+> **The "peaks near x = 0.063" reading survives, measured**: |w_hi − 1| at
+> 0.063 is ×1.0745 its x = 0.010 value (×1.0756 on the published column) and
+> the half-width ×1.0740, and the peak stays at 0.063 on the shipped anchor
+> and on both of registry row 17's alternatives
+> (`run_2026-09-06/phase_A_numbers.md` §A2). The correction on `A_zz` is
+> exactly ×(`LI6_B1_RANK2_TRANSFER` × `LI6_B1_PER_NUCLEON`) = ×0.30731567 =
+> ÷3.253983147 at every x, because the shipped `b2` is `2·x·b₁` and `azz` is then linear in
+> b₁; `τ` and `w_hi − 1` follow only approximately (τ's denominator is not).
+> Full correction, and the eight-point §8.1c column beside it:
+> `run_2026-09-02/phase_C_numbers.md` §8.1c-corr / §8.2-corr / §8.3-corr.
+
 **The tails, `w_tail − 1`** (elastic + unpolarised quasi-elastic, as a
 fraction of the Born, at m = ±1):
 
@@ -606,16 +636,27 @@ Never quote either edge as "the" radiative tail.
 
 **The derived quantities that settle three design estimates:**
 
-| x | Q² | edge | (1/6)σ^el_T/σ^el_U | σ^q_U/σ^el_U (S(q) on / S = 1) | ΔA_zz (tail) |
-|---|---|---|---|---|---|
-| 0.01 | 5 | ho | −5.0943e−04 | 0.28237 / 0.5981 | +3.5167e−07 |
-| 0.01 | 5 | vmc-ft | −5.4705e−04 | 0.27942 / 0.5918 | +3.2291e−07 |
-| 0.03 | 5 | ho | −7.3583e−04 | 0.54628 / 0.8679 | — |
-| 0.03 | 5 | vmc-ft | −8.0426e−04 | 0.53452 / 0.8492 | — |
-| 0.10 | 5 | ho | **+1.5595e−04** | 2.7475 / 3.164 | +6.6751e−09 |
-| 0.10 | 5 | vmc-ft | **−4.0702e−05** | 2.4881 / 2.865 | +6.7163e−09 |
-| 0.30 | 5 | ho | +1.3287e−02 | **1000.2** / 1000.2 | +1.2665e−11 |
-| 0.30 | 5 | vmc-ft | +1.5556e−02 | 329.85 / 329.85 | +1.7334e−11 |
+| x | Q² | edge | (1/6)σ^el_T/σ^el_U | σ^q_U/σ^el_U (S(q) on / S = 1) | ΔA_zz (tail), as published | **ΔA_zz, shipped ⁶Li b₁ (2026-09-06)** |
+|---|---|---|---|---|---|---|
+| 0.01 | 5 | ho | −5.0943e−04 | 0.28237 / 0.5981 | +3.5167e−07 | **−1.769797e−07** |
+| 0.01 | 5 | vmc-ft | −5.4705e−04 | 0.27942 / 0.5918 | +3.2291e−07 | **−2.100985e−07** |
+| 0.03 | 5 | ho | −7.3583e−04 | 0.54628 / 0.8679 | — | — |
+| 0.03 | 5 | vmc-ft | −8.0426e−04 | 0.53452 / 0.8492 | — | — |
+| 0.10 | 5 | ho | **+1.5595e−04** | 2.7475 / 3.164 | +6.6751e−09 | **+2.127452e−09** |
+| 0.10 | 5 | vmc-ft | **−4.0702e−05** | 2.4881 / 2.865 | +6.7163e−09 | **+2.042099e−09** |
+| 0.30 | 5 | ho | +1.3287e−02 | **1000.2** / 1000.2 | +1.2665e−11 | **+5.130156e−12** |
+| 0.30 | 5 | vmc-ft | +1.5556e−02 | 329.85 / 329.85 | +1.7334e−11 | **+9.784578e−12** |
+
+**The last column is new on 2026-09-06 and the one beside it is left as
+published** (registry row 6 / §B11): `ΔA_zz` carries `A_zz` through its
+`−A_zz r_U` term, so it inherits the ×3.253983 of the WARNING below, while the
+`σ^el_T` and `σ^q_U` columns carry no `A_zz` and are unchanged — re-measured,
+identical to every printed digit. **`ΔA_zz` changes SIGN at x = 0.01 on both
+C0 edges and at all three Q² of `phase_C_numbers.md` §8.1c** (the 2026-09-04
+note recorded the flip at one point; it is six), and at x = 0.10 and 0.30 the
+sign survives while the magnitude falls by ×0.32 and ×0.41 (`ho`). Recomputed
+column, its recipe, and the eight-point version:
+`run_2026-09-02/phase_C_numbers.md` §8.1c-corr.
 
 The second row at every point is the other edge of the ⁶Li C0 **shape** band
 (`--rc-c0-shape vmc-ft`, added 2026-09-04): the j₀ transform of the committed
@@ -638,6 +679,10 @@ moves. σ^q_U itself is bit-identical between them.
    missed by 20–60× at x ≤ 0.1 on **both** edges. Everything measured, with the
    two policy overrides that reading the VMC density required:
    `docs/open_items/run_2026-09-03/phase_B_numbers.md` §B1.
+   > **Depends on the `A_zz(Born)` column? NO — re-derived 2026-09-06.** Every
+   > quantity in this conclusion is `σ^el_T`, `σ^el_U` or `σ^q_U`; none of them
+   > carries `A_zz`, and all three columns re-measure identical to every
+   > printed digit. **It stands exactly as written.**
 2. **`σ^q_U/σ^el_U` runs 0.28 → 2.75 → 1000** over x = 0.01 → 0.30 (0.60 →
    3.16 → 1000 with the Pauli suppression off; 0.28 → 2.49 → 330 on the
    `vmc-ft` edge, which does not change the reading). The design's "30–70 % of the
@@ -645,6 +690,11 @@ moves. σ^q_U itself is bit-identical between them.
    quasi-elastic-dominated at every x ≳ 0.03** (22 % of the tail at x = 0.01,
    73 % at 0.1, **99.9 %** at 0.30), so `--rc-qe-suppression` and
    `RcOptions::qe_kf_gev` are the dominant tail knobs almost everywhere.
+   > **Depends on the `A_zz(Born)` column? NO — re-derived 2026-09-06.** It is
+   > a ratio of two tail cross sections. Unchanged, re-measured. (What the
+   > correction *does* touch here is one step further on: the ΔA_zz **spread**
+   > of `qe_suppression` and `qe_kf_gev`, because those two move `r_U` — see
+   > the run-level rows below and `phase_C_numbers.md` §8.3-corr.)
 3. **The tail is not the leading RC systematic at the EIC.** ΔA_zz from the
    whole tail is 3.5e−07 at x = 0.01, Q² = 5, against a **band half-width of
    4.4e−04** — a factor 1300. **CORRECTED 2026-09-04 (task B6): the factor is
@@ -653,6 +703,15 @@ moves. σ^q_U itself is bit-identical between them.
    −1.769797e−07 and the band half-width 1.358472e−04. **The ordering is
    unchanged and that is the point of the row**; the arithmetic is now right,
    and at `a_transfer_frac = 1` the band leads by ×1086.
+   > **Depends on the `A_zz(Born)` column? YES, in both of its numbers — and
+   > it was already corrected; re-derived and confirmed 2026-09-06.** The
+   > ratio re-measures **×767.6** (1.358472e−04 ÷ 1.769797e−07), which is the
+   > 768 above. What the 2026-09-06 recomputation adds is that the ordering
+   > survives with **more** margin than the row claims at the other x too, and
+   > that the tail entry it is compared against has changed **sign** since the
+   > row was first written (+3.5167e−07 → −1.769797e−07): the row's conclusion
+   > is about magnitudes and is unaffected, but the sign may not be quoted
+   > from the published column. `phase_C_numbers.md` §8.1c-corr.
 
 **Run-level:**
 
@@ -663,19 +722,22 @@ moves. σ^q_U itself is bit-identical between them.
 | clipped tail nodes at `tail_max = 10`, global / y < 0.5 / 0.5–0.9 / y > 0.9 | **0 / 0 / 0 / 0** at the default `tail_model = TPeak` (was 1.71 % / 0 / 0 / 21.95 % before the per-nucleon fix). On `--rc-tail-model t-peak+ll`: **0.36 % / 0 / 0 / 4.62 %** on the 101 × 77 CLI grid (1.01 % / 0 / 0 / 5.85 % on T8(d)'s coarser 40 × 24 test grid) — the same y → 1 edge as everywhere else |
 | clipped EVENTS — tail / band, default 2000-event inclusive run | **0 / 0** on BOTH tail models, and still 0 at 200 000 events (`meta["rc_clipped_tail_event_fraction"]`, `..._band_...`; a DIFFERENT quantity from the node fractions — nodes are not event-weighted, and no accepted cell centre lands in the nodes `t-peak+ll` clips) |
 | whole-run mean `rc_tail`, 200 k inclusive ⁶Li config 1, `t-peak` → `t-peak+ll` | **1.021836 → 1.040369** (max 3.410153 → 5.981595; the tail dilution roughly doubles, and every event's kinematics and `weight` are bit-identical — `RcModel::fill` takes no `Rng&`) |
-| clipped EVENTS on the BAND, 20 k tagged-alpha | **0.62 %** (⁶Li), **2.6 %** (⁷Li). `tau_tag` reaches 30.7 at the M = 0 density nodes; `band_tau_max = 1` holds every edge in [0.7, 1.3] instead of the −1.79 / −8.35 v0 published. |
-| δ(A_zz) at x = 0.01, Q² = 5 from the band, δ_low = 0.19 vs 0.30 | 2.7996e−04 vs **4.4204e−04** |
-| … from `fq_scale` 0 vs 2 | ΔA_zz +7.54154e−07 → −4.9925e−08, spread 8.041e−07 |
-| … from `tail_tensor_scale` 0.5 vs 2 | +3.59193e−07 → +3.23118e−07, spread 3.61e−08 |
-| … from `qe_suppression` 0 vs 1 | +1.83644e−07 → +3.51674e−07, spread 1.680e−07 |
-| … from `qe_kf_gev` 0 (S = 1) vs 0.169 | +5.39491e−07 → +3.51674e−07, spread 1.878e−07 |
-| … from `c0_shape` `ho` vs `vmc-ft` (the C0 SHAPE band, 2026-09-04) | +3.51683e−07 → +3.22911e−07, spread **2.877e−08**. On ΔA_zz it is the *smallest* of these knobs; on `σ^el_T` itself it is the largest by far, because it **flips the sign** at x = 0.10 (§9's table). `RcModel` construction 0.111 s → 1.293 s on this edge. |
+| clipped EVENTS on the BAND, 20 k tagged-alpha | **0.62 %** (⁶Li, seed 1 — the top of a ten-seed scatter 0.485–0.620 %, mean 0.528 %, sd 0.041 %), **2.6 %** (⁷Li, seed 11; seed 1 gives 2.51 %). `tau_tag` reaches 30.7 at the M = 0 density nodes; `band_tau_max = 1` holds every edge in [0.7, 1.3] instead of the −1.79 / −8.35 v0 published. |
+| δ(A_zz) at x = 0.01, Q² = 5 from the band, δ_low = 0.19 vs 0.30 | 2.7996e−04 vs **4.4204e−04** — both on the ×3.253983 deuteron-b₁ `A_zz` of the WARNING below. Re-measured 2026-09-06 with this generator's ⁶Li b₁: **8.603659e−05 vs 1.358472e−04** |
+| … from the LOW-x ANCHOR itself, δ_low = 0.30 / 0.266 / 0.113 (registry **row 17**, priced 2026-09-06) | band half-widths on A_zz at x = 0.01, Q² = 5 **1.358472e−04 / 1.204512e−04 / 5.116913e−05** (×1 / ×0.8867 / ×0.3767), at x = 0.063 **1.459067e−04 / 1.308566e−04 / 6.313127e−05** (×0.8969 / ×0.4327), at x = 0.10 **9.680016e−05 / 8.798804e−05 / 4.833349e−05** (×0.9090 / ×0.4993) and **1.920691e−05 unmoved** at x = 0.16. **0.113 is the value the source panel READS at x = 0.00966, the x nearest the 0.01 anchor**, so the shipped 0.30 errs **wide by ×2.65**. Two columns and one `meta` key move; the tagged clipped-event fraction does **not** (124/20 000 ⁶Li and 520/20 000 ⁷Li at all three). `run_2026-09-06/phase_A_numbers.md` §A2 |
+| … from `fq_scale` 0 vs 2 | ΔA_zz +7.54154e−07 → −4.9925e−08, spread 8.041e−07 — **as published, on the ×3.253983 `A_zz`. Recomputed 2026-09-06 with the shipped ⁶Li b₁: +2.255019e−07 → −5.785810e−07, spread 8.040830e−07 — the SPREAD is unchanged to four digits** (this knob moves only `r_T`), **and the sign change, which is the claim, survives.** |
+| … from `tail_tensor_scale` 0.5 vs 2 | +3.59193e−07 → +3.23118e−07, spread 3.61e−08 — **as published. Recomputed 2026-09-06: −1.694451e−07 → −2.055947e−07, spread 3.615e−08** (+0.21 % on the published 3.608e−08 — the third significant figure; this knob too moves only `r_T`). |
+| … from `qe_suppression` 0 vs 1 | +1.83644e−07 → +3.51674e−07, spread 1.680e−07 — **as published. Recomputed 2026-09-06: −2.286503e−07 → −1.769797e−07, spread 5.167e−08, i.e. ×0.31** — this knob scales the quasi-elastic tail and so moves `r_U`, so its spread carries `A_zz` and does not survive the correction. |
+| … from `qe_kf_gev` 0 (S = 1) vs 0.169 | +5.39491e−07 → +3.51674e−07, spread 1.878e−07 — **as published. Recomputed 2026-09-06: −1.192240e−07 → −1.769797e−07, spread 5.776e−08, ×0.31.** It stays a *larger* knob than `qe_suppression` (5.776e−08 against 5.167e−08), which is the reading this row carries. |
+| … from `c0_shape` `ho` vs `vmc-ft` (the C0 SHAPE band, 2026-09-04) | +3.51683e−07 → +3.22911e−07, spread **2.877e−08** — **as published. Recomputed 2026-09-06: −1.769797e−07 → −2.100985e−07, spread 3.312e−08, i.e. it WIDENS by +15 %** (the two C0 edges have different `r_U`). It stays the smallest of the six. *(The published pair's absolute values do not re-measure exactly: this tree gives +3.516736e−07 → +3.229021e−07 for the same two settings — 2.7 × 10⁻⁵ and 2.9 × 10⁻⁵ relative away — while its **spread**, 2.8772e−08, reproduces. Deterministic here across processes; cause not established; `phase_C_numbers.md` §8.1c-corr records it.)* On ΔA_zz it is the *smallest* of these knobs; on `σ^el_T` itself it is the largest by far, because it **flips the sign** at x = 0.10 (§9's table). `RcModel` construction 0.111 s → 1.293 s on this edge. |
 
 | … from `a_transfer_frac` 0 / 0.5 / 1 (the **A = 2 → A = 6 TRANSFER** price, 2026-09-04) | band half-widths on A_zz **1.358472e−04 / 1.518818e−04 / 1.921170e−04** — the band widens by √(1+f²) = 1 / 1.118 / **1.414**. Not a ΔA_zz row like the others: this knob moves the **band** and touches neither the tail nor τ (asserted bit-for-bit). Measured with this generator's ⁶Li b₁, so `f = 0` is the **corrected** 1.3585e−04, not the 4.4204e−04 row above. Default **0.0** and byte-identical output. `run_2026-09-03/phase_B_numbers.md` §B6 |
 
 | … from `qe_tensor_scale` 0 vs 1 (the POLARISED QE stand-in, 2026-09-04) | ΔA_zz **−1.769797e−07 → −2.931806e−07**, spread **1.162e−07** at x = 0.01; +3.017677e−10 at x = 0.10 and +1.795956e−09 at x = 0.30 — **0.086 % / 0.0003 % / 0.25 %** of the band half-width there. Computed with **this generator's own ⁶Li b₁**; see the warning below. It is a BORROWED magnitude, exactly linear in the scale, and possibly ~10² too small at x ≤ 0.1. |
 
-> **WARNING on the five ΔA_zz rows above, added 2026-09-04 (task B3).** Their `A_zz(Born)` — and therefore the 4.4204e−04 band half-width and every ΔA_zz that carries the `−A_zz·r_U` term — was computed with the **deuteron** Miller b₁ table (`toy_b1`, `B1Mode::Digitized`), not with this generator's ⁶Li b₁ (`Li6B1(MillerB1)`), and is **×3.253983 too large**. The correct band half-width at x = 0.01, Q² = 5 is **1.3585e−04**, and the ΔA_zz rows move with it — the default point, measured both ways, reads +3.51674e−07 above and **−1.76980e−07** with the ⁶Li b₁, i.e. it changes **sign**; the other rows in the block were not re-measured. The `σ^el_T`, `σ^q_U`, `r_U` and `w_tail` rows are **unaffected** and reproduce exactly. The block was **not** republished here — that is its own task. `run_2026-09-03/phase_B_numbers.md` §B3.2.
+> **WARNING on the five ΔA_zz rows above, added 2026-09-04 (task B3), and its RESOLUTION dated 2026-09-06.** Their `A_zz(Born)` — and therefore the 4.4204e−04 band half-width and every ΔA_zz that carries the `−A_zz·r_U` term — was computed with the **deuteron** Miller b₁ table (`toy_b1`, `B1Mode::Digitized`), not with this generator's ⁶Li b₁ (`Li6B1(MillerB1)`), and is **×3.253983 too large**. The correct band half-width at x = 0.01, Q² = 5 is **1.3585e−04**, and the ΔA_zz rows move with it — the default point, measured both ways, reads +3.51674e−07 above and **−1.76980e−07** with the ⁶Li b₁, i.e. it changes **sign**. The `σ^el_T`, `σ^q_U`, `r_U` and `w_tail` rows are **unaffected** and reproduce exactly.
+>
+> **"the other rows in the block were not re-measured" is no longer true: all five were, on 2026-09-06 (registry row 6 / §B11), and each row now carries both numbers.** The published values stay in place; the recomputed ones are marked in the same cell. Two things came out of doing it. **(1) The correction is not a common factor.** A knob that leaves `r_U` alone has an `A_zz`-independent spread, so `fq_scale` and `tail_tensor_scale` keep theirs to four digits, while `qe_suppression` and `qe_kf_gev` shrink by ×0.31 and `c0_shape` **widens** by +15 %. **(2) The ORDER of the budget changes at second place, for a bookkeeping reason.** `qe_tensor_scale`'s row was already corrected when it was added in 2026-09-04, so the ladder above compared one corrected number against four uncorrected ones. All six on the same footing: **`fq_scale` 8.041e−07 ≫ `qe_tensor_scale` 1.162e−07 > `qe_kf_gev` 5.776e−08 > `qe_suppression` 5.167e−08 > `tail_tensor_scale` 3.615e−08 > `c0_shape` 3.312e−08** — `qe_tensor_scale` moves from fourth to **second**, because the three below it shrank and not because it grew. **The band still dominates every one of them** (168.9× the largest, on the corrected half-width). Full recomputation and its recipe: `run_2026-09-03/phase_B_numbers.md` §B3.2 and `run_2026-09-02/phase_C_numbers.md` §8.1c-corr / §8.2-corr / §8.3-corr.
 
 **The `fq_scale` band changes the SIGN of ΔA_zz** and is not symmetric about
 the nominal — σ^el_T is *quadratic* in F_q. That is why it must be **RUN**
@@ -710,7 +772,48 @@ conservative end of a Q² spread" and "the panel's lowest-x value extrapolated
 upward in x" are different bases, and the shipped documents asserted the first
 while the anchor rests on the second. Conservative in magnitude either way
 (0.30 > 0.266 > 0.113), which is all `w = 1 ∓ δτ` uses, so **nothing moves** —
-recorded, not changed (`run_2026-09-03/phase_B_numbers.md` §B6.3). Throughout,
+recorded, not changed (`run_2026-09-03/phase_B_numbers.md` §B6.3).
+**Since 2026-09-06 the two alternatives are PRICED and not merely named**
+(registry row 17; `run_2026-09-06/phase_A_numbers.md` §A2), and the direction
+of the error is the part to carry to any reader: **0.113 is the value the
+panel actually reads at the x NEAREST the anchor**, so the shipped 0.30 is
+**×2.65** it and **×1.13** the 0.266 at the panel's bottom — it errs **wide**,
+which is the safe direction for a half-width and the wrong one for a quoted
+precision. Running `--rc-delta-low-x` 0.30 / 0.266 / 0.113 at the
+configuration of this section's own band table (⁶Li, `--config 1`,
+`--plan tensor-thirds --pzz 0.6`, Q² = 5, P_zz = +1) but with **this
+generator's ⁶Li b₁** — the corrected `A_zz` of the WARNING below, not the
+table's own ×3.253983 column — the band half-width on `A_zz` is
+
+| δ_low | x = 0.010 | x = 0.063 | x = 0.100 | x = 0.160 |
+|---|---|---|---|---|
+| **0.30 (shipped)** | **1.358472e−04** | **1.459067e−04** | **9.680016e−05** | 1.920691e−05 |
+| 0.266 (panel bottom, x = 0.00226) | 1.204512e−04 | 1.308566e−04 | 8.798804e−05 | 1.920691e−05 |
+| **0.113 (panel AT the nearest x, 0.00966)** | **5.116913e−05** | **6.313127e−05** | **4.833349e−05** | 1.920691e−05 |
+
+— the anchor is carried in full only at x ≤ `RC_X_LOW` (×0.8867, ×0.3767),
+**compressed** between the anchors by the log-linear interpolation (×0.8969 /
+×0.4327 at 0.063, ×0.9090 / ×0.4993 at 0.100) and **identically zero** at
+x ≥ `RC_X_HIGH` = 0.16, where the E12-13-011 anchor pins it. The band still
+peaks at x = 0.063 on all three (and sharpens as the anchor drops), and still
+leads the **whole** radiative tail at x = 0.01 by **×768 / ×681 / ×289**, so
+the RC budget's ordering survives every choice. It moves **two npz columns
+(`rc_tensor_lo`, `rc_tensor_hi`) and one `meta` key**, and — measured, not
+assumed — **not** the tagged band's clipped-event fraction: the same 124 of
+20 000 ⁶Li events (0.62 %, seed 1) and 520 of 20 000 ⁷Li (2.6 %, seed 11) clip
+at all three anchors, because `clamp_tau` clips |τ| against `band_tau_max` and
+δ never enters it. What the anchor sets **at** the clip is the width there:
+|τ| = 1 exactly, so those events' edges are exactly 1 ∓ δ_low —
+[0.700, 1.300] / [0.734, 1.266] / [0.887, 1.113]. **Nothing is decided and no
+default moved**; `python/tests/test_rc_low_x_anchor.py` pins the table.
+**The HIGH anchor has no alternative to run**: the record names none.
+`RC_DELTA_HIGH_X = 0.015` is E12-13-011's 1.5 %, which lives in the
+**unpublished proposal only** — the published companion arXiv:2506.04506 has
+no radiative-correction discussion at all — and the only alternative the tree
+states is an *action*, "cite it by page or **drop** the anchor"
+(`docs/CONVENTIONS.md` (a), `run_2026-09-02/design_C_tensor_rc.md`), not a
+second value. There is nothing to band it against, and that is the honest
+statement of it. Throughout,
 **δ ≡ (Δσ_RC − Δσ_Born)/Δσ_Born** — the RC as a fraction of the Born, which is
 the base the paper's own sentence names ("as compared with the Born
 contribution") and the base `w = 1 ∓ δτ` applies. It is **inferred** from the
@@ -1016,25 +1119,67 @@ the digitized +1.48e−4, a factor 9 low, because MSTW's second zero sits at
 0.4572. No clause of G3 sees that — G3a gates the zero's *position* (cleared by
 0.062) and G3b the peak — but a reader comparing curves at x = 0.5 will.
 
-### The ⁶Li numbers — a ToyF2 measurement, NOT covered by the lift until rerun
+### The ⁶Li numbers — REGENERATED AS A BAND on 2026-09-06
 
 x·b₁ per nucleon, Q² = 2.5 GeV², default options — which include **ToyF2 F₁
 with `r_sigma_lt`** (not the gate's `r1998`; see below) and **κ = 1** (not the
 gate's Eq. (21)), and the 2400 / 2400 / 3200 y grid the review of 2026-09-03
 set. Every row is the centre of a mandatory {0, 1, 2} × b₁ band:
 
-> **These values must be REGENERATED under `--b1-unpol mstw` before they are
-> quoted as physics.** The 2026-09-03 lift is a statement about a
-> configuration: the MSTW2008 LO nucleon input at CDKS Eq. (21). The table
-> below is the **`ToyF2`** configuration, whose own G3b is **0.440**, outside
-> the [0.5, 2] window the lift was read off — and the difference is a shape
-> change, not a normalisation (mstw/toy on `Li6ConvolutionB1::b1(x, 2.5)` is
+> **THESE VALUES WERE REGENERATED AS A BAND ON 2026-09-06, and the band — not
+> the row below — is what may be quoted.**
+> `run_2026-09-06/phase_A_li6_tables.md` reruns **the same observables at the
+> same (x, Q²) points with the same options**, over
+> `--b1-unpol {toy, ct18nlo, mstw}` × `--unpol-sf {toy, ct18nlo, mstw}`. The
+> table below is the **`toy`/`toy`** cell of that band and reproduces there to
+> every printed digit; it is the band's **centre-of-record, not its answer**.
+>
+> **Which axis moves what — measured, not assumed.** `--b1-unpol` is the
+> deuteron F₁ *inside* CDKS Eq. (22) and moves **terms (2d) and (2α) and
+> nothing else**: terms (1) and (3) convolve b₁ᵈ and are **bit-identical**
+> across all three backends, as are the densities, the T14 remainders and the
+> `w_αd = 0` row. `--unpol-sf` is the **kernel's own** F₁/F₂ — the
+> **denominator** of A_zz — and is **exactly flat on x·b₁** (bit-identical
+> through the pipeline at all five x for both non-toy `b1_unpol` values),
+> because `Li6ConvolutionB1::b1` ignores its `f1` argument. So the band on
+> **these tables is three wide, not seven**; A_zz itself moves on both axes
+> (a factor **2.23** across the seven legal cells at x = 0.10, Q² = 2.5,
+> y = 0.5). Two of the nine cells — `--b1-unpol toy` under a non-toy
+> `--unpol-sf` — are **refused by name** by `validate()`, because
+> `meta["b1_unpol"]` would then record "toy" for something else.
+>
+> **The band on x·b₁ (Q² = 2.5), and then the ±100 % on top of it:**
+>
+> | x | `--b1-unpol` envelope | **× {0, 1, 2} — quotable** | spread |
+> |---|---|---|---|
+> | 0.05 | [+1.574759e−6, +3.650716e−6] | **[0, +7.301431e−6]** | ×2.318 |
+> | 0.10 | [−6.212120e−6, −2.796612e−6] | **[−1.242424e−5, 0]** | ×2.221 |
+> | 0.20 | [−2.803165e−5, −2.120522e−5] | **[−5.606329e−5, 0]** | ×1.322 |
+> | 0.30 | [−5.324901e−5, −4.173248e−5] | **[−1.064980e−4, 0]** | ×1.276 |
+> | 0.50 | [+4.226952e−5, +5.411263e−5] | **[0, +1.082253e−4]** | ×1.280 |
+>
+> **The ±100 % band does NOT bracket the PDF spread at the two lowest x**:
+> ×2.318 and ×2.221 both exceed 2, so running `{0, 1, 2}` on one backend does
+> not cover the others at x ≤ 0.1. It does at x = 0.20/0.30/0.50. **Both bands
+> have to be quoted.** And the ±100 % band is not lifted by any of this: it
+> comes from Q(⁶Li) = −0.0818(17) fm² against Q_d = +0.2859(3) fm², **not**
+> from the A = 2 gate, and **the gate is A = 2 and tests nothing about the
+> α–d step** — there is no b₁ measurement at any A > 2. `∫b₁ dx` over
+> [0.01, 1.2] becomes **[+1.387049e−4, +1.458804e−4]** (a 5.17 % spread, the
+> tightest quantity on the axis).
+>
+> **The 2026-09-03 lift is still a statement about a configuration**, and the
+> `toy` column still sits outside it: `ToyF2`'s own G3b is **0.440**, outside
+> the [0.5, 2] window the lift was read off, and the gap is a shape change and
+> not a normalisation (mstw/toy on `Li6ConvolutionB1::b1(x, 2.5)` =
 > **1.848 / 1.276 / 0.817** at x = 0.10 / 0.30 / 0.50; ×1.92 on the gate's own
-> peak), so no rescaling converts one into the other. What survives untouched
-> is only what is algebraic: the four terms summing to `b1` to 1e−12 and the
-> band's exact linearity. Every **value** below, and every ratio between terms
-> and derived systematic read off it, is a ToyF2 measurement until it is rerun.
-> `docs/USAGE.md` §2a carries the same decision and the same reasons.
+> peak) — so no rescaling converts one column into another, which is why the
+> rerun was a rerun and not a factor. **Two published readings do NOT survive
+> it**, and they are named in place below: the orbital sector's *opposite
+> sign*, and *"w = 2 nearly zeroes b₁ at x = 0.10"*. `docs/USAGE.md` §2a and
+> `run_2026-09-02/phase_D_numbers.md` carry the same band and the same
+> reasons; one row is pinned at rtol 1e-12 by
+> `python/tests/test_li6_unpol_band.py`.
 
 *(The `Li6B1(CdksB1)` column DOUBLED on 2026-09-03 — `b1_convolution()` stopped
 halving a column that is already per nucleon; see Q1b below. Every other column
@@ -1054,13 +1199,34 @@ Reading it:
 * **Term (3) is 0.197 % of term (1)** at every x — exactly the CG algebra's
   0.1 × P_D^{αd}. It is kept because it is free and because it is the analytic
   bridge to `LI6_B1_RANK2_TRANSFER`, not because it matters numerically.
-* **Terms (2d)+(2α) are 7–133 % of term (1), with the OPPOSITE sign** over the
-  whole window, because the α–d S–D relative sign is opposite to the
-  deuteron's below the S node (66 % of the density). They nearly cancel term (1)
-  at x ≈ 0.1 and dominate below. **This is the ⁶Li quadrupole puzzle showing up
-  in b₁ and it is the quantitative reason the 100 % band is mandatory.**
+* **Terms (2d)+(2α) are 0.2–133 % of term (1)** over the band, and they are
+  **the only part of these tables the unpolarised backend moves at all**
+  (terms (1) and (3) convolve b₁ᵈ and are bit-identical across it). **This is
+  the ⁶Li quadrupole puzzle showing up in b₁ and it is the quantitative
+  reason the 100 % band is mandatory** — the PDF systematic and the A > 2 band
+  live on the *same* term.
+  > **⚠ The "OPPOSITE sign … over the whole window" this bullet published
+  > until 2026-09-06 DOES NOT SURVIVE THE BAND, and is withdrawn as a
+  > reading.** The signed ratio [(2d)+(2α)]/(1) at
+  > x = 0.05/0.10/0.20/0.30/0.50/0.70 is
+  > **+1.325 / −0.406 / −0.106 / −0.074 / +0.217 / +0.093** on `toy`
+  > (opposite at three of the six, which the toy row's own signs already
+  > showed), **+0.002 / +0.322 / +0.183 / +0.148 / +0.273 / +0.167** on
+  > `ct18nlo` — *same* sign as term (1) at **every** x — and
+  > **+0.272 / +0.099 / +0.147 / +0.182 / −0.006 / +0.166** on `mstw`, where
+  > the one negative entry is a near-zero crossing, not an opposition. The
+  > follow-on *"they nearly cancel term (1) at x ≈ 0.1 and dominate below"* is
+  > toy-only: at x = 0.10 the total is **0.596** of |term (1)| on `toy` but
+  > **×1.324** on `ct18nlo` and **×1.101** on `mstw` — the orbital sector
+  > **adds** there. **The sign of the orbital sector relative to term (1) may
+  > not be quoted without the unpolarised backend.**
+  > `run_2026-09-06/phase_A_li6_tables.md` §A4.3.
 * **The struck-α term is half the orbital sector**: (2α)/(2d) = 0.494–0.503
-  against the analytic 2(M_d/M_α)² = 0.5064 (T15). Dropping it is a 30 % error.
+  on `toy` and **0.477–0.512 over the whole band** against the analytic
+  2(M_d/M_α)² = 0.5064 (T15) — configuration-robust wherever it is readable.
+  Dropping it is a 30 % error. (Two band entries read −1.185 and 13.08, at
+  `ct18nlo`/x = 0.05 and `mstw`/x = 0.50; those are ratios taken across a zero
+  of (2d) — ×0.0121 and ×0.0030 of its `toy` value — and are **not** a spread.)
   *(On the design's 600/2400/800 y grid this column read 0.489–0.497 and term
   (2d) itself was 2.3 % high at x = 0.10 — a quadrature artefact of the struck
   deuteron's wider z-distribution, fixed by the 2400/2400/3200 default and now
@@ -1075,10 +1241,16 @@ N_αd⟨E⟩/M_d = 0.817421 (3.1e−4 apart, T3's own tolerance); `mean_y()` =
 ⟨z²⟩/⟨z⟩ **0.9997871** (⟨z⟩ ≈ 1, *not* 1/3 — the fair-share normalisation of
 design §1.6 is what makes this literally CDKS Eq. (16) one level up); `p_d()` 0.0193299, `p_d_momentum()` 0.0193516
 against `VMC_P_D_LI6` = 0.0193549 (1.7e−4, the file's own quadrature spread).
-∫b₁ dx over [0.01, 1.2]: **+1.4588e−4**, against `Li6B1(MillerB1)`'s +9.1243e−4
+∫b₁ dx over [0.01, 1.2]: **+1.4588e−4** on `toy` and
+**[+1.387049e−4, +1.458804e−4]** over the band (5.17 %), against
+`Li6B1(MillerB1)`'s +9.1243e−4
 and `Li6B1(CdksB1)`'s +1.38596e−4 (that one doubled on 2026-09-03; it was
-+6.9298e−5). `finite_q_delta` moves ⁶Li's x·b₁ by only
-−1 % to +7 % (against 1.57–1.69 on the A = 2 gate), because in ⁶Li the term κ
++6.9298e−5). *(The densities above are **backend-independent** — measured
+identical on all three, since `LightConeDensities` never sees an `UnpolSF` —
+so they were never a ToyF2 measurement and did not need the rerun.)*
+`finite_q_delta` moves ⁶Li's x·b₁ by only
+−1 % to +7 % on `toy` and **−1.1 % to +8.6 % over the band** (against
+1.57–1.69 on the A = 2 gate), because in ⁶Li the term κ
 multiplies is the small orbital one — which is why the two objects default
 differently.
 
@@ -1099,7 +1271,20 @@ worth having on the *gate*, which has no denominator; inside the pipeline
 consistency wins. **This is an author decision, not a derivation** — the third
 option, and the better one, is to thread ONE R hook through
 `default_inclusive_kernel` into both objects so they cannot disagree by
-accident. That is a wiring change and it is not made here.
+accident. **That wiring EXISTS since 2026-09-06, as an opt-in whose default
+does not take it**: `--r-source {unset, sigma-lt, r1998}`
+(`PipelineConfig::r_source`, `RSource`) puts ONE R object in
+`Li6ConvolutionOptions::r_func` *and* `InclusiveKernel::Options::r_func`;
+`unset` is the default and never enters that branch, so nothing here moved,
+and the flag is refused off `--b1-model li6-convolution`. Its cost is priced
+in `docs/open_items/run_2026-09-06/phase_A_numbers.md` §A1 and **it does not
+simply undo the mismatch**: at y = 0.5, Q² = 2.5 the shared `r1998` moves
+K/D_φ (and A_zz, which is −(2/3) of it) by −3.8357 % / +26.3988 % / +3.3518 %
+at x = 0.05 / 0.10 / 0.30 against the numerator-only −5.5148 % / +24.6099 % /
++2.6629 % — **larger** at x = 0.10 — the cos 2φ amplitude moves by
+−8.33 % / −6.73 % / −3.14 % where the numerator-only swap leaves it
+bit-identical, the shared shift is **y-dependent** where the numerator-only
+one is not, and the unpolarised rate moves too (σ −0.684681 %).
 
 **Measured cost of the choice** (Q² = 2.5, default options), x·b₁:
 
@@ -1236,7 +1421,7 @@ a close and not a deferral.
 | 1 | Decide item 0's default (the δ-function) | **DONE.** The A = 2 gate is quoted at CDKS Eq. (21), their exact definition; the ⁶Li backend keeps Eq. (17)'s κ = 1, where the switch is worth 1 %. It turned out to be load-bearing for the verdict, not only for the third digit: MSTW gives 0.843 at Eq. (21) against 0.520 at Eq. (17) |
 | 2 | Get MSTW2008 LO (or Kumano's tabulated curves) and rerun checklist item 4 with CDKS's own PDF | **DONE.** MSTW2008 LO was on disk all along — the CENTRAL member ships with PYTHIA 8 as `pdfdata/mstw2008lo.00.dat`; only LHAPDF's set store lacked it. `MstwSF` (`include/lipolgen/mstw_sf.hpp`) reads it with the same charge weights as `LhapdfSF`, so an MSTW/CT18NLO ratio is a PDF comparison and not a convention one. **G3b 0.719 (CT18NLO stand-in) → 0.843243.** Kumano's curves were not needed |
 | 3 | Get a real CD-Bonn u, w instead of the D-state rescaling proxy | **DONE.** Machleidt's Appendix-D parameterisation is `cdbonn_wave()` in `cluster.hpp`, with C₁₁ and D₉..D₁₁ **computed** from the r → 0 boundary conditions rather than typed; reached through `DeuteronConvolutionB1::Options::wave = kCdBonn`. It reproduces his Table XV (P_D 4.8562 % against 4.85, η 0.0255714 against 0.0256(4), Q_d +0.270178 fm² against 0.270) and is **×1.18631** on the G3b peak — it **closes**, which is the opposite sign to the retired proxy's ×0.88. The default stays AV18 |
-| 4 | Decide whether `Li6ConvolutionOptions` should default to `r1998` like the gate | **DECIDED — it stays `r_sigma_lt`**, because the shipped observable is a ratio whose denominator carries `InclusiveKernel`'s R. Measured cost of the choice and the term-by-term reason are above ("The ⁶Li backend and the gate use different R"). The better third option — one R hook threaded through both — is named there and not taken here |
+| 4 | Decide whether `Li6ConvolutionOptions` should default to `r1998` like the gate | **DECIDED — it stays `r_sigma_lt`**, because the shipped observable is a ratio whose denominator carries `InclusiveKernel`'s R. Measured cost of the choice and the term-by-term reason are above ("The ⁶Li backend and the gate use different R"). The better third option — one R hook threaded through both — **is now BUILT and PRICED as the opt-in `--r-source`, and still not taken as a default** (2026-09-06): registry row 3 is open, and the question it now asks is *(iii) with which R?* (`docs/open_items/run_2026-09-06/phase_A_numbers.md` §A1) |
 | 5 | Decide whether `CdksB1` should stop halving the per-nucleon column (Q5(a)) | **DECIDED — yes, and done.** `B1_CDKS_TABLE_TO_PER_NUCLEON` = 1; `--b1-model cdks` doubled. Certain, from CDKS's own words plus the HERMES inversion (Q1b above). Two pinned values in `tests/test_sf.cpp` doubled with it; no reference JSON moved |
 | 6 | Check **Miller's** own normalisation independently (Q5(b)) | **DECIDED AS AN AUTHOR DECISION — the 0.5 stays, and it is *likely*, not certain.** His derivation is per deuteron and his presentation is per nucleon; the paper cannot be both. Evidence for each reading and the numerical consequence of the other (every `MillerB1` number, and the default inclusive tensor rate, would double) are in Q1b above. **The framing this document gave the question was wrong and is retracted**: the answer is not on the axis of his Fig. 5 |
 | 7 | Only then re-open G3b | **RE-OPENED, AND IT PASSES.** Ratio **0.843243** with MSTW at Eq. (21); **1.000338** with CD-Bonn as well. Design §5.4's *Escalation* clause is not triggered, so **the ⁶Li publication ban is lifted** — read the four conditions in the warning block at the top of this section before quoting anything |
@@ -1250,9 +1435,14 @@ a close and not a deferral.
   Eq. (20), which needs a pion PDF set this tree does not have.
 * **The R wiring (condition 4)** — `STATUS.md` decision **row 3**,
   `AUTHOR_DECISIONS.md` §B7 — is a decision too; the clean fix is one R hook
-  threaded through `default_inclusive_kernel` into both objects, and its cost
-  is **unpriced**: no run exists with one R in both the numerator and the
-  denominator.
+  threaded through `default_inclusive_kernel` into both objects. **It was
+  unpriced until 2026-09-06 and is not any more**: the hook is built as the
+  opt-in `--r-source` (default `unset`, nothing moved) and measured against
+  both alternatives in
+  `docs/open_items/run_2026-09-06/phase_A_numbers.md` §A1. The decision is
+  still open — sharing the hook does **not** shrink the shift (it is larger at
+  x = 0.10), it makes the shift **y-dependent**, and it moves the unpolarised
+  rate by −0.684681 % — so the row now asks *(iii) with which R?*
 * **G3c is not enforced and did not improve with the PDF** (0.467 → 0.490 of
   the digitized integral; 0.98 only with CD-Bonn as well). The peak agreeing
   does not make the integral agree.
@@ -2467,7 +2657,10 @@ name itself.
   prints the offending m and the **derived** domain. F4: a half-assigned
   `ClusterPartialWave` throws instead of segfaulting. F5: the run banner
   prints the fill's own moments, so `--plan helicity-flip --pzz 0.6` can no
-  longer look as if it set T = 0.6 when the max-entropy ladder gave 0.4.
+  longer look as if it set T = 0.6 when the max-entropy ladder gave 0.4 —
+  and since 2026-09-06 `--pzz-mode typed` will honour the typed value
+  instead, refusing it (never clamping) where it is outside the plan's
+  domain, which `--pzz 0.6` at `--pz 0.7` is at J = 3/2 by 0.02.
 * **No b₁(⁷Li), in any form.** Nothing below is in the code.
 
 ### 15.2 Why the b₁ is deferred, and what would unblock it
@@ -2537,7 +2730,10 @@ report: struck-t : struck-α = 1 : 0.756 against the analytic
 b₁ by ≤ 0.05 %), `convolve` unchanged with `x_max_g = 1`, and Phase A's
 `r_func` decision (`r_sigma_lt`) — which **matters more** here, worth
 −9.66 % … −46.02 %, because *all* of b₁(⁷Li) is the orbital term that responds
-to the slope of R.
+to the slope of R. Since 2026-09-06 the shared-hook option (`--r-source`, §10)
+exists for ⁶Li; a ⁷Li backend would inherit both the choice and its
+consequences, including the **y dependence** the shared hook introduces and
+the numerator-only swap does not.
 
 **What must NOT transfer**: `LI6_B1_RANK2_TRANSFER` = 0.921947 — it is the
 tensor dilution of an *embedded spin-1 deuteron*, ⁷Li has no spin-1
@@ -2623,7 +2819,7 @@ each name three different decisions across this document set.)*
 | **D10** | **Δ_32 (cos 2φ)** | Filling `b1_32_func` alone leaves cos 2φ at zero. There is **no ⁷Li Δ model**; reusing ⁶Li's toy means adopting an arbitrary 1e−2 scale for a second nucleus — and 3·Q_NN = ±3 at J = 3/2 against ±1/−2 at spin 1, so the same Δ gives a **larger** ⁷Li amplitude |
 | **D11** | **Q(⁷Li) is not in the tree** | §15.4. One constant, with a real source, and the −4.00(3) vs −4.06 spread recorded |
 | **D12** | **The run-plan surface** | There is no J = 3/2 tensor plan. The honest one is the **two-state T = +1 / T = −1 contrast**, not a thirds pattern — and at J = 3/2 the pure-alignment fill is rank-3 clean by construction |
-| **D13** | **`--pzz` on `helicity-flip`** (new, F5) | It is silently not read: `use_explicit_pzz` stays false and the fill comes from the max-entropy ladder at `--pz` (T = 0.4, not the 0.6 typed). Honouring it would **move a shipped fill**, so nothing was changed; the banner now prints the fill's own moments. Options: honour it (a number change), refuse it, or leave it documented |
+| **D13** | **`--pzz` on `helicity-flip`** (F5; **priced 2026-09-06**) | At the default `--pzz-mode ladder` it is still not read — `use_explicit_pzz` stays false and the fill comes from the max-entropy ladder at `--pz` (T = 0.4, not the 0.6 typed) — but the run banner names both fills and the provenance table's `pzz_mode` row says which branch ran. **`--pzz-mode typed` is registry option (iii), built and priced**: it honours the typed value and refuses one outside the plan's domain with the edge named, never clamping. WHAT IT COSTS, measured at the standard configuration (inclusive, config 1, seed 20260713, `--pz 0.7 --pe 0.7`, `--pzz 0.5` against the ladder; `phase_A_numbers.md` §A3): on **⁷Li — the isotope this row is about — no observable moves.** The rank-2 sector is identically zero and both modes honour `--pz`, so the only fill moments the kernel sums are unchanged: σ agrees to 1 ulp (1.970 × 10⁻¹⁶ relative), the two per-category σ to 3.939 × 10⁻¹⁶ and 0, and A_∥ moves by 6.2 × 10⁻¹⁴ of its own statistical error. On **⁶Li** (J = 1, where the rank-2 sector is live) σ moves −0.0023527 % and A_∥ by −4.27 × 10⁻⁶ σ_stat at 100 000 events. What moves on both is the **recorded alignment** — 0.4 → 0.5 at J = 3/2, 0.409403 → 0.5 at J = 1 — which is the divisor of every tensor estimator (−20 % / −18.1195 % on δ(A_zz) and δ(cos 2φ) at fixed N), and the event sample, which is not bit-identical even on ⁷Li (0.1060 % of 100 000 events change (x, Q²) cell on last-bit arithmetic). The DEFAULT did not move |
 
 ### 15.6 One thing not to do
 

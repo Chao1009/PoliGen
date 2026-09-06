@@ -18,16 +18,30 @@ review (the y-grid default and the b₁ᵈ-support fix below both move columns).
 > the gate was read in*, which is **not** the configuration these tables were
 > made in.
 >
-> **THE NUMBERS BELOW MUST BE REGENERATED UNDER `--b1-unpol mstw` BEFORE THEY
-> ARE QUOTED AS PHYSICS.** Every row here was made with the default `ToyF2`
-> unpolarised input, whose own G3b is **0.440** — outside the [0.5, 2] window
-> the lift was read off. The gap is a shape change and not a normalisation
-> (mstw/toy on `Li6ConvolutionB1::b1(x, 2.5)` is **1.848 / 1.276 / 0.817** at
-> x = 0.10 / 0.30 / 0.50; ×1.92 on the gate's own peak), so these tables cannot
-> be rescaled into covered ones. What survives untouched is only the
-> **algebra**: the four terms summing to `b1` to 1e−12, and the band's exact
-> linearity. Decision and reasons: `docs/USAGE.md` §2a and
-> `docs/OPEN_ITEMS_SOLUTIONS.md` §10.
+> **THE NUMBERS BELOW WERE REGENERATED AS A BAND ON 2026-09-06 — quote the
+> band, in `../run_2026-09-06/phase_A_li6_tables.md`, and never a row of this
+> file.** Every row here was made with the default `ToyF2` unpolarised input,
+> whose own G3b is **0.440** — outside the [0.5, 2] window the lift was read
+> off. The gap is a shape change and not a normalisation (mstw/toy on
+> `Li6ConvolutionB1::b1(x, 2.5)` is **1.848 / 1.276 / 0.817** at
+> x = 0.10 / 0.30 / 0.50; ×1.92 on the gate's own peak), so these tables could
+> not be rescaled into covered ones and had to be rerun. **This file's rows
+> are the `toy` column of that band and reproduce there to every printed
+> digit**; they are kept in place, labelled, as the record of what was
+> published on 2026-09-03.
+>
+> The band is over `--b1-unpol {toy, ct18nlo, mstw}` × `--unpol-sf
+> {toy, ct18nlo, mstw}`; **`--b1-unpol` moves terms (2d)/(2α) and nothing
+> else** (terms (1) and (3), the densities, the T14 remainders and the
+> `w_αd = 0` row are all **bit-identical** across it), **`--unpol-sf` is
+> exactly flat on x·b₁** and moves the A_zz denominator instead, and two of
+> the nine cells are refused by name. **Two readings in this file DO NOT
+> SURVIVE the band and are flagged in place below**: the orbital sector's
+> *opposite sign*, and *"w = 2 nearly zeroes b₁ at x = 0.10"*. What survived
+> untouched is the **algebra**: the four terms summing to `b1` to ≤ 3.1e−16 on
+> every backend, and the band's exact linearity. Decision and reasons:
+> `docs/USAGE.md` §2a and `docs/OPEN_ITEMS_SOLUTIONS.md` §10; one row pinned
+> at rtol 1e-12 by `python/tests/test_li6_unpol_band.py`.
 >
 > **Three conditions that come with them even after a rerun, and none of them
 > is the gate.**
@@ -81,12 +95,21 @@ Reading:
   0.1 × P_D^{αd} = 0.1935 %. It is kept because it is free and because it is
   the analytic bridge to `LI6_B1_RANK2_TRANSFER`, not because it matters.
 * **Terms (2d)+(2α) are 7–133 % of term (1)** (+1.326 / −0.406 / −0.106 /
-  −0.074 / +0.217 as a signed ratio at the five x) and have the **opposite
-  sign** over the whole window, because the α–d S–D relative sign is opposite
-  to the deuteron's below the S node (66 % of the density). They very nearly
-  cancel term (1) at x ≈ 0.1 and dominate below. *This is the ⁶Li quadrupole
-  puzzle showing up in b₁, and it is the quantitative reason the 100 % band is
-  mandatory.*
+  −0.074 / +0.217 as a signed ratio at the five x). *This is the ⁶Li
+  quadrupole puzzle showing up in b₁, and it is the quantitative reason the
+  100 % band is mandatory.*
+  > **⚠ WITHDRAWN AS A READING 2026-09-06 (band):** this bullet said they
+  > *"have the **opposite sign** over the whole window … They very nearly
+  > cancel term (1) at x ≈ 0.1 and dominate below."* **On neither real global
+  > fit is that true.** The signed ratio is
+  > +0.002 / +0.322 / +0.183 / +0.148 / +0.273 on `ct18nlo` — *same* sign as
+  > term (1) at every one of the five x — and
+  > +0.272 / +0.099 / +0.147 / +0.182 / −0.006 on `mstw`, the one negative
+  > entry being a near-zero of (2d) rather than an opposition. At x = 0.10 the
+  > total is **0.596** of |term (1)| on `toy` but **×1.324** on `ct18nlo` and
+  > **×1.101** on `mstw`: the orbital sector **adds** there. The signed ratios
+  > printed above are the `toy` column's own and stand as that.
+  > `../run_2026-09-06/phase_A_li6_tables.md` §A4.3.
 * **The struck-α term (2α) is half of that**: (2α)/(2d) = **0.5024 / 0.5035 /
   0.5033 / 0.5011 / 0.4936 / 0.5029** at x = 0.05/0.10/0.20/0.30/0.50/0.70,
   against the analytic 2(M_d/M_α)² = **0.5064**. (On the design's coarser y
@@ -144,6 +167,15 @@ None is zero; none is enforced (`sf.hpp`: "Reported, not enforced").
 The knob is linear by construction (it scales (2d) and (2α) together, which is
 right: they are one physical effect). At x = 0.10 the orbital term is 70 % of
 the total's magnitude, so w = 2 nearly zeroes b₁ there.
+
+> **⚠ THAT LAST CLAUSE IS TOY-ONLY, measured 2026-09-06.** The `w = 0` row is
+> **bit-identical** on all three unpolarised backends (w = 0 deletes the only
+> terms `--b1-unpol` reaches), but on the two real fits `w = 2` moves
+> x·b₁(0.10) **away** from zero — −6.212120e−6 → −7.722311e−6 (**+24.3 %**) on
+> `ct18nlo` and −5.167487e−6 → −5.633045e−6 (**+9.0 %**) on `mstw` — against
+> the −2.796612e−6 → −8.912966e−7 (**−68.1 %**, toward zero) printed above.
+> The knob stays exactly linear on every backend.
+> `../run_2026-09-06/phase_A_li6_tables.md` §A4.4.
 
 ## `finite_q_delta` on / off (⁶Li, x·b₁)
 

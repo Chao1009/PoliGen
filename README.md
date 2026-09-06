@@ -44,6 +44,7 @@ is measured, and no number here stands without the window it was measured in.**
 | selector | default | what the other value adds | measured, with its window |
 |---|---|---|---|
 | `--cluster-wave {hulthen,vmc}` | `hulthen`, bit for bit | ANL VMC AV18 α+d / α+t tables, and the AV18 deuteron everywhere the run reads one | ⁶Li α-tag fraction **0.0249 → 0.0348** at 10 × 99.5 on the YR high-acceptance envelope; on the α-tag channel the opt-in path moves every polarized observable by **−2.027 %**; refused on `inclusive`/`coherent`, where it is never read |
+| `--pzz-mode {ladder,typed}` | `ladder`, bit for bit (it is the branch that was already there) | `--plan helicity-flip` honours the typed `--pzz` instead of the max-entropy ladder at `--pz`, and REFUSES a value outside the plan's domain with the edge named rather than clamping | inclusive config 1, 100 000 events, seed 20260713, `--pz 0.7 --pe 0.7`, `--pzz 0.5` against the ladder: **on ⁷Li no observable moves** (rank-2 identically zero; σ agrees to 1 ulp, A_∥ to 6 × 10⁻¹⁴ of its own error) while **0.1060 %** of events re-cell on last-bit arithmetic; on **⁶Li** σ **−0.0023527 %** and A_∥ **−4.27 × 10⁻⁶ σ_stat** on the shipped `miller` (22–36× less on the opt-in b₁ models). The **recorded alignment** moves 0.4 → 0.5 (⁷Li) / 0.409403 → 0.5 (⁶Li), i.e. **−20 % / −18.12 %** on δ(A_zz) and δ(cos 2φ) at fixed N |
 | `--triton-sf {hulthen,ciofi-simula}` | `hulthen`, bit for bit | the Ciofi–Simula three-channel A = 3 spectral function | S₀ = **0.6525, untuned** |
 | `--fsi {off,glauber-cluster,glauber-nucleon}` | `off` | a Glauber survival **weight** on `Event::weight` — never a momentum shift | the two variants are **not** one: **99.50 %** of events differ by more than **1 %** (\|w_nucleon/w_cluster − 1\| > 0.01), ratio to **68.5**, on `tagged-6Li-alpha`, 20 000 events, seed 1234, `tensor-thirds`, **σ_XN = 40 mb** — one end of the mandatory 20–40 mb band |
 | `--rc {off,tensor-band}` | `off`, byte-identical | the tensor RC **band** `rc_tensor_lo/hi` plus the radiative tails, on `Event::rc_weights` and never on `Event::weight` | the band is the answer; a single edge is not. `--rc` is accepted and does nothing on `coherent`, and a non-default rc sub-knob there is refused |
@@ -57,7 +58,8 @@ is measured, and no number here stands without the window it was measured in.**
 | `--coherent-t-max` | 0.2 GeV² | a different coherent \|t\| ceiling | the ceiling's reason is the **anchor range** (\|t\| ≤ 0.30, knob-independent); positivity is the contingent second reason — its edge is 0.245 at the shipped `eps_b0` and 2.80 at the measured quadrupole. Truncation redistributes exp(−B t_max) = **4.5e−5** of the rate |
 
 **Every knob's read / not-read / refused status is one table** —
-`Pipeline::knob_provenance`, **66 rows on a default run** — written into
+`Pipeline::knob_provenance`, **68 rows on a default run** (66 before
+`--r-source` and `--pzz-mode`, both 2026-09-06) — written into
 `meta["knob_provenance"]` and printed as the banner's `KNOB PROVENANCE` block.
 A knob that did not run is never recorded as if it had: the value is replaced
 by a label (`not read on channel coherent-6Li`, `not read by plan
@@ -73,7 +75,7 @@ Event counts: `--events N` for a fixed count, or `--lumi L` **alone** for
 luminosity mode (the two are exclusive, and giving both — on the command line
 or through `--config-file` — is refused rather than silently resolved).
 
-## Status (2026-09-05)
+## Status (2026-09-05, measured at `5af0427`; the current tallies are on the run boards, `docs/open_items/run_*/STATUS.md`)
 
 - 401 doctest cases / 17 240 286 assertions and 926 pytest cases pass, with
   1 doctest case and 112 pytest cases skipped. `pytest -rs` prints all 112
@@ -170,8 +172,11 @@ close-out of the run before this one (`a94fd6e`, 2026-09-03), one was
 CDKS column, which is per nucleon already (decision registry row 1) — and two
 are recorded as author decisions and still open: whether
 `Li6ConvolutionOptions` should default to `r1998` like the A = 2 gate rather
-than to `r_sigma_lt` (row 3), and Miller's own b₁ normalisation, which his
-paper is self-inconsistent about by exactly the factor in question (row 2).
+than to `r_sigma_lt` (row 3 — whose third option, ONE R hook in both the
+tensor weight's numerator and its denominator, now exists as the opt-in
+`--r-source` and is priced, with no default moved), and Miller's own b₁
+normalisation, which his paper is self-inconsistent about by exactly the
+factor in question (row 2).
 The registry is `STATUS.md`'s decision table; each row is stated in full, with
 its options and their measured cost, in `AUTHOR_DECISIONS.md` (§B12, §B7,
 §B2).

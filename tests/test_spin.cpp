@@ -2,7 +2,10 @@
 // Gate 1 (DEVELOPMENT_PLAN section 4.1): rho-matrix moments, all axes, exact.
 // Ported one-for-one from PolarizedLithiumSim/evgen/tests/test_spin.py.
 
+#include <array>
 #include <cmath>
+#include <stdexcept>
+#include <string>
 #include <vector>
 
 #include "check_close.hpp"
@@ -298,5 +301,54 @@ TEST_CASE("D1/F3: the J = 3/2 population domain is stated exactly, and it is "
     CHECK(m.find("unphysical (pz = 0.7, t = 0.6, o = 0)") != std::string::npos);
     CHECK(m.find("0.26 <= t <= 0.58") != std::string::npos);
     CHECK(m.find("|pz| <= 5/6") != std::string::npos);
+  }
+}
+
+TEST_CASE("the spin-1 domain is a DOMAIN, and the refusal names its edges") {
+  // The spin-1 counterpart of the J = 3/2 case above, and it exists because
+  // `--pzz-mode typed` (2026-09-06) made this branch reachable from the
+  // command line: `spin1_populations` used to throw "unphysical (pz, pzz):
+  // negative population", which named neither the offending m nor the P_zz
+  // this P_z admits.
+  //
+  // The three populations are fixed UNIQUELY by (1, pz, pzz), so positivity
+  // is exactly 3|pz| - 2 <= pzz <= 1.  Checked against the function itself
+  // on a 41 x 41 grid before it is quoted in a message.
+  int disagreements = 0;
+  for (int i = 0; i <= 40; ++i) {
+    const double pz = -1.0 + 0.05 * i;
+    for (int k = 0; k <= 40; ++k) {
+      const double pzz = -2.0 + 0.075 * k;
+      const bool inside = (pzz >= 3.0 * std::fabs(pz) - 2.0 - 1e-12) &&
+                          (pzz <= 1.0 + 1e-12);
+      bool threw = false;
+      try {
+        spin1_populations(pz, pzz);
+      } catch (const std::runtime_error&) {
+        threw = true;
+      }
+      if (threw == inside) ++disagreements;
+    }
+  }
+  CHECK(disagreements == 0);
+
+  // The edge is reached, not approached: at pzz = 3|pz| - 2 exactly, p(-1)
+  // is 0 and the fill is still built.
+  const std::array<double, 3> edge = spin1_populations(0.7, 0.1);
+  CHECK_CLOSE_AT(edge[2], 0.0, 0.0, 1e-15);
+  CHECK_CLOSE_AT(edge[0] + edge[1] + edge[2], 1.0, 0.0, 1e-15);
+
+  // ... and the message names the offending m, its population and the edge.
+  try {
+    spin1_populations(0.7, -0.5);
+    CHECK(false);
+  } catch (const std::runtime_error& e) {
+    const std::string m(e.what());
+    CHECK(m.find("unphysical (pz = 0.7, pzz = -0.5)") != std::string::npos);
+    CHECK(m.find("p(m = -1) = -0.1 < 0") != std::string::npos);
+    CHECK(m.find("0.1 <= pzz <= 1") != std::string::npos);
+    // and it says the J = 3/2 domain at the same pz is SMALLER, which is the
+    // trap `--pzz-mode typed` walks into at the CLI's own default fill
+    CHECK(m.find("0.26 <= T <= 0.58") != std::string::npos);
   }
 }

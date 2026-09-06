@@ -5,8 +5,10 @@
 // the run-share rule -- a share moves COUNTS, never CROSS SECTIONS
 // (evgen/tests/test_bookkeeping.py, test_run_share.py).
 
+#include <array>
 #include <cmath>
 #include <map>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -375,5 +377,117 @@ TEST_CASE("the spin share is not the programme share") {
   const std::map<std::string, double> quarter = plan.lumi_shares(0.25 * 1.0e3);
   for (const auto& kv : shares) {
     CHECK_CLOSE(quarter.at(kv.first), 0.25 * kv.second, 1e-12);
+  }
+}
+
+TEST_CASE("--pzz-mode: the ladder is the default bit for bit, typed honours "
+          "the typed alignment, and the domain is refused not clamped") {
+  // `HelicityFlipOptions::use_explicit_pzz` IS `--pzz-mode`: false =
+  // "ladder" (the shipped default), true = "typed" (2026-09-06, registry
+  // row 20 / OPEN_ITEMS_SOLUTIONS.md sec. 15.5 D13).  Priced in
+  // docs/open_items/run_2026-09-06/phase_A_numbers.md sec. A3.
+  const double pz = 0.7;
+
+  // (1) THE DEFAULT IS THE LADDER, BY CONSTRUCTION.  An explicitly
+  // default-constructed options object and no options object at all are the
+  // same call, and the fill it builds IS `populations_maxent` -- double for
+  // double, not to a tolerance, which is what "bit for bit" has to mean.
+  for (double j : {1.0, 1.5}) {
+    CAPTURE(j);
+    const RunPlan implicit = helicity_flip_plan(j, pz, kPe);
+    const RunPlan explicit_default =
+        helicity_flip_plan(j, pz, kPe, HelicityFlipOptions());
+    CHECK(implicit.categories()[0].populations ==
+          explicit_default.categories()[0].populations);
+    CHECK(implicit.categories()[0].populations == populations_maxent(j, pz));
+    CHECK(implicit.pzz_true() == spin_temperature_pzz(j, pz));
+  }
+
+  // (2) TYPED HONOURS WHAT WAS TYPED.  The fill is the closed-form solution
+  // at the requested alignment, and `pzz_true` -- what the estimators divide
+  // by -- comes back as that alignment rather than the ladder's.
+  {
+    HelicityFlipOptions typed;
+    typed.use_explicit_pzz = true;
+    typed.pzz = 0.5;
+    const RunPlan t32 = helicity_flip_plan(1.5, pz, kPe, typed);
+    const std::array<double, 4> want32 = spin32_populations(pz, 0.5, 0.0);
+    for (std::size_t i = 0; i < 4; ++i) {
+      CHECK(t32.categories()[0].populations[i] == want32[i]);
+    }
+    CHECK_CLOSE_AT(t32.pzz_true(), 0.5, 0.0, 1e-15);
+    // ... and it is a DIFFERENT fill from the ladder's, which at this P_z
+    // carries T = 0.4 with a non-zero octupole (SPIN32_FINITE_GAMMA.md 2.4).
+    CHECK(t32.categories()[0].populations !=
+          helicity_flip_plan(1.5, pz, kPe).categories()[0].populations);
+    CHECK_CLOSE_AT(spin_temperature_pzz(1.5, pz), 0.4, 0.0, 1e-12);
+
+    const RunPlan t1 = helicity_flip_plan(1.0, pz, kPe, typed);
+    const std::array<double, 3> want1 = spin1_populations(pz, 0.5);
+    for (std::size_t i = 0; i < 3; ++i) {
+      CHECK(t1.categories()[0].populations[i] == want1[i]);
+    }
+    CHECK_CLOSE_AT(t1.pzz_true(), 0.5, 0.0, 1e-15);
+  }
+
+  // (3) THE VECTOR MOMENT IS THE SAME IN BOTH FILLS.  This is why the two
+  // modes are a TENSOR choice and not a vector one: `--pz` is honoured by
+  // both, so A_par's divisor does not move.
+  for (double j : {1.0, 1.5}) {
+    CAPTURE(j);
+    HelicityFlipOptions typed;
+    typed.use_explicit_pzz = true;
+    typed.pzz = 0.5;   // inside BOTH domains at this P_z
+    CHECK_CLOSE_AT(helicity_flip_plan(j, pz, kPe, typed).pz_true(),
+                   helicity_flip_plan(j, pz, kPe).pz_true(), 0.0, 1e-15);
+    CHECK_CLOSE_AT(
+        helicity_flip_plan(j, pz, kPe, typed).categories()[0].vector_moment(),
+        pz, 0.0, 1e-12);
+  }
+
+  // (4) OUTSIDE THE DOMAIN IT IS REFUSED, NOT CLAMPED.  The CLI's own
+  // default fill (--pz 0.7 --pzz 0.6) is inside the spin-1 domain and
+  // outside the J = 3/2 one by 0.02 -- the edge is T = 0.58, where
+  // p(-1/2) = 0 -- so `--plan helicity-flip --pzz-mode typed` runs at J = 1
+  // and is refused at J = 3/2, with the edge named.
+  {
+    HelicityFlipOptions typed;
+    typed.use_explicit_pzz = true;
+    typed.pzz = 0.6;
+    CHECK_CLOSE_AT(helicity_flip_plan(1.0, pz, kPe, typed).pzz_true(), 0.6,
+                   0.0, 1e-15);
+    CHECK_THROWS_AS(helicity_flip_plan(1.5, pz, kPe, typed),
+                    std::runtime_error);
+    try {
+      helicity_flip_plan(1.5, pz, kPe, typed);
+      CHECK(false);
+    } catch (const std::runtime_error& e) {
+      CHECK(std::string(e.what()).find("0.26 <= t <= 0.58") !=
+            std::string::npos);
+    }
+    // the edge itself IS reachable: T = 0.58 builds, T just past it does not
+    HelicityFlipOptions edge = typed;
+    edge.pzz = 1.0 - 0.6 * pz;
+    CHECK_CLOSE_AT(helicity_flip_plan(1.5, pz, kPe, edge).pzz_true(), 0.58,
+                   0.0, 1e-12);
+    edge.pzz = 1.0 - 0.6 * pz + 1e-6;
+    CHECK_THROWS_AS(helicity_flip_plan(1.5, pz, kPe, edge),
+                    std::runtime_error);
+  }
+
+  // (5) THE MODE DOES NOT TOUCH THE LUMINOSITY PATTERN.  Both fills give the
+  // same two categories with the same shares, so nothing about the estimator
+  // pattern changes with the mode -- only the fill.
+  HelicityFlipOptions typed;
+  typed.use_explicit_pzz = true;
+  typed.pzz = 0.5;
+  const RunPlan lad = helicity_flip_plan(1.5, pz, kPe);
+  const RunPlan typ = helicity_flip_plan(1.5, pz, kPe, typed);
+  CHECK(lad.categories().size() == typ.categories().size());
+  for (std::size_t i = 0; i < lad.categories().size(); ++i) {
+    CHECK(lad.categories()[i].name == typ.categories()[i].name);
+    CHECK(lad.categories()[i].lam_e == typ.categories()[i].lam_e);
+    CHECK(lad.categories()[i].lumi_fraction ==
+          typ.categories()[i].lumi_fraction);
   }
 }

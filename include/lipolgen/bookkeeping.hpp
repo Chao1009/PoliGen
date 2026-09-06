@@ -134,6 +134,22 @@ class RunPlan {
 /// is the Python's `pzz=None`: SPIN-TEMPERATURE (max-entropy) populations for
 /// the requested pz -- the physical vector-fill model, which for j >= 1 drags
 /// a non-zero rank-2 moment along with it (recorded in `pzz_true`).
+///
+/// THIS FLAG IS `--pzz-mode` (CLI, since 2026-09-06; Python
+/// `make_plan(pzz_mode=...)`), and the two names are the SAME switch spelled
+/// once each: `use_explicit_pzz = false` IS `--pzz-mode ladder`, the DEFAULT
+/// and bit for bit the tree before the flag existed; `true` IS
+/// `--pzz-mode typed`, which honours the typed `--pzz` through
+/// `spin1_populations` / `spin32_populations`.  `make_plan` is the ONE place
+/// the string becomes this bool.  Both fills are legitimate; they are
+/// different physics, not a correction of one another, and the cost of
+/// choosing the second is measured in
+/// `docs/open_items/run_2026-09-06/phase_A_numbers.md` sec. A3.
+///
+/// `--pzz-mode typed` REFUSES a value outside the plan's domain rather than
+/// clamping to its edge: at J = 1 that domain is 3|P_z| - 2 <= P_zz <= 1 and
+/// at J = 3/2 it is the smaller 1.8|P_z| - 1 <= T <= 1 - 0.6|P_z|, and
+/// `spin1_populations` / `spin32_populations` name the edge they crossed.
 struct HelicityFlipOptions {
   bool use_explicit_pzz = false;
   /// P_zz in [-2, 1] for j = 1, the normalized T in [-1, 1] for j = 3/2.

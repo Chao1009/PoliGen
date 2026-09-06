@@ -32,7 +32,8 @@ that go through `KnobProvenance::meta_value()` — `pol_sf`, `rc_scope`,
 time in `python/bindings.cpp` — the CLI's `KNOB PROVENANCE` banner block
 (`cli.knob_provenance_lines`), and `python/tests/test_knob_provenance.py`,
 which rebuilds the (spec × knob) matrix — 12 (isotope, channel, plan) specs
-× 71 knob variants = 547 cells, not the full (channel × plan) product; see
+× 76 knob variants = 592 cells (re-measured 2026-09-06), not the full
+(channel × plan) product; see
 `USAGE.md` §7c — and asserts the table against
 the **output hash**. **A knob added without a row fails that test.** Do not add
 a per-knob reach sentence to the banner or a bare per-knob key to the `meta`:
@@ -46,8 +47,11 @@ the Miller branch, `rc_qe_tensor_scale` without the quasi-elastic tail, every
 rc tail sub-knob on a tagged channel. LABEL when it names a *backend, an axis
 or a member of a family that a channel-, plan- or set-scan sets uniformly
 across runs*: refusing one cell of such a scan costs more than it buys —
-`--pol-sf` on coherent and under the unpolarised-beam plans, `--pzz` under
-`helicity-flip`, `--pom-set` off the coherent channel. A rule that depends on
+`--pol-sf` on coherent and under the unpolarised-beam plans, `--pzz-mode`
+under the three tensor plans, `--pom-set` off the coherent channel. (`--pzz`
+under `helicity-flip` was the second example until 2026-09-06, when
+`--pzz-mode typed` made that flag reachable there and the label moved onto the
+mode.) A rule that depends on
 the RUN PLAN can only be labelled: `validate()` has no plan (`rc_scope` under a
 θ_S = 0 fill).
 
@@ -264,6 +268,17 @@ knobs recorded nowhere at all
   terms (term (1) is bit-identical, because it carries a b₁ᵈ table with no R in
   it); on the gate the same swap is +2.7 % on G3b.  Author decision, recorded
   in `docs/OPEN_ITEMS_SOLUTIONS.md` §10 and stated in `docs/USAGE.md` §2a.
+  **Since 2026-09-06 the "one R in both" option EXISTS as an opt-in and the
+  defaults still do not agree by design**: `--r-source {unset, sigma-lt,
+  r1998}` (`PipelineConfig::r_source`) threads ONE R object into
+  `Li6ConvolutionOptions::r_func` and `InclusiveKernel::Options::r_func`
+  together; `unset`, the default, does not enter that branch, so nothing
+  moved.  It is NOT a free repair: at y = 0.5, Q² = 2.5 sharing `r1998` moves
+  K/D_φ by −3.8357 % / +26.3988 % / +3.3518 % at x = 0.05 / 0.10 / 0.30
+  against the numerator-only −5.5148 % / +24.6099 % / +2.6629 % — larger at
+  x = 0.10 — and the shared shift is y-dependent where the numerator-only one
+  is not.  Priced in
+  `docs/open_items/run_2026-09-06/phase_A_numbers.md` §A1.
   The same file records the quadrature choices: the inner k integral is
   **Simpson**, not `numerics.hpp::trapezoid`, because b₁ at small x is a
   three-decade cancellation of the exact ∫δ_T f dy = 0 and the trapezoid's
@@ -442,11 +457,25 @@ knobs recorded nowhere at all
   (a) `RC_DELTA_HIGH_X = 0.015` at `RC_X_HIGH = 0.16` is a quoted
   **uncertainty** (JLab E12-13-011 / PR12-13-011; x = 0.16 is that
   experiment's own lower kinematic edge, arXiv:2506.04506 p. 8 — the proposal
-  itself is unpublished, so cite it by page or drop the anchor).
+  itself is unpublished, so cite it by page or drop the anchor). **There is
+  no alternative value to band it against and the record names none**
+  (checked 2026-09-06, `docs/open_items/run_2026-09-06/phase_A_numbers.md`
+  §A2): "cite it by page or drop it" is an *action*, not a second reading.
+  It is unbanded because nothing exists to band it against, not because it is
+  better known than (b).
   (b) `RC_DELTA_LOW_X = 0.30` at `RC_X_LOW = 0.01` is the **size of a
   correction this generator does not apply**, taken as a 1σ band — the
   conservative end of Gakh–Shekhovtsova's (hep-ph/0403262, **zero INSPIRE
-  citations**) 10–30 %. It is NOT a measured residual.
+  citations**) 10–30 %. It is NOT a measured residual. And it is that
+  paper's panel value **carried upward in x**, not read at 0.01: the one
+  panel its sentence covers spans x = 0.00226–0.00966 at Q² = 0.1, and
+  **0.113 is the value it actually reads at x = 0.00966, the x nearest this
+  anchor** (0.266 at its own bottom), so the shipped 0.30 errs **wide by
+  ×2.65** — the safe direction for a half-width, the wrong one for a quoted
+  precision. Both alternatives are **priced, not adopted** (registry row 17,
+  `docs/open_items/run_2026-09-06/phase_A_numbers.md` §A2): half-widths on
+  A_zz at x = 0.01, Q² = 5 of **1.358472e−04 / 1.204512e−04 / 5.116913e−05**,
+  unmoved at x ≥ 0.16, and no clipped-event fraction moves at all.
   (c) `RC_DELTA_LOW_X_OPTIMISTIC = 0.19` IS a measured residual: HERMES's own
   fractional RC systematic at its lowest-x bin (2×10⁻³ on A_zz = −1.06×10⁻²,
   hep-ex/0506018 Table II). **Run 0.19 and 0.30 both; never quote one row

@@ -61,7 +61,7 @@ from .export import (inclusive_dict, tagged_dict, hfs_sample,  # noqa: F401
 __all__ = [n for n in dir(_lipolgen) if not n.startswith("_")] + [
     "export", "inclusive_dict", "tagged_dict", "hfs_sample", "write_hfs_npz",
     "write_columns_npz", "CHANNELS", "PLANS", "TRITON_SFS", "FSI", "RC",
-    "B1_MODELS", "B1_UNPOL", "UNPOL_SF", "POL_SF",
+    "B1_MODELS", "B1_UNPOL", "R_SOURCE", "UNPOL_SF", "POL_SF", "PZZ_MODES",
     "RC_C0_SHAPES", "RC_TAIL_MODELS",
     "make_config", "make_plan", "make_pipeline", "run", "__version__",
 ]
@@ -200,6 +200,44 @@ B1_UNPOL = {
     "ct18nlo": _lipolgen.B1UnpolSource.Ct18Nlo,
 }
 
+#: `--r-source` -- the ONE R = sigma_L/sigma_T threaded into BOTH halves of
+#: the 6Li tensor weight.  The shipped observable is a RATIO:
+#: A_zz = -(2/3) K/D_phi with K = b1 + (1-y)/(x y^2) b2 and
+#: D_phi = F1 + (1-y)/(x y^2) F2 (`asymmetries.azz`).  Its numerator's R is
+#: `Li6ConvolutionOptions.r_func` and its denominator's is the inclusive
+#: kernel's own `Options.r_func`; both default to null, which `resolve_r`
+#: turns into `r_sigma_lt`, so they agree today by coincidence of two
+#: independent defaults and the only way to move one was to move it ALONE.
+#: This selector is registry option (iii) of `STATUS.md` row 3: whichever R
+#: is named, `default_inclusive_kernel` puts the SAME object in both.
+#:
+#: "unset" is the DEFAULT and installs NOTHING -- both hooks stay null and
+#: the run is bit for bit the pre-flag tree, by construction.  "sigma-lt"
+#: installs one `r_sigma_lt` in both and is MEASURED bit-identical to
+#: "unset" (sigma_pb, all three per-category cross sections and every
+#: generated column; and b1, K/D_phi, A_zz and the cos 2phi amplitude at the
+#: six standard points x = 0.05/0.10/0.30 x Q2 = 2.5/5, each at y = 0.1, 0.5
+#: and 0.9): it is the wiring's own test, not a physics variation, and
+#: `knob_provenance` labels it `not-read` for exactly that reason.  "r1998" installs the A = 2 gate's R in both.
+#:
+#: MEASURED at y = 0.5, Q2 = 2.5 (docs/open_items/run_2026-09-06/
+#: phase_A_numbers.md sec. A1), against "unset": the tensor weight K/D_phi --
+#: and A_zz, which is -(2/3) of it -- moves -3.84 % / +26.40 % / +3.35 % at
+#: x = 0.05 / 0.10 / 0.30, and the cos 2phi amplitude, whose numerator
+#: carries no R at all, moves -8.33 % / -6.73 % / -3.14 % there.  Unlike
+#: `--b1-unpol` this one moves the UNPOLARISED rate too (sigma_pb -0.6847 %
+#: on a 2000-event 6Li run at x_max 0.95), because the kernel's `r_func`
+#: reaches F1, F_L, D(y) and `ToyG1`.
+#:
+#: Read only by "li6-convolution"; `validate()` refuses it on the other two
+#: models rather than let `meta["r_source"]` record an R that never touched
+#: the rate.
+R_SOURCE = {
+    "unset": _lipolgen.RSource.Unset,
+    "sigma-lt": _lipolgen.RSource.SigmaLt,
+    "r1998": _lipolgen.RSource.R1998,
+}
+
 #: `--unpol-sf` -- which UNPOLARISED structure-function backend supplies F2,
 #: and through it F1, F_L and the whole unpolarised rate, to EVERY kernel a
 #: `Pipeline` builds: the inclusive kernel, the coherent channel that rides
@@ -327,6 +365,35 @@ RC_TAIL_MODELS = {
 PLANS = ("tensor-thirds", "azz", "helicity-flip", "apar", "transverse-tensor",
          "cos2phi", "tensor-flip", "flip")
 
+#: `--pzz-mode` -- WHICH FILL the `helicity-flip` / `apar` plan builds, and
+#: the only knob in this module that names a branch of a plan FACTORY rather
+#: than a field of `PipelineConfig`.
+#:
+#:   "ladder"  the DEFAULT.  `helicity_flip_plan` leaves
+#:             `HelicityFlipOptions.use_explicit_pzz` false and takes the
+#:             SPIN-TEMPERATURE (max-entropy) populations at `pz`, so `pzz`
+#:             is not read at all and the fill carries the rank-2 moment a
+#:             pure vector fill of J >= 1 necessarily drags along
+#:             (`spin_temperature_pzz`).  Bit for bit the tree before this
+#:             switch existed, by construction: it is the branch that was
+#:             already there.
+#:   "typed"   `use_explicit_pzz = true`: the fill is
+#:             `spin1_populations(pz, pzz)` at J = 1 and
+#:             `spin32_populations(pz, pzz)` at J = 3/2, i.e. the typed
+#:             alignment, with the octupole R_3 left at 0.  A value outside
+#:             the plan's domain is REFUSED with the edge named, never
+#:             clamped: 3|P_z| - 2 <= P_zz <= 1 at J = 1 and the smaller
+#:             1.8|P_z| - 1 <= T <= 1 - 0.6|P_z| at J = 3/2, so at P_z = 0.7
+#:             the typed T = 0.6 of the CLI default is outside the J = 3/2
+#:             domain by 0.02 (the edge is T = 0.58, where p(-1/2) = 0).
+#:
+#: The two fills are DIFFERENT PHYSICS, not a correction of one another, and
+#: the cost of choosing the second is measured at the standard configuration
+#: in `docs/open_items/run_2026-09-06/phase_A_numbers.md` sec. A3.  The three
+#: tensor plans have no ladder branch, so the mode leaves their fills exactly
+#: as they are and `knob_provenance` labels it `not-read` there.
+PZZ_MODES = ("ladder", "typed")
+
 #: Ion spin J by species -- the spin the run plan has to be built for.
 _ION_SPIN = {"p": 0.5, "d": 1.0, "3He": 0.5, "6Li": 1.0, "7Li": 1.5}
 
@@ -354,6 +421,7 @@ def make_config(isotope="6Li", config=1, channel="inclusive", events=0,
                 rc_tail_model=None,
                 b1_model=None, b1_band_scale=None,
                 b1_alpha_d_dwave_weight=None, b1_unpol=None,
+                r_source=None,
                 unpol_sf=None, pol_sf=None, coherent_t_max=None):
     """A `PipelineConfig` from plain values (the CLI's own constructor).
 
@@ -398,6 +466,12 @@ def make_config(isotope="6Li", config=1, channel="inclusive", events=0,
     shape knob on the alpha-d orbital terms (2d) + (2a) together, read only by
     "li6-convolution".  A knob that the chosen backend does not read is
     REFUSED at 1.0-away values, for the same provenance reason.
+    `r_source` is a key of `R_SOURCE` ("unset", the default, "sigma-lt" or
+    "r1998"): the ONE R = sigma_L/sigma_T threaded into BOTH the alpha-d
+    convolution's own F1 and the kernel's, so the tensor weight's numerator
+    and denominator are the same choice.  Read by
+    `b1_model="li6-convolution"` only.
+
     `b1_unpol` is a key of `B1_UNPOL` ("toy", the default, "mstw" or
     "ct18nlo") or a `B1UnpolSource` directly: the UNPOLARISED backend the
     "li6-convolution" b1 folds its own F1 against.  "mstw" is CDKS's own
@@ -556,6 +630,16 @@ def make_config(isotope="6Li", config=1, channel="inclusive", events=0,
         # object.  It raises here, naming the missing tier, rather than
         # letting `validate()` report a named-but-empty slot later.
         _lipolgen.set_b1_unpol(cfg, b1_unpol)
+    if r_source is not None:
+        if isinstance(r_source, str):
+            if r_source not in R_SOURCE:
+                raise ValueError("unknown r_source %r; know %s"
+                                 % (r_source, ", ".join(sorted(R_SOURCE))))
+            r_source = R_SOURCE[r_source]
+        # A PLAIN ASSIGNMENT, unlike the three selectors around it: both R
+        # functions live in the CORE (`sf.hpp`), so there is no optional tier
+        # to build and no provenance/realisation pair to keep together.
+        cfg.r_source = r_source
     if unpol_sf is not None:
         if isinstance(unpol_sf, str):
             if unpol_sf not in UNPOL_SF:
@@ -595,13 +679,22 @@ def make_config(isotope="6Li", config=1, channel="inclusive", events=0,
 
 
 def make_plan(name="tensor-thirds", j=1.0, pz=0.7, pzz=0.6, pe=0.7,
-              theta_s=0.0, phi_s=None, rel_lumi_offset=0.0, share_plus=0.5):
+              theta_s=0.0, phi_s=None, rel_lumi_offset=0.0, share_plus=0.5,
+              pzz_mode="ladder"):
     """A `RunPlan` from a name of `PLANS`.
 
     tensor-thirds / azz          `tensor_thirds_plan` -- spin 1 only
     helicity-flip / apar         `helicity_flip_plan` at spin `j`
     transverse-tensor / cos2phi  `transverse_tensor_plan` -- spin 1 only
     tensor-flip / flip           `tensor_flip_plan` -- spin 1 only
+
+    `pzz_mode` is a value of `PZZ_MODES` and is READ BY `helicity-flip` /
+    `apar` ONLY.  "ladder" (the DEFAULT) is the max-entropy fill at `pz` with
+    `pzz` not read at all -- bit for bit what this function did before the
+    mode existed; "typed" honours `pzz` through `spin1_populations` /
+    `spin32_populations`, refusing a value outside the plan's domain with the
+    edge named rather than clamping to it.  THIS IS THE ONE PLACE the mode
+    string becomes `HelicityFlipOptions.use_explicit_pzz`.
 
     THREE OF THE FOUR ARE SPIN-1 PATTERNS AND ARE NOW REFUSED AT ANY OTHER J.
     `tensor_thirds_plan`, `transverse_tensor_plan` and `tensor_flip_plan`
@@ -614,6 +707,9 @@ def make_plan(name="tensor-thirds", j=1.0, pz=0.7, pzz=0.6, pe=0.7,
     the two that could not work (`phase_D_li7_rank2.md` sec. 1.5, defect F2).
     """
     name = name.lower()
+    if pzz_mode not in PZZ_MODES:
+        raise ValueError("unknown pzz_mode %r; know %s"
+                         % (pzz_mode, ", ".join(PZZ_MODES)))
     if name in ("tensor-thirds", "azz", "transverse-tensor", "cos2phi",
                 "tensor-flip", "flip") and abs(j - 1.0) > 1e-12:
         raise ValueError(
@@ -641,6 +737,13 @@ def make_plan(name="tensor-thirds", j=1.0, pz=0.7, pzz=0.6, pe=0.7,
         opt.theta_s = theta_s
         opt.phi_s = 0.0 if phi_s is None else phi_s
         opt.rel_lumi_offset = rel_lumi_offset
+        # THE ONE PLACE `--pzz-mode` becomes a fill.  "ladder" leaves
+        # `use_explicit_pzz` false, which is the branch that was always here,
+        # so the default is bit for bit by construction and not by an
+        # argument about two code paths agreeing.
+        if pzz_mode == "typed":
+            opt.use_explicit_pzz = True
+            opt.pzz = pzz
         return _lipolgen.helicity_flip_plan(j, pz, pe, opt)
     if name in ("transverse-tensor", "cos2phi"):
         return _lipolgen.transverse_tensor_plan(

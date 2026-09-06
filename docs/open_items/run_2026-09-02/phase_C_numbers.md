@@ -167,6 +167,13 @@ where it is true, and says why in place.
 > deliberately **not** republished by task B3 — the finding is recorded with its
 > cause so that regenerating it is a deliberate step.
 > `../run_2026-09-03/phase_B_numbers.md` §B3.2.
+>
+> **REPUBLISHED BESIDE THE ORIGINAL ON 2026-09-06 (registry row 6 / §B11).**
+> The table above **stays**, labelled as what it was computed with; the
+> recomputation is the separate table below. Nothing was deleted and no
+> decision was taken: option (i) "leave with the note" and option (ii)
+> "republish" both remain open, and (ii) is now costed at zero because the
+> corrected column exists beside the original.
 
 The `x = 0.03` row is new (it is where the `Ho` edge's sign change happens) and
 carries no `A_zz(Born)`, so it carries no `ΔA_zz` either. `σ^q_U` itself is
@@ -224,6 +231,105 @@ Three things this table settles:
    the tail's own factor-4 s-/p-peak deficit at fixed-target kinematics (§8.1a's
    second box) does **not** change that ordering here.
 
+### 8.1c-corr `A_zz(Born)` and `ΔA_zz` recomputed with the SHIPPED kernel — 2026-09-06
+
+**A dated correction, not a replacement.** §8.1c above is left exactly as it
+was published on 2026-09-02/04. This table is the same eight `(x, Q²)` points
+and the same two C0 edges with the **shipped** ⁶Li b₁ —
+`default_inclusive_kernel`'s `Li6B1(MillerB1)`, i.e. `InclusiveKernel::tables`'
+own `b1`/`b2` — in place of the `azz(toy_b1(x, q2, f1, B1Mode::Digitized), …)`
+the original column reproduces. Only the two rightmost columns of §8.1c can
+move: `(1/6)σ^el_T/σ^el_U`, `σ^q_U/σ^el_U` and `w_tail` carry no `A_zz` and are
+unchanged (re-measured, identical to every printed digit).
+
+| x | Q² | edge | `A_zz(Born)` **shipped ⁶Li b₁** | `ΔA_zz` **shipped ⁶Li b₁** | `A_zz(Born)` as published | `ΔA_zz` as published |
+|---|---|---|---|---|---|---|
+| 0.01 | 2 | ho | **−5.316313e−04** | **−2.355530e−08** | −1.7299e−03 | +8.3816e−08 |
+| 0.01 | 2 | vmc-ft | **−5.316313e−04** | **−2.922677e−08** | −1.7299e−03 | +7.9026e−08 |
+| 0.01 | 5 | ho | **−4.528242e−04** | **−1.769797e−07** | −1.4735e−03 | +3.5167e−07 |
+| 0.01 | 5 | vmc-ft | **−4.528242e−04** | **−2.100985e−07** | −1.4735e−03 | +3.2291e−07 |
+| 0.01 | 10 | ho | **−4.012087e−04** | **−8.419210e−07** | −1.3055e−03 | +1.0939e−06 |
+| 0.01 | 10 | vmc-ft | **−4.012087e−04** | **−9.796923e−07** | −1.3055e−03 | +9.7195e−07 |
+| 0.10 | 2 | ho | **−1.589729e−03** | +3.643984e−10 | −5.1730e−03 | +1.1451e−09 |
+| 0.10 | 2 | vmc-ft | **−1.589729e−03** | +3.506747e−10 | −5.1730e−03 | +1.1531e−09 |
+| 0.10 | 5 | ho | **−1.528923e−03** | +2.127452e−09 | −4.9751e−03 | +6.6751e−09 |
+| 0.10 | 5 | vmc-ft | **−1.528923e−03** | +2.042099e−09 | −4.9751e−03 | +6.7163e−09 |
+| 0.10 | 10 | ho | **−1.482347e−03** | +8.116142e−09 | −4.8235e−03 | +2.5436e−08 |
+| 0.10 | 10 | vmc-ft | **−1.482347e−03** | +7.774146e−09 | −4.8235e−03 | +2.5575e−08 |
+| 0.30 | 5 | ho | **−4.871661e−05** | +5.130156e−12 | −1.5852e−04 | +1.2665e−11 |
+| 0.30 | 5 | vmc-ft | **−4.871661e−05** | +9.784578e−12 | −1.5852e−04 | +1.7334e−11 |
+| 0.30 | 10 | ho | **−4.852497e−05** | +2.059353e−11 | −1.5790e−04 | +5.0374e−11 |
+| 0.30 | 10 | vmc-ft | **−4.852497e−05** | +3.938178e−11 | −1.5790e−04 | +6.9223e−11 |
+
+**What the correction is, exactly.** The ratio published ÷ shipped is
+**3.253983147 at every one of the eight points**, and it is not a fit: it is
+`1 / (LI6_B1_RANK2_TRANSFER × LI6_B1_PER_NUCLEON)` = `1 / (0.921947 × 2/6)`,
+the two factors `Li6B1` applies to the deuteron table and `toy_b1` does not.
+`A_zz` is **exactly linear in b₁** here because the shipped `b2` is the
+Callan–Gross `2·x·b₁` — measured, `tables().b2 == 2*x*tables().b1` as doubles
+at all three x — so the whole column divides by one constant. `ΔA_zz` does
+**not**, because `ΔA_zz = [2 r_T − A_zz r_U] / (1 + r_U)` carries an
+`A_zz`-independent term as well.
+
+**Three readings that change, and two that do not.**
+
+1. **The sign flip at x = 0.01 is not one row, it is all six.** The 2026-09-04
+   note recorded the flip at `(0.01, 5)` `ho`. Measured here, `ΔA_zz` changes
+   sign at **x = 0.01 on both C0 edges at every Q² in the table** (+8.3816e−08
+   → −2.355530e−08, +3.5167e−07 → −1.769797e−07, +1.0939e−06 → −8.419210e−07
+   on `ho`; the same three on `vmc-ft`). Where `2 r_T` and `−A_zz r_U` are
+   comparable, shrinking `A_zz` by 3.25 tips the sum.
+2. **At x = 0.10 and 0.30 the sign survives and the magnitude falls, but not
+   by one factor**: ×0.318 / ×0.319 / ×0.319 at x = 0.10 (Q² = 2/5/10, `ho`)
+   and ×0.405 / ×0.409 at x = 0.30 — because only part of `ΔA_zz` carries
+   `A_zz`.
+3. **The C0 SHAPE band on `ΔA_zz` widens rather than shrinks** at x = 0.01,
+   Q² = 5: `ho` → `vmc-ft` was +3.516736e−07 → +3.229021e−07 (spread
+   **2.877e−08**) and is now −1.769797e−07 → −2.100985e−07 (spread
+   **3.312e−08**, +15 %) — the two edges have different `r_U`, so the
+   `−A_zz r_U` term does not cancel between them.
+4. **Unchanged: item 1's sign-change-in-x conclusion and item 2's
+   `σ^q_U/σ^el_U` ladder**, which contain no `A_zz` at all.
+5. **Unchanged: item 3's ordering.** The band still leads the whole tail at
+   x = 0.01, Q² = 5 — 1.358472e−04 ÷ 1.769797e−07 = **×767.6**, the 768
+   already recorded there.
+
+**Reproduction of the ORIGINAL column, stated with its exceptions.** Every
+`ho` row of §8.1c reproduces here to every printed digit, `A_zz` and `ΔA_zz`
+alike, as do §8.2's five rows in full. **Three of the eight `vmc-ft` `ΔA_zz`
+entries do not**: +7.9026e−08 / +3.2291e−07 / +9.7195e−07 / +2.5575e−08 as
+published against **+7.902804e−08 / +3.229021e−07 / +9.720112e−07 /
++2.557553e−08** re-measured — a **2.4 × 10⁻⁵ to 6.3 × 10⁻⁵ relative**
+difference in the fifth significant figure at `(0.01, 2)`, `(0.01, 5)`,
+`(0.01, 10)` and `(0.10, 10)` (the other four `vmc-ft` entries reproduce).
+The re-measurement is deterministic in this tree — two separate processes give
+bit-identical values, and an explicit `--rc-c0-shape ho` is bit-identical to
+the default — so this is a difference against the 2026-09-04 build and **its
+cause is not established**. It is recorded rather than smoothed over; it is
+four to five orders of magnitude below every conclusion drawn from the column,
+and the `ho` edge, which carries all of them, is exact.
+
+**Recipe** (from `env.sh`, nothing written):
+
+```python
+import lipolgen as lg
+def pipe(**c0):
+    cfg = lg.make_config(isotope="6Li", channel="inclusive", config=1,
+                         events=2000, seed=99, rc="tensor-band", **c0)
+    return lg.Pipeline(cfg, lg.tensor_thirds_plan(0.0, 0.6))
+base = pipe(); k, s = base.dis_sampler.kernel, base.dis_sampler.s
+for x, q2 in ((0.01, 2.0), (0.01, 5.0), (0.01, 10.0), (0.10, 2.0),
+              (0.10, 5.0), (0.10, 10.0), (0.30, 5.0), (0.30, 10.0)):
+    y = q2 / (x * s); t = k.tables(x, q2)
+    azz6 = lg.azz(t.b1, t.f1, t.f2, x, y, t.b2, 0.0)              # SHIPPED 6Li b1
+    azzd = lg.azz(lg.toy_b1(x, q2, t.f1, lg.B1Mode.Digitized),
+                  t.f1, t.f2, x, y, None, 0.0)                    # the published column
+    for p in (base, pipe(rc_c0_shape="vmc-ft")):
+        m = p.rc_model
+        rU = m.tail_ratio_at(x, q2, 0.0); rT = m.tail_ratio_at(x, q2, 1.0) - rU
+        print(x, q2, azz6, azzd, (azz6 + 2*rT)/(1 + rU) - azz6)
+```
+
 ---
 
 ## 8.2 The band — `w_hi − 1` at `P_zz = +1`, `θ_S = 0`, `Q² = 5 GeV²`
@@ -239,11 +345,44 @@ draft omitted.
 | 0.160 | 0.01500 | −4.1666e−03 | −2.0876e−03 | **−3.1315e−05** | +3.1315e−05 |
 | 0.300 | 0.01500 | −1.5852e−04 | −7.9268e−05 | **−1.1890e−06** | +1.1890e−06 |
 
-> **⚠ The `A_zz` column here carries the same ×3.253983 error as §8.1c's** (deuteron b₁ instead of ⁶Li b₁), so `τ`, `w_hi − 1` and `w_lo − 1` are all high by that factor. Correct ⁶Li `A_zz` at Q² = 5: −4.528242e−04 at x = 0.01, −1.528923e−03 at x = 0.10, −4.871661e−05 at x = 0.30. Not republished here — `../run_2026-09-03/phase_B_numbers.md` §B3.2.
+> **⚠ The `A_zz` column here carries the same ×3.253983 error as §8.1c's** (deuteron b₁ instead of ⁶Li b₁), so `τ`, `w_hi − 1` and `w_lo − 1` are all high by that factor. Correct ⁶Li `A_zz` at Q² = 5: −4.528242e−04 at x = 0.01, −1.528923e−03 at x = 0.10, −4.871661e−05 at x = 0.30. Not republished here — `../run_2026-09-03/phase_B_numbers.md` §B3.2. **REPUBLISHED BESIDE IT ON 2026-09-06 — §8.2-corr immediately below; the table above stays as published.**
 `w_lo + w_hi == 2.0` bit-for-bit on every event (T4a). The band peaks near
 `x = 0.063` — not at the lowest x — because `δ(x)` is still rising there while
 `|A_zz|` has not yet fallen: **the largest RC systematic on `A_zz` sits in the
 middle of the low-x range, not at its edge.**
+
+### 8.2-corr The same band with the SHIPPED ⁶Li b₁ — 2026-09-06
+
+Same configuration, same `δ(x)`, same `τ` definition; `A_zz` from
+`InclusiveKernel::tables` (`Li6B1(MillerB1)`) instead of the deuteron table.
+**`δ(x)` is `rc_delta` alone and does not move.** The last column is the band
+**half-width on `A_zz`**, `δ(x)·|A_zz|`, which is the quantity every RC-budget
+comparison in this tree uses — a *different* number from `w_hi − 1` (`τ` is
+≈ `A_zz`/2), and the one registry rows 6, 17 and B6 all quote.
+
+| x | δ(x) | `A_zz` | `τ` | `w_hi − 1` | `w_lo − 1` | half-width δ·\|A_zz\| |
+|---|---|---|---|---|---|---|
+| 0.010 | 0.30000 | **−4.528242e−04** | **−2.264634e−04** | **−6.793901e−05** | +6.793901e−05 | 1.358472e−04 |
+| 0.063 | 0.11081 | **−1.316774e−03** | **−6.588209e−04** | **−7.300143e−05** | +7.300143e−05 | **1.459067e−04** |
+| 0.100 | 0.06331 | **−1.528923e−03** | **−7.650466e−04** | **−4.843711e−05** | +4.843711e−05 | 9.680016e−05 |
+| 0.160 | 0.01500 | **−1.280460e−03** | **−6.406404e−04** | **−9.609605e−06** | +9.609605e−06 | 1.920691e−05 |
+| 0.300 | 0.01500 | **−4.871661e−05** | **−2.435890e−05** | **−3.653835e−07** | +3.653835e−07 | 7.307492e−07 |
+
+**The reading survives the correction, measured.** The band still **peaks at
+x = 0.063**: |w_hi − 1| there is ×1.0745 its x = 0.010 value (×1.0756 on the
+published column), and the half-width ×1.0740. `w_lo + w_hi == 2.0` is
+unaffected — it is an identity of the construction, not of `A_zz`. Every row
+of the published table above reproduces to every printed digit, so the
+correction is a clean division and not a re-measurement: `A_zz` is exactly
+`published ÷ 3.253983147` at all five x, while `τ` and `w_hi − 1` are only
+nearly so (τ's denominator is non-linear).
+
+**Where else these five rows are quoted, and what each site now says.**
+`OPEN_ITEMS_SOLUTIONS.md` §9 carries the same table and is corrected beside its
+original at the same date; the x = 0.010 half-width **1.358472e−04** is the one
+`../run_2026-09-03/phase_B_numbers.md` §B3.2/§B6 and
+`../run_2026-09-06/phase_A_numbers.md` §A2 already use, so this table is now
+consistent with them rather than 3.25× above them.
 
 ---
 
@@ -267,8 +406,74 @@ middle of the low-x range, not at its edge.**
 | δ(A_zz) at `x = 0.01, Q² = 5` from `qe_suppression = 0` vs `1` | `ΔA_zz` **+1.83644e−07 → +3.51674e−07**, spread **1.680e−07** |
 | δ(A_zz) at `x = 0.01, Q² = 5` from `qe_kf_gev = 0` (S = 1) vs `0.169` | `ΔA_zz` **+5.39491e−07 → +3.51674e−07**, spread **1.878e−07** — the Pauli suppression is a *larger* knob than `qe_suppression = 0 → 1` at this x, which is why it is the default rather than a band edge |
 
+### 8.3-corr The six `A_zz`-carrying rows of that table, recomputed — 2026-09-06
+
+The five `ΔA_zz` rows and the `δ_low` row above all carry the ×3.253983
+deuteron-b₁ `A_zz` (§8.1c-corr). They are **left as published** and recomputed
+here with the shipped ⁶Li b₁, same point (x = 0.01, Q² = 5), same knob values,
+same `ho` C0 edge unless the row names another.
+
+| row | as published | **with the shipped ⁶Li b₁** | spread, published → corrected |
+|---|---|---|---|
+| band, `δ_low = 0.19` vs `0.30` (half-widths on `A_zz`) | 2.7996e−04 vs 4.4204e−04 | **8.603659e−05 vs 1.358472e−04** | 1.6208e−04 → **4.981061e−05** |
+| `fq_scale` 0 vs 2 | +7.54154e−07 → −4.9925e−08 | **+2.255019e−07 → −5.785810e−07** | 8.041e−07 → **8.041e−07** (unchanged) |
+| `tail_tensor_scale` 0.5 vs 2 | +3.59193e−07 → +3.23118e−07 | **−1.694451e−07 → −2.055947e−07** | 3.61e−08 → **3.615e−08** |
+| `qe_suppression` 0 vs 1 | +1.83644e−07 → +3.51674e−07 | **−2.286503e−07 → −1.769797e−07** | 1.680e−07 → **5.167e−08** |
+| `qe_kf_gev` 0 (S = 1) vs 0.169 | +5.39491e−07 → +3.51674e−07 | **−1.192240e−07 → −1.769797e−07** | 1.878e−07 → **5.776e−08** |
+| `c0_shape` `ho` vs `vmc-ft` (§9's row) | +3.51683e−07 → +3.22911e−07 *(§9 as printed; this tree re-measures the same two settings at +3.516736e−07 → +3.229021e−07 — see the exception note)* | **−1.769797e−07 → −2.100985e−07** | 2.877e−08 → **3.312e−08** |
+
+**Five of the six "as published" pairs reproduce exactly** from this tree with
+the deuteron table in place of the kernel's b₁, to every digit they print —
+`fq_scale`, `tail_tensor_scale`, `qe_suppression`, `qe_kf_gev` and both
+half-widths of the `δ_low` row (0.19 × 1.473482e−03 and 0.30 × 1.473482e−03).
+**The `c0_shape` pair does not**: §9 prints +3.51683e−07 → +3.22911e−07 where
+the same two settings here give +3.516736e−07 → +3.229021e−07 — 2.7 × 10⁻⁵ and
+2.9 × 10⁻⁵ relative away, in the fifth significant figure — while its
+**spread**, 2.8772e−08, reproduces exactly. It is the same `vmc-ft` exception
+§8.1c-corr records, and its cause is likewise not established; the `ho` value
+in that published pair also disagrees with the four other rows' own `ho` value
+inside §9, which is what makes it a property of that measurement rather than
+of the edge.
+
+**Which spreads move, and why — the rule is one line.** A knob that leaves
+`r_U` alone has an `A_zz`-independent spread (`Δ(ΔA_zz) = 2 Δr_T/(1 + r_U)`);
+a knob that moves `r_U` does not, because the `−A_zz r_U` term then differs
+between its two settings. So `fq_scale` (which touches only `F_q`, i.e. `r_T`)
+is **unchanged to five digits** (8.040793e−07 vs 8.040830e−07), `tail_tensor_scale` moves by +0.21 % — the third significant figure (3.607508e−08 → 3.614951e−08),
+and the three knobs that scale the quasi-elastic tail or the elastic C0 shape —
+`qe_suppression`, `qe_kf_gev`, `c0_shape` — move by ×0.31 / ×0.31 / ×1.15.
+
+**What this does to the ORDER of the RC budget, which is the reading the table
+exists for.** Within §8.3's own four `ΔA_zz` knobs the order is **unchanged**:
+`fq_scale` ≫ `qe_kf_gev` > `qe_suppression` > `tail_tensor_scale`. It changes
+once §9's two extra rows are included, and it changes for a bookkeeping reason
+worth naming: §9 already carried `qe_tensor_scale` **corrected** (1.162e−07,
+measured on the ⁶Li b₁ in 2026-09-04's task B3) beside four rows that were
+not, so its published ladder compared one corrected number against four
+uncorrected ones. All six on the same footing:
+
+**`fq_scale` 8.041e−07 ≫ `qe_tensor_scale` 1.162e−07 > `qe_kf_gev` 5.776e−08 >
+`qe_suppression` 5.167e−08 > `tail_tensor_scale` 3.615e−08 > `c0_shape`
+3.312e−08** — `qe_tensor_scale` moves from **fourth to second**, not because it
+grew but because the three below it shrank by ×0.31. `c0_shape` stays the
+smallest of the six, which is what §9's own sentence claims.
+
+**And the band still dominates all of them** — the ordering the whole section
+turns on. The published row's *"by a factor 300 over everything below"* does
+not reproduce as either well-defined ratio even on its own column (the
+half-width over the largest knob spread is **549.7**; the 0.19 ↔ 0.30 spread
+over it is **201.6**), so it is restated here as the two measured numbers:
+with the shipped ⁶Li b₁ the half-width is **168.9×** the largest knob spread
+and the 0.19 ↔ 0.30 spread is **61.9×** it. **The band is still the dominant
+RC systematic on both readings**, by two orders of magnitude and one order
+respectively.
+
 **The `fq_scale` band CHANGES THE SIGN of `ΔA_zz`** (+3.9e−06 at 0, −9.6e−07 at
-2) and is **not** symmetric about the nominal — `σ^el_T` is *quadratic* in
+2 — *those two numbers are older than the table above them: they reproduce
+under neither b₁ choice, and they predate the 2026-09-03 per-nucleon fix.
+Flagged 2026-09-06, left in place; the reproducing pairs are the `fq_scale`
+row of §8.3 and of §8.3-corr, and the SIGN CHANGE — the claim of this
+sentence — holds on both of them*) and is **not** symmetric about the nominal — `σ^el_T` is *quadratic* in
 `F_q`. That is exactly why the design forbids rescaling one run and why T12 fits
 a quadratic through three runs instead of asserting linearity.
 

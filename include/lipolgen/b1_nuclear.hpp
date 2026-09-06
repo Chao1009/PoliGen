@@ -503,8 +503,20 @@ struct Li6ConvolutionOptions {
   /// x = 0.05 -> 0.5.  On the A = 2 gate, where there is no such
   /// cancellation, the same swap is only +2.7 % on G3b.
   ///
-  /// The clean fix, NOT made here, is to thread ONE R hook through
-  /// `default_inclusive_kernel` into both this and the kernel's `UnpolSF`.
+  /// THE CLEAN FIX EXISTS SINCE 2026-09-06, AS AN OPT-IN AND NOT AS A NEW
+  /// DEFAULT: `PipelineConfig::r_source` (`RSource`, pipeline.hpp; CLI
+  /// `--r-source`) threads ONE R object through `default_inclusive_kernel`
+  /// into THIS field and `InclusiveKernel::Options::r_func` together, so the
+  /// ratio's two halves cannot disagree.  Its default `Unset` does not enter
+  /// that branch at all, which is why this field's own null default is still
+  /// what every shipped number is made with.  The option is PRICED in
+  /// docs/open_items/run_2026-09-06/phase_A_numbers.md sec. A1 and it does
+  /// NOT simply undo the mismatch: at y = 0.5, Q2 = 2.5 sharing `r1998`
+  /// moves K/D_phi by -3.8357 % / +26.3988 % / +3.3518 % at
+  /// x = 0.05 / 0.10 / 0.30 against the numerator-only swap's
+  /// -5.5148 % / +24.6099 % / +2.6629 % -- LARGER at x = 0.10 -- and the
+  /// shared shift is y-DEPENDENT where the numerator-only one is not
+  /// (-5.4705 % at y = 0.1 to +2.3678 % at y = 0.9 for x = 0.05, Q2 = 2.5).
   RFunc r_func;                        ///< null => r_sigma_lt
 
   /// TERM KNOBS -- each multiplies one term of design 1.7.  All 1 = nominal.

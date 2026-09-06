@@ -34,8 +34,8 @@ import numpy as np
 from . import _lipolgen as _l
 from . import export
 from . import (B1_MODELS, B1_UNPOL, CHANNELS, CLUSTER_WAVES, FSI, OPTICS,
-               UNPOL_SF, POL_SF,
-               PLANS, RC, TRITON_SFS,
+               R_SOURCE, UNPOL_SF, POL_SF,
+               PLANS, PZZ_MODES, RC, TRITON_SFS,
                ion_spin,
                make_config, make_plan)
 
@@ -88,12 +88,48 @@ def build_parser():
     p.add_argument("--pzz", type=float, default=None,
                    help="fill P_zz (the normalised T at J = 3/2).  READ BY "
                         "--plan tensor-thirds / transverse-tensor / "
-                        "tensor-flip ONLY: helicity-flip builds its fill from "
-                        "the MAX-ENTROPY ladder at --pz "
+                        "tensor-flip ALWAYS, and by helicity-flip ONLY AT "
+                        "--pzz-mode typed: at the default --pzz-mode ladder "
+                        "that plan builds its fill from the MAX-ENTROPY "
+                        "ladder at --pz "
                         "(HelicityFlipOptions::use_explicit_pzz is false) and "
                         "does not read this flag -- the fill's own moments "
                         "are printed in the run banner so the difference is "
                         "never silent")
+    p.add_argument("--pzz-mode", choices=sorted(PZZ_MODES), default=None,
+                   help="WHICH FILL --plan helicity-flip builds, and read by "
+                        "that plan alone.  'ladder' (the DEFAULT) takes the "
+                        "max-entropy populations at --pz and does NOT read "
+                        "--pzz: it is the branch that was always here, so it "
+                        "is bit for bit the pre-flag tree by construction.  "
+                        "'typed' honours --pzz through spin1_populations "
+                        "(J = 1) / spin32_populations (J = 3/2) and REFUSES a "
+                        "value outside the plan's domain with the edge named, "
+                        "rather than clamping to it -- at --pz 0.7 the "
+                        "J = 3/2 domain is 0.26 <= T <= 0.58, so the CLI's "
+                        "own default --pzz 0.6 is outside it by 0.02 and "
+                        "--plan helicity-flip --pzz-mode typed is refused "
+                        "there.  THE TWO FILLS ARE DIFFERENT PHYSICS, not a "
+                        "correction of one another.  MEASURED at the "
+                        "standard configuration (inclusive, config 1, "
+                        "100000 events, seed 20260713, --pz 0.7 --pe 0.7, "
+                        "--pzz 0.5 against the ladder): on 7Li NO observable "
+                        "moves -- the rank-2 sector is identically zero and "
+                        "both fills honour --pz, so sigma agrees to 1 ulp "
+                        "(1.970e-16 relative) and A_par to 6.2e-14 of its own "
+                        "statistical error -- while 0.1060 %% of the events "
+                        "still land in a different (x, Q2) cell; on 6Li sigma "
+                        "moves -0.0023527 %% and A_par -4.27e-6 sigma_stat on "
+                        "the shipped --b1-model miller (22-36x less on the "
+                        "opt-in b1 models).  What moves on BOTH is the "
+                        "RECORDED ALIGNMENT -- T 0.4 -> 0.5 at J = 3/2, "
+                        "P_zz 0.409403 -> 0.5 at J = 1 -- which is the "
+                        "divisor of every tensor estimator: -20 %% resp. "
+                        "-18.1195 %% on delta(A_zz) and delta(cos 2phi) at "
+                        "fixed N.  Full tables in "
+                        "docs/open_items/run_2026-09-06/phase_A_numbers.md "
+                        "sec. A3; the fill's own moments are on the banner's "
+                        "`fill` line of every run")
     p.add_argument("--pe", type=float, default=None,
                    help="electron polarization")
     p.add_argument("--rel-lumi-offset", type=float, default=None,
@@ -159,9 +195,26 @@ def build_parser():
                    help="the low-x band edge (default 0.30, the conservative "
                         "end of Gakh-Shekhovtsova's UNCITED 10-30 %%; 0.19 is "
                         "the residual HERMES actually achieved). BAND IT: "
-                        "run both, never quote one row alone")
+                        "run both, never quote one row alone. The 0.30 is "
+                        "that source's panel value carried UPWARD in x, and "
+                        "0.113 is what the panel READS at x = 0.00966, the x "
+                        "nearest the 0.01 anchor -- the default is 2.65x it. "
+                        "Priced (run 2026-09-06 sec. A2): half-width on A_zz "
+                        "at x = 0.01, Q2 = 5 is 1.358e-04 / 1.205e-04 / "
+                        "5.117e-05 at 0.30 / 0.266 / 0.113, unmoved at "
+                        "x >= 0.16, and the tagged clipped fraction does not "
+                        "move at all")
     p.add_argument("--rc-delta-high-x", type=float, default=None,
-                   help="the high-x band edge (default 0.015, E12-13-011)")
+                   help="the high-x band edge (default 0.015, E12-13-011). "
+                        "There is NO alternative to band it against: the "
+                        "1.5 %% lives in the UNPUBLISHED proposal only, the "
+                        "published companion (arXiv:2506.04506) has no "
+                        "radiative-correction discussion at all, and the only "
+                        "alternative the record names is an action -- cite it "
+                        "by page, or drop the anchor -- not a second value "
+                        "(checked 2026-09-06, sec. A2). It pins x >= 0.16 "
+                        "exactly, so the low-x anchor decision lives entirely "
+                        "below it")
     p.add_argument("--rc-a-transfer-frac", type=float, default=None,
                    help="price the A = 2 -> A = 6 TRANSFER of the band "
                         "(design Q8).  EVERY number delta(x) interpolates "
@@ -334,6 +387,43 @@ def build_parser():
                         "with miller and cdks, "
                         "which never read it, and never silently downgraded "
                         "to the toy in a build without the tier")
+    p.add_argument("--r-source", choices=sorted(R_SOURCE), default=None,
+                   help="the ONE R = sigma_L/sigma_T threaded into BOTH "
+                        "halves of the 6Li tensor weight.  The shipped "
+                        "observable is a RATIO -- A_zz = -(2/3) K/D_phi, "
+                        "K = b1 + (1-y)/(x y^2) b2 over "
+                        "D_phi = F1 + (1-y)/(x y^2) F2 -- whose numerator's "
+                        "R is Li6ConvolutionOptions::r_func and whose "
+                        "denominator's is the kernel's own Options::r_func.  "
+                        "'unset' (the DEFAULT) installs NEITHER: both hooks "
+                        "stay null, resolve_r turns each into r_sigma_lt "
+                        "independently, and the run is bit for bit the "
+                        "pre-flag tree.  'sigma-lt' installs one r_sigma_lt "
+                        "in both and is MEASURED bit-identical to unset "
+                        "(sigma_pb, every per-category cross section, every "
+                        "generated column, and b1 / K/D_phi / A_zz / the "
+                        "cos 2phi amplitude at the six standard points "
+                        "x = 0.05/0.10/0.30 x Q2 = 2.5/5, each at y = 0.1, "
+                        "0.5 and 0.9) -- "
+                        "the wiring's own test, not a physics variation, and "
+                        "the provenance table labels it not-read.  'r1998' "
+                        "installs the A = 2 gate's SLAC world fit in both.  "
+                        "MEASURED at y = 0.5, Q2 = 2.5 against unset: "
+                        "K/D_phi (and so A_zz) -3.84 %% / +26.40 %% / "
+                        "+3.35 %% and the cos 2phi amplitude -8.33 %% / "
+                        "-6.73 %% / -3.14 %% at x = 0.05 / 0.10 / 0.30; the "
+                        "weight's shift is y-DEPENDENT (it runs -5.47 %% at "
+                        "y = 0.1 to +2.37 %% at y = 0.9 for x = 0.05) "
+                        "because only the DENOMINATOR's R moves and D_phi's "
+                        "F1 and F2 terms carry different powers of y; the "
+                        "numerator-only swap of registry option (ii) is "
+                        "y-independent to 2 ulp.  Unlike "
+                        "--b1-unpol it moves the UNPOLARISED rate too "
+                        "(sigma_pb -0.6847 %% on a 2000-event 6Li run at "
+                        "--x-max 0.95), "
+                        "because the kernel's r_func reaches F1, F_L, D(y) "
+                        "and ToyG1.  REFUSED with miller and cdks, which "
+                        "have no numerator R to share")
     p.add_argument("--unpol-sf", choices=sorted(UNPOL_SF), default=None,
                    help="UNPOLARISED structure-function backend of EVERY "
                         "kernel the run builds -- the inclusive kernel, the "
@@ -517,6 +607,7 @@ def build_parser():
 DEFAULTS = dict(isotope="6Li", config=1, channel="inclusive",
                 plan="tensor-thirds", events=100000, lumi=0.0, seed=20260713,
                 run=1, optics="yr-high-acceptance", pz=0.7, pzz=0.6, pe=0.7,
+                pzz_mode="ladder",
                 rel_lumi_offset=0.0, nthreads=1, hadronize=False,
                 quiet=False,
                 hepmc=None, npz=None, hfs_npz=None, cluster_beta=None,
@@ -536,6 +627,7 @@ DEFAULTS = dict(isotope="6Li", config=1, channel="inclusive",
                 inclusive_b1=False,
                 b1_model="miller", b1_band_scale=1.0,
                 b1_alpha_d_dwave_weight=1.0, b1_unpol="toy",
+                r_source="unset",
                 unpol_sf="toy", pol_sf="toy", x_max=None,
                 coherent_t_max=None,
                 coherent=None)
@@ -935,6 +1027,7 @@ def main(argv=None):
                       b1_band_scale=opts["b1_band_scale"],
                       b1_alpha_d_dwave_weight=opts["b1_alpha_d_dwave_weight"],
                       b1_unpol=opts["b1_unpol"],
+                      r_source=opts["r_source"],
                       unpol_sf=opts["unpol_sf"], pol_sf=opts["pol_sf"],
                       coherent_t_max=opts["coherent_t_max"],
                       coherent=opts["coherent"])
@@ -963,9 +1056,22 @@ def main(argv=None):
             "phi-averaged density 1 + w_avg stays positive, so InclusiveSampler "
             "refuses the run.  See docs/USAGE.md sec. 2a, 'The top x cell'."
             % _l.b1_model_name(cfg.b1_model))
-    plan = make_plan(opts["plan"], j=ion_spin(cfg.isotope), pz=opts["pz"],
-                     pzz=opts["pzz"], pe=opts["pe"],
-                     rel_lumi_offset=opts["rel_lumi_offset"])
+    try:
+        plan = make_plan(opts["plan"], j=ion_spin(cfg.isotope), pz=opts["pz"],
+                         pzz=opts["pzz"], pe=opts["pe"],
+                         rel_lumi_offset=opts["rel_lumi_offset"],
+                         pzz_mode=opts["pzz_mode"])
+    except (RuntimeError, ValueError) as e:
+        # A FILL OUTSIDE THE PLAN'S DOMAIN IS A REFUSAL, not a traceback, and
+        # it is never CLAMPED to the edge: clamping would publish an alignment
+        # nobody typed.  `spin1_populations` / `spin32_populations` name the
+        # offending m, its negative population and both edges at this --pz,
+        # and `--pzz-mode typed` is what makes that reachable from the
+        # command line (--pzz 0.6 at --pz 0.7 is outside the J = 3/2 domain by
+        # 0.02: the edge is T = 0.58, where p(-1/2) = 0).  The same clause
+        # carries make_plan's spin-1-pattern refusal, which reached the user
+        # as a traceback until 2026-09-06.
+        raise SystemExit(str(e))
 
     nthreads = max(1, int(opts["nthreads"]))
     bridge = None
@@ -1042,6 +1148,7 @@ def main(argv=None):
     ctx.plan_name = opts["plan"]
     ctx.pz = float(opts["pz"])
     ctx.pzz = float(opts["pzz"])
+    ctx.pzz_mode = str(opts["pzz_mode"])
     ctx.pe = float(opts["pe"])
     ctx.rel_lumi_offset = float(opts["rel_lumi_offset"])
     ctx.t2_bound = bridge is not None
@@ -1067,21 +1174,40 @@ def main(argv=None):
                               p.sigma_per_category_pb(), p.counts()):
         say("    %-10s sigma = %12.6g pb   N = %d" % (name, sig, cnt))
     # THE FILL'S OWN MOMENTS, on every run.  `--pzz` is read by the three
-    # spin-1 tensor plans only: `helicity_flip_plan` leaves
-    # `use_explicit_pzz` false and takes the MAX-ENTROPY ladder at `--pz`, so
-    # `--plan helicity-flip --pzz 0.6` has always produced a different
-    # alignment from the one typed (T = 0.4 at pz = 0.7, J = 3/2) with nothing
-    # saying so.  Printing what the plan actually carries closes that without
-    # moving any fill: these are `RunPlan`'s own recorded true moments, and at
-    # J = 3/2 `pzz_true` is the normalised T, not P_zz (bookkeeping.hpp).
-    say("  fill %s: J = %g, P_z = %.6g, %s = %.6g%s"
-        % (opts["plan"], ion_spin(cfg.isotope), plan.pz_true,
-           "T" if abs(ion_spin(cfg.isotope) - 1.5) < 1e-9 else "P_zz",
-           plan.pzz_true,
-           "" if opts["plan"] in ("tensor-thirds", "azz", "transverse-tensor",
-                                  "cos2phi", "tensor-flip", "flip")
-           else "  (from the max-entropy ladder at --pz; --pzz is not read "
-                "by this plan)"))
+    # spin-1 tensor plans always and by `helicity-flip` only at
+    # `--pzz-mode typed`: at the default `--pzz-mode ladder`
+    # `helicity_flip_plan` leaves `use_explicit_pzz` false and takes the
+    # MAX-ENTROPY ladder at `--pz`, so `--plan helicity-flip --pzz 0.6`
+    # produces a different alignment from the one typed (T = 0.4 at pz = 0.7,
+    # J = 3/2) and said so nowhere until 2026-09-05.  Printing what the plan
+    # actually carries closes that without moving any fill: these are
+    # `RunPlan`'s own recorded true moments, and at J = 3/2 `pzz_true` is the
+    # normalised T, not P_zz (bookkeeping.hpp).
+    #
+    # THE SECOND LINE IS THE COUNTERFACTUAL, and it is DERIVED, never typed:
+    # the ladder's own moment at this `--pz` comes from
+    # `spin_temperature_pzz` (the same function `helicity_flip_plan`'s
+    # default branch is built on) and the typed one is `--pzz` itself, so the
+    # reader sees both fills and which one this run used.  The DOMAIN is not
+    # printed here: it is stated once, in the refusal `spin1_populations` /
+    # `spin32_populations` throw when it is crossed.
+    j_fill = ion_spin(cfg.isotope)
+    rank2 = "T" if abs(j_fill - 1.5) < 1e-9 else "P_zz"
+    say("  fill %s: J = %g, P_z = %.6g, %s = %.6g"
+        % (opts["plan"], j_fill, plan.pz_true, rank2, plan.pzz_true))
+    if opts["plan"] in ("helicity-flip", "apar"):
+        if opts["pzz_mode"] == "typed":
+            say("    --pzz-mode typed: the fill is built at the TYPED "
+                "%s = %.6g; the max-entropy ladder at this --pz would give "
+                "%s = %.6g" % (rank2, opts["pzz"], rank2,
+                               _l.spin_temperature_pzz(j_fill,
+                                                       float(opts["pz"]))))
+        else:
+            say("    --pzz-mode ladder (the default): the max-entropy fill at "
+                "--pz, so --pzz = %.6g is NOT read -- --pzz-mode typed would "
+                "build the fill at %s = %.6g instead (refused, with the edge "
+                "named, where that is outside the plan's domain)"
+                % (opts["pzz"], rank2, opts["pzz"]))
     # THE COHERENT CHANNEL'S OWN LINES, on every coherent run.  The |t|
     # ceiling with the reason it is 0.2 (the anchor range, not positivity --
     # D5), the DERIVED positivity edge beside it so the two are visibly
@@ -1183,6 +1309,24 @@ def main(argv=None):
                    _l.unpol_sf_name(cfg.unpol_sf)))
             for line in b1_gate_lines(_l.b1_unpol_name(cfg.b1_unpol)):
                 say("     " + line)
+            # WHICH R the two halves of the tensor weight were built from.
+            # Printed on every li6-convolution run, "unset" included, for the
+            # `--b1-unpol` reason: at r1998 the weight moves by up to +26 %
+            # at x = 0.10 and the unpolarised rate by -0.6847 %, and nothing
+            # else in the banner says so.
+            say("     R = sigma_L/sigma_T %s (--r-source; %s)"
+                % (_l.r_source_name(cfg.r_source),
+                   "unset = both hooks null, each resolving to r_sigma_lt "
+                   "independently -- numerator and denominator agree today "
+                   "only because two defaults coincide"
+                   if cfg.r_source == _l.RSource.Unset else
+                   "sigma-lt = the value both null hooks already resolve to; "
+                   "bit-identical to unset, NOT READ (see KNOB PROVENANCE)"
+                   if cfg.r_source == _l.RSource.SigmaLt else
+                   "ONE object in BOTH Li6ConvolutionOptions::r_func (the "
+                   "K numerator) and the kernel's Options::r_func (the "
+                   "D_phi denominator, and F_L, D(y), ToyG1 -- so the "
+                   "unpolarised rate moves with it)"))
             say("     4 terms: (1) embedded d S wave, (2d)+(2a) alpha-d "
                 "D wave (struck d and struck alpha, one physical effect), "
                 "(3) CG depolarization.  N_ad = %.6g suppresses all of them; "
@@ -1269,6 +1413,12 @@ def main(argv=None):
                 "citations: band it (--rc-delta-low-x 0.19 / 0.30, "
                 "--rc-fq-scale 0 / 1 / 2, --rc-qe-suppression 0 / 0.5 / 1), "
                 "never quote one row alone.")
+            say("     and 0.30 is that paper's panel value carried UPWARD in "
+                "x: at x = 0.00966, the x nearest this anchor's 0.01, the "
+                "panel READS 0.113 (0.266 at its own bottom, x = 0.00226). "
+                "The default errs WIDE by x2.65; priced at "
+                "--rc-delta-low-x 0.266 / 0.113 in the 2026-09-06 run, "
+                "sec. A2.")
             if cfg.rc_options.a_transfer_frac == 0.0:
                 say("     the A = 2 -> A = 6 TRANSFER of delta(x) is NOT "
                     "priced (design Q8): every band anchor is a DEUTERON "

@@ -459,6 +459,66 @@ const char* b1_model_name(B1Model m);
 enum class B1UnpolSource : std::uint8_t { Toy, Mstw, Ct18Nlo, Custom };
 const char* b1_unpol_name(B1UnpolSource s);
 
+/// WHICH R = sigma_L/sigma_T the 6Li alpha-d convolution and the kernel that
+/// carries its denominator are BOTH built with -- ONE hook, threaded through
+/// `default_inclusive_kernel` into `Li6ConvolutionOptions::r_func` AND
+/// `InclusiveKernel::Options::r_func` (`PipelineConfig::r_source`; CLI
+/// `--r-source`).  OFF (`Unset`) by default, and then today bit for bit.
+///
+/// WHY THIS EXISTS.  The shipped tensor observable is a RATIO: A_zz is
+/// -(2/3) K/D_phi with K = b1 + (1-y)/(x y^2) b2 and
+/// D_phi = F1 + (1-y)/(x y^2) F2 (`asymmetries.hpp`, `azz`).  Until this
+/// selector existed the two halves of that ratio could not be made to agree
+/// on R.  The numerator's R is `Li6ConvolutionOptions::r_func`
+/// (`b1_nuclear.hpp`), whose null default is `r_sigma_lt`; the denominator's
+/// is the kernel's own `Options::r_func`, whose null default is also
+/// `r_sigma_lt` -- so they agree TODAY, by coincidence of two independent
+/// defaults, and the only way to move one was to move it ALONE.  That is the
+/// decision `STATUS.md` row 3 records: the A = 2 gate
+/// (`DeuteronConvolutionB1::Options::r_func`) defaults to `r1998`, CDKS's
+/// SLAC world fit, and adopting it in the numerator alone does not cancel
+/// against a denominator still on `r_sigma_lt`.  This selector is the
+/// registry's option (iii), "the better third option": whichever R is named,
+/// numerator and denominator are built from the SAME object.
+///
+///   Unset     the DEFAULT.  NOTHING is threaded: both hooks stay null and
+///             each consumer resolves its own `r_sigma_lt` through
+///             `resolve_r` (`sf.hpp`), exactly as before this selector
+///             existed.  Bit for bit BY CONSTRUCTION -- the branch that
+///             sets the hooks is not taken.
+///   SigmaLt   ONE `r_sigma_lt` object into both hooks.  MEASURED
+///             bit-identical to `Unset` on the tensor observables at every
+///             standard point (docs/open_items/run_2026-09-06/
+///             phase_A_numbers.md sec. A1) -- which is the wiring's own
+///             test, not a physics claim: it says the shared hook reaches
+///             both halves and changes nothing when it names the value they
+///             already had.
+///   R1998     ONE `r1998` object into both -- the A = 2 gate's R, on both
+///             halves of the ratio.  This is the value that costs something,
+///             and sec. A1 is what it costs.
+///
+/// SCOPE, and why it is REFUSED elsewhere rather than labelled.  The hook is
+/// installed by the `Li6Convolution` branch of `default_inclusive_kernel` and
+/// nowhere else, so `validate()` refuses anything but `Unset` off
+/// `b1_model = li6-convolution` -- which is already inclusive-only and 6Li-
+/// only and refused beside a caller-supplied `kernel`.  The `b1_unpol` rule
+/// verbatim, for the `b1_unpol` reason: `meta["r_source"]` is written
+/// unconditionally, so a value that did not reach the rate may not be
+/// recorded as if it had.  On `Miller` and `Cdks` the numerator has no F1 of
+/// its own to give an R to (Miller is a ratio model, Cdks a digitized
+/// column), so "one shared R" is not a statement those branches can make.
+///
+/// WHAT IT MOVES, and the asymmetry with `--b1-unpol`.  `--b1-unpol` moves
+/// the NUMERATOR alone and leaves the spin-blind cell cross section bit for
+/// bit; this one moves BOTH -- the kernel's `r_func` is threaded to all four
+/// places the kernel needs R (F1 in `NuclearF2::f1a`, F_L in
+/// `dsigma_dx_dq2`, D(y) in `depolarization_d`, and the default `ToyG1`'s
+/// F1), so the unpolarised rate moves too.  That is the POINT: the ratio is
+/// what is quoted, and its two halves are now built from one R.  Say which
+/// R a plot used.
+enum class RSource : std::uint8_t { Unset, SigmaLt, R1998 };
+const char* r_source_name(RSource s);
+
 /// Which UNPOLARISED structure-function backend supplies F2 -- and through
 /// it F1, F_L and the whole unpolarised rate -- to EVERY kernel the
 /// `Pipeline` builds (`PipelineConfig::unpol_sf`; CLI `--unpol-sf`).
@@ -864,6 +924,16 @@ struct PipelineConfig {
   /// with `_lipolgen.set_b1_unpol(cfg, source)`; a C++ caller sets them
   /// together, the `optics_choice` / `optics` arrangement.
   std::shared_ptr<const UnpolSF> b1_unpol_sf;
+  /// Which R = sigma_L/sigma_T is threaded into BOTH the `Li6Convolution`
+  /// numerator and the kernel that carries the ratio's denominator
+  /// (`RSource` above; CLI `--r-source`).  `Unset` is the DEFAULT and is
+  /// today bit for bit -- it installs nothing, and both hooks keep the null
+  /// that `resolve_r` turns into `r_sigma_lt`.  Read ONLY by the
+  /// `Li6Convolution` branch of `default_inclusive_kernel`, so `validate()`
+  /// refuses anything but `Unset` on `Miller` and `Cdks` -- the `b1_unpol`
+  /// provenance rule verbatim, and `meta["r_source"]` is written
+  /// unconditionally for the same reason.
+  RSource r_source = RSource::Unset;
 
   // --- structure-function backends, every kernel ---------------------------
   /// Which UNPOLARISED backend EVERY kernel this config builds takes its F2
@@ -937,12 +1007,24 @@ std::shared_ptr<const InclusiveKernel> default_inclusive_kernel(const Ion& ion);
 /// against when `b1_unpol` is null -- which is why `PipelineConfig::
 /// validate()` refuses `b1_unpol = Toy` there rather than let
 /// `meta["b1_unpol"] = "toy"` name an object that is no longer `ToyF2`.
+///
+/// `r_source` is `PipelineConfig::r_source` (`RSource`): the ONE R hook this
+/// function threads into `Li6ConvolutionOptions::r_func` AND
+/// `InclusiveKernel::Options::r_func` together, so the tensor weight's
+/// numerator and denominator are built from the same R.  `Unset` -- the
+/// default, and every existing caller -- takes the branch that installs
+/// NOTHING, leaving both hooks null exactly as they were, so it is bit for
+/// bit inert by construction and not by an argument about `resolve_r`.  It
+/// is read on the `Li6Convolution` branch ONLY (`Miller` is a ratio model
+/// with no F1 of its own and `Cdks` a digitized column), which is what
+/// `PipelineConfig::validate()` enforces.
 std::shared_ptr<const InclusiveKernel> default_inclusive_kernel(
     const Ion& ion, B1Model model, double band_scale = 1.0,
     double w_alpha_d = 1.0,
     std::shared_ptr<const UnpolSF> b1_unpol = nullptr,
     std::shared_ptr<const UnpolSF> unpol_sf = nullptr,
-    std::shared_ptr<const PolSF> pol_sf = nullptr);
+    std::shared_ptr<const PolSF> pol_sf = nullptr,
+    RSource r_source = RSource::Unset);
 
 // ------------------------------------------- the 7Li rank-2 zero, out loud
 //
@@ -1092,8 +1174,8 @@ std::string pol_sf_unread_label(const PipelineConfig& cfg, const RunPlan& plan);
 // EVERY user-settable knob of a run with what the run did with it.  The npz
 // `meta` block, the CLI banner block and `python/tests/test_knob_provenance.py`
 // -- which rebuilds the measured (spec x knob) matrix (12 (isotope, channel,
-// plan) specs x 71 knob variants = 547 cells; not the full channel x plan
-// product -- USAGE.md sec. 7c) and asserts
+// plan) specs x 76 knob variants = 592 cells, re-measured 2026-09-06; not the
+// full channel x plan product -- USAGE.md sec. 7c) and asserts
 // the table against the OUTPUT HASH -- all read this one table, so a knob
 // cannot be reported without a status and a new knob cannot be added without
 // one either.
@@ -1107,7 +1189,10 @@ std::string pol_sf_unread_label(const PipelineConfig& cfg, const RunPlan& plan);
 // AXIS or a MEMBER OF A FAMILY that a channel-, plan- or set-scan sets
 // UNIFORMLY across runs, because refusing one cell of such a scan costs more
 // than it buys and the label carries the whole truth anyway (the `--pol-sf`
-// on coherent and the `--pzz` under helicity-flip precedents).  Either way the
+// on coherent and the `--pzz-mode` under the three tensor plans precedents;
+// `--pzz` under helicity-flip was the second of them until 2026-09-06, when
+// `--pzz-mode typed` made that flag reachable there and the label moved onto
+// the mode).  Either way the
 // knob is WRITTEN, with its status and its reason: silence is never an option,
 // and that is what closes the fourth class -- knobs accepted and recorded
 // nowhere at all.
@@ -1163,7 +1248,9 @@ struct KnobProvenance {
 /// `std::function` and the core cannot ask it for `PDF:PomSet`.  And a
 /// `RunPlan` records its MOMENTS, not which flags produced them -- only the
 /// caller knows whether `--pzz` was read or whether the fill came from
-/// `helicity_flip_plan`'s max-entropy ladder.  Default-constructed = "no T2
+/// `helicity_flip_plan`'s max-entropy ladder, which since 2026-09-06 is the
+/// `--pzz-mode` switch and is carried here as `pzz_mode`.
+/// Default-constructed = "no T2
 /// tier bound, plan provenance not supplied", which is what a C++ caller
 /// driving `Pipeline` directly has; the rows that need what is missing are
 /// then simply not emitted, never guessed.
@@ -1177,13 +1264,23 @@ struct KnobRunContext {
   /// What the caller ASKED the plan factory for.  Not the same thing as the
   /// plan's own `pz_true()` / `pzz_true()` / `pe_true()`, and the difference
   /// IS the defect: `transverse_tensor_plan(pzz, phi_s)` never sees `--pz`,
-  /// `helicity_flip_plan` never sees `--pzz`, and the three tensor plans
-  /// never see `--pe` -- so the fill's moments cannot say what was typed.
+  /// `helicity_flip_plan` sees `--pzz` only at `--pzz-mode typed`, and the
+  /// three tensor plans never see `--pe` -- so the fill's moments cannot say
+  /// what was typed.
   /// NaN = not supplied; the row then falls back to the plan's own moment.
   double pz = std::nan("");
   double pzz = std::nan("");
   double pe = std::nan("");
   double rel_lumi_offset = std::nan("");
+  /// WHICH FILL the caller asked `helicity_flip_plan` for: "ladder" (the
+  /// default max-entropy branch, `HelicityFlipOptions::use_explicit_pzz =
+  /// false`) or "typed" (`= true`, honouring `--pzz`).  A `RunPlan` cannot
+  /// answer this either -- at J = 1 the two branches can in principle reach
+  /// the same populations, and at J = 3/2 they differ in R_3, which the
+  /// recorded moments do not carry -- so it is the caller's, exactly like
+  /// `pz` / `pzz` above.  Empty = not supplied, and the `pzz_mode` row is
+  /// then omitted rather than guessed.
+  std::string pzz_mode;
   bool t2_bound = false;    ///< a hadronizer is attached to the config
   /// The attached bridge's own options.  The defaults are
   /// `PythiaBridgeOptions`' own, so a context that names no bridge still

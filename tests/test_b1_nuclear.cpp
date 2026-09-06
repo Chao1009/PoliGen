@@ -2201,3 +2201,120 @@ TEST_CASE("b1_nuclear D1/F4: a half-assigned ClusterPartialWave throws "
   v.rebuild();
   CHECK_CLOSE_AT(v(0.15), 1.6875, 0.0, 1e-12);
 }
+
+// -----------------------------------------------------------------------
+// T18: `--r-source`, the registry's option (iii) -- ONE R hook threaded into
+// BOTH halves of the 6Li tensor weight.
+//
+// WHAT THIS PINS.  The shipped observable is a RATIO, K/D_phi (`azz`,
+// asymmetries.hpp): its numerator's R is `Li6ConvolutionOptions::r_func` and
+// its denominator's is `InclusiveKernel::Options::r_func`.  The decision of
+// 2026-09-03 (STATUS.md row 3) kept the numerator on `r_sigma_lt` BECAUSE
+// moving it alone does not cancel against a denominator still on
+// `r_sigma_lt`, and named the fix it did not make: one hook into both.
+// `RSource` is that hook.  Three clauses, one per status of the axis:
+//
+//   Unset     does not enter the wiring branch -- bit for bit, and the two
+//             `default_inclusive_kernel` overloads agree;
+//   SigmaLt   installs the SHARED object and is bit-identical anyway,
+//             because `resolve_r`'s null branch IS `r_sigma_lt`.  This is
+//             the wiring's own test: it says the hook reaches both halves;
+//   R1998     moves b1 exactly as the numerator-only option (ii) does, AND
+//             moves F1 -- which is what (ii) cannot do.
+//
+// The measured cost is in docs/open_items/run_2026-09-06/phase_A_numbers.md
+// sec. A1; python/tests/test_b1_model.py P10 pins the numbers, this case
+// pins the WIRING.
+TEST_CASE("b1_nuclear T18: --r-source puts ONE R in numerator and denominator") {
+  const double q2 = 2.5;
+  const std::array<double, 3> xs = {0.05, 0.10, 0.30};
+
+  CHECK(std::string(r_source_name(RSource::Unset)) == "unset");
+  CHECK(std::string(r_source_name(RSource::SigmaLt)) == "sigma-lt");
+  CHECK(std::string(r_source_name(RSource::R1998)) == "r1998");
+  CHECK(PipelineConfig().r_source == RSource::Unset);
+
+  const auto base = default_inclusive_kernel(LI6(), B1Model::Li6Convolution);
+  const auto unset = default_inclusive_kernel(
+      LI6(), B1Model::Li6Convolution, 1.0, 1.0, nullptr, nullptr, nullptr,
+      RSource::Unset);
+  const auto shared_lt = default_inclusive_kernel(
+      LI6(), B1Model::Li6Convolution, 1.0, 1.0, nullptr, nullptr, nullptr,
+      RSource::SigmaLt);
+  const auto shared_98 = default_inclusive_kernel(
+      LI6(), B1Model::Li6Convolution, 1.0, 1.0, nullptr, nullptr, nullptr,
+      RSource::R1998);
+  REQUIRE(base);
+  REQUIRE(unset);
+  REQUIRE(shared_lt);
+  REQUIRE(shared_98);
+
+  // The NUMERATOR-ONLY option (ii), hand-built: no flag reaches it and none
+  // is being added.  Everything but `o.r_func` is the Li6Convolution branch
+  // of `default_inclusive_kernel` verbatim, including the ONE shared ToyF2.
+  const auto f2 = std::make_shared<const ToyF2>();
+  Li6ConvolutionOptions o;
+  o.unpol = f2;
+  o.r_func = [](double x, double qq) { return r1998(x, qq); };
+  const auto num_only_b1 = std::make_shared<const Li6ConvolutionB1>(std::move(o));
+  InclusiveKernel::Options nopt;
+  nopt.f2_source = f2;
+  nopt.b1_func = [num_only_b1](double x, double qq, double f1) {
+    return num_only_b1->b1(x, qq, f1);
+  };
+  nopt.delta_func = [](double x, double qq, double f1) {
+    return toy_delta_gluon(x, qq, f1, 1e-2);
+  };
+  const InclusiveKernel num_only(LI6(), nopt);
+
+  for (double x : xs) {
+    CAPTURE(x);
+    const SFTables tb = base->tables(x, q2);
+    const SFTables tu = unset->tables(x, q2);
+    const SFTables tl = shared_lt->tables(x, q2);
+    const SFTables ts = shared_98->tables(x, q2);
+    const SFTables tn = num_only.tables(x, q2);
+
+    // (1) the default did not move, on either overload
+    CHECK(tb.b1 == tu.b1);
+    CHECK(tb.f1 == tu.f1);
+    CHECK(tb.f2 == tu.f2);
+    CHECK(tb.delta == tu.delta);
+    // (2) the shared r_sigma_lt hook is installed and changes nothing
+    CHECK(tb.b1 == tl.b1);
+    CHECK(tb.f1 == tl.f1);
+    CHECK(tb.b2 == tl.b2);
+    CHECK(tb.delta == tl.delta);
+    // (3) r1998 moves the NUMERATOR exactly as (ii) does -- same object,
+    //     same output, bit for bit -- and the DENOMINATOR as well, which is
+    //     the whole difference between the two options.
+    CHECK(ts.b1 == tn.b1);
+    CHECK(ts.b2 == tn.b2);
+    CHECK(ts.b1 != tb.b1);
+    CHECK(tn.f1 == tb.f1);            // (ii) leaves F1 alone
+    CHECK(ts.f1 != tb.f1);            // (iii) does not
+    CHECK(ts.f2 == tb.f2);            // F2 has no R in it, on either option
+    // ... and F1 moves by exactly the (1 + R) ratio the registry quoted.
+    CHECK_CLOSE_AT(tb.f1 / ts.f1,
+                   (1.0 + r1998(x, q2)) / (1.0 + r_sigma_lt(x, q2)),
+                   0.0, 1e-12);
+  }
+
+  // (4) the provenance rule: refused where the hook is not installed.
+  {
+    PipelineConfig c;
+    c.channel = PipelineChannel::Inclusive;
+    c.isotope = "6Li";
+    c.n_events = 100;
+    c.b1_model = B1Model::Li6Convolution;
+    c.r_source = RSource::R1998;
+    CHECK_NOTHROW(c.validate());
+    for (B1Model m : {B1Model::Miller, B1Model::Cdks}) {
+      c.b1_model = m;
+      CHECK_THROWS_AS(c.validate(), std::runtime_error);
+      c.r_source = RSource::Unset;         // ... and the default is legal
+      CHECK_NOTHROW(c.validate());
+      c.r_source = RSource::R1998;
+    }
+  }
+}

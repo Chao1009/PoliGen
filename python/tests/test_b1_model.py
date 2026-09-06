@@ -16,6 +16,11 @@ P6  the b1 normalisation split of 2026-09-03: the two camps' constants, and
 P7  the r-default decision: the null hook IS `r_sigma_lt`, term (1) is
     bit-identical under the swap to `r1998`, and the measured cost of the
     choice.
+P10 `--r-source`, the registry's option (iii): ONE R hook in the tensor
+    weight's numerator AND denominator.  The default installs nothing,
+    `sigma-lt` installs the shared object and is bit-identical, `r1998` moves
+    both halves -- and the difference from option (ii) is y-dependent because
+    only the denominator carries y.
 
 THE RULE ALL OF THESE GUARD.  `Li6ConvolutionB1` PASSED its A = 2 magnitude
 gate on 2026-09-03 (G3b ratio 0.843 with CDKS's own MSTW2008 LO at their
@@ -1041,3 +1046,240 @@ def test_no_shipped_python_source_still_says_the_gate_fails(repo_root):
         "gate passes for the MSTW2008 LO input at CDKS Eq. (21) (G3b 0.843243) "
         "and is 0.440 on the toy default -- say the configuration, do not say "
         "it failed." % (hits,))
+
+
+
+# ------------------------------------------------------------------ P10
+# `--r-source`: THE REGISTRY'S OPTION (iii), ONE R IN BOTH HALVES OF THE
+# RATIO -- opt-in, default bit for bit.
+#
+# P7 above pins the DECISION of 2026-09-03 (`Li6ConvolutionOptions` keeps
+# `r_sigma_lt`) and its measured cost.  Its own reasoning names the thing it
+# did NOT do: the shipped observable is a ratio K/D_phi whose denominator
+# carries `InclusiveKernel`'s R, so moving the numerator's R alone does not
+# cancel, and "the clean fix, NOT made here, is to thread ONE R hook through
+# `default_inclusive_kernel` into both".  `RSource` is that hook, priced in
+# docs/open_items/run_2026-09-06/phase_A_numbers.md sec. A1.  P10 pins the
+# three things that make it safe to leave in the tree:
+#
+#   (a) the DEFAULT installs nothing and is bit for bit -- kernel level and
+#       end to end;
+#   (b) `sigma-lt` installs the shared object and is MEASURED bit-identical,
+#       which is what makes the wiring testable at all: it says the hook
+#       reaches both halves without changing the answer;
+#   (c) `r1998` moves the NUMERATOR exactly as option (ii) does (same b1, bit
+#       for bit) and the DENOMINATOR as well, which is the whole difference
+#       between (ii) and (iii) -- and the difference is y-DEPENDENT, because
+#       only D_phi carries y in a way that does not cancel.
+
+#: (i) = the status quo, and (iii) at `sigma-lt` reproduces it BIT FOR BIT.
+#: K/D_phi at y = 0.5, Q2 = 2.5 (`phase_A_numbers.md` sec. A1).
+R_WEIGHT_STATUS_QUO = {0.05: +1.837372e-05, 0.10: -1.651128e-05,
+                       0.30: -4.695082e-04}
+#: (iii) with `r1998` in BOTH halves, same point.
+R_WEIGHT_SHARED_R1998 = {0.05: +1.766896e-05, 0.10: -2.087005e-05,
+                         0.30: -4.852452e-04}
+#: (ii), r1998 in the NUMERATOR ALONE: y-INDEPENDENT, because D_phi does not
+#: move and K is proportional to b1 at the default b2 = 2x b1.
+R_WEIGHT_NUMERATOR_ONLY_PCT = {0.05: -5.5148, 0.10: +24.6099, 0.30: +2.6629}
+#: (iii)/(i) - 1 on the cos 2phi amplitude at y = 0.5, Q2 = 2.5.  It is the
+#: PURE DENOMINATOR effect: Delta carries no R, so (ii) moves it by exactly 0.
+R_COS2PHI_SHARED_PCT = {0.05: -8.3268, 0.10: -6.7268, 0.30: -3.1441}
+
+
+def _shared_r_kernel(source):
+    return _l.default_inclusive_kernel(_l.li6(), _l.B1Model.Li6Convolution,
+                                       r_source=source)
+
+
+def _numerator_only_r1998_kernel():
+    """Option (ii): r1998 in `Li6ConvolutionOptions` and NOWHERE else.
+
+    Hand-built because no flag reaches that state and none is being added --
+    (ii) is the option the registry did not take.  Everything else is
+    `default_inclusive_kernel`'s Li6Convolution branch verbatim, including
+    the ONE shared `ToyF2` and the 1e-2 discovery-scale Delta.
+    """
+    f2 = _l.ToyF2()
+    o = _l.Li6ConvolutionOptions()
+    o.unpol = f2
+    o.r_func = lambda x, q2: _l.r1998(x, q2)
+    b = _l.Li6ConvolutionB1(o)
+    opt = _l.InclusiveKernel.Options()
+    opt.f2_source = f2
+    opt.b1_func = lambda x, q2, f1: b.b1(x, q2, f1)
+    opt.delta_func = lambda x, q2, f1: _l.toy_delta_gluon(x, q2, f1, 1e-2)
+    return _l.InclusiveKernel(_l.li6(), opt)
+
+
+def _obs(kern, x, q2, y):
+    t = kern.tables(x, q2)
+    return dict(b1=t.b1, b2=t.b2, f1=t.f1, f2=t.f2, delta=t.delta,
+                w=(_l.InclusiveKernel.tensor_kernel(t, x, y)
+                   / _l.InclusiveKernel.dphi(t, x, y)),
+                dphi=_l.InclusiveKernel.dphi(t, x, y),
+                azz=_l.azz(t.b1, t.f1, t.f2, x, y, t.b2),
+                c2p=_l.a_cos2phi(t.delta, t.f1, t.f2, x, y))
+
+
+def test_r_source_name_table():
+    assert set(lg.R_SOURCE) == {"unset", "sigma-lt", "r1998"}
+    assert lg.R_SOURCE["unset"] == _l.RSource.Unset
+    assert "R_SOURCE" in lg.__all__
+    for key, val in lg.R_SOURCE.items():
+        assert _l.r_source_name(val) == key
+    assert cli.DEFAULTS["r_source"] == "unset"
+    assert lg.make_config(events=N).r_source == _l.RSource.Unset
+
+
+def test_r_source_default_installs_nothing_and_is_bit_for_bit():
+    """(a) THE DEFAULT DID NOT MOVE, which is the whole licence for the flag.
+
+    `Unset` does not enter the wiring branch at all, so this is bit for bit
+    by construction; the assertions say so on both surfaces anyway.
+    """
+    a = _l.default_inclusive_kernel(_l.li6(), _l.B1Model.Li6Convolution)
+    b = _l.default_inclusive_kernel(_l.li6(), _l.B1Model.Li6Convolution,
+                                    1.0, 1.0, None, _l.RSource.Unset)
+    for x in (0.05, 0.10, 0.30):
+        for q2 in (2.5, 5.0):
+            assert _obs(a, x, q2, 0.5) == _obs(b, x, q2, 0.5), (x, q2)
+
+
+def test_r_source_sigma_lt_is_the_shared_hook_and_changes_nothing():
+    """(b) THE WIRING'S OWN TEST.
+
+    `sigma-lt` puts ONE `r_sigma_lt` object in `Li6ConvolutionOptions::r_func`
+    AND in `InclusiveKernel::Options::r_func`.  `resolve_r`'s null branch IS
+    `r_sigma_lt`, so it must reproduce `unset` BIT FOR BIT -- and that is
+    exactly why the provenance table labels it `not-read` rather than `read`.
+    """
+    base = _l.default_inclusive_kernel(_l.li6(), _l.B1Model.Li6Convolution)
+    shared = _shared_r_kernel(_l.RSource.SigmaLt)
+    for x in (0.05, 0.10, 0.30):
+        for q2 in (2.5, 5.0):
+            for y in (0.1, 0.5, 0.9):
+                assert _obs(base, x, q2, y) == _obs(shared, x, q2, y), \
+                    (x, q2, y)
+
+
+def test_r_source_r1998_moves_numerator_and_denominator_together():
+    """(c) WHAT (iii) BUYS OVER (ii), measured at both ends of the ratio."""
+    base = _shared_r_kernel(_l.RSource.Unset)
+    num_only = _numerator_only_r1998_kernel()
+    shared = _shared_r_kernel(_l.RSource.R1998)
+
+    for x in (0.05, 0.10, 0.30):
+        for q2 in (2.5, 5.0):
+            b, n, s = (_obs(k, x, q2, 0.5) for k in (base, num_only, shared))
+            # THE NUMERATOR IS THE SAME OBJECT'S OUTPUT in (ii) and (iii):
+            # both hand r1998 to `Li6ConvolutionOptions`, so b1 and b2 are
+            # bit-identical and every difference below is the DENOMINATOR's.
+            assert n["b1"] == s["b1"], (x, q2)
+            assert n["b2"] == s["b2"], (x, q2)
+            # ... and the denominator moves in (iii) and not in (ii).
+            assert n["dphi"] == b["dphi"], (x, q2)
+            assert s["dphi"] != b["dphi"], (x, q2)
+            # The cos 2phi amplitude has NO R in its numerator (Delta is
+            # toy_delta_gluon), so (ii) cannot move it at all and (iii) moves
+            # it purely through D_phi.  This is the cleanest separation of the
+            # two options anywhere in the tree.
+            assert n["c2p"] == b["c2p"], (x, q2)
+            assert s["c2p"] != b["c2p"], (x, q2)
+
+    # the priced numbers, y = 0.5, Q2 = 2.5 (phase_A_numbers.md sec. A1)
+    for x in (0.05, 0.10, 0.30):
+        b, n, s = (_obs(k, x, 2.5, 0.5) for k in (base, num_only, shared))
+        assert b["w"] == pytest.approx(R_WEIGHT_STATUS_QUO[x], rel=1e-6), x
+        assert s["w"] == pytest.approx(R_WEIGHT_SHARED_R1998[x], rel=1e-6), x
+        # A_zz IS -(2/3) of the weight at theta_m = 0 (TENSOR_LL_SIGN = -1),
+        # so it is not a second number: the two carry the same percentage.
+        assert b["azz"] == pytest.approx(-2.0 / 3.0 * b["w"], rel=1e-12), x
+        assert s["azz"] == pytest.approx(-2.0 / 3.0 * s["w"], rel=1e-12), x
+        assert 100 * (n["w"] / b["w"] - 1) == pytest.approx(
+            R_WEIGHT_NUMERATOR_ONLY_PCT[x], abs=1e-3), x
+        assert 100 * (s["c2p"] / b["c2p"] - 1) == pytest.approx(
+            R_COS2PHI_SHARED_PCT[x], abs=1e-3), x
+
+    # THE y DEPENDENCE IS THE SIGNATURE OF (iii).  (ii) moves K alone, and at
+    # the default b2 = 2x b1 the numerator is K = b1 * (1 + 2(1-y)/y^2), i.e.
+    # the whole y factor multiplies b1, so the (ii)/(i) ratio of K/D_phi is
+    # b1'/b1 at EVERY y; (iii) moves D_phi too, and D_phi's F1 and F2 terms
+    # carry different powers of y (only F1 has an R in it).
+    for x in (0.05, 0.10, 0.30):
+        ns = [_obs(num_only, x, 2.5, y)["w"] / _obs(base, x, 2.5, y)["w"]
+              for y in (0.1, 0.5, 0.9)]
+        ss = [_obs(shared, x, 2.5, y)["w"] / _obs(base, x, 2.5, y)["w"]
+              for y in (0.1, 0.5, 0.9)]
+        # y-independent to 2 ulp (the cancellation is algebraic; K/D_phi is
+        # still evaluated from different intermediates at each y)
+        assert ns[1] == pytest.approx(ns[0], rel=1e-14), x
+        assert ns[2] == pytest.approx(ns[0], rel=1e-14), x
+        # ... and (iii) is not: the three differ in the fourth digit or
+        # sooner, which no ulp story explains.
+        assert abs(ss[2] / ss[0] - 1) > 1e-3, x
+    # the window, at the point where it is widest: -5.47 % at y = 0.1 to
+    # +2.37 % at y = 0.9, straddling zero, against (ii)'s flat -5.51 %.
+    edges = [100 * (_obs(shared, 0.05, 2.5, y)["w"]
+                    / _obs(base, 0.05, 2.5, y)["w"] - 1)
+             for y in (0.1, 0.9)]
+    assert edges[0] == pytest.approx(-5.4705, abs=1e-3)
+    assert edges[1] == pytest.approx(+2.3678, abs=1e-3)
+
+
+def test_r_source_is_refused_where_it_is_not_read_and_recorded_where_it_is():
+    """The provenance rule: refused off li6-convolution, in the meta on it."""
+    for model in ("miller", "cdks"):
+        cfg = _cfg(model)
+        cfg.r_source = _l.RSource.R1998
+        with pytest.raises(RuntimeError, match="read ONLY by b1_model"):
+            cfg.validate()
+    # `unset` is accepted everywhere -- it is the default and installs nothing
+    for model in ("miller", "cdks", "li6-convolution"):
+        _cfg(model).validate()
+
+    plan = lg.tensor_thirds_plan(0.0, 0.6)
+    meta = _l.Pipeline(_unpol_cfg(model="li6-convolution"),
+                       plan).generate(0, True)["meta"]
+    assert meta["r_source"] == "unset"
+    cfg = _unpol_cfg(model="li6-convolution")
+    cfg.r_source = _l.RSource.R1998
+    meta = _l.Pipeline(cfg, plan).generate(0, True)["meta"]
+    assert meta["r_source"] == "r1998"
+    # `sigma-lt` is the one value whose row is NOT-READ -- it is accepted, it
+    # installs the shared object, and it is bit-identical to unset -- so the
+    # meta carries the LABEL rather than the bare name, exactly as
+    # meta["pol_sf"] does on a coherent run.  A bare "sigma-lt" here would
+    # claim a variation that the output hash says did not happen.
+    cfg = _unpol_cfg(model="li6-convolution")
+    cfg.r_source = _l.RSource.SigmaLt
+    meta = _l.Pipeline(cfg, plan).generate(0, True)["meta"]
+    assert meta["r_source"] == "not read at r_source = sigma-lt"
+    # ... and on a run that does not read it the meta carries the REFUSAL's
+    # own value, never a backend name that did not run.
+    meta = _l.Pipeline(_cfg("miller"), plan).generate(0, True)["meta"]
+    assert meta["r_source"] == "unset"
+
+
+def test_r_source_moves_the_unpolarised_rate_unlike_b1_unpol():
+    """The asymmetry with `--b1-unpol`, stated in both headers, measured here.
+
+    `--b1-unpol` leaves the SPIN-BLIND cell cross section bit for bit; this
+    one does not, because the kernel's own `r_func` reaches F1, F_L, D(y) and
+    `ToyG1`.  That is the price of making the ratio's two halves agree.
+    """
+    plan = lg.tensor_thirds_plan(0.7, 0.6)
+    base = _l.Pipeline(_unpol_cfg(model="li6-convolution"), plan)
+    cfg = _unpol_cfg(model="li6-convolution")
+    cfg.r_source = _l.RSource.SigmaLt
+    same = _l.Pipeline(cfg, plan)
+    cfg = _unpol_cfg(model="li6-convolution")
+    cfg.r_source = _l.RSource.R1998
+    moved = _l.Pipeline(cfg, plan)
+
+    assert np.array_equal(np.asarray(base.dis_sampler.cell_xsec_pb),
+                          np.asarray(same.dis_sampler.cell_xsec_pb))
+    assert base.sigma_pb() == same.sigma_pb()
+    assert not np.array_equal(np.asarray(base.dis_sampler.cell_xsec_pb),
+                              np.asarray(moved.dis_sampler.cell_xsec_pb))
+    assert moved.sigma_pb() / base.sigma_pb() - 1 < 0.0

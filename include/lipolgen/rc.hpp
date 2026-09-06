@@ -192,6 +192,15 @@
 ///   * `RC_DELTA_LOW_X` is the SIZE of a correction this generator does not
 ///     apply, taken as a 1-sigma band.  It is a CHOICE, and its source has
 ///     ZERO INSPIRE citations.  BAND IT: run 0.19 and 0.30, never quote one.
+///     And say which way the shipped anchor errs: 0.30 is the source panel's
+///     value carried UPWARD in x, while **0.113 is what that panel reads at
+///     x = 0.00966, the x nearest `RC_X_LOW` = 0.01** -- the shipped anchor
+///     is 2.65x it.  Both alternatives (0.266, 0.113) are priced at
+///     `docs/open_items/run_2026-09-06/phase_A_numbers.md` sec. A2; on A_zz
+///     at x = 0.01, Q^2 = 5 the half-width runs 1.358472e-04 / 1.204512e-04 /
+///     5.116913e-05, and the band still leads the WHOLE radiative tail by
+///     x768 / x681 / x289 there, so the RC budget's ordering survives all
+///     three.  UNDECIDED: nothing here moves the default.
 ///   * No RC calculation exists for a TAGGED tensor asymmetry.  Applying
 ///     delta(x) to tau_tag is a defensible, conservative EXTRAPOLATION and
 ///     must never be quoted as a published result.
@@ -242,6 +251,19 @@ namespace lipolgen {
 /// 0.16 (arXiv:2506.04506 p. 8: 0.16 < x < 0.49, 0.8 < Q^2 < 5.0 GeV^2).
 /// Quoting 1.5 % below x ~ 0.1 is unsupported and contradicts HERMES's
 /// MEASURED 15 % residual at x = 0.063.
+///
+/// THERE IS NO ALTERNATIVE VALUE TO BAND THIS AGAINST, and the record names
+/// none -- checked across include/, src/, python/, tests/ and docs/ on
+/// 2026-09-06 (`docs/open_items/run_2026-09-06/phase_A_numbers.md` sec. A2):
+/// no second reading, no `_OPTIMISTIC` partner (the LOW anchor has one) and
+/// no band edge exists anywhere.  What the record carries instead is a
+/// provenance flag -- the 1.5 % is in the UNPUBLISHED proposal only, and the
+/// published companion arXiv:2506.04506 contains no radiative-correction
+/// discussion at all -- and an ACTION, "cite it by page for the 1.5 %, or
+/// DROP the anchor", which is not a number.  So this anchor is unbanded
+/// because there is nothing to band it against, NOT because it is better
+/// known than the low one.  It pins delta = 0.015 exactly at x >= RC_X_HIGH,
+/// so the low-x anchor decision (registry row 17) lives entirely below 0.16.
 inline constexpr double RC_DELTA_HIGH_X = 0.015;
 inline constexpr double RC_X_HIGH       = 0.16;
 /// Gakh-Shekhovtsova (hep-ph/0403262, JETP 99 (2004) 898) SIZE of the RC on
@@ -267,6 +289,28 @@ inline constexpr double RC_X_HIGH       = 0.16;
 /// 1-sigma band is a CHOICE this generator makes because it does not apply the
 /// correction.  Default = the conservative 0.30 edge, which CONTAINS the 0.10
 /// one, so nothing is lost by it.
+///
+/// PRICED 2026-09-06 (registry row 17,
+/// `docs/open_items/run_2026-09-06/phase_A_numbers.md` sec. A2), and the
+/// direction of the error is the part to carry: **0.113 is the value the
+/// panel actually reads at the x NEAREST this anchor** (x = 0.00966; 0.01 is
+/// above the panel's top), so the shipped 0.30 is 2.65x that reading and
+/// 1.13x the 0.266 at the panel's bottom -- it errs WIDE, which is the safe
+/// direction for a half-width and the wrong one for a quoted precision.
+/// Running `--rc-delta-low-x` 0.30 / 0.266 / 0.113 on the tensor band gives
+/// half-widths on A_zz (6Li, config 1, Q^2 = 5, P_zz = +1, this generator's
+/// own 6Li b1) of
+///     x = 0.01   1.358472e-04 / 1.204512e-04 / 5.116913e-05
+///     x = 0.063  1.459067e-04 / 1.308566e-04 / 6.313127e-05
+///     x = 0.10   9.680016e-05 / 8.798804e-05 / 4.833349e-05
+///     x = 0.16   1.920691e-05 / 1.920691e-05 / 1.920691e-05  (unmoved)
+/// -- proportional to the anchor at x <= RC_X_LOW, COMPRESSED between the
+/// anchors by the log-linear interpolation (x0.4327 and x0.4993 at x = 0.063
+/// and 0.10 where the anchor itself is x0.3767), and IDENTICALLY ZERO at
+/// x >= RC_X_HIGH.  It moves exactly two columns (`rc_tensor_lo`,
+/// `rc_tensor_hi`) and one `meta` key, and NOT the clipped-event fraction on
+/// the tagged band: `clamp_tau` clips |tau| and delta never enters it.
+/// Pinned by `python/tests/test_rc_low_x_anchor.py`.  Still UNDECIDED.
 inline constexpr double RC_DELTA_LOW_X            = 0.30;
 /// The residual HERMES actually ACHIEVED at the lowest x: 2e-3 against a
 /// MEASURED |A_zz| of 1.06e-2 at <x> = 0.012 (hep-ex/0506018 Table II) =>
@@ -285,7 +329,10 @@ inline constexpr double RC_DELTA_LOW_X_OPTIMISTIC = 0.19;
 /// readings happen to be conservative in magnitude (0.30 > 0.266 > 0.113) and
 /// that is the only property the band uses, but the basis is stated here so
 /// nobody re-derives the anchor from the wrong one.  Recorded, NOT changed:
-/// moving the anchor is the author's call, and 0.30 is unchanged.
+/// moving the anchor is the author's call, and 0.30 is unchanged.  Since
+/// 2026-09-06 the two alternatives are PRICED rather than only named -- see
+/// `RC_DELTA_LOW_X` above for the three half-width rows, and note again that
+/// **0.113 is the panel's reading at the x nearest THIS constant**.
 inline constexpr double RC_X_LOW                  = 0.01;
 
 /// The ceiling on |tau| the BAND is allowed to see, i.e. `RcOptions::

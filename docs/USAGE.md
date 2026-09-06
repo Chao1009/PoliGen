@@ -1441,7 +1441,7 @@ in `docs/open_items/vmc_reconciliation.md`):
 > a category average whose EXPECTATION is the uniform-M mix integral and IS
 > invariant, measured unmoved to all 15 digits (**0.024675932148828** Hulthén
 > β = 0.30, **0.033810227625842** VMC AV18, the equal-thirds average
-> reproducing it to +3.1e−9) — but whose SAMPLE is re-drawn, ~77 % of events
+> reproducing it to +3.1e−6 (a per-M norm-residual effect — Σ n_M k² differs by 5e−5 between M = 0 and ±1 — not summation order; the pooled category average equals the uniform mix to 2.2e−16 on both builds)) — but whose SAMPLE is re-drawn, ~77 % of events
 > taking a different (k, cos θ_k); at 40 k events the two readings sit 1.4σ
 > (YR high-acceptance, 0.0249 → 0.0264) and 0.7σ (tagging, 0.2530 → 0.2551)
 > apart, on binomial σ_diff of 1.1e−3 and 3.1e−3 for two independent samples.  A single tensor-polarised fill is not invariant at all: measured on
@@ -1471,7 +1471,7 @@ separately per isotope).
 above, unchanged, on the post-`build_amp2`-fix build).  The ⁶Li rows read
 `0.0286 | 0.0365 | 0.0249 | 0.0348 | 0.0266 | 0.0349` and
 `0.3410 | 0.3175 | 0.2530 | 0.2485 | 0.3115 | 0.2905` before, and a scratch
-build of the pre-fix `HEAD` reproduced those exactly when the rows were checked
+build of the pre-fix `HEAD` reproduced the six Hulthén cells exactly when the rows were checked (two VMC tagging cells differ in the last printed digit: 0.2486 vs 0.2485 at 10 × 99.5, 0.2906 vs 0.2905 at 18 × 275)
 on 2026-09-06; **every ⁷Li row is unchanged, digit for
 digit**, because ⁷Li is one L = 1 wave and does not move at all.  The ⁶Li rows
 are a `tensor-thirds` category average, so what moved is the SAMPLE and not the

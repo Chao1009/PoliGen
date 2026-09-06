@@ -34,7 +34,7 @@ the configuration, sample, energy or knob it was measured at.
 
 | # | item | state | the deciding number, with its window | where |
 |---|---|---|---|---|
-| 1 | VMC α+d / α+t cluster wave functions | **opt-in shipped** (`--cluster-wave vmc`; Hulthén default bit for bit) **+ author decisions rows 9, 10, 11** | ⁶Li α-tag fraction **0.0249 → 0.0348** (×1.40) at 10 × 99.5 on the YR high-acceptance envelope, 0.2551 → 0.2486 (regenerated 2026-09-06; pre-fix sample 0.2530 → 0.2485) on the tagging optics; the shipped whole-nucleus ⁶Li polarization is **0.811228** against the ab-initio **0.848**, so **no inclusive ⁶Li polarization may be quoted without the band 0.81 … 0.91** | §1; `phase_C_numbers.md` §§C5.4–C5.5b |
+| 1 | VMC α+d / α+t cluster wave functions | **opt-in shipped** (`--cluster-wave vmc`; Hulthén default bit for bit) **+ author decisions rows 9, 10, 11** | ⁶Li α-tag fraction **0.0264 → 0.0348** (×1.315; regenerated 2026-09-06 on the sign-fixed build — the pre-fix sample read 0.0249 → 0.0348, ×1.40) at 10 × 99.5 on the YR high-acceptance envelope, 0.2551 → 0.2486 (regenerated 2026-09-06; pre-fix sample 0.2530 → 0.2485) on the tagging optics; the shipped whole-nucleus ⁶Li polarization is **0.811228** against the ab-initio **0.848**, so **no inclusive ⁶Li polarization may be quoted without the band 0.81 … 0.91** | §1; `phase_C_numbers.md` §§C5.4–C5.5b |
 | 2 | ePIC chain gate (HepMC3 → abconv → npsim) | **closed** | **10/10** events through `npsim`, directly and via `abconv -p ip6_hiacc_100x10`, with the writer fix that puts m_e = 0.51099895 MeV in `generated_mass` | §2; `T2_CHAIN.md` |
 | 3 | Tensor sign `TENSOR_LL_SIGN` | **author decision — `STATUS.md` row 22** (carried forward, confirm only) | **−1**, the value four independent sources give for A_zz = −(2/3) b₁/F₁; the code has shipped it since 2026-08-29 while two documents still read "author to confirm" | §3–4; `AUTHOR_DECISIONS.md` §B1 |
 | 4 | ⁶Li / ⁷Li effective polarizations | **author decision — row 23** | whole-nucleus VMC **0.85 ± 0.03** for ⁶Li (0.848, Wiringa 2014 Table I) against the shipped cluster-picture **0.811228**; ⁷Li 0.866 / −0.037 | §3–4; `AUTHOR_DECISIONS.md` §B6 |
@@ -113,7 +113,7 @@ behind a Cloudflare challenge). Findings:
   0.4001 / 0.4990 GeV (it read 0.535 / 0.398 / 0.348 / 0.234 / −0.554 before), so
   the shrink is a factor **2.3 at k = 0.20 falling to 8.8 at k = 0.40** — not a
   halving. **Both curves are now negative** across the accepted window; the tag
-  fractions, ⟨k⟩ and P_D on this line are spin-blind and did not move.
+  ⟨k⟩ and P_D on this line are spin-blind and did not move; the tag fractions are NOT spin-blind for a tensor-polarised fill (they move with A_zz^tag, −24.5 % at the CLI's default fill) and their 40 000-event rows were regenerated on the fixed build — only the uniform-M mix is invariant.
 - Consequence for the physics case: the ⁶Li α-tag acceptance is entirely a
   p_T-tail measurement, so the published tag fractions and the tagged A_zz
   curves were re-run on VMC (`validation/vmc_tag_fractions.py`,
@@ -133,7 +133,7 @@ behind a Cloudflare challenge). Findings:
   `yr_optics(..., high_acceptance = true)`, `n_phi = 32`: **−1.2069** Hulthén
   β = 0.30 and **−0.5191** VMC AV18, against +0.8450 and +0.4518 before. **The
   Hulthén → VMC statement this bullet makes survives the fix and every other
-  number on this line is unchanged**: the tag fractions and P_D are spin-blind,
+  number on this line is unchanged except the tag-fraction rows, which were regenerated**: P_D is spin-blind,
   and the spin-blind accepted rate is **unmoved across the fix to ≤ 4.0e−16
   relative (1–2 ulp; the VMC channel is bit-identical)** — measured as the
   acceptance-weighted Σ_M n_M k² at `n_phi = 32`, giving an accepted fraction

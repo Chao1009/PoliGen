@@ -379,7 +379,7 @@ polarizations and the inclusive sector are untouched. `norm` moves by up to
 > (**0.024675932148828** Hulthén β = 0.30, **0.033810227625842** VMC AV18,
 > acceptance-weighted Σ_M n_M k² at `n_phi = 32`, YR high-acceptance,
 > `default_configs("6Li")[1]`), and the equal-thirds `tensor-thirds` average
-> reproduces it to +3.1e−9. For a **tensor-polarised** fill the tag fraction is
+> reproduces it to +3.1e−6 (a per-M norm-residual effect — Σ n_M k² differs by 5e−5 between M = 0 and ±1 — not summation order; the pooled category average equals the uniform mix to 2.2e−16 on both builds). For a **tensor-polarised** fill the tag fraction is
 > the same acceptance-weighted integral as A_zz^tag and moves with it: measured
 > on the ⁶Li Hulthén channel at those optics, `tensor-thirds` categories
 > **0.028127 → 0.018403** (azz±) and **0.017775 → 0.037222** (azz0), and the

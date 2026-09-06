@@ -311,7 +311,7 @@ high-acceptance, 0.2530 / 0.2485 tagging optics, 0.9730 / 0.9981 for ⁷Li),
 > are 40 000-event SAMPLES at the `tensor-thirds` fill, and while the
 > EXPECTATION of that category average is invariant — the uniform-M mix
 > accepted fraction is unmoved to all 15 digits, §7.1's own table, and the
-> equal-thirds average reproduces it to **+3.1e−9** — the SAMPLE is re-drawn,
+> equal-thirds average reproduces it to **+3.1e−6 (a per-M norm-residual effect — Σ n_M k² differs by 5e−5 between M = 0 and ±1 — not summation order; the pooled category average equals the uniform mix to 2.2e−16 on both builds)** — the SAMPLE is re-drawn,
 > because ~77 % of events take a different (k, cos θ_k). Re-running the rows'
 > own command on the fixed library
 > (`validation/vmc_tag_fractions.py --events 40000 --configs 0,1,2`, seed

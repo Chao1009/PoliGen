@@ -96,7 +96,14 @@ the 7Li -> 6Li efficiency substitution straddles 1, which is what makes the
 band's top a span; and the far-forward working point is unchosen -- the LAST
 is the single correction that on its own restores the NO (at LiPolGen's own
 de-squeezed 6Li tagging optics the band is 0.73-0.92 sigma with 3 sigma at
-106-167 fb^-1/u).
+106-167 fb^-1/u).  SURVEYED 2026-09-15 AND STILL FOUR: the second of them was
+taken to the sibling ../PolarizedLithiumSim -- every module of
+fastsim/polli_fastsim/, all of tools/fullsim/ and tools/analysis/, plans/03
+and plans/09 and all 54 refs/ entries -- which supplies no central-detector
+lepton reconstruction efficiency either, only a per-track stand-in at
+evgen/polligen/hfs.py:251 and a CONSTRUCTED scattered-electron ID profile at
+evgen/polligen/reco.py:482, so it stays UNBOUNDED and no bound is quoted
+(docs/open_items/run_2026-09-06/phase_C_survey.md).
 
 `lipolgen-run` is untouched: this is a separate console entry point, not a
 flag on it, because adding subparsers there would change its parse behaviour.

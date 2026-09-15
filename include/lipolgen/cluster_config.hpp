@@ -533,6 +533,17 @@ class ClusterConfigSampler {
   /// 6Li tagging optics the band is 0.73-0.92 sigma with 3 sigma at
   /// 106-167 fb^-1/u, OUTSIDE the {1, 10, 100} band at both ends, and that
   /// last one is the single correction that on its own restores the NO.
+  /// SURVEYED 2026-09-15 AND STILL FOUR: the second of them was taken to the
+  /// sibling ../PolarizedLithiumSim -- every module of fastsim/polli_fastsim/,
+  /// all of tools/fullsim/ and tools/analysis/, plans/03 and plans/09 and all
+  /// 54 refs/ entries, plus whole-tree greps -- and that repository supplies
+  /// NO central-detector lepton reconstruction efficiency either, only a
+  /// per-track stand-in at evgen/polligen/hfs.py:251 (labelled "stand-in" on
+  /// the line that states it) and a CONSTRUCTED scattered-electron ID profile
+  /// at evgen/polligen/reco.py:482, with no J/psi reconstruction and no
+  /// EICrecon output at all, so this factor stays UNBOUNDED rather than
+  /// bounded and nothing here is quoted as a bound
+  /// (docs/open_items/run_2026-09-06/phase_C_survey.md).
   /// docs/open_items/run_2026-09-03/phase_C_numbers.md
   /// sec. C2 (C2.0 for the limitation, C2.8 for every assumption);
   /// docs/OPEN_ITEMS_SOLUTIONS.md sec. 11.3.

@@ -354,12 +354,12 @@
   "first": "/// 6Li(1+) is a rigid alpha(0+) core plus a deuteron with relative orbital",
   "last": "///"
  },
- "include/lipolgen/coherent.hpp:527-528": {
+ "include/lipolgen/coherent.hpp:538-539": {
   "sha256": "abebdfecbc4fea71982183da202f9b3ab8e6a0d9fd78969dd1fee00be95624d5",
   "first": "  /// deformation coefficient 2 a_2 PLUS the flat gluon-transversity term",
   "last": "  /// amp * P_zz (`money_cos2phi_coherent.py` injects 1 + amp P_zz cos 2phi)."
  },
- "include/lipolgen/coherent.hpp:620-626": {
+ "include/lipolgen/coherent.hpp:631-637": {
   "sha256": "d55149603fea3f45641d93a5804c362020c074625d328e203776a85a570da9fc",
   "first": "/// (plans/08 D8) draws x_P log-uniform over a fixed decade and uses it for",
   "last": "/// just the virtual photon and M_X^2 = -Q^2 in 100 % of events."

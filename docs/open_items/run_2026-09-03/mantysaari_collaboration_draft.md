@@ -333,7 +333,13 @@ map is anchored and 0.1 < Q² < 100 was the extrapolation, not the reverse.
    the problem: at 10 × 99.5 a J/ψ at ⟨W⟩ = 30.2 sits at y = −0.39, nearly at
    rest in the lab, so both 1.548 GeV decay leptons are inside |η| < 3.5 with
    acceptance **0.994**, and never below 0.89 anywhere the beams can reach.
-   The per-lepton reconstruction efficiency is what we have nothing for. **It
+   The per-lepton reconstruction efficiency is what we have nothing for — and
+   on 2026-09-15 we surveyed our own detector-simulation repository
+   (`../PolarizedLithiumSim`: all of `fastsim/polli_fastsim/`, `tools/fullsim/`,
+   `tools/analysis/`, `plans/03`, `plans/09` and all 54 `refs/` entries) and it
+   has none either, only a per-track stand-in it labels as one and a
+   constructed scattered-electron ID profile, so this stays **unbounded rather
+   than bounded** (`run_2026-09-06/phase_C_numbers.md` §C1). **It
    can only cost**, and it is why the number above is a band that is open
    below: a pair acceptance × efficiency of 0.52 would cost the "above 2 σ"
    half of MARGINAL, and 0.12 would put 3 σ outside the {1, 10, 100} band.
@@ -487,7 +493,9 @@ format (§1), the eSTARlight rate/slope baseline including the Q² scan (§1), a
 >   detector acceptance or reconstruction efficiency for the e⁺e⁻/μ⁺μ⁻ pair at
 >   all. The geometry we can bound and it is benign (the J/ψ is nearly at rest
 >   at 10 × 99.5, so 0.99 of pairs are inside |η| < 3.5); the reconstruction
->   efficiency we simply do not have, and it can only cost. That is the open
+>   efficiency we simply do not have — we searched our own detector-simulation
+>   repository for one on 2026-09-15 and it has none either, only a per-track
+>   stand-in it labels as one — and it can only cost. That is the open
 >   bottom of the band above.
 >   Pulling the other way, and we would rather tell you than have you find it:
 >   the 17.75 % is a ⁷Li number at ⁷Li's own *top* energy, 18 × 118, and we

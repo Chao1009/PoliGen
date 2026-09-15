@@ -94,6 +94,29 @@ ASSUMPTIONS, all of them, and where each one is stated in the output:
     `Scenario::eta_max`); the per-lepton reconstruction efficiency is
     UNBOUNDED HERE, and the 0.95/track used at the band's low end is the
     sibling ../PolarizedLithiumSim's own stand-in.  Section 3b(c);
+  * ... and SINCE 2026-09-15 THAT SIBLING HAS BEEN SURVEYED FOR ONE AND HAS
+    NONE EITHER, so the factor stays UNBOUNDED rather than merely unmeasured:
+    COHERENT_JPSI_EFF_IR8_LI7 = 0.1775 is a PURE GEOMETRIC ACCEPTANCE and
+    therefore an UPPER bound on the far-forward intact-recoil tagging efficiency
+    x acceptance: Chang et al. (PRD 113 (2026) 032018, sec. IV, last sentence)
+    state that the simulation 'only accounts for the acceptance effect and does
+    not incorporate the efficiencies of the detector' and that 'the efficiency
+    and acceptance of the reconstructed distribution' were not included. Each
+    omitted factor is <= 1, so restoring any can only LOWER the product;
+    direction DOWN, unquantified, and it COMPOUNDS with the x1.12 beam-energy
+    leg rather than cancelling it (surveyed 2026-09-15,
+    run_2026-09-06/phase_C_survey.md C-S6). It bounds the RECOIL leg only, not
+    the decay leptons.
+    every module of ../PolarizedLithiumSim/fastsim/polli_fastsim/, all of
+    tools/fullsim/ and tools/analysis/, plans/03 and plans/09 and all 54
+    refs/ entries were read and the whole tree grepped, and what is there is
+    the same per-track plateau at evgen/polligen/hfs.py:251 (labelled
+    "stand-in" on the line that states it), a CONSTRUCTED scattered-electron
+    ID profile at evgen/polligen/reco.py:482 whose own docstring says "No
+    ePIC electron-ID efficiency curve exists in any ePIC document", and no
+    J/psi reconstruction, no eic-smear parameterisation and no EICrecon
+    output at all -- so NO BOUND is derived here and none is quoted.
+    docs/open_items/run_2026-09-06/phase_C_survey.md;
   * the two previous items PARTLY CANCEL (x1.1224 against x0.8971 = 1.007),
     which is why neither may be quoted without the other;
   * the programme luminosity carries NO energy dependence: 10 fb^-1/u is a
@@ -434,7 +457,7 @@ def lepton_pair_acceptance(w_gev: float, eta_max: float = None,
     ELECTRON -- there is no decay-lepton acceptance anywhere in this tree, and
     that is the point of this function).  `pt_min` is optional and is NOT an
     in-tree number: 0.2 GeV is the sibling ../PolarizedLithiumSim's own
-    `HfsModel(pt_min_track=0.2)` stand-in for a 1.7 T solenoid.
+    `polligen.hfs.HadronResponse(pt_min_track=0.2)` stand-in for a 1.7 T solenoid.
 
     The leptons are back to back at p* = sqrt(M^2/4 - m_l^2) = 1.548 GeV in
     the J/psi frame, so both are inside |eta| < eta_max exactly when the
@@ -449,7 +472,8 @@ def lepton_pair_acceptance(w_gev: float, eta_max: float = None,
     lepton and hurts the other); no material, no magnetic-field sagitta cut
     beyond `pt_min`; and the result is a pure ACCEPTANCE -- the per-lepton
     tracking/PID/reconstruction efficiency is a SEPARATE factor and is
-    UNBOUNDED anywhere in this tree.
+    UNBOUNDED anywhere in this tree -- and, surveyed on 2026-09-15, unbounded
+    in the sibling ../PolarizedLithiumSim too (phase_C_survey.md).
     """
     if eta_max is None:
         eta_max = _l.Scenario().eta_max
@@ -463,8 +487,17 @@ def lepton_pair_acceptance(w_gev: float, eta_max: float = None,
 
 #: Per-lepton reconstruction efficiency used ONLY to show what a plausible one
 #: costs.  It is NOT an in-tree number and NOT a measurement: it is the
-#: sibling ../PolarizedLithiumSim's own `HfsModel(eff_track=0.95)`, which that
+#: sibling ../PolarizedLithiumSim's own `polligen.hfs.HadronResponse(eff_track=0.95)` (`evgen/polligen/hfs.py:251`, default at `:293`), which that
 #: file labels "stand-in" in as many words.  The pair costs its SQUARE.
+#:
+#: SURVEYED 2026-09-15 AND STILL A STAND-IN, NOT A BOUND: the sibling was read
+#: end to end for a central-detector lepton reconstruction efficiency (every
+#: module of fastsim/polli_fastsim/, all of tools/fullsim/ and tools/analysis/,
+#: plans/03 and plans/09, all 54 refs/ entries) and supplies none, so this line
+#: stays a stand-in and acquires no direction; the label itself is at
+#: evgen/polligen/hfs.py:251, and the plateau is the top of a logistic p_T
+#: turn-on applied to HADRONS under a pion mass hypothesis, not to leptons.
+#: docs/open_items/run_2026-09-06/phase_C_survey.md sec. C-S3.1.
 EPS_TRACK_SIBLING_STANDIN = 0.95
 
 
@@ -993,6 +1026,21 @@ def report(out=sys.stdout) -> dict:
       "         STAND-IN and is not a measurement of anything.\n"
       % (EPS_TRACK_SIBLING_STANDIN, ch["eps_pair_standin"],
          ch["down_standin"]))
+    w("         AND THE SIBLING WAS SURVEYED FOR A REAL ONE ON 2026-09-15\n"
+      "         AND HAS NONE, so this stays UNBOUNDED rather than merely\n"
+      "         unmeasured and NO fourth ladder row exists: every module of\n"
+      "         fastsim/polli_fastsim/, all of tools/fullsim/ and\n"
+      "         tools/analysis/, plans/03 and plans/09 and all 54 refs/\n"
+      "         entries were read and the whole tree grepped, and what is\n"
+      "         there is the per-track plateau above (evgen/polligen/\n"
+      "         hfs.py:251, labelled \"stand-in\" on the line that states it,\n"
+      "         and applied to HADRONS under a pion mass hypothesis), a\n"
+      "         CONSTRUCTED scattered-electron ID profile (evgen/polligen/\n"
+      "         reco.py:482, whose own docstring says \"No ePIC electron-ID\n"
+      "         efficiency curve exists in any ePIC document\"), and no J/psi\n"
+      "         reconstruction, no eic-smear parameterisation and no EICrecon\n"
+      "         output at all.  docs/open_items/run_2026-09-06/\n"
+      "         phase_C_survey.md.\n")
 
     w("\n    (d) THEY PARTLY CANCEL, WHICH IS WHY BOTH HAD TO BE STATED.\n"
       "    The energy leg alone times the stand-in pair factor is\n"
@@ -1290,7 +1338,14 @@ def report(out=sys.stdout) -> dict:
       "     * the decay-lepton reconstruction efficiency, which is UNBOUNDED\n"
       "       here and is what makes the band open below.  It would have to\n"
       "       fall to %.2f to cost the 'above 2 sigma' half of MARGINAL and\n"
-      "       to %.2f to put 3 sigma outside the band.\n"
+      "       to %.2f to put 3 sigma outside the band.  SURVEYED 2026-09-15:\n"
+      "       the sibling ../PolarizedLithiumSim supplies none either -- its\n"
+      "       fastsim/, tools/fullsim/, tools/analysis/, plans/03, plans/09\n"
+      "       and all 54 refs/ entries were read and it holds one per-track\n"
+      "       stand-in (evgen/polligen/hfs.py:251), one CONSTRUCTED\n"
+      "       scattered-electron ID profile (evgen/polligen/reco.py:482), no\n"
+      "       J/psi reconstruction and no EICrecon output at all -- so this\n"
+      "       row is still UNBOUNDED, not bounded (phase_C_survey.md).\n"
       "     * the efficiency below Q^2 = 0.1 -- where 85 %% of the J/psi rate\n"
       "       now sits -- is UNMEASURED anywhere in this tree (section 3);\n"
       "     * a_2 itself is a closed-form map, not an amplitude (top of this\n"

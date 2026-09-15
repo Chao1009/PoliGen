@@ -1185,7 +1185,14 @@ at its top, 3 σ at 8.3 … 13.0 fb⁻¹/u, inside {1, 10, 100} at both ends, wi
 ε_det the dominant unquantified factor and `Optics::lumi_fraction` the single
 correction that on its own restores a NO (0.73–0.92 σ, 106–167 fb⁻¹/u).
 `a2_from_quadrupole` is a closed form, not a Good–Walker amplitude. Nothing
-has been sent (the draft says so at its top and bottom).
+has been sent (the draft says so at its top and bottom). **Surveyed 2026-09-15
+(run 2026-09-06, task C1):** the sibling `../PolarizedLithiumSim` was read end
+to end for the decay-lepton reconstruction efficiency the ask's fourth caveat
+names — every module of `fastsim/polli_fastsim/`, all of `tools/fullsim/` and
+`tools/analysis/`, `plans/03`, `plans/09` and all 54 `refs/` entries, plus
+whole-tree greps — and supplies none, so that caveat stays **unbounded rather
+than bounded** and the draft's wording of it is unchanged
+(`run_2026-09-06/phase_C_numbers.md` §C1, `phase_C_survey.md`).
 
 **(d)** No number in the tree moves under any option.
 

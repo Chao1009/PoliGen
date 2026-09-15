@@ -630,7 +630,19 @@ No per-lepton tracking or PID efficiency exists anywhere in this tree. The
 sibling assumes `eff_track` = 0.95 and **labels it a stand-in in as many
 words**; the pair would then cost 0.9025, and A_geom × that is **0.897**. That
 0.897 is used below only as a *stand-in*, and it is what makes the band's low
-end a band edge rather than a bound.
+end a band edge rather than a bound. **Surveyed 2026-09-15 and still
+unbounded**: that sibling was read end to end for a real one — every module of
+`fastsim/polli_fastsim/`, all of `tools/fullsim/` and `tools/analysis/`,
+`plans/03` and `plans/09`, all 54 `refs/` entries and two reference PDFs, plus
+whole-tree greps — and it supplies **no central-detector lepton reconstruction
+efficiency at all**, only that per-track plateau (`evgen/polligen/hfs.py:251`,
+labelled "stand-in" on the line that states it, and applied to *hadrons* under
+a pion mass hypothesis), one **constructed** scattered-electron ID profile
+(`evgen/polligen/reco.py:482`, whose own docstring says "No ePIC electron-ID
+efficiency curve exists in any ePIC document"), no J/ψ reconstruction, no
+`eic-smear` parameterisation and no EICrecon output whatever, so **no bound was
+derived and none is quoted** (`docs/open_items/run_2026-09-06/phase_C_survey.md`;
+recorded at `run_2026-09-06/phase_C_numbers.md` §C1).
 
 **(d) THEY PARTLY CANCEL.** ×1.122 (energy leg) × 0.897 (geometry × the
 stand-in pair factor) = **1.007 — unity to 0.7 %.** With the species leg on top
@@ -874,7 +886,9 @@ the ask.**
   up-lever on ε_det (beam energy) times a species substitution whose direction
   is **not established** (×0.99–1.33, §C2.3c(b)); its bottom from a *stand-in*
   for the decay-lepton reconstruction efficiency that no source in this tree
-  supplies. Below that bottom it is **open**: 0.52 on the
+  supplies — **and, surveyed 2026-09-15, no source in the sibling
+  `../PolarizedLithiumSim` either** (`run_2026-09-06/phase_C_numbers.md` §C1).
+  Below that bottom it is **open**: 0.52 on the
   pair costs "above 2 σ", 0.117 costs "3 σ inside the band" (§C2.3c, §C2.4a).
 * **φ: YES on statistics.** 39 σ with no Q² floor, 8.3 σ over 0.1 < Q² < 100,
   and **2.1 σ** inside LiPolGen's own Q² > 0.7 window.
@@ -987,7 +1001,13 @@ sign were missing from it entirely.
    lepton exists anywhere in this repository. The 0.95/track used to draw the
    band's low end is the sibling `../PolarizedLithiumSim`'s own
    `HfsModel(eff_track=0.95)`, which that file labels a stand-in. This is what
-   leaves the verdict band open below.
+   leaves the verdict band open below. **Surveyed 2026-09-15**: that sibling
+   was read end to end (`fastsim/polli_fastsim/`, `tools/fullsim/`,
+   `tools/analysis/`, `plans/03`, `plans/09`, all 54 `refs/` entries) and has
+   no lepton reconstruction efficiency either — only the per-track stand-in
+   above and a *constructed* scattered-electron ID profile
+   (`evgen/polligen/reco.py:482`) — so this item is **still unbounded, not
+   bounded** (`run_2026-09-06/phase_C_survey.md`).
 
 3c. **Items 3a and 3b PARTLY CANCEL** — ×1.122 against ×0.897 is 1.007 — which
    is why neither may be quoted alone. A reader given only 3a moves the

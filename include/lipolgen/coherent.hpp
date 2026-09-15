@@ -247,6 +247,17 @@ const std::vector<EstarlightLi6Row>& estarlight_li6_coherent();
 /// The single code home of that number; before 2026-09-04 it was a literal
 /// inside validation/o5_a2_reach.py.
 inline constexpr double COHERENT_JPSI_EFF_IR8_LI7 = 0.1775;
+/// COHERENT_JPSI_EFF_IR8_LI7 = 0.1775 is a PURE GEOMETRIC ACCEPTANCE and
+/// therefore an UPPER bound on the far-forward intact-recoil tagging efficiency
+/// x acceptance: Chang et al. (PRD 113 (2026) 032018, sec. IV, last sentence)
+/// state that the simulation 'only accounts for the acceptance effect and does
+/// not incorporate the efficiencies of the detector' and that 'the efficiency
+/// and acceptance of the reconstructed distribution' were not included. Each
+/// omitted factor is <= 1, so restoring any can only LOWER the product;
+/// direction DOWN, unquantified, and it COMPOUNDS with the x1.12 beam-energy
+/// leg rather than cancelling it (surveyed 2026-09-15,
+/// run_2026-09-06/phase_C_survey.md C-S6). It bounds the RECOIL leg only, not
+/// the decay leptons.
 
 /// The ION beam energy `COHERENT_JPSI_EFF_IR8_LI7` was measured at [GeV/u]:
 /// 7Li's own top energy, Z/A x 275 = 117.857, which arXiv:2511.05638 writes

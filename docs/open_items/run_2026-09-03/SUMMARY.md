@@ -155,7 +155,15 @@ and one do, since C5.4 (§10 and §8).
 
 1. **No detection efficiency exists below Q² = 0.1 in any source this tree has
    seen**, and **no decay-lepton reconstruction efficiency exists in it at
-   all** — only the geometry is bounded (A_geom = 0.994 at 10 × 99.5). The
+   all** — only the geometry is bounded (A_geom = 0.994 at 10 × 99.5).
+   **Still true after 2026-09-15**, when the sibling `../PolarizedLithiumSim`
+   was surveyed for one — every module of `fastsim/polli_fastsim/`, all of
+   `tools/fullsim/` and `tools/analysis/`, `plans/03`, `plans/09` and all 54
+   `refs/` entries — and supplied none either: one per-track stand-in
+   (`evgen/polligen/hfs.py:251`), one *constructed* scattered-electron ID
+   profile (`evgen/polligen/reco.py:482`), no J/ψ reconstruction and no
+   EICrecon output at all, so the factor stays **unbounded, not bounded**
+   (`run_2026-09-06/phase_C_numbers.md` §C1). The
    far-forward working point is unchosen, and `Optics::lumi_fraction` is the
    single correction that on its own **restores a NO** (0.73 … 0.92 σ,
    106–167 fb⁻¹/u).

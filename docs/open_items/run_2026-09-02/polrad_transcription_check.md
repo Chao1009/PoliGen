@@ -9,6 +9,16 @@ recorded in §7 — one in the design (`ℑ^el_6`), one in POLRAD itself (the
 approx-path carbon `Z²`) — plus one **new blocking flag** (§8, the overall sign
 of Eq. (38)) that the implementer must resolve before `rc_tail` is trusted.
 
+> **§10 ADDED 2026-09-06.** §§1–9 check Eq. (18)'s prefactor, Appendix **A**
+> and Eq. (A.4). **Appendix B was never transcribed here**, because nothing
+> evaluated it until `RcTailModel::PolradFull` was implemented. It is now, and
+> `polrad2t.tex`'s Appendix B turns out to be wrong in **five** places against
+> POLRAD's own FORTRAN — the `a_ik` M-powers, the level `q_ik` acts at, the
+> `T_821` `S`/`X` pairing, and two dropped factors in the second lift. All five
+> are in §10, each with the measurement that catches it. None of them touches
+> the shipped `TPeak`/`TPeakPlusLL` tail, and none of them changes a verdict
+> in §§1–9.
+
 ---
 
 ## 0. Sources obtained, and how to get them again
@@ -699,6 +709,20 @@ Two things this section must not be read as saying:
   s+p enter the unpolarised numerator only and `TPeakPlusLL` **lowers the
   tensor fraction** of the tail. That fraction is unknown, not zero.
 
+> **CORRECTION, 2026-09-06 (B2) — the second bullet is true of *Eq. (38)* and
+> FALSE of the paper.** "There is no tensor s/p peak in POLRAD" was written
+> when only Eqs. (37)–(39) had been transcribed. **Eq. (18) + Eq. (A.4) carries
+> the s- and p-peaks' own tensor content**, and `RcTailModel::PolradFull`
+> (shipped 2026-09-06, §10 of this document) computes it. Read the bullet as
+> *"Eq. (38) supplies no tensor s/p peak, so `TPeakPlusLL`'s leading-log s+p
+> enter the unpolarised numerator only"*, and strike **"That fraction is
+> unknown, not zero"**: on `TPeakPlusLL` it is **bounded, not computed**, by
+> `RcOptions::sp_tensor_scale` (2026-09-06, B1), and on `PolradFull` it is
+> **computed**. That is also why `sp_tensor_scale` is refused on `PolradFull`
+> for the **opposite** reason it is refused on `TPeak`: not because the term
+> did not run, but because it **did**. See `phase_B_numbers.md` §B2 in
+> `run_2026-09-06`.
+
 `rc.hpp`'s `RcTailModel` comments, the run banner and `USAGE.md` §7b all say so.
 
 ---
@@ -725,3 +749,193 @@ Two things this section must not be read as saying:
    catalogue identifier `ADXQ` → **`ADGH_v1_0`**, dataset `37vgvzgr2w` on
    Mendeley Data (only lines 1964 and 2096 of this design carry `ADXQ`; no other
    file under `docs/` mentions it).
+
+---
+
+## 10. APPENDIX B, transcribed at last — and it is wrong in FIVE places (added 2026-09-06)
+
+Everything above checks Eq. (18)'s *prefactor*, Appendix **A** and Eq. (A.4).
+**Appendix B — the `θ_ij(τ)` kernels Eq. (18) cannot be evaluated without —
+was never transcribed**, because until 2026-09-06 nothing evaluated it:
+`RcTailModel::PolradFull` threw. It is implemented now
+(`../run_2026-09-06/phase_B_numbers.md` §B2), and transcribing it turned up
+**five** defects in `polrad2t.tex`'s Appendix B. In every one the **FORTRAN**
+(`adgh`, CPC `ADGH_v1_0`, the same archive §0 records) is right and the paper
+is wrong, and in every one the wrong reading is caught by the same measurement.
+
+**Every one was read from the LaTeX source, not the PDF.** §0's
+`pdftotext`-swaps-fractions warning does not apply to any of them.
+
+> **CORRECTION, 2026-09-06 (verification pass) — three `adgh` LINE CITATIONS in
+> this section pointed into the wrong deck.** The quoted FORTRAN and every
+> number in this section are unchanged; only the line numbers were wrong, and
+> all three are now re-pointed against the same archive (`adgh_v1_0.gz`,
+> sha256 `83703668…1ea7b`; uncompressed sha256 `4a823438…11761`, 11 593 lines):
+>
+> | claim | printed here until 2026-09-06 | what is actually there | correct citation |
+> |---|---|---|---|
+> | §10.4, `T_821`'s pairing | `adgh:9155-9157` | `al2ll`'s own `write(9,…)` / `end` | **`adgh:1161-1163`** — `tm3(6,2,n)` in `ffu` |
+> | §10.5, `4F_{2−}^{ηη}` keeps its `τ` | `adgh:1082-1085` | the tail of `oi12` plus `eeis` | **`adgh:1085-1086`** — `eeir` |
+> | §10.6, `4F^{ηη}` keeps its `s_η` | `adgh:1090-1091` | `eei1i2` | **`adgh:1093-1094`** — `eeb` |
+>
+> The same three (plus `adgh:9134-9137` → **`adgh:1134-1137`** for `ffu`'s
+> `hi2`/`shi2`/`ehi2`/`ohi2`, and the first-lift range `1075-1078, 1088, 1090`
+> → **`1073-1075, 1089, 1092`**) were corrected in `src/core/rc.cpp` and in
+> `../run_2026-09-06/phase_B_numbers.md` §B2.2 on the same pass.
+
+> **CORRECTION, 2026-09-15 (residue pass) — TWO MORE `adgh` LINE CITATIONS in
+> this section, of the same family, were off by one.** The quoted FORTRAN,
+> every number and every conclusion in this section are unchanged; only the
+> line numbers move. Re-read line by line from the same uncompressed archive
+> (sha256 `4a823438…11761`, 11 593 lines):
+>
+> | claim | printed here until 2026-09-15 | what is actually on those lines | correct citation |
+> |---|---|---|---|
+> | §10.2, `tails`' `ajm2`/`ajm3` block | `adgh:1102-1107` | the quoted block starts one line earlier, at 1101 (`ajm2(1)=apq/amp`), and ends at 1105 (`ajm3(3)=-3./amp2`); 1106-1107 are the `do 15` / `do 13` loop heads that follow it | **`adgh:1101-1105`** |
+> | §10.3, the bare `τ/M²` term | `adgh:1114-1115` | 1114 is the *plain* accumulate `tm(i,j)=tm(i,j)+tm3(ii(i),j-k+1,k)*ajk`; the quoted `if((i.eq.5.or.i.eq.6).and.k.eq.2)` is 1115 and its `*ta/amp2` continuation line is 1116 | **`adgh:1115-1116`** |
+>
+> The second one is also cited in `src/core/rc.cpp` (the `Eq. (B.7)'s q_ik, IN
+> adgh's FORM` comment) and in `../run_2026-09-06/phase_B_numbers.md` §B2.2;
+> both were corrected on the same pass.
+
+### 10.1 The measurement that settles all five
+
+Eq. (38) **is** POLRAD's own ultrarelativistic *t*-peak extraction of Eq. (18)
+(§2.1.3 B). So with a form factor **dead at the s-/p-peak vertex**
+`Q'² ≈ z_s Q²` — which isolates the *t*-peak without touching either
+quadrature — the ratio `Eq. (18)_tensor / Eq. (38) σ_q^d` must tend to **1** as
+`x_A → 0`. Deuteron, `E = 27.6 GeV`, `y = 0.5`, Gaussian `b = 20 t_min`, F_m
+sector, `S_A = A s`, `x_A = x/A`:
+
+| reading of Appendix B | `x_A` = 0.003 | 0.006 | 0.012 |
+|---|---|---|---|
+| **`adgh` — what `src/core/rc.cpp` ships** | **1.00313** | **1.00627** | **1.01257** |
+| paper's `a_ik` (§10.2) | −9345.05 | −4658.87 | −2315.75 |
+| paper's `q_ik` (§10.3) | −167714 | −83651.6 | −41620 |
+| paper's `T_821` (§10.4) | 13.9681 | 14.0043 | 14.0771 |
+| paper's `4F_{2−}^{ηη}` (§10.5) | 7406.36 | 464.806 | 30.1189 |
+| paper's `4F^{ηη}` (§10.6) | −86047.5 | −42857.2 | −21261.8 |
+
+### 10.2 Eq. (B.3)'s `a_ik` are missing `1/M^{l_i−1}` — and the BORN settles it
+
+The paper prints `a_ik = {Q² − 3(ηq)², 6(ηq), −3}` for `i = 5, 6` and
+`{ηq, −1}` for `i = 4, 8`. `adgh`'s `tails` (adgh:1101-1105) has
+
+```fortran
+      ajm2(1)=apq/amp
+      ajm2(2)=-1./amp
+      ajm3(1)=(y-3.*apq**2)/amp2
+      ajm3(2)=6.*apq/amp2
+      ajm3(3)=-3./amp2
+```
+
+i.e. the paper's values **divided by `M^{l_i−1}`**. Eq. (A.1) says why: the
+`ℑ₅` term of the hadronic tensor is `g̃_{μν} k_n ℑ₅` with
+
+```
+  k_n = (3(qη)² − Q²)/M²
+```
+
+so `a_{51}` is `−k_n`, not `−M²k_n`. The expansion is
+`−M²k_n(q − k)/M² = [Q² − 3(ηq)² + 6(ηq)(ηk) − 3(ηk)²]/M²`, and the three
+`a_5k` are its coefficients.
+
+**Independent confirmation, from a path that has nothing to do with the tail.**
+POLRAD's **Born** kernels (`bornin`, adgh:817-825) are the same `θ` structure
+at `k = 0`:
+
+```fortran
+      tm(1)=-(2.*aml2-y)
+      tm(2)=(-(amp2*y-s*x))/(2.*amp2)
+      tm(7)=(-(4.*aml2+3.*apn**2-3.*apq**2+y))/2.
+      tm(8)=apq/amp*(-3.*(apn*sxp-apq*sx))/(2.*ap)
+      ek=(3.*apq**2-y)/amp2
+      tm(5)=-ek*tm(1)
+      tm(6)=-ek*tm(2)
+```
+
+`tm(5) = −ek·tm(1)` with `ek = (3 apq² − Q²)/M²` **exactly**, and
+`tm(8) = (apq/M)·(…)`. The `1/M²` and `1/M` are POLRAD's, in a routine that has
+no `τ` in it at all.
+
+### 10.3 Eq. (B.7)'s `q_ik` is applied at the wrong LEVEL
+
+The paper's Eq. (B.6) reads
+`T_{ijk} = T_{i,j−1,k−1}{F → F^η, …} + q_ik T_{i,j−1,k−1}` with
+`q_ik = δ_{k2}(δ_{i5} + δ_{i6}) τ/M`, so the outer sum `θ_ij = Σ_k a_ik T_ijk`
+multiplies that second term by `a_{i2} = 6(ηq)` as well. `adgh` (adgh:1115-1116)
+adds it **outside** `a_{i2}`:
+
+```fortran
+       if((i.eq.5.or.i.eq.6).and.k.eq.2)
+     . tm(i,j)=tm(i,j)+tm3(ii(i),j-k+1,1)*ta/amp2
+```
+
+— a bare `τ/M²·T_{i,j−1,1}`. The two differ by `6(ηq)/M`, which at these
+kinematics is ~80, and the paper's reading misses Eq. (38) by five orders of
+magnitude.
+
+### 10.4 Eq. (B.4)'s `T_821` pairs `S` and `X` with the wrong SIGN
+
+Paper:
+
+```tex
+T_{821}(\tau) = -{3\over M}( \eta{\cal K}(m^2F_{2-} - \tau S_pF_d) + \eta q F_{IR}
+    + m^2 S_p F^{\eta}_{2-} + (S\,\eta k_1 + X\,\eta k_2)F_{1+} + S_x F^{\eta}_{IR} )
+```
+
+With `2ηk₁ = ηK + ηq` and `2ηk₂ = ηK − ηq`, `(S ηk₁ + X ηk₂) = (ηK S_p + ηq S_x)/2`.
+`adgh`'s `tm3(6,2,n)` (adgh:1161-1163, in `ffu`) has `apn*F_{1+}*sx + apq*F_{1+}*sxp`, i.e.
+`(ηK S_x + ηq S_p)/2 = S ηk₁ − X ηk₂`. **The two `S`/`X` labels are swapped
+relative to the paper.** Note `T_{811}` two lines earlier pairs them the *other*
+way (`S ηk₂ + X ηk₁`) and the paper gets **that** one right, which is what makes
+this look like a sign slip and not a convention difference.
+
+### 10.5 Eq. (B.8)'s `4F_{2−}^{ηη}` drops a `τ`
+
+The paper's own FIRST-order relation, three lines above, is
+
+```
+  2F_{2-}^{eta} = (2F_d + F_{2+}) * TAU * s_eta + F_{2-} r_eta
+```
+
+and its second-order line prints `(2F_d + F_{2+})(r_η s_{…} + s_η r_{…})`
+with **no `τ`**. `adgh`'s `tails` (adgh:1085-1086) keeps it:
+
+```fortran
+      eeir=( ((ccpe**2+spe**2*ta**2)*bir+4.*bi12*ccpe*spe*ta+4.
+     . *bi1pi2*spe**2*ta+2.*bis*ccpe*spe*ta))/4.
+```
+
+(`4*bi12*ccpe*spe*ta + 2*bis*ccpe*spe*ta` = `2(2F_d + F_{2+}) τ r_η s_η`.)
+
+### 10.6 Eq. (B.8)'s `4F^{ηη}` drops an `s_η`
+
+The paper prints
+
+```
+  4F^{eta eta} = F(r_eta - tau s_eta)^2 + 4F_i(r_eta - tau s_eta) + 4F_ii s_eta^2
+```
+
+whose middle term is **first** order in `(r, s)` where the other two are
+second. `adgh` (`tails`, adgh:1093-1094) has the missing factor:
+
+```fortran
+      eeb=((ccpe-spe*ta)**2*bb+4.*(ccpe-spe*ta)*b1i*spe+4.*b11i
+     . *spe**2)/4.
+```
+
+### 10.7 What this does NOT change
+
+* **Nothing in the shipped `TPeak` or `TPeakPlusLL` tail.** Appendix B is
+  reached only from Eq. (18); Eqs. (37)–(39) do not contain a `θ_ij`. Both
+  t-peak models are byte-identical across this work
+  (`../run_2026-09-06/phase_B_numbers.md` §B2.8).
+* **Nothing in §§1–9 above.** All five defects are in Appendix **B**; §§1–5's
+  verdicts on Eq. (38), Eq. (18)'s prefactor, Eq. (21) and Eq. (A.4) stand
+  unchanged, and §7.1's `ℑ^el_6` correction is now **exercised** for the first
+  time (T9, un-skipped).
+* **It does not make Eq. (18) validated against Mo–Tsai.** `[MT69]` is still
+  not in this tree. The `x_A → 0` reduction above is POLRAD-internal, and that
+  is exactly what §10.1 is: a check that two POLRAD equations agree with each
+  other where they must.

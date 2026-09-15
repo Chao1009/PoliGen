@@ -39,6 +39,13 @@ G6  the `--unpol-sf` / `--pol-sf` selectors REACH ⁷Li -- inclusive and tagged
     sector stays exactly zero under every one of them.
 G7  the two adjacent run-surface defects: `ClusterPartialWave`'s half-assigned
     segfault (F4) and `spin32_populations`' uninformative refusal (F3).
+G8  THE A = 7 QUADRUPOLE GATE IS REAL, CITED AND BOUND (B3, 2026-09-06).
+    `LI7_QUADRUPOLE_FM2` = -4.06 fm² is now a sourced constant with one home
+    (rc.hpp, beside `LI6_QUADRUPOLE_FM2`), and `li7_alpha_t_quadrupole`
+    computes Q from the shipped α-t overlap and reports the ratio.  It
+    validates the α-t WAVE FUNCTION's quadrupole ONLY.  b1(⁷Li) is still
+    unimplemented (open item 15) and G1-G3 above still hold afterwards --
+    which is the point: a passing wave-function gate licenses no b₁.
 """
 
 import subprocess
@@ -406,3 +413,125 @@ def test_spin32_refusal_names_the_reachable_domain():
             except RuntimeError:
                 ok = False
             assert ok == inside, (pz, t)
+
+
+# ------------------------------------------------------------------- G8
+
+#: The measured moment, as TUNL's A = 5, 6, 7 evaluation prints it: Tilley,
+#: Cheves, Godwin, Hale, Hofmann, Kelley, Sheu and Weller, Nucl. Phys. A708
+#: (2002) 3, whose A = 7 half prints "Q = -40.6 ± 0.8 mb (1988DI1B)" and whose
+#: A = 6 half prints the "Q = -0.818(17) mb (1998CE04)" that is
+#: `LI6_QUADRUPOLE_FM2`.  1 mb = 0.1 fm².  Read 2026-09-06 from
+#: nucldata.tunl.duke.edu/nucldata/ourpubs/07_2002.pdf and 06_2002.pdf.
+Q7_MB = -40.6
+
+#: The alternative Stone also lists: Voelk et al., Nucl. Phys. A530 (1991) 475
+#: (Coulomb-excitation reorientation), -0.0400(3) b.  Recorded, not adopted.
+Q7_CER_FM2 = -4.00
+
+
+def test_the_measured_7li_quadrupole_is_sourced_bound_and_has_one_home():
+    """B3: the number that was 'quoted from memory' is now a cited constant.
+
+    ONE HOME: it lives beside `LI6_QUADRUPOLE_FM2` in `rc.hpp` because both
+    come from the SAME evaluation, in the same sign convention (the
+    spectroscopic moment of the m = I substate; negative = oblate) and the
+    same unit rule (1 mb = 0.1 fm²).  Nothing else in the tree may define it.
+    """
+    assert _l.LI7_QUADRUPOLE_FM2 == pytest.approx(Q7_MB * 0.1, rel=1e-12)
+    assert _l.LI7_QUADRUPOLE_FM2 == -4.06
+    # the convention the ⁶Li line already carries, unchanged
+    assert _l.LI6_QUADRUPOLE_FM2 == -0.0818
+    assert _l.LI7_QUADRUPOLE_FM2 < 0.0 and _l.LI6_QUADRUPOLE_FM2 < 0.0
+    # ⁷Li's moment is ~50x ⁶Li's in magnitude -- these are not the same
+    # quantity accidentally transcribed, and a unit slip would show here.
+    assert 40.0 < _l.LI7_QUADRUPOLE_FM2 / _l.LI6_QUADRUPOLE_FM2 < 60.0
+    for name in ("LI7_QUADRUPOLE_FM2", "AlphaTQuadrupole", "alpha_t_quadrupole",
+                 "li7_alpha_t_quadrupole"):
+        assert hasattr(_l, name), name
+
+
+def test_the_alpha_t_quadrupole_gate_reproduces_the_note_and_is_pinned():
+    """§4.2 of phase_D_li7_rank2.md, now COMPUTED by shipped code.
+
+    Every number here was measured on 2026-09-06 and reproduces the note's
+    own offline numpy recipe (§9 `q_at`) to the last bit.
+    """
+    g = _l.li7_alpha_t_quadrupole()
+    assert g.r2_fm2 == pytest.approx(12.534828961030, rel=1e-9)
+    assert g.r_rms_fm == pytest.approx(3.540456038568, rel=1e-9)
+    assert g.z_eff == pytest.approx(0.695075101362, rel=1e-9)
+    assert g.q_fm2 == pytest.approx(-3.485059004257, rel=1e-9)
+    # the -(2/5) is the Clebsch-Gordan factor, not a fit: it is exactly twice
+    # the -1/5 the ⁷Li polarimeter already uses as <P₂(cos θ_k)> = -T/5.
+    assert g.q_fm2 == pytest.approx(-0.4 * g.z_eff * g.r2_fm2, rel=1e-14)
+    # Z_eff is MASS-weighted; the A-number form 34/49 is 0.17 % away and unused
+    mt, ma, m7 = (_l.nuclear_mass(1, 3), _l.nuclear_mass(2, 4),
+                  _l.nuclear_mass(3, 7))
+    assert g.z_eff == pytest.approx(2.0 * (mt / m7) ** 2 + (ma / m7) ** 2,
+                                    rel=1e-14)
+    assert abs(34.0 / 49.0 / g.z_eff - 1.0) == pytest.approx(1.72291e-3,
+                                                             rel=1e-4)
+    # grid/truncation, pinned; 30 fm is within 0.032 % of 60 fm
+    for rmax, want in ((20.0, -3.472004271671), (30.0, -3.485059004257),
+                       (40.0, -3.485797071382), (60.0, -3.486171274781)):
+        assert _l.li7_alpha_t_quadrupole(0.0, rmax).q_fm2 == pytest.approx(
+            want, rel=1e-9)
+    q60 = _l.li7_alpha_t_quadrupole(0.0, 60.0).q_fm2
+    assert abs(q60 / g.q_fm2 - 1.0) < 1e-3
+    # the ANL Monte Carlo band, fully correlated: ±0.33 %, an order of
+    # magnitude smaller than the discrepancy, so it does not explain it
+    qm = _l.li7_alpha_t_quadrupole(-1.0).q_fm2
+    qp = _l.li7_alpha_t_quadrupole(+1.0).q_fm2
+    assert qm == pytest.approx(-3.496426569222, rel=1e-9)
+    assert qp == pytest.approx(-3.473744615578, rel=1e-9)
+    assert abs(qm / g.q_fm2 - 1.0) < 4e-3 and abs(qp / g.q_fm2 - 1.0) < 4e-3
+
+
+def test_the_gate_is_a_reported_ratio_and_not_a_verdict_on_b1():
+    """13-14 % low -- MEASURED, against both compilations, and that is all.
+
+    The number is a RATIO that is reported.  It is not thresholded on b₁ and
+    it cannot be: b₁(⁷Li) is not implemented, and §4.1 of the note explains
+    why nothing offline can validate the light-cone convolution at A = 7
+    (the A = 3 analogue does not exist -- ³H and ³He are J = ½ and have no
+    rank-2 structure function at all).
+    """
+    g = _l.li7_alpha_t_quadrupole()
+    assert g.q_fm2 / _l.LI7_QUADRUPOLE_FM2 == pytest.approx(0.858388917305,
+                                                            rel=1e-9)
+    assert g.q_fm2 / Q7_CER_FM2 == pytest.approx(0.871264751064, rel=1e-9)
+    # the choice of compilation moves the ratio by 1.5 % and does not change
+    # the verdict "13-14 % low"
+    spread = abs(g.q_fm2 / Q7_CER_FM2 - g.q_fm2 / _l.LI7_QUADRUPOLE_FM2)
+    assert spread / abs(g.q_fm2 / _l.LI7_QUADRUPOLE_FM2) == pytest.approx(
+        0.0150, abs=5e-4)
+    for r in (g.q_fm2 / _l.LI7_QUADRUPOLE_FM2, g.q_fm2 / Q7_CER_FM2):
+        assert 0.12 < 1.0 - r < 0.15
+    # THE CONTRAST that makes the gate worth committing: the same
+    # construction one cluster level down misses ⁶Li's measured moment by a
+    # factor 4.07 (307 %), so ⁷Li's wave function is validated by a measured
+    # moment an order of magnitude better than ⁶Li's is -- 21.7x, measured.
+    w0, w2 = _l.li6_alpha_d_partial_waves()
+    f6 = _l.alpha_d_quadrupole_fm2(w0, w2) / _l.LI6_QUADRUPOLE_FM2
+    assert f6 == pytest.approx(4.0748, rel=1e-3)
+    assert (f6 - 1.0) / abs(1.0 - g.q_fm2 / _l.LI7_QUADRUPOLE_FM2) > 10.0
+
+
+def test_the_passing_wave_function_gate_ships_no_b1_at_all():
+    """G8 must not weaken G1: ⁷Li's rank-2 sector is STILL exactly zero.
+
+    This is the whole reason the gate is phrased as a ratio.  A validated
+    α-t wave function is an input, not a structure function; b₁(⁷Li) waits on
+    registry row 3 (the unpolarised-backend decision) and open item 15.
+    """
+    g = _l.li7_alpha_t_quadrupole()
+    assert g.q_fm2 < 0.0                       # the gate ran and agrees in sign
+    k = _l.default_inclusive_kernel(_l.ion_by_name("7Li"))
+    t = k.tables(0.2, 5.0)
+    assert (t.b1, t.b2, t.delta) == (0.0, 0.0, 0.0)
+    cfg = _cfg()
+    assert _l.inclusive_rank2_is_empty(cfg)
+    meta = _l.Pipeline(cfg, li7_tensor_plan()).generate(0, False)["meta"]
+    assert meta["b1_model"] == NONE_LABEL
+    assert meta["rank2_input"].startswith("EMPTY -- 7Li is spin 3/2")

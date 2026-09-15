@@ -760,6 +760,80 @@ double alpha_d_quadrupole_fm2(const ClusterPartialWave& phi0,
                               double r_max_fm = 20.0, std::size_t n_r = 2000,
                               std::size_t n_k = 4001);
 
+/// THE A = 7 GATE, and the ONLY validation 7Li gets offline.
+///
+/// `Q = -(2/5) Z_eff <r^2>` for the alpha + t cluster state, Eq. (6) of
+/// `docs/open_items/run_2026-09-03/phase_D_li7_rank2.md` sec. 4.2, computed
+/// from the SAME `momenta/li7_at3.momentum` wave `li7_alpha_channel` already
+/// ships to the tagged channel.  Every factor is parameter-free:
+///
+///   * both clusters are spherical (alpha is 0+, t is 1/2+), so the WHOLE of
+///     Q(7Li) is orbital in this picture -- the same statement that makes
+///     7Li's b1 purely orbital;
+///   * for a pure L = 1, S = 1/2, J = 3/2 state
+///     <3cos^2(theta) - 1>_{M=3/2} = 2[L(L+1) - 3 m_L^2]/[(2L-1)(2L+3)]
+///     = -2/5 at m_L = +1, which is twice the SAME -1/5 the 7Li polarimeter
+///     already uses as <P_2(cos theta_k)> = -T/5;
+///   * `Z_eff` = Z_alpha (M_t/M_7)^2 + Z_t (M_alpha/M_7)^2 = 0.695075 with
+///     the AME nuclear masses `nuclear_mass(1,3) / (2,4) / (3,7)` (the
+///     A-number form 34/49 = 0.693878 is 0.17 % away and is NOT used);
+///   * <r^2> comes from u_1(r) = r sqrt(2/pi) int k^2 j_1(kr) phi_1(k) dk,
+///     the L = 1 member of the same Fourier-Bessel pair
+///     `alpha_d_quadrupole_fm2` uses at L = 0, 2, and is normalised by its own
+///     int u^2 dr -- so no norm, no spectroscopic factor and no global phase
+///     enters, which is why `VMC_S_ALPHA_T_LI7` = 1.0084 > 1 does not
+///     contaminate it.
+///
+/// WHAT IT VALIDATES, AND WHAT IT DOES NOT.  It validates the alpha-t WAVE
+/// FUNCTION's quadrupole -- its <r^2> and its P-wave character -- against a
+/// measured rank-2 observable of the same nucleus, `LI7_QUADRUPOLE_FM2`
+/// (rc.hpp).  It validates NOTHING about the light-cone convolution, the
+/// unpolarised DIS input, or b1(7Li) -- which is NOT IMPLEMENTED (open item
+/// 15 of docs/OPEN_ITEMS_SOLUTIONS.md; 7Li's rank-2 sector is exactly zero by
+/// construction) and whose sign is not even determined by the inputs in this
+/// tree.  There is no A = 3 analogue of the A = 2 b1 gate and there cannot be
+/// one: 3H and 3He are J = 1/2 and have no rank-2 structure function at all
+/// (`TaggedModel::tensor_dilution` throws for exactly that reason), so this
+/// quadrupole is the only offline check the 7Li wave function will get.
+///
+/// MEASURED (phase_B_numbers.md sec. B3, and pinned in tests):
+///   <r^2> = 12.534829 fm^2, r_rms = 3.540456 fm, Z_eff = 0.695075,
+///   Q = -3.485059 fm^2 at the defaults below;
+///   grid: -3.472004 (r_max 20) / -3.485059 (30) / -3.485797 (40) /
+///         -3.486171 (60), i.e. converged to 0.1 % at 30 fm;
+///   VMC MC band (`vmc_mc_sigma` = -+1, fully correlated):
+///         -3.496427 / -3.485059 / -3.473745, i.e. +-0.33 %;
+///   ratio to `LI7_QUADRUPOLE_FM2` = -4.06: 0.858389 (14.2 % low).
+/// It is a REPORTED ratio, never a pass/fail on b1.  For contrast, the same
+/// construction one cluster level down gives
+/// `alpha_d_quadrupole_fm2(li6_alpha_d_partial_waves())` = -0.3333 fm^2
+/// against a measured -0.0818 -- a factor 4.08 -- so the 7Li wave-function
+/// input is validated by a measured moment an order of magnitude better than
+/// 6Li's is, and that asymmetry is the point of the gate.
+struct AlphaTQuadrupole {
+  double r2_fm2 = 0.0;    ///< <r^2> of the alpha-t relative motion [fm^2]
+  double r_rms_fm = 0.0;  ///< sqrt(r2_fm2) [fm]
+  double z_eff = 0.0;     ///< Z_alpha (M_t/M_7)^2 + Z_t (M_alpha/M_7)^2
+  double q_fm2 = 0.0;     ///< -(2/5) z_eff r2_fm2 [fm^2]
+};
+
+/// The gate on an arbitrary L = 1 relative wave.  `phi1` is read for its
+/// (k, psi) table only -- the L it carries is not consulted, j_1 is applied
+/// here -- and the k grid is the table's own, in GeV.
+AlphaTQuadrupole alpha_t_quadrupole(const VmcRadial& phi1,
+                                    double r_max_fm = 30.0,
+                                    std::size_t n_r = 4000,
+                                    std::size_t n_k = 8001);
+
+/// The gate on 7Li's own shipped wave: `li7_alpha_channel(BETA_DEFAULT,
+/// ClusterWaveSource::VmcAV18, vmc_mc_sigma)`, i.e. `momenta/li7_at3.momentum`
+/// (the 3/2- GROUND state).  `vmc_mc_sigma` is the ANL table's own fully
+/// correlated 1-sigma band, 0 by default and then bit for bit today's table.
+AlphaTQuadrupole li7_alpha_t_quadrupole(double vmc_mc_sigma = 0.0,
+                                        double r_max_fm = 30.0,
+                                        std::size_t n_r = 4000,
+                                        std::size_t n_k = 8001);
+
 }  // namespace lipolgen
 
 #endif  // LIPOLGEN_B1_NUCLEAR_HPP

@@ -32,7 +32,9 @@ the rtol-1e−12 gates did not move.
 ## B — the radiative tail (`d3ac125`, `phase_B_numbers.md`)
 
 * POLRAD's "only the t-peak leads" holds **event-weighted (+0.61 %)** in the
-  Q² ≥ 20 GeV², y ≤ 0.9 window (5182 of 200 000 events, seed 1234) and **fails
+  Q² ≥ 20 GeV², y ≤ 0.9 window (5182 of 200 000 events, seed 1234, **at
+  `--pz 0`** — P_z named 2026-09-15 and both fills re-measured: the CLI default
+  P_z = 0.7 gives 5194 events and +0.62 %; the 5182 here is exact) and **fails
   per cell**: **331 of that window's 1356 accepted cells (24.4 %)** differ by
   > 1 %, worst **×6444** at x = 0.7943, y = 0.0088, **318 of them at y < 0.1**.
 * The ⁶Li **C0 shape is a band in both sign and magnitude**: σ^el_T/σ^el_U at
@@ -164,11 +166,39 @@ and one do, since C5.4 (§10 and §8).
    untested, so the ±100 % band stays, and the *shipped* unpolarised default is
    outside the window the lift was granted on.
 4. **b₁(⁷Li) is not implemented**, deliberately: its sign flips with the
-   unpolarised backend, and the Q(⁷Li) it would be gated against is quoted from
-   memory and absent from this tree.
-5. **The exact Mo–Tsai elastic tail was never obtained.** What ships is a band
-   of two stated models; the **tensor** fraction of the s-/p-peaks is *unknown,
-   not zero*; the polarised quasi-elastic tail is *priced, not computed*; no RC
+   unpolarised backend. ~~and the Q(⁷Li) it would be gated against is quoted
+   from memory and absent from this tree.~~ **The second half is CLOSED
+   2026-09-06** (run 2026-09-06 task B3): Q(⁷Li) is sourced and in the tree as
+   `LI7_QUADRUPOLE_FM2` = **−4.06 fm²** (`rc.hpp`, from the same TUNL A = 5,
+   6, 7 evaluation as `LI6_QUADRUPOLE_FM2`), and `li7_alpha_t_quadrupole`
+   makes the A = 7 gate a real, pinned test — **reported ratio 0.858389,
+   14 % low** (0.871265 against the −4.00(3) previously quoted). The first
+   half stands: that gate validates the α–t **wave function**, so **b₁(⁷Li)
+   is still not implemented** and still blocked on the unpolarised-backend
+   decision.
+5. **The exact Mo–Tsai elastic tail was never obtained** — and still has not
+   been: `[MT69]` is not in this tree and no number from it is quoted anywhere.
+   What ships is **three** tail models since 2026-09-06, when POLRAD's own
+   exact one (`--rc-tail-model polrad-full`, Eq. (18) + Appendix B +
+   Eq. (A.4)) was implemented; it is checked POLRAD-internally and against the
+   leading-log fallback, **not** against an external exact tail, and it is
+   **outside** the two t-peak models on 43.5 % of the sampler's cells, so
+   those two are a **price range and not a confidence interval**
+   (`../run_2026-09-06/phase_B_numbers.md` §B2). The **tensor** fraction of
+   the s-/p-peaks is *computed* on that model and, on the two t-peak ones,
+   since 2026-09-06, *bounded, not computed* — and the bound is **partial and, at the
+   standard points, empty**: `--rc-sp-tensor-scale` (default 0) prices the
+   **elastic** s/p column, which recovers **0.0 %** of the tensor-fraction
+   collapse ×0.66139 / ×0.0031829 / ×6.6076e−05 at x = 0.01 / 0.10 / 0.30,
+   Q² = 5 (bit-identical there: ⁶Li's coherent form factor is 45+ decades down
+   at the s/p vertex Q′² ≈ Q²) and **at most 21.72 %** of it anywhere on the
+   grid; the **quasi-elastic** s/p column, which is the whole of that collapse
+   at x ≥ 0.10, is bounded by **nothing**
+   (`../run_2026-09-06/phase_B_numbers.md` §B1) **and is not computed by the
+   exact model either** — a nucleon has no tensor structure function, so the
+   quasi-elastic tail is tensor-blind at all three peaks on all three models
+   (§B2); the polarised quasi-elastic
+   tail is *priced, not computed*; no RC
    calculation exists for a tagged tensor asymmetry, and everything the band is
    calibrated on is **deuteron**.
 6. **O3 in the form asked** — the α–d split from GFMC configurations — remains

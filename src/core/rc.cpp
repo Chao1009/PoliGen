@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cmath>
 #include <fstream>
+#include <limits>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -344,6 +345,444 @@ double polrad_sigma_qe_u(int z, int n, double x, double y, double s,
                         gm * gm);
         };
     return polrad_tpeak_quadrature(integ, x, y, s, lim, n_eta);
+  };
+  return static_cast<double>(z) * one(true) +
+         static_cast<double>(n) * one(false);
+}
+
+// -------------------------- POLRAD Eq. (18): the exact tau_A quadrature
+//
+// WHY `long double` INSIDE THIS BLOCK, and it is not a style choice.
+// Eq. (B.3)'s a_ik for i = 5, 6 are {Q^2 - 3(eta q)^2, 6(eta q), -3}/M^2, i.e.
+// the expansion of -M_A^2 k_n(q - k) = Q^2 - 3(eta(q-k))^2 in powers of the
+// photon contraction, and in the collinear region the three terms cancel:
+// MEASURED at 6Li config 1, x = 1e-4, y = 0.5, tau near tau_min,
+// SUM|term| / |SUM term| = 2.9e4 inside one theta_5j and 6.6e4 at x = 0.1,
+// i.e. ~4.8 decimal digits gone before the i-sum begins.  In `double` the
+// TENSOR column of the tail then moves by 14 % between tanh-sinh steps
+// h = 1/16 and h = 1/32 (-3.30e-4 -> -3.78e-4 at x = 1e-3, y = 0.5) -- the
+// quadrature is converged and the ARITHMETIC is not.  In `long double`
+// (64-bit mantissa on x86-64) the same scan is stable to 6e-5.  The
+// unpolarised column never needed it (10 digits either way); it is carried
+// along because it shares the theta evaluation.
+//
+// A PLATFORM WHERE `long double` IS `double` WOULD SILENTLY LOSE THAT, so
+// `RcModel`'s constructor REFUSES `PolradFull` there rather than ship a
+// tensor tail with two significant figures.  T14 and T19(e) are the gates.
+namespace {
+using ld = long double;
+
+/// The eight Appendix-B F-functions at one "eta level": the bare set of
+/// Eq. (B.12), or its image under one or two applications of the Eq. (B.8)
+/// lift.  `FIR` is m^2 F_2+ - Q_m^2 F_d at the SAME level -- Eq. (B.8) does
+/// not list F_IR^eta because it is not independent, and `adgh`'s `ffu`
+/// (adgh:1125) rebuilds it from its arguments at every level:
+/// `hi2`/`shi2`/`ehi2`/`ohi2` = `aml2*bis - ym*bi12` etc. at adgh:1134-1137,
+/// with `ym = y + al2` = Q_m^2 (adgh:751).  (The "adgh:9134-9137" this line
+/// carried until 2026-09-06 is inside `al2ll` and reads `refss=0d0`.)
+struct FullFSet {
+  ld F = 0, F2p = 0, F2m = 0, Fd = 0, F1p = 0, FIR = 0;
+};
+
+/// The invariants Eq. (18) is written in, all at the NUCLEAR map when the
+/// caller is elastic and at the NUCLEON map when it is quasi-elastic -- the
+/// formulae do not care which, only that S, X, M and the form factors agree.
+struct FullKin {
+  ld S, X, Sx, Sp, Q2, Qm2, M, M2, m2, lQ, sqlQ;
+  ld apq, apn;    ///< (eta q) and (eta K), Eq. (B.16); 0 for a spin-1/2 target
+  ld se, re0, re1;///< s_eta and r_eta = re0 + re1 tau, Eq. (B.10)
+};
+
+FullKin full_kin(ld x_a, ld y, ld s_a, ld m_a, ld m_lep) {
+  FullKin k;
+  k.S = s_a;
+  k.X = (1.0L - y) * s_a;
+  k.Sx = k.S - k.X;
+  k.Sp = k.S + k.X;
+  k.Q2 = x_a * y * s_a;
+  k.m2 = m_lep * m_lep;
+  k.Qm2 = k.Q2 + 2.0L * k.m2;
+  k.M = m_a;
+  k.M2 = m_a * m_a;
+  k.lQ = k.Sx * k.Sx + 4.0L * k.M2 * k.Q2;
+  k.sqlQ = std::sqrt(k.lQ);
+  // LONGITUDINAL target polarisation, POLRAD `conkin` `+self,if=long`
+  // (adgh:779-781): eta = 2(a_eta k_1 + c_eta p) with
+  // a_eta = M/sqrt(lambda_s), c_eta = -S/(2 M sqrt(lambda_s)).  That is the
+  // unique unit spacelike vector in the (k_1, p) plane with eta.p = 0:
+  // eta.p = a_eta S + 2 c_eta M^2 = 0 and eta^2 = (4 M^2 m^2 - S^2)/lambda_s
+  // = -1 exactly.  In the target rest frame it is the beam axis, which for
+  // this library's collider variables is the ion's own momentum -- the same
+  // axis Eq. (43) rotates off.
+  const ld ls = k.S * k.S - 4.0L * k.m2 * k.M2;
+  const ld sqls = std::sqrt(ls);
+  const ld ae = k.M / sqls, be = 0.0L, ce = -k.S / (2.0L * k.M * sqls);
+  k.apq = -k.Q2 * (ae - be) + ce * k.Sx;                 // adgh:788
+  k.apn = (k.Q2 + 4.0L * k.m2) * (ae + be) + ce * k.Sp;  // adgh:789
+  k.se = ae + be;                                        // s_eta, Eq. (B.10)
+  k.re0 = 2.0L * ce;                        // r_eta = 2c + tau(a - b)
+  k.re1 = ae - be;
+  return k;
+}
+
+/// Eq. (B.12) on Eq. (B.13)'s B_{1,2}, C_{1,2}, with Eq. (B.14) for F_d.
+/// adgh `tails`:1053-1065 (adgh:1066-1069 is `sps`/`spe`/`ccpe`/`ccps`, i.e.
+/// s_eta and r_eta, which `full_kin` carries instead).
+void full_level0(const FullKin& k, ld ta, FullFSet* out, ld* fi, ld* fii) {
+  const ld b1 = -0.5L * (k.lQ * ta + k.Sp * (k.Sx * ta + 2.0L * k.Q2));
+  const ld b2 = -0.5L * (k.lQ * ta - k.Sp * (k.Sx * ta + 2.0L * k.Q2));
+  const ld com = 4.0L * k.m2 * (k.Q2 + ta * k.Sx - ta * ta * k.M2);
+  const ld c1 = (k.S * ta + k.Q2) * (k.S * ta + k.Q2) + com;
+  const ld c2 = (k.X * ta - k.Q2) * (k.X * ta - k.Q2) + com;
+  const ld sc1 = std::sqrt(c1), sc2 = std::sqrt(c2);
+  out->F = 1.0L / k.sqlQ;
+  // Eq. (B.14), NOT the printed tau^{-1}(C_2^{-1/2} - C_1^{-1/2}): tau = 0 is
+  // inside the range and the printed form is 0/0 there.
+  out->Fd = k.Sp * (ta * k.Sx + 2.0L * k.Q2) / (sc1 * sc2 * (sc1 + sc2));
+  out->F1p = 1.0L / sc2 + 1.0L / sc1;
+  out->F2p = b2 / (sc2 * c2) - b1 / (sc1 * c1);
+  out->F2m = b2 / (sc2 * c2) + b1 / (sc1 * c1);
+  out->FIR = k.m2 * out->F2p - k.Qm2 * out->Fd;
+  *fi = -b1 / (k.lQ * k.sqlQ);
+  *fii = 0.5L * (3.0L * b1 * b1 - k.lQ * c1) / (k.lQ * k.lQ * k.sqlQ);
+}
+
+/// Eq. (B.8), FIRST lift (F -> F^eta).  adgh `tails`:1073-1075 (`eis`, `eir`,
+/// `ei12` = F_2+^eta, F_2-^eta, F_d^eta), 1089 (`ei1pi2` = F_1+^eta) and 1092
+/// (`eb` = F^eta); the same lift in the S direction is adgh:1070-1072.  (This
+/// citation read "1075-1078, 1088, 1090" until 2026-09-06 -- 1076-1078 is
+/// `ois`, the eta-s CROSS set, not this lift.)
+FullFSet full_lift1(const FullKin& k, ld ta, const FullFSet& b, ld fi, ld se,
+                    ld re) {
+  FullFSet o;
+  o.F2p = (2.0L * b.F1p * se + b.F2m * se * ta + b.F2p * re) / 2.0L;
+  o.F2m = (2.0L * b.Fd * se * ta + b.F2m * re + b.F2p * se * ta) / 2.0L;
+  o.Fd = (b.Fd * re + b.F1p * se) / 2.0L;
+  o.F1p = (4.0L * b.F * se + b.Fd * se * ta * ta + b.F1p * re) / 2.0L;
+  o.F = ((re - se * ta) * b.F + 2.0L * fi * se) / 2.0L;
+  o.FIR = k.m2 * o.F2p - k.Qm2 * o.Fd;
+  return o;
+}
+
+/// Eq. (B.8), SECOND lift (F -> F^{eta eta}), built from the BARE set exactly
+/// as adgh `tails`:1083-1094 does (`eeis`, `eeir`, `eei12`, `eei1i2`, `eeb`).
+/// TWO of these five differ from
+/// polrad2t.tex's Appendix B and the FORTRAN is right in both:
+///
+///   * `4 F_{2-}^{eta eta}` carries `2(2F_d + F_2+) tau r_eta s_eta`; the
+///     paper prints it with NO tau, which contradicts its own first-order
+///     `2F_{2-}^eta = (2F_d + F_2+) tau s_eta + F_2- r_eta`.
+///   * `4 F^{eta eta}` carries `4 F_i (r_eta - tau s_eta) s_eta`; the paper
+///     prints `4 F_i (r_eta - tau s_eta)`, which is FIRST order in (r, s)
+///     where every other term is second.
+///
+/// Both were caught by the x_A -> 0 gate, not by inspection: with the paper's
+/// forms the tensor column does not reduce to Eq. (38)'s sigma_q^d.
+FullFSet full_lift2(const FullKin& k, ld ta, const FullFSet& b, ld fi, ld fii,
+                    ld se, ld re) {
+  const ld rr = re * re + se * se * ta * ta;
+  FullFSet o;
+  o.F2p = (rr * b.F2p + 8.0L * b.F * se * se + 4.0L * b.Fd * se * se * ta * ta +
+           4.0L * b.F1p * re * se + 2.0L * b.F2m * re * se * ta) / 4.0L;
+  o.F2m = (rr * b.F2m + 4.0L * b.Fd * re * se * ta +
+           4.0L * b.F1p * se * se * ta + 2.0L * b.F2p * re * se * ta) / 4.0L;
+  o.Fd = (rr * b.Fd + 4.0L * b.F * se * se + 2.0L * b.F1p * re * se) / 4.0L;
+  o.F1p = (rr * b.F1p + 4.0L * (2.0L * re - se * ta) * b.F * se +
+           8.0L * fi * se * se + 2.0L * b.Fd * re * se * ta * ta) / 4.0L;
+  o.F = ((re - se * ta) * (re - se * ta) * b.F +
+         4.0L * (re - se * ta) * fi * se + 4.0L * fii * se * se) / 4.0L;
+  o.FIR = k.m2 * o.F2p - k.Qm2 * o.Fd;
+  return o;
+}
+
+/// Eq. (B.4) + Eq. (B.5) + the Eq. (B.6) lift, i.e. adgh's `ffu`, for the four
+/// rows this file needs: `r1` = T_{1j n} (= T_{5j n} by Eq. (B.5)), `r2` =
+/// T_{2j n} (= T_{6j n}), `r7` = T_{7j n}, `r8` = T_{8j n}.  T_3 and T_4 are
+/// NOT here: every term of them carries P_L (Eq. (B.4)), and the whole A_zz
+/// programme runs at an unpolarised beam.
+///
+/// `b` is the level-(n-1) set, `nx` the level-n one, `fdd` the level-(n+1)
+/// F_d that T_{73} alone needs (adgh's `ffu` reads it from /bseo/, which is
+/// correct because row 7 is only ever used at n = 1).
+struct FullTm {
+  ld r1[3], r2[3], r7[3], r8[3];
+};
+FullTm full_ffu(const FullKin& k, ld ta, const FullFSet& b, const FullFSet& nx,
+                ld fdd) {
+  FullTm o;
+  o.r1[0] = -4.0L * (2.0L * k.m2 - k.Q2) * b.FIR;
+  o.r1[1] = 4.0L * b.FIR * ta;
+  o.r1[2] = -2.0L * (2.0L * b.F + b.Fd * ta * ta);
+  o.r2[0] = ((k.Sp * k.Sp - k.Sx * k.Sx) - 4.0L * k.M2 * k.Q2) * b.FIR /
+            (2.0L * k.M2);
+  o.r2[1] = (2.0L * k.m2 * b.F2m * k.Sp - 4.0L * k.M2 * b.FIR * ta -
+             b.Fd * k.Sp * k.Sp * ta + b.F1p * k.Sp * k.Sx +
+             2.0L * b.FIR * k.Sx) / (2.0L * k.M2);
+  o.r2[2] = (2.0L * (2.0L * b.F + b.Fd * ta * ta) * k.M2 + 4.0L * k.m2 * b.Fd -
+             b.Fd * k.Sx * ta - b.F1p * k.Sp) / (2.0L * k.M2);
+  o.r7[0] = -2.0L * (4.0L * k.m2 + 3.0L * k.apn * k.apn -
+                     3.0L * k.apq * k.apq + k.Q2) * b.FIR;
+  o.r7[1] = -2.0L * (6.0L * k.m2 * k.apn * nx.F2m -
+                     3.0L * k.apn * k.apn * b.Fd * ta +
+                     3.0L * k.apn * k.apq * b.F1p + 6.0L * k.apq * nx.FIR +
+                     b.FIR * ta);
+  o.r7[2] = -(24.0L * k.m2 * fdd - 6.0L * k.apn * nx.F1p -
+              6.0L * k.apq * nx.Fd * ta - 2.0L * b.F - b.Fd * ta * ta);
+  o.r8[0] = -3.0L * (k.apn * k.Sp - k.apq * k.Sx) * b.FIR / k.M;
+  // THE PAIRING HERE IS `adgh`'s, NOT the paper's.  polrad2t.tex's T_{821}
+  // prints `(S eta k_1 + X eta k_2) F_{1+}` = (apn S_p + apq S_x)F_1+/2;
+  // adgh's `tm3(6,2,n)` (adgh:1161-1163, in `ffu`; the "adgh:9155-9157" this
+  // comment carried until 2026-09-06 is `al2ll`'s own `write`/`end`) has
+  // `apn F_1+ S_x + apq F_1+ S_p`, i.e.
+  // (S eta k_1 - X eta k_2).  With the paper's the tensor column misses
+  // Eq. (38)'s sigma_q^d by x14 in the x_A -> 0 limit; with adgh's it lands
+  // on 1.003 at x_A = 0.003.  MEASURED, not argued.
+  o.r8[1] = -3.0L * (2.0L * (k.apn * b.F2m + nx.F2m * k.Sp) * k.m2 -
+                     2.0L * b.Fd * k.Sp * ta * k.apn +
+                     k.apn * b.F1p * k.Sx + k.apq * b.F1p * k.Sp +
+                     2.0L * b.FIR * k.apq + 2.0L * nx.FIR * k.Sx) /
+            (2.0L * k.M);
+  o.r8[2] = -3.0L * (8.0L * k.m2 * nx.Fd - k.apn * b.F1p -
+                     k.apq * b.Fd * ta - nx.Fd * k.Sx * ta -
+                     nx.F1p * k.Sp) / (2.0L * k.M);
+  return o;
+}
+
+/// theta_ij(tau) of Eq. (B.1) for i in {1, 2, 5, 6, 7, 8}, laid out as
+/// `th[i][j-1]` with j running to k_i = (3, 3, -, -, 5, 5, 3, 4).
+struct FullTheta { ld th[9][5]; };
+
+FullTheta full_thetas(const FullKin& k, ld ta, bool tensor) {
+  FullFSet l0; ld fi = 0, fii = 0;
+  full_level0(k, ta, &l0, &fi, &fii);
+  FullTheta t;
+  for (int i = 0; i < 9; ++i)
+    for (int j = 0; j < 5; ++j) t.th[i][j] = 0.0L;
+  if (!tensor) {
+    // Spin 1/2, or the Q_N = 0 half of spin 1: only i = 1, 2 survive and the
+    // eta four-vector is never needed.  This is the whole quasi-elastic path.
+    const FullFSet z;
+    const FullTm n1 = full_ffu(k, ta, l0, z, 0.0L);
+    for (int j = 0; j < 3; ++j) { t.th[1][j] = n1.r1[j]; t.th[2][j] = n1.r2[j]; }
+    return t;
+  }
+  const ld se = k.se, re = k.re0 + k.re1 * ta;
+  const FullFSet l1 = full_lift1(k, ta, l0, fi, se, re);
+  const FullFSet l2 = full_lift2(k, ta, l0, fi, fii, se, re);
+  const FullFSet z;
+  const FullTm n1 = full_ffu(k, ta, l0, l1, l2.Fd);
+  const FullTm n2 = full_ffu(k, ta, l1, l2, 0.0L);
+  const FullTm n3 = full_ffu(k, ta, l2, z, 0.0L);
+  const FullTm* nn[3] = {&n1, &n2, &n3};
+  for (int j = 0; j < 3; ++j) {
+    t.th[1][j] = n1.r1[j];
+    t.th[2][j] = n1.r2[j];
+    t.th[7][j] = n1.r7[j];
+  }
+  // Eq. (B.3)'s a_ik, IN adgh's NORMALISATION -- with the 1/M^{l_i - 1} the
+  // paper leaves implicit in Eq. (A.1)'s k_n = (3(q eta)^2 - Q^2)/M^2 and
+  // Omega~/M^2.  `bornin` (adgh:817-825) settles it independently: the BORN
+  // kernels obey tm(5) = -ek tm(1) with ek = (3 apq^2 - Q^2)/M^2 exactly, and
+  // tm(8) = (apq/M) x (the i = 8 kernel).
+  const ld a8[2] = {k.apq / k.M, -1.0L / k.M};
+  const ld a5[3] = {(k.Q2 - 3.0L * k.apq * k.apq) / k.M2,
+                    6.0L * k.apq / k.M2, -3.0L / k.M2};
+  // Eq. (B.7)'s q_ik, IN adgh's FORM (adgh:1115-1116): the extra term is
+  // tau/M^2 times T_{i,j-1,1} and is NOT multiplied by a_i2.  The paper's
+  // "q_ik = tau/M inside T_{ij2}" would put a_i2 = 6(eta q)/M^2 in front of
+  // it; MEASURED, that misses Eq. (38)'s sigma_q^d by five orders of
+  // magnitude in the x_A -> 0 limit, while adgh's lands on 1.003.
+  const ld qk = ta / k.M2;
+  for (int kk = 1; kk <= 2; ++kk)
+    for (int j = kk; j <= kk + 2; ++j)
+      t.th[8][j - 1] += nn[kk - 1]->r8[j - kk] * a8[kk - 1];
+  for (int kk = 1; kk <= 3; ++kk)
+    for (int j = kk; j <= kk + 2; ++j) {
+      t.th[5][j - 1] += nn[kk - 1]->r1[j - kk] * a5[kk - 1];
+      t.th[6][j - 1] += nn[kk - 1]->r2[j - kk] * a5[kk - 1];
+      if (kk == 2) {
+        t.th[5][j - 1] += n1.r1[j - 2] * qk;
+        t.th[6][j - 1] += n1.r2[j - 2] * qk;
+      }
+    }
+  return t;
+}
+
+/// tanh-sinh (double-exponential) quadrature of `f` on [a, b] with `n` nodes.
+///
+/// WHY NOT THE Gauss-Legendre PANELS `gl_log_quadrature` USES.  The s- and
+/// p-peaks sit AT tau_s and tau_p with a width set by 4 m_e^2 -- a relative
+/// scale of 1e-11 on a range of order 1.  Splitting the range at the two peak
+/// positions and putting a rule that clusters its nodes DOUBLE-exponentially
+/// at every panel edge resolves both sides of both peaks with no adaptivity
+/// and no peak-width estimate.  The abscissa is written as a + (b-a)*s with
+/// s the logistic of pi/2 sinh(u), so the offset from the edge never cancels.
+template <class F>
+ld tanh_sinh_quadrature(const F& f, ld a, ld b, int n) {
+  if (!(b > a)) return 0.0L;
+  const ld umax = 3.5L;
+  const ld h = 2.0L * umax / static_cast<ld>(std::max(2, n) - 1);
+  const ld len = b - a;
+  const int half = static_cast<int>(umax / h);
+  ld acc = 0.0L;
+  for (int i = -half; i <= half; ++i) {
+    const ld u = static_cast<ld>(i) * h;
+    const ld v = 0.5L * static_cast<ld>(kPi) * std::sinh(u);
+    const ld s = 1.0L / (1.0L + std::exp(-2.0L * v));
+    const ld sm = 1.0L / (1.0L + std::exp(2.0L * v));
+    const ld w = len * static_cast<ld>(kPi) * s * sm * std::cosh(u);
+    if (!(w > 0.0L)) continue;
+    const ld fv = f(a + len * s);
+    if (!std::isfinite(static_cast<double>(fv))) continue;
+    acc += w * fv;
+  }
+  return acc * h;
+}
+
+/// The shared driver: `im` fills Im^el_i(t, eta) at one tau node, and the
+/// caller says which of the eight it fills.
+template <class IM>
+ld polrad_full_quadrature(const FullKin& k, const IM& im, bool tensor,
+                          int n_tau) {
+  if (!(k.Q2 > 0.0L) || !(k.Sx > k.Q2)) return 0.0L;
+  const ld tamax = (k.Sx + k.sqlQ) / (2.0L * k.M2);
+  const ld tamin = -k.Q2 / (k.M2 * tamax);        // = (S_x - sqrt(lQ))/(2M^2)
+  if (!(tamax > tamin)) return 0.0L;
+  static const int kmax[9] = {0, 3, 3, 0, 0, 5, 5, 3, 4};
+  auto integ = [&](ld ta) -> ld {
+    const ld rel = (k.Sx - k.Q2) / (1.0L + ta);   // R_el, Eq. (17)
+    const ld t = k.Q2 + rel * ta;
+    if (!(t > 0.0L)) return 0.0L;
+    const ld eta = t / (4.0L * k.M2);
+    ld imv[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+    im(static_cast<double>(t), static_cast<double>(eta), imv);
+    const FullTheta th = full_thetas(k, ta, tensor);
+    const ld pref = 2.0L * k.M2 / ((1.0L + ta) * t * t);
+    ld acc = 0.0L;
+    for (int i = 1; i <= 8; ++i) {
+      if (imv[i] == 0.0L) continue;
+      ld rp = 1.0L / rel;                          // R^{j-2} at j = 1
+      ld sub = 0.0L;
+      for (int j = 1; j <= kmax[i]; ++j) { sub += th.th[i][j - 1] * rp; rp *= rel; }
+      acc += sub * imv[i];
+    }
+    return acc * pref;
+  };
+  // The peaks go on panel EDGES: tau_s = -Q^2/S (always inside, because
+  // tau_min = -2Q^2/(S_x + sqrt(lQ)) < -Q^2/S_x <= -Q^2/S) and tau_p = Q^2/X.
+  ld bp[5] = {tamin, -k.Q2 / k.S, 0.0L, k.Q2 / k.X, tamax};
+  ld tot = 0.0L;
+  ld lo = tamin;
+  for (int i = 1; i < 5; ++i) {
+    const ld hi = (i == 4) ? tamax : std::min(bp[i], tamax);
+    if (!(hi > lo)) continue;
+    tot += tanh_sinh_quadrature(integ, lo, hi, n_tau);
+    lo = hi;
+  }
+  // Eq. (18)'s LEADING MINUS (polrad2t.tex:580) -- the same one
+  // `polrad_tpeak_quadrature` applies, and for the same reason (T8(0)).
+  const ld a3 = static_cast<ld>(ALPHA_EM) * static_cast<ld>(ALPHA_EM) *
+                static_cast<ld>(ALPHA_EM);
+  // y_Bj = S_x/S_A exactly (X_A = (1-y)S_A).
+  return -a3 * (k.Sx / k.S) * tot;
+}
+
+}  // namespace
+
+TauLimits polrad_tau_limits(double x_a, double y, double s_a, double m_a) {
+  TauLimits lim;
+  if (!(x_a > 0.0) || !(y > 0.0) || !(y < 1.0) || !(s_a > 0.0) ||
+      !(m_a > 0.0)) {
+    return lim;
+  }
+  const double q2 = x_a * y * s_a;
+  const double sx = y * s_a;
+  const double m2 = m_a * m_a;
+  const double sqly = std::sqrt(sx * sx + 4.0 * m2 * q2);
+  lim.hi = (sx + sqly) / (2.0 * m2);
+  // tau_min tau_max = (S_x^2 - lambda_Q)/(4 M^4) = -Q^2/M^2 exactly, which is
+  // how the printed (S_x - sqrt(lambda_Q))/(2M^2) is evaluated without
+  // cancelling two nearly equal large numbers.
+  lim.lo = (lim.hi > 0.0) ? -q2 / (m2 * lim.hi) : 0.0;
+  return lim;
+}
+
+PolradIm polrad_im_el_spin1(const Spin1ElasticFF& ff, double t_gev2,
+                            double m_a) {
+  PolradIm o;
+  if (!(m_a > 0.0)) return o;
+  const double eta = t_gev2 / (4.0 * m_a * m_a);
+  const double fc = ff.fc(t_gev2), fm = ff.fm(t_gev2), fq = ff.fq(t_gev2);
+  // polrad2t.tex:2698-2709, Eq. (A.4), verbatim and split in Q_N.
+  o.u[1] = (2.0 / 3.0) * eta * (1.0 + eta) * fm * fm;
+  o.u[2] = fc * fc + (2.0 / 3.0) * eta * fm * fm +
+           (8.0 / 9.0) * eta * eta * fq * fq;
+  o.t[1] = eta * eta * fm * fm;
+  o.t[2] = eta * fm * fm + (4.0 * eta * eta / (1.0 + eta)) *
+                               ((eta / 3.0) * fq + fc - fm) * fq;
+  o.t[5] = 0.25 * fm * fm;
+  // 4/(1 + eta_A), NOT 4 eta_A/(1 + eta_A): design_C_tensor_rc.md sec. 1.4.6
+  // carried the spurious eta_A until 2026-09-04 and
+  // polrad_transcription_check.md sec. 7.1 is the correction.
+  o.t[6] = 0.25 * (fm * fm + (4.0 / (1.0 + eta)) *
+                                 ((eta / 3.0) * fq + fc + eta * fm) * fq);
+  o.t[7] = eta * (1.0 + eta) * fm * fm;
+  o.t[8] = -eta * fm * (fm + 2.0 * fq);
+  return o;
+}
+
+PolradFullPair polrad_full_sigma_el(const Spin1ElasticFF& ff, double x_a,
+                                    double y, double s_a, double m_a,
+                                    int n_tau, double m_lepton) {
+  PolradFullPair out;
+  if (!(x_a > 0.0) || !(y > 0.0) || !(y < 1.0) || !(s_a > 0.0) ||
+      !(m_a > 0.0) || !(m_lepton > 0.0)) {
+    return out;
+  }
+  const FullKin k = full_kin(x_a, y, s_a, m_a, m_lepton);
+  // Eq. (A.4) at Q_N = 0 -- Im_1|_0 = B/2, Im_2|_0 = A of the spin-1
+  // Rosenbluth pair, the SAME algebra `rosenbluth_spin1` writes and not a
+  // second definition of it (T9 pins the two against each other).
+  auto im_u = [&](double t, double, ld* imv) {
+    const PolradIm im = polrad_im_el_spin1(ff, t, m_a);
+    for (int i = 1; i <= 8; ++i) imv[i] = static_cast<ld>(im.u[i]);
+  };
+  // ... and the Q_N part, Im_i = Im_i|_0 + (Q_N/6) Im_i^T, so what is
+  // returned is Eq. (37)'s sigma_q^A and NOT (Q_N/6) sigma_q^A.
+  auto im_t = [&](double t, double, ld* imv) {
+    const PolradIm im = polrad_im_el_spin1(ff, t, m_a);
+    for (int i = 1; i <= 8; ++i) imv[i] = static_cast<ld>(im.t[i]);
+  };
+  out.u = static_cast<double>(
+      polrad_full_quadrature(k, im_u, /*tensor=*/false, n_tau));
+  out.t = static_cast<double>(
+      polrad_full_quadrature(k, im_t, /*tensor=*/true, n_tau));
+  return out;
+}
+
+double polrad_full_sigma_qe_u(int z, int n, double x, double y, double s,
+                              double m_n, int n_tau, double kf_gev,
+                              double m_lepton) {
+  if (!(x > 0.0) || !(y > 0.0) || !(y < 1.0) || !(s > 0.0) || !(m_n > 0.0) ||
+      !(m_lepton > 0.0)) {
+    return 0.0;
+  }
+  const FullKin k = full_kin(x, y, s, m_n, m_lepton);
+  auto one = [&](bool proton) {
+    auto im = [&](double t, double eta, ld* imv) {
+      const NucleonFF f = nucleon_ff(t);
+      const double ge = proton ? f.ge_p : f.ge_n;
+      const double gm = proton ? f.gm_p : f.gm_n;
+      // POLRAD Eq. (A.5) at Z = 1: Im_1 = eta G_M^2, Im_2 = (G_E^2 + eta
+      // G_M^2)/(1 + eta).  Eq. (44)'s S_E = S_M = S(q) multiplies both, at
+      // the SAME q^2 = t(1 + eta) the t-peak quasi-elastic tail uses.
+      const double sup =
+          pauli_suppression(std::sqrt(t * (1.0 + eta)), kf_gev);
+      imv[1] = static_cast<ld>(sup * eta * gm * gm);
+      imv[2] = static_cast<ld>(sup * (ge * ge + eta * gm * gm) / (1.0 + eta));
+    };
+    return static_cast<double>(
+        polrad_full_quadrature(k, im, /*tensor=*/false, n_tau));
   };
   return static_cast<double>(z) * one(true) +
          static_cast<double>(n) * one(false);
@@ -939,23 +1378,57 @@ RcModel::RcModel(RcMode mode, RcOptions opt,
                         "exactly 1.0 and Event::rc_weights stays EMPTY";
     return;
   }
-  if (opt_.tail_model == RcTailModel::PolradFull) {
-    throw std::runtime_error(
-        "RcModel: RcTailModel::PolradFull (Eq. (18) + Appendix B + Eq. (A.4)) "
-        "is NOT implemented in v0 -- design_C_tensor_rc.md sec. 1.4.6");
-  }
   if (opt_.tail_model != RcTailModel::TPeak &&
-      opt_.tail_model != RcTailModel::TPeakPlusLL) {
+      opt_.tail_model != RcTailModel::TPeakPlusLL &&
+      opt_.tail_model != RcTailModel::PolradFull) {
     throw std::runtime_error("RcModel: unhandled RcTailModel");
   }
   if (opt_.n_eta < 8) {
     throw std::runtime_error("RcModel: n_eta must be >= 8 (the eta_A "
                              "quadrature runs in Gauss-Legendre panels of 8)");
   }
+  if (opt_.tail_model == RcTailModel::PolradFull) {
+    // TWO REFUSALS THAT ARE NOT STYLE, both measured.
+    //
+    // (a) `long double` HAS TO BE WIDER THAN `double` HERE.  Eq. (B.3)'s
+    //     a_ik for i = 5, 6 cancel to ~5 decimal digits in the collinear
+    //     region (rc.cpp's `long double` note), and in plain `double` the
+    //     TENSOR column of the tail moves by 14 % between two tanh-sinh step
+    //     sizes that the unpolarised column agrees on to ten digits.  On a
+    //     platform where the two types coincide the number would still be
+    //     produced and would still be wrong, so it is refused instead.
+    if (std::numeric_limits<long double>::digits <=
+        std::numeric_limits<double>::digits) {
+      throw std::runtime_error(
+          "RcModel: RcTailModel::PolradFull needs a `long double` wider than "
+          "`double`, and this platform's is not (digits = " +
+          std::to_string(std::numeric_limits<long double>::digits) +
+          ").  Eq. (B.3)'s a_ik cancel to ~5 decimal digits in the collinear "
+          "region and the TENSOR column of the tail loses 14 % to it; the "
+          "t-peak models are unaffected, so run --rc-tail-model t-peak or "
+          "t-peak+ll");
+    }
+    // (b) `n_eta` IS THE tanh-sinh NODE COUNT PER PANEL HERE, and 8 of them
+    //     do not resolve a peak of relative width 4 m_e^2/Q^2.  MEASURED
+    //     (6Li config 1, x = 1e-3, y = 0.5): sigma^el_U = 0.2197428 at
+    //     n_tau = 32 against 0.22086597 at 128, 256 and 512 -- 0.51 % low.
+    //     At 64 it is 0.2208600, 2.7e-5 low.  64 is the floor.
+    if (opt_.n_eta < 64) {
+      throw std::runtime_error(
+          "RcModel: RcTailModel::PolradFull needs n_eta >= 64 -- it is the "
+          "tanh-sinh node count PER PANEL of the tau_A quadrature, and the "
+          "s-/p-peaks it exists to resolve are 4 m_e^2/Q^2 wide.  MEASURED "
+          "at 6Li config 1, x = 1e-3, y = 0.5: sigma^el_U is 0.51 % low at "
+          "n_eta = 32 and 2.7e-5 low at 64, against a value stable to 1e-12 "
+          "from 128 up (the default)");
+    }
+  }
   if (!(opt_.fq_scale >= 0.0) || !(opt_.tail_tensor_scale >= 0.0) ||
-      !(opt_.qe_suppression >= 0.0) || !(opt_.qe_tensor_scale >= 0.0)) {
+      !(opt_.qe_suppression >= 0.0) || !(opt_.qe_tensor_scale >= 0.0) ||
+      !(opt_.sp_tensor_scale >= 0.0)) {
     throw std::runtime_error("RcModel: fq_scale / tail_tensor_scale / "
-                             "qe_suppression / qe_tensor_scale must be >= 0");
+                             "qe_suppression / qe_tensor_scale / "
+                             "sp_tensor_scale must be >= 0");
   }
   // A negative fraction would be silently squared away by the hypot in
   // `delta()` and recorded in meta as if it had meant something.
@@ -994,6 +1467,32 @@ RcModel::RcModel(RcMode mode, RcOptions opt,
         "they would be recorded in meta as a price that was never paid.  "
         "Turn the quasi-elastic tail on, or leave all three at their "
         "defaults");
+  }
+  // THE SAME RULE, ONE LEVEL DOWN, FOR THE s-/p-PEAKS.  `sp_tensor_scale`
+  // multiplies `TailTriple::u_sp`, the ELASTIC leading-log s+p column, which
+  // `tail_sigma_at` fills ONLY under `RcTailModel::TPeakPlusLL`; under `TPeak`
+  // that table is identically zero, so a non-zero scale is bit-identical to
+  // the default and would be recorded in meta as a price that was never paid.
+  // This is the `with_qe_tail` clause above with `u_sp` in place of
+  // `sigma^q_U`, and it is refused rather than labelled for the reason stated
+  // once at `KnobProvenance`: it names a VARIATION OF A PIECE THAT DID NOT
+  // RUN.
+  if (opt_.tail_model != RcTailModel::TPeakPlusLL &&
+      opt_.sp_tensor_scale != 0.0) {
+    throw std::runtime_error(
+        std::string("RcModel: sp_tensor_scale != 0 needs tail_model = "
+                    "TPeakPlusLL -- it is a fraction OF the leading-log "
+                    "s-/p-peak column u_sp, and ") +
+        (opt_.tail_model == RcTailModel::PolradFull
+             // TWO REFUSALS, OPPOSITE REASONS, AND THE DISTINCTION MATTERS.
+             ? "PolradFull does not compute that column because it does not "
+               "NEED a stand-in: Eq. (18) carries the s- and p-peaks inside "
+               "its own tau_A integral WITH their Eq. (A.4) tensor content, "
+               "so the scale would double-count a term that ran"
+             : "the t-peak-only tail does not compute it at all (the table "
+               "is identically zero), so it would be recorded in meta as a "
+               "price that was never paid") +
+        " (rc.hpp, RcOptions::sp_tensor_scale)");
   }
   if (!(opt_.tail_max > 0.0)) {
     throw std::runtime_error("RcModel: tail_max must be > 0 (a Monte-Carlo "
@@ -1231,6 +1730,39 @@ RcModel::TailTriple RcModel::tail_sigma_at(double x, double q2) const {
   // old code's ERT : QRT ratio was internally inconsistent by a factor A.
   const double per_nucleon = 1.0 / (a * a);
 
+  // POLRAD Eq. (18) + Appendix B + Eq. (A.4), the EXACT tau_A quadrature.
+  //
+  // IT TAKES THE SAME `per_nucleon` AS Eq. (38), and that is a MEASURED
+  // statement rather than an assumed one: with a form factor dead at the
+  // s-/p-peak vertex, so that only the t-peak survives, Eq. (18) as written
+  // in `polrad_full_sigma_el` divided by Eq. (38) tends to 1 as x_A -> 0
+  // (1.00230 at x_A = 0.003 unpolarised, 1.00313 tensor, on the F_m sector;
+  // 1 + 1.64 x_A on a spin-0 Gaussian).  Both are therefore the WHOLE-NUCLEUS
+  // d^2 sigma/(dx_A dy) in the same normalisation, and both get (1/A) x the
+  // Jacobian dx_A/dx = 1/A.  The quasi-elastic partner is in NUCLEON
+  // invariants and takes the same single 1/A its t-peak partner takes.
+  //
+  // AND IT HAS NO SEPARATE s-/p-PEAK COLUMNS.  `u_sp` and `qe_sp` exist
+  // because `TPeakPlusLL` ADDS a leading-log estimate beside a t-peak that
+  // does not contain one; Eq. (18) contains all three peaks in ONE tau_A
+  // integral, with their tensor content, so splitting them out would be an
+  // invented decomposition.  They stay identically zero here, which is also
+  // why `RcOptions::sp_tensor_scale` is refused on this model -- not because
+  // the s/p tensor part did not run, but because it DID.
+  if (opt_.tail_model == RcTailModel::PolradFull) {
+    const PolradFullPair el = polrad_full_sigma_el(*ff_, x_a, y, s_a, m_a,
+                                                   opt_.n_eta, opt_.m_lepton);
+    out.u = per_nucleon * el.u;
+    out.t = per_nucleon * el.t;
+    if (opt_.with_qe_tail) {
+      out.qe = polrad_full_sigma_qe_u(ion_.Z, ion_.N(), x, y, s_, PROTON_MASS,
+                                      opt_.n_eta, opt_.qe_kf_gev,
+                                      opt_.m_lepton) /
+               a;
+    }
+    return out;
+  }
+
   out.u = per_nucleon *
           polrad_sigma_el_u(*ff_, x_a, y, s_a, m_a, opt_.n_eta);
   out.t = per_nucleon *
@@ -1258,9 +1790,14 @@ RcModel::TailTriple RcModel::tail_sigma_at(double x, double q2) const {
   //
   // NO TENSOR PARTNER IS COMPUTED HERE.  See the `RcTailModel::TPeakPlusLL`
   // comment in rc.hpp: `ll_peaks_spin1` returns the unpolarised Rosenbluth
-  // (A, B) only, POLRAD supplies no sigma_T at the s-/p-peak, and inventing
-  // one would be an uncited second definition.  `u_sp`/`qe_sp` therefore go
-  // into `tail_ratio_at`'s numerator OUTSIDE the (q_n/6) tensor term.
+  // (A, B) only, POLRAD's Eq. (38) supplies no sigma_T at the s-/p-peak, and
+  // inventing one from the leading log would be an uncited second definition.
+  // SAY WHICH POLRAD: Eq. (18) + Eq. (A.4) DOES carry it and the PolradFull
+  // branch a few lines above computes it, so the unqualified sentence is true
+  // of Eq. (38) and FALSE of the paper -- which is why `sp_tensor_scale` is
+  // refused on that model for the OPPOSITE reason it is refused on `TPeak`.
+  // `u_sp`/`qe_sp` therefore go into `tail_ratio_at`'s numerator OUTSIDE the
+  // (q_n/6) tensor term.
   if (opt_.tail_model == RcTailModel::TPeakPlusLL) {
     const LlPeaks el = ll_peaks_spin1(*ff_, x_a, y, s_a, m_a);
     out.u_sp = per_nucleon * (el.s + el.p);
@@ -1487,7 +2024,21 @@ double RcModel::tail_ratio_at(double x, double q2, double q_n,
   // parent has been switched off would be a tail with no parent.  It is
   // strictly LINEAR in the scale, which is why -- unlike `fq_scale` -- one run
   // rescales to any other value.
+  //
+  // AND THE s/p TENSOR TERM IS A SECOND STAND-IN, OFF BY DEFAULT AND
+  // UNREACHABLE UNDER `TPeak`.  `RcOptions::sp_tensor_scale` -- zero unless a
+  // caller asks, and refused unless `tail_model == TPeakPlusLL` -- reuses the
+  // SAME `ratio_t`, so `sp_tensor_scale = 1` is literally "the s/p tensor
+  // fraction equals the elastic t-peak's".  It sits OUTSIDE `qe_suppression`
+  // because `su_sp` does: it is the ELASTIC s+p column.  It is a BOUND WITH
+  // NO DERIVATION -- narrower than the quasi-elastic one (it borrows across
+  // Q'^2 within ONE coherent vertex, not across coherence) but empty exactly
+  // where the coherent form factor is dead; read `RcOptions::sp_tensor_scale`
+  // point (3) before quoting a number from it.  Strictly LINEAR, so one run
+  // rescales.  The QUASI-ELASTIC s/p column `sqe_sp` is covered by NEITHER
+  // scale and stays exactly tensor-blind: point (5).
   const double num = su + (q_n / 6.0) * ratio_t * su + su_sp +
+                     (q_n / 6.0) * opt_.sp_tensor_scale * ratio_t * su_sp +
                      opt_.qe_suppression *
                          (sqe + sqe_sp +
                           (q_n / 6.0) * opt_.qe_tensor_scale * ratio_t * sqe);

@@ -262,7 +262,7 @@ Three consequences for the run plans:
   property of the physics. No C++ example CLI parses a `--pzz` flag, so the
   branch is unreachable from *them*; the Python API exposes it
   (`HelicityFlipOptions.use_explicit_pzz` and `.pzz`,
-  `python/bindings.cpp:1822-1823`) and `lipolgen-run --pzz-mode typed` now
+  `python/bindings.cpp:1852-1853`) and `lipolgen-run --pzz-mode typed` now
   reaches it too, so a caller who sets `pzz` gets R₃ = 0 — no longer silently:
   the run banner names the fill the other mode would have built, and the
   provenance table's `pzz_mode` row says which branch ran. **The R₃ = 0 of the
@@ -982,9 +982,9 @@ This section is a design sketch, not an instruction; nothing here is implemented
 | `InclusiveKernel` | `double octupole_moments(double m) const` returning `(m³ − (41/20)m)/0.3` for spin 3/2 and `0.0` otherwise, the exact analogue of `tensor_moments` (`src/core/xsec.cpp:168-173`) and consistent with `src/core/spin.cpp:246-259`. **Plural, mirroring `tensor_moments`**: a member named `octupole_moment` would hide the free function `lipolgen::octupole_moment(const CplxMatrix&, double)` (`include/lipolgen/spin.hpp:102`) inside the class scope |
 | `HelicityFlipOptions` (`include/lipolgen/bookkeeping.hpp:153-163`) | an explicit `o` beside `pzz`, since the explicit branch silently sets R₃ = 0 today (`src/core/bookkeeping.cpp:89`) |
 | `RunPlan` (`include/lipolgen/bookkeeping.hpp:89-129`) | **there is nowhere to record R₃ today.** The class carries `pe/pz/pzz` true + measured only, and `helicity_flip_plan` records just `.tensor` (`src/core/bookkeeping.cpp:102-104`), so the `HelicityFlipOptions::o` above has no destination. Add `o_true_` / `measured_o_`, recorded from `moments_along_axis(j, pops).octupole`, and give the smear block (`src/core/bookkeeping.cpp:33-41`) a policy — noting §2.4 that **there is no rank-3 polarimeter**, so the honest default is *not* a fourth `rng.normal()` draw but R₃ taken from the fill model (14) with its own systematic |
-| `python/bindings.cpp:1712-1714` | the two new `Options` members, beside the existing `b1_32_func` / `b2_32_func` / `delta_32_func` |
-| `python/bindings.cpp:1672-1681` | the `Amplitudes` binding gains `a3` — and this is a **breaking** change, not an addition: its `__iter__` and `__repr__` are a fixed 3-tuple, so every Python caller doing `w, a1, a2 = amps` breaks the day `a3` appears |
-| `python/bindings.cpp:1975-1976` | the `state_tables` dict export gains `a3`, `a3n` |
+| `python/bindings.cpp:1719-1721` | the two new `Options` members, beside the existing `b1_32_func` / `b2_32_func` / `delta_32_func` |
+| `python/bindings.cpp:1679-1688` | the `Amplitudes` binding gains `a3` — and this is a **breaking** change, not an addition: its `__iter__` and `__repr__` are a fixed 3-tuple, so every Python caller doing `w, a1, a2 = amps` breaks the day `a3` appears |
+| `python/bindings.cpp:2005-2006` | the `state_tables` dict export gains `a3`, `a3n` |
 
 Naming: **use `g1_rank3`, never `g2`**, for [6]'s fourth function (§3.3); the
 name `g2` is already taken in `SFTables` by the twist-3 nucleon g2

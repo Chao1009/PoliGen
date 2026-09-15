@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <cstdio>
 #include <stdexcept>
 #include <string>
@@ -539,10 +540,11 @@ void PipelineConfig::validate() const {
     }
     if (!(rc_options.fq_scale >= 0.0 && rc_options.tail_tensor_scale >= 0.0 &&
           rc_options.qe_suppression >= 0.0 &&
-          rc_options.qe_tensor_scale >= 0.0)) {
+          rc_options.qe_tensor_scale >= 0.0 &&
+          rc_options.sp_tensor_scale >= 0.0)) {
       throw std::runtime_error(
           "PipelineConfig: rc fq_scale / tail_tensor_scale / qe_suppression / "
-          "qe_tensor_scale must be >= 0");
+          "qe_tensor_scale / sp_tensor_scale must be >= 0");
     }
     // Its sign is erased by the quadrature in `RcModel::delta`, so a negative
     // value would be recorded in `meta` as a price it did not charge.
@@ -600,10 +602,50 @@ void PipelineConfig::validate() const {
             "leave the quasi-elastic tail on");
       }
     }
+    // `RcTailModel::PolradFull` -- POLRAD Eq. (18) + Appendix B + Eq. (A.4),
+    // implemented 2026-09-06 (phase_B_numbers.md sec. B2).  Its two
+    // preconditions are `RcModel`'s own and are repeated here for the same
+    // reason every other rc check is: `validate()` has to refuse BEFORE any
+    // model exists.
     if (rc_options.tail_model == RcTailModel::PolradFull) {
+      if (std::numeric_limits<long double>::digits <=
+          std::numeric_limits<double>::digits) {
+        throw std::runtime_error(
+            "PipelineConfig: rc tail_model polrad-full needs a `long double` "
+            "wider than `double` (Eq. (B.3)'s a_ik cancel to ~5 decimal "
+            "digits and the TENSOR column loses 14 % to it); this platform's "
+            "is not.  Run --rc-tail-model t-peak or t-peak+ll");
+      }
+      if (rc_options.n_eta < 64) {
+        throw std::runtime_error(
+            "PipelineConfig: rc tail_model polrad-full needs n_eta >= 64 -- "
+            "under it n_eta is the tanh-sinh node count PER PANEL of the "
+            "tau_A quadrature, and sigma^el_U is 0.51 % low at 32 (measured, "
+            "6Li config 1, x = 1e-3, y = 0.5)");
+      }
+    }
+    // THE SAME RULE AGAIN, ONE LEVEL DOWN: `sp_tensor_scale` is a fraction OF
+    // the leading-log s-/p-peak column `TailTriple::u_sp`, and only
+    // `tail_model = TPeakPlusLL` computes that column -- under `TPeak` the
+    // table is identically zero, so the scale multiplies nothing and the run
+    // is bit-identical to the default while `meta` would carry
+    // `rc_sp_tensor_scale` as if the s/p tensor omission had been priced.
+    // `RcModel`'s constructor makes the identical check for the C++ API path.
+    if (rc_options.tail_model != RcTailModel::TPeakPlusLL &&
+        rc_options.sp_tensor_scale != 0.0) {
       throw std::runtime_error(
-          "PipelineConfig: rc tail_model PolradFull is not implemented "
-          "(design_C_tensor_rc.md section 1.4.6)");
+          std::string("PipelineConfig: rc sp_tensor_scale != 0 needs "
+                      "tail_model = TPeakPlusLL (--rc-tail-model t-peak+ll) "
+                      "-- the s/p tensor stand-in is a fraction of the "
+                      "UNPOLARISED leading-log s-/p-peaks, and ") +
+          (rc_options.tail_model == RcTailModel::PolradFull
+               ? "polrad-full does not need one: Eq. (18) carries the s- and "
+                 "p-peaks in its own tau_A integral WITH their Eq. (A.4) "
+                 "tensor content, so the stand-in would double-count a term "
+                 "that ran"
+               : "the t-peak-only tail does not compute them, so it would "
+                 "record a price that was never paid") +
+          " (rc.hpp, RcOptions::sp_tensor_scale)");
     }
     // A KNOB THAT DID NOT RUN MAY NOT BE RECORDED AS IF IT HAD -- the same
     // rule the Miller branch enforces for `b1_band_scale` below.  `m_lepton`
@@ -618,13 +660,27 @@ void PipelineConfig::validate() const {
     // nowhere and the TARGET mass everywhere), so honouring `m_lepton` in the
     // log alone would be a half-change dressed as a whole one.  Refusing it
     // keeps the rule intact: what `meta` records is what ran.
-    if (rc_options.m_lepton != M_ELECTRON) {
+    //
+    // SINCE 2026-09-06 THE RESERVATION IS DISCHARGED ON ONE MODEL.
+    // `PolradFull` reads `m_lepton` and nothing else does: it is the m^2 of
+    // C_{1,2}(tau) (Eq. (B.13)), of F_IR = m^2 F_2+ - Q_m^2 F_d, of Q_m^2
+    // and of lambda_s, i.e. it is what REGULATES the s- and p-peaks.  So the
+    // row is three-way now -- read under polrad-full, refused on the two
+    // t-peak models -- and the refusal below applies only to them.
+    if (rc_options.tail_model != RcTailModel::PolradFull &&
+        rc_options.m_lepton != M_ELECTRON) {
       throw std::runtime_error(
-          "PipelineConfig: rc_options.m_lepton is RESERVED for tail_model = "
-          "PolradFull (POLRAD's F_IR and l_m); the shipped TPeak tail has no "
-          "lepton-mass dependence and TPeakPlusLL's leading-log radiator "
-          "reads constants.hpp's M_ELECTRON directly, so setting it would "
-          "record a variation that did not run -- leave it at M_ELECTRON");
+          "PipelineConfig: rc_options.m_lepton is read ONLY by tail_model = "
+          "PolradFull (POLRAD's F_IR, C_{1,2} and lambda_s); the shipped "
+          "TPeak tail has no lepton-mass dependence and TPeakPlusLL's "
+          "leading-log radiator reads constants.hpp's M_ELECTRON directly, "
+          "so setting it here would record a variation that did not run -- "
+          "leave it at M_ELECTRON or run --rc-tail-model polrad-full");
+    }
+    if (!(rc_options.m_lepton > 0.0)) {
+      throw std::runtime_error(
+          "PipelineConfig: rc_options.m_lepton must be > 0 -- it is a mass "
+          "squared in C_{1,2}(tau) and in lambda_s = S^2 - 4 m^2 M^2");
     }
     // A KNOB THAT DID NOT RUN MAY NOT BE RECORDED AS IF IT HAD, applied to
     // the rc sub-knobs AS A CLASS rather than one at a time.  The
@@ -675,6 +731,8 @@ void PipelineConfig::validate() const {
            rc_options.qe_suppression != od.qe_suppression},
           {"--rc-qe-tensor-scale",
            rc_options.qe_tensor_scale != od.qe_tensor_scale},
+          {"--rc-sp-tensor-scale",
+           rc_options.sp_tensor_scale != od.sp_tensor_scale},
           {"rc_options.qe_kf_gev", rc_options.qe_kf_gev != od.qe_kf_gev},
           {"--rc-tail-model", rc_options.tail_model != od.tail_model},
           {"rc_options.with_qe_tail",
@@ -2996,8 +3054,52 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
            "6Li's measured Fermi momentum in the Pauli suppression S(q)",
            o.qe_kf_gev == od.qe_kf_gev);
     tail_row("rc_tail_model", "--rc-tail-model", rc_tail_model_name(o.tail_model),
-             "t-peak alone (a LOWER bound) or t-peak plus the leading-log s- "
-             "and p-peaks", o.tail_model == od.tail_model);
+             "t-peak alone (a LOWER bound), t-peak plus the leading-log s- "
+             "and p-peaks, or POLRAD Eq. (18)'s exact tau_A quadrature",
+             o.tail_model == od.tail_model);
+    // THE s-/p-PEAK SUB-FAMILY, the same shape as `qe_row` one branch over.
+    // `sp_tensor_scale` additionally needs the LEADING-LOG s-/p-peaks to have
+    // run, and only `tail_model = TPeakPlusLL` computes them; under the
+    // shipped `TPeak` the `u_sp` table is identically zero, so the scale is a
+    // multiplier on a term this run computes as exactly 0 -- REFUSED by
+    // `validate()` and by `RcModel`'s constructor, not labelled, under the
+    // criterion stated once at `KnobProvenance`.
+    {
+      const bool sp = tail && o.tail_model == RcTailModel::TPeakPlusLL;
+      const bool pf = o.tail_model == RcTailModel::PolradFull;
+      add("rc_sp_tensor_scale", "--rc-sp-tensor-scale",
+          fmt_g(o.sp_tensor_scale),
+          sp ? KnobStatus::Read
+             : (on ? KnobStatus::Refused : KnobStatus::NotRead),
+          sp ? std::string("LEADING-LOG s-/p-PEAK knob: prices the tensor "
+                           "fraction of the s-/p-peaks with a BORROWED "
+                           "magnitude -- a BOUND WITH NO DERIVATION; 0 is the "
+                           "shipped tensor-blind s+p")
+          : !on ? std::string("not read at rc = off: no RcModel is built")
+          : !tail
+              ? ("the radiative tail does not apply on this run (rc_tail == 1 "
+                 "exactly" +
+                 std::string(is_tagged(c.channel)
+                                 ? " by construction on channel " + chn
+                                 : "") +
+                 "), so this knob would record a systematic as PRICED that "
+                 "was never computed -- validate() refuses any value but the "
+                 "default here")
+          : pf ? std::string("rc_options.tail_model = polrad-full needs no "
+                             "s/p tensor stand-in: Eq. (18) carries the s- "
+                             "and p-peaks inside its own tau_A integral WITH "
+                             "their Eq. (A.4) tensor content, so this knob "
+                             "would double-count a term that RAN -- "
+                             "validate() refuses any value but the default "
+                             "here.  The OPPOSITE reason to the t-peak one")
+              : std::string("rc_options.tail_model = t-peak computes no "
+                            "leading-log s-/p-peaks at all (the u_sp table is "
+                            "identically zero), so this knob scales nothing "
+                            "-- validate() refuses any value but the default "
+                            "here rather than record a systematic as PRICED "
+                            "that was never computed"),
+          o.sp_tensor_scale == od.sp_tensor_scale);
+    }
     tail_row("rc_with_qe_tail", "", yn(o.with_qe_tail),
              "whether POLRAD Eq. (44)'s unpolarised quasi-elastic tail is "
              "computed at all", o.with_qe_tail == od.with_qe_tail);
@@ -3023,17 +3125,41 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
           o.with_tail == od.with_tail);
     }
     tail_row("rc_n_eta", "", std::to_string(o.n_eta),
-             "quadrature nodes of the eta_A integral of the tail",
+             o.tail_model == RcTailModel::PolradFull
+                 ? "tanh-sinh nodes PER PANEL of Eq. (18)'s tau_A integral "
+                   "(four panels, split at tau_s, 0 and tau_p)"
+                 : "quadrature nodes of the eta_A integral of the tail",
              o.n_eta == od.n_eta);
     tail_row("rc_tail_max", "", fmt_g(o.tail_max),
              "ceiling on the returned tail ratio; the clipped fraction is "
              "reported, not hidden", o.tail_max == od.tail_max);
-    add("rc_m_lepton", "", fmt_g(o.m_lepton), KnobStatus::Refused,
-        "RESERVED for tail_model = PolradFull (POLRAD's F_IR and l_m).  "
-        "Nothing in src/core/rc.cpp reads it -- TPeakPlusLL's leading-log "
-        "radiator takes M_ELECTRON from constants.hpp directly -- so "
-        "validate() refuses any value but M_ELECTRON",
-        o.m_lepton == od.m_lepton);
+    // `rc_m_lepton` WAS `Refused` UNCONDITIONALLY UNTIL 2026-09-06, with the
+    // reason "RESERVED for tail_model = PolradFull".  PolradFull exists now
+    // and reads it -- it is the m^2 of C_{1,2}(tau), of F_IR and of
+    // lambda_s, i.e. what regulates the s- and p-peaks -- so the row is
+    // three-way, exactly like `rc_sp_tensor_scale` one branch up.
+    {
+      const bool ml = tail && o.tail_model == RcTailModel::PolradFull;
+      add("rc_m_lepton", "", fmt_g(o.m_lepton),
+          ml ? KnobStatus::Read : (on ? KnobStatus::Refused
+                                      : KnobStatus::NotRead),
+          ml ? std::string("the LEPTON MASS of POLRAD Eq. (18): the m^2 of "
+                           "C_{1,2}(tau) (Eq. (B.13)), of F_IR = m^2 F_2+ - "
+                           "Q_m^2 F_d and of lambda_s -- it is what regulates "
+                           "the s- and p-peaks")
+          : !on ? std::string("not read at rc = off: no RcModel is built")
+          : !tail
+              ? (off_ch +
+                 "the radiative tail does not apply on this run, so no "
+                 "quadrature reads a lepton mass at all")
+              : std::string("read ONLY by tail_model = polrad-full.  The "
+                            "t-peak forms of Eqs. (37)-(39) carry no lepton "
+                            "mass and TPeakPlusLL's leading-log radiator "
+                            "takes M_ELECTRON from constants.hpp directly, "
+                            "so validate() refuses any value but M_ELECTRON "
+                            "here"),
+          o.m_lepton == od.m_lepton);
+    }
   }
 
   // ------------------------------------------------------ coherent channel

@@ -256,17 +256,17 @@ ALLOW = {
         "no rank-3 (octupole) slot",
         "no such symbol exists in the tree, deliberately: the row cites the "
         "comment that states why there is no rank-3 slot"),
-    ("src/core/pipeline.cpp", 783, "coherent"): (
+    ("src/core/pipeline.cpp", 841, "coherent"): (
         "on the coherent channel the tensor signal is in the recoil",
         "the cited line is inside PipelineConfig::validate()'s refusal "
         "message; `coherent` there is the English word in that message, which "
         "is the text the row quotes"),
-    ("src/core/pipeline.cpp", 1753, "optics_lumi_factor"): (
+    ("src/core/pipeline.cpp", 1811, "optics_lumi_factor"): (
         "cfg_.lumi_pb * optics_lumi_factor()",
         "the row's claim is that luminosity mode multiplies the optics factor "
         "in, so it cites the multiplication, not the accessor (declared at "
         "include/lipolgen/pipeline.hpp:780, cited there too)"),
-    ("src/core/rc.cpp", 1033, "is_tagged_channel"): (
+    ("src/core/rc.cpp", 1532, "is_tagged_channel"): (
         "is_tagged_channel(channel_)",
         "one of three consecutive branch lines of RcModel::exclusion_reason "
         "the row cites together; the neighbours are use sites in files that "

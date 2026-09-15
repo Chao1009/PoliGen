@@ -835,6 +835,13 @@ py::dict columns_to_dict(Columns& c, const Pipeline& p, std::uint64_t n,
     // magnitude, not a computed tail, and an analysis has to be able to see
     // that it was applied (rc.hpp, RcOptions::qe_tensor_scale).
     meta["rc_qe_tensor_scale"] = rc->options().qe_tensor_scale;
+    // The s-/p-PEAK stand-in, recorded for the same reason and under the same
+    // warning: 0 by default (the leading-log peaks are tensor-blind, and
+    // under the shipped `t-peak` tail they do not exist at all), and a run
+    // that turned it on must be distinguishable in `meta` from one that did
+    // not -- it is a BOUND WITH NO DERIVATION, not a computed tensor s/p peak
+    // (rc.hpp, RcOptions::sp_tensor_scale).
+    meta["rc_sp_tensor_scale"] = rc->options().sp_tensor_scale;
     meta["rc_qe_kf_gev"] = rc->options().qe_kf_gev;
     meta["rc_band_tau_max"] = rc->options().band_tau_max;
     // The NON-numeric knobs, recorded for the same provenance reason as
@@ -1760,6 +1767,29 @@ static void bind_sf(py::module_& m) {
         "THE SIGN GATE (design 2.2): the quadrupole moment of the unit-"
         "normalised relative wave function.  Must be NEGATIVE for alpha-d and "
         "positive for the deuteron, from the same code path.");
+
+  py::class_<AlphaTQuadrupole>(m, "AlphaTQuadrupole",
+      "The A = 7 gate's four numbers: <r^2> [fm^2], r_rms [fm], Z_eff and "
+      "Q = -(2/5) Z_eff <r^2> [fm^2] of the alpha-t relative motion.  Compare "
+      "with LI7_QUADRUPOLE_FM2; it validates the alpha-t WAVE FUNCTION's "
+      "quadrupole only, and b1(7Li) remains unimplemented (open item 15).")
+      .def_readonly("r2_fm2", &AlphaTQuadrupole::r2_fm2)
+      .def_readonly("r_rms_fm", &AlphaTQuadrupole::r_rms_fm)
+      .def_readonly("z_eff", &AlphaTQuadrupole::z_eff)
+      .def_readonly("q_fm2", &AlphaTQuadrupole::q_fm2);
+  m.def("alpha_t_quadrupole", &alpha_t_quadrupole, py::arg("phi1"),
+        py::arg("r_max_fm") = 30.0, py::arg("n_r") = 4000,
+        py::arg("n_k") = 8001,
+        "Q = -(2/5) Z_eff <r^2> for an arbitrary L = 1 relative wave, read "
+        "for its (k, psi) table only (j_1 is applied here).");
+  m.def("li7_alpha_t_quadrupole", &li7_alpha_t_quadrupole,
+        py::arg("vmc_mc_sigma") = 0.0, py::arg("r_max_fm") = 30.0,
+        py::arg("n_r") = 4000, py::arg("n_k") = 8001,
+        "THE A = 7 GATE on 7Li's own shipped alpha-t wave "
+        "(momenta/li7_at3.momentum, the 3/2- ground state).  It validates the "
+        "WAVE FUNCTION's quadrupole against the measured LI7_QUADRUPOLE_FM2 "
+        "and nothing else: b1(7Li) is NOT implemented (open item 15) and "
+        "7Li's rank-2 sector is exactly zero by construction.");
 
   py::class_<ConvolutionKinematics>(m, "ConvolutionKinematics")
       .def(py::init<>())
@@ -2973,6 +3003,7 @@ static void bind_cluster_config(py::module_& m) {
   m.attr("LI6_ETA_DS_GK_SYST") = LI6_ETA_DS_GK_SYST;
   m.attr("LI6_R2_POINT_FM2") = LI6_R2_POINT_FM2;
   m.attr("LI6_QUADRUPOLE_FM2") = LI6_QUADRUPOLE_FM2;
+  m.attr("LI7_QUADRUPOLE_FM2") = LI7_QUADRUPOLE_FM2;
   m.attr("VMC_HE4_DENSITY") = VMC_HE4_DENSITY;
   m.attr("VMC_LI6_DENSITY") = VMC_LI6_DENSITY;
   m.attr("VMC_LI6_AD_FIT") = VMC_LI6_AD_FIT;
@@ -3392,8 +3423,15 @@ static void bind_rc(py::module_& m) {
       "STATED MODEL of mixed approximation orders, not a controlled O(alpha) "
       "expansion: it has NO tensor s/p partner, so it LOWERS the tensor "
       "fraction of the tail where it matters -- run it BESIDE TPeak as a "
-      "systematic, never instead of it.  PolradFull is the documented "
-      "upgrade path and is refused.")
+      "systematic, never instead of it.  PolradFull (2026-09-06) is POLRAD "
+      "Eq. (18) + Appendix B + Eq. (A.4): ONE exact tau_A quadrature "
+      "containing all three peaks WITH the s-/p-peaks' own Eq. (A.4) tensor "
+      "content, so it needs no s/p tensor stand-in -- and it still is NOT "
+      "checked against Mo-Tsai or any external exact tail (no such number is "
+      "in this tree), only POLRAD-internally and against the leading-log "
+      "fallback.  It does NOT bracket inside the TPeak/TPeakPlusLL band: "
+      "measured, it sits between them on 56.5 % of the sampler's cells.  It "
+      "needs n_eta >= 64 and ~10 s of table build.")
       .value("TPeak", RcTailModel::TPeak)
       .value("PolradFull", RcTailModel::PolradFull)
       .value("TPeakPlusLL", RcTailModel::TPeakPlusLL);
@@ -3487,11 +3525,15 @@ static void bind_rc(py::module_& m) {
                      "edges, never rescale one.")
       .def_readwrite("tail_model", &RcOptions::tail_model,
                      "RcTailModel.TPeak (default, bit for bit every "
-                     "published number) or RcTailModel.TPeakPlusLL (the "
+                     "published number), RcTailModel.TPeakPlusLL (the "
                      "leading-log s+p peaks added to the UNPOLARISED "
                      "numerator; a STATED MODEL with no tensor s/p partner, "
-                     "so it LOWERS the tensor fraction of the tail).  Run "
-                     "both as a band; PolradFull is refused.")
+                     "so it LOWERS the tensor fraction of the tail) or "
+                     "RcTailModel.PolradFull (Eq. (18)'s exact tau_A "
+                     "quadrature, all three peaks with their tensor "
+                     "content).  Run the t-peak pair as a PRICE RANGE -- "
+                     "measured, PolradFull is outside it on 43 % of the "
+                     "sampler's cells, so it is not a confidence interval.")
       // NOT `def_readwrite`.  `RcOptions::ff` is a shared_ptr<const
       // Spin1ElasticFF>, so assigning a PYTHON SUBCLASS through a plain
       // readwrite stores only the C++ trampoline and drops the Python object
@@ -3546,6 +3588,41 @@ static void bind_rc(py::module_& m) {
                      "the magnitude, never the sign.  It is LINEAR, so one "
                      "run rescales; it rides inside qe_suppression; and "
                      "with_qe_tail = False refuses a non-zero value.")
+      .def_readwrite("sp_tensor_scale", &RcOptions::sp_tensor_scale,
+                     "The TENSOR FRACTION OF THE LEADING-LOG s-/p-PEAKS, "
+                     "priced by a STAND-IN and not computed.  DEFAULT 0.0 = "
+                     "the shipped tensor-blind s+p, bit for bit, and "
+                     "unreachable under the shipped t-peak tail anyway.  At "
+                     "1.0 the ELASTIC s-/p-peaks are given the elastic "
+                     "t-peak's own sigma^el_T/sigma^el_U, i.e. `the s/p "
+                     "tensor fraction equals the elastic t-peak's'.  IT IS A "
+                     "BOUND WITH NO DERIVATION: POLRAD's Eq. (38) supplies "
+                     "no tensor s/p peak and none is derived here.  SAY WHICH "
+                     "POLRAD -- Eq. (18) + Eq. (A.4) DOES carry it and "
+                     "RcTailModel.PolradFull computes it, which is why this "
+                     "scale is refused THERE for the opposite reason (the "
+                     "term RAN); the unqualified sentence was true of "
+                     "Eq. (38) and false of the paper.  It borrows less than "
+                     "qe_tensor_scale does -- the SAME coherent 6Li vertex at "
+                     "a different photon topology, not a coherent ratio on an "
+                     "incoherent process -- but the s/p vertex sits at "
+                     "Q'^2 ~ Q^2, where 6Li's coherent form factor is DEAD, "
+                     "while the t-peak's sits at t ~ t_min where it is alive, "
+                     "so the borrowed ratio may be the WRONG REFERENCE "
+                     "ENTIRELY at high Q^2 -- and there the term it scales is "
+                     "itself ~0, so the knob prices NOTHING exactly where the "
+                     "s/p peaks dominate.  The QUASI-ELASTIC s/p column is "
+                     "covered by neither this nor qe_tensor_scale and stays "
+                     "exactly tensor-blind -- under PolradFull too, because "
+                     "the quasi-elastic tail is a sum over SPIN-1/2 nucleons "
+                     "whose Im_5..8 vanish identically.  Read the magnitude, "
+                     "never the sign.  LINEAR, so one run rescales; it is "
+                     "OUTSIDE qe_suppression; and any tail_model but "
+                     "TPeakPlusLL refuses a non-zero value -- on TPeak "
+                     "because the s/p column did not run, on PolradFull "
+                     "because it DID (Eq. (18) carries the s-/p-peaks' own "
+                     "Eq. (A.4) tensor content, so the stand-in would "
+                     "double-count).")
       .def_readwrite("qe_kf_gev", &RcOptions::qe_kf_gev,
                      "POLRAD Eq. (44)'s S_E/S_M as `ffquas` codes them: the "
                      "de Forest-Walecka Fermi-gas factor "
@@ -3554,19 +3631,28 @@ static void bind_rc(py::module_& m) {
                      "al., PRL 26 (1971) 445).  It cuts the QRT to 0.47 at "
                      "x = 0.01 and 0.87 at x = 0.1, and the QRT is the "
                      "DOMINANT piece of rc_tail.  0 = the unsuppressed edge.")
-      .def_readwrite("n_eta", &RcOptions::n_eta)
+      .def_readwrite("n_eta", &RcOptions::n_eta,
+                     "The tail's one-dimensional quadrature resolution, and "
+                     "it means two things: Gauss-Legendre nodes in ln(eta_A) "
+                     "under TPeak/TPeakPlusLL, tanh-sinh nodes PER PANEL of "
+                     "Eq. (18)'s tau_A integral (four panels) under "
+                     "PolradFull, where the minimum is 64 and less is "
+                     "refused -- sigma^el_U is 0.51 % low at 32.")
       .def_readwrite("m_lepton", &RcOptions::m_lepton,
-                     "RESERVED for tail_model = PolradFull (POLRAD's F_IR and "
-                     "l_m = ln(Q^2/m^2)); UNUSED by the shipped TPeak tail, "
-                     "which has no lepton-mass dependence.  PipelineConfig "
+                     "The LEPTON MASS, read by tail_model = PolradFull and by "
+                     "nothing else: it is the m^2 of POLRAD Eq. (B.13)'s "
+                     "C_1,2(tau), of F_IR = m^2 F_2+ - Q_m^2 F_d and of "
+                     "lambda_s, i.e. what REGULATES the s- and p-peaks.  "
+                     "UNUSED by the two t-peak tails, and PipelineConfig "
                      "REFUSES any value other than constants.hpp's "
-                     "M_ELECTRON on BOTH implemented tail models, so that a "
-                     "knob that did not run is never recorded as if it had.  "
-                     "TPeakPlusLL's leading-log radiator does carry "
-                     "ln(Q^2/m_e^2), but it reads M_ELECTRON directly: a "
-                     "different lepton needs its own elastic kinematics too, "
-                     "so honouring m_lepton in the log alone would be a "
-                     "half-change dressed as a whole one.")
+                     "M_ELECTRON on them, so that a knob that did not run is "
+                     "never recorded as if it had.  TPeakPlusLL's "
+                     "leading-log radiator does carry ln(Q^2/m_e^2), but it "
+                     "reads M_ELECTRON directly: a different lepton needs its "
+                     "own elastic kinematics too, so honouring m_lepton in "
+                     "the log alone would be a half-change dressed as a whole "
+                     "one.  (It was refused on ALL THREE models, as "
+                     "'RESERVED for PolradFull', until 2026-09-06.)")
       .def_readwrite("tail_max", &RcOptions::tail_max)
       .def_readwrite("band_tau_max", &RcOptions::band_tau_max,
                      "Ceiling on |tau| the BAND sees (default 1.0).  On the "
@@ -3743,7 +3829,11 @@ static void bind_rc(py::module_& m) {
          "-- no table, no interpolation.  The last two are the leading-log "
          "s+p peaks and are IDENTICALLY ZERO unless tail_model = "
          "RcTailModel.TPeakPlusLL; there is deliberately no tensor s/p "
-         "partner (see RcTailModel.TPeakPlusLL).");
+         "partner on that model (see RcTailModel.TPeakPlusLL).  Under "
+         "RcTailModel.PolradFull the split does not exist at all -- Eq. (18) "
+         "puts all three peaks in ONE tau_A integral, so u/t/qe already "
+         "contain the s- and p-peaks and the last two columns stay zero for "
+         "a DIFFERENT reason: there is no decomposition to read.");
 }
 
 // ---------------------------------------------------------------- coherent

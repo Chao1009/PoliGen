@@ -5,7 +5,7 @@
 // Design sec. 5's numbering is kept, so a reader can go row by row:
 //
 //   T1   the band identity against the PUBLISHED A_zz          T8'  the QRT, Eq. (44)
-//   T2   the tagged identity (the SAME closed form)            T9   SKIP-ped, with the reason
+//   T2   the tagged identity (the SAME closed form)            T9   Eq. (A.4)'s Q_N split
 //   T3   the band delta(x)                                     T10  the deuteron FF normalisation
 //   T4   the signs, incl. the TENSOR_LL_SIGN-free form         T11  the 6Li FF anchors
 //   T5   the tail's y and t_min behaviour                      T12  fq_scale is QUADRATIC
@@ -20,6 +20,7 @@
 // (design sec. 6, agent 2) and live in test_pipeline / test_hepmc / pytest.
 
 #include <cmath>
+#include <limits>
 #include <memory>
 #include <string>
 #include <thread>
@@ -395,6 +396,27 @@ std::shared_ptr<HoSpin1FF> deuteron_ff(double fq_scale = 1.0,
   o.tail_tensor_scale = fm_scale;
   return HoSpin1FF::for_ion(DEUTERON(), o);
 }
+
+/// A GAUSSIAN spin-1 form factor whose WIDTH the caller chooses, so that a
+/// test can put the s-/p-peak vertex outside it and the t-peak inside.  That
+/// is the switch T19(a) needs: Eq. (38) is Eq. (18)'s ULTRARELATIVISTIC
+/// t-PEAK reduction, so the two agree only where the other two peaks are
+/// absent, and a form factor 20+ decades down at Q'^2 ~ z_s Q^2 kills them
+/// without touching either quadrature.  NOT a physical deuteron -- the
+/// magnitudes here are meaningless and only the RATIO of the two models is
+/// read.
+class GaussianSpin1FF : public Spin1ElasticFF {
+ public:
+  GaussianSpin1FF(double b_gev2, double mu, double q, double fc0)
+      : b_(b_gev2), mu_(mu), q_(q), fc0_(fc0) {}
+  double fc(double t) const override { return fc0_ * std::exp(-t / b_); }
+  double fm(double t) const override { return mu_ * std::exp(-t / b_); }
+  double fq(double t) const override { return q_ * std::exp(-t / b_); }
+  std::string provenance() const override { return "test Gaussian"; }
+
+ private:
+  double b_, mu_, q_, fc0_;
+};
 
 /// A SPIN-0 nucleus: F_m = F_q = 0 and F_c = Z F(t), which is how POLRAD
 /// Eq. (38)'s carbon line sits inside the same master formula (T8(b)).
@@ -1504,6 +1526,250 @@ TEST_CASE("B3: the POLARISED quasi-elastic stand-in, RcOptions::qe_tensor_scale"
   }
 }
 
+TEST_CASE("B1: the s-/p-peak tensor stand-in, RcOptions::sp_tensor_scale") {
+  // `RcTailModel::TPeakPlusLL` puts the leading-log s- and p-peaks in the
+  // UNPOLARISED numerator only, because POLRAD's Eq. (38) supplies no tensor
+  // s/p peak and inventing one from the leading log would be an uncited second
+  // definition.  (Eq. (18) + Eq. (A.4) DOES supply one and
+  // `RcTailModel::PolradFull` computes it -- T19 -- which is why this scale is
+  // refused there for the OPPOSITE reason: the term RAN.  Unqualified, the
+  // sentence is true of Eq. (38) and false of the paper.)  That left the
+  // tensor fraction of that piece at EXACTLY ZERO -- a choice, not a
+  // measurement.
+  // `sp_tensor_scale` prices it by lending the ELASTIC s-/p-peaks the elastic
+  // t-peak's own sigma^el_T/sigma^el_U.  IT IS A BOUND WITH NO DERIVATION
+  // (rc.hpp, RcOptions::sp_tensor_scale); what is testable is the ALGEBRA and
+  // the plumbing, and that is what this case gates.
+  const RunPlan plan = tensor_thirds_plan(0.0, 0.6);
+  const RcModel& base = rc_model();          // the shipped TPeak default
+  RcOptions ll_opt;
+  ll_opt.tail_model = RcTailModel::TPeakPlusLL;
+  const RcModel ll(RcMode::TensorBand, ll_opt, rc_sampler_ptr(), plan,
+                   Channel::Inclusive, LI6());
+
+  SUBCASE("the default is 0 and the SHIPPED tail cannot see it") {
+    CHECK(RcOptions().sp_tensor_scale == 0.0);
+    // Under `TPeak` the u_sp table is identically zero, which is why a
+    // non-zero scale is REFUSED there rather than silently ignored.
+    for (double x : {0.01, 0.1, 0.3}) {
+      for (double q2 : {3.0, 5.0, 9.0}) {
+        CHECK(base.tail_sigma_at(x, q2).u_sp == 0.0);
+        CHECK(base.tail_sigma_at(x, q2).qe_sp == 0.0);
+      }
+    }
+  }
+
+  SUBCASE("a knob that did not run is REFUSED, and a negative one too") {
+    RcOptions bad;                            // tail_model = TPeak
+    bad.sp_tensor_scale = 1.0;
+    CHECK_THROWS_AS(RcModel(RcMode::TensorBand, bad, rc_sampler_ptr(), plan,
+                            Channel::Inclusive, LI6()),
+                    std::runtime_error);
+    // ... zero under TPeak is fine: nothing is recorded that did not run.
+    CHECK_NOTHROW(RcModel(RcMode::TensorBand, RcOptions(), rc_sampler_ptr(),
+                          plan, Channel::Inclusive, LI6()));
+    // ... and under TPeakPlusLL it is accepted, because the peaks ran.
+    RcOptions ok = ll_opt;
+    ok.sp_tensor_scale = 1.0;
+    CHECK_NOTHROW(RcModel(RcMode::TensorBand, ok, rc_sampler_ptr(), plan,
+                          Channel::Inclusive, LI6()));
+    RcOptions neg = ll_opt;
+    neg.sp_tensor_scale = -1e-12;
+    CHECK_THROWS_AS(RcModel(RcMode::TensorBand, neg, rc_sampler_ptr(), plan,
+                            Channel::Inclusive, LI6()),
+                    std::runtime_error);
+  }
+
+  SUBCASE("what it adds IS (q_n/6) scale (sigma^el_T/sigma^el_U) u_sp") {
+    // Gated AT A TABLE NODE, where the interpolation is exact, so the identity
+    // is the algebra and not an interpolation tolerance.  The added tensor
+    // term divided by the elastic t-peak's own tensor term must be
+    // u_sp/sigma^el_U -- both read from `tail_sigma_at`, i.e. from the
+    // quadrature and not from the ratio under test.
+    RcOptions o = ll_opt;
+    o.sp_tensor_scale = 1.0;
+    const RcModel m(RcMode::TensorBand, o, rc_sampler_ptr(), plan,
+                    Channel::Inclusive, LI6());
+    const std::vector<double>& nx = m.table_x();
+    const std::vector<double>& ny = m.table_y();
+    REQUIRE(nx.size() > 8);
+    REQUIRE(ny.size() > 8);
+    const double s_pn = rc_sampler().s();
+    int checked = 0, alive = 0, dead = 0;
+    double worst_rel = 0.0, wrx = 0.0, wry = 0.0;
+    for (std::size_t i = 0; i < nx.size(); ++i) {
+      for (std::size_t j = 0; j < ny.size(); ++j) {
+        const double x = nx[i];
+        const double q2 = x * s_pn * ny[j];
+        const RcModel::TailTriple t = m.tail_sigma_at(x, q2);
+        if (!(t.u > 0.0)) continue;
+        (t.u_sp > 0.0) ? ++alive : ++dead;
+        if (!(t.u_sp > 0.0)) continue;
+        const double el_t = ll.tail_ratio_at(x, q2, 1.0) -
+                            ll.tail_ratio_at(x, q2, 0.0);
+        const double added =
+            m.tail_ratio_at(x, q2, 1.0) - ll.tail_ratio_at(x, q2, 1.0);
+        if (!(std::fabs(el_t) > 1e-300)) continue;
+        // TWO CANCELLATION GUARDS, both the B3 subcase's guard in a new
+        // dress.  `added` and `el_t` are each DIFFERENCES of two tail ratios
+        // whose common size is the WHOLE numerator, so the identity loses one
+        // digit for every decade by which the whole numerator exceeds the
+        // piece being isolated: once where sigma^q_U swamps sigma^el_U, and
+        // again where u_sp is a tiny fraction of sigma^el_U.  Gated where it
+        // can be gated; the ALGEBRA is the same everywhere.
+        if (t.qe > 1e2 * t.u) continue;
+        if (t.u_sp > 1e4 * t.u || t.u_sp < 1e-3 * t.u) continue;
+        const double got = added / el_t, want = t.u_sp / t.u;
+        const double rel = std::fabs(got - want) / std::fabs(want);
+        if (rel > worst_rel) { worst_rel = rel; wrx = x; wry = ny[j]; }
+        // 1e-5 and not B3's 1e-8 because of those two guards' own subject:
+        // even inside them the isolation costs digits.  MEASURED worst on
+        // this grid 2026-09-06: 3.60359e-06 at x = 0.0251189, y = 0.004 (the
+        // y-grid floor, where sigma^q_U is closest to its 1e2 ceiling), over
+        // 270 gated nodes.
+        CHECK_CLOSE(got, want, 1e-5);
+        ++checked;
+      }
+    }
+    MESSAGE("B1: u_sp alive at " << alive << " of " << (alive + dead)
+                                 << " nodes; identity gated at " << checked
+                                 << "; worst rel " << worst_rel << " at x = "
+                                 << wrx << ", y = " << wry);
+    CHECK(checked >= 8);
+    // AND THE COHERENT s/p PEAK IS DEAD OVER MOST OF THE GRID.  That is the
+    // whole of rc.hpp point (3), measured: the s-/p-peak's own elastic vertex
+    // sits at Q'^2 ~ Q^2, where 6Li's coherent form factor is numerically
+    // zero, while the t-peak's sits at t ~ t_min, where it is alive.
+    CHECK(dead > 0);
+    CHECK(alive > 0);
+  }
+
+  SUBCASE("it is EXACTLY LINEAR in the scale and in q_n") {
+    RcOptions o1 = ll_opt, o2 = ll_opt, o4 = ll_opt;
+    o1.sp_tensor_scale = 1.0;
+    o2.sp_tensor_scale = 2.0;
+    o4.sp_tensor_scale = 4.0;
+    const RcModel m1(RcMode::TensorBand, o1, rc_sampler_ptr(), plan,
+                     Channel::Inclusive, LI6());
+    const RcModel m2(RcMode::TensorBand, o2, rc_sampler_ptr(), plan,
+                     Channel::Inclusive, LI6());
+    const RcModel m4(RcMode::TensorBand, o4, rc_sampler_ptr(), plan,
+                     Channel::Inclusive, LI6());
+    const std::vector<double>& nx = m1.table_x();
+    const std::vector<double>& ny = m1.table_y();
+    const double s_pn = rc_sampler().s();
+    int checked = 0;
+    for (std::size_t i = 0; i < nx.size() && checked < 12; ++i) {
+      for (std::size_t j = 0; j < ny.size() && checked < 12; ++j) {
+        const double x = nx[i];
+        const double q2 = x * s_pn * ny[j];
+        if (!(m1.tail_sigma_at(x, q2).u_sp > 0.0)) continue;
+        const double b1 = ll.tail_ratio_at(x, q2, 1.0);
+        const double d1 = m1.tail_ratio_at(x, q2, 1.0) - b1;
+        const double d2 = m2.tail_ratio_at(x, q2, 1.0) - b1;
+        const double d4 = m4.tail_ratio_at(x, q2, 1.0) - b1;
+        if (!(std::fabs(d1) > 0.0)) continue;
+        CHECK_CLOSE(d2 / d1, 2.0, 1e-10);
+        CHECK_CLOSE(d4 / d1, 4.0, 1e-10);
+        const double a = m1.tail_ratio_at(x, q2, 1.0) -
+                         m1.tail_ratio_at(x, q2, 0.0);
+        const double b = m1.tail_ratio_at(x, q2, -2.0) -
+                         m1.tail_ratio_at(x, q2, 0.0);
+        CHECK_CLOSE(b / a, -2.0, 1e-9);
+        ++checked;
+      }
+    }
+    CHECK(checked >= 8);
+  }
+
+  SUBCASE("it is OUTSIDE qe_suppression -- u_sp is the ELASTIC column") {
+    // The mirror image of B3's "it rides INSIDE qe_suppression": that knob is
+    // a flat multiplier on the QUASI-ELASTIC tail, and `u_sp` is not part of
+    // it, so switching the quasi-elastic tail off must leave this stand-in
+    // standing.
+    RcOptions a = ll_opt, b = ll_opt;
+    a.qe_suppression = 0.0;
+    b.qe_suppression = 0.0;
+    a.sp_tensor_scale = 1.0;
+    const RcModel ma(RcMode::TensorBand, a, rc_sampler_ptr(), plan,
+                     Channel::Inclusive, LI6());
+    const RcModel mb(RcMode::TensorBand, b, rc_sampler_ptr(), plan,
+                     Channel::Inclusive, LI6());
+    const std::vector<double>& nx = ma.table_x();
+    const std::vector<double>& ny = ma.table_y();
+    const double s_pn = rc_sampler().s();
+    int moved = 0;
+    for (std::size_t i = 0; i < nx.size(); ++i) {
+      for (std::size_t j = 0; j < ny.size(); ++j) {
+        const double x = nx[i];
+        const double q2 = x * s_pn * ny[j];
+        if (!(ma.tail_sigma_at(x, q2).u_sp > 0.0)) continue;
+        if (ma.tail_ratio_at(x, q2, 1.0) != mb.tail_ratio_at(x, q2, 1.0)) {
+          ++moved;
+        }
+        // ... and the UNPOLARISED tail is untouched at every node, q_n = 0.
+        CHECK(ma.tail_ratio_at(x, q2, 0.0) == mb.tail_ratio_at(x, q2, 0.0));
+      }
+    }
+    CHECK(moved > 0);
+  }
+
+  SUBCASE("THE PRICE, and where the bound is EMPTY -- printed") {
+    // The measurement phase_B_numbers.md sec. B1 publishes.  At the three
+    // standard points the term is EXACTLY ZERO, because the coherent s/p
+    // vertex Q'^2 = z_s Q^2 = 4.37 / 4.94 / 4.98 GeV^2 is four decades above
+    // the t-peak's own t ~ t_min ~ 8.7e-05 GeV^2 and 6Li's coherent form
+    // factor is dead there (F_c = -3.8e-45 against +2.99).  The bound is not
+    // conservative at those points; it is EMPTY there.
+    RcOptions o = ll_opt;
+    o.sp_tensor_scale = 1.0;
+    const RcModel m(RcMode::TensorBand, o, rc_sampler_ptr(), plan,
+                    Channel::Inclusive, LI6());
+    for (double x : {0.01, 0.1, 0.3}) {
+      // The priced tail ratio is EQUAL BIT FOR BIT to the unpriced one: the
+      // added term is so far below the numerator's ulp that it is not a small
+      // correction, it is no correction at all.
+      CHECK(m.tail_ratio_at(x, 5.0, 1.0) == ll.tail_ratio_at(x, 5.0, 1.0));
+      const RcModel::TailTriple t = m.tail_sigma_at(x, 5.0);
+      MESSAGE("B1 x = " << x << " Q2 = 5: u_sp = " << t.u_sp
+                        << ", sigma^el_U = " << t.u
+                        << ", u_sp/sigma^el_U = " << (t.u_sp / t.u));
+      // NOT `== 0.0`: the coherent s/p peak is not switched off there, it is
+      // KILLED BY THE FORM FACTOR -- 70+ decades below the t-peak it is being
+      // lent a tensor fraction from.  That is rc.hpp point (3), measured.
+      CHECK(t.u_sp < 1e-60 * t.u);
+    }
+    // ... and where it is ALIVE -- low x, y -> 1 -- it is not small.  The
+    // largest tensor-tail multiplier on this grid is reported, never asserted
+    // as a physics claim: it is a PRICE TAG on an omission.
+    const std::vector<double>& nx = m.table_x();
+    const std::vector<double>& ny = m.table_y();
+    const double s_pn = rc_sampler().s();
+    double worst = 1.0, wx = 0.0, wy = 0.0;
+    for (std::size_t i = 0; i < nx.size(); ++i) {
+      for (std::size_t j = 0; j < ny.size(); ++j) {
+        const double x = nx[i];
+        const double q2 = x * s_pn * ny[j];
+        if (!(m.tail_sigma_at(x, q2).u_sp > 0.0)) continue;
+        const double a = ll.tail_ratio_at(x, q2, 1.0) -
+                         ll.tail_ratio_at(x, q2, 0.0);
+        const double b = m.tail_ratio_at(x, q2, 1.0) -
+                         m.tail_ratio_at(x, q2, 0.0);
+        if (!(std::fabs(a) > 1e-300)) continue;
+        if (std::fabs(b / a) > std::fabs(worst)) {
+          worst = b / a;
+          wx = x;
+          wy = ny[j];
+        }
+      }
+    }
+    MESSAGE("B1 sp_tensor_scale = 1: tensor tail x" << worst << " at x = "
+            << wx << ", y = " << wy << "; EXACTLY 1 at x = 0.01/0.1/0.3, "
+            "Q2 = 5 (the coherent s/p vertex is dead there)");
+    CHECK(worst > 1.0);
+  }
+}
+
 TEST_CASE("Q9: the QUASI-ELASTIC Pauli suppression S(q), POLRAD Eq. (44)") {
   // Design Q9, closed.  v0 shipped S_E = S_M = 1, which after the per-nucleon
   // fix is the S = 1 EDGE of a band on what is now the DOMINANT piece of
@@ -1606,29 +1872,97 @@ TEST_CASE("the tail tables REFUSE a scenario whose y_max is above the ceiling") 
   CHECK(generator_scenario(Scenario()).y_max < RC_TAIL_Y_CEILING);
 }
 
-TEST_CASE("T9: the Q_N = 0 Rosenbluth limit of Eq. (38)'s integrand" *
-          doctest::skip(true)) {
-  // The `PolradFull` half of design sec. 5's T9 -- Im^el_2 == A(Q^2),
-  // Im^el_1 == B(Q^2)/2, Im^el_{5,6,7,8} == 0 at Q_N = 0 -- is SKIPPED in v0
-  // because Eq. (A.4) is never evaluated: `RcTailModel::PolradFull` is not
-  // implemented (rc.cpp throws on it) and the t-peak closed forms of
-  // Eqs. (37)-(39) have those contractions already folded in.  Kept in the
-  // file, with the reason, so that whoever builds the upgrade path finds it.
+TEST_CASE("T9: the Q_N = 0 Rosenbluth limit of Eq. (A.4), and the Q_N part") {
+  // THIS TEST CARRIED `doctest::skip(true)` FROM 2026-09-02 TO 2026-09-06 --
+  // the ONE unconditional skip in the suite -- because Eq. (A.4) at Q_N != 0
+  // was never evaluated: `RcTailModel::PolradFull` threw.  It is implemented
+  // now (`polrad_full_sigma_el`), Eq. (A.4) is `polrad_im_el_spin1`, and the
+  // design's T9 is exactly this: Im^el_2|_0 == A(Q^2), Im^el_1|_0 == B(Q^2)/2,
+  // Im^el_{5,6,7,8}|_0 == 0.
   //
-  // NOTE for that implementer: design sec. 1.4.6's Im^el_6 has a SPURIOUS
-  // eta_A.  polrad2t.tex:2706-2707 and POLRAD's own b2, b3, b4 (adgh:4235-4242
-  // through Eq. (A.3), Im_6 = (Q_N/6) eps^3 (b2/3 + b3 + b4)) both give
-  //   Im^el_6 = (Q_N/24) ( F_m^2 + (4/(1 + eta_A))
-  //                        ((eta_A/3) F_q + F_c + eta_A F_m) F_q )
-  // with 4/(1+eta_A), NOT 4 eta_A/(1+eta_A).  Im_2's 4 eta_A^2/(1+eta_A),
-  // Im_5, Im_7 and Im_8 all check out (polrad_transcription_check.md sec. 7.1).
-  //
-  // The v0 half of T9 is covered by T8(a) AND T8(b): T8(a) compares the code's
-  // sigma_u^d integrand against A(Q^2) Xt - (2/3)(1+eta) F_m^2 written
-  // literally in this file, and T8(b) pins the design's second clause --
-  // sigma_q's integrand is identically 0 when F_m = F_q = 0 -- on the very
-  // `Spin0FF` object it already builds.
-  CHECK(false);
+  // WHY IT IS A REAL GATE AND NOT A RESTATEMENT.  `rosenbluth_spin1` is
+  // written from the (A, B) side -- it is what the collinear peaks need, a
+  // cross section at a shifted Q'^2 -- while `polrad_im_el_spin1` is
+  // polrad2t.tex:2698-2709 transcribed as printed.  Getting the Q_N split
+  // wrong silently doubles the UNPOLARISED tail into the tensor one, which no
+  // unpolarised test can see (design sec. 1.4.6's own warning).
+  const std::shared_ptr<HoSpin1FF> ff = HoSpin1FF::for_ion(LI6());
+  const double m_a = LI6().mass();
+
+  SUBCASE("(a) Im_1|_0 = B/2, Im_2|_0 = A, Im_{5..8}|_0 = 0") {
+    for (double t : {1e-4, 1e-3, 1e-2, 0.05, 0.2, 1.0, 5.0}) {
+      const PolradIm im = polrad_im_el_spin1(*ff, t, m_a);
+      const RosenbluthAB ab = rosenbluth_spin1(*ff, t, m_a);
+      CHECK_CLOSE(im.u[2], ab.a, 1e-15);
+      CHECK_CLOSE(im.u[1], 0.5 * ab.b, 1e-15);
+      // EXACT zeros, not "small": Eq. (A.4)'s Im_5..8 carry an explicit
+      // overall Q_N, so their Q_N = 0 halves are structurally absent and
+      // anything weaker would let a tensor term leak into the unpolarised
+      // tail and still pass.
+      for (int i : {3, 4, 5, 6, 7, 8}) CHECK(im.u[i] == 0.0);
+      // ... and the vector (P_N) entries are deliberately left at zero:
+      // Im_3, Im_4 reach every tail formula through m M P_L alone.
+      CHECK(im.t[3] == 0.0);
+      CHECK(im.t[4] == 0.0);
+    }
+  }
+
+  SUBCASE("(b) the Q_N part, against a LITERAL Eq. (A.4) written here") {
+    // polrad2t.tex:2698-2709, transcribed in this file rather than read from
+    // rc.cpp, with the CORRECTED Im_6 (4/(1+eta), not 4 eta/(1+eta) --
+    // polrad_transcription_check.md sec. 7.1, which the design carried wrong
+    // from 2026-09-02 to 2026-09-04).
+    for (double t : {1e-4, 1e-2, 0.2, 2.0}) {
+      const double eta = t / (4.0 * m_a * m_a);
+      const double fc = ff->fc(t), fm = ff->fm(t), fq = ff->fq(t);
+      const double want1 = eta * eta * fm * fm;
+      const double want2 = eta * fm * fm + (4.0 * eta * eta / (1.0 + eta)) *
+                                               ((eta / 3.0) * fq + fc - fm) * fq;
+      const double want5 = fm * fm / 4.0;
+      const double want6 = (fm * fm + (4.0 / (1.0 + eta)) *
+                                          ((eta / 3.0) * fq + fc + eta * fm) *
+                                          fq) / 4.0;
+      const double want7 = eta * (1.0 + eta) * fm * fm;
+      const double want8 = -eta * fm * (fm + 2.0 * fq);
+      const PolradIm im = polrad_im_el_spin1(*ff, t, m_a);
+      CHECK_CLOSE(im.t[1], want1, 1e-14);
+      CHECK_CLOSE(im.t[2], want2, 1e-14);
+      CHECK_CLOSE(im.t[5], want5, 1e-14);
+      CHECK_CLOSE(im.t[6], want6, 1e-14);
+      CHECK_CLOSE(im.t[7], want7, 1e-14);
+      CHECK_CLOSE(im.t[8], want8, 1e-14);
+      // AND Im_1, Im_2 ARE NOT PURELY UNPOLARISED.  design sec. 1.4.6 warns
+      // that splitting them wrong doubles the unpolarised tail into the
+      // tensor one; these two `!=` are what would catch it.
+      CHECK(im.t[1] != 0.0);
+      CHECK(im.t[2] != 0.0);
+    }
+  }
+
+  SUBCASE("(c) the SHIPPED tail reads this function, so the gate is not "
+          "cosmetic") {
+    // Scaling F_m alone must move BOTH columns of `polrad_full_sigma_el`,
+    // because Im_1|_0, Im_2|_0 and Im_{1,2,5,6,7,8}^T all carry F_m.  If the
+    // quadrature had its own copy of Eq. (A.4) this subcase would still pass
+    // -- what it pins is that the copy does not exist: the Q_N = 0 column is
+    // EXACTLY the Rosenbluth pair, so setting F_m = F_q = 0 must leave
+    // sigma_u alive (F_c^2 survives) and sigma_q identically zero.
+    HoSpin1FFOptions o;
+    o.fq_scale = 0.0;
+    o.tail_tensor_scale = 0.0;
+    const std::shared_ptr<HoSpin1FF> flat = HoSpin1FF::for_ion(LI6(), o);
+    for (double t : {1e-3, 0.1, 1.0}) {
+      const PolradIm im = polrad_im_el_spin1(*flat, t, m_a);
+      CHECK(im.u[2] > 0.0);
+      for (int i = 1; i <= 8; ++i) CHECK(im.t[i] == 0.0);
+      CHECK(im.u[1] == 0.0);
+    }
+    const double s_a = 6.0 * 3980.0;
+    const PolradFullPair p =
+        polrad_full_sigma_el(*flat, 0.01 / 6.0, 0.5, s_a, m_a, 128);
+    CHECK(p.u > 0.0);
+    CHECK(p.t == 0.0);
+  }
 }
 
 // ------------------------------------------------------------ T1, T4, T17
@@ -2306,12 +2640,33 @@ TEST_CASE("T14: the per-channel table, TOTAL over Channel") {
                     std::runtime_error);
   }
 
-  SUBCASE("PolradFull is refused, with the design section that owns it") {
+  SUBCASE("PolradFull BUILDS now, and its two preconditions are refused") {
+    // This subcase asserted the OPPOSITE until 2026-09-06 ("PolradFull is
+    // refused, with the design section that owns it").  Eq. (18) + Appendix B
+    // + Eq. (A.4) is implemented; what stays refused is a resolution that
+    // cannot resolve the s-/p-peaks it exists to carry.
     RcOptions o;
     o.tail_model = RcTailModel::PolradFull;
-    CHECK_THROWS_AS(RcModel(RcMode::TensorBand, o, rc_sampler_ptr(), plan,
+    CHECK_NOTHROW(RcModel(RcMode::TensorBand, o, rc_sampler_ptr(), plan,
+                          Channel::Inclusive, LI6()));
+    RcOptions coarse = o;
+    coarse.n_eta = 32;
+    CHECK_THROWS_AS(RcModel(RcMode::TensorBand, coarse, rc_sampler_ptr(), plan,
                             Channel::Inclusive, LI6()),
                     std::runtime_error);
+    // ... and the s/p tensor STAND-IN is refused on it, for the OPPOSITE
+    // reason it is refused on TPeak: PolradFull computes the s-/p-peaks'
+    // tensor content, so the stand-in would double-count a term that ran.
+    RcOptions sp = o;
+    sp.sp_tensor_scale = 1.0;
+    CHECK_THROWS_AS(RcModel(RcMode::TensorBand, sp, rc_sampler_ptr(), plan,
+                            Channel::Inclusive, LI6()),
+                    std::runtime_error);
+    // The `long double` precondition is a PLATFORM fact, so it is asserted
+    // rather than provoked: on a platform where it fails the constructor
+    // refuses instead of shipping a two-figure tensor tail.
+    CHECK(std::numeric_limits<long double>::digits >
+          std::numeric_limits<double>::digits);
   }
 }
 
@@ -2446,8 +2801,10 @@ TEST_CASE("T8(d): RcTailModel::TPeakPlusLL -- what it adds, and what it does NOT
   SUBCASE("(d) ... so the TENSOR FRACTION of the tail FALLS.  Stated, not hidden") {
     // The documented consequence of (c): the denominator grows and the tensor
     // numerator does not, so (w_tail(q_n) - w_tail(0))/(w_tail(0) - 1) drops.
-    // The tensor part of the s-/p-peaks is UNKNOWN, not zero, and this is what
-    // makes TPeakPlusLL a systematic to run BESIDE TPeak and never instead.
+    // The tensor part of the s-/p-peaks is BOUNDED (RcOptions::sp_tensor_scale,
+    // 2026-09-06), not computed, and this is what makes TPeakPlusLL a
+    // systematic to run BESIDE TPeak and never instead.  That bound is EMPTY
+    // at these very (x, Q^2): see the B1 case's own "THE PRICE" subcase.
     bool saw_a_drop = false;
     for (double x : {0.01, 0.1}) {
       for (double q2 : {3.0, 8.0}) {
@@ -2532,13 +2889,12 @@ TEST_CASE("T8(d): RcTailModel::TPeakPlusLL -- what it adds, and what it does NOT
                                                   << " / " << bp[2]);
   }
 
-  SUBCASE("(h) PolradFull is STILL refused; the name table is total") {
-    RcOptions bad;
-    bad.tail_model = RcTailModel::PolradFull;
-    CHECK_THROWS_AS(RcModel(RcMode::TensorBand, bad, rc_sampler_ptr(),
-                            tensor_thirds_plan(0.0, 0.6), Channel::Inclusive,
-                            LI6()),
-                    std::runtime_error);
+  SUBCASE("(h) PolradFull BUILDS since 2026-09-06; the name table is total") {
+    RcOptions full;
+    full.tail_model = RcTailModel::PolradFull;
+    CHECK_NOTHROW(RcModel(RcMode::TensorBand, full, rc_sampler_ptr(),
+                          tensor_thirds_plan(0.0, 0.6), Channel::Inclusive,
+                          LI6()));
     CHECK(std::string(rc_tail_model_name(RcTailModel::TPeak)) == "t-peak");
     CHECK(std::string(rc_tail_model_name(RcTailModel::PolradFull)) ==
           "polrad-full");
@@ -2702,6 +3058,380 @@ TEST_CASE("T8(d): RcTailModel::TPeakPlusLL -- what it adds, and what it does NOT
 }
 
 // -------------------------------------------------------- the odds and ends
+
+TEST_CASE("T19: RcTailModel::PolradFull -- POLRAD Eq. (18) + App. B + Eq. (A.4)") {
+  // THE THREE GATES design sec. 5 / the B2 brief ask for, in order:
+  //   (a) the limit in which Eq. (18) MUST reduce to Eq. (38) -- stated, and
+  //       it is not "switch the s-/p-peaks off" by hand: it is x_A -> 0 with a
+  //       form factor DEAD at the s-/p-peak vertex, which is what makes
+  //       Eq. (38)'s ultrarelativistic t-peak extraction exact.
+  //   (b) T9 (its own TEST_CASE above), un-skipped: the Q_N = 0 Rosenbluth
+  //       limit of Eq. (A.4).
+  //   (c) the transcription check's own tabulated numbers -- T8(c') for the
+  //       t-peak, extended here.
+  // and then what the two models actually differ by.
+  const double m_d = DEUTERON().mass();
+  const double s_a_d = 2.0 * (2.0 * PROTON_MASS * 27.6);   // S_A = A s
+
+  SUBCASE("(a) THE LIMIT: x_A -> 0 with the s-/p-peaks dead, Eq. (18) -> "
+          "Eq. (38), UNPOLARISED AND TENSOR") {
+    // WHY THE FORM FACTOR IS THE SWITCH.  Eq. (38) is POLRAD's own
+    // ultrarelativistic t-peak reduction of Eq. (18) (sec. 2.1.3 B), so the
+    // two agree only where the OTHER two peaks are absent.  A Gaussian with
+    // b = 20 t_min is alive across the whole t-peak and 20+ decades down at
+    // the s-peak's Q'^2 ~ z_s Q^2, which isolates the t-peak WITHOUT touching
+    // the quadrature.  What is left is the ultrarelativistic error, and it is
+    // O(x_A): MEASURED 1 + 1.64 x_A on the spin-0 sector.
+    struct Row { double x_a, want_u, want_t; };
+    // spin-0 (F_c alone): no tensor column at all.
+    const Row spin0[] = {{0.003, 1.00492, 0.0}, {0.006, 1.00990, 0.0},
+                         {0.012, 1.01997, 0.0}};
+    for (const Row& r : spin0) {
+      const double b = 20.0 * (r.x_a * 0.938) * (r.x_a * 0.938);
+      const GaussianSpin1FF ff(b, 0.0, 0.0, 1.0);
+      const double e38 = polrad_sigma_el_u(ff, r.x_a, 0.5, s_a_d, m_d, 1024);
+      const PolradFullPair p =
+          polrad_full_sigma_el(ff, r.x_a, 0.5, s_a_d, m_d, 128);
+      CHECK_CLOSE(p.u / e38, r.want_u, 2e-4);
+      // ... and sigma_q is IDENTICALLY zero when F_m = F_q = 0: every Q_N
+      // term of Eq. (A.4) carries one of them, so `== 0.0` is the right
+      // assertion and anything weaker would let F_c leak into the tensor tail.
+      CHECK(p.t == 0.0);
+      CHECK(polrad_sigma_el_t(ff, r.x_a, 0.5, s_a_d, m_d, 1024) == 0.0);
+    }
+    // F_m alone, and F_q alone -- the two sectors of sigma_q^d that do NOT
+    // cancel against each other.  (The full deuteron does: sigma_q^d is a
+    // ~7x cancellation between them there, so its RATIO is not a gate.)
+    const Row fm[] = {{0.003, 1.00230, 1.00313}, {0.006, 1.00462, 1.00627},
+                      {0.012, 1.00931, 1.01257}};
+    const Row fq[] = {{0.003, 1.00670, 1.01872}, {0.006, 1.01347, 1.03850},
+                      {0.012, 1.02722, 1.08168}};
+    for (int sector = 0; sector < 2; ++sector) {
+      const Row* rows = sector == 0 ? fm : fq;
+      for (int i = 0; i < 3; ++i) {
+        const Row& r = rows[i];
+        const double b = 20.0 * (r.x_a * 0.938) * (r.x_a * 0.938);
+        const GaussianSpin1FF ff(b, sector == 0 ? 1.7139610634 : 0.0,
+                                 sector == 0 ? 0.0 : 25.84, 0.0);
+        const double e38u = polrad_sigma_el_u(ff, r.x_a, 0.5, s_a_d, m_d, 1024);
+        const double e38t = polrad_sigma_el_t(ff, r.x_a, 0.5, s_a_d, m_d, 1024);
+        const PolradFullPair p =
+            polrad_full_sigma_el(ff, r.x_a, 0.5, s_a_d, m_d, 128);
+        CHECK_CLOSE(p.u / e38u, r.want_u, 2e-4);
+        CHECK_CLOSE(p.t / e38t, r.want_t, 2e-4);
+      }
+    }
+    // THE LIMIT ITSELF, as a monotone statement and not three numbers: the
+    // deviation from Eq. (38) must SHRINK as x_A does, in both columns.
+    double prev_u = 0.0, prev_t = 0.0;
+    for (double xa : {0.012, 0.006, 0.003, 0.0015}) {
+      const double b = 20.0 * (xa * 0.938) * (xa * 0.938);
+      const GaussianSpin1FF ff(b, 1.7139610634, 0.0, 0.0);
+      const double e38u = polrad_sigma_el_u(ff, xa, 0.5, s_a_d, m_d, 1024);
+      const double e38t = polrad_sigma_el_t(ff, xa, 0.5, s_a_d, m_d, 1024);
+      const PolradFullPair p = polrad_full_sigma_el(ff, xa, 0.5, s_a_d, m_d, 128);
+      const double du = std::fabs(p.u / e38u - 1.0);
+      const double dt = std::fabs(p.t / e38t - 1.0);
+      if (prev_u > 0.0) { CHECK(du < prev_u); CHECK(dt < prev_t); }
+      prev_u = du; prev_t = dt;
+    }
+    CHECK(prev_u < 2e-3);            // measured 1.15e-03 at x_A = 0.0015
+    CHECK(prev_t < 3e-3);            // measured 1.57e-03
+  }
+
+  SUBCASE("(b) the tau_A range and where the peaks sit inside it") {
+    // tau_s = -Q^2/S and tau_p = Q^2/X are PANEL EDGES of the quadrature, so
+    // if either fell outside [tau_min, tau_max] a whole peak would be
+    // integrated with no clustering and silently under-resolved.
+    const double s_a = 6.0 * 3980.0, m_a = LI6().mass();
+    for (double x : {1e-4, 0.01, 0.3, 0.9}) {
+      for (double y : {0.01, 0.5, 0.985}) {
+        const double x_a = x / 6.0, q2 = x_a * y * s_a;
+        const TauLimits t = polrad_tau_limits(x_a, y, s_a, m_a);
+        const double tas = -q2 / s_a, tap = q2 / ((1.0 - y) * s_a);
+        CHECK(t.hi > t.lo);
+        CHECK(t.lo > -1.0);                     // R_el = (S_x-Q^2)/(1+tau)
+        CHECK(t.lo < tas);
+        CHECK(tas < 0.0);
+        CHECK(tap > 0.0);
+        CHECK(tap < t.hi);
+        // tau_min tau_max = -Q^2/M^2 exactly (Eq. (14)); the stable form.
+        CHECK_CLOSE(t.lo * t.hi, -q2 / (m_a * m_a), 1e-12);
+      }
+    }
+  }
+
+  SUBCASE("(c) POLRAD's own three deuteron points -- the SIGN and the scale") {
+    // T8(c') gates the t-peak against polrad_transcription_check.md sec. 8.
+    // The exact tail must land on the SAME SIDE of zero in the tensor column
+    // at every one of them (that column CHANGES SIGN with x, which is the
+    // whole reason sigma^el_T is a separate table) and within a factor of a
+    // few in the unpolarised one -- it adds two peaks, it does not replace
+    // the object.  MEASURED full/t-peak: 1.065 / 1.176 / 1.547 unpolarised,
+    // 1.197 / 2.571 / 1.076 tensor.
+    const std::shared_ptr<HoSpin1FF> ff = deuteron_ff();
+    struct Row { double e, x, y, ru, rt; };
+    const Row rows[] = {{27.6, 0.050, 0.60, 1.0647, 1.1967},
+                        {27.6, 0.012, 0.50, 1.1760, 2.5712},
+                        {11.0, 0.200, 0.50, 1.5474, 1.0758}};
+    for (const Row& r : rows) {
+      const double s_n = 2.0 * PROTON_MASS * r.e, s_a = 2.0 * s_n;
+      const double x_a = r.x / 2.0;
+      const double eu = polrad_sigma_el_u(*ff, x_a, r.y, s_a, m_d, 256);
+      const double et = polrad_sigma_el_t(*ff, x_a, r.y, s_a, m_d, 256);
+      const PolradFullPair p = polrad_full_sigma_el(*ff, x_a, r.y, s_a, m_d, 128);
+      CHECK(p.u > 0.0);                                    // T8(0)'s sign gate
+      CHECK(p.t * et > 0.0);                               // same side of zero
+      CHECK_CLOSE(p.u / eu, r.ru, 2e-3);
+      CHECK_CLOSE(p.t / et, r.rt, 2e-3);
+      CHECK(p.u > eu);                        // it ADDS the s- and p-peaks
+    }
+  }
+
+  SUBCASE("(d) the LEADING-LOG fallback, at the HERMES deuteron point") {
+    // x = 0.012, y = 0.85, Q^2 = 0.53 -- the point the header block quotes as
+    // "the t-peak is 23 % of the leading-log total (low by 4.36x)".  The exact
+    // tail settles it: it is low by 2.36x, i.e. the leading-log edge
+    // OVERSHOOTS by 1.85x.  That is the whole reason this model was built, so
+    // it is gated rather than only reported.
+    const std::shared_ptr<HoSpin1FF> ff = deuteron_ff();
+    const double s_n = 2.0 * PROTON_MASS * 27.6, s_a = 2.0 * s_n;
+    const double x = 0.012, y = 0.85, x_a = x / 2.0;
+    const double te = polrad_sigma_el_u(*ff, x_a, y, s_a, m_d, 256) / 4.0;
+    const LlPeaks se = ll_peaks_spin1(*ff, x_a, y, s_a, m_d);
+    const double tq = polrad_sigma_qe_u(1, 1, x, y, s_n, PROTON_MASS, 256, 0.0)
+                      / 2.0;
+    const LlPeaks sq = ll_peaks_qe(1, 1, x, y, s_n);
+    const PolradFullPair fe = polrad_full_sigma_el(*ff, x_a, y, s_a, m_d, 128);
+    const double fq = polrad_full_sigma_qe_u(1, 1, x, y, s_n, PROTON_MASS, 128,
+                                             0.0) / 2.0;
+    const double tot_t = te + tq;
+    const double tot_ll = tot_t + (se.s + se.p) / 4.0 + (sq.s + sq.p) / 2.0;
+    const double tot_f = fe.u / 4.0 + fq;
+    MESSAGE("HERMES deuteron point: t-peak " << tot_t << ", t-peak+ll "
+            << tot_ll << ", polrad-full " << tot_f << "  (full/t = "
+            << tot_f / tot_t << ", full/(t+ll) = " << tot_f / tot_ll << ")");
+    CHECK_CLOSE(tot_f / tot_t, 2.3562, 2e-3);
+    CHECK_CLOSE(tot_f / tot_ll, 0.5401, 2e-3);
+    // ... and it is BETWEEN the two edges here, which is the case the band was
+    // built for.  (T19(g) is the case it is NOT.)
+    CHECK(tot_f > tot_t);
+    CHECK(tot_f < tot_ll);
+  }
+
+  SUBCASE("(e) the quadrature CONVERGES, and the tensor column is the one "
+          "that needs the resolution") {
+    const std::shared_ptr<HoSpin1FF> ff = HoSpin1FF::for_ion(LI6());
+    const double s_a = 6.0 * 3980.0, m_a = LI6().mass();
+    for (double x : {1e-3, 1e-4}) {
+      for (double y : {0.5, 0.9}) {
+        const PolradFullPair a =
+            polrad_full_sigma_el(*ff, x / 6.0, y, s_a, m_a, 128);
+        const PolradFullPair b =
+            polrad_full_sigma_el(*ff, x / 6.0, y, s_a, m_a, 512);
+        // 1e-8: MEASURED worst spread over the four points is 2.13e-09
+        // (x = 1e-4, y = 0.5, 35.95009232 at n_tau = 128 against 35.95009240
+        // at 512).  The unpolarised column is converged; the tensor one is
+        // not, and the two tolerances below say by how much.
+        CHECK_CLOSE(a.u, b.u, 1e-8);
+        // 1e-3, not 1e-9: Eq. (B.3)'s a_ik cancel to ~5 decimal digits in the
+        // collinear region and `long double` leaves ~1e-4 of that on the
+        // tensor column.  rc.cpp says so where the type is chosen; this is
+        // the number.
+        CHECK_CLOSE(a.t, b.t, 1e-3);   // measured worst 6.0e-04
+        // ... and the UNPOLARISED column is genuinely converged, which is what
+        // makes the tensor spread arithmetic and not quadrature.
+        CHECK(std::fabs(a.u / b.u - 1.0) < 1e-8);
+      }
+    }
+  }
+
+  SUBCASE("(f) THE QUASI-ELASTIC TAIL IS STILL TENSOR-BLIND -- the gap that "
+          "the exact tail does NOT close") {
+    // THIS SUBCASE ASSERTS AN OMISSION, exactly like B1's
+    // `..._bounded_by_NEITHER_scale` pytest, and for the same reason: a
+    // reader could reasonably expect Eq. (18) to close the hole
+    // `RcOptions::sp_tensor_scale` only bounds.  It closes the ELASTIC half
+    // and not the quasi-elastic one, because a nucleon has no tensor
+    // structure function to put at any peak (Eq. (A.5) -> Im_{5..8} = 0).
+    //
+    // The assertion: `polrad_full_sigma_qe_u` has no tensor entry point AT
+    // ALL, and the elastic tensor column is untouched by every quasi-elastic
+    // knob -- so the quasi-elastic tensor tail is exactly zero on this model
+    // as on the other two, and only `qe_tensor_scale` prices it.
+    const double s_n = 3980.0;
+    const double a = polrad_full_sigma_qe_u(3, 3, 0.1, 0.5, s_n, PROTON_MASS,
+                                            128, 0.169);
+    const double b = polrad_full_sigma_qe_u(3, 3, 0.1, 0.5, s_n, PROTON_MASS,
+                                            128, 0.0);
+    CHECK(a > 0.0);
+    CHECK(b > a);                       // Pauli suppression bites, as Eq. (44)
+    // ... and it is BIG: the quasi-elastic s+p is what the t-peak misses at
+    // x >= 0.1, and none of it is tensor.  MEASURED at 6Li config 1,
+    // x = 0.1, Q^2 = 5, k_F = 0.169: full/t-peak = 202.2.
+    const double y = 5.0 / (0.1 * s_n);
+    const double tqe = polrad_sigma_qe_u(3, 3, 0.1, y, s_n, PROTON_MASS, 128,
+                                         0.169);
+    const double fqe = polrad_full_sigma_qe_u(3, 3, 0.1, y, s_n, PROTON_MASS,
+                                              128, 0.169);
+    MESSAGE("quasi-elastic at x = 0.1, Q^2 = 5: t-peak " << tqe
+            << " -> polrad-full " << fqe << " (x" << fqe / tqe << "), and "
+            "ALL of that growth is tensor-blind");
+    CHECK(fqe / tqe > 100.0);
+  }
+
+  SUBCASE("(g) it does NOT sit inside the t-peak band, and the model moves "
+          "the tail through RcModel") {
+    RcOptions o;
+    o.tail_model = RcTailModel::PolradFull;
+    const RunPlan plan = tensor_thirds_plan(0.0, 0.6);
+    const RcModel mf(RcMode::TensorBand, o, rc_sampler_ptr(), plan,
+                     Channel::Inclusive, LI6());
+    RcOptions ol;
+    ol.tail_model = RcTailModel::TPeakPlusLL;
+    const RcModel ml(RcMode::TensorBand, ol, rc_sampler_ptr(), plan,
+                     Channel::Inclusive, LI6());
+    const RcModel& mt = rc_model();
+    // The tables are NOT the s+p decomposition: under PolradFull `u` and `qe`
+    // already contain the s- and p-peaks, so u_sp/qe_sp stay zero for a
+    // DIFFERENT reason than under TPeak.
+    const RcModel::TailTriple tt = mf.tail_sigma_at(0.01, 5.0);
+    CHECK(tt.u_sp == 0.0);
+    CHECK(tt.qe_sp == 0.0);
+    CHECK(tt.u > mt.tail_sigma_at(0.01, 5.0).u);
+    // ... and there is at least one accepted cell where the exact tail is
+    // OUTSIDE the [TPeak, TPeakPlusLL] interval, so the pair is a price range
+    // and not a confidence interval.  MEASURED on the PRODUCTION grid (this
+    // loop runs on the small test sampler, so it gates the sign of the
+    // statement and not its size): 1326 of 3051 cells are outside, and the
+    // worst is x4518.3 the t-peak at x = 0.954993, Q^2 = 206.68, y = 0.0544
+    // with `tail_max` raised so the census measures the MODEL.  At the
+    // shipped `tail_max` = 10 that cell and five others clip to x11 = 1 +
+    // `tail_max` -- the CEILING, which is what "the worst x11 the t-peak at
+    // x = 0.955" meant here until 2026-09-06; that cell is x3449.9 unclipped.
+    int outside = 0, n = 0;
+    for (std::size_t c = 0; c < rc_sampler().n_cells(); ++c) {
+      const double x = rc_sampler().x_cells()[c];
+      const double q2 = rc_sampler().q2_cells()[c];
+      const double a = mt.tail_ratio_at(x, q2, 0.0);
+      const double b = ml.tail_ratio_at(x, q2, 0.0);
+      const double f = mf.tail_ratio_at(x, q2, 0.0);
+      ++n;
+      if (f < std::min(a, b) || f > std::max(a, b)) ++outside;
+    }
+    MESSAGE("polrad-full outside the [t-peak, t-peak+ll] interval on "
+            << outside << " of " << n << " test-sampler cells");
+    CHECK(outside > 0);
+  }
+
+  SUBCASE("(h) m_lepton is READ here and by nothing else") {
+    // The knob `PipelineConfig::validate()` reserved for this model since the
+    // model was a comment.  It is the m^2 of C_{1,2}(tau), so it sets the
+    // WIDTH of the s-/p-peaks: a heavier lepton makes them narrower and the
+    // tail SMALLER.  Gated as an inequality, not a number -- what matters is
+    // that the field reaches the quadrature at all.
+    const std::shared_ptr<HoSpin1FF> ff = HoSpin1FF::for_ion(LI6());
+    const double s_a = 6.0 * 3980.0, m_a = LI6().mass();
+    const double x_a = 1e-4 / 6.0, y = 0.9;
+    const PolradFullPair e =
+        polrad_full_sigma_el(*ff, x_a, y, s_a, m_a, 128, M_ELECTRON);
+    const PolradFullPair mu =
+        polrad_full_sigma_el(*ff, x_a, y, s_a, m_a, 128, 0.1056583755);
+    CHECK(e.u != mu.u);
+    CHECK(mu.u < e.u);
+    MESSAGE("m_lepton e -> mu at x = 1e-4, y = 0.9: sigma^el_U "
+            << e.u << " -> " << mu.u << " (x" << mu.u / e.u << ")");
+    // ... and the two t-peak entry points take no lepton mass at all, which
+    // is why validate() refuses the knob on them.
+    CHECK(polrad_sigma_el_u(*ff, x_a, y, s_a, m_a, 128) ==
+          polrad_sigma_el_u(*ff, x_a, y, s_a, m_a, 128));
+  }
+
+  SUBCASE("(i) THE PIN -- tail_sigma_at under PolradFull is pinned to a "
+          "VALUE, not to a ratio or an inequality") {
+    // T8(a') does this for the t-peak, and the reason it exists is that the
+    // per-nucleon reduction at THIS call site is where the historical factor-A
+    // bug lived (polrad_transcription_check.md sec. 4: the shipped
+    // `per_nucleon = m_p/M_A` was 6.00x too large).  Until this subcase,
+    // NOTHING pinned a value on `RcTailModel::PolradFull`: T19(a)-(h) and T9
+    // test `polrad_full_sigma_el` / `..._qe_u` directly, T14 and
+    // test_rc_pipeline check only refusals, and the one assertion that touched
+    // the model's own PolradFull branch was T19(g)'s inequality
+    // `tt.u > mt.tail_sigma_at(0.01, 5.0).u`.  MEASURED: replacing the
+    // branch's `1.0/(a*a)` by `1.0/a` -- exactly the historical bug, at the
+    // exact line it lived on -- left T9 + T19 at 316/316 and both polrad-full
+    // pytests passing.  It cannot now: every number below moves by x6.
+    //
+    // THE SECOND SLIP THE SAME CALL CAN MAKE is passing `x` where `x_A = x/A`
+    // belongs (and `s` where `S_A = A s` does).  That was caught by exactly
+    // one inequality; it is now caught by the values, and by how far the wrong
+    // argument lands from them -- printed below, x0.0052 / x3.6e-10 / x9.4e-62
+    // at the three points.
+    RcOptions o;
+    o.tail_model = RcTailModel::PolradFull;
+    const RcModel mf(RcMode::TensorBand, o, rc_sampler_ptr(),
+                     tensor_thirds_plan(0.0, 0.6), Channel::Inclusive, LI6());
+    const double s = rc_sampler().s();
+    const double a = static_cast<double>(LI6().A);
+    const double m_a = LI6().mass();
+    const std::shared_ptr<HoSpin1FF> ff = HoSpin1FF::for_ion(LI6());
+    // 6Li config 1 (`default_configs("6Li")[1]`, S = 3980 GeV^2), RcOptions()
+    // defaults but for the model: n_eta = 128, m_lepton = m_e,
+    // k_F = RC_QE_KF_GEV, with_qe_tail = true.  All three columns are
+    // sigma per nucleon [GeV^-2], i.e. Eq. (18)/A^2 and Eq. (A.5)/A.
+    //   (0.01,  5) the reviewer's point: u = 2.230125e-05 is the raw
+    //              8.0284510282e-04 divided by A^2 = 36, and NOT by A = 6.
+    //   (0.1,  20) x_A = 1/60 is far from x = 0.1 on a form factor that has
+    //              fallen 7.8 decades between them: the point where the
+    //              x-vs-x_A slip is unmissable.
+    //   (0.3,   5) the QUASI-ELASTIC point: qe is 3.7e+06 times u here, so
+    //              the third column is pinned where it is the whole tail --
+    //              and it carries ONE 1/A, not two, which is the other half
+    //              of the same historical bug (the ERT and the QRT were
+    //              normalised differently, so their ratio was wrong by A).
+    struct Pin { double x, q2, u, t, qe; };
+    const Pin pins[] = {
+        {0.01,  5.0,  2.2301252856028388e-05, -6.8964416598016638e-08,
+                      1.4082400494855565e-05},
+        {0.10, 20.0,  1.3474277075174561e-08,  1.0398154385161343e-11,
+                      4.2214155843320782e-08},
+        {0.30,  5.0,  2.5848200248542323e-12,  1.6976986824052815e-13,
+                      9.5240888233400158e-06}};
+    for (const Pin& p : pins) {
+      const RcModel::TailTriple tt = mf.tail_sigma_at(p.x, p.q2);
+      CHECK_CLOSE(tt.u,  p.u,  1e-9);
+      CHECK_CLOSE(tt.t,  p.t,  1e-9);
+      CHECK_CLOSE(tt.qe, p.qe, 1e-9);
+      // ... and the pinned values ARE the raw quadratures over A^2 (elastic)
+      // and A (quasi-elastic), so a reader can rebuild them from the header's
+      // own reduction rather than trusting three literals.
+      const double y = p.q2 / (p.x * s);
+      const PolradFullPair raw =
+          polrad_full_sigma_el(*ff, p.x / a, y, a * s, m_a, o.n_eta,
+                               o.m_lepton);
+      const double raw_qe =
+          polrad_full_sigma_qe_u(LI6().Z, LI6().N(), p.x, y, s, PROTON_MASS,
+                                 o.n_eta, o.qe_kf_gev, o.m_lepton);
+      CHECK_CLOSE(tt.u  * (a * a), raw.u,  1e-12);
+      CHECK_CLOSE(tt.t  * (a * a), raw.t,  1e-12);
+      CHECK_CLOSE(tt.qe * a,       raw_qe, 1e-12);
+      // The two wrong reductions and the wrong argument, so the failure a
+      // future edit produces is legible rather than just red.
+      const PolradFullPair wrong_x =
+          polrad_full_sigma_el(*ff, p.x, y, a * s, m_a, o.n_eta, o.m_lepton);
+      MESSAGE("PIN x = " << p.x << ", Q^2 = " << p.q2 << ": u = " << tt.u
+              << " (1/A would give " << raw.u / a << ", x" << a << "), "
+              "x-for-x_A would give " << wrong_x.u / (a * a) << " (x"
+              << wrong_x.u / raw.u << ")");
+      CHECK(std::fabs(raw.u / a / p.u - a) < 1e-9);      // 1/A is exactly x6
+      CHECK(wrong_x.u / raw.u < 0.01);                   // and x_A is not x
+    }
+    // The s/p columns are zero HERE for the reason T19(g) states, and the
+    // pin says so as a value too: nothing leaks into them from Eq. (18).
+    CHECK(mf.tail_sigma_at(0.01, 5.0).u_sp == 0.0);
+    CHECK(mf.tail_sigma_at(0.01, 5.0).qe_sp == 0.0);
+  }
+}
 
 TEST_CASE("TabulatedSpin1FF: the API exists, and NO 6Li table is shipped") {
   // design sec. 2.1's fallback (F) is a digitised `data/ff/li6_elastic.csv`.

@@ -43,8 +43,8 @@ add the row.
 *variation of a piece that did not run* (a scale, a band edge or a shape on a
 term the run computes as identically 1): such a value claims a systematic was
 PRICED, and no label makes a priced systematic un-priced — `b1_band_scale` on
-the Miller branch, `rc_qe_tensor_scale` without the quasi-elastic tail, every
-rc tail sub-knob on a tagged channel. LABEL when it names a *backend, an axis
+Miller, `rc_qe_tensor_scale` with no quasi-elastic tail, `rc_sp_tensor_scale` with no s-/p-peaks (2026-09-06), every rc tail sub-knob on a tagged channel. **A REFUSAL CAN ALSO HAVE THE OPPOSITE CAUSE, and the `reason` must say which:** `rc_sp_tensor_scale` is refused on `--rc-tail-model polrad-full` too (2026-09-06) — not because the s/p tensor term did not run but because it **DID**, since POLRAD Eq. (18) carries it and the stand-in would double-count a term that ran. Same status, opposite sentence.
+LABEL when it names a *backend, an axis
 or a member of a family that a channel-, plan- or set-scan sets uniformly
 across runs*: refusing one cell of such a scan costs more than it buys —
 `--pol-sf` on coherent and under the unpolarised-beam plans, `--pzz-mode`

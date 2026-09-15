@@ -72,7 +72,7 @@ the board above is the state and the deciding number.
 | 12 | Packaging | **implemented 2026-09-02** — `pyproject.toml` (scikit-build-core) in-tree, `pip install -e .` works (66 s); one copy of each `.so` in `lipolgen/`, `$ORIGIN`+deps-prefix RPATH, data/vmc vendored; portable wheel still needs `auditwheel` + GPL-3 terms | done | see §12–13 below |
 | 13 | License | **GPL-3.0-or-later** (forced by HepMC3/LHAPDF; matches MCnet norms) | 0 | author to confirm — `STATUS.md` decision **row 24**, `AUTHOR_DECISIONS.md` §B21; E2 stamped the identifier onto 101 files on the strength of it |
 | 14 | Structure-function backend injection (the 2026-09-03 sweep's **D2**, filed as `sf-backend-injection`) | **implemented 2026-09-04** — `--unpol-sf {toy,mstw,ct18nlo}` reaches **every kernel the pipeline builds**, the tagged struck-cluster kernel included, which had **no** structure-function slot of any kind before (and which `PipelineConfig::kernel` never reached either). **`--pol-sf {toy,nnpdfpol}` does not have that reach and never could** — it reaches the inclusive and tagged kernels only where the fill also carries `lam_e·P_e ≠ 0`, and not the coherent channel at all, whose rate is spin-independent; under `tensor-thirds`, this CLI's own default plan, it is read on **no** channel. It is *labelled, not credited*, wherever it did not run (`pol_sf_is_read(config, plan)`, §15.3). Both default to the toy backends and are then **bit for bit**, proved per channel by `np.array_equal`. Measured price of the toy on ⁶Li at config 1: accepted σ **×0.7985** (ct18nlo) / **×0.7934** (mstw), run-level A_zz ×1.2524 / ×1.2604 — and the shipped `ToyG1`'s g₁ⁿ has the **WRONG SIGN** over roughly 0.25 < x < 0.6. R and the EMC hook are deliberately **not** covered by *these two* selectors; the EMC hook stays hard-locked everywhere, and R did too until 2026-09-06, when `--r-source` opened it on ONE path — `--b1-model li6-convolution`, where it is the shared hook of registry row 3's option (iii) and is refused everywhere else (§10) | 1 session | done — §14 below |
-| 15 | ⁷Li rank-2 (tensor) input (the 2026-09-03 sweep's **D1**) | **the ZERO is now LOUD; the b₁ is DEFERRED, deliberately** — a ⁷Li inclusive run's tensor term, cos 2φ amplitude and A_zz have always been *exactly* 0 (`default_inclusive_kernel` fills a rank-2 slot for spin 1 only) while `meta` recorded `b1_model = "miller"`, a backend that did not run, and no run-surface line said anything. Now: an unconditional banner block, `meta["rank2_input"]`, and `b1_model` / `b1_unpol` = `"none (spin 3/2: no rank-2 input)"`; plus four run-surface defects (F2 the spin-1 plans at J = 3/2, F3 the population-domain message, F4 a three-line segfault, F5 the silently ignored `--pzz` — no longer silent, and since 2026-09-06 no longer ignored either at the opt-in `--pzz-mode typed`, whose cost is measured in `docs/open_items/run_2026-09-06/phase_A_numbers.md` §A3). **No b₁(⁷Li) was implemented**: the α–t convolution is worked out and measured **in `phase_D_li7_rank2.md`, not here** — 2.99 ± 0.02 × ⁶Li's orbital term, and the ⟨r²⟩/P-wave character of the same wave function agrees with Q(⁷Li) to 13 % — but its **sign flips with the unpolarised backend** the A = 2 gate tells you to use, so shipping it would publish a tensor asymmetry whose direction is a flag. **Both numbers are the research note's, quoted, not re-measured and not in the code; and the 13 % "gate" is NOT COMMITTED** — its reference Q(⁷Li) = −4.00(3) fm² is quoted from memory of the standard compilations, is absent from this tree and must be sourced first (§15.4, author decision D11) | loud zero 1 session; b₁ ~1 week after the decision | **blocked on author decision D2** (one unpolarised backend, for both isotopes) — §15 below |
+| 15 | ⁷Li rank-2 (tensor) input (the 2026-09-03 sweep's **D1**) | **the ZERO is now LOUD; the b₁ is DEFERRED, deliberately** — a ⁷Li inclusive run's tensor term, cos 2φ amplitude and A_zz have always been *exactly* 0 (`default_inclusive_kernel` fills a rank-2 slot for spin 1 only) while `meta` recorded `b1_model = "miller"`, a backend that did not run, and no run-surface line said anything. Now: an unconditional banner block, `meta["rank2_input"]`, and `b1_model` / `b1_unpol` = `"none (spin 3/2: no rank-2 input)"`; plus four run-surface defects (F2 the spin-1 plans at J = 3/2, F3 the population-domain message, F4 a three-line segfault, F5 the silently ignored `--pzz` — no longer silent, and since 2026-09-06 no longer ignored either at the opt-in `--pzz-mode typed`, whose cost is measured in `docs/open_items/run_2026-09-06/phase_A_numbers.md` §A3). **No b₁(⁷Li) was implemented**: the α–t convolution is worked out and measured **in `phase_D_li7_rank2.md`, not here** — 2.99 ± 0.02 × ⁶Li's orbital term, and the ⟨r²⟩/P-wave character of the same wave function agrees with Q(⁷Li) to 13 % — but its **sign flips with the unpolarised backend** the A = 2 gate tells you to use, so shipping it would publish a tensor asymmetry whose direction is a flag. **The b₁ numbers are the research note's, quoted, not re-measured and not in the code. The QUADRUPOLE GATE, by contrast, is COMMITTED as of 2026-09-06** (task B3, `run_2026-09-06/phase_B_numbers.md` §B3, D11 paid): its reference is sourced — `LI7_QUADRUPOLE_FM2` = **−4.06 fm²** in `rc.hpp` beside `LI6_QUADRUPOLE_FM2`, from the **same TUNL A = 5, 6, 7 evaluation** (NPA 708 (2002) 3, `Q = −40.6 ± 0.8 mb`) that the ⁶Li constant comes from — and `li7_alpha_t_quadrupole` computes Q = **−3.485059 fm²** in shipped code, reproducing the research note bit for bit, for a **reported ratio of 0.858389 against −4.06 (0.871265 against the −4.00 the note quoted): 13–14 % low**, pinned by doctest T13 and pytest G8. It validates the α–t **wave function's** quadrupole only; **b₁(⁷Li) remains unimplemented** and ⁷Li's rank-2 sector is still exactly zero, which G8 re-asserts in the very test that runs the gate (§15.4, D11) | loud zero 1 session; b₁ ~1 week after the decision | **blocked on author decision D2** (one unpolarised backend, for both isotopes) — §15 below |
 
 ## 1. Cluster wave functions — the biggest physics correction — **OPT-IN SHIPPED** (rows 9, 10, 11 open)
 
@@ -623,16 +623,73 @@ uncancelled soft 1/(1−z) that overshoots as y → 0 — and **not** a controll
 O(α) expansion. **Neither edge carries a tensor s/p peak**: POLRAD supplies
 none, inventing one would be a second definition of a physics number, so the
 s+p enter the **unpolarised** numerator only and `TPeakPlusLL` **lowers the
-tensor fraction of the tail**. That fraction is *unknown*, not zero.
+tensor fraction of the tail** — measured at Q² = 5 GeV², ⁶Li config 1,
+production grid, 2026-09-06: `r_T/r_U` falls by **×0.66139 / ×0.0031829 /
+×6.6076e−05** at x = 0.01 / 0.10 / 0.30. Since 2026-09-06 that fraction is
+**bounded, not computed** — and the number has to be read with the word.
+`--rc-sp-tensor-scale` (`RcOptions::sp_tensor_scale`, default 0, refused
+unless `--rc-tail-model t-peak+ll`) lends the **elastic** s-/p-peaks the
+elastic t-peak's own σ^el_T/σ^el_U, so scale 1 says *"the s/p tensor fraction
+equals the elastic t-peak's"*. **It is a bound with no derivation**, and it is
+**empty at the three standard points**: the s/p elastic vertex sits at
+Q′²_s = 4.3728 / 4.9382 / 4.9801 GeV², where ⁶Li's coherent form factor is
+F_c = −3.75e−45 / −6.44e−51 / −2.41e−51 against **+2.99260** at the t-peak's own
+t_min = 8.7304e−05 GeV², so `u_sp/σ^el_U` = 5.25e−79 / 2.07e−86 / 4.06e−83 and
+scale 1 is **bit-identical** to 0 there — it recovers **0.0 %** of the collapse
+above. It bites on **77 of 3051 accepted cells** (x ≤ 7.94e−03, y ≥ 0.366),
+where at scale 1 it reaches **582.9 % of the band half-width** (x = 4.169e−04,
+Q² = 1.608, y = 0.9692) and recovers at most **21.72 %** of the collapse. The
+**QUASI-ELASTIC s/p column** — `TailTriple::qe_sp`, which is essentially the
+whole of the collapse at x ≥ 0.10 (`r_U` grows ×314.18 at x = 0.10 and ×15134
+at x = 0.30 between the two tail models, none of it coherent) — is covered by
+**neither** `sp_tensor_scale` nor `qe_tensor_scale` and stays exactly
+tensor-blind. It is now the largest exactly-zero tensor term in `rc_tail`
+(`open_items/run_2026-09-06/phase_B_numbers.md` §B1).
+
+**AND SINCE 2026-09-06 THE ELASTIC HALF IS COMPUTED, NOT BOUNDED.**
+`--rc-tail-model polrad-full` — POLRAD **Eq. (18) + Appendix B + Eq. (A.4)**,
+the exact τ_A quadrature — carries the s- and p-peaks **with their own
+Eq. (A.4) tensor content**, so *"POLRAD supplies no tensor s/p peak"* is true
+of **Eq. (38)** and **false of the paper**, and `--rc-sp-tensor-scale` is
+refused on that model because the term it stands in for **ran**. Scored against
+the computed answer the bound was **not even one-sided**: `r_T/r_U` × the
+t-peak is **×0.79395 / ×0.0020032 / ×0.00022591** computed against
+×0.66139 / ×0.0031829 / ×6.6076e−05 bounded, at x = 0.01 / 0.10 / 0.30. **The
+exact tail is NOT inside the t-peak pair** — between the two edges on 1725 of
+3051 accepted cells (56.5 %), covering a median **0.6555** of the gap **over
+the 3027 cells whose gap is nonzero** (0.6620 over all 3051; the other 24 have
+`t-peak+ll` = `t-peak` exactly, so the fraction is undefined), with the **ratio
+of the σ-weighted mean shifts** at **0.428** — a ratio of means, **not** an
+event-weighted (nor a σ-weighted) mean of the per-cell fractions, which is
+**6.483** — and **above both** in the Q² ≥ 20, y ≤ 0.9 window. It is still
+**not** validated against Mo–Tsai (not in this tree). **It does not close the
+quasi-elastic half**: a nucleon has no tensor structure function (Eq. (A.5) →
+`Im₅…₈ ≡ 0`), so the quasi-elastic tail is tensor-blind at all three peaks on
+all three models — and that is the column carrying ×202 and ×7123 of the
+t-peak at x = 0.10 and 0.30
+(`open_items/run_2026-09-06/phase_B_numbers.md` §B2).
 
 POLRAD §2.1.3 B's "the s- and p-peaks are suppressed" is an **event-weighted**
 statement about this generator's bulk and is **false cell by cell**. Both halves,
 because either one alone misleads:
 
-* **Event-weighted, it holds.** For ⁶Li at Q² ≥ 20 GeV² and y ≤ 0.9 the mean
-  dilution ⟨w_tail − 1⟩ moves **8.48914e−03 → 8.54072e−03**, **+0.61 %**
-  (5182 of 200 000 events, seed 1234); cross-section-weighted over the
-  sampler's accepted cells, 8.31257e−03 → 8.35972e−03, **+0.57 %**.
+* **Event-weighted, it holds — and it is a statement about a P_z.** For ⁶Li
+  at Q² ≥ 20 GeV² and y ≤ 0.9, at the CLI's **default fill P_z = 0.7**, the
+  mean dilution ⟨w_tail − 1⟩ moves **8.719649e−03 → 8.773752e−03**, **+0.62 %**
+  (5194 of 200 000 events, seed 1234), and **8.815031e−03** (+1.09 %) on the
+  exact `polrad-full` tail — which is **above both**, so this window's
+  event-weighted statement does not BRACKET the exact answer either. At
+  **P_z = 0** (the plan both test suites use) the same build gives **5182**
+  events and **8.489138e−03 → 8.540716e−03 → 8.581236e−03** (+0.61 %, +1.08 %).
+  *(**CORRECTION, 2026-09-15 — re-measured at both P_z.** From 2026-09-06 this
+  bullet said the "8.48914e−03 → 8.54072e−03, +0.61 %, 5182" absolutes "no
+  longer reproduce" and blamed that run's Phase A for changing the ⁶Li kernel
+  normalisation and with it the sampler's cell weights. **Both claims are
+  withdrawn**: those digits reproduce exactly on this build at P_z = 0, and the
+  2026-09-06 digits are the same run at P_z = 0.7 — the re-measurement had
+  switched fill plans without saying so. The
+  cross-section-weighted pair 8.31257e−03 → 8.35972e−03 was not re-measured
+  and stays withdrawn.)*
 * **Per cell, it fails.** **331 of that window's 1356 accepted cells — 24.4 %,
   28.2 % of its cross section — disagree by more than 1 %**, worst **×6444** at
   x = 0.7943, y = 0.0088, Q² = 27.8 (t-peak = 0.016 % of the total), and
@@ -754,7 +811,7 @@ moves. σ^q_U itself is bit-identical between them.
 | inclusive throughput, `--rc off` → `--rc tensor-band` (1 core, end to end) | 574 852 → 495 017 ev/s (**−13.9 %**), same build and machine as the row above |
 | clipped tail nodes at `tail_max = 10`, global / y < 0.5 / 0.5–0.9 / y > 0.9 | **0 / 0 / 0 / 0** at the default `tail_model = TPeak` (was 1.71 % / 0 / 0 / 21.95 % before the per-nucleon fix). On `--rc-tail-model t-peak+ll`: **0.36 % / 0 / 0 / 4.62 %** on the 101 × 77 CLI grid (1.01 % / 0 / 0 / 5.85 % on T8(d)'s coarser 40 × 24 test grid) — the same y → 1 edge as everywhere else |
 | clipped EVENTS — tail / band, default 2000-event inclusive run | **0 / 0** on BOTH tail models, and still 0 at 200 000 events (`meta["rc_clipped_tail_event_fraction"]`, `..._band_...`; a DIFFERENT quantity from the node fractions — nodes are not event-weighted, and no accepted cell centre lands in the nodes `t-peak+ll` clips) |
-| whole-run mean `rc_tail`, 200 k inclusive ⁶Li config 1, `t-peak` → `t-peak+ll` | **1.021836 → 1.040369** (max 3.410153 → 5.981595; the tail dilution roughly doubles, and every event's kinematics and `weight` are bit-identical — `RcModel::fill` takes no `Rng&`) |
+| whole-run mean `rc_tail`, 200 k inclusive ⁶Li config 1, `t-peak` → `t-peak+ll` | **1.021836 → 1.040369** at P_z = 0 (the suites' fill; at the CLI default P_z = 0.7: 1.021779 → 1.040274) (max 3.410153 → 5.981595; the tail dilution roughly doubles, and every event's kinematics and `weight` are bit-identical — `RcModel::fill` takes no `Rng&`) |
 | clipped EVENTS on the BAND, 20 k tagged-alpha | **0.62 %** (⁶Li, seed 1 — the top of a ten-seed scatter 0.485–0.620 %, mean 0.528 %, sd 0.041 %), **2.6 %** (⁷Li, seed 11; seed 1 gives 2.51 %). `tau_tag` reaches 30.7 at the M = 0 density nodes; `band_tau_max = 1` holds every edge in [0.7, 1.3] instead of the −1.79 / −8.35 v0 published. |
 | δ(A_zz) at x = 0.01, Q² = 5 from the band, δ_low = 0.19 vs 0.30 | 2.7996e−04 vs **4.4204e−04** — both on the ×3.253983 deuteron-b₁ `A_zz` of the WARNING below. Re-measured 2026-09-06 with this generator's ⁶Li b₁: **8.603659e−05 vs 1.358472e−04** |
 | … from the LOW-x ANCHOR itself, δ_low = 0.30 / 0.266 / 0.113 (registry **row 17**, priced 2026-09-06) | band half-widths on A_zz at x = 0.01, Q² = 5 **1.358472e−04 / 1.204512e−04 / 5.116913e−05** (×1 / ×0.8867 / ×0.3767), at x = 0.063 **1.459067e−04 / 1.308566e−04 / 6.313127e−05** (×0.8969 / ×0.4327), at x = 0.10 **9.680016e−05 / 8.798804e−05 / 4.833349e−05** (×0.9090 / ×0.4993) and **1.920691e−05 unmoved** at x = 0.16. **0.113 is the value the source panel READS at x = 0.00966, the x nearest the 0.01 anchor**, so the shipped 0.30 errs **wide by ×2.65**. Two columns and one `meta` key move; the tagged clipped-event fraction does **not** (124/20 000 ⁶Li and 520/20 000 ⁷Li at all three). `run_2026-09-06/phase_A_numbers.md` §A2 |
@@ -892,7 +949,22 @@ largest unpriced piece of `rc_tail`. `--rc-qe-tensor-scale` (default **0.0**)
 prices the omission by lending the quasi-elastic tail the **elastic** tail's
 own tensor fraction: a **borrowed magnitude, not a derived bound**, possibly
 ~10² too small at x ≤ 0.1, and with a meaningless sign
-(`run_2026-09-03/phase_B_numbers.md` §B3). **`rc_tail` is the t-peak only
+(`run_2026-09-03/phase_B_numbers.md` §B3). The **tensor fraction of the
+leading-log s-/p-peaks** is the same shape of omission one level down, and
+since 2026-09-06 it too is **bounded, not computed** — `--rc-sp-tensor-scale`
+(default **0.0**, refused unless `--rc-tail-model t-peak+ll`) — but that bound
+is **empty at x = 0.01 / 0.10 / 0.30, Q² = 5** (bit-identical to 0: the
+coherent s/p vertex sits at Q′² ≈ Q², 45–51 decades below the form factor at
+the t-peak's own t_min) and recovers at most **21.72 %** of the tensor-fraction
+collapse anywhere on the grid. **The QUASI-ELASTIC s/p column is bounded by
+neither knob and is now the largest exactly-zero tensor term in `rc_tail`**
+(`run_2026-09-06/phase_B_numbers.md` §B1) — **and `--rc-tail-model
+polrad-full`, the exact Eq. (18) tail shipped the same day, does NOT close it
+either: a nucleon has no tensor structure function (Eq. (A.5) → `Im₅…₈ ≡ 0`),
+so the quasi-elastic tail is tensor-blind at all three peaks on all three
+models (§B2). What `polrad-full` DOES compute is the ELASTIC s/p tensor peak,
+and scored against it the `sp_tensor_scale` bound was not even one-sided.**
+**`rc_tail` at the DEFAULT is the t-peak only
 and is a LOWER BOUND**, and "fine at Q² ≥ 20 GeV²" is **event-weighted and
 never per cell** (T8(c), T8(d)(i)): the window mean moves only **+0.61 %**, but
 over Q² ≥ 20 GeV² with **no y cut 346 of 1399 accepted cells — 24.7 %, 29.6 %
@@ -901,8 +973,9 @@ of that window's cross section — differ from the `t-peak+ll` edge by more than
 edge at y → 0, not a measured deficit of the t-peak. The **only** per-cell
 agreement statement is **Q² ≥ 20 GeV² and 0.15 ≤ y ≤ 0.7** (660 cells, worst
 0.55 %). What is unchanged is the lower bound elsewhere: the t-peak is **low by
-4.4×** at the HERMES deuteron point (the "POLRAD §2.1.3 B" block earlier in
-this section). The **tagged band is clamped** at
+4.4×** at the HERMES deuteron point **on the leading-log estimate, and by
+2.36× on the exact `polrad-full` tail — the upper edge overshoots there by
+1.85×** (the "POLRAD §2.1.3 B" block earlier in this section; §B2.4). The **tagged band is clamped** at
 `|τ| ≤ band_tau_max = 1`, which is a *choice*: `n_M → 0` is exactly where the
 fractional-rescale ansatz breaks down, and the clipped fraction is reported
 rather than hidden.
@@ -2835,21 +2908,44 @@ Q(⁷Li) is orbital:
         Q = Z_eff ⟨r²⟩ ⟨3cos²θ − 1⟩_{M=3/2} = − (2/5) Z_eff ⟨r²⟩
         Z_eff = Z_α (M_t/M₇)² + Z_t (M_α/M₇)² = 0.695075                    (4)
 
-From `momenta/li7_at3.momentum` by Fourier–Bessel the research measured (there,
-not here) ⟨r²⟩ = 12.5348 fm² and **Q = −3.4851 fm²** (converged to 0.1 % in r_max, ±0.3 %
-on the VMC MC band), against a measured −4.00(3) fm² → **ratio 0.871** — an
-order of magnitude better than the ⁶Li sign gate's factor 4.08.
+**COMMITTED 2026-09-06 (D11 paid; `run_2026-09-06/phase_B_numbers.md` §B3).**
+It is now shipped code, not a research measurement:
+`li7_alpha_t_quadrupole` (`b1_nuclear.hpp`) reads
+`momenta/li7_at3.momentum` through `li7_alpha_channel` and returns
+⟨r²⟩ = **12.534828961030 fm²**, r_rms = **3.540456038568 fm**,
+Z_eff = **0.695075101362** and **Q = −3.485059004257 fm²** — reproducing the
+research note's own numpy recipe (§9 of `phase_D_li7_rank2.md`) to the **last
+bit** (relative difference 0.000e+00). Converged to **0.032 %** in r_max
+(30 → 60 fm) and **±0.33 %** on the fully correlated VMC MC band.
 
-**It was not committed here, and the reason is a rule, not effort.** The
-measured Q(⁷Li) is **not in this tree** (there is no `LI7_QUADRUPOLE_FM2`
-beside `LI6_QUADRUPOLE_FM2`), and the research note quotes it *from memory of
-the standard compilations*, saying itself that it "must be sourced before it
-is committed". A gate whose reference number nobody verified against a source
-is not a gate. **Author action:** supply the source, then this is ~20 lines
-and one constant, and it should land whether or not the b₁ ever does — it is
-the only quantitative check the ⁷Li α–t input has ever had, and it validates
-the wave function `li7_vmc_waves` already ships to the tagged channel. Record
-the −4.06 fm² alternative beside it: it moves the ratio 0.871 → 0.858.
+The reference is now in the tree, with one home:
+**`LI7_QUADRUPOLE_FM2` = −4.06 fm²** in `rc.hpp`, beside `LI6_QUADRUPOLE_FM2`
+— sourced from **TUNL's A = 5, 6, 7 evaluation** (Tilley *et al.*, NPA 708
+(2002) 3), whose A = 7 half prints `Q = −40.6 ± 0.8 mb (1988DI1B)` and whose
+A = 6 half prints the `Q = −0.818(17) mb (1998CE04)` that IS
+`LI6_QUADRUPOLE_FM2`. One document, one sign convention, one unit rule; the
+−4.00(3) fm² the research note quoted from memory is one of the **eight**
+⁷Li determinations N. J. Stone lists without recommending any, and it is
+recorded in `rc.hpp` beside the adopted value with its price:
+
+> **ratio 0.858389** against −4.06 (**14.16 % low**), **0.871265** against
+> −4.00 (**12.87 % low**) — so "13–14 % low" is the verdict and the choice of
+> compilation (1.5 %) does not decide it.
+
+Against the ⁶Li contrast from the same code family — factor **4.0748**, i.e.
+**307.5 %** — ⁷Li is better by a factor **21.7**, which is what "an order of
+magnitude better" means here and is asserted with a threshold of 10.
+Pinned by `tests/test_b1_nuclear.cpp` **T13** (26 assertions) and
+`python/tests/test_li7_rank2.py` **G8** (4 tests).
+
+**What it is NOT.** A **reported ratio**, never a pass/fail on b₁(⁷Li) — which
+remains **unimplemented** and blocked on D2 / registry row 3, with ⁷Li's whole
+rank-2 sector still exactly zero. G8's
+`test_the_passing_wave_function_gate_ships_no_b1_at_all` runs the gate and
+then re-asserts that zero in the same test, so a passing wave-function gate
+cannot be read as licensing a b₁. It validates the α–t **wave function's**
+quadrupole — its ⟨r²⟩ and P-wave character — and the wave function
+`li7_vmc_waves` already ships to the tagged channel; nothing more.
 
 Its honest limits, to travel with it: S_αt = 1.0084 > 1 proves the α–t overlap
 is **not a probability**, and the missing 13 % is the expected size of cluster
@@ -2876,7 +2972,7 @@ each name three different decisions across this document set.)*
 | **D8** | **`LightConeDensities`' interface** | Its φ₀/φ₂ + SD/DD shape is an A = 2 / ⁶Li shape. A first-class ⁷Li needs an L-generic alignment slot or an explicit `alignment_coefficient` (1 for L = 1 / S = ½ / J = 3/2; 1.5 and 6/√2 for ⁶Li's DD and SD), which would also let the ⁶Li coefficients be **derived** instead of hard-coded |
 | **D9** | **b₂_32** | Silence means 2x·b₁ by default; state it rather than inherit it |
 | **D10** | **Δ_32 (cos 2φ)** | Filling `b1_32_func` alone leaves cos 2φ at zero. There is **no ⁷Li Δ model**; reusing ⁶Li's toy means adopting an arbitrary 1e−2 scale for a second nucleus — and 3·Q_NN = ±3 at J = 3/2 against ±1/−2 at spin 1, so the same Δ gives a **larger** ⁷Li amplitude |
-| **D11** | **Q(⁷Li) is not in the tree** | §15.4. One constant, with a real source, and the −4.00(3) vs −4.06 spread recorded |
+| **D11** | ~~**Q(⁷Li) is not in the tree**~~ — **PAID 2026-09-06** | §15.4. `LI7_QUADRUPOLE_FM2` = **−4.06 fm²** at `rc.hpp:669`, from TUNL's A = 5, 6, 7 evaluation (NPA 708 (2002) 3), the same document `LI6_QUADRUPOLE_FM2` comes from; the −4.00(3) vs −4.06 spread and all eight of Stone's ⁷Li entries are recorded in the constant's comment, and the gate is `li7_alpha_t_quadrupole` + doctest T13 + pytest G8 (ratio 0.858389 / 0.871265). It gates the wave function; **b₁(⁷Li) is still unimplemented and D1–D10, D12, D13 are untouched** |
 | **D12** | **The run-plan surface** | There is no J = 3/2 tensor plan. The honest one is the **two-state T = +1 / T = −1 contrast**, not a thirds pattern — and at J = 3/2 the pure-alignment fill is rank-3 clean by construction |
 | **D13** | **`--pzz` on `helicity-flip`** (F5; **priced 2026-09-06**) | At the default `--pzz-mode ladder` it is still not read — `use_explicit_pzz` stays false and the fill comes from the max-entropy ladder at `--pz` (T = 0.4, not the 0.6 typed) — but the run banner names both fills and the provenance table's `pzz_mode` row says which branch ran. **`--pzz-mode typed` is registry option (iii), built and priced**: it honours the typed value and refuses one outside the plan's domain with the edge named, never clamping. WHAT IT COSTS, measured at the standard configuration (inclusive, config 1, seed 20260713, `--pz 0.7 --pe 0.7`, `--pzz 0.5` against the ladder; `phase_A_numbers.md` §A3): on **⁷Li — the isotope this row is about — no observable moves.** The rank-2 sector is identically zero and both modes honour `--pz`, so the only fill moments the kernel sums are unchanged: σ agrees to 1 ulp (1.970 × 10⁻¹⁶ relative), the two per-category σ to 3.939 × 10⁻¹⁶ and 0, and A_∥ moves by 6.2 × 10⁻¹⁴ of its own statistical error. On **⁶Li** (J = 1, where the rank-2 sector is live) σ moves −0.0023527 % and A_∥ by −4.27 × 10⁻⁶ σ_stat at 100 000 events. What moves on both is the **recorded alignment** — 0.4 → 0.5 at J = 3/2, 0.409403 → 0.5 at J = 1 — which is the divisor of every tensor estimator (−20 % / −18.1195 % on δ(A_zz) and δ(cos 2φ) at fixed N), and the event sample, which is not bit-identical even on ⁷Li (0.1060 % of 100 000 events change (x, Q²) cell on last-bit arithmetic). The DEFAULT did not move |
 

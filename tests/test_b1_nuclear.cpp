@@ -70,6 +70,7 @@ namespace {
 const std::string kFdeut = data_path("vmc/deuteron/fdeut.av18");
 const std::string kLi6Momentum = data_path("vmc/momenta/li6_ad1.momentum");
 const std::string kLi6Overlap = data_path("vmc/li6_alpha_d/li6.ad");
+const std::string kLi7Momentum = data_path("vmc/momenta/li7_at3.momentum");
 
 bool have(const std::string& path) {
   std::ifstream f(path);
@@ -1592,6 +1593,111 @@ TEST_CASE("b1_nuclear T10: the alpha-d sign gate") {
           << " fm^2 against fdeut.av18's own qm = 0.269673");
   CHECK_CLOSE(qd, 0.269673, 3e-3);
   CHECK(qd > 0.0);
+}
+
+// ===================================================================== T13
+// THE A = 7 GATE.  Q(7Li) from the alpha-t overlap against the MEASURED
+// moment, and it validates the alpha-t WAVE FUNCTION's quadrupole ONLY --
+// its <r^2> and its P-wave character.  It is NOT a pass/fail on b1(7Li):
+// b1(7Li) IS NOT IMPLEMENTED (open item 15; 7Li's whole rank-2 sector is
+// exactly zero by construction because `default_inclusive_kernel` fills no
+// spin-3/2 slot), it waits on the unpolarised-backend decision, and nothing
+// here licenses one.  Nor does the gate say anything about the light-cone
+// convolution or the DIS input, which is where the real 7Li uncertainty
+// lives; and there is NO A = 3 analogue of the A = 2 b1 gate, because 3H and
+// 3He are J = 1/2 and carry no rank-2 structure function at all.  So this is
+// the only offline validation the 7Li wave function gets.
+//
+// Reference: docs/open_items/run_2026-09-03/phase_D_li7_rank2.md sec. 4.2
+// (the construction) and docs/open_items/run_2026-09-06/phase_B_numbers.md
+// sec. B3 (this measurement, and the sourcing of `LI7_QUADRUPOLE_FM2`).
+TEST_CASE("b1_nuclear T13: the A = 7 alpha-t quadrupole gate") {
+  REQUIRE(have(kLi7Momentum));
+
+  // (0) the measured moment has ONE home and this is its value: TUNL's
+  //     A = 5, 6, 7 evaluation (Tilley et al., NPA 708 (2002) 3) prints
+  //     Q(7Li) = -40.6 +- 0.8 mb, and 1 mb = 0.1 fm^2.  The SAME paper's
+  //     A = 6 half is where LI6_QUADRUPOLE_FM2 = -0.0818 comes from, so the
+  //     two lithium quadrupoles share a document, a sign convention and a
+  //     unit rule.  See rc.hpp for the eight-entry Stone compilation spread.
+  CHECK_CLOSE(LI7_QUADRUPOLE_FM2, -40.6 * 0.1, 1e-12);
+  CHECK(LI7_QUADRUPOLE_FM2 < 0.0);
+
+  const AlphaTQuadrupole g = li7_alpha_t_quadrupole();
+
+  // (1) Z_eff is the MASS-weighted charge, not the A-number one.
+  const double m_t = nuclear_mass(1, 3), m_a = nuclear_mass(2, 4),
+               m_7 = nuclear_mass(3, 7);
+  CHECK_CLOSE(g.z_eff,
+              2.0 * (m_t / m_7) * (m_t / m_7) + (m_a / m_7) * (m_a / m_7),
+              1e-14);
+  CHECK_CLOSE(g.z_eff, 0.695075101362, 1e-9);
+  // the A-number form 34/49 is 0.172 % away, MEASURED -- and is not used.
+  CHECK_CLOSE_AT(34.0 / 49.0 / g.z_eff, 1.0, 0.0, 2.0e-3);
+  CHECK(std::fabs(34.0 / 49.0 / g.z_eff - 1.0) > 1.0e-3);
+
+  // (2) the pin, at the shipped defaults (r_max = 30 fm, n_r = 4000,
+  //     n_k = 8001).  These reproduce the offline note's own numpy recipe
+  //     (phase_D_li7_rank2.md sec. 9 `q_at`) to the LAST BIT -- measured
+  //     2026-09-06, relative difference 0.000e+00 on all three.
+  CHECK_CLOSE(g.r2_fm2, 12.534828961030, 1e-9);
+  CHECK_CLOSE(g.r_rms_fm, 3.540456038568, 1e-9);
+  CHECK_CLOSE(g.q_fm2, -3.485059004257, 1e-9);
+  CHECK_CLOSE(g.q_fm2, -0.4 * g.z_eff * g.r2_fm2, 1e-14);
+  CHECK(g.q_fm2 < 0.0);                        // same sign as the measurement
+
+  // (3) grid/truncation, PINNED and converged: 30 fm is within 0.032 % of
+  //     60 fm, so the 14 % discrepancy below is physics, not the r cut.
+  const double q20 = li7_alpha_t_quadrupole(0.0, 20.0).q_fm2;
+  const double q40 = li7_alpha_t_quadrupole(0.0, 40.0).q_fm2;
+  const double q60 = li7_alpha_t_quadrupole(0.0, 60.0).q_fm2;
+  CHECK_CLOSE(q20, -3.472004271671, 1e-9);
+  CHECK_CLOSE(q40, -3.485797071382, 1e-9);
+  CHECK_CLOSE(q60, -3.486171274781, 1e-9);
+  CHECK(std::fabs(q60 - g.q_fm2) / std::fabs(g.q_fm2) < 1e-3);
+
+  // (4) the ANL Monte Carlo band, fully correlated, +-0.33 % -- an order of
+  //     magnitude smaller than the discrepancy, so it does not explain it.
+  const double qm = li7_alpha_t_quadrupole(-1.0).q_fm2;
+  const double qp = li7_alpha_t_quadrupole(+1.0).q_fm2;
+  CHECK_CLOSE(qm, -3.496426569222, 1e-9);
+  CHECK_CLOSE(qp, -3.473744615578, 1e-9);
+  CHECK(std::fabs(qm - g.q_fm2) / std::fabs(g.q_fm2) < 4e-3);
+  CHECK(std::fabs(qp - g.q_fm2) / std::fabs(g.q_fm2) < 4e-3);
+
+  // (5) THE GATE ITSELF, REPORTED AS A RATIO AND NEVER AS A b1 VERDICT.
+  //     0.858389 against TUNL's -4.06 fm^2 (14.2 % low); 0.871265 against
+  //     the Voelk CER -4.00(3) fm^2 that Stone also lists (12.9 % low).  The
+  //     choice of compilation moves it by 1.5 % and does not change the
+  //     verdict, which is "13-14 % low, converged to 0.03 %, MC band 0.33 %".
+  const double ratio = g.q_fm2 / LI7_QUADRUPOLE_FM2;
+  MESSAGE("T13: Q(7Li)_alpha-t = " << g.q_fm2 << " fm^2 against the measured "
+          << LI7_QUADRUPOLE_FM2 << " fm^2 -- ratio " << ratio
+          << ".  This validates the alpha-t WAVE FUNCTION's quadrupole only; "
+             "b1(7Li) remains UNIMPLEMENTED (open item 15).");
+  CHECK_CLOSE(ratio, 0.858388917305, 1e-9);
+  CHECK_CLOSE(g.q_fm2 / -4.00, 0.871264751064, 1e-9);
+  CHECK(ratio > 0.80);
+  CHECK(ratio < 1.00);            // the cluster overlap UNDERSHOOTS, as noted
+
+  // (6) the contrast that makes the gate worth committing: the SAME
+  //     construction one cluster level down (alpha-d, 6Li) misses its own
+  //     measured moment by a factor 4.07, so the 7Li wave-function input is
+  //     validated by a measured moment an ORDER OF MAGNITUDE better than
+  //     6Li's is.  That asymmetry, not the 14 %, is the result.
+  if (have(kLi6Momentum) && have(kLi6Overlap)) {
+    const auto w6 = li6_alpha_d_partial_waves();
+    const double f6 =
+        alpha_d_quadrupole_fm2(w6.first, w6.second) / LI6_QUADRUPOLE_FM2;
+    MESSAGE("T13: the 6Li contrast from the same code family -- 6Li misses "
+            "by a factor " << f6 << " (" << 100.0 * (f6 - 1.0)
+            << " %) against 7Li's " << 100.0 * (1.0 - ratio) << " %");
+    CHECK(f6 > 4.0);
+    // MEASURED 2026-09-06: 307.5 % against 14.2 %, a factor 21.7 -- so
+    // "an order of magnitude better" is a measurement, not a manner of
+    // speaking.  The threshold is 10, well inside it.
+    CHECK((f6 - 1.0) > 10.0 * std::fabs(1.0 - ratio));
+  }
 }
 
 // ===================================================================== T12

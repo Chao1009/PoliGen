@@ -70,11 +70,23 @@ with `Q_N = P_zz^eff` (+1 at `m = ±1`, −2 at `m = 0`) and `κ_qe = 1`.
 > **neither edge has a tensor s/p peak**, so `TPeakPlusLL` **lowers the tensor
 > fraction** of the tail (that fraction is unknown, not zero).
 >
+> > **CORRECTION, 2026-09-06 (B1 + B2).** *"Neither edge has a tensor s/p
+> > peak"* stays true of the two **t-peak** edges, but *"that fraction is
+> > unknown, not zero"* does not: it is **bounded** on `TPeakPlusLL` by
+> > `RcOptions::sp_tensor_scale` (B1) and **computed** on the third model,
+> > `RcTailModel::PolradFull` — Eq. (18) + Eq. (A.4), shipped 2026-09-06 — so
+> > *"POLRAD supplies no tensor s/p peak"* is true of Eq. (38) and **false of
+> > the paper**. `../run_2026-09-06/phase_B_numbers.md` §B1, §B2.
+>
 > POLRAD §2.1.3 B's claim is an **event-weighted** statement about the bulk of
 > the regime this generator runs in and is **false cell by cell** (corrected
 > 2026-09-04; `phase_B_numbers.md` §B2.3(i)). For ⁶Li at EIC `Q² ≥ 20 GeV²`
 > and `y ≤ 0.9` the *event-weighted* mean dilution moves only **+0.61 %**
-> (8.48914e−03 → 8.54072e−03), but **331 of that window's 1356 accepted cells
+> (8.48914e−03 → 8.54072e−03, **at `--pz 0`** — P_z named 2026-09-15, both
+> fills re-measured on the working-tree build: `tensor_thirds_plan(0.0, 0.6)`
+> gives 5182 events and 8.489138e−03 → 8.540716e−03, exactly these digits;
+> the CLI default P_z = 0.7 gives 5194 and 8.719649e−03 → 8.773752e−03),
+> but **331 of that window's 1356 accepted cells
 > — 24.4 %, 28.2 % of its cross section — differ by more than 1 %**, worst
 > **×6444** at `x = 0.7943`, `y = 0.0088`, and **318 of them sit at `y < 0.1`**.
 > Per cell the two edges agree to **0.55 %** only for `0.15 ≤ y ≤ 0.7`

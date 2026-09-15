@@ -338,9 +338,9 @@ RC_C0_SHAPES = {
     "vmc-ft": _lipolgen.C0Shape.VmcFt,
 }
 
-#: The two IMPLEMENTED tail formulations, for `rc_tail_model` /
-#: `--rc-tail-model`.  (`RcTailModel.PolradFull` exists in the enum and is
-#: REFUSED by `PipelineConfig.validate`, so it is deliberately absent here.)
+#: The THREE tail formulations, for `rc_tail_model` / `--rc-tail-model`.
+#: (`RcTailModel.PolradFull` was refused by `PipelineConfig.validate` and
+#: absent from this table until 2026-09-06; it is implemented now.)
 #:
 #: "t-peak" is the DEFAULT and is bit for bit every published number: POLRAD
 #: Eqs. (37)-(39), (43), the t-peak ALONE, and therefore a LOWER BOUND on the
@@ -351,14 +351,29 @@ RC_C0_SHAPES = {
 #: quadrature; the s-/p-peaks are a single-z collinear leading log.  Their sum
 #: double-counts nothing but is accurate only to the leading log, ~5-10 %.
 #:
-#: AND IT HAS NO TENSOR PARTNER.  POLRAD supplies no sigma_T at the s-/p-peak
-#: and this library will not invent one, so the s+p contribution enters the
-#: UNPOLARISED numerator only.  Switching to "t-peak+ll" therefore LOWERS the
-#: tensor FRACTION of the tail wherever the s-/p-peaks matter -- the tensor
-#: part of those peaks is UNKNOWN, not zero.  RUN BOTH, as a band.
+#: AND IT HAS NO TENSOR PARTNER.  POLRAD's Eq. (38) supplies no sigma_T at the
+#: s-/p-peak and this library will not invent one from the leading log, so the
+#: s+p contribution enters the UNPOLARISED numerator only.  (Eq. (18) +
+#: Eq. (A.4) DOES supply one and "polrad-full" computes it: the unqualified
+#: sentence is true of Eq. (38) and false of the paper, which is why
+#: rc_sp_tensor_scale is refused on "polrad-full" because the term RAN.)
+#: Switching to "t-peak+ll" therefore LOWERS the
+#: tensor FRACTION of the tail (x0.66 / x0.0032 / x6.6e-05 at x = 0.01 / 0.10 /
+#: 0.30, Q^2 = 5): BOUNDED by rc_sp_tensor_scale, not computed.  RUN BOTH.
+#:
+#: "polrad-full" is POLRAD Eq. (18) + Appendix B + Eq. (A.4): ONE exact tau_A
+#: quadrature that contains all three peaks, with the s-/p-peaks' OWN tensor
+#: content -- the thing "t-peak+ll" has to bound and cannot compute.  It is
+#: NOT the default and NOT validated against any external exact tail (no
+#: Mo-Tsai number is in this tree): what is checked is its x_A -> 0 reduction
+#: to Eq. (38), unpolarised AND tensor, its Q_N = 0 Rosenbluth limit, and its
+#: agreement with the leading-log fallback where the s-/p-peaks are alive.
+#: It costs ~10 s of table build and needs n_eta >= 64 and a `long double`
+#: wider than `double`; both are refused, not degraded.
 RC_TAIL_MODELS = {
     "t-peak": _lipolgen.RcTailModel.TPeak,
     "t-peak+ll": _lipolgen.RcTailModel.TPeakPlusLL,
+    "polrad-full": _lipolgen.RcTailModel.PolradFull,
 }
 
 #: Run-plan names accepted on the command line (aliases included).
@@ -417,6 +432,7 @@ def make_config(isotope="6Li", config=1, channel="inclusive", events=0,
                 rc_a_transfer_frac=None,
                 rc_fq_scale=None, rc_tail_tensor_scale=None,
                 rc_qe_suppression=None, rc_qe_tensor_scale=None,
+                rc_sp_tensor_scale=None,
                 rc_c0_shape=None,
                 rc_tail_model=None,
                 b1_model=None, b1_band_scale=None,
@@ -565,6 +581,7 @@ def make_config(isotope="6Li", config=1, channel="inclusive", events=0,
                                    rc_a_transfer_frac,
                                    rc_fq_scale, rc_tail_tensor_scale,
                                    rc_qe_suppression, rc_qe_tensor_scale,
+                                   rc_sp_tensor_scale,
                                    rc_c0_shape, rc_tail_model)):
         opt = cfg.rc_options
         if rc_delta_low_x is not None:
@@ -581,6 +598,8 @@ def make_config(isotope="6Li", config=1, channel="inclusive", events=0,
             opt.qe_suppression = float(rc_qe_suppression)
         if rc_qe_tensor_scale is not None:
             opt.qe_tensor_scale = float(rc_qe_tensor_scale)
+        if rc_sp_tensor_scale is not None:
+            opt.sp_tensor_scale = float(rc_sp_tensor_scale)
         if rc_c0_shape is not None:
             if isinstance(rc_c0_shape, str):
                 if rc_c0_shape not in RC_C0_SHAPES:

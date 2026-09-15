@@ -4,7 +4,8 @@
 WHY THIS FILE EXISTS.  The repository's rule is that *a knob that did not run
 may not be recorded in the `meta` or printed in the banner as if it had*.  It
 was enforced knob by knob -- `validate()` refuses `b1_band_scale` on the
-Miller branch and `rc_qe_tensor_scale` without the quasi-elastic tail,
+Miller branch, `rc_qe_tensor_scale` without the quasi-elastic tail and
+`rc_sp_tensor_scale` without the leading-log s-/p-peaks,
 `rank2_input_report` labels the 7Li rank-2 zero, `pol_sf_is_read` labelled the
 coherent channel -- and it broke FIVE TIMES IN ONE RUN, each time on an axis
 the previous fix had not looked at:
@@ -392,6 +393,31 @@ VARIANTS = [
       post=_chain(NO_QE, _post(**{"rc_options.qe_tensor_scale": 1.0}))),
     V("rc_tail_model", "t-peak -> t-peak+ll", base=RC,
       var=dict(RC, rc_tail_model="t-peak+ll")),
+    # THE THIRD MODEL, implemented 2026-09-06: POLRAD Eq. (18) + Appendix B +
+    # Eq. (A.4).  It is a `read` cell like the other one -- the row is a
+    # `tail_row`, so it is `refused` wherever the tail does not apply and the
+    # cell skips there.
+    V("rc_tail_model", "t-peak -> polrad-full", base=RC,
+      var=dict(RC, rc_tail_model="polrad-full")),
+    # THE s-/p-PEAK SUB-FAMILY, one level below the tail and one branch over
+    # from the quasi-elastic one.  `sp_tensor_scale` prices the tensor
+    # fraction of the leading-log s-/p-peaks, which ONLY `t-peak+ll` computes:
+    # under the shipped `t-peak` the u_sp table is identically zero, so the
+    # scale multiplies nothing and is REFUSED rather than recorded as a price
+    # that was never paid.  Both cells are here because the pair is the rule.
+    V("rc_sp_tensor_scale", "0 -> 1 at t-peak+ll",
+      base=dict(RC, rc_tail_model="t-peak+ll"),
+      var=dict(RC, rc_tail_model="t-peak+ll", rc_sp_tensor_scale=1.0)),
+    V("rc_sp_tensor_scale", "0 -> 1 at t-peak (the shipped tail)", base=RC,
+      var=dict(RC, rc_sp_tensor_scale=1.0)),
+    # ... and REFUSED on polrad-full too, for the OPPOSITE reason: that model
+    # carries the s-/p-peaks' own Eq. (A.4) tensor content, so the stand-in
+    # would double-count a term that RAN.  Same status, different sentence --
+    # test_every_row_is_well_formed checks the sentence is non-empty and this
+    # cell checks the status.
+    V("rc_sp_tensor_scale", "0 -> 1 at polrad-full",
+      base=dict(RC, rc_tail_model="polrad-full"),
+      var=dict(RC, rc_tail_model="polrad-full", rc_sp_tensor_scale=1.0)),
     V("rc_with_qe_tail", "true -> false", base=RC, var=RC,
       post=_post(**{"rc_options.with_qe_tail": False})),
     V("rc_with_tail", "true -> false", base=RC, var=RC,
@@ -404,6 +430,15 @@ VARIANTS = [
     V("rc_tail_max", "10 -> 0.01 (clips every event)", base=RC, var=RC,
       post=_post(**{"rc_options.tail_max": 0.01})),
     V("rc_m_lepton", "M_ELECTRON -> the muon mass", base=RC, var=RC,
+      post=_post(**{"rc_options.m_lepton": 0.1056583755})),
+    # ... and READ on polrad-full since 2026-09-06: it is the m^2 of
+    # Eq. (B.13)'s C_1,2(tau), of F_IR and of lambda_s, i.e. what sets the
+    # WIDTH of the s- and p-peaks.  The row was `refused` unconditionally,
+    # with the reason "RESERVED for tail_model = PolradFull", until the model
+    # it was reserved for existed.
+    V("rc_m_lepton", "M_ELECTRON -> the muon mass at polrad-full",
+      base=dict(RC, rc_tail_model="polrad-full"),
+      var=dict(RC, rc_tail_model="polrad-full"),
       post=_post(**{"rc_options.m_lepton": 0.1056583755})),
     # --- the coherent channel --------------------------------------------
     V("coherent_t_max", "0.2 -> 0.1", var=dict(coherent_t_max=0.1)),

@@ -476,6 +476,20 @@ the honest reading — the tensor part of those peaks is **unknown, not zero** �
 and it is why `TPeakPlusLL` is a systematic to run *beside* `TPeak` and never a
 replacement. Measured, `(w_tail(Q_N) − w_tail(0))/w_tail(0)` at `Q_N = 600`:
 
+> **CORRECTION, 2026-09-06 (tasks B1 + B2).** Two sentences above are now
+> wrong. (1) *"POLRAD supplies no σ_T counterpart at the s- or p-peak"* is true
+> of **Eq. (38)** and **false of the paper**: Eq. (18) + Eq. (A.4) carries the
+> s-/p-peaks' own tensor content and `RcTailModel::PolradFull`
+> (`--rc-tail-model polrad-full`, shipped 2026-09-06) **computes** it. (2) the
+> tensor part of those peaks is no longer *"unknown, not zero"*: on
+> `TPeakPlusLL` it is **bounded, not computed**, by `RcOptions::sp_tensor_scale`
+> (B1), and on `PolradFull` it is **computed** — which is why `sp_tensor_scale`
+> is refused there for the **opposite** reason it is refused on `TPeak`: the
+> term **ran**. Everything else in this section — the `u_sp`/`qe_sp` columns,
+> their position outside the tensor term, and every number in the tables — is
+> unchanged and still describes `TPeakPlusLL`. See
+> `../run_2026-09-06/phase_B_numbers.md` §B1 and §B2.
+
 | x | Q² | `t-peak` | `t-peak+ll` | factor |
 |---|---|---|---|---|
 | 0.01 | 3 | −0.238354 | −0.0339332 | 0.142 |
@@ -595,7 +609,7 @@ ratio the shipped weight actually carries):
 **THE CONCLUSION, in two statements that must never be quoted for each other:**
 
 * **EVENT-WEIGHTED — the acceptance is MET.** Over `Q² ≥ 20`, `y ≤ 0.9`
-  (5182 of 200 000 events, seed 1234) the mean dilution `⟨w_tail − 1⟩` moves
+  (5182 of 200 000 events, seed 1234, P_z = 0 — the suites' fill) the mean dilution `⟨w_tail − 1⟩` moves
   **8.48914e−03 → 8.54072e−03**, **+0.61 %**. Cross-section-weighted over the
   accepted cells: 8.31257e−03 → 8.35972e−03, **+0.57 %**. A rate analysis in
   that window is unaffected at the 1 % level.

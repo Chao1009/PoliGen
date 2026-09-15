@@ -57,33 +57,71 @@
 /// 0.28 / 2.7 / 1000 at x = 0.01 / 0.1 / 0.3), which is why `qe_kf_gev` and
 /// `qe_suppression` are the tail's dominant knobs.
 ///
-/// AND THE DEFAULT IS A LOWER BOUND, WITH THE OTHER EDGE NOW SHIPPED.
+/// AND THE DEFAULT IS A LOWER BOUND, WITH TWO OTHER EDGES NOW SHIPPED.
 /// `rc_tail` at the shipped `RcTailModel::TPeak` is the t-PEAK ALONE.  The
 /// leading-log s- and p-peaks of the same observable are `ll_peaks_spin1` /
 /// `ll_peaks_qe` (declared beside `polrad_sigma_qe_u`), and
-/// `RcTailModel::TPeakPlusLL` adds them.  THE TWO ARE A BAND, and neither is
-/// "the" radiative tail:
+/// `RcTailModel::TPeakPlusLL` adds them.  `RcTailModel::PolradFull`
+/// (2026-09-06) computes ALL THREE PEAKS EXACTLY, from POLRAD Eq. (18) +
+/// Appendix B + Eq. (A.4).  NONE of the three is "the" radiative tail:
 ///
 ///   * `TPeak` is a LOWER BOUND.  It is one peak of a three-peak object.
 ///   * `TPeakPlusLL` is a STATED MODEL, not a controlled O(alpha) expansion:
 ///     it sums an eta_A quadrature and a single-z collinear leading log, so
 ///     it is accurate to the worse of the two (~5-10 %), and its radiator
 ///     carries an UNCANCELLED soft 1/(1-z) that overshoots as y -> 0.
-///   * NEITHER carries a tensor s/p peak, because POLRAD supplies none and
-///     this file will not invent one.  `TPeakPlusLL` therefore LOWERS the
-///     tensor FRACTION of the tail: see the enumerator's own comment.
+///   * `PolradFull` is ONE exact tau_A quadrature, with the lepton mass in
+///     it, so it has no mixed-order problem and no uncancelled radiator --
+///     but its ABSOLUTE NORMALISATION IS STILL NOT CHECKED AGAINST MO-TSAI
+///     OR ANY EXTERNAL EXACT TAIL (no such number is in this tree).  It is
+///     checked POLRAD-INTERNALLY (the x_A -> 0 reduction to Eq. (38),
+///     unpolarised AND tensor) and against the leading-log fallback, and
+///     nothing more.
+///   * NEITHER t-peak MODEL carries a tensor s/p peak: Eqs. (37)-(39) have
+///     none and a leading log cannot supply one, so `TPeakPlusLL` LOWERS the
+///     tensor FRACTION of the tail -- x0.66139 / x0.0031829 / x6.6076e-05 at
+///     x = 0.01 / 0.10 / 0.30, Q^2 = 5.  Since 2026-09-06 that omission is
+///     BOUNDED by `RcOptions::sp_tensor_scale` on those two models -- a bound
+///     that covers the ELASTIC s/p column ONLY, recovers 0.0 % of those three
+///     collapses (bit-identical: the coherent form factor is dead at the s/p
+///     vertex) and at most 21.72 % anywhere on the grid -- and COMPUTED, not
+///     bounded, on `PolradFull`, which carries Eq. (A.4) at every tau node.
+///     MEASURED there, the same three cells give x0.79395 / x0.0020032 /
+///     x0.00022591: PolradFull puts the tensor fraction ABOVE `TPeakPlusLL`
+///     at x = 0.01 and 0.30 and BELOW it at 0.10, so the bound was not even
+///     one-sided.  THE QUASI-ELASTIC s/p TENSOR TERM IS STILL ZERO ON ALL
+///     THREE MODELS -- the quasi-elastic tail is a sum over spin-1/2
+///     nucleons, whose Im_{5..8} vanish identically -- and it is the piece
+///     that carries the collapse at x >= 0.10.  That gap is NOT closed.
 ///
 /// MEASURED (T8(c), T8(d), phase_B_numbers.md sec. B2).  POLRAD sec. 2.1.3 B's
 /// "the s- and p-peaks are suppressed" is TRUE AS AN EVENT-WEIGHTED STATEMENT
 /// ABOUT THIS GENERATOR'S BULK AND FALSE CELL BY CELL.  The two must never be
 /// quoted for each other, so they are written separately:
 ///
-///   EVENT-WEIGHTED, AND IT HOLDS.  Over 6Li EIC config 1 restricted to
-///     Q^2 >= 20 GeV^2 and y <= 0.9 (5182 of 200 000 events, seed 1234), the
-///     mean dilution <w_tail - 1> moves 8.48914e-03 -> 8.54072e-03 when the
-///     s-/p-peaks are added: +0.61 %.  Weighting the sampler's own accepted
-///     cells by their cross section instead gives 8.31257e-03 -> 8.35972e-03,
-///     +0.57 %.  A RATE analysis in that window is unaffected at the 1 % level.
+///   EVENT-WEIGHTED, AND IT HOLDS -- BUT SAY WHICH P_z, BECAUSE THE FILL
+///     PLAN DECIDES WHICH EVENTS LAND IN THE WINDOW.  Over 6Li EIC config 1
+///     restricted to Q^2 >= 20 GeV^2 and y <= 0.9, at the CLI's DEFAULT fill
+///     P_z = 0.7 (`tensor_thirds_plan(0.7, 0.6)`; 5194 of 200 000 events,
+///     seed 1234), the mean dilution <w_tail - 1> moves
+///     8.719649e-03 -> 8.773752e-03 when the s-/p-peaks are added: +0.62 %.
+///     At P_z = 0 (`tensor_thirds_plan(0.0, 0.6)` -- the plan BOTH test
+///     suites use and the plan the 2026-09-03 run published) the SAME build
+///     gives 5182 events and 8.489138e-03 -> 8.540716e-03: +0.61 %.  A RATE
+///     analysis in that window is unaffected at the 1 % level on either.
+///     (CORRECTED 2026-09-15, RE-MEASURED AT BOTH P_z ON THIS BUILD.  From
+///     2026-09-06 this line said the "5182 ... 8.48914e-03 -> 8.54072e-03"
+///     absolutes "no longer reproduce" and blamed that run's Phase A for
+///     moving the 6Li kernel normalisation and with it the sampler's cell
+///     weights.  BOTH CLAIMS ARE WITHDRAWN: the 2026-09-03 digits reproduce
+///     EXACTLY at P_z = 0 and the 2026-09-06 digits are the same run at
+///     P_z = 0.7 -- the 2026-09-06 re-measurement had switched fill plans
+///     without saying so.  run_2026-09-03/phase_B_numbers.md:836-839 already
+///     tabulated both rows.  Phase A moved nothing here.)
+///     AND `PolradFull` IS ABOVE BOTH EDGES: 8.815031e-03, +1.09 % at
+///     P_z = 0.7 (8.581236e-03, +1.08 % at P_z = 0).  So even the
+///     event-weighted statement this window was quoted for does not BRACKET
+///     the exact answer -- phase_B_numbers.md sec. B2.5.
 ///   PER CELL, AND IT FAILS.  Of the sampler's 3051 accepted cells, 1356 have
 ///     Q^2 >= 20 and y <= 0.9, and 331 of THOSE -- 24.4 % of them, 28.2 % of
 ///     the window's cross section -- disagree by MORE than 1 %.  The worst is
@@ -130,7 +168,10 @@
 /// denominator that moved.
 ///
 /// It is false outright elsewhere too: at the HERMES deuteron point the t-peak
-/// is 23 % of the leading-log total (low by 4.36x), and at the Q^2 ~ 4 GeV^2
+/// is 23 % of the leading-log total (low by 4.36x) -- and `PolradFull`, which
+/// needs no leading log, says the honest factor there is 2.36x, i.e. the
+/// leading-log edge OVERSHOOTS by 1.85x (phase_B_numbers.md sec. B2.4).  At
+/// the Q^2 ~ 4 GeV^2
 /// corner of the generator window (x = 0.01, y = 0.1) the quasi-elastic s+p is
 /// 3.35x the t-peak unsuppressed and 7.09x at the shipped Pauli k_F.
 /// Never quote one edge alone, and never port `TPeak` to fixed-target
@@ -226,6 +267,22 @@
 ///     "agrees to 0.16 %" sentence that used to stand here was an
 ///     EVENT-WEIGHTED statement misread as a per-cell one.  See the header
 ///     block's "two bad corners", the RcTailModel comments, T8(c) and T8(d).
+///     AND THAT BAND DOES NOT BRACKET THE EXACT ANSWER.  `PolradFull`
+///     (2026-09-06) computes all three peaks from Eq. (18); MEASURED over
+///     the sampler's 3051 accepted cells it lies BETWEEN the two edges on
+///     only 1725 of them (56.5 %), covering a median 0.6555 of the gap OVER
+///     THE 3027 CELLS WHOSE GAP IS NONZERO (0.6620 over all 3051 -- on the
+///     other 24, `TPeakPlusLL` equals `TPeak` exactly and the fraction is
+///     undefined), while the RATIO OF THE SIGMA-WEIGHTED MEAN SHIFTS is
+///     0.428 -- a ratio of means, NOT a sigma-weighted mean of the per-cell
+///     fractions, which is 6.483.  It leaves the band entirely at the
+///     high-x, low-y corner: MEASURED x4518.3 against `TPeak` at
+///     x = 0.954993, Q^2 = 206.68, y = 0.0544 with the ceiling raised.  At
+///     the SHIPPED `tail_max` = 10 that cell and five others are CLIPPED to
+///     x11, which is 1 + `tail_max` -- the CEILING, not the model; the
+///     "x11 at x = 0.955, Q^2 = 186" this line carried until 2026-09-06 was
+///     that ceiling mislabelled.  See `RcTailModel::PolradFull` point (4).
+///     The two t-peak models are a PRICE RANGE, not a confidence interval.
 ///
 /// Design: docs/open_items/run_2026-09-02/design_C_tensor_rc.md.
 
@@ -614,6 +671,59 @@ inline constexpr double LI6_MU_N          = 0.8220473;
 /// 1998), NOT TUNL's; switching to it is a one-constant change and moves
 /// F_q(0) by 1.5 % (-65.914 -> -64.947).
 inline constexpr double LI6_QUADRUPOLE_FM2 = -0.0818;
+/// Q(7Li) = -4.06(8) fm^2 -- MEASURED, and read from THE SAME EVALUATION as
+/// the 6Li line above, which is the whole reason it is here and not in a
+/// compilation of its own: Tilley, Cheves, Godwin, Hale, Hofmann, Kelley,
+/// Sheu and Weller, "Energy Levels of Light Nuclei, A = 5, 6, 7", Nucl. Phys.
+/// A708 (2002) 3.  TUNL serves that one paper as three PDFs; its A = 7 half
+/// (`nucldata.tunl.duke.edu/nucldata/ourpubs/07_2002.pdf`, the 7Li GENERAL
+/// block) prints
+///
+///     mu = +3.256427(2) nm: see (1989RA17).
+///     Q  = -40.6 +- 0.8 mb (1988DI1B).
+///
+/// and its A = 6 half (`ourpubs/06_2002.pdf`) prints the
+/// "Q = -0.818(17) mb (1998CE04)" that IS `LI6_QUADRUPOLE_FM2` -- so both
+/// lithium quadrupoles in this file now come from one document, in one sign
+/// convention (the SPECTROSCOPIC moment, the m = I substate, negative =
+/// oblate) and one unit rule (1 mb = 0.1 fm^2, hence -40.6 mb = -4.06 fm^2).
+/// 1988DI1B is Diercksen, Sadlej, Sundholm and Pyykko, Chem. Phys. Lett. 143
+/// (1988) 163; TUNL calls it a review of the earlier 1984SU09, 1984VE03,
+/// 1984VE08 and 1985WE08 determinations.
+///
+/// THE COMPILATION SPREAD IS RECORDED, NOT AVERAGED AWAY.  N. J. Stone's
+/// "Table of Nuclear Magnetic Dipole and Electric Quadrupole Moments" (NNDC
+/// mirror `www.nndc.bnl.gov/nndc/stone_moments/nuclear-moments.pdf`, dated
+/// 04/11/2001, p. 1) lists EIGHT 7Li values and recommends none:
+///
+///     -0.0406   st     MB,R    Chem. Phys. Lett. 112 (1984) 1   [1984SU09]
+///     -0.0370(8)       CIAN    Phys. Rev. Lett. 55 (1985) 480   [Weller]
+///     -0.041(6)        OD,OL   Z. Phys. A273 (1975) 221
+///     -0.059(8)        OL      Phys. Rev. A17 (1978) 1394
+///     -0.040(11)       CER     Phys. Lett. B138 (1984) 365
+///     -0.0400(6)       CER     Nucl. Phys. A530 (1991) 475      [Voelk, constr.]
+///     -0.0400(3)       CER     Nucl. Phys. A530 (1991) 475      [Voelk, destr.]
+///     -0.0406(8)       R       Aust. J. Phys. 42 (1989) 597
+///
+/// in barns -- i.e. -3.70 to -5.9 fm^2, and Stone's own policy note says the
+/// two CER entries are the constructive- and destructive-interference
+/// readings of one experiment.  The often-quoted -4.00(3) fm^2 is the second
+/// of those, NOT TUNL's; switching to it is a one-constant change and moves
+/// the ONLY thing this constant feeds, the A = 7 alpha-t gate ratio, from
+/// 0.8584 to 0.8713 -- 14.2 % low against 12.9 % low.  MEASURED both ways in
+/// `docs/open_items/run_2026-09-06/phase_B_numbers.md` sec. B3; the gate's
+/// verdict ("the alpha-t wave function reproduces the measured quadrupole to
+/// 13-14 %") does not turn on the choice, which is why the choice could be
+/// made on provenance alone.
+///
+/// IT IS A GATE REFERENCE AND NOT A MODEL INPUT.  Nothing in the running
+/// generator reads it: 7Li's rank-2 sector is exactly zero by construction
+/// (`InclusiveKernel::tables` has no spin-3/2 b1 slot filled), b1(7Li) is
+/// NOT IMPLEMENTED and waits on open item 15, and the single consumer is
+/// `li7_alpha_t_quadrupole` in b1_nuclear.hpp, which validates the alpha-t
+/// WAVE FUNCTION's quadrupole -- its <r^2> and its P-wave character -- and
+/// nothing about the light-cone convolution or the DIS input.
+inline constexpr double LI7_QUADRUPOLE_FM2 = -4.06;
 /// <r^2>_point(6Li) = 6.0788 fm^2 -> r_point = 2.4655 fm -- the MEASURED
 /// point-nucleon second moment this file already builds `LI6_FF_HO_A_FM` /
 /// `LI6_FF_HO_ALPHA` on (r_ch = 2.589(39) fm, Angeli & Marinova, ADNDT 99
@@ -860,6 +970,157 @@ double polrad_sigma_el_t(const Spin1ElasticFF& ff, double x_a, double y,
 double polrad_sigma_qe_u(int z, int n, double x, double y, double s,
                          double m_n, int n_eta = 128, double kf_gev = 0.0);
 
+// --------------------------- POLRAD Eq. (18): the EXACT tau_A quadrature
+//
+// WHAT Eq. (18) NEEDS BEYOND Eqs. (37)-(39), stated once and exactly, because
+// "the upgrade path" was a name and not a list until this function existed.
+// Eq. (38) is ONE integral of ONE algebraic bracket over eta_A.  Eq. (18) is
+//
+//   d^2 sigma^el/(dx_A dy) = - alpha^3 y INT dtau_A SUM_i SUM_{j=1}^{k_i}
+//        theta_ij(tau_A) 2 M_A^2 R_el^{j-2} / [(1+tau_A)(Q^2 + R_el tau_A)^2]
+//        Im^el_i(R_el, tau_A)
+//
+// with R_el = (S_xA - Q^2)/(1 + tau_A) (Eq. (17)) and
+// eta_A = (Q^2 + R_el tau_A)/(4 M_A^2).  Everything below is what the second
+// form needs and the first does not:
+//
+//  (1) THE tau_A VARIABLE ITSELF, over the EXACT range
+//      tau_{max,min} = (S_x +- sqrt(lambda_Q))/(2 M_A^2) (Eq. (14)).  The
+//      change of variable is exact -- dtau = (1+tau)^2 dt/(S_x - Q^2) and
+//      t = Q^2 + R_el tau -- so Eq. (18) covers the SAME t range Eq. (38)
+//      does.  What it adds is the s- and p-PEAKS: at tau_s = -Q^2/S and
+//      tau_p = Q^2/X the Appendix-B functions C_{1,2}(tau) collapse to
+//      4 m^2 (Q^2 + tau S_x - tau^2 M_A^2) and the integrand spikes.  Those
+//      two spikes ARE the collinear peaks `ll_peaks_spin1` estimates by a
+//      leading log, and Eq. (18) carries them EXACTLY -- with their O(alpha)
+//      non-log pieces, at the true kinematics, and (this is the part no
+//      leading log can supply) with their OWN TENSOR CONTENT.
+//  (2) THE APPENDIX-B KERNELS theta_ij(tau) -- eight F-functions of Eq. (B.12)
+//      (F, F_IR, F_d, F_{1+}, F_{2+-}, F_i, F_ii) on B_{1,2}(tau), C_{1,2}(tau)
+//      of Eq. (B.13); the numerically stable Eq. (B.14) for F_d at tau = 0;
+//      the T_{ij1} of Eq. (B.4); Eq. (B.5)'s T_{5j1} = T_{1j1},
+//      T_{6j1} = T_{2j1}; the two upper-index LIFTS of Eq. (B.8) (F -> F^eta,
+//      F^eta -> F^{eta eta}) that build T_{ij2} and T_{ij3}; Eq. (B.7)'s
+//      q_ik term for i = 5, 6 at k = 2; and Eq. (B.3)'s a_ik.
+//  (3) THE TARGET POLARISATION FOUR-VECTOR eta, expanded over the basis
+//      eta = 2(a_eta k_1 + b_eta k_2 + c_eta p) (Eq. (B.11)).  Eq. (38) has
+//      no eta at all -- its tensor content is already contracted.  This one
+//      needs (eta q) and (eta K), i.e. `apq` and `apn` of POLRAD's `conkin`.
+//      LONGITUDINAL ONLY here: a_eta = M_A/sqrt(lambda_s), b_eta = 0,
+//      c_eta = -S_A/(2 M_A sqrt(lambda_s)), which is POLRAD's `+self,if=long`
+//      (adgh:779-781).  The axis dependence is carried, exactly as under
+//      `TPeak`, by Q_N -> P_zz^eff = 3 Q_NN P_2(cos theta_S) (Eq. (43)); the
+//      tensor sector is QUADRATIC in eta, so its sign does not enter.
+//  (4) Eq. (A.4) ITSELF, at Q_N != 0 -- Im^el_{1,2} beyond their Rosenbluth
+//      parts plus Im^el_{5,6,7,8}, which Eq. (38) never evaluates.  T9 gates
+//      the Q_N = 0 limit; `rosenbluth_spin1` is the SAME (A, B) pair and is
+//      not written twice.
+//  (5) THE LEPTON MASS, which the t-peak forms drop entirely.  `m_lepton` is
+//      read here and nowhere else -- it is what regulates the s-/p-peaks.
+//
+// FIVE THINGS THIS IS NOT.
+//
+//  * NOT validated against Mo-Tsai, or against any external exact tail.  The
+//    Mo-Tsai paper is not in this tree and no number from it is quoted.  What
+//    is checked is (a) POLRAD-INTERNAL -- the x_A -> 0 limit against Eq. (38),
+//    which is Eq. (18)'s own ultrarelativistic t-peak reduction, unpolarised
+//    AND tensor; (b) against the LEADING-LOG fallback `ll_peaks_spin1` where
+//    the s-/p-peaks are alive; (c) the Q_N = 0 Rosenbluth limit (T9).
+//    Nothing more.  See `RcTailModel::PolradFull`.
+//  * NOT a different normalisation from Eq. (38).  MEASURED: with a form
+//    factor dead at the s-/p-peak vertex (so that only the t-peak survives),
+//    Eq. (18)/Eq. (38) -> 1 as x_A -> 0 -- 1.00492 at x_A = 0.003, 1.00990 at
+//    0.006, 1.01997 at 0.012, i.e. 1 + 1.64 x_A (deuteron, E = 27.6 GeV,
+//    y = 0.5, spin-0 Gaussian).  So Eq. (18) as written here IS the
+//    whole-nucleus d^2 sigma/(dx_A dy), with no 1/A of its own, exactly as
+//    Eq. (38) is -- and `RcModel` gives it the SAME 1/A^2.
+//  * NOT free of the paper's transcription defects.  polrad2t.tex's
+//    Appendix B is WRONG in FIVE places and `adgh` is right -- the a_ik
+//    M-powers (Eq. (B.3)), the level q_ik acts at (Eq. (B.7)), the T_821
+//    pairing (Eq. (B.4)) and two terms of Eq. (B.8)'s second lift; every one
+//    was caught by the x_A -> 0 gate above and is recorded in
+//    docs/open_items/run_2026-09-06/phase_B_numbers.md sec. B2.2 and
+//    docs/open_items/run_2026-09-02/polrad_transcription_check.md sec. 10
+//    (sec. 10.2-10.6, one per defect).  ("three places" stood here until
+//    2026-09-06 and was never the count either record carried.)
+//  * NOT a second definition of anything.  The nucleon form factors are
+//    `nucleon_ff`, the spin-1 ones the same `Spin1ElasticFF`, the Pauli
+//    factor the same `pauli_suppression`, and the (A, B) pair the same
+//    algebra `rosenbluth_spin1` writes.
+//  * NOT a cure for the QUASI-ELASTIC tensor gap.  The quasi-elastic tail is
+//    a sum over SPIN-1/2 nucleons: Im_{5,6,7,8} vanish identically there, so
+//    `polrad_full_sigma_qe_u` is tensor-blind for the same reason Eq. (44) is,
+//    at all three peaks.  `RcOptions::qe_tensor_scale` remains the only
+//    stand-in and remains a BORROWED magnitude.
+
+/// POLRAD Eq. (A.4), the SPIN-1 generalised structure functions, split by the
+/// polarisation degree it is linear in:  Im^el_i = `u[i]` + (Q_N/6) `t[i]`.
+///
+/// ONE DEFINITION, and `polrad_full_sigma_el` calls it -- so T9 gates the
+/// SHIPPED contraction and not a copy of it.  Indices are POLRAD's 1..8;
+/// `u[3]`, `u[4]`, `t[3]`, `t[4]` are the P_N (vector) entries and are left at
+/// zero, because every tail formula reaches them through m M P_L alone and
+/// the whole A_zz programme runs at an unpolarised beam.
+///
+/// THE Q_N = 0 LIMIT IS THE ROSENBLUTH PAIR, and that is the normalisation
+/// pin: `u[1]` = B/2 and `u[2]` = A of `rosenbluth_spin1`, `u[5..8]` = 0.
+/// NOTE `t[1]` and `t[2]` are NOT zero -- Im_1 and Im_2 are not purely
+/// unpolarised, and splitting them wrong doubles the unpolarised tail into
+/// the tensor one.
+struct PolradIm { double u[9] = {0}; double t[9] = {0}; };
+PolradIm polrad_im_el_spin1(const Spin1ElasticFF& ff, double t_gev2,
+                            double m_a);
+
+/// The elastic tail's two columns from ONE tau_A pass: `u` is Eq. (37)'s
+/// `sigma_u^A` and `t` its `sigma_q^A` (the partner of Q_N/6), the SAME two
+/// objects `polrad_sigma_el_u` / `polrad_sigma_el_t` return under the t-peak
+/// approximation, in the same units and the same whole-nucleus normalisation.
+/// They share the theta_ij(tau) evaluation, which is 90 % of the cost.
+struct PolradFullPair { double u = 0.0; double t = 0.0; };
+
+/// POLRAD Eq. (18) + Appendix B + Eq. (A.4) for a SPIN-1 nucleus.
+///
+/// `n_tau` is the number of tanh-sinh nodes PER PANEL, and the tau range is
+/// split at tau_s = -Q^2/S_A, at 0 and at tau_p = Q^2/X_A so that each peak
+/// sits at a panel EDGE, where tanh-sinh clusters its nodes exponentially.
+/// (POLRAD's own `qqt` splits at tau = 0 and integrates in ln(tau + Q^2/S_x);
+/// the peaks are narrower than that grid resolves, and here they are the
+/// point.)  MEASURED convergence, 6Li config 1, x = 1e-3, y = 0.5,
+/// `m_lepton = M_ELECTRON`: `sigma^el_U` = 0.2197427678 / 0.2208599758 /
+/// 0.2208659734 / 0.2208659734 / 0.2208659734 at n_tau = 32 / 64 / 128 / 256
+/// / 512, i.e. 0.51 % low at 32, 2.7e-05 low at 64 and stable to 1e-12 from
+/// 128 up; `sigma^el_T` is stable only to ~6e-04, which is what the ~5-decade
+/// cancellation of Eq. (B.3)'s a_ik leaves even in `long double` -- see the
+/// note where that type is chosen in rc.cpp.  `RcModel` REFUSES n_tau < 64.
+///
+/// `m_lepton` regulates the s-/p-peaks and is `RcOptions::m_lepton`.
+PolradFullPair polrad_full_sigma_el(const Spin1ElasticFF& ff, double x_a,
+                                    double y, double s_a, double m_a,
+                                    int n_tau = 128,
+                                    double m_lepton = M_ELECTRON);
+
+/// The same quadrature for the UNPOLARISED QUASI-ELASTIC tail: Z protons +
+/// N neutrons, incoherently, PER NUCLEUS in NUCLEON invariants (x, s, m_p) --
+/// the same convention as `polrad_sigma_qe_u`, so the two are directly
+/// comparable and `RcModel` divides both by A.
+///
+/// Spin 1/2, so Eq. (A.5): Im_1 = eta G_M^2 and
+/// Im_2 = (G_E^2 + eta G_M^2)/(1 + eta), with Im_{5..8} identically zero --
+/// there is NO tensor quasi-elastic tail here either, at any of the peaks.  `kf_gev` is the same de
+/// Forest-Walecka Pauli factor, at the elastic-vertex three-momentum transfer
+/// q^2 = t(1 + eta) of each tau node.
+double polrad_full_sigma_qe_u(int z, int n, double x, double y, double s,
+                              double m_n, int n_tau = 128,
+                              double kf_gev = 0.0,
+                              double m_lepton = M_ELECTRON);
+
+/// The exact tau_A range of Eq. (18), (S_x -+ sqrt(lambda_Q))/(2 M^2)
+/// (Eq. (14)), with the lower limit written as -Q^2/(M^2 tau_max) so that no
+/// digit cancels.  Exposed for the tests, which need the peak positions
+/// tau_s = -Q^2/S and tau_p = Q^2/X to sit inside it.
+struct TauLimits { double lo = 0.0; double hi = 0.0; };
+TauLimits polrad_tau_limits(double x_a, double y, double s_a, double m_a);
+
 // ----------------------------------------- the LEADING-LOG s- and p-peaks
 
 /// The Weizsacker-Williams (equivalent-radiator) lepton structure function
@@ -961,8 +1222,10 @@ enum class RcMode : int {
   TensorBand = 1,   ///< the band + the radiative tails
 };
 
-/// Which tail formulation.  v0 ships `TPeak` only; `PolradFull` is the
-/// documented upgrade path (design_C_tensor_rc.md sec. 1.4.6).
+/// Which tail formulation.  All THREE are implemented since 2026-09-06;
+/// `TPeak` remains the DEFAULT and is bit for bit every published number.
+/// (`PolradFull` was the documented upgrade path of
+/// design_C_tensor_rc.md sec. 1.4.6 and threw until then.)
 enum class RcTailModel : int {
   TPeak      = 0,   ///< DEFAULT: POLRAD Eqs. (37)-(39), (43) -- one eta_A
                     ///< integral.  IT IS ONE PEAK OF THE ELASTIC TAIL AND ITS
@@ -984,7 +1247,98 @@ enum class RcTailModel : int {
                     ///< lowest-x bin" radiative background.  Treat `rc_tail`
                     ///< as a LOWER BOUND on the dilution, band it, and never
                     ///< quote it as "the" radiative tail.
-  PolradFull = 1,   ///< Eq. (18) + Appendix B + Eq. (A.4).  NOT IMPLEMENTED.
+  PolradFull = 1,   ///< OPT-IN: POLRAD Eq. (18) + Appendix B + Eq. (A.4) --
+                    ///< ONE exact tau_A quadrature that contains ALL THREE
+                    ///< peaks.  Implemented 2026-09-06; it threw before that.
+                    ///<
+                    ///< (1) WHAT IT ADDS OVER THE OTHER TWO.  The s- and
+                    ///< p-peaks are IN the integral, at their true kinematics,
+                    ///< with their O(alpha) non-log pieces AND -- the part no
+                    ///< leading log can supply -- with their OWN Eq. (A.4)
+                    ///< TENSOR CONTENT.  So `RcOptions::sp_tensor_scale`, the
+                    ///< stand-in `TPeakPlusLL` needs, is REFUSED here: not
+                    ///< because the term did not run but because it DID.
+                    ///<
+                    ///< (2) WHAT IT DOES NOT ADD.  The QUASI-ELASTIC tail is
+                    ///< a sum over SPIN-1/2 nucleons, whose Im_{5..8} vanish
+                    ///< identically (Eq. (A.5)), so it is tensor-blind at all
+                    ///< three peaks here exactly as under `TPeak`.  That is
+                    ///< the gap `RcOptions::qe_tensor_scale` prices with a
+                    ///< borrowed magnitude, and PolradFull does not close it.
+                    ///<
+                    ///< (3) ITS NORMALISATION IS STILL NOT CHECKED AGAINST
+                    ///< MO-TSAI, or against any external exact tail: that
+                    ///< paper is not in this tree and no number from it is
+                    ///< quoted anywhere.  It is checked POLRAD-INTERNALLY --
+                    ///< with a form factor dead at the s-/p-peak vertex, so
+                    ///< that only the t-peak survives, Eq. (18)/Eq. (38) is
+                    ///< 1.00230 (unpolarised) and 1.00313 (tensor) — the F_m-only sector's ratios; the spin-0 unpolarised ratio at the same x_A is 1.00492 and the F_q tensor ratio 1.01872 (§B2.3) at
+                    ///< x_A = 0.003 and tends to 1 as x_A -> 0 -- and against
+                    ///< the leading-log fallback where the peaks are alive.
+                    ///< Nothing more.
+                    ///<
+                    ///< (4) IT IS NOT BRACKETED BY THE `TPeak`/`TPeakPlusLL`
+                    ///< BAND.  MEASURED over the sampler's 3051 accepted
+                    ///< cells: it lies between them on 1725 (56.5 %), covers
+                    ///< a median 0.6555 of the gap OVER THE 3027 CELLS WHOSE
+                    ///< GAP IS NONZERO (0.6620 over all 3051; on the other
+                    ///< 24, `TPeakPlusLL` equals `TPeak` exactly and the
+                    ///< fraction is undefined), and the RATIO of the
+                    ///< sigma-weighted mean SHIFTS is 0.428 -- a ratio of
+                    ///< means, NOT a sigma-weighted mean of the per-cell
+                    ///< fractions, which is 6.483 (re-measured 2026-09-15;
+                    ///< the census is 0.427958 unclipped and 0.427368 at the
+                    ///< shipped `tail_max` = 10).
+                    ///< It leaves the band on the far side at the
+                    ///< high-x, low-y corner.  SAY WHICH NUMBER, because the
+                    ///< two differ by 400x.  UNCLIPPED (`tail_max` raised, so
+                    ///< that the census measures the MODEL) the worst is
+                    ///< x4518.3 the `TPeak` tail, at x = 0.954993,
+                    ///< Q^2 = 206.68, y = 0.0544.  At the SHIPPED
+                    ///< `tail_max` = 10 the worst is x11 -- but x11 IS
+                    ///< 1 + `tail_max`, the CEILING and not the model, and
+                    ///< SIX cells tie at it (x = 0.954993 at Q^2 = 186.0,
+                    ///< 206.7, 229.7, 389.4, 432.8, 733.6; 5.0e-09 of the
+                    ///< cross section between them, 0 of 200 000 events).
+                    ///< The x = 0.955, Q^2 = 186 cell this comment called
+                    ///< "x11" until 2026-09-06 is x3449.9 unclipped.
+                    ///<
+                    ///< Mean `rc_tail` over 6Li config 1, EACH WITH ITS
+                    ///< ESTIMATOR -- the triple printed here until 2026-09-06
+                    ///< carried the cell-weighted, ceiling-clipped numbers
+                    ///< under the label "event-weighted":
+                    ///<   EVENT-weighted, 200 000 events at seed 1234, AT
+                    ///<   THE CLI's DEFAULT FILL P_z = 0.7
+                    ///<   (`tensor_thirds_plan(0.7, 0.6)`) --
+                    ///<   1.021778527 (TPeak) -> 1.040274188 (TPeakPlusLL)
+                    ///<   -> 1.029702912 (PolradFull), 0 clipped.  SAY WHICH
+                    ///<   P_z: at P_z = 0 (`tensor_thirds_plan(0.0, 0.6)`,
+                    ///<   the plan both test suites use) the SAME build
+                    ///<   gives 1.021836305 -> 1.040368933 -> 1.029775347
+                    ///<   (re-measured 2026-09-15).  The fill plan moves
+                    ///<   which events the sampler draws, so an
+                    ///<   event-weighted mean is a statement about a
+                    ///<   POLARISATION as well as a seed;
+                    ///<   CELL-cross-section-weighted over the 3051 accepted
+                    ///<   cells -- 1.02217080 -> 1.04097066 -> 1.03021634
+                    ///<   unclipped, the last becoming 1.03020526 at the
+                    ///<   shipped `tail_max` = 10; this one is P_z-FREE
+                    ///<   (measured identical on both plans).  The two
+                    ///<   estimators land 5e-04 apart, which is the
+                    ///<   sampler's own cell-to-event reweighting and not a
+                    ///<   disagreement.
+                    ///<
+                    ///< (5) IT COSTS, AND IT REFUSES RATHER THAN DEGRADES.
+                    ///< ~10 s of tail-table build against ~0.15 s.  It needs
+                    ///< `n_eta` >= 64 (there it is the tanh-sinh node count
+                    ///< PER PANEL of the tau integral) and a `long double`
+                    ///< wider than `double` (Eq. (B.3)'s a_ik cancel to ~5
+                    ///< decimal digits); both are REFUSED by `RcModel`'s
+                    ///< constructor, never silently degraded.
+                    ///<
+                    ///< (6) NOT THE DEFAULT, for the same reason
+                    ///< `TPeakPlusLL` is not: `TPeak` keeps every published
+                    ///< number and every reference JSON bit for bit.
   TPeakPlusLL = 2,  ///< OPT-IN: `TPeak` PLUS the leading-log s- and p-peaks
                     ///< of `ll_peaks_spin1` / `ll_peaks_qe`, added to the
                     ///< UNPOLARISED numerator of `tail_ratio_at`.  Read the
@@ -1012,13 +1366,18 @@ enum class RcTailModel : int {
                     ///< statement at all -- see the header block's "two bad
                     ///< corners" and T8(d)(i).
                     ///<
-                    ///< (2) THERE IS NO TENSOR s/p PEAK, and this file will
-                    ///< not invent one.  `ll_peaks_spin1` returns the
-                    ///< UNPOLARISED Rosenbluth (A, B) only; POLRAD supplies no
-                    ///< sigma_T counterpart at the s- or p-peak, and deriving
-                    ///< one here would be an uncited second definition of a
-                    ///< physics number (docs/CONVENTIONS.md).  So the s+p
-                    ///< contribution is carried in its OWN columns
+                    ///< (2) THIS MODEL HAS NO TENSOR s/p PEAK, and no
+                    ///< leading log can be given one.  `ll_peaks_spin1`
+                    ///< returns the UNPOLARISED Rosenbluth (A, B) only;
+                    ///< Eqs. (37)-(39) supply no sigma_T counterpart at the s-
+                    ///< or p-peak, and deriving one here would be an uncited
+                    ///< second definition of a physics number
+                    ///< (docs/CONVENTIONS.md).  POLRAD DOES supply one, but
+                    ///< in Eq. (18) + Eq. (A.4), which is `PolradFull` and not
+                    ///< this model -- so the sentence "POLRAD supplies no
+                    ///< tensor s/p peak", which stood here until 2026-09-06,
+                    ///< was true of Eq. (38) and FALSE of the paper.  So the
+                    ///< s+p contribution is carried in its OWN columns
                     ///< (`TailTriple::u_sp`, `::qe_sp`, `sigma_tail_u_sp()`,
                     ///< `sigma_tail_qe_sp()`), which are added to
                     ///< `tail_ratio_at`'s numerator and DELIBERATELY KEPT OUT
@@ -1028,13 +1387,31 @@ enum class RcTailModel : int {
                     ///< not bookkeeping: switching to `TPeakPlusLL` LOWERS the
                     ///< tensor FRACTION of the tail wherever the s-/p-peaks
                     ///< matter, because the denominator grows and the tensor
-                    ///< numerator does not.  That is the honest reading -- the
-                    ///< tensor part of the s-/p-peaks is UNKNOWN, not zero --
-                    ///< and it is why `TPeakPlusLL` is a systematic to run
-                    ///< beside `TPeak`, never a replacement for it.  A run
-                    ///< that needs the tensor tail at fixed-target kinematics
-                    ///< needs Eq. (A.4) at the shifted Q'^2, which is
-                    ///< `PolradFull`'s job and is not implemented.
+                    ///< numerator does not.  MEASURED at Q^2 = 5 GeV^2 (6Li
+                    ///< config 1, production grid, 2026-09-06) r_T/r_U falls
+                    ///< by x0.66139 / x0.0031829 / x6.6076e-05 at x = 0.01 /
+                    ///< 0.10 / 0.30.  Since 2026-09-06 the tensor part of the
+                    ///< s-/p-peaks is BOUNDED, NOT COMPUTED, and the bound is
+                    ///< a PARTIAL one whose number must be read with it:
+                    ///< `RcOptions::sp_tensor_scale` (default 0) prices the
+                    ///< ELASTIC s/p column, and at scale 1 that recovers
+                    ///< 0.0 % of the collapse above at all three x -- 6Li's
+                    ///< coherent form factor is 45+ decades down at the s/p
+                    ///< vertex Q'^2 ~ Q^2, so the knob is BIT-IDENTICAL to 0
+                    ///< there -- and at most 21.72 % of it anywhere on that
+                    ///< grid (at x = 4.16869e-04, y = 0.969238).  The
+                    ///< QUASI-ELASTIC s/p column, which is the whole of the
+                    ///< collapse at x >= 0.10, is bounded by NOTHING.  It is
+                    ///< why `TPeakPlusLL` is a systematic to run beside
+                    ///< `TPeak`, never a replacement for it.  A run that
+                    ///< needs the tensor tail at fixed-target kinematics
+                    ///< needs Eq. (A.4) at the shifted Q'^2, which IS
+                    ///< `PolradFull`'s job and IS implemented since
+                    ///< 2026-09-06: there the same three cells give
+                    ///< x0.79395 / x0.0020032 / x0.00022591, i.e. the
+                    ///< computed s/p tensor content puts the fraction ABOVE
+                    ///< this model at x = 0.01 and 0.30 and BELOW it at 0.10.
+                    ///< The bound was not even one-sided.
                     ///<
                     ///< (3) NOT THE DEFAULT.  `TPeak` stays the shipped
                     ///< default so that every published number and every
@@ -1243,17 +1620,201 @@ struct RcOptions {
   /// Set to 0 for the unsuppressed S = 1 edge (which v0 shipped as its
   /// default and which overstates the QRT there).
   double qe_kf_gev = RC_QE_KF_GEV;
-  /// eta_A quadrature of Eq. (38): Gauss-Legendre nodes in ln(eta_A).
+  /// THE TENSOR FRACTION OF THE LEADING-LOG s-/p-PEAKS -- A BOUND WITH NO
+  /// DERIVATION.  DEFAULT 0.0, which is exactly the tensor-blind s-/p-peaks
+  /// the shipped code has always carried, and which is unreachable under the
+  /// shipped `TPeak` anyway: with this at 0 not one floating-point operation
+  /// of any run moved.
+  ///
+  /// WHAT IT DOES.  `tail_ratio_at` adds, to its numerator,
+  ///
+  ///   (q_n/6) * sp_tensor_scale * (sigma^el_T/sigma^el_U) * sigma^el_{U,s+p}
+  ///
+  /// -- OUTSIDE `qe_suppression`, beside the `u_sp` column it scales, exactly
+  /// where that column already sits.  It hands the ELASTIC LEADING-LOG s- and
+  /// p-peaks the ELASTIC t-PEAK's own tensor-to-unpolarised ratio, scaled.
+  /// `sp_tensor_scale = 1` is therefore the sentence "the s/p tensor fraction
+  /// equals the elastic t-peak's".  The term is EXACTLY LINEAR in the scale
+  /// (unlike `fq_scale`, which is quadratic and must be RUN -- T12), so one
+  /// run at 1 rescales to any other value.
+  ///
+  /// WHY IT EXISTS.  `RcTailModel::TPeakPlusLL` promotes the s-/p-peaks into
+  /// the UNPOLARISED numerator and DELIBERATELY leaves them out of the tensor
+  /// term (enumerator comment, point (2)), because POLRAD's Eq. (38) supplies
+  /// no tensor s/p peak and deriving one from the leading log here would be an
+  /// uncited second definition.  SAY WHICH POLRAD: Eq. (18) + Eq. (A.4) DOES
+  /// carry the s-/p-peaks' own tensor content and `RcTailModel::PolradFull`
+  /// computes it, so the unqualified sentence "POLRAD supplies no tensor s/p
+  /// peak" -- which stood here until 2026-09-06 -- is true of Eq. (38) and
+  /// FALSE of the paper.  That is exactly why this knob is refused on
+  /// `PolradFull` for the OPPOSITE reason it is refused on `TPeak`: not
+  /// because the term did not run, but because it did.
+  /// The consequence is that the tensor fraction of the tail COLLAPSES where
+  /// the s-/p-peaks matter -- x1.55e-04 at the worst cell of the Q^2 >= 20
+  /// window (header block above) -- purely because the denominator grew. That
+  /// left the tensor fraction of that piece at EXACTLY ZERO, which is a
+  /// CHOICE and not a measurement, and this knob is what turns the choice
+  /// into a priced one.  It is the s/p analogue of `qe_tensor_scale`, one
+  /// level down, and it is refused unless the peaks it scales actually ran.
+  ///
+  /// AND IT IS NOT A DERIVED BOUND.  Say it plainly, in those words: THIS IS
+  /// A BOUND WITH NO DERIVATION.  No tensor leading-log peak exists for a
+  /// spin-1 nucleus in POLRAD or anywhere this tree cites, none is derived
+  /// here, and nothing below is a calculation of one.  What the number
+  /// assumes, where it is conservative, and where it fails:
+  ///
+  ///   (1) WHAT IS BORROWED, AND WHAT IS NOT.  Unlike `qe_tensor_scale`, this
+  ///       stand-in does NOT cross from a coherent quantity to an incoherent
+  ///       process: `sigma^el_{U,s+p}` and `sigma^el_T` are the SAME coherent
+  ///       6Li elastic vertex -- the same F_C, F_Q, F_M -- reached by two
+  ///       different photon-emission topologies.  What is borrowed is
+  ///       therefore ONE thing only: the claim that the tensor-to-unpolarised
+  ///       ratio of that vertex is the same at the s-/p-peak's Q'^2 as at the
+  ///       t-peak's t.  That is a narrower borrowing than the quasi-elastic
+  ///       one, and it is the ONLY reason this knob is defined on the ELASTIC
+  ///       s/p column and not on the quasi-elastic one (see (5)).
+  ///
+  ///   (2) WHERE IT IS CONSERVATIVE.  It replaces an exact zero on a piece
+  ///       that is otherwise pure denominator with a number that is reported,
+  ///       banded, and carried in the same (x, y) weighting as everything
+  ///       else in `tail_ratio_at`.  It restores tensor numerator where
+  ///       `TPeakPlusLL` added unpolarised denominator, so it moves the
+  ///       tensor fraction back TOWARDS the `TPeak` value rather than away
+  ///       from it, and it cannot be quietly wrong in the way a zero can.
+  ///       BUT READ (3) AND (5) BEFORE CALLING IT A BOUND ON THE s+p: the
+  ///       collapse it walks back is mostly not its own.  MEASURED
+  ///       (6Li config 1, production grid, 2026-09-06) the tensor fraction
+  ///       r_T/r_U of the tail falls by x0.66139 / x0.0031829 / x6.6076e-05
+  ///       at x = 0.01 / 0.10 / 0.30, Q^2 = 5 when `TPeak` becomes
+  ///       `TPeakPlusLL`, and `sp_tensor_scale = 1` recovers 0.0 % of that
+  ///       at all three -- see (3).  The most it recovers ANYWHERE on that
+  ///       grid is 21.72 %, at x = 4.16869e-04, y = 0.969238.
+  ///
+  ///   (3) WHERE IT FAILS, AND THE FAILURE IS THE POINT: THE VERTICES SIT AT
+  ///       DIFFERENT Q^2, THE COHERENT FORM FACTOR IS DEAD AT ONE OF THEM,
+  ///       AND THE BOUND IS THEREFORE **EMPTY** OVER MOST OF THE WINDOW.
+  ///       The t-peak's elastic vertex sits at t in [t_min, t_max] with
+  ///       t_min = M_A^2 x_A^2/(1 - x_A) -- 8.7304e-05 GeV^2 at x = 0.01 --
+  ///       and its integrand is dominated by the bottom of that range, where
+  ///       6Li's form factor is ALIVE (F_c = +2.992599 there).  The s-
+  ///       and p-peaks sit at Q'^2 = z_s Q^2 and Q^2/z_p, i.e. AT THE SCALE
+  ///       OF Q^2 ITSELF.  MEASURED at Q^2 = 5 GeV^2, x = 0.01 / 0.10 / 0.30:
+  ///       Q'^2_s = 4.3728 / 4.9382 / 4.9801 GeV^2, where F_c = -3.7532e-45 /
+  ///       -6.4358e-51 / -2.4078e-51 -- FORTY-FIVE TO FIFTY-ONE DECADES down
+  ///       from the t-peak's own vertex.  So `u_sp/sigma^el_U` is
+  ///       5.2492e-79 / 2.0652e-86 / 4.0603e-83 there (test grid, T-case
+  ///       B1), the added term is far below the numerator's ulp, and
+  ///       `sp_tensor_scale = 1` is BIT-IDENTICAL to 0 at all three standard
+  ///       points.  It is not conservative there; it is EMPTY there.  Two
+  ///       consequences, pointing in OPPOSITE directions:
+  ///         * `sigma^el_T/sigma^el_U`, a ratio measured at t ~ t_min, MAY BE
+  ///           THE WRONG REFERENCE ENTIRELY at Q'^2 ~ Q^2: the ratio is a
+  ///           strong function of momentum transfer -- it changes SIGN with
+  ///           x on this tree's own tables, and its sign at x = 0.10 is a
+  ///           C0-shape band edge -- and nothing argues it survives being
+  ///           carried up by four decades in the elastic vertex's Q'^2.
+  ///           Where the coherent s/p peak is DEAD that question is moot and
+  ///           the knob prices NOTHING; the piece it fails to price there is
+  ///           (5)'s, and (5)'s is the whole of the collapse in (2).
+  ///         * WHERE THE COHERENT s/p PEAK IS ALIVE -- low x, y -> 1, the
+  ///           Q'^2 ~ 0.05 GeV^2 corner -- the ratio is carried a SHORTER
+  ///           distance and the borrowing is at its most defensible, and that
+  ///           is also where the priced shift is largest: on the production
+  ///           grid the term is non-zero on 77 of 3051 accepted cells, all
+  ///           with x <= 7.943e-03 and y >= 0.3656, and at scale 1 it moves
+  ///           Delta A_zz by 582.9 % of the band half-width at the worst of
+  ///           them (x = 4.16869e-04, Q^2 = 1.6081, y = 0.969238).  That
+  ///           corner is ALSO where `TPeakPlusLL` itself is least trustworthy
+  ///           (the uncancelled soft radiator, header block above), so a
+  ///           large price there is not a licence to quote it.
+  ///       Neither statement is a bound in the mathematical sense.  This
+  ///       knob's number is a PRICE TAG on an omission, not a limit on it.
+  ///
+  ///   (4) THE SIGN IS MEANINGLESS, for the same reason it is meaningless on
+  ///       `qe_tensor_scale`: `sigma^el_T/sigma^el_U` changes sign with x and
+  ///       its sign at x = 0.10 is a C0-shape band edge (the 2026-09-03 run's
+  ///       phase_B_numbers.md sec. B1, not this knob's own).  The stand-in
+  ///       inherits that sign and there is no argument that a tensor s/p peak
+  ///       would share it.  Read the MAGNITUDE.
+  ///
+  ///   (5) WHAT IT DOES NOT COVER, NAMED, AND IT IS THE BIGGER HALF.  The
+  ///       QUASI-ELASTIC s/p column (`TailTriple::qe_sp`,
+  ///       `sigma_tail_qe_sp()`) keeps a tensor part of EXACTLY ZERO and is
+  ///       bounded by NEITHER knob: `qe_tensor_scale` multiplies `sigma^q_U`
+  ///       alone and this one multiplies `sigma^el_{U,s+p}` alone.  That is
+  ///       deliberate, not an oversight -- covering it would need a THIRD
+  ///       stand-in that borrows across coherence AND across Q'^2 at once,
+  ///       i.e. both category errors in one product -- but it means the s/p
+  ///       column that SURVIVES where the coherent one dies is the unpriced
+  ///       one, and by (2)'s numbers that is essentially ALL of the tensor
+  ///       fraction's collapse at x >= 0.10 (r_U grows x314.18 at x = 0.10
+  ///       and x15134 at x = 0.30 between the two tail models, and none of
+  ///       that growth is coherent).  It is the largest remaining
+  ///       exactly-zero tensor term in `rc_tail`.  Recorded as open:
+  ///       docs/open_items/run_2026-09-06/phase_B_numbers.md sec. B1.
+  ///
+  ///       AND `RcTailModel::PolradFull` DOES NOT CLOSE IT EITHER, which is
+  ///       the one thing a reader might expect the exact tail to fix.  The
+  ///       quasi-elastic tail is a sum over SPIN-1/2 nucleons, and Eq. (A.5)
+  ///       has Im_{5..8} identically zero: there is no tensor quasi-elastic
+  ///       structure function to put at ANY of the three peaks.  So the
+  ///       exact tail computes the ELASTIC s/p tensor peak and leaves the
+  ///       QUASI-ELASTIC one at exactly zero, and `qe_tensor_scale` remains
+  ///       the only stand-in for the larger half.  Gated by
+  ///       `test_rc.cpp` T19(f).
+  ///
+  /// TWO PLUMBING RULES.  It is NOT multiplied by `qe_suppression` (that knob
+  /// is a flat multiplier on the QUASI-ELASTIC tail and `u_sp` is elastic),
+  /// and `PipelineConfig::validate()` REFUSES a non-zero value when
+  /// `tail_model != TPeakPlusLL`, under the same rule that governs
+  /// `qe_tensor_scale` with `with_qe_tail = false` and `m_lepton` under
+  /// `TPeak`: a knob that did not run may not be recorded in the npz `meta`
+  /// as if it had.  Under `TPeak` the `u_sp` table is identically zero, so a
+  /// non-zero scale there is bit-identical to the default.
+  ///
+  /// AND IT IS REFUSED ON `PolradFull` FOR THE OPPOSITE REASON -- say it in
+  /// those words, because the two refusals share a message and not a cause.
+  /// Eq. (18) carries the s- and p-peaks inside its own tau_A integral WITH
+  /// their Eq. (A.4) tensor content, so on that model the term this knob
+  /// stands in for RAN, and applying the stand-in would double-count it.
+  /// MEASURED against that computed answer at the three standard points
+  /// (Q^2 = 5): the tensor fraction multiplier against `TPeak` is
+  /// x0.79395 / x0.0020032 / x0.00022591 under `PolradFull` against
+  /// x0.66139 / x0.0031829 / x6.6076e-05 under `TPeakPlusLL` -- so at
+  /// x = 0.01 and 0.30 this bound pointed the right way and stopped far
+  /// short, and at x = 0.10 it pointed the WRONG way.  It is a price tag,
+  /// not an interval.
+  double sp_tensor_scale = 0.0;
+  /// The tail's ONE-DIMENSIONAL QUADRATURE RESOLUTION, and it means two
+  /// different things by tail model:
+  ///
+  ///   `TPeak` / `TPeakPlusLL`  Gauss-Legendre nodes in ln(eta_A), in panels
+  ///                            of 8, over Eq. (38)'s eta_A range.
+  ///   `PolradFull`             tanh-sinh nodes PER PANEL of Eq. (18)'s tau_A
+  ///                            integral, which runs in FOUR panels split at
+  ///                            tau_s, 0 and tau_p.  Minimum 64 there, and
+  ///                            `RcModel` refuses less: MEASURED at 6Li
+  ///                            config 1, x = 1e-3, y = 0.5, sigma^el_U is
+  ///                            0.51 % low at 32 and 2.7e-5 low at 64 against
+  ///                            a value stable to 1e-12 from 128 up.
   int    n_eta       = 128;
-  /// RESERVED for `RcTailModel::PolradFull`; UNUSED by the shipped `TPeak`.
-  /// POLRAD's infrared factor F_IR and l_m = ln(Q^2/m^2) need the LEPTON
-  /// mass, but Eqs. (37)-(39), (43) as transcribed here carry none of it, so
-  /// nothing in src/core/rc.cpp reads this field.  A knob that did not run
-  /// may not be recorded as if it had (the same rule
-  /// `PipelineConfig::validate()` enforces for `b1_band_scale` on the Miller
-  /// branch), so validate() REFUSES `m_lepton != M_ELECTRON` while
-  /// `tail_model == TPeak` rather than let a Python caller set it and get a
-  /// silent no-op that the npz `meta` does not record.  From constants.hpp --
+  /// The LEPTON MASS.  Read by `RcTailModel::PolradFull` and by nothing else.
+  ///
+  /// It is the m^2 of POLRAD Eq. (B.13)'s C_{1,2}(tau), of
+  /// F_IR = m^2 F_2+ - Q_m^2 F_d, of Q_m^2 = Q^2 + 2m^2 and of
+  /// lambda_s = S^2 - 4 m^2 M^2 -- i.e. it is what REGULATES the s- and
+  /// p-peaks, whose width is 4 m^2 (Q^2 + tau S_x - tau^2 M^2).
+  ///
+  /// Eqs. (37)-(39), (43) carry no lepton mass at all, and `TPeakPlusLL`'s
+  /// leading-log radiator does carry ln(Q^2/m_e^2) but reads constants.hpp's
+  /// `M_ELECTRON` DIRECTLY -- deliberately, because a different lepton would
+  /// also need its own elastic kinematics, and honouring this field in the
+  /// log alone would be a half-change dressed as a whole one.  So a knob that
+  /// did not run may not be recorded as if it had (the rule
+  /// `PipelineConfig::validate()` also enforces for `b1_band_scale` on the
+  /// Miller branch), and validate() REFUSES `m_lepton != M_ELECTRON` on both
+  /// t-peak models.  It was refused on ALL of them, with the reason "RESERVED
+  /// for tail_model = PolradFull", until 2026-09-06.  From constants.hpp --
   /// NOT a second literal.
   double m_lepton    = M_ELECTRON;
   /// Ceiling on the returned tail ratio, mirroring `GlauberFsiOptions::w_max`:
@@ -1502,8 +2063,20 @@ class RcModel {
   /// `u_sp` and `qe_sp` are the leading-log s+p peaks of the SAME two
   /// unpolarised observables, filled ONLY under `RcTailModel::TPeakPlusLL`
   /// and IDENTICALLY ZERO otherwise.  There is no `t_sp`: see the
-  /// `RcTailModel::TPeakPlusLL` comment -- the tensor s/p peak is unknown, not
-  /// zero, and is deliberately absent rather than guessed.
+  /// `RcTailModel::TPeakPlusLL` comment -- that model's tensor s/p peak is
+  /// deliberately absent rather than guessed, because POLRAD's Eq. (38) and
+  /// the leading log supply none.  IT IS NOT UNKNOWN, and saying so
+  /// unqualified (as this comment did until 2026-09-06) is false of the
+  /// paper: Eq. (18) + Eq. (A.4) carries it and `RcTailModel::PolradFull`
+  /// computes it -- see the paragraph below.  On `TPeakPlusLL` it is
+  /// BOUNDED, NOT COMPUTED, by `RcOptions::sp_tensor_scale`.
+  ///
+  /// UNDER `RcTailModel::PolradFull` THE SPLIT DOES NOT EXIST AT ALL, and
+  /// `u_sp`/`qe_sp` stay zero there for a different reason: Eq. (18) puts all
+  /// three peaks in ONE tau_A integral, so `u` and `qe` already contain the
+  /// s- and p-peaks (with their tensor content, which lands in `t`).  Reading
+  /// `u_sp` as "the s/p part" on that model would be wrong, not merely empty
+  /// -- there is no decomposition to read.
   struct TailTriple {
     double u = 0.0, t = 0.0, qe = 0.0;
     double u_sp = 0.0, qe_sp = 0.0;

@@ -776,8 +776,15 @@ shape, T3 rewritten.
 physically present, become the default?
 
 **(b)** Per knob: `RcOptions::c0_shape` `Ho` → `VmcFt`; `tail_model` `TPeak`
-→ `TPeakPlusLL`; `qe_tensor_scale` 0 → 1; `a_transfer_frac` 0 → 0.5/1;
-`cluster_vmc_mc_sigma` 0 → ±1; `pol_sf` `toy` → `nnpdfpol`.
+→ `TPeakPlusLL` **or, since 2026-09-06, `TPeak` → `PolradFull`** (a third
+value of the SAME knob, not a new one: POLRAD Eq. (18) + Appendix B +
+Eq. (A.4), the exact τ_A tail — see (d)); `qe_tensor_scale` 0 → 1;
+`a_transfer_frac` 0 → 0.5/1;
+`cluster_vmc_mc_sigma` 0 → ±1; `pol_sf` `toy` → `nnpdfpol`. **Added
+2026-09-06: `RcOptions::sp_tensor_scale` 0 → 1**, the direct sibling of
+`qe_tensor_scale` one level down (the tensor fraction of the leading-log
+s-/p-peaks), which is refused unless `tail_model = TPeakPlusLL` and therefore
+cannot become a default without (b)'s second entry going first.
 
 **(c)** The run's ground rule (new physics opt-in, default bit for bit) is the
 only reason each sits at zero; each header argues the term is real.
@@ -792,10 +799,73 @@ half-widths 1.358472e−04 / 1.518818e−04 / 1.921170e−04 at f = 0 / 0.5 / 1.
 `cluster_vmc_mc_sigma` — 0.02 % on the tagged tensor observable. `pol_sf` —
 read on no channel at the CLI default plan. The first four are inside `--rc`,
 itself opt-in, so they move nothing at the CLI default whichever way they go.
+**`sp_tensor_scale = 1`, priced 2026-09-06** (`../run_2026-09-06/phase_B_numbers.md`
+§B1) — Δ(ΔA_zz) is **exactly 0** at x = 0.01 / 0.10 / 0.30, Q² = 5 for scale
+0.5 **and** 1, because the coherent s/p vertex sits at Q′² = 4.37 / 4.94 /
+4.98 GeV² where ⁶Li's form factor is 45–51 decades down, so scale 1 is
+bit-identical to 0 there; it is non-zero on **77 of 3051** accepted cells
+(x ≤ 7.94e−03, y ≥ 0.366), reaching **582.9 %** of the band half-width at
+x = 4.169e−04, y = 0.9692, and it recovers at most **21.72 %** of the
+tensor-fraction collapse ×0.66139 / ×0.0031829 / ×6.6076e−05 that
+`tail_model = TPeakPlusLL` causes at those same three x. So this entry is a
+price tag whose price is **zero where the run is quoted** — and the piece that
+carries that collapse, the **quasi-elastic s/p column**, has no knob at all.
 
-**(e)** Per knob: its default line in `rc.hpp:431/1070/1079/1096/1189`,
+**`tail_model = PolradFull`, priced 2026-09-06** (`../run_2026-09-06/phase_B_numbers.md`
+§B2). This is the entry that changed most, because there is now a **computed**
+third answer where (b) previously offered only a lower bound and a stated
+model. Measured: **it is not inside the pair** — over the sampler's 3051
+accepted cells it lies between `TPeak` and `TPeakPlusLL` on **1725 (56.5 %)**
+and outside on **1326 (43.5 %)**, covers a **median 0.6555** of the gap **over
+the 3027 cells whose gap is nonzero** (0.6620 over all 3051; on the other 24
+`TPeakPlusLL` equals `TPeak` exactly) and the **ratio of the σ-weighted mean
+shifts** is **0.428** — a ratio of means, *not* a σ-weighted mean of the
+per-cell fractions, which is 6.483 — and in the Q² ≥ 20, y ≤ 0.9 window it is
+**above both**. Whole-run mean `rc_tail` (200 k, seed 1234) **at the CLI's
+default fill P_z = 0.7**: **1.021778527** (`TPeak`,
+the default) → **1.040274188** (`TPeakPlusLL`) → **1.029702912**
+(`PolradFull`); at **P_z = 0** (the plan both test suites use, and the plan
+this run's own §B2 published) **1.021836305 → 1.040368933 → 1.029775347** on
+the same build. Δ(ΔA_zz) against `TPeak` is **0.0435 % / 0.3073 / 3.254 %**
+of the band half-width at x = 0.01 / 0.10 / 0.30 — about **half** the
+`TPeakPlusLL` edge's. It also **retires the reason (b)'s `sp_tensor_scale`
+entry exists**: it computes the s-/p-peaks' Eq. (A.4) tensor content instead of
+bounding it, and scored against it the bound was not even one-sided
+(`r_T/r_U` × the t-peak: ×0.79395 / ×0.0020032 / ×0.00022591 computed against
+×0.66139 / ×0.0031829 / ×6.6076e−05 bounded). **What it does NOT change**: the
+quasi-elastic tensor tail is still exactly zero on all three models, because
+Eq. (A.5) has `Im₅…₈ ≡ 0` for a spin-½ target — so this entry does not close
+the gap the paragraph above names, and `qe_tensor_scale` is still the only
+stand-in for it. **Not validated against Mo–Tsai**, which is not in this tree;
+checked POLRAD-internally and against the leading-log fallback only. It costs
+~10 s of tail-table build and needs `n_eta ≥ 64`.
+
+> **CORRECTION, 2026-09-15 (residue pass) — this paragraph published an
+> event-weighted triple with no P_z, and a mislabelled 0.428.** Both fixed
+> above, re-measured on the working-tree build: the triple is
+> **1.021778527 / 1.040274188 / 1.029702912** at `tensor_thirds_plan(0.7, 0.6)`
+> (the CLI default) and **1.021836305 / 1.040368933 / 1.029775347** at
+> `tensor_thirds_plan(0.0, 0.6)`; **0.428** is the RATIO of the σ-weighted mean
+> shifts (0.427958 unclipped, 0.427368 at the shipped `tail_max = 10`), not a
+> σ-weighted mean of the per-cell coverage fractions, which is **6.483**; and
+> the **median 0.6555** is over the **3027** cells with a nonzero
+> `TPeak → TPeakPlusLL` gap (**0.6620** over all 3051). The cell-σ-weighted
+> census is P_z-free — measured identical on both plans. The decision this
+> paragraph asks for is unchanged: no default moved.
+
+**(e)** Per knob: its default line in `rc.hpp:431/1070/1079/1096/1189`
+(those five line numbers are as of the 2026-09-03 tree and have since shifted
+— `rc.hpp` grew from 1581 to 1788 lines (`wc -l`, HEAD to working tree) over the 2026-09-06 B3 and B1 edits —
+and they are left as recorded rather than silently renumbered),
 `pipeline.hpp`, the `USAGE.md` §"knobs" table, and the shipped npz for `--rc`
-runs.
+runs. `sp_tensor_scale`'s own default line is `rc.hpp:1452`, its numerator
+term `rc.cpp:1524` and its refusal `rc.cpp:1010`, all as of 2026-09-06
+**before** the B2 edits of the same day, which grew `rc.cpp` by ~470 lines and
+moved every one of them — left as recorded rather than silently renumbered,
+the same convention this paragraph already uses. `PolradFull`'s own entry
+points are `polrad_full_sigma_el` / `polrad_full_sigma_qe_u` /
+`polrad_im_el_spin1` in `rc.hpp` and `rc.cpp`, and its `meta` value is
+`rc_tail_model = "polrad-full"` on the row §B15 already owns.
 
 ### B16. The coherent |t| ceiling stays 0.2 GeV², justified by the anchor range, not by positivity — *applied, confirm* (`STATUS.md` row 12)
 
@@ -964,12 +1034,33 @@ number exists. D2 is B3 above; D13 is B18.
 | D8 | `LightConeDensities` interface | L-generic alignment slot / explicit coefficient / keep the A = 2 shape | reusing φ₂ for L = 1 is "numerically exact, semantically a lie" | an interface change that would also derive ⁶Li's 1.5 and 6/√2 |
 | D9 | b₂_32 | inherit 2x·b₁ / state it | none | one stated line |
 | D10 | Δ_32 (cos 2φ) | none / reuse ⁶Li's toy 1e−2 | 3·Q_NN = ±3 at J = 3/2 gives a larger amplitude for the same Δ | `delta_32_func` |
-| D11 | Q(⁷Li) constant | −4.00(3) / −4.06 fm², with a source | not in the tree; ratio 0.871 → 0.858 | `LI7_QUADRUPOLE_FM2` beside `LI6_QUADRUPOLE_FM2` in `rc.hpp`, and §4.2's gate |
+| D11 | Q(⁷Li) constant — **PAID 2026-09-06** | −4.00(3) / −4.06 fm², with a source → **−4.06 fm² adopted** | not in the tree; ratio 0.871 → 0.858 — **confirmed: 0.871265 → 0.858389** | done: `LI7_QUADRUPOLE_FM2` = −4.06 beside `LI6_QUADRUPOLE_FM2` in `rc.hpp:669`, and §4.2's gate is `li7_alpha_t_quadrupole` + doctest T13 + pytest G8 |
 | D12 | the J = 3/2 tensor run plan | two-state T = ±1 contrast / a thirds pattern | the pure-alignment fill is rank-3 clean by construction | a new plan in `spin.hpp`, `cli.py` |
 
 **(e)** Deciding any of them changes nothing shipped until step 3 of
 `phase_D_li7_rank2.md` §8 is taken; D11 is the one the run recommends
 committing first (a gate before a b₁).
+
+**CLOSED FOR ROW 20's D11, 2026-09-06** (task B3;
+`../run_2026-09-06/phase_B_numbers.md` §B3). The constant is sourced,
+committed and bound: **`LI7_QUADRUPOLE_FM2` = −4.06 fm²** at
+`include/lipolgen/rc.hpp:669`, beside `LI6_QUADRUPOLE_FM2`, from TUNL's
+A = 5, 6, 7 evaluation (Tilley *et al.*, NPA 708 (2002) 3), whose A = 7 half
+prints `Q = −40.6 ± 0.8 mb (1988DI1B)` and whose A = 6 half prints the
+`Q = −0.818(17) mb (1998CE04)` that IS `LI6_QUADRUPOLE_FM2` — **one document,
+one sign convention, one unit rule**, which is what the brief's "match
+conventions" required and is why the −4.06 option was taken rather than the
+−4.00(3) the note quoted from memory. This row's own predicted price is
+**confirmed to six digits**: the A = 7 α–t gate ratio is **0.871265** against
+−4.00 and **0.858389** against −4.06 (12.87 % vs 14.16 % low), a 1.5 % swap
+that does not change the verdict "13–14 % low". §4.2's gate is now real code —
+`li7_alpha_t_quadrupole` in `b1_nuclear.hpp`, reproducing the note's offline
+numpy recipe **bit for bit** — pinned by `tests/test_b1_nuclear.cpp` T13
+(26 assertions) and `python/tests/test_li7_rank2.py` G8 (4 tests). It is a
+**reported ratio and not a b₁ verdict**: b₁(⁷Li) is still unimplemented and
+still blocked on D2, and G8 re-asserts ⁷Li's exactly-zero rank-2 sector in the
+very test that runs the gate. **No new registry row was added.** D1, D3–D10
+and D12 are untouched.
 
 ### B21. The licence, GPL-3.0-or-later — *carried forward, confirm only; E2 built on it* (`STATUS.md` decision **row 24**; `OPEN_ITEMS_SOLUTIONS.md` top table row 13)
 

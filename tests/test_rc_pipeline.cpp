@@ -208,14 +208,20 @@ TEST_CASE("T6c: PipelineConfig::validate refuses only a bad RC knob") {
     CHECK_THROWS_AS(cfg.validate(), std::runtime_error);
   }
   SUBCASE("tail model") {
+    // ALL THREE ARE IMPLEMENTED SINCE 2026-09-06.  What `validate()` refuses
+    // on `PolradFull` is a tau_A resolution that cannot resolve the s-/p-
+    // peaks it exists to carry: n_eta is the tanh-sinh node count PER PANEL
+    // there, and sigma^el_U is 0.51 % low at 32.
     cfg.rc_options.tail_model = RcTailModel::PolradFull;
+    CHECK_NOTHROW(cfg.validate());
+    cfg.rc_options.n_eta = 32;
     CHECK_THROWS_AS(cfg.validate(), std::runtime_error);
-    // ... but TPeakPlusLL is IMPLEMENTED and must pass: it is the opt-in
-    // s-/p-peak model of T8(d), not a reserved enumerator.
+    cfg.rc_options.n_eta = RcOptions().n_eta;
     cfg.rc_options.tail_model = RcTailModel::TPeakPlusLL;
     CHECK_NOTHROW(cfg.validate());
   }
-  SUBCASE("m_lepton is refused on BOTH implemented tail models") {
+  SUBCASE("m_lepton is refused on the two t-peak models and READ on the "
+          "exact one") {
     // A KNOB THAT DID NOT RUN MAY NOT BE RECORDED AS IF IT HAD.  TPeak has no
     // lepton-mass dependence at all; TPeakPlusLL's leading-log radiator DOES
     // carry ln(Q^2/m_e^2) but reads constants.hpp's M_ELECTRON directly,
@@ -228,6 +234,17 @@ TEST_CASE("T6c: PipelineConfig::validate refuses only a bad RC knob") {
       CHECK_THROWS_AS(cfg.validate(), std::runtime_error);
       cfg.rc_options.m_lepton = M_ELECTRON;
     }
+    // ... and ACCEPTED on PolradFull, which is the model the reservation was
+    // written for: m^2 sits in C_{1,2}(tau) (Eq. (B.13)), in
+    // F_IR = m^2 F_2+ - Q_m^2 F_d and in lambda_s, i.e. it is what regulates
+    // the s- and p-peaks.  A non-positive value is still refused.
+    cfg.rc_options.tail_model = RcTailModel::PolradFull;
+    cfg.rc_options.m_lepton = 0.1056583755;
+    CHECK_NOTHROW(cfg.validate());
+    cfg.rc_options.m_lepton = 0.0;
+    CHECK_THROWS_AS(cfg.validate(), std::runtime_error);
+    cfg.rc_options.m_lepton = M_ELECTRON;
+    cfg.rc_options.tail_model = RcTailModel::TPeak;
   }
   SUBCASE("a POLARISED beam is refused -- by RcModel, one frame later") {
     // design sec. 3.2 puts this loop in `validate()`; `PipelineConfig` has no

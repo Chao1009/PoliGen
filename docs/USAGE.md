@@ -1212,17 +1212,23 @@ length, and this line carried neither until 2026-09-05):
   `docs/open_items/run_2026-09-03/phase_D_li7_rank2.md` §§5–6; nothing in
   `src/` or `python/` computes a ⁷Li b₁, and `meta["rank2_input"]` says so on
   every ⁷Li run.
-* **The "gated to 13 % by Q(⁷Li)" gate WAS NOT COMMITTED, and cannot be until
-  its reference number has a source.** The research note computes
-  Q(⁷Li) = −3.4851 fm² from `li7_at3.momentum` against a measured
-  −4.00(3) fm² (ratio 0.871, i.e. 13 % low), but that −4.00(3) is quoted there
-  *from memory of the standard compilations* and **is not in this tree** —
-  there is no `LI7_QUADRUPOLE_FM2` beside `LI6_QUADRUPOLE_FM2`, and no test
-  runs the comparison. A gate whose reference nobody verified against a source
-  is not a gate. It is filed as author decision **D11** in §15.5. There is
-  also no A = 3 analogue of the A = 2 gate at all: ³H/³He are J = ½ and carry
-  no rank-2 structure function, so nothing about the ⁷Li convolution can be
-  validated on a lighter system.
+* **The Q(⁷Li) gate IS COMMITTED as of 2026-09-06 — and it gates the WAVE
+  FUNCTION, not b₁.** `li7_alpha_t_quadrupole` (`b1_nuclear.hpp`) computes
+  Q(⁷Li) = **−3.485059 fm²** from `li7_at3.momentum` and reports the ratio
+  against **`LI7_QUADRUPOLE_FM2` = −4.06 fm²**, now in `rc.hpp` beside
+  `LI6_QUADRUPOLE_FM2` and sourced from the same TUNL A = 5, 6, 7 evaluation
+  (Tilley *et al.*, NPA 708 (2002) 3, `Q = −40.6 ± 0.8 mb`) the ⁶Li constant
+  comes from: **ratio 0.858389, 14 % low** (0.871265, 13 % low, against the
+  −4.00(3) fm² the research note had quoted from memory, which is one of the
+  eight determinations N. J. Stone lists without recommending one). Pinned by
+  doctest T13 and pytest G8; measured in
+  `docs/open_items/run_2026-09-06/phase_B_numbers.md` §B3; author decision
+  **D11** is thereby paid. **It licenses no b₁**: what it validates is the α–t
+  wave function's ⟨r²⟩ and P-wave character, ⁷Li's rank-2 sector is still
+  exactly zero, and the pytest that runs the gate re-asserts that zero in the
+  same test. There is also no A = 3 analogue of the A = 2 gate at all: ³H/³He
+  are J = ½ and carry no rank-2 structure function, so nothing about the ⁷Li
+  convolution can be validated on a lighter system.
 
 The full construction, its numbers and the author decisions it needs are
 `docs/OPEN_ITEMS_SOLUTIONS.md` §15 and
@@ -2192,9 +2198,10 @@ quote the lo/hi envelope on `A_zz`:
 | `--rc-fq-scale` | **0, 1, 2** | ±100 % on the ⁶Li quadrupole form factor. σ^el_T is **quadratic** in it, so this band must be **RUN, never rescaled** from one row — the two edges are not symmetric about the nominal, and at `x = 0.01, Q² = 5` they even bracket a **sign change** of ΔA_zz |
 | `--rc-tail-tensor-scale` | **0.5, 1, 2** | the η·F_m² tensor sector, which `--rc-fq-scale` does **not** span |
 | `--rc-c0-shape` | **`ho` and `vmc-ft`** | the ⁶Li **C0 (monopole) SHAPE**, shared by F_c and F_q. `ho` is the unfitted harmonic oscillator every published number was made with; `vmc-ft` is the j₀ transform of the committed ANL VMC point-proton density, r-rescaled so that **⟨r²⟩_point, F_c(0) = 3 and F_q(0) = −65.914 are identical on the two edges** (T11 gates all three on both). It is a *shape*, not a multiplier: it cannot be rescaled out of one run, and no two-parameter oscillator can be refitted to reach the other edge while holding ⟨r²⟩. It **flips the sign of the tensor fraction of the elastic tail at x = 0.1** — see the box below. Cost: `RcModel` construction 0.11 s → 1.29 s |
-| `--rc-tail-model` | **`t-peak` and `t-peak+ll`** | **WHICH PEAKS OF THE TAIL ARE IN IT.** `t-peak` is the default and the **lower** edge: POLRAD Eqs. (37)–(39), (43), one peak of a three-peak object. `t-peak+ll` adds the leading-log s- and p-peaks and is the **upper** edge. Their sum is a **stated model of mixed approximation orders** (an η_A quadrature plus a single-z leading log), good to ~5–10 %, with an uncancelled soft `1/(1−z)` as `y → 0`; and it has **no tensor s/p partner**, so it **lowers the tensor fraction** of the tail — the tensor part of those peaks is unknown, not zero. Whole-run mean `rc_tail` on 200 k inclusive ⁶Li config-1 events: **1.021836 → 1.040369**. In the `Q² ≥ 20 GeV²`, `y ≤ 0.9` window the two edges agree to **+0.61 % event-weighted** but **not cell by cell**: 331 of 1356 accepted cells (24.4 %) differ by more than 1 %, worst **×6444** at `x = 0.79`, `y = 0.0088`, and they differ by 59 % at `y = 0.985`. Per-cell agreement is ≤ 0.55 % only for `0.15 ≤ y ≤ 0.7` |
+| `--rc-tail-model` | **`t-peak`, `t-peak+ll` and `polrad-full`** | **WHICH PEAKS OF THE TAIL ARE IN IT.** `polrad-full` (2026-09-06) is POLRAD **Eq. (18) + Appendix B + Eq. (A.4)** — ONE exact τ_A quadrature with all three peaks **and** the s-/p-peaks' own Eq. (A.4) tensor content, so `--rc-sp-tensor-scale` is refused on it (the term RAN). **It is NOT inside the t-peak pair**: between the two edges on **1725 of 3051** accepted cells (56.5 %), covering a median **0.6555** of the gap **over the 3027 cells whose gap is nonzero** (0.6620 over all 3051; the other 24 have `t-peak+ll` = `t-peak` exactly, so no fraction), with the **ratio of the σ-weighted mean shifts** at **0.428** — a ratio of means, **not** a σ-weighted (still less an event-weighted) mean of the per-cell fractions, which is **6.483** — and **above both** in the Q² ≥ 20, y ≤ 0.9 window. Whole-run mean `rc_tail` (200 k, seed 1234) **at the default fill P_z = 0.7**: **1.021778527 / 1.040274188 / 1.029702912**; at **P_z = 0** (the plan both test suites use) **1.021836305 / 1.040368933 / 1.029775347** on the same build. Still **not** checked against [MT69] or any external exact tail — only POLRAD-internally (`Eq. (18)/Eq. (38) → 1` as `x_A → 0`, 1.00230 unpolarised / 1.00313 tensor at x_A = 0.003) and against the leading log. Costs ~10 s of table build and needs `n_eta ≥ 64`. `t-peak` is the default and the **lower** edge: POLRAD Eqs. (37)–(39), (43), one peak of a three-peak object. `t-peak+ll` adds the leading-log s- and p-peaks and is the **upper** edge. Their sum is a **stated model of mixed approximation orders** (an η_A quadrature plus a single-z leading log), good to ~5–10 %, with an uncancelled soft `1/(1−z)` as `y → 0`; and it has **no tensor s/p partner**, so it **lowers the tensor fraction** of the tail (`r_T/r_U` ×0.66139 / ×0.0031829 / ×6.6076e−05 at x = 0.01 / 0.10 / 0.30, Q² = 5) — the tensor part of those peaks is, since 2026-09-06, **bounded, not computed** by `--rc-sp-tensor-scale`, and that bound is **empty at those three points** (recovers 0.0 % of the collapse, bit-identical) and at most **21.72 %** anywhere on the grid, with the quasi-elastic s/p column bounded by **nothing** — see §7b. Whole-run mean `rc_tail` on 200 k inclusive ⁶Li config-1 events, **at the default fill P_z = 0.7**: **1.021778527 → 1.040274188**; at **P_z = 0**, **1.021836305 → 1.040368933** (*corrected 2026-09-15: the 2026-09-06 note that the 1.021836 → 1.040369 pair "is pre-Phase-A and does not reproduce" is **withdrawn** — it is this build's own P_z = 0 answer, re-measured*). In the `Q² ≥ 20 GeV²`, `y ≤ 0.9` window the two edges agree to **+0.61 % event-weighted at P_z = 0, +0.62 % at P_z = 0.7** but **not cell by cell**: 331 of 1356 accepted cells (24.4 %) differ by more than 1 %, worst **×6444** at `x = 0.79`, `y = 0.0088`, and they differ by 59 % at `y = 0.985`. Per-cell agreement is ≤ 0.55 % only for `0.15 ≤ y ≤ 0.7` |
 | `--rc-qe-suppression` | **0, 0.5, 1** | a flat multiplier on the quasi-elastic tail, **on top of** the Pauli suppression below. `rc_tail` is quasi-elastic-**dominated** at every `x ≳ 0.03` (73 % of the tail at `x = 0.1`, **99.9 %** at `x = 0.30`), so 0 is never a small variation |
 | `--rc-qe-tensor-scale` | **0 (default) and 1 — and read the caveat before either** | the **POLARISED** quasi-elastic tail, which is otherwise treated as exactly tensor-blind on the piece that is 73 % of `rc_tail` at x = 0.1 and **99.9 %** at x = 0.30. Nobody has computed it: POLRAD has no tensor partner to Eq. (44) and no such calculation exists for an A = 6 spin-1 nucleus. At **1** the quasi-elastic tail is lent the **elastic** tail's own σ^el_T/σ^el_U — a **BORROWED MAGNITUDE, not a derived bound** (a *coherent* nuclear quadrupole fraction on an *incoherent* nucleon process). ⁶Li's elastic tensor fraction is anomalously small for a reason the quasi-elastic piece has no reason to share, so **1 may be ~10² too small at x ≤ 0.1**, and the SIGN it inherits is meaningless — read the **magnitude**. It is **exactly linear**, so one run rescales to any value. Measured at Q² = 5: ΔA_zz moves by −1.162e−07 / +3.018e−10 / +1.796e−09 at x = 0.01 / 0.10 / 0.30, i.e. **0.086 % / 0.0003 % / 0.25 %** of the band half-width there |
+| `--rc-sp-tensor-scale` | **0 (default) and 1 — and read where the bound is EMPTY before quoting either** | the **TENSOR fraction of the leading-log s-/p-peaks**, which `--rc-tail-model t-peak+ll` otherwise adds to the **unpolarised** numerator alone, so that edge lowers `r_T/r_U` by **×0.66139 / ×0.0031829 / ×6.6076e−05** at x = 0.01 / 0.10 / 0.30, Q² = 5 purely by growing the denominator (`r_U` ×1.512 / ×314.18 / ×15134). **Refused unless `--rc-tail-model t-peak+ll`** — the t-peak-only tail computes no s/p peaks, so a price there would be recorded without a single operation behind it. At **1** the **elastic** s-/p-peaks are lent the elastic t-peak's own σ^el_T/σ^el_U. **IT IS A BOUND WITH NO DERIVATION**, and it borrows *less* than `--rc-qe-tensor-scale` (the same coherent ⁶Li vertex, a different photon topology) — but **it is EMPTY at the three standard points**: Q′²_s = 4.3728 / 4.9382 / 4.9801 GeV² there, where F_c = −3.75e−45 / −6.44e−51 / −2.41e−51 against **+2.99260** at the t-peak's own t_min = 8.7304e−05, so `u_sp/σ^el_U` = 5.25e−79 / 2.07e−86 / 4.06e−83 and **ΔA_zz moves by exactly 0 at scale 0, 0.5 and 1**, recovering **0.0 %** of the collapse. It bites on **77 of 3051 accepted cells** (x ≤ 7.94e−03, y ≥ 0.366), reaching **582.9 %** of the band half-width at x = 4.169e−04, y = 0.9692 (`--rc-qe-tensor-scale 1` gives 328.4 % there) and recovering at most **21.72 %** of the collapse. Exactly linear, so one run rescales. The **quasi-elastic** s/p column is bounded by **neither** scale |
 | `RcOptions::qe_kf_gev` (API) | **0.169 (default), 0.221, 0** | POLRAD Eq. (44)'s `S_E`/`S_M`, the de Forest–Walecka Fermi-gas factor `S(q) = (3/4)(q/k_F) − (q/k_F)³/16` below `q = 2k_F`, exactly as POLRAD's `ffquas` codes it. **On by default** at ⁶Li's measured `k_F` (Moniz *et al.*, PRL **26** (1971) 445). It cuts the QRT to **0.47** at `x = 0.01` and **0.87** at `x = 0.1`; `0` is the unsuppressed edge v0 shipped |
 
 > **The C0 shape band decides a sign, so read this before quoting `σ^el_T`.**
@@ -2296,14 +2303,50 @@ number is in `docs/OPEN_ITEMS_SOLUTIONS.md` §9.
   inherits is meaningless. Read `RcOptions::qe_tensor_scale` in `rc.hpp`
   before quoting a number from it; measured sizes in
   `docs/open_items/run_2026-09-03/phase_B_numbers.md` §B3.
-* **`rc_tail` is a BAND OF TWO TAIL MODELS, and neither edge is "the"
-  radiative tail.** `--rc-tail-model t-peak` (the **default**, bit for bit
-  every published number) is ONE PEAK of the elastic and quasi-elastic tails
-  and its absolute normalisation is not validated against any exact tail: it
-  is a **lower bound on the dilution**. `--rc-tail-model t-peak+ll` adds the
+* **`rc_tail` has THREE tail models, the two t-peak ones are a PRICE RANGE
+  and NOT a confidence interval, and none of the three is "the" radiative
+  tail.** `--rc-tail-model t-peak` (the **default**, bit for bit every
+  published number) is ONE PEAK of the elastic and quasi-elastic tails and its
+  absolute normalisation is not validated against any exact tail: it is a
+  **lower bound on the dilution**. `--rc-tail-model t-peak+ll` adds the
   leading-log s- and p-peaks of the same two unpolarised observables
   (`ll_peaks_spin1` / `ll_peaks_qe`, promoted out of the test binary in the
-  2026-09-03 run) and is the **upper edge**. Run both; quote both.
+  2026-09-03 run) and is the **upper edge**. `--rc-tail-model polrad-full`
+  (2026-09-06) is POLRAD **Eq. (18) + Appendix B + Eq. (A.4)**: ONE exact τ_A
+  quadrature carrying all three peaks, with the s-/p-peaks' own Eq. (A.4)
+  **tensor** content. Run all three; quote all three.
+
+  **AND THE EXACT ONE IS NOT INSIDE THE OTHER TWO.** Measured over the
+  sampler's own 3051 accepted ⁶Li config-1 cells: `polrad-full` lies between
+  the two t-peak edges on **1725 (56.5 %)** and **outside on 1326 (43.5 %)**;
+  it covers a **median 0.6555** of the `t-peak → t-peak+ll` gap **over the
+  3027 cells whose gap is nonzero** (0.6620 over all 3051 — on the other 24
+  `t-peak+ll` equals `t-peak` exactly and the fraction is undefined), and the
+  **ratio of the σ-weighted mean shifts** is **0.428** (0.427958 unclipped,
+  0.427368 at the shipped `tail_max = 10`) — a **ratio of means**, *not* a
+  σ-weighted mean of the per-cell fractions, which is **6.483**; and in the
+  `Q² ≥ 20 GeV²`, `y ≤ 0.9` window it is **above
+  both** (8.815031e−03 against 8.719649e−03 and 8.773752e−03, at the default
+  fill P_z = 0.7). Whole-run mean
+  `rc_tail`, 200 k events, seed 1234, **at P_z = 0.7**: **1.021778527 →
+  1.040274188 → 1.029702912**; at **P_z = 0** (`tensor_thirds_plan(0.0, 0.6)`,
+  the plan both test suites use) **1.021836305 → 1.040368933 → 1.029775347**
+  on the same build. The cell-σ-weighted census above is P_z-free; an
+  event-weighted mean is not, because the fill plan decides which events the
+  sampler draws (re-measured at both, 2026-09-15).
+
+  **What `polrad-full` is still NOT checked against: Mo–Tsai, or any external
+  exact tail.** `[MT69]` is not in this tree and no number from it is quoted
+  anywhere. What is checked is **POLRAD-internal** — with a form factor dead
+  at the s-/p-peak vertex, so only the t-peak survives, `Eq. (18)/Eq. (38)` is
+  **1.00230** (unpolarised) and **1.00313** (tensor) — the F_m-only sector's ratios; the spin-0 unpolarised ratio at the same x_A is 1.00492 and the F_q tensor ratio 1.01872 (§B2.3) at `x_A = 0.003` and tends
+  to 1 as `x_A → 0` — the `Q_N = 0` Rosenbluth limit of Eq. (A.4) (T9,
+  un-skipped for this), and the leading-log fallback. It costs **~10 s** of
+  tail-table build and needs `rc_options.n_eta ≥ 64`; both a smaller `n_eta`
+  and a platform whose `long double` is no wider than `double` are **refused**,
+  never silently degraded. Details, and the FIVE transcription defects found in
+  `polrad2t.tex`'s Appendix B on the way, in
+  `docs/open_items/run_2026-09-06/phase_B_numbers.md` §B2.
 
   **The upper edge is a STATED MODEL, not a controlled expansion.** It sums
   POLRAD's η_A quadrature and a single-z collinear leading log, so it is
@@ -2314,11 +2357,59 @@ number is in `docs/OPEN_ITEMS_SOLUTIONS.md` §9.
   (`< 4e−4` of the Born at `x = 0.74`, `y = 0.007`) but the model is not
   trustworthy in that corner.
 
-  **NEITHER edge carries a tensor s/p peak**, because POLRAD supplies none and
-  this repository will not invent one (`docs/CONVENTIONS.md`: no second
-  definition of a physics number). The s+p therefore enter the **unpolarised**
-  numerator only, so `t-peak+ll` **lowers the tensor fraction of the tail** —
-  the tensor part of those peaks is **unknown, not zero**.
+  **NEITHER t-PEAK MODEL carries a tensor s/p peak**, because **Eq. (38)**
+  supplies none and a leading log cannot be given one without a second
+  definition of a physics number (`docs/CONVENTIONS.md`). **Eq. (18) DOES**,
+  and `polrad-full` computes it — the sentence *"POLRAD supplies no tensor s/p
+  peak"*, which stood here until 2026-09-06, was true of Eq. (38) and false of
+  the paper. On the two t-peak models the s+p therefore enter the
+  **unpolarised** numerator only, so `t-peak+ll` **lowers the tensor fraction
+  of the tail** —
+  measured at Q² = 5 GeV², ⁶Li config 1, production grid, 2026-09-06: `r_T/r_U`
+  falls by **×0.66139 / ×0.0031829 / ×6.6076e−05** at x = 0.01 / 0.10 / 0.30,
+  because `r_U` grows ×1.512 / ×314.18 / ×15134 while the tensor numerator does
+  not move at all.
+
+  Since 2026-09-06 the tensor part of those peaks is **bounded, not computed** —
+  and the number belongs with the word. `--rc-sp-tensor-scale`
+  (`RcOptions::sp_tensor_scale`, default **0.0**, **refused** unless
+  `--rc-tail-model t-peak+ll`, exactly linear so one run rescales) lends the
+  **elastic** s-/p-peaks the elastic t-peak's own σ^el_T/σ^el_U: scale 1 is the
+  sentence *"the s/p tensor fraction equals the elastic t-peak's"*. **It is a
+  bound with no derivation.** It borrows *less* than `--rc-qe-tensor-scale` —
+  the same coherent ⁶Li vertex reached by a different photon topology, not a
+  coherent ratio lent to an incoherent process — but it is **EMPTY at the three
+  standard points**: the s/p elastic vertex sits at Q′²_s = **4.3728 / 4.9382 /
+  4.9801 GeV²**, where F_c = −3.75e−45 / −6.44e−51 / −2.41e−51 against
+  **+2.99260** at the t-peak's own t_min = 8.7304e−05 GeV², so `u_sp/σ^el_U` =
+  5.25e−79 / 2.07e−86 / 4.06e−83 and scale 1 is **bit-identical to 0** there.
+  **And now that there is a computed answer to score it against, the bound was
+  not even one-sided**: at the same three points `polrad-full` gives
+  `r_T/r_U` **×0.79395 / ×0.0020032 / ×0.00022591** of the t-peak against
+  `t-peak+ll`'s ×0.66139 / ×0.0031829 / ×6.6076e−05 — so at x = 0.01 and 0.30
+  the bound pointed the right way and stopped far short, and at x = 0.10 it
+  pointed the **wrong** way. `--rc-sp-tensor-scale` is **refused on
+  `polrad-full`**, for the opposite reason it is refused on `t-peak`: the term
+  it stands in for **ran**.
+  ΔA_zz moves by **exactly 0** at x = 0.01 / 0.10 / 0.30, Q² = 5 for scale 0,
+  0.5 **and** 1, against `--rc-qe-tensor-scale 1`'s **0.0855 % / 0.00031 % /
+  0.246 %** of the band half-width on the same edge. It bites on **77 of 3051
+  accepted cells** (x ≤ 7.94e−03, y ≥ 0.366), where at scale 1 it reaches
+  **582.9 %** of the band half-width (x = 4.169e−04, Q² = 1.608, y = 0.9692,
+  against `--rc-qe-tensor-scale 1`'s 328.4 % there) — and that is the corner
+  where `t-peak+ll` is itself least trustworthy, so a large price there is not a
+  licence to quote it. The distribution over those 77 is extreme: **3** cells
+  exceed 100 % of the band, 6 exceed 10 %, 8 exceed 1 %, 18 exceed 0.1 %, and
+  the median is **2.8e−05 %**. Whole-run mean `rc_tail` (200 k, seed 1234, config 1)
+  moves **1.040274188 → 1.040274193** at scale 1 and → 1.040274711 at scale 100 (event-weighted at the CLI default P_z = 0.7).
+
+  **What is still bounded by nothing:** the **QUASI-ELASTIC s/p column**
+  (`TailTriple::qe_sp`). `--rc-qe-tensor-scale` multiplies σ^q_U alone and
+  `--rc-sp-tensor-scale` the elastic s/p column alone, so the column that
+  *survives* where the coherent one dies keeps a tensor part of exactly zero —
+  and it is essentially the whole of the collapse at x ≥ 0.10. It is now the
+  largest exactly-zero tensor term in `rc_tail`
+  (`open_items/run_2026-09-06/phase_B_numbers.md` §B1).
 
   **Where POLRAD §2.1.3 B's "the s- and p-peaks are suppressed" holds, and
   where it does not** (`tests/test_rc.cpp` T8(c)/T8(d)/T8(d)(i),
@@ -2326,12 +2417,31 @@ number is in `docs/OPEN_ITEMS_SOLUTIONS.md` §9.
   generator's bulk and it is **false cell by cell**; the two must not be
   quoted for each other.
 
-  * **Event-weighted — it holds.** For ⁶Li at EIC config 1 restricted to
-    `Q² ≥ 20 GeV²` and `y ≤ 0.9` (5182 of 200 000 events, seed 1234) the mean
-    dilution `⟨w_tail − 1⟩` moves **8.48914e−03 → 8.54072e−03**, **+0.61 %**,
-    when the s-/p-peaks are added. Weighting the sampler's accepted cells by
-    their cross section instead: 8.31257e−03 → 8.35972e−03, **+0.57 %**. A
-    *rate* analysis in that window is unaffected at the 1 % level.
+  * **Event-weighted — it holds, and SAY WHICH P_z.** For ⁶Li at EIC config 1
+    restricted to `Q² ≥ 20 GeV²` and `y ≤ 0.9`, at the CLI's **default fill
+    P_z = 0.7** (`tensor_thirds_plan(0.7, 0.6)`; 5194 of 200 000 events, seed
+    1234) the mean
+    dilution `⟨w_tail − 1⟩` moves **8.719649e−03 → 8.773752e−03**,
+    **+0.62 %**, when the s-/p-peaks are added, and **8.815031e−03**
+    (**+1.09 %**) on the exact `polrad-full` tail — which is **above both
+    edges**, so even this event-weighted statement does not BRACKET the exact
+    answer. At **P_z = 0** (`tensor_thirds_plan(0.0, 0.6)`, the plan both test
+    suites use and the plan the 2026-09-03 run published) the same build gives
+    **5182** events and **8.489138e−03 → 8.540716e−03 → 8.581236e−03**
+    (**+0.61 %**, **+1.08 %**). A *rate* analysis in that window is unaffected
+    at the 1 % level on either.
+    *(**CORRECTION, 2026-09-15 — re-measured at both P_z.** From 2026-09-06
+    this bullet said the "5182 of 200 000 events … 8.48914e−03 → 8.54072e−03,
+    +0.61 %" absolutes "no longer reproduce" and attributed the move to that
+    run's Phase A changing the ⁶Li kernel normalisation and with it the
+    sampler's cell weights. **Both claims are withdrawn.** Those digits are
+    this build's own P_z = 0 answer, reproduced here to every printed digit;
+    the 2026-09-06 numbers are the same run at the CLI default P_z = 0.7. The
+    re-measurement had switched fill plans without saying so —
+    `open_items/run_2026-09-03/phase_B_numbers.md:836-839` already tabulated
+    both rows. Phase A moved nothing here. The cell-weighted
+    8.31257e−03 → 8.35972e−03 pair remains withdrawn: it was never
+    re-measured.)*
   * **Per cell — it fails.** Of the sampler's 3051 accepted cells, 1356 sit at
     `Q² ≥ 20` and `y ≤ 0.9`, and **331 of those (24.4 %, 28.2 % of the
     window's cross section) disagree by more than 1 %**, worst **×6444** at
@@ -2405,15 +2515,28 @@ On `--rc-tail-model t-peak+ll` the **nodes** do clip again — **0.36 %**
 globally and **4.62 %** of the `y > 0.9` band on the 101 × 77 CLI grid — which
 is the same `y → 1` edge as everything else in this bullet; the **event**
 count stays **0 / 200 000**, because no accepted cell centre lands in those
-nodes. `Pipeline::rc_model()` (Python: `p.rc_model`) exposes `delta(x)`,
+nodes. On `--rc-tail-model polrad-full` the nodes clip **0.386 %** globally,
+and in a **different** corner — **0.456 %** of `y < 0.5` and **0.124 %** of
+`0.5 ≤ y ≤ 0.9`, and **nothing** at `y > 0.9`. Six accepted cells reach the
+`tail_max` ceiling there, all at `x = 0.955` with `y` = 0.049–0.193 (**4.96e−07
+of the cross section**, and the event count is again **0 / 200 000**): at
+`x → 1` the DIS Born is negligible while the elastic tail is not, so `w_tail`
+is genuinely ~4500 there and the t-peak, whose own vertex sits above
+`t_min ∝ x²`, returns 6.6e−21 — it is not a lower bound with an error there,
+it is zero where the answer is everything.
+`Pipeline::rc_model()` (Python: `p.rc_model`) exposes `delta(x)`,
 `tail_ratio_at(x, q2, q_n)`, `tail_sigma_at(x, q2)` (**five** wide since the
 2026-09-03 run: `u, t, qe, u_sp, qe_sp`, the last two zero unless
-`t-peak+ll`), `ff_provenance`, `clipped_fraction_by_y` and the **five** raw
-tail tables for plotting.
+`t-peak+ll` — and zero under `polrad-full` too, for a **different** reason:
+Eq. (18) puts all three peaks in ONE integral, so `u`/`qe` already contain the
+s+p and there is no decomposition to read), `ff_provenance`,
+`clipped_fraction_by_y` and the **five** raw tail tables for plotting.
 
 Cost: **0.106 s** at setup (the η_A quadratures over a 101 × 77 node grid;
 **1.29 s** on `--rc-c0-shape vmc-ft`, which evaluates a 99-term j₀ sum at every
-η node below its q = 3 fm⁻¹ cut instead of a closed form) and
+η node below its q = 3 fm⁻¹ cut instead of a closed form; **9.84 s** on
+`--rc-tail-model polrad-full`, which replaces each of them by a four-panel
+tanh-sinh τ_A quadrature in `long double`) and
 **≈ 14 %** of the inclusive event rate (575 k → 495 k ev/s single core on this
 machine — the same measurement `OPEN_ITEMS_SOLUTIONS.md` §9 and
 `phase_C_numbers.md` §8.3 quote; the *ratio* is the number to carry, the
@@ -2497,23 +2620,32 @@ the two `…` elisions:
          (InclusiveKernel::amplitudes adds helicity * (m/J) * cos(theta_S) *
          A_par and nothing else reads a PolSF).  The three TENSOR plans build
          every category at lam_e = 0, pe = 0 (bookkeeping.cpp: ...) ...
-     not read, at their defaults (42):
+     not read, at their defaults (44):
        not read at fsi = off: fsi_sigma_mb
        not read at rc = off: rc_delta_low_x, rc_delta_high_x, rc_x_low, ...
+         ... rc_tail_model, rc_sp_tensor_scale, rc_with_qe_tail, rc_with_tail,
+         rc_n_eta, rc_tail_max, rc_m_lepton
        not read by plan tensor-thirds: pzz_mode
        not read in FIXED-COUNT mode (events = 200): lumi_pb
        not read in fixed-count mode: poisson, apply_optics_lumi_fraction
        not read on channel inclusive: optics, n_sigma, pot_config,
          cluster_beta, p_d, triton_sf, tier, inclusive_b1, coherent_t_max, ...
        not read without --hadronize: coherent_t2, pom_set, pom_rescale
-     refused axes (8), where validate() throws on any other value:
+     refused axes (7), where validate() throws on any other value:
        b1_band_scale, b1_alpha_d_dwave_weight, b1_unpol, r_source,
-       cluster_wave, cluster_vmc_mc_sigma, fsi, rc_m_lepton
+       cluster_wave, cluster_vmc_mc_sigma, fsi
 ```
 
 *(66 knobs and seven refused axes until 2026-09-06, when `--r-source` added
-the eighth and `--pzz-mode` a 68th knob — labelled, not refused, under the
-three tensor plans; re-measured from the command above.)*
+an eighth and `--pzz-mode` a 68th knob — labelled, not refused, under the
+three tensor plans; re-measured from the command above. The eighth refused
+axis was `rc_m_lepton`, and it came back OUT the same day: `PolradFull` was
+implemented, `m_lepton` is READ on it, and at `--rc off` the row is
+`not-read` like every other rc knob — validate()'s whole rc block sits inside
+`if (rc != PipelineRc::Off)`, so `refused` was never true there. That is the
+ONE `meta` change an `--rc off` run sees from
+`docs/open_items/run_2026-09-06/phase_B_numbers.md` §B2; the 48 numeric
+columns are byte-identical.)*
 
 Read that block against the five rounds: `pol_sf` and `pe` are round 2, on the
 **default plan**; `optics` / `n_sigma` / `pot_config` are not read on the
@@ -2556,8 +2688,12 @@ buys. A rule that depends on the run PLAN can only be labelled, because
 array is bit for bit):
 
 * `--rc-fq-scale`, `--rc-tail-tensor-scale`, `--rc-c0-shape`,
-  `--rc-qe-suppression`, `--rc-qe-tensor-scale`, `--rc-tail-model` and the four
-  API-only tail knobs are **refused** on the three tagged channels, where
+  `--rc-qe-suppression`, `--rc-qe-tensor-scale`, `--rc-sp-tensor-scale`,
+  `--rc-tail-model` and the four
+  API-only tail knobs (`with_qe_tail`, `n_eta`, `tail_max`, `m_lepton` — the
+  last of which is **read** on `--rc-tail-model polrad-full` since 2026-09-06
+  and refused on the two t-peak models) are **refused** on the three tagged
+  channels, where
   `rc_tail == 1` by construction — each of them was measured bit-identical to
   the `--rc tensor-band` baseline there — and every rc sub-knob is refused on
   the coherent channel, where `RcModel::applies()` is false. `--rc

@@ -127,12 +127,19 @@ double sph_bessel(int l, double v) {
     if (std::fabs(v) < 1e-3) return 1.0 - v2 / 6.0 + v2 * v2 / 120.0;
     return std::sin(v) / v;
   }
+  if (l == 1) {
+    // Added 2026-09-06 for `alpha_t_quadrupole` (L = 1 alpha-t).  The l = 0
+    // and l = 2 branches are untouched, so every number this file already
+    // published is bit for bit what it was.
+    if (std::fabs(v) < 1e-2) return v / 3.0 * (1.0 - v2 / 10.0 + v2 * v2 / 280.0);
+    return std::sin(v) / v2 - std::cos(v) / v;
+  }
   if (l == 2) {
     if (std::fabs(v) < 1e-1) return v2 / 15.0 * (1.0 - v2 / 14.0 + v2 * v2 / 504.0);
     const double v3 = v2 * v;
     return (3.0 / v3 - 1.0 / v) * std::sin(v) - 3.0 / v2 * std::cos(v);
   }
-  throw std::runtime_error("b1_nuclear: sph_bessel implemented for l = 0, 2");
+  throw std::runtime_error("b1_nuclear: sph_bessel implemented for l = 0, 1, 2");
 }
 
 /// The raw digitized CDKS theory-1 column as a TensorSF (see the header).
@@ -874,6 +881,60 @@ double alpha_d_quadrupole_fm2(const ClusterPartialWave& phi0,
     integ[i] = r * r * wr[i] * (2.0 * std::sqrt(2.0) * ur[i] - wr[i]);
   }
   return trapezoid(integ, rr) / 20.0;
+}
+
+// ------------------------------------------------------- the A = 7 gate
+
+AlphaTQuadrupole alpha_t_quadrupole(const VmcRadial& phi1, double r_max_fm,
+                                    std::size_t n_r, std::size_t n_k) {
+  AlphaTQuadrupole out;
+  // Z_eff from the AME nuclear masses, never from A-numbers (0.17 % apart).
+  const double m_t = nuclear_mass(1, 3);
+  const double m_a = nuclear_mass(2, 4);
+  const double m_7 = nuclear_mass(3, 7);
+  out.z_eff = 2.0 * (m_t / m_7) * (m_t / m_7) + 1.0 * (m_a / m_7) * (m_a / m_7);
+  if (phi1.k().size() < 2 || n_r < 2 || n_k < 2) return out;
+  // The SPLINE, not the linear `VmcRadial::operator()`: the same natural
+  // cubic spline `alpha_d_quadrupole_fm2` gets through `ClusterPartialWave`,
+  // and the reason is the same one the header of `ClusterPartialWave` gives.
+  // `l = 0` is a CONTAINER slot here and carries no phase (i^0 = 1); the
+  // physical L = 1 enters as j_1 below, because `from_uw` refuses odd L by
+  // design (i^L is not real there) and only |phi|^2 and j_1 are wanted.
+  const ClusterPartialWave w =
+      ClusterPartialWave::from_uw(phi1.k(), phi1.psi(), 0);
+  const double kmax_fm = phi1.k().back() / HBARC_GEV_FM;
+  const std::vector<double> kf = linspace(0.0, kmax_fm, n_k);
+  std::vector<double> pf(n_k);
+  for (std::size_t i = 0; i < n_k; ++i) pf[i] = w(kf[i] * HBARC_GEV_FM);
+  const std::vector<double> rr =
+      linspace(r_max_fm / static_cast<double>(n_r), r_max_fm, n_r);
+  std::vector<double> u(n_r), u2(n_r), r2u2(n_r), t1(n_k);
+  const double c = std::sqrt(2.0 / kPi);
+  for (std::size_t i = 0; i < n_r; ++i) {
+    const double r = rr[i];
+    for (std::size_t j = 0; j < n_k; ++j) {
+      t1[j] = kf[j] * kf[j] * sph_bessel(1, kf[j] * r) * pf[j];
+    }
+    u[i] = r * c * trapezoid(t1, kf);   // u_1(r) = r R_1(r)
+    u2[i] = u[i] * u[i];
+    r2u2[i] = r * r * u2[i];
+  }
+  const double n = trapezoid(u2, rr);
+  if (!(n > 0.0)) return out;
+  out.r2_fm2 = trapezoid(r2u2, rr) / n;
+  out.r_rms_fm = std::sqrt(out.r2_fm2);
+  out.q_fm2 = -0.4 * out.z_eff * out.r2_fm2;
+  return out;
+}
+
+AlphaTQuadrupole li7_alpha_t_quadrupole(double vmc_mc_sigma, double r_max_fm,
+                                        std::size_t n_r, std::size_t n_k) {
+  const TaggedChannel c = li7_alpha_channel(
+      BETA_DEFAULT, ClusterWaveSource::VmcAV18, vmc_mc_sigma);
+  if (c.waves.size() != 1 || !c.waves[0].vmc) {
+    throw std::runtime_error("li7_alpha_t_quadrupole: no VMC wave");
+  }
+  return alpha_t_quadrupole(*c.waves[0].vmc, r_max_fm, n_r, n_k);
 }
 
 }  // namespace lipolgen

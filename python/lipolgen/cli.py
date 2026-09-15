@@ -266,7 +266,8 @@ def build_parser():
                         "EDGES.  The tensor fraction of the elastic tail at "
                         "x = 0.1 is +1.6e-4 on one edge and -4.1e-5 on the "
                         "other, i.e. its sign is a band edge and not a result")
-    p.add_argument("--rc-tail-model", choices=("t-peak", "t-peak+ll"),
+    p.add_argument("--rc-tail-model",
+                   choices=("t-peak", "t-peak+ll", "polrad-full"),
                    default=None,
                    help="which radiative-tail formulation rc_tail carries: "
                         "\"t-peak\" (default, bit for bit every published "
@@ -279,14 +280,60 @@ def build_parser():
                         "NO tensor s/p partner -- so it LOWERS the tensor "
                         "fraction of the tail where it bites.  For 6Li at "
                         "EIC Q^2 >= 20 GeV^2, y <= 0.9 it moves the "
-                        "EVENT-WEIGHTED mean tail by only +0.61 %%, but it is "
+                        "EVENT-WEIGHTED mean tail by only +0.61 %% at --pz 0 "
+                        "(+0.62 %% at the default P_z = 0.7), but it is "
                         "NOT negligible cell by cell: 331 of that window's "
                         "1356 accepted cells (24.4 %%, 28.2 %% of its cross "
                         "section) move by > 1 %% and the worst by x6444, at "
                         "high x and y ~ 0.009 where the soft 1/(1-z) radiator "
                         "D(z_s) reaches 11.5 and the model itself breaks "
                         "down.  A factor ~4 at fixed-target kinematics.  RUN "
-                        "BOTH")
+                        "BOTH.  \"polrad-full\" (2026-09-06) is POLRAD "
+                        "Eq. (18) + Appendix B + Eq. (A.4): ONE exact tau_A "
+                        "quadrature carrying all THREE peaks WITH the "
+                        "s-/p-peaks' own Eq. (A.4) tensor content, so it "
+                        "needs no s/p tensor stand-in and --rc-sp-tensor-"
+                        "scale is refused on it.  ITS ABSOLUTE NORMALISATION "
+                        "IS STILL NOT CHECKED AGAINST MO-TSAI OR ANY "
+                        "EXTERNAL EXACT TAIL -- only POLRAD-internally (the "
+                        "x_A -> 0 reduction to Eq. (38), unpolarised AND "
+                        "tensor) and against the leading-log fallback.  It "
+                        "does NOT sit inside the t-peak band: measured over "
+                        "the sampler's 3051 accepted cells it lies between "
+                        "the two edges on 1725 (56.5 %%), covers a median "
+                        "0.6555 of the gap OVER THE 3027 CELLS WHOSE GAP IS "
+                        "NONZERO (0.6620 over all 3051; on the other 24 "
+                        "t-peak+ll equals t-peak exactly and the fraction is "
+                        "undefined), the RATIO of the sigma-weighted mean "
+                        "SHIFTS is 0.428 -- a ratio of means, NOT a "
+                        "sigma-weighted mean of the per-cell fractions, "
+                        "which is 6.483 -- and it "
+                        "leaves the band on the far side at the high-x, "
+                        "low-y corner -- x4518.3 the t-peak at x = 0.954993, "
+                        "Q^2 = 206.68, y = 0.0544 with the ceiling raised.  "
+                        "At the SHIPPED rc_options.tail_max = 10 that cell "
+                        "and five others clip to x11, which is 1 + tail_max: "
+                        "the CEILING, not the model (the 'x11 at x = 0.955, "
+                        "Q^2 = 186' this help printed until 2026-09-06 was "
+                        "that ceiling mislabelled; that cell is x3449.9 "
+                        "unclipped).  Mean rc_tail on 6Li config 1, each "
+                        "with its estimator AND its P_z: EVENT-weighted over "
+                        "200 000 events at seed 1234 AT THE DEFAULT FILL "
+                        "P_z = 0.7, 1.021778527 (t-peak) -> "
+                        "1.040274188 (t-peak+ll) -> 1.029702912 "
+                        "(polrad-full), and at --pz 0 (the plan both test "
+                        "suites use) 1.021836305 -> 1.040368933 -> "
+                        "1.029775347 on the same build -- the fill plan "
+                        "moves which events the sampler draws, so an "
+                        "event-weighted mean is a statement about a "
+                        "POLARISATION as well as a seed; "
+                        "CELL-cross-section-weighted over the "
+                        "3051 accepted cells, 1.02217080 -> 1.04097066 -> "
+                        "1.03021634 unclipped, the last becoming 1.03020526 "
+                        "at tail_max = 10, and that estimator is P_z-free "
+                        "(measured identical on both plans).  "
+                        "Costs ~10 s of tail-table build "
+                        "and needs rc_options.n_eta >= 64")
     p.add_argument("--rc-tail-tensor-scale", type=float, default=None,
                    help="multiplier on the 6Li MAGNETIC form factor -- the "
                         "eta*F_m^2 tensor sector, which --rc-fq-scale does "
@@ -314,6 +361,32 @@ def build_parser():
                         "fraction is anomalously suppressed for a reason the "
                         "quasi-elastic piece does not share.  LINEAR, so one "
                         "run rescales.  Read the magnitude, never the sign")
+    p.add_argument("--rc-sp-tensor-scale", type=float, default=None,
+                   help="price the TENSOR FRACTION OF THE LEADING-LOG "
+                        "s-/p-PEAKS, which --rc-tail-model t-peak+ll "
+                        "otherwise adds to the UNPOLARISED numerator alone, "
+                        "so that edge LOWERS the tensor fraction of the tail "
+                        "by growing the denominator alone (r_T/r_U x0.66 / "
+                        "x0.0032 / x6.6e-05 at x = 0.01 / 0.10 / 0.30, "
+                        "Q^2 = 5).  NEEDS --rc-tail-model t-peak+ll (refused "
+                        "otherwise: the t-peak-only tail computes no s/p "
+                        "peaks at all).  Default 0.0.  At 1.0 the ELASTIC "
+                        "s-/p-peaks are given the elastic t-peak's own tensor "
+                        "fraction.  IT IS A BOUND WITH NO DERIVATION: "
+                        "POLRAD's Eq. (38) supplies no tensor s/p peak and "
+                        "none is derived here -- but Eq. (18) + Eq. (A.4) "
+                        "DOES supply one and --rc-tail-model polrad-full "
+                        "computes it, which is why this flag is refused "
+                        "there for the OPPOSITE reason (the term ran).  It "
+                        "borrows LESS than --rc-qe-tensor-scale "
+                        "(one coherent 6Li vertex, two photon topologies) "
+                        "but the s/p vertex sits at Q'^2 ~ Q^2 where the "
+                        "coherent form factor is DEAD -- so MEASURED the "
+                        "shift is EXACTLY 0 at those three points, and "
+                        "reaches 583 %% of the band half-width only at "
+                        "x = 4.2e-4, y = 0.97 (77 of 3051 cells).  LINEAR, "
+                        "so one run rescales.  Read the magnitude, never "
+                        "the sign")
     p.add_argument("--inclusive-b1", action="store_true", default=None,
                    help="put an inclusive b1 in the struck cluster's kernel.  "
                         "OFF by default on the tagged channels, deliberately: "
@@ -643,6 +716,7 @@ DEFAULTS = dict(isotope="6Li", config=1, channel="inclusive",
                 rc_a_transfer_frac=0.0,
                 rc_fq_scale=1.0, rc_tail_tensor_scale=1.0,
                 rc_qe_suppression=1.0, rc_qe_tensor_scale=0.0,
+                rc_sp_tensor_scale=0.0,
                 rc_c0_shape="ho",
                 rc_tail_model="t-peak",
                 coherent_t2="pomeron", pom_set=6, pom_rescale=1.0,
@@ -1042,6 +1116,7 @@ def main(argv=None):
                       rc_tail_tensor_scale=opts["rc_tail_tensor_scale"],
                       rc_qe_suppression=opts["rc_qe_suppression"],
                       rc_qe_tensor_scale=opts["rc_qe_tensor_scale"],
+                      rc_sp_tensor_scale=opts["rc_sp_tensor_scale"],
                       rc_c0_shape=opts["rc_c0_shape"],
                       rc_tail_model=opts["rc_tail_model"],
                       inclusive_b1=opts["inclusive_b1"],
@@ -1402,7 +1477,20 @@ def main(argv=None):
                     "as a price tag on an omission, never as the polarised "
                     "quasi-elastic tail."
                     % cfg.rc_options.qe_tensor_scale)
-            if r.options.tail_model == _l.RcTailModel.TPeak:
+            if r.options.tail_model == _l.RcTailModel.PolradFull:
+                say("     the tail is POLRAD Eq. (18) + Appendix B + "
+                    "Eq. (A.4) (--rc-tail-model polrad-full): ONE exact "
+                    "tau_A quadrature carrying all THREE peaks, with the "
+                    "s-/p-peaks' OWN Eq. (A.4) tensor content -- the term "
+                    "t-peak+ll can only bound.  ITS ABSOLUTE NORMALISATION "
+                    "IS STILL NOT CHECKED AGAINST MO-TSAI OR ANY EXTERNAL "
+                    "EXACT TAIL: no such number is in this tree.  What is "
+                    "checked is POLRAD-INTERNAL (the x_A -> 0 reduction to "
+                    "Eq. (38), unpolarised AND tensor, and the Q_N = 0 "
+                    "Rosenbluth limit) and the leading-log fallback.  The "
+                    "QUASI-ELASTIC tail is a sum over SPIN-1/2 nucleons and "
+                    "is tensor-blind at all three peaks here too.")
+            elif r.options.tail_model == _l.RcTailModel.TPeak:
                 say("     the tail is the t-PEAK ONLY (POLRAD Eqs. 37-39): "
                     "its absolute normalisation is NOT validated against an "
                     "exact tail.  Measured (test_rc.cpp T8(c), T8(d)) against "
@@ -1424,9 +1512,41 @@ def main(argv=None):
                     "UNCANCELLED soft 1/(1-z) that overshoots as y -> 0 -- "
                     "NOT a controlled O(alpha) expansion.  It has NO tensor "
                     "s/p partner, so it LOWERS the tensor fraction of the "
-                    "tail: the tensor part of those peaks is UNKNOWN, not "
-                    "zero.  This is the UPPER edge of a band whose lower "
+                    "tail: the tensor part of those peaks is BOUNDED, NOT "
+                    "COMPUTED.  This is the UPPER edge of a band whose lower "
                     "edge is --rc-tail-model t-peak; quote both.")
+                if cfg.rc_options.sp_tensor_scale == 0.0:
+                    say("     the s/p TENSOR fraction is NOT priced on this "
+                        "run: rc_tail carries the leading-log s-/p-peaks in "
+                        "the UNPOLARISED numerator only, so this edge LOWERS "
+                        "the tensor fraction of the tail by growing its "
+                        "denominator alone.  --rc-sp-tensor-scale prices that "
+                        "omission with a BOUND THAT HAS NO DERIVATION -- and "
+                        "MEASURED (6Li config 1, 2026-09-06) that bound is "
+                        "EMPTY at the three standard points: at x = 0.01 / "
+                        "0.10 / 0.30, Q^2 = 5 the coherent s/p vertex sits at "
+                        "Q'^2 = 4.37 / 4.94 / 4.98 GeV^2, where 6Li's form "
+                        "factor is 45-51 decades down, so scale 1 is BIT-"
+                        "IDENTICAL there.  It bites on 77 of 3051 accepted "
+                        "cells (x < 0.008, y > 0.37), reaching 583 % of the "
+                        "band half-width at x = 4.2e-4, y = 0.969.  The "
+                        "QUASI-ELASTIC s/p column, which carries the s+p "
+                        "everywhere else, is bounded by NOTHING.")
+                else:
+                    say("     the s/p TENSOR fraction is priced by a STAND-IN "
+                        "at sp_tensor_scale = %.4g: the ELASTIC s-/p-peaks "
+                        "are given the elastic t-peak's own tensor fraction. "
+                        " IT IS A BOUND WITH NO DERIVATION -- the same "
+                        "coherent 6Li vertex, but the s/p one sits at "
+                        "Q'^2 ~ Q^2 where the coherent form factor is DEAD, "
+                        "so the borrowed ratio may be the WRONG REFERENCE at "
+                        "high Q^2, and there the term it scales is ~0, so it "
+                        "prices NOTHING exactly where the s/p peaks dominate. "
+                        " The QUASI-ELASTIC s/p column is covered by neither "
+                        "this nor --rc-qe-tensor-scale and stays exactly "
+                        "tensor-blind.  Quote it as a price tag on an "
+                        "omission, and read the magnitude, never the sign."
+                        % cfg.rc_options.sp_tensor_scale)
         if r.applies:
             say("     the weights are on Event.rc_weights and NOT on "
                 "Event.weight: a systematic variation and a background, not "

@@ -66,6 +66,16 @@ function predicts with no free parameter:
 > The ⁶Li sign gate, from the same code path, gives **−0.3333 fm² against
 > −0.0818 fm², a factor 4.08 too large**. **The ⁷Li wave-function input is
 > validated by a measured moment an order of magnitude better than ⁶Li's is.**
+>
+> **COMMITTED 2026-09-06** (run 2026-09-06 §B3, D11 paid). The reference is
+> now `LI7_QUADRUPOLE_FM2` = **−4.06 fm²** (`rc.hpp`, TUNL's A = 5, 6, 7
+> evaluation — the same one `LI6_QUADRUPOLE_FM2` comes from), so the primary
+> ratio is **0.858389** (0.871265 against the −4.00(3) this note quoted), and
+> the whole calculation is shipped code (`li7_alpha_t_quadrupole`) that
+> reproduces this note's own §9 recipe **bit for bit**, pinned by doctest T13
+> and pytest G8. The ⁶Li contrast re-measures as **4.0748**, so "an order of
+> magnitude better" is **21.7×**, measured. **It gates the wave function; it
+> is not a b₁ verdict and b₁(⁷Li) is still unimplemented.**
 
 **And the recommendation is nevertheless *not* "implement it now".** The
 convolution's sign is not predicted by anything in this tree. Swapping the
@@ -473,11 +483,25 @@ Q(7Li)_alpha-t = -3.4851 fm^2
    VMC MC band:     -3.4964 (-1 sigma) / -3.4851 (0) / -3.4737 (+1 sigma)
 ```
 
-Against the measured moment — **an external number, not in this tree** (there is
-no `LI7_QUADRUPOLE_FM2`; §7 D11) — Q(⁷Li) = −4.00(3) fm²:
+Against the measured moment — which **was** an external number absent from
+this tree when this note was written (§7 D11), and **since 2026-09-06 is
+`LI7_QUADRUPOLE_FM2` = −4.06 fm² in `rc.hpp`** — Q(⁷Li):
 
-> **ratio 0.8713** (0.8584 against the −4.06 fm² of some compilations).
-> **13 % low, converged to 0.1 %, MC band ±0.3 %.**
+> **ratio 0.8584** against the committed −4.06 fm² (TUNL A = 5, 6, 7, the same
+> evaluation `LI6_QUADRUPOLE_FM2` comes from), **0.8713** against the −4.00(3)
+> fm² this note originally quoted (Voelk *et al.*, NPA 530 (1991) 475, one of
+> the eight determinations N. J. Stone lists without recommending one).
+> **13–14 % low, converged to 0.1 %, MC band ±0.3 %.**
+
+**This is no longer an offline calculation.** `li7_alpha_t_quadrupole`
+(`b1_nuclear.hpp`) ships it, and it reproduces §9's `q_at` **to the last bit**
+(relative difference 0.000e+00 on ⟨r²⟩, Q and Z_eff, measured 2026-09-06); the
+grid row, the MC band and both ratios are pinned by `tests/test_b1_nuclear.cpp`
+T13 and `python/tests/test_li7_rank2.py` G8, and the run-2026-09-06 numbers are
+in `../run_2026-09-06/phase_B_numbers.md` §B3. What the test asserts is the
+**ratio**, reported — never a pass/fail on b₁(⁷Li), which is still not
+implemented (open item 15) and which G8 re-checks is still exactly zero in the
+very test that runs the gate.
 
 For contrast, from the same code path on ⁶Li:
 `alpha_d_quadrupole_fm2(li6_alpha_d_partial_waves())` = **−0.3333 fm²** against
@@ -757,7 +781,7 @@ statistics, not the quadrature, not the VMC errors — is what sets it.**
 | **D8** | **`LightConeDensities`' interface.** Its φ₀/φ₂ + SD/DD shape is an A = 2/⁶Li shape. §9 reuses `f_d`/`f_d_p2` with the L = 1 wave in the φ₂ slot — numerically exact, semantically a lie | A first-class implementation needs either an L-generic alignment slot or an explicit `Options::alignment_coefficient` (1 for L = 1/S = ½/J = 3/2, 1.5 for the L = 2 DD term, 6/√2 for the SD one) — which would also let the ⁶Li coefficients be *derived* rather than hard-coded at `b1_nuclear.cpp:355-356` |
 | **D9** | **b₂_32.** `TensorSF`'s base gives 2x·b₁ | No reason to differ, but the ⁷Li slot is separate (`b2_32_func`) and silence there means 2x·b₁ by default, which should be stated rather than inherited |
 | **D10** | **Δ_32 (cos 2φ gluon transversity).** ⁶Li gets `toy_delta_gluon(…, 1e-2)`; ⁷Li gets nothing | Filling `b1_32_func` alone leaves cos 2φ at zero. There is **no ⁷Li Δ model**; reusing the ⁶Li toy means adopting an arbitrary 1e−2 scale for a second nucleus. Note 3·Q_NN = ±3 for J = 3/2 against ±1/−2 for spin 1, so the same Δ gives a *larger* ⁷Li cos 2φ amplitude |
-| **D11** | **Q(⁷Li) is not in the tree.** There is no `LI7_QUADRUPOLE_FM2` beside `LI6_QUADRUPOLE_FM2` (`rc.hpp`) | If §4.2's gate is committed, exactly one copy must be added with a real source, and the −4.00(3) vs −4.06 spread recorded (it moves the ratio 0.871 → 0.858) |
+| **D11** | ~~**Q(⁷Li) is not in the tree.**~~ **PAID 2026-09-06**: `LI7_QUADRUPOLE_FM2` = **−4.06 fm²** now sits beside `LI6_QUADRUPOLE_FM2` at `rc.hpp:669` | Exactly one copy, from a real source — TUNL's A = 5, 6, 7 evaluation (NPA 708 (2002) 3), the **same document** the ⁶Li constant comes from, which is what fixed the choice; the −4.00(3) vs −4.06 spread is recorded in the constant's own comment together with all eight of Stone's ⁷Li entries, and the predicted price is confirmed: ratio **0.871265 → 0.858389** |
 | **D12** | **The run-plan surface.** No spin-3/2 tensor plan exists (§1.5 F1) | A ⁷Li A_zz programme needs `tensor_thirds_plan`'s J = 3/2 analogue — and §2.3's note that for J = 3/2 the pure-alignment fill (P_z = 0, symmetric populations) is *rank-3 clean by construction*, so the honest ⁷Li A_zz plan is the two-state T = +1 / T = −1 contrast of §1.3, not a thirds pattern |
 
 ---
@@ -791,6 +815,13 @@ does so an order of magnitude better than the ⁶Li sign gate validates its own.
 It is worth having on its own merits (it is the only quantitative check the
 ⁷Li α–t input has ever had), it costs one constant (D11) and ~20 lines, and it
 is the thing §4.1's absence of an A = 3 gate makes indispensable.
+
+**DONE 2026-09-06** (run 2026-09-06 task B3): the constant is
+`LI7_QUADRUPOLE_FM2` = −4.06 fm² at `rc.hpp:669`, the ~20 lines are
+`alpha_t_quadrupole` / `li7_alpha_t_quadrupole` in `b1_nuclear.{hpp,cpp}`, and
+the gate is `tests/test_b1_nuclear.cpp` **T13** + `python/tests/test_li7_rank2.py`
+**G8**. Step 2 is closed; steps 1, 3 and 4 of this section are not, and the
+gate deliberately licenses none of them.
 
 ### Step 3 — the α–t b₁ as a third `B1Model`, but only after D2
 
@@ -912,9 +943,19 @@ L=2 M=+1.0  <P2>=-0.100000  -5<P2>/Q_NN=+1.500000      <- the code's own 6Li DD 
 * It does **not** validate the light-cone convolution at A = 7. The quadrupole
   gate validates the **wave function**; nothing offline validates the
   convolution, and §4.1 explains why nothing can.
-* Q(⁷Li) = −4.00(3) fm² is **external and not in this tree**. It is quoted from
-  memory of the standard compilations and **must be sourced before it is
-  committed** (D11); the −4.06 fm² alternative is recorded beside it.
+* ~~Q(⁷Li) = −4.00(3) fm² is **external and not in this tree**. It is quoted
+  from memory of the standard compilations and **must be sourced before it is
+  committed** (D11); the −4.06 fm² alternative is recorded beside it.~~
+  **SOURCED AND COMMITTED 2026-09-06 (D11 paid, run 2026-09-06 task B3).** The
+  constant is `LI7_QUADRUPOLE_FM2` = **−4.06 fm²** in `rc.hpp`, beside
+  `LI6_QUADRUPOLE_FM2` — the −4.06 alternative, not the −4.00 this note quoted,
+  because it comes from the **same evaluation** the ⁶Li constant does (TUNL's
+  A = 5, 6, 7, Tilley *et al.*, NPA 708 (2002) 3, whose A = 7 half prints
+  "Q = −40.6 ± 0.8 mb"), which is what "match conventions" means here. §4.2's
+  ratio is therefore **0.858389** as the primary number and **0.871265**
+  against the −4.00; the swap is 1.5 % and changes nothing this note concludes.
+  See `../run_2026-09-06/phase_B_numbers.md` §B3 for the fetch, the eight-entry
+  Stone compilation spread, and the measurement.
 * The ⁶Li + n sketch of §5.5 is a **Clebsch–Gordan transfer only** — no orbital
   smearing, no struck neutron, from an r-space-only table. It is an
   order-of-magnitude cross-check, not a computation.

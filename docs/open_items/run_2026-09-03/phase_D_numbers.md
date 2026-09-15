@@ -311,14 +311,20 @@ both lengths. Both orders reach the same value, 1.6875 at k = 0.15 on the
   orbital term) entered any header, constant or test. They stay in that note,
   which states plainly that their **sign** is not predicted by the inputs in
   this tree.
-* **The A = 7 quadrupole gate (§4.2 of the note) was NOT committed**, and this
-  section reports no Q(⁷Li). It needs one constant that is **not in this
-  tree** — the measured Q(⁷Li) = −4.00(3) fm², which that note quotes from
+* **The A = 7 quadrupole gate (§4.2 of the note) was NOT committed** *in this
+  run*, and this section reports no Q(⁷Li). It needed one constant that was
+  **not in this tree** — the measured Q(⁷Li), which that note quotes from
   memory of the standard compilations and itself says "must be sourced before
   it is committed" (its decision D11). A number nobody in this session
-  verified against a source is not a gate; it is filed as step 2 of §15
+  verified against a source is not a gate; it was filed as step 2 of §15
   instead, with the −4.06 fm² alternative and the ratio it moves (0.871 →
   0.858) recorded there.
+  **CLOSED 2026-09-06 by run 2026-09-06 task B3** (`../run_2026-09-06/phase_B_numbers.md`
+  §B3): the constant is `LI7_QUADRUPOLE_FM2` = **−4.06 fm²** (`rc.hpp:669`,
+  TUNL's A = 5, 6, 7 evaluation — the alternative, taken because it is the same
+  document `LI6_QUADRUPOLE_FM2` comes from), the gate is
+  `li7_alpha_t_quadrupole` + doctest T13 + pytest G8, and the ratio is
+  **0.858389** (0.871265 against −4.00). Nothing in *this* section moved.
 * **Nothing was measured about the ⁶Li + n decomposition** (§5.5 of the note)
   beyond reading it.
 * **The rank-3 (octupole) sector was not touched.** `R₃` remains at 0 by

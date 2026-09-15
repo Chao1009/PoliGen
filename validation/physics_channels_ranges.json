@@ -174,7 +174,7 @@
   "first": "### Installing the Python package with pip",
   "last": "`docs/OPEN_ITEMS_SOLUTIONS.md` §12–13 and `docs/open_items/engineering.md` §C)."
  },
- "docs/USAGE.md:1495-1503": {
+ "docs/USAGE.md:1501-1509": {
   "sha256": "c8958c6536993541d5bf2508013977038b638531c53ac6057b128baf57c0188b",
   "first": "### Tier T1 — the struck cluster is resolved (the default)",
   "last": "* its `Role::PartnerSpectator` fragments (status 1, **on shell** at their"
@@ -184,25 +184,25 @@
   "first": "X (pdg 92). The balance is **per-nucleon**, `k + P_N = k' + X`, exactly as",
   "last": "number the generator could emit was made on the toy** — including after the"
  },
- "docs/USAGE.md:1927-2118": {
+ "docs/USAGE.md:1933-2124": {
   "sha256": "90a7c095fadc0dee726f4abe18f015cbe6f0854a37ea71d93e4fac3e9aa7eeef",
   "first": "## 5. Far-forward routing",
   "last": "  `rc_tensor_lo`/`rc_tensor_hi`/`rc_tail`. **Every other CLI plan is"
  },
- "docs/USAGE.md:2008-2014": {
+ "docs/USAGE.md:2014-2020": {
   "sha256": "cfa42994d7893afe53474900d5ca86ee2ae2bea465e3bb6860fbbbb5a36be9b1",
   "first": "## 7. Checks you get for free",
   "last": "```"
  },
- "docs/USAGE.md:2146-2321": {
-  "sha256": "bbdd1278f468f565c73cf305f63c207937553f88d38d5a8c3ab94badc5cc725d",
-  "first": ">   lithium channel is **unbound** — ⁵Li and ⁵He are resonances above the",
-  "last": "  the tensor part of those peaks is **unknown, not zero**."
- },
- "docs/USAGE.md:2581-2588": {
+ "docs/USAGE.md:2717-2724": {
   "sha256": "9cf755a3c8b97c0b7abde6620cc7250bf839feba9aff18acc6a0239127260383",
   "first": "## 8. Command-line generators",
   "last": "```"
+ },
+ "docs/USAGE.md:2744-2941": {
+  "sha256": "09f5b2bb32ff0ac99ff94ea17b2d4d69cb0c936f487c70360ee1283946b4ecc0",
+  "first": "## 9. Polarized ⁶Li configurations for coherent-diffraction codes",
+  "last": "and `phase_G_numbers.md` the reproduced numbers."
  },
  "docs/open_items/physics_literature.md:108-112": {
   "sha256": "590126d6d6102339410e72817fecf6527aa61f733b64f635e5c60af28cc750c9",
@@ -424,17 +424,17 @@
   "first": "  /// DEPRECATED (2026-08-30, superseded by the T1 tier).  Hook: pick the",
   "last": "  /// `PythiaBridgeStats::n_cluster_fallback`."
  },
- "include/lipolgen/rc.hpp:154-161": {
+ "include/lipolgen/rc.hpp:195-202": {
   "sha256": "78b79c4278535e4b171f0ba3f39f70ff1e7ca88f4cedd5ac116356683dd6fad6",
   "first": "/// w_tensor/a1_tensor/a2_tensor` hold.  At an UNPOLARISED beam and along it",
   "last": "/// DIS one -- see `RcModel::tensor_fraction`.  The band is then"
  },
- "include/lipolgen/rc.hpp:210-217": {
+ "include/lipolgen/rc.hpp:251-258": {
   "sha256": "f1df66b413a50ee65ca1befab67a66283265062c7bc550910c5bb7f92b3dfd78",
   "first": "///     transfers to 6Li is untested, and is the largest unquantified",
   "last": "///     part), and the clipped fraction is reported per run and per event"
  },
- "include/lipolgen/rc.hpp:326-408": {
+ "include/lipolgen/rc.hpp:383-465": {
   "sha256": "30a1ca60809dd42a0cda6e535db00f514a3e34eae278bd22c89fbeb5b927f69a",
   "first": "/// So the real basis of the anchor is \"THE PANEL'S LOWEST-x VALUE, CARRIED",
   "last": "  virtual double fm(double t_gev2) const = 0;"
@@ -648,42 +648,42 @@
   "last": "  if (beamSetup.doVarEcm && doHardProc) {",
   "src": "pythia8317"
  },
- "python/bindings.cpp:1672-1681": {
+ "python/bindings.cpp:1679-1688": {
   "sha256": "affaf106a7d1dbfaf074e07ba11105a3835e01f11485f47742f9ceeb12103e36",
   "first": "        py::arg(\"r_func\") = nullptr,",
   "last": "     \"CDKS Eq. (10) and the text under their Eq. (16), and \""
  },
- "python/bindings.cpp:1712-1714": {
+ "python/bindings.cpp:1719-1721": {
   "sha256": "71b5b572842c7a109d0974c0f8c33cfccfc829e41f09a566c2f26854c94560dd",
   "first": "        return copy_array(std::vector<double>(r.begin(), r.end()));",
   "last": "         \"construction -- Machleidt's \\\"about 15 decimal digits\\\".\");"
  },
- "python/bindings.cpp:1822-1823": {
+ "python/bindings.cpp:1852-1853": {
   "sha256": "ff2ba6207b4c08b0d8b4d06880682be5d71d23c4806853e78c8678e45c99de19",
   "first": "      .def_property_readonly(\"options\", &LightConeDensities::options)",
   "last": "      .def(\"convolve\", &LightConeDensities::convolve, py::arg(\"dens_at\"),"
  },
- "python/bindings.cpp:1975-1976": {
+ "python/bindings.cpp:2005-2006": {
   "sha256": "daccc48f820e4b1ef3bf89f4377cb312f11e60d59ca82248a9bbf026b5cd153e",
   "first": "           py::arg(\"q2\"))",
   "last": "      .def(\"densities\", &DeuteronConvolutionB1::densities,"
  },
- "python/lipolgen/__init__.py:401": {
+ "python/lipolgen/__init__.py:416": {
   "sha256": "42d1b3c1373ae738b90a7b6be6ecae2ac5f61b83ae6be3e1d9c25b4e27493adc",
   "line": "def ion_spin(isotope):",
   "name": "isotope"
  },
- "python/lipolgen/__init__.py:609": {
+ "python/lipolgen/__init__.py:628": {
   "sha256": "6e8d4548e6f69e6314bba0668e7b1547bd834f31f40a0b5a4cdc0e76c21ba6df",
   "line": "    if b1_model is not None:",
   "name": "b1_model"
  },
- "python/lipolgen/__init__.py:669": {
+ "python/lipolgen/__init__.py:688": {
   "sha256": "c8c6b8b1f6e0e97adaddb6d72a6a797fc2e2a16f2420869d61a8b5facd3c762b",
   "line": "            setattr(sc, k, float(v))",
   "name": "setattr"
  },
- "python/lipolgen/cli.py:1368": {
+ "python/lipolgen/cli.py:1443": {
   "sha256": "1d2f24498096c3b3855a2ea8b882f003dd6d6cae4a8b164319b6b93399cb564d",
   "line": "    if p.rc_model is not None:",
   "name": "rc_model"
@@ -748,60 +748,65 @@
   "line": "  if (opt_.variant == FsiVariant::GlauberNucleon) {",
   "name": "GlauberNucleon"
  },
- "src/core/pipeline.cpp:1085": {
+ "src/core/pipeline.cpp:1143": {
   "sha256": "ad29b4f734d2daf50ededfb2ff603d6de41d1b8da319bc33d14c67c502ab492a",
   "line": "  scenario.validate();",
   "name": "scenario"
  },
- "src/core/pipeline.cpp:1473": {
+ "src/core/pipeline.cpp:1531": {
   "sha256": "571044c1fb8fd3dc133d4a2f8c4f1fbbd0fef9e236c70ca707037264bd62b307",
   "line": "    sopt.grid = cfg_.grid;",
   "name": "grid"
  },
- "src/core/pipeline.cpp:1558": {
+ "src/core/pipeline.cpp:1616": {
   "sha256": "6143e100b50564bab6c2de1fe2548dfaaaff508e2a54ab925c5ecf6b7d57c068",
   "line": "      bo.beta = cfg_.cluster_beta;",
   "name": "beta"
  },
- "src/core/pipeline.cpp:1588": {
+ "src/core/pipeline.cpp:1646": {
   "sha256": "d19f53dd5ad472c8c3bfea196c1f40e4a25fc417a5bd7012b4b2a26ec5000ee3",
   "line": "    dis_sampler_ = std::make_shared<InclusiveSampler>(kernel, beams_,",
   "name": "InclusiveSampler"
  },
- "src/core/pipeline.cpp:1659": {
+ "src/core/pipeline.cpp:1717": {
   "sha256": "395b16a1d6eeba60e7a61a66a29573617ba01bf8ae148406e7366b9afb2a4ed5",
   "line": "      const bool fits = cfg_.coherent_xpom.x_pom_min(q2c[c], w2c)",
   "name": "x_pom_min"
  },
- "src/core/pipeline.cpp:3557": {
+ "src/core/pipeline.cpp:3683": {
   "sha256": "0ff9c4ac169c911d660a1430a75278c4de48e6709b20b7d4281b06c8e2f26adb",
   "line": "  if (cfg_.hadronizer) cfg_.hadronizer(out, rng);",
   "name": "hadronizer"
  },
- "src/core/pipeline.cpp:549": {
+ "src/core/pipeline.cpp:551": {
   "sha256": "42a04ad5bf71c64c729c88feab1dc7a0fe8d3a95b88ca96d5e7c35e6353d8bb9",
   "line": "    if (!(rc_options.a_transfer_frac >= 0.0)) {",
   "name": "a_transfer_frac"
  },
- "src/core/pipeline.cpp:747": {
+ "src/core/pipeline.cpp:805": {
   "sha256": "b759141159d6b71cd6d1c2ecf3f3ad41233f2134d9e01943218cbeebbf591b69",
   "line": "  if (b1_model == B1Model::Miller) {",
   "name": "B1Model"
  },
- "src/core/rc.cpp:1007": {
+ "src/core/rc.cpp:1435": {
+  "sha256": "b60bee31f2fda72f8c59a0a73193e2e84f3614d1b12002aa780e10347da9a3e4",
+  "line": "  if (!(opt_.a_transfer_frac >= 0.0)) {",
+  "name": "a_transfer_frac"
+ },
+ "src/core/rc.cpp:1481": {
+  "sha256": "0376bdf430c7f72b07bf8aab2eaff05b6e3b8e3bc32e2bd3e073f090cc82f668",
+  "line": "      opt_.sp_tensor_scale != 0.0) {",
+  "name": "sp_tensor_scale"
+ },
+ "src/core/rc.cpp:1506": {
   "sha256": "5009280770b03aefea7eb15f1bf67ba919db95aaaf02b5c6c7ba5cdb99bdb7d4",
   "line": "    if (c.lam_e != 0 && c.pe != 0.0) {",
   "name": "lam_e"
  },
- "src/core/rc.cpp:1026": {
+ "src/core/rc.cpp:1525": {
   "sha256": "8ca9c2cd13378d06e5a2812adb119f8a056f9b89246c0e391cf264c4fdc16db8",
   "line": "  if (channel_ == Channel::CoherentLi6) {",
   "name": "CoherentLi6"
- },
- "src/core/rc.cpp:962": {
-  "sha256": "b60bee31f2fda72f8c59a0a73193e2e84f3614d1b12002aa780e10347da9a3e4",
-  "line": "  if (!(opt_.a_transfer_frac >= 0.0)) {",
-  "name": "a_transfer_frac"
  },
  "src/core/sampler.cpp:225": {
   "sha256": "6dc4c4df16a23e5ab1832edf80bad5d373ab0218574d112de58d447ca227ecdf",

@@ -616,8 +616,23 @@ afterwards and therefore thread-safe like `GlauberFsiWeight`.
 
 #### 1.4.6 The upgrade path — Eq. (18) + Appendix B + Eq. (A.4)
 
-`RcTailModel::PolradFull` (not implemented in v0, specified here so the v0
-choice is auditable). Eq. (18) as printed on POLRAD p. 7:
+> **IMPLEMENTED 2026-09-06 (task B2).** This section was written as a
+> specification for something that threw; `RcTailModel::PolradFull` now runs,
+> opt-in as `--rc-tail-model polrad-full`, and is measured in
+> `../run_2026-09-06/phase_B_numbers.md` §B2. **What the section below got
+> right:** the ingredient list, `x_A = x/A` in every Appendix-A/B function, the
+> `1/A²` per-nucleon reduction (now *measured* — Eq. (18)/Eq. (38) → 1 as
+> `x_A → 0`, so both are the whole-nucleus rate), and `ℑ^el_6`'s corrected
+> `4/(1+η_A)`. **What it could not have got right, because Appendix B was
+> never transcribed here:** `polrad2t.tex`'s Appendix B is wrong in **five**
+> places against POLRAD's own FORTRAN, and the code follows the FORTRAN — the
+> `a_ik` M-powers (Eq. (B.3)), the level `q_ik` acts at (Eq. (B.7)), the
+> `T_821` pairing (Eq. (B.4)), and two terms of Eq. (B.8)'s second lift. Each
+> was found by the `x_A → 0` gate, not by inspection; §B2.2 tabulates what
+> each wrong reading gives.
+
+`RcTailModel::PolradFull` (specified here first, implemented 2026-09-06).
+Eq. (18) as printed on POLRAD p. 7:
 
 ```
                 1  d^2 sigma^el      alpha^3 y   tau_A,max      8   k_i                      2 M_A^2 R_el^{j-2}
@@ -709,14 +724,17 @@ The Eq. (A.4) spin-1 generalised structure functions, transcribed for reference
 > (`ℑ₂`'s `4η_A²/(1+η_A)` **is** correct as printed; only `ℑ₆` was wrong.)
 >
 > **The CODE never had the error, because the code never had `ℑ^el_6`.**
-> Eq. (A.4) at `Q_N ≠ 0` is evaluated only on the `RcTailModel::PolradFull`
-> path, which `src/core/rc.cpp:933-935` refuses with `NOT IMPLEMENTED`. What
-> v0 ships is Eq. (38) (`polrad_sigma_el_u` / the `σ_q` integrand,
-> `src/core/rc.cpp:258-294`) and the `Q_N = 0` Rosenbluth pair
-> (`rosenbluth_spin1`, `src/core/rc.cpp:377-381`) — both independently checked,
-> neither containing `ℑ₆`. So this was a **document-only** defect, found by
+> Eq. (A.4) at `Q_N ≠ 0` was evaluated only on the `RcTailModel::PolradFull`
+> path, which refused with `NOT IMPLEMENTED` until 2026-09-06. What v0 shipped
+> is Eq. (38) (`polrad_sigma_el_u` / the `σ_q` integrand) and the `Q_N = 0`
+> Rosenbluth pair (`rosenbluth_spin1`) — both independently checked, neither
+> containing `ℑ₆`. So this was a **document-only** defect, found by
 > `polrad_transcription_check.md` §7.1 and corrected here; nothing in the
-> shipped tail moves, and no test number changes.
+> shipped tail moved, and no test number changed.
+> **AND IT IS NOW EXERCISED.** Since 2026-09-06 Eq. (A.4) at `Q_N ≠ 0` is
+> `polrad_im_el_spin1`, `PolradFull` calls it, and T9 — un-skipped for this —
+> gates the corrected `4/(1+η_A)` against a literal transcription in the test
+> file at 1e-14. The correction is no longer dead code.
 — POLRAD Eq. (A.4). Every `Q_N` appears linearly, so
 `ℑ^el_i(Q_N) = U_i + Q_N T_i` with
 
@@ -1284,6 +1302,16 @@ run would have silently used ⁶Li form factors.
 
 ### 3.1 `include/lipolgen/rc.hpp` — header sketch
 
+> **DATED NOTE, 2026-09-06 (task B2).** The sketch below still reads
+> `PolradFull = 1, ... NOT IMPLEMENTED` and *"v0 ships `TPeak` only"*. **That
+> is no longer true.** `RcTailModel::PolradFull` is **implemented and shipped**
+> (opt-in, `--rc-tail-model polrad-full`); the enum gained a third value
+> `TPeakPlusLL` on 2026-09-03; and the refusal reproduced in §3.2 below
+> (*"tail_model PolradFull is not implemented"*) was replaced by the `n_eta >=
+> 64` and `m_lepton` rules. Read the sketch as the v0 specification it was, and
+> `include/lipolgen/rc.hpp` for what ships. §1.4.6 above and
+> `../run_2026-09-06/phase_B_numbers.md` §B2 carry the measurements.
+
 ```cpp
 #ifndef LIPOLGEN_RC_HPP
 #define LIPOLGEN_RC_HPP
@@ -1428,6 +1456,9 @@ enum class RcTailModel : int {
                     ///< SUPPRESSED, so this is not an approximation to the
                     ///< collinear limit -- it is the dominant piece.
   PolradFull = 1,   ///< Eq. (18) + Appendix B + Eq. (A.4).  NOT IMPLEMENTED.
+                    ///< [2026-09-06: IMPLEMENTED -- see the note above this
+                    ///< block.  The shipped enum keeps this value (TPeak = 0,
+                    ///< PolradFull = 1) and adds TPeakPlusLL = 2.]
 };
 const char* rc_mode_name(RcMode m);          ///< "off", "tensor-band"
 
@@ -1733,11 +1764,14 @@ FSI block:
           "PipelineConfig: rc fq_scale / tail_tensor_scale / qe_suppression "
           "must be >= 0");
     }
-    if (rc_options.tail_model != RcTailModel::TPeak) {
+    if (rc_options.tail_model != RcTailModel::TPeak) {          // v0 only
       throw std::runtime_error(
           "PipelineConfig: rc tail_model PolradFull is not implemented "
           "(design_C_tensor_rc.md section 1.4.6)");
     }
+    // [2026-09-06: GONE.  Every tail model runs; what validate() refuses now
+    //  is n_eta < 64 under PolradFull and a non-default m_lepton under the
+    //  two t-peak models.  See the dated note in section 3.1.]
     for (const SpinCategory& c : plan.categories()) {
       if (c.lam_e != 0 && c.pe != 0.0) {
         throw std::runtime_error(
@@ -2034,6 +2068,7 @@ mirroring `fsi_weight`.
   RC bullets: the *polarised* quasi-elastic tail is not priced; there is no RC
   for the φ-dependent tensor observables (`Δ`, the coherent channel) at any
   axis; the tagged band is an uncited extrapolation; `RcTailModel::PolradFull`
+  (implemented 2026-09-06, and STILL not checked against Mo-Tsai)
   is unimplemented.
   > **Reviewer note / response.** The review said `docs/PHYSICS_CHANNELS.md`
   > "does not exist". It does — 144 KB, with §11 *"Not handled (explicitly)"*
@@ -2073,7 +2108,8 @@ C++ in a new `tests/test_rc.cpp` (picked up by the `GLOB` at
 | **T7** | **Born normalisation against POLRAD Eq. (9).** `x s · dsigma_unpol(x, q2, s)` equals `(4πα²S/Q⁴)[x y² F₁ + (1−y)F₂]` built directly from `SFTables`, at `Q_N = 0`, `P_L = 0`. | 1e-12 relative; this is the gate that keeps the tail's denominator from being a second definition of the Born |
 | **T8** | **Tail normalisation — POLRAD-INTERNAL gates, not a radiator.** The first draft asked the leading-log equivalent-radiator limit to reproduce Eq. (18) to 5 %. It cannot: POLRAD §2.1.3 B says the **s- and p-peaks are suppressed** for a tail and only the **t-peak** leads, and the t-peak reaches `t_min = (x M_N)²` — inside the form factor — while the s-peak sits at `t ≈ (1−y)Q²` where `F_c(⁶Li)` is dead. Worse, that test would have *determined* the prefactor it was meant to check (the implementer tunes until 5 % appears), which is exactly how a missing `A = 6` gets absorbed. **Three internal gates instead, each with an unambiguous reference:** **(a)** `RcModel`'s `σ_u` quadrature at `Q_N = 0`, run with **deuteron** inputs (`Ion` = d, `A = 1` nuclear map degenerate to `M_A = M_d`), must reproduce the design's own literal transcription of Eq. (38) `σ_u^d` (a 15-line function written *in the test file*, not in `rc.cpp`) to **1e-10**; likewise `σ_q` at `Q_N ≠ 0` against Eq. (38) `σ_q^d`. **(b)** the **carbon** line: with a spin-0 ion (`P_N = Q_N = 0`) and a single form factor `F`, the model must reproduce `σ_u^C = (α³/S) Z² Y₋ ∫dη_A/η_A X̃ F²` — the **explicit `Z²`** is what pins the charge normalisation, and the `A`-normalisation follows from the §1.4.5 per-nucleon reduction. **(c)** the `A = 1`, spin-½ limit (POLRAD Eq. (A.5) / Eqs. (38) `σ_u^p`, (40)) against the **Mo–Tsai exact proton elastic tail** at one fixed-target point (`E = 10 GeV`, `x = 0.3`, `Q² = 2 GeV²`), to **10 %** — the residual there is genuinely the ultrarelativistic approximation, and it is a *cross-check*, not the definition. | (a), (b) 1e-10; (c) 10 % |
 | **T8'** | **The QRT.** `σ^q_U` at `S_e = S_m = S_em = 1` must equal `Z·σ_u^p[G_E^p, G_M^p] + N·σ_u^p[G_E^n, G_M^n]` built in the test from the same Eq. (38) transcription, in **nucleon** invariants. And `qe_suppression = 0` must reproduce the elastic-only tail bit for bit. | 1e-12 |
-| **T9** | **Rosenbluth limit.** *v0 form:* Eq. (38)'s `σ_u^d` integrand is `A(Q²)X̃ − (2/3)(1+η_A)F_m²` with `A = F_c² + (2/3)η F_m² + (8/9)η² F_q²` — assert the code's `σ_u` integrand against that, and that `σ_q`'s integrand is identically 0 when `F_m = F_q = 0`. *`PolradFull` form (`SKIP`-ped in v0, kept in the file with the reason):* with `Q_N = 0`, `ℑ^el_2 == A(Q²)`, `ℑ^el_1 == B(Q²)/2 = (2/3)η(1+η)F_m²`, `ℑ^el_{5,6,7,8} == 0` identically. | exact (algebraic identity in the code) |
+| **T9** | **Rosenbluth limit.** *v0 form:* Eq. (38)'s `σ_u^d` integrand is `A(Q²)X̃ − (2/3)(1+η_A)F_m²` with `A = F_c² + (2/3)η F_m² + (8/9)η² F_q²` — assert the code's `σ_u` integrand against that, and that `σ_q`'s integrand is identically 0 when `F_m = F_q = 0`. *`PolradFull` form (`SKIP`-ped from 2026-09-02 to 2026-09-06, **UN-SKIPPED** when the model landed):* with `Q_N = 0`, `ℑ^el_2 == A(Q²)`, `ℑ^el_1 == B(Q²)/2 = (2/3)η(1+η)F_m²`, `ℑ^el_{5,6,7,8} == 0` identically — asserted through the SHIPPED `polrad_im_el_spin1`, at 1e-15 against `rosenbluth_spin1` and with `== 0.0` (not "small") on the four tensor entries, plus the six `Q_N` parts against a literal Eq. (A.4) at 1e-14. It was the suite's ONE unconditional skip. | exact; 1e-15 / 1e-14 |
+| **T19** | **`RcTailModel::PolradFull` itself** (2026-09-06, and it is where the design's own "upgrade path" is discharged). **(a)** THE LIMIT, stated: `x_A → 0` with a form factor **dead at the s-/p-peak vertex**, so only the t-peak survives and Eq. (38)'s ultrarelativistic extraction is exact — measured `Eq. (18)/Eq. (38)` = 1.00230 (unpol.) / 1.00313 (tensor) at `x_A = 0.003`, tending to 1, on three form-factor sectors run separately (the full deuteron `σ_q^d` is a ~7× cancellation between two of them, so *its* ratio is not a gate). **(b)** the τ_A range and the peak positions inside it. **(c)** the transcription check's own three deuteron points. **(d)** the leading-log fallback at the HERMES point. **(e)** convergence in `n_eta`. **(f)** THE GAP IT DOES NOT CLOSE: the quasi-elastic tail is tensor-blind on this model too. **(g)** it is **outside** the `[TPeak, TPeakPlusLL]` interval on a large minority of cells. **(h)** `m_lepton` is read. | (a) 2e-4; (c) 2e-3; (d) 2e-3; (e) 1e-8 / 1e-3 |
 | **T10** | **Deuteron form-factor normalisation.** `HoSpin1FF` built with the *deuteron's* moments returns `F_q(0) = 25.83` and `F_m(0) = 1.714`. | 1e-3 relative against the textbook values — proves the convention |
 | **T11** | **⁶Li form-factor anchors.** `F_c(0) = 3`, `F_m(0) = 4.90765`, `F_q(0) = −65.914` (TUNL `Q = −0.0818(17) fm²`; pin whichever moment §2.1 finally adopts — Pyykkö's −0.0806 gives −64.947); `−6 dF_c/dq²|₀ / F_c(0)` reproduces `⟨r²⟩_point = 6.078 fm²`; `HoSpin1FF::for_ion` **throws** for ⁷Li and for the deuteron-by-name (no measured-moment block). The first `F_c` zero is pinned to **the refit result with the refit's own uncertainty**, and asserted only to lie in `[2.9, 3.3] fm⁻¹` — *not* to `3.10 ± 0.02`, which the first draft attributed to WS98 and which WS98 does not state. | 1e-4 relative on the values, the zero in `[2.9, 3.3]` |
 | **T12** | **Quadrupole band is QUADRATIC, not linear.** The first draft asserted "exactly linear in `fq_scale` to 1e-12", which **fails against a correct implementation**: Eq. (38)'s `σ_q^d` contains `F_q(3F_c + 3ηF_m + ηF_q)` and `F_q(4F_c − 3xF_m + (4/3)ηF_q)`, and Eq. (A.4)'s `ℑ^el_2`/`ℑ^el_6` likewise carry `F_q·F_q` (only `ℑ^el_8` is linear). Instead: take the `Q_N`-dependent part of `w_tail − 1` at `s = fq_scale ∈ {0, 1, 2}`, fit `T(s) = T₀ + s·T₁ + s²·T₂` exactly (three points, three unknowns), and require the **prediction at `s = 0.5` and `s = 3`** to match the model. Also assert `T₂ ≠ 0` at some `(x, Q²)`, so a linear implementation fails. | 1e-12 |
@@ -2104,7 +2140,8 @@ Files it owns:
   `σ_q^A`, and the Eq. (44) QRT built on `σ_u^p` with `(Z, N)` nucleon form
   factors); `RcModel` with the table build + interpolation, the two
   `tensor_fraction` forms, `tail_ratio`, `tail_ratio_at`, `weights`, `fill`.
-  **No Appendix B in v0** — that is `RcTailModel::PolradFull`, §1.4.6.
+  **No Appendix B in v0** — that is `RcTailModel::PolradFull`, §1.4.6,
+  **implemented 2026-09-06** (`../run_2026-09-06/phase_B_numbers.md` §B2).
 * `include/lipolgen/constants.hpp` — `M_ELECTRON`, and the one-line change in
   `src/hepmc/hepmc_writer.cpp:135` to use it.
 * `include/lipolgen/xsec.hpp` + `src/core/xsec.cpp` —
@@ -2155,7 +2192,8 @@ Watch-outs, in the order they will bite:
   see it — which is why T8(a) compares against a literal Eq. (38) transcription
   written *in the test*, at 1e-10.
 * **Eq. (18)'s prefactor is `α³y/A²` on the right and `1/A` on the left**
-  (§1.4.6). Only relevant if `PolradFull` is ever implemented.
+  (§1.4.6). Relevant since 2026-09-06, when `PolradFull` was implemented; the
+  `ℑ₆` correction is now exercised by T9.
 * **`t_min = 4M_A²η_min = M_A²x_A²/(1−x_A)`** must come out `≈ (x M_N)²`. If it
   scales with `A`, the nuclear map is wrong somewhere. Assert it.
 * `RcModel` must be **immutable after construction** — `Pipeline::for_each`

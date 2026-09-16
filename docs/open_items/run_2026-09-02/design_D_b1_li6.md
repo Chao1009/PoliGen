@@ -1666,7 +1666,7 @@ chosen names as part of Agent B's docs step, rather than leaving two vocabularie
 * `include/lipolgen/tagged.hpp` — add `VMC_N_ALPHA_D_LI6 = 0.80362 + 0.015861` and
   rewrite `VMC_P_D_LI6` as `0.015861 / VMC_N_ALPHA_D_LI6` (§2.1). This is a **value-
   preserving** edit (`VMC_P_D_LI6` is bit-identical) and it is the only way N_{αd} has
-  one home; `python/tests/test_module.py:252` pins `VMC_P_D_LI6` and must still pass.
+  one home; `python/tests/test_module.py:265` pins `VMC_P_D_LI6` and must still pass.
 
 **Steps**
 1. `read_fdeut_k`: locate the `k  u(k)  w(k)` header (line 10221), read 3-column

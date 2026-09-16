@@ -188,7 +188,7 @@ convolution's **sign** flips with the backend at four of six x points
 (default bit-for-bit), not on evidence; the evidence favours the gate's
 input. A non-toy default has a build cost the run states: `--b1-unpol mstw`
 "needs the optional PYTHIA tier and is refused, never silently downgraded,
-without it" (`README.md:158-159`), so a core-only build could not run the
+without it" (`README.md:178-179`), so a core-only build could not run the
 default.
 
 **(d)** Measured by Phase D on the ⁶Li inclusive channel
@@ -196,7 +196,7 @@ default.
 ×0.79847, A_zz ×1.25239, A_∥ ×0.82519; `mstw` A_zz ×1.26044. ⁷Li inclusive σ
 ×0.795936 (`ct18nlo`) / ×0.791318 (`mstw`); tagged-⁷Li-α ×0.792543 /
 ×0.788565 (`OPEN_ITEMS_SOLUTIONS.md` §15.3). On b₁ itself mstw/toy = 1.848 /
-1.276 / 0.817 at x = 0.10 / 0.30 / 0.50 (`README.md:161`). Option (i)
+1.276 / 0.817 at x = 0.10 / 0.30 / 0.50 (`README.md:181`). Option (i)
 leaves the default's ⁶Li convolution numbers **outside the lift** (B4).
 
 **(e)** (i): nothing. (ii): `pipeline.hpp:857` default, `cli.py`'s
@@ -329,7 +329,7 @@ for ⁶Li, 0.87 / −0.03 for ⁷Li) and does not point at this row.
 **(d)** (i): nothing moves; the 11.61 % split stands between runs. (ii)–(iv):
 every inclusive ⁶Li g₁ / A_∥ scales by new/0.811228 (×1.1161, ×1.0935,
 ×1.0453); `validation/reference/beams.json` and `xsec.json` (both carry
-0.811228) move at rtol 1e−12; `tests/test_beams.cpp:106`.
+0.811228) move at rtol 1e−12; `tests/test_beams.cpp:106` (anchor read 2026-09-15 "0.81123, 5e-6").
 
 **(e)** (i): close the row and link `OPEN_ITEMS_SOLUTIONS.md` row 4 to it.
 Otherwise: `beams.hpp:134`, re-dump `beams.json`/`xsec.json`, T-pins in
@@ -978,7 +978,7 @@ running on ⁷Li instead of quietly filling 0.4.
 **(e)** (i): add the row to the table and close it. (ii): `make_plan` /
 `cli.py` validation. (iii): DONE opt-in 2026-09-06 — `--pzz-mode`
 (`cli.py:99`), `PZZ_MODES` and `make_plan(pzz_mode=...)`
-(`python/lipolgen/__init__.py:395`, `:744`, the ONE place the string becomes
+(`python/lipolgen/__init__.py:395`, `:763`, the ONE place the string becomes
 `HelicityFlipOptions::use_explicit_pzz`), `KnobRunContext::pzz_mode`
 (`pipeline.hpp:1283`) with its `knob_provenance` row (`pipeline.cpp:2407`),
 the spin-1 refusal taught to name its edges (`spin.cpp` `spin1_populations`),
@@ -1044,7 +1044,7 @@ committing first (a gate before a b₁).
 **CLOSED FOR ROW 20's D11, 2026-09-06** (task B3;
 `../run_2026-09-06/phase_B_numbers.md` §B3). The constant is sourced,
 committed and bound: **`LI7_QUADRUPOLE_FM2` = −4.06 fm²** at
-`include/lipolgen/rc.hpp:669`, beside `LI6_QUADRUPOLE_FM2`, from TUNL's
+`include/lipolgen/rc.hpp:726`, beside `LI6_QUADRUPOLE_FM2`, from TUNL's
 A = 5, 6, 7 evaluation (Tilley *et al.*, NPA 708 (2002) 3), whose A = 7 half
 prints `Q = −40.6 ± 0.8 mb (1988DI1B)` and whose A = 6 half prints the
 `Q = −0.818(17) mb (1998CE04)` that IS `LI6_QUADRUPOLE_FM2` — **one document,
@@ -1285,8 +1285,8 @@ one.
    13, 14/15** only (row 7 `phase_B_numbers.md:1664`; row 8 `coherent.hpp:84`,
    `USAGE.md:1566`, `OPEN_ITEMS_SOLUTIONS.md:2144`; row 12
    `phase_D_numbers.md:1432`; row 13 `test_release_metadata.py:7`,
-   `check_spdx_headers.py:14-16`, `README.md:275`; rows 14/15 `README.md:230`
-   and `README.md:218`). Rows 1–6 and 9–11 were pointed at by none: their
+   `check_spdx_headers.py:14-16`, `README.md:275`; rows 14/15 `README.md:253` (anchor read 2026-09-15 "activates it")
+   and `README.md:241` (anchor read 2026-09-15 "PACKAGING.md")). Rows 1–6 and 9–11 were pointed at by none: their
    dependents cite `OPEN_ITEMS_SOLUTIONS.md` §10 (conditions 4/6),
    `phase_A_miller_normalisation.md`, or `phase_C_numbers.md` §C5 instead
    (`constants.hpp:107`, `CONVENTIONS.md:106/233/266`, `USAGE.md:207/292`,
@@ -1367,7 +1367,7 @@ one.
     paragraph — the same drift `validation/check_physics_channels_links.py`
     exists to catch. **APPLIED 2026-09-05:** every `path:line` in this file
     was re-read against the tree; **38 anchors moved**, and three were added
-    (`README.md:218`, `:230`, `:275` — the rows 15/14/13 citations item 4's
+    (`README.md:241` (anchor read 2026-09-15 "PACKAGING.md"), `:253` (anchor read 2026-09-15 "activates it"), `:298` (anchor read 2026-09-15 "and CITATION") — the rows 15/14/13 citations item 4's
     list was missing). **NOT applied, and an option rather than an
     oversight:** putting this file into the gate's `EXTRA_DOCS`. Measured with
     the gate's own `REF`/`RANGE` regexes over this file with THIS ITEM
@@ -1378,7 +1378,7 @@ one.
     (`rc.hpp:270`, `USAGE.md:207`). Real coverage therefore means first
     rewriting every anchor in repository-relative form, and adding the
     document also moves every sentence in the tree that counts the gate's
-    documents: `README.md:99` "over three documents", `SUMMARY.md:106` "the
+    documents: `README.md:101` "over three documents", `SUMMARY.md:106` "the
     strict gate covers **three** documents", and the "both extra documents" of
     `docs/PACKAGING.md:164` and `phase_E_numbers.md:707`, plus §E1's own
     record of why those two and not others. Both are the author's call, not a

@@ -38,12 +38,12 @@ file, at the very end).
 
 The **1 skipped** doctest case was identified positively, not inferred: forcing
 it alone with `--no-skip=true --test-case="T9: the Q_N = 0 Rosenbluth limit of
-Eq. (38)'s integrand"` runs it and it fails at `tests/test_rc.cpp:1630` with
-`CHECK( false )` — confirming `tests/test_rc.cpp:1608`
+Eq. (38)'s integrand"` runs it and it fails at `tests/test_rc.cpp:1630` (as of d3ac125) with
+`CHECK( false )` — confirming `tests/test_rc.cpp:1608` (as of d3ac125)
 (`TEST_CASE(... * doctest::skip(true))`) is the one skipped case, and that it
 is a deliberate "not implemented" stub (`PolradFull` is unimplemented, per the
 comment at that line), not an environment-dependent skip. The other
-`doctest::skip(...)` site in the tree, `tests/test_b1_nuclear.cpp:805`
+`doctest::skip(...)` site in the tree, `tests/test_b1_nuclear.cpp:805` (as of de1a040)
 (conditional on `mstw_grid_present()`), was **not** the one that skipped —
 its test case ran to completion in this environment (MESSAGE output at
 `test_b1_nuclear.cpp:234/826/849/867` appears in the log), confirming the
@@ -94,8 +94,8 @@ and what the source docs got wrong by now.
 1. **OPEN.** `docs/open_items/engineering.md:20` — `npsim`/DD4hep nudges the
    primary electron's energy by O(10) ppm because LiPolGen writes exactly
    `generated_mass = 0` for the beam/scattered electron. Root cause verified
-   still present, same lines cited: `src/core/generator.cpp:114`
-   (`beam_e.mass = 0.0;`) and `src/core/generator.cpp:132`
+   still present, same lines cited: `src/core/generator.cpp:115`
+   (`beam_e.mass = 0.0;`) and `src/core/generator.cpp:133`
    (`escat.mass = 0.0;`), unchanged. Non-fatal (events still process/conserve
    at Geant4's working precision); no test in this tree gates it either way.
 2. **OPEN.** `docs/open_items/engineering.md:22` — `abconv -p 1` (auto energy
@@ -106,7 +106,7 @@ and what the source docs got wrong by now.
    alternative. No code change was made toward either fix.
    **Related, and independently confirmed stale:** `docs/T2_CHAIN.md:149` and
    `:154` still read "the `abconv`/`npsim` half is unrun here" — but
-   `docs/DEVELOPMENT_PLAN.md:270-272` records that same gate as **PASSED
+   `docs/DEVELOPMENT_PLAN.md:280-282` records that same gate as **PASSED
    2026-09-02**, and `engineering.md` §A is the write-up of that very run.
    `T2_CHAIN.md`'s "unrun" line is therefore itself stale documentation, not
    just an open engineering task — this is `PLAN.md`'s own Phase E item **E3**
@@ -167,10 +167,10 @@ and what the source docs got wrong by now.
 **E. From `docs/DEVELOPMENT_PLAN.md` §4 (validation matrix)**
 
 7. **OPEN, explicitly marked so by the plan, and independently reconfirmed by
-   today's test run.** `docs/DEVELOPMENT_PLAN.md:110` — item 4's neutron gate:
+   today's test run.** `docs/DEVELOPMENT_PLAN.md:110` (as of de1a040) — item 4's neutron gate:
    "P_p = 0.866 and P_n ≈ −0.037 (the neutron half is an *open* gate, report
    it)." Today's `lipolgen_tests` run prints, verbatim, at
-   `tests/test_tagged.cpp:380`: "P_n = -0.028 against the plans/05 gate
+   `tests/test_tagged.cpp:426`: "P_n = -0.028 against the plans/05 gate
    -0.037 -- OPEN, the model's own value is asserted and the gate is not."
    Items 1, 2, 3, 5, 6, 7, 8 of §4 carry no "open" language and are not
    listed here.
@@ -180,44 +180,44 @@ and what the source docs got wrong by now.
 8. **OPEN, default confirmed unchanged.** `docs/DEVELOPMENT_PLAN.md:201-210`
    — the triton remnant's *default* is still the crude, flagged sequential
    model; `--triton-sf ciofi-simula` is opt-in only. Verified:
-   `include/lipolgen/pipeline.hpp:796` still reads
+   `include/lipolgen/pipeline.hpp:796` (as of de1a040) still reads
    `TritonSfChoice triton_sf = TritonSfChoice::Hulthen;`.
 9. **OPEN, default confirmed unchanged.** `docs/DEVELOPMENT_PLAN.md:211-216`
    — "the breakup fragments' own rescattering stays open" (no FSI moves any
    fragment's own four-vector; Glauber FSI is an optional per-event *weight*
-   only). Verified: `include/lipolgen/pipeline.hpp:740` still reads
+   only). Verified: `include/lipolgen/pipeline.hpp:802` still reads
    `PipelineFsi fsi = PipelineFsi::Off;`.
 10. **OPEN, as stated by the plan; not independently re-derived.**
-    `docs/DEVELOPMENT_PLAN.md:223` — "Still open in the coherent sector: no
+    `docs/DEVELOPMENT_PLAN.md:223` (as of de1a040) — "Still open in the coherent sector: no
     exclusive-VM channel below M_X = 1.2 GeV." Taken from the plan text as-is;
     re-deriving the M_X floor from `src/core/coherent.cpp` was not done in
     this read-only pass.
 11. **OPEN, default confirmed unchanged.** `docs/DEVELOPMENT_PLAN.md:236-247`
     — the b₁(⁶Li) convolution's A=2 gate says nothing about the α–d step
     itself ("the gate is A = 2 and says nothing about the α–d step").
-    Verified: `include/lipolgen/pipeline.hpp:828` still reads
+    Verified: `include/lipolgen/pipeline.hpp:828` (as of de1a040) still reads
     `B1Model b1_model = B1Model::Miller;` (`Li6Convolution` is opt-in via
     `--b1-model li6-convolution`, not the shipped default).
 12. **OPEN, as stated by the plan.** `docs/DEVELOPMENT_PLAN.md:247-250` — the
     coherent amplitude for polarized A > 2 has "a first rung" (eSTARlight
     unpolarized ⁶Li baseline + polarized α+d configuration sampler) but "not
     yet a full polarized coherent amplitude."
-13. **OPEN, as stated by the plan.** `docs/DEVELOPMENT_PLAN.md:250-252` — the
+13. **OPEN, as stated by the plan.** `docs/DEVELOPMENT_PLAN.md:260-262` — the
     spin-3/2 rank-2 basis has a theory note only
     (`docs/theory/SPIN32_FINITE_GAMMA.md`); "the rank-3 sector it describes
     stays off by default, so no code behaviour changed" — no rank-3
     implementation exists.
-14. **OPEN, as stated by the plan.** `docs/DEVELOPMENT_PLAN.md:253` — "Still
+14. **OPEN, as stated by the plan.** `docs/DEVELOPMENT_PLAN.md:253` (as of de1a040) — "Still
     wholly external: polarized nuclear PDFs." No backend for this exists in
     the tree.
 15. **Known physics uncertainty, not an actionable bug — listed for
-    completeness.** `docs/DEVELOPMENT_PLAN.md:256-257` — the ⁶Li effective
+    completeness.** `docs/DEVELOPMENT_PLAN.md:256-257` (as of de1a040) — the ⁶Li effective
     polarization convention (`LI6_CLUSTER_POLARIZATION = 0.81123`) sits inside
     "the 0.81–0.85 band whose top is the Wiringa VMC 0.848," an acknowledged
     remaining uncertainty, distinct from the (already-decided) convention
     itself.
 16. **Deliberate non-goals — NOT open work, listed only so the next stage
-    does not mistake them for open items.** `docs/DEVELOPMENT_PLAN.md:259-269`
+    does not mistake them for open items.** `docs/DEVELOPMENT_PLAN.md:328-338`
     ("NOT ported, deliberately"): the `reco.py`/`recopseudo.py` reconstruction
     chain, `fom.project_observables`'s D_eff *projection* (the divisor itself,
     `depolarization_effective`, IS ported), `polarized.unpolarized_emc_ratio`'s
@@ -226,7 +226,7 @@ and what the source docs got wrong by now.
     addendum figure/report scripts. None of these have a C++ counterpart and
     none is planned to.
 
-**Cross-cutting note.** `docs/DEVELOPMENT_PLAN.md:273-275` states "Packaging:
+**Cross-cutting note.** `docs/DEVELOPMENT_PLAN.md:273-275` (as of de1a040) states "Packaging:
 DONE 2026-09-02" with no caveat — but items 3-4 above (from `engineering.md`
 §B, reconfirmed live) show the wheel is not actually portable off the build
 machine. `docs/USAGE.md:34-48` already carries the accurate caveat;
@@ -332,9 +332,9 @@ source (function/block boundaries re-read, not guessed) and corrected:
 | `src/core/spin.cpp:244-257` (×3) | `:245-258` | `octupole_moment` |
 | `src/core/spin.cpp:259-288` | `:260-289` | `moments_along_axis` |
 | `src/core/spin.cpp:228-242` | `:229-243` | `tensor_polarization` |
-| `src/core/spin.cpp:304-322` | `:305-323` | `spin32_populations` (decl through the pre-comment line) |
+| `src/core/spin.cpp:333-351` | `:334-352` | `spin32_populations` (decl through the pre-comment line) |
 | `src/core/bookkeeping.cpp:80-104` | `:80-109` | `helicity_flip_plan`, full body |
-| `include/lipolgen/bookkeeping.hpp:196-207` | `:197-207` | `SpinTemperatureLadder` doc comment + struct + decl |
+| `include/lipolgen/bookkeeping.hpp:212-223` | `:213-223` | `SpinTemperatureLadder` doc comment + struct + decl |
 | `tests/test_tagged.cpp:335-351` | `:336-352` | the P2/polarimeter `TEST_CASE` body |
 | `src/core/xsec.cpp:282-289` | `:310-317` | `density()` + `positivity_margin()` (the P8 `tensor_amplitudes`/`amplitudes` split moved these ~28 lines) |
 | `tests/test_xsec.cpp:387-408` | `:387-405` | the magic-angle `TEST_CASE` (end only; start was already right) |
@@ -496,7 +496,7 @@ is filled in).
 Measured: `docs/T2_CHAIN.md` (before this phase) said, in two places, that the
 `abconv`/`npsim` half of the plans/05 5.D smoke gate "is unrun here (no
 container in this environment)" / "is not run from this repository" — while
-`docs/DEVELOPMENT_PLAN.md:270-272` already recorded, correctly, "HepMC3 ->
+`docs/DEVELOPMENT_PLAN.md:280-282` already recorded, correctly, "HepMC3 ->
 abconv -> npsim smoke test: PASSED 2026-09-02 (10/10 events through `npsim`
 directly and via `abconv`; see `docs/OPEN_ITEMS_SOLUTIONS.md` §2 ...)", and
 `docs/OPEN_ITEMS_SOLUTIONS.md` §2 ("Chain gate — **CLOSED** (passed)", retitled 2026-09-05) independently
@@ -563,7 +563,7 @@ row-by-row list in `docs/DEVELOPMENT_PLAN.md` §4 itself for the full set;
 summary: row 1 -> `tests/test_spin.cpp` (4 cases); row 2 ->
 `tests/test_xsec.cpp` (6 cases); row 3 -> `tests/test_sampler.cpp` (5 cases);
 row 4 -> `tests/test_tagged.cpp` (4 cases, including the one that prints the
-open P_n gate, `tests/test_tagged.cpp:380`); row 5 -> `tests/test_spectator.cpp`
+open P_n gate, `tests/test_tagged.cpp:380` (as of 71cfd60)); row 5 -> `tests/test_spectator.cpp`
 (2 cases); row 6 -> `tests/test_coherent.cpp` (2 cases); row 7 -> rewritten,
 §E3b; row 8 -> `tests/test_pipeline.cpp`, `tests/test_rng.cpp` (×2),
 `tests/test_rc_pipeline.cpp`, `tests/test_t2.cpp` (4 cases across two files,

@@ -11,6 +11,14 @@ Every document's report is printed in turn (the primary document's line is
 unlabelled, exactly as before this change; an extra document's line carries
 `[filename]` so a broken citation says which document it is in).
 
+Since 2026-09-15 (Phase D item D2) `--records` adds a fifth pass, over the
+DATED RUN RECORDS in `docs/open_items/` -- history, gated by nothing until that
+date -- under one RELAXED rule, R6, described in full beside `RECORDS_REL`
+below.  It is opt-in: `--records` runs it after the strict documents,
+`--records-only` runs it alone (the reproducible measurement recipe), and
+neither runs in a `--record-ranges`/`--audit-ranges` pass, so every count D1
+published with `| tail -1` still names what it named.
+
 FOUR CITATION SHAPES ARE CHECKED, and each has its own rule.
 
 A. `` `path:line` `name` `` -- a NAMED point citation (1075 of them).  The
@@ -61,14 +69,32 @@ A. `` `path:line` `name` `` -- a NAMED point citation (1075 of them).  The
    CLASS LIST is NOT a declaration of that name: `class ToyF2 : public UnpolSF`
    declares `ToyF2` only (see RESIDUALS 3).
 
-B. `` `path:line` `` with NO name (19 of them).  Nothing names the target, so
-   the only thing that can be asserted is that the line is a line somebody
-   could have meant: in bounds, NOT BLANK, and not a bare delimiter (`}`, `};`,
-   `{`, `)`, `,`, `*/` ... -- a line with no alphanumeric character on it).
-   That is the minimum, and it is the whole of it; see RESIDUALS 1.
+B. `` `path:line` `` with NO name (43 of them).  Nothing names the target, so
+   the assertions are about the line and about the sentence that cites it.
 
-C. `` `path:first-last` `` -- a RANGE, a block citation: 97 citations of 89
-   distinct blocks, 5 of them written `` `:first-last` `` and inheriting the
+     B1  in bounds, NOT BLANK, and not a bare delimiter (`}`, `};`, `{`, `)`,
+         `,`, `*/` ... -- a line with no alphanumeric character on it).  That
+         was the whole of rule B until 2026-09-15, and it asserts almost
+         nothing: 76.2 % of these citations survive a +1 drift under it, and
+         two had been stale for weeks with the gate green
+         (`docs/PHYSICS_CHANNELS.md:301` -> `docs/CONVENTIONS.md:357` for
+         a_nn, which is now at :383, and `:206` ->
+         `include/lipolgen/constants.hpp:86` for the [SS90] bag-model
+         coefficient, which is at :136-138).
+
+     B2  THE CITING SENTENCE MUST EVIDENCE THE LINE, by R5's rule (below)
+         applied to the cited line and nothing either side of it: a phrase the
+         sentence QUOTES must occur on that line as text or as a symbol.  It
+         flags 30 of the 42 such citations a3c9ecb carries, against 19 for the
+         obvious alternative (R6's shared-token test) -- and lets 2.4 % of +1
+         drifts through against that alternative's 16.7 %.  A flagged citation
+         is not necessarily wrong; like an R5 refusal it means "this gate
+         cannot tell", and the answer is an `UNNAMED_ALLOW` exemption with a
+         PIN and a REASON, read and signed one at a time.  28 of the 43 in the
+         tree this phase leaves carry one; see RESIDUALS 1.
+
+C. `` `path:first-last` `` -- a RANGE, a block citation: 95 ranges on the primary
+   document at the time of writing (the run prints the current count), 5 of them written `` `:first-last` `` and inheriting the
    path of the citation before them on the same document line.  Checked for:
 
      R1  in bounds and well ordered: 1 <= first < last <= len(file);
@@ -82,7 +108,80 @@ C. `` `path:first-last` `` -- a RANGE, a block citation: 97 citations of 89
          in the PROSE BEFORE them, and attaching that prose name was measured
          on 2026-09-04 to be wrong 9 times in 11 by backward proximity and 3
          times in 4 by forward proximity, so neither is done;
-     R4  THE BLOCK IS STILL THE BLOCK.  R1-R3 cannot see a range whose file
+     R5  THE BLOCK CONTAINS WHAT THE CITING SENTENCE SAYS IT DOES.  R4 pins a
+         block to the content it had WHEN IT WAS RECORDED, and nothing checked
+         that the content was the right content: a range recorded onto the
+         wrong block is "0 broken" for ever after (three `docs/CONVENTIONS.md`
+         ranges on 2026-09-05, two `docs/USAGE.md` ranges on 2026-09-06, every
+         one of them found by a human reading the row, none by this gate).  So
+         since 2026-09-06 `--record-ranges` REFUSES to record a block that the
+         citing sentence does not evidence, and refusing means the entry is not
+         written, so the next ordinary run reports the range as "not
+         fingerprinted" and the gate stays red until a human acts.  The
+         evidence is taken from THE CITING SENTENCE -- the `RECORD_WIN`
+         characters on either side of the citation, clipped to the enclosing
+         paragraph, where a markdown TABLE ROW is its own paragraph (the claim
+         cell and the provenance cell of one row are one citing sentence; the
+         row above is not).  Three branches, in order:
+
+           (a) an ADJACENT NAME (`` `path:first-last` `name` ``, the same
+               one-space adjacency rule the point citations use) must be
+               DECLARED OR USED inside the block.  Declared-or-used, not R3's
+               declared: a range is a block citation and citing the three lines
+               that CALL a thing is legitimate.  R3 is the stricter rule and
+               still runs first, so an identifier name that fails R3 never
+               reaches this;
+           (b) failing that, a QUOTED PHRASE -- backticks, "straight" or
+               "curly" quotation marks -- inside the window, excluding the
+               citations themselves.  At least one such phrase must occur in
+               the block, either as TEXT (whitespace-normalised substring, 3
+               characters or more) or as a SYMBOL (an identifier, qualified
+               name, call or CLI flag of 2 characters or more, declared or used
+               in the block).  At least one, not all: a sentence quotes several
+               things and only one of them need be the block;
+           (c) neither: the citation says nothing a machine can check against
+               the block, and the entry needs an explicit per-entry exemption
+               in `RANGE_ALLOW` below -- a PIN and a REASON.  The pin is a
+               substring that occurs inside the block and NOWHERE ELSE in that
+               file, so the exemption names the block by its content and cannot
+               slide onto another one; the reason is what the human who read
+               the row concluded.  The refusal prints what it would have
+               needed, quoted phrase by quoted phrase.
+
+         PER CITATION, not per block.  Until 2026-09-15 the verdict was pooled
+         on the block key -- "a block cited by two documents is evidenced if
+         EITHER sentence evidences it" -- and `RANGE_ALLOW` was keyed on the
+         range, so a citation re-pointed onto an already-blessed block was
+         accepted whatever its own sentence said (three of five deliberately
+         wrong-block ranges passed that way, and 11 citations on 7 keys in the
+         committed documents had never been judged against their own sentence
+         at all).  The verdict is now keyed on (document, citing line, range),
+         the exemption with it, and a block is fingerprinted only when EVERY
+         citation of it is evidenced or exempted.  The citing line is part of
+         the key on purpose: an exemption records that a human read THAT
+         sentence, so a document edit that moves the sentence retires the
+         exemption loudly ("no range citation reaches it") instead of quietly
+         covering a sentence nobody read.
+
+         MEASURED against the committed tree this rule was written on
+         (a3c9ecb), measured 2026-09-15 with `RANGE_ALLOW` suppressed: of the 180
+         distinct blocks the three covered documents cite, 91 were evidenced
+         (71 by quoted text, 20 by quoted symbol, 0 by an adjacent name -- no
+         range in any of the three carried one) and **89 were REFUSED**.
+         Twenty of those 89 turned out to be pointed at the wrong block and
+         were re-pointed; the other 69 are citations whose sentence says
+         nothing a machine can check -- the common shape in these documents is
+         prose that names the subject in unquoted words ("provenance at", "the
+         inventory table at") -- and they are the exemptions below.  So a
+         refusal is not a synonym for a wrong citation; it is "this gate
+         cannot tell", and 22 % of the time here it was a wrong citation.
+         Recipe: `git archive a3c9ecb | tar -x -C <dir>`, copy this file into
+         `<dir>/validation/`, and run `python3
+         validation/check_physics_channels_links.py --audit-ranges
+         --no-range-allow` there.  `--audit-ranges` runs the rule and writes
+         nothing; `--no-range-allow` suppresses the exemption table.
+
+   R4  THE BLOCK IS STILL THE BLOCK.  R1-R3 cannot see a range whose file
          grew above it: 20 of the 89 blocks had gone stale that way by
          2026-09-04 and only 4 of the 20 had a blank edge to give them away.
          So the content of every cited block is fingerprinted in
@@ -99,12 +198,16 @@ C. `` `path:first-last` `` -- a RANGE, a block citation: 97 citations of 89
 
    R4 has a running cost, and it is the point: editing a block that a covered
    document cites breaks this gate until a human confirms the row and
-   re-records.  `--record-ranges` prints every entry it adds, changes or
+   re-records (and since R5, re-recording is itself refused unless the citing
+   sentence still evidences the block).  `--record-ranges` prints every entry it adds, changes or
    drops.  The same sidecar holds the S3 use-site pins and the D fingerprints
    below, now SHARED across every document this gate covers (a block or
    upstream line cited by more than one document hashes to one entry, not
-   one per document): 220 entries in all -- 181 blocks, 30 use-site lines
-   and 9 upstream lines, as of 2026-09-05 once docs/theory/
+   one per document): 220 entries in all -- 180 blocks, 31 use-site lines
+   and 9 upstream lines (re-counted 2026-09-15 from the file itself: a range
+   entry is the one with a `first`/`last` pair, a use-site entry the one with
+   a `line`, an upstream entry the one keyed `pythia8:`; the 181/30 this line
+   carried was one out in each), as of 2026-09-05 once docs/theory/
    SPIN32_FINITE_GAMMA.md and docs/PYTHIA_BRIDGE.md joined
    docs/PHYSICS_CHANNELS.md under this gate (EXTRA_DOCS, below).
 
@@ -136,7 +239,12 @@ citation: a named point onto the nearest DECLARATION of the name (refusing an
 exact tie between two declarations, and never touching an ALLOW entry), a range
 or a pinned use site onto its new home when the fingerprint locates it, and in
 `--loose` mode a named point onto the nearest textual match.
-`--record-ranges` (re)writes the sidecar.
+`--record-ranges` (re)writes the sidecar, refusing any range R5 does not
+evidence (the refused entry is left unwritten, so the gate reports it as
+unfingerprinted until it is re-pointed or exempted).  `--audit-ranges` applies
+R5 and writes nothing; adding `--no-range-allow` suppresses `RANGE_ALLOW`, so
+`--audit-ranges --no-range-allow` measures how many entries the rule refuses on
+their own evidence.
 
 RESIDUALS -- what this gate still cannot see, measured 2026-09-04.
 
@@ -147,11 +255,15 @@ RESIDUALS -- what this gate still cannot see, measured 2026-09-04.
   measured end to end -- insert or delete k lines at the top of all 77 cited
   files, run the gate, count the citations it does NOT report.
 
-  1. An UNNAMED point citation (rule B) is pinned only to "a non-blank,
-     non-trivial line".  Of the 19, 14 survive a +1 drift and 12 a -1 (10 both);
-     at 2 lines it is 17 and 14.  The neighbouring line carries text too.
-     Naming the symbol in the document is the only real fix, and is preferred
-     whenever the target has a name.
+  1. An UNNAMED point citation (rule B) was pinned only to "a non-blank,
+     non-trivial line" until 2026-09-15.  Of the 19 there were then, 14
+     survived a +1 drift and 12 a -1 (10 both); at 2 lines it was 17 and 14.
+     B2 closes most of that -- 2.4 % of +1 drifts survive it -- but what
+     remains is the 28 citations B2 cannot read, which are exempted in
+     `UNNAMED_ALLOW` and are pinned by their exemption's pin and by nothing
+     else: a drift that carries the pinned text with it is invisible, exactly
+     as it is for a RANGE_ALLOW pin.  Naming the symbol in the document is
+     still the real fix, and is preferred whenever the target has a name.
 
   2. A NAMED point citation is pinned to the set of lines that declare its
      name, which is usually but not always one line.  120 of the 1075 accept
@@ -200,6 +312,7 @@ import json
 import os
 import re
 import sys
+from collections import Counter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -281,6 +394,754 @@ ALLOW = {
         "definition at src/pythia/pythia_bridge.cpp:171 in the same row"),
 }
 
+# R5, the recording rule.  `RECORD_WIN` is the "within N characters of the
+# citation" of branch (b): the citing sentence is taken as this many characters
+# on either side of the citation, clipped to the enclosing paragraph (a
+# markdown table row being its own paragraph).  200 was chosen by measuring the
+# alternatives over the three covered documents (2026-09-06, on the tree this
+# rule was landed in): 120 / 200 / 400 characters evidence 94 / 112 / 126 of the
+# 211 range citations while accepting a DECOY block -- the same citation pointed
+# at a block of the same length shifted clear of the true one -- 10.8 % / 14.3 %
+# / 20.4 % of the time, so the true-to-decoy ratio falls 4.5 / 4.1 / 3.3 and
+# every widening is paid for.  The whole of the gain from 120 to 200 is a table
+# row's claim cell reaching its own provenance cell, which is the same sentence.
+# Clipping at the table-cell `|` instead (so that only the cell holding the
+# citation counts) evidences 80 of the 211 rather than 112: those 32 are rows
+# whose claim cell quotes the very symbol the cited block declares, so the cell
+# boundary is not the sentence boundary in these documents and is not used as
+# one.  The numbers and their recipes are in
+# `docs/open_items/run_2026-09-06/phase_D_numbers.md` sec. D1.6.
+RECORD_WIN = 200
+# A quoted phrase: a backticked span, or a "straight" or “curly” quotation.
+# A phrase may WRAP: these documents are hard-wrapped at ~80 columns, so the
+# phrase `docs/CONVENTIONS.md:72-73` is cited for -- "b₁ > 0 means the m = 0
+# state has the LARGER cross section" -- runs across a line break, and a regex
+# that stopped at the newline refused that citation for quoting nothing while
+# the quotation sat in front of it.  A blank line still ends a phrase (nothing
+# in these documents quotes across a paragraph), and 240 characters caps it.
+QUOTED = re.compile(r"`([^`]{1,240}?)`|\"([^\"]{3,240}?)\"|“([^”]{3,240}?)”")
+BLANK_LINE = re.compile(r"\n[ \t]*\n")
+MIN_PHRASE = 3                      # characters, for the TEXT branch of (b)
+MIN_SYMBOL = 2                      # characters, for the SYMBOL branch of (b)
+# The MINIMUM EVIDENCE a text match has to be (see `text_evidence_ok`): a
+# one-word phrase on more lines than this of the target file evidences nothing,
+# and no text match evidences a block longer than this.  Both were measured in
+# D3.5 and both are reproducible with `validation/record_rule_sweep.py r5`.
+EVIDENCE_WORD_LINES = 5
+EVIDENCE_MAX_BLOCK = 150
+
+# R5 (c): ranges whose citing sentence evidences nothing a machine can read.
+# Keyed on the EXACT range -- `path:first-last`, the sidecar's own key -- so an
+# exemption covers that one block and no other, and carrying, like ALLOW above,
+# a PIN and a REASON.  The pin must occur inside the block and NOWHERE ELSE in
+# the file: that is what makes the exemption name a block by its content rather
+# than by two line numbers that drift.  Every entry here was read against its
+# block on 2026-09-15, one at a time, before it was written:
+# `--audit-ranges --no-range-allow` prints each refusal's citing sentence and
+# the phrases the rule looked for, and that listing is the worksheet they were
+# filled in from.
+RANGE_ALLOW: dict[tuple[str, int, str], tuple[str, str]] = {
+    ("PHYSICS_CHANNELS.md", 80, "include/lipolgen/spin.hpp:19-21"): (
+        "///   octupole J=3/2   O    = <J_z^3 - (41/20) J_z>/(3/10)",
+        "the row says the (41/20, 3/10) octupole normalisation is "
+        "stated only here; the block is the three moment lines, the "
+        "last of which is that normalisation"),
+    ("PHYSICS_CHANNELS.md", 87, "tests/test_tagged.cpp:383-400"): (
+        "CHECK_CLOSE_AT(m.p2_moment_mixture(pv), -mom.tensor / 5.0, "
+        "0.0, tol);",
+        "the row calls ⟨P₂(cos θ_k)⟩ = −T/5 a test-pinned identity; the "
+        "block is the test case that pins it, including the mixture "
+        "form"),
+    ("PHYSICS_CHANNELS.md", 107, "src/core/xsec.cpp:295-298"): (
+        "const double helicity = state.lam_e * state.pe;",
+        "the row's claim is that the vector-L term is evaluated only "
+        "when lam_e*P_e != 0 and m != 0, so an m = 0 state has no "
+        "vector-L term for any spin; the block is that guard and the "
+        "term it protects"),
+    ("PHYSICS_CHANNELS.md", 120, "docs/open_items/physics_literature.md:132-140"): (
+        "**(d) Independent fourth check, POLRAD 2.0**",
+        "the row cites [POLRAD]'s Born Eqs. (9)/(10) as an independent "
+        "fourth sign check; the block is the register entry that makes "
+        "that check, (b) through (d)"),
+    ("PHYSICS_CHANNELS.md", 188, "include/lipolgen/sf.hpp:43-45"): (
+        "/// R = sigma_L/sigma_T, simplified R1990-like magnitude "
+        "(TOY).  The DEFAULT R",
+        "the row says both defaults are explicitly labelled TOY here "
+        "and at :109-112; the block is the R default's comment, which "
+        "carries that label"),
+    ("PHYSICS_CHANNELS.md", 200, "docs/CONVENTIONS.md:194-198"): (
+        "the EPPS21 depletion is the single stored number",
+        "the row's provenance for EMC_VALENCE_DEPLETION_EPPS21 = "
+        "0.031052077003862335 and for the superseded CT18NLO 0.02979; "
+        "the block states both and why the denominator is CT18ANLO"),
+    ("PHYSICS_CHANNELS.md", 200, "include/lipolgen/sf.hpp:322-336"): (
+        "/// PROVENANCE: "
+        "`polli_fastsim.polarized.valence_depletion(mode=\"epps21\")` --",
+        "the row's provenance for EMC_VALENCE_DEPLETION_EPPS21, its "
+        "301-point window and the superseded CT18NLO value; the block "
+        "is that provenance comment and the constant"),
+    ("PHYSICS_CHANNELS.md", 201, "include/lipolgen/sf.hpp:341-343"): (
+        "/// eq = 23 is the R^{3/2 3/2}_{As} of their Eq. (23), eq = 26 "
+        "the",
+        "the row reads eq = 23 as R^{3/2 3/2}_As and eq = 26 as R^{(3/2 "
+        "1)}_As 'per' this block; the block is the comment that assigns "
+        "exactly those two"),
+    ("PHYSICS_CHANNELS.md", 205, "include/lipolgen/pipeline.hpp:893-896"): (
+        "-0.0818(17) fm^2 (`LI6_QUADRUPOLE_FM2`, TUNL A = 6, 1998CE04",
+        "the row says the measured Q(⁶Li) and Q_d are quoted here; the "
+        "block is the comment carrying −0.0818(17) fm² against Q_d = "
+        "+0.2859(3) fm² with their sources"),
+    ("PHYSICS_CHANNELS.md", 207, "include/lipolgen/sf.hpp:331-334"): (
+        "4.2 % shallower",
+        "the row says the only quantified CT18NLO-vs-CT18ANLO "
+        "difference in the repo is the 4.2 % depletion shift; the block "
+        "is the comment that states it, with both constants"),
+    ("PHYSICS_CHANNELS.md", 227, "include/lipolgen/generator.hpp:22-28"): (
+        "Bacchetta et al. (JHEP 02 (2007) 093) azimuth",
+        "the row says [Bacchetta07]'s phi_S convention is cited only "
+        "here and echoed in sampler.hpp, and is registered nowhere; the "
+        "block is that citation and the sign convention it fixes"),
+    ("PHYSICS_CHANNELS.md", 227, "include/lipolgen/sampler.hpp:26-29"): (
+        "phi_S of the alignment axis exactly (massless target; "
+        "`reco.py`",
+        "two rows say [Bacchetta07]'s φ_S convention is echoed here; "
+        "the block is that echo"),
+    ("PHYSICS_CHANNELS.md", 233, "include/lipolgen/bookkeeping.hpp:170-172"): (
+        "/// Spin-1 A_zz run plan: equal-thirds fills (pz, +pzz), (-pz, "
+        "+pzz) and the",
+        "the row cites [HERMES05] for the thirds pattern; the block is "
+        "the doc comment that names the HERMES-style pattern and the "
+        "three fills"),
+    ("PHYSICS_CHANNELS.md", 263, "data/vmc/README.md:85-118"): (
+        "the cluster MOMENTUM DISTRIBUTIONS (fetched 2026-08-29, second "
+        "pass)",
+        "the row says the repo carries no journal citation for the "
+        "momenta/ AV18+UX files beyond Wiringa's ANL page and the "
+        "Wayback URLs in this block; the block is that section of the "
+        "inventory"),
+    ("PHYSICS_CHANNELS.md", 263, "docs/open_items/vmc_reconciliation.md:120-131"): (
+        "| k < 0.678 fm⁻¹ = 0.134 GeV (below the **S** node) | **−1** |",
+        "the row says the VMC node values are recorded here; the block "
+        "is the sign table with the S node at 0.678 fm⁻¹ = 0.134 GeV "
+        "and the D node at 2.250"),
+    ("PHYSICS_CHANNELS.md", 264, "data/vmc/README.md:65-103"): (
+        "## Files fetched, one row per subdirectory",
+        "the row cites the VMC inventory table and its Wayback URLs in "
+        "unquoted prose; the block is that inventory (both fetch "
+        "passes) with the Wayback-snapshot column"),
+    ("PHYSICS_CHANNELS.md", 268, "docs/open_items/vmc_reconciliation.md:197-206"): (
+        "| VMC D-sign flipped (= the PRE-FIX physics column) |",
+        "the row calls this 'that table, REGENERATED on the fixed "
+        "library'; the block is the regenerated k-table whose header "
+        "names the pre-fix physics column"),
+    ("PHYSICS_CHANNELS.md", 271, "docs/surveys/beagle_survey.md:120-127"): (
+        "### 2f. The eD mode with spectator tagging",
+        "the row's [BeAGLE22] provenance for the "
+        "struck-cluster/spectator split; the block is the survey "
+        "section on BeAGLE's eD spectator-tagging mode"),
+    ("PHYSICS_CHANNELS.md", 298, "docs/surveys/beagle_survey.md:120-127"): (
+        "- **No FSI at all in eD** (paper, §II).",
+        "the row's provenance for the impulse approximation and for "
+        "BeAGLE's four-momentum-balance-only closure; the block is the "
+        "eD section, whose last line is the no-FSI statement the row "
+        "leans on"),
+    ("PHYSICS_CHANNELS.md", 301, "docs/DEVELOPMENT_PLAN.md:61-65"): (
+        "| tier | content | source of truth |",
+        "the row points at the in-repo pointers to plans/05 step 5.D; "
+        "the block is the T0/T1/T2 tier table whose T1 row names "
+        "`plans/05` 5.D"),
+    ("PHYSICS_CHANNELS.md", 342, "include/lipolgen/fsi.hpp:213-220"): (
+        "a^2 = (r_ch^2(cluster) - r_ch^2(p)) / 3 .",
+        "the row says the a² values are quoted from measured charge "
+        "radii with no bibliographic source; the block is that formula "
+        "and the α number 0.7001 fm² it produces"),
+    ("PHYSICS_CHANNELS.md", 343, "docs/open_items/physics_literature.md:81-85"): (
+        "**σ_eff = 30–70 mb** rising with W (Cosyn–Sargsian Deeps fit)",
+        "two rows cite this block: for the register's only fitted σ(W) "
+        "(30–70 mb rising) and for its calling the coherent-α amplitude "
+        "a variant; both sentences are inside it"),
+    ("PHYSICS_CHANNELS.md", 343, "include/lipolgen/fsi.hpp:176-179"): (
+        "THE OPEN PHYSICS INPUT.  sigma_XN(W) is the weakest number in "
+        "the model.",
+        "the row says the decreasing σ anchors encode a "
+        "formation-length argument; the block is the comment that makes "
+        "that argument and calls σ_XN(W) the weakest number in the "
+        "model"),
+    ("PHYSICS_CHANNELS.md", 422, "include/lipolgen/coherent.hpp:631-637"): (
+        "ONE thing, the t_min kinematic cut; it never forms M_X",
+        "the row says the Python recopseudo.CoherentResponse drew x_P "
+        "only for a t_min cut and never formed M_X; the block is the "
+        "comment that states exactly that and why LiPolGen cannot"),
+    ("PHYSICS_CHANNELS.md", 425, "docs/PYTHIA_BRIDGE.md:574-575"): (
+        "veto = 0 at `M_X ≥ 1.4`.",
+        "cited as the CHAIN TEST for the M_X floor; the block is the "
+        "sentence that says the T2 chain test re-measures the veto "
+        "table per run and pins veto = 0 at M_X >= 1.4"),
+    ("PHYSICS_CHANNELS.md", 426, "src/core/coherent.cpp:290-291"): (
+        "// 6Li: TUNL A=6 (Tilley et al. NPA 708:3).  7Li: recomputed "
+        "from",
+        "the row cites [TUNL6] for the ⁶Li breakup thresholds; the "
+        "block is the comment that names Tilley et al. NPA 708:3 as "
+        "their source"),
+    ("PHYSICS_CHANNELS.md", 446, "include/lipolgen/cluster_config.hpp:19-71"): (
+        "Q_matter(6Li, M) = (3M^2-2)",
+        "the row says the (G1)/(G4)/(G5)/(G6) identities are derived in "
+        "place here; the block is that derivation, (G1) through (G8)"),
+    ("PHYSICS_CHANNELS.md", 448, "docs/USAGE.md:2744-2941"): (
+        "## 9. Polarized ⁶Li configurations for coherent-diffraction "
+        "codes",
+        "the row cites USAGE sec. 9 in full for the configuration "
+        "format and its committed example sidecar; the block is that "
+        "section (198 lines, so no text match evidences it since "
+        "EVIDENCE_MAX_BLOCK)"),
+    ("PHYSICS_CHANNELS.md", 486, "docs/PYTHIA_BRIDGE.md:145-146"): (
+        "worst |λ − 1| = 1.2 × 10⁻¹³ over",
+        "cited as the MEASUREMENT behind the row's worst |λ−1| ≈ "
+        "1.2e-13; the block is that measurement over 400 events"),
+    ("PHYSICS_CHANNELS.md", 486, "docs/PYTHIA_BRIDGE.md:219-230"): (
+        "## 5. The frame map",
+        "cited as the DERIVATION of the frame map the row describes; "
+        "the block is §5 and its triad construction"),
+    ("PHYSICS_CHANNELS.md", 486, "docs/PYTHIA_BRIDGE.md:429-432"): (
+        "| worst relative 4-momentum deviation | 8.4 × 10⁻¹⁴ |",
+        "cited as a MEASUREMENT for the row's 8.4e-14 and 1.2e-13; the "
+        "block is the performance table carrying both"),
+    ("PHYSICS_CHANNELS.md", 488, "docs/PYTHIA_BRIDGE.md:137-161"): (
+        "P(q) ∝ e_q² · x f_q(ζ, max(Q², q2_pdf_min))",
+        "the row's subject is the bridge's flavour choice and its "
+        "q2_pdf_min floor (and the c/b table mass it sits beside); the "
+        "block is §2's m_q rule and §3 Flavour choice, including the "
+        "sampling probability that carries q2_pdf_min"),
+    ("PHYSICS_CHANNELS.md", 492, "docs/T2_CHAIN.md:79-96"): (
+        "`Role::StruckNucleon` verbatim; its `Role::StruckCluster` "
+        "branch is",
+        "the row is about which nucleon the bridge is handed; the block "
+        "is the T2 record of the struck-nucleon hook, its deprecated "
+        "cluster branch and the measured disappearance of the "
+        "no-surrogate tail"),
+    ("PHYSICS_CHANNELS.md", 492, "include/lipolgen/pythia_bridge.hpp:358-373"): (
+        "DEPRECATED (2026-08-30, superseded by the T1 tier)",
+        "the row is about which nucleon the bridge is handed; the block "
+        "is the deprecated NucleonInCluster hook's own comment, which "
+        "is the alternative the row's NucleonChoice replaced"),
+    ("PHYSICS_CHANNELS.md", 493, "docs/PYTHIA_BRIDGE.md:473-475"): (
+        "**990 is a legal user beam**",
+        "the row cites this for the two PYTHIA upstream pointers it "
+        "names (BeamSetup.cc:869-875, BeamParticle.cc:178); the block "
+        "is the sentence that carries both and says why 990 works as a "
+        "beam"),
+    ("PHYSICS_CHANNELS.md", 496, "docs/surveys/beagle_survey.md:120-127"): (
+        "`ISTHKK == 14`",
+        "the row says the intact-recoil roles are never read and never "
+        "touched -- the BeAGLE light-nucleus rule; the block is the eD "
+        "section that shows BeAGLE finding the spectator and leaving it "
+        "alone"),
+    ("PHYSICS_CHANNELS.md", 497, "docs/PYTHIA_BRIDGE.md:360-375"): (
+        "is the statement that is",
+        "the row lists the three HFS identities; the block is the "
+        "numbered list of exactly those three, ending with the exact "
+        "hfs_sigma_empz_exact one"),
+    ("PHYSICS_CHANNELS.md", 497, "docs/T2_CHAIN.md:102-106"): (
+        "the closed-form collinear `hfs_sigma_empz_truth` is now "
+        "approximate at the",
+        "the row's first HFS identity is the approximate one; the block "
+        "is the T2 measurement of how approximate (1.4 % ⁶Li α, 0.7 % "
+        "⁷Li) and why"),
+    ("PHYSICS_CHANNELS.md", 511, "docs/CONVENTIONS.md:312-314"): (
+        "X must be TIMELIKE on",
+        "the row's claim is that the hadronic X is timelike on every "
+        "channel and is checked, never clipped; the block is the "
+        "convention that says exactly that"),
+    ("PHYSICS_CHANNELS.md", 511, "include/lipolgen/pipeline.hpp:13-39"): (
+        "WHAT X IS, PER CHANNEL.",
+        "the row states the per-channel hadronic-X balance; the block "
+        "is the header comment that writes that balance out for "
+        "inclusive, tagged and coherent"),
+    ("PHYSICS_CHANNELS.md", 512, "include/lipolgen/pipeline.hpp:287-299"): (
+        "Fidelity tier of the final state a run writes",
+        "the row says no CLI or config-file key sets the tier, only the "
+        "PipelineConfig field; the block is that field's own T0/T1/T2 "
+        "documentation"),
+    ("PHYSICS_CHANNELS.md", 515, "docs/HEPMC3_CONVENTION.md:6-12"): (
+        "**proposed convention for ion-spin states in HepMC3** flagged "
+        "as open item",
+        "the row says the ion-spin attribute convention is LiPolGen's "
+        "own proposal and open item #17; the block is the paragraph "
+        "that states it and that nothing upstream exists"),
+    ("PHYSICS_CHANNELS.md", 515, "docs/HEPMC3_CONVENTION.md:95-121"): (
+        "- **Role → status/PDG map**, complete, with the tier that "
+        "writes each row:",
+        "the row cites the 'role/status table'; the block is that table "
+        "and the PartnerSpectator note under it"),
+    ("PHYSICS_CHANNELS.md", 999, "include/lipolgen/sf.hpp:152-158"): (
+        "Wandzura-Wilczek g2(x) = -g1(x)",
+        "the [WW] bibliography entry says the relation is carried by "
+        "name only, with no journal or arXiv identifier; the block is "
+        "the g2_ww comment and declaration that carry the name"),
+    ("PHYSICS_CHANNELS.md", 1033, "include/lipolgen/beams.hpp:25-41"): (
+        "/// Physical nuclear masses [GeV] -- the same AME2020-derived "
+        "values as",
+        "cited from the [AME2020] bibliography entry as where the "
+        "AME2020 masses are tabulated; the block is that table's header "
+        "comment and nucleus_mass"),
+    ("PHYSICS_CHANNELS.md", 1038, "include/lipolgen/generator.hpp:22-28"): (
+        "`reco.azimuth_wrt_lepton_plane` is written and tested",
+        "the [Bacchetta07] bibliography entry says the convention is "
+        "cited in this block only; the block is that citation"),
+    ("SPIN32_FINITE_GAMMA.md", 20, "include/lipolgen/asymmetries.hpp:57-61"): (
+        "M is the FREE",
+        "the note's conventions paragraph says `M` is the free nucleon "
+        "mass because x is per-nucleon; the block is that comment and "
+        "`gamma_squared`"),
+    ("SPIN32_FINITE_GAMMA.md", 22, "include/lipolgen/xsec.hpp:121-128"): (
+        "struct EventSpinState {",
+        "the note's convention line defines λ_e and P_e; the block is "
+        "EventSpinState, which carries lam_e and pe (and the axis "
+        "angles the same sentence names)"),
+    ("SPIN32_FINITE_GAMMA.md", 32, "include/lipolgen/xsec.hpp:23-29"): (
+        "RANK-2 GEOMETRY",
+        "the note says the rank-2 block reuses the spin-1 machinery "
+        "verbatim through one Q_NN geometry; the block is the header's "
+        "RANK-2 GEOMETRY paragraph that states it for any J"),
+    ("SPIN32_FINITE_GAMMA.md", 33, "src/core/xsec.cpp:168-173"): (
+        "InclusiveKernel::tensor_moments",
+        "the note cites the code that computes the Q_NN geometry; the "
+        "block is `tensor_moments`, which returns (Q_NN, 3 Q_NN)"),
+    ("SPIN32_FINITE_GAMMA.md", 34, "include/lipolgen/xsec.hpp:204-217"): (
+        "(DEFAULT FALSE) selects the tensor b-sector kernel",
+        "the note cites the optional exact finite-gamma Cosyn kernel; "
+        "the block is the `tensor_gamma` option that selects it and "
+        "states the default"),
+    ("SPIN32_FINITE_GAMMA.md", 36, "src/core/xsec.cpp:108-118"): (
+        "b1f = &b1_32_func_;",
+        "the note says the J = 3/2 slots are dispatched here; the block "
+        "is the spin-1.5 branch that assigns them"),
+    ("SPIN32_FINITE_GAMMA.md", 38, "include/lipolgen/spin.hpp:94-102"): (
+        "/// Normalized rank-3 moment for J=3/2: <Jz^3 - (41/20) "
+        "Jz>/(3/10).",
+        "the note says the rank-3 (octupole) sector is computed in the "
+        "spin bookkeeping; the block is octupole_moment and its comment"),
+    ("SPIN32_FINITE_GAMMA.md", 38, "src/core/spin.cpp:246-259"): (
+        "octupole moment defined for j = 3/2 only",
+        "the note says the rank-3 sector is computed in the spin "
+        "bookkeeping but never reaches the cross section; the block is "
+        "`octupole_moment`"),
+    ("SPIN32_FINITE_GAMMA.md", 107, "include/lipolgen/bookkeeping.hpp:59-68"): (
+        "/// Populations p_m ordered m = +J ... -J along the axis "
+        "(library-wide).",
+        "the note says the library stores an axially symmetric fill: "
+        "populations p_m along one axis n̂(θ_S, φ_S), m ordered +J … "
+        "−J; the block is SpinCategory, which is that storage"),
+    ("SPIN32_FINITE_GAMMA.md", 107, "include/lipolgen/spin.hpp:9-14"): (
+        "/// n(theta_S, phi_S): populations p_m with sum(p_m) = 1, "
+        "ordered m = +J ... -J",
+        "the note says the library stores an axially symmetric fill "
+        "with p_m ordered +J … −J; the block is the comment that "
+        "defines exactly that and the lab-frame rotation"),
+    ("SPIN32_FINITE_GAMMA.md", 110, "include/lipolgen/spin.hpp:18-21"): (
+        "///   octupole J=3/2   O    = <J_z^3 - (41/20) J_z>/(3/10)",
+        "the note says the three numbers are these; the block is the "
+        "four comment lines defining P, P_zz / T and O"),
+    ("SPIN32_FINITE_GAMMA.md", 110, "src/core/spin.cpp:261-290"): (
+        "AxisMoments moments_along_axis(double j, const "
+        "std::vector<double>& populations)",
+        "the note says the three axial moments are implemented here; "
+        "the block is moments_along_axis, which computes all three"),
+    ("SPIN32_FINITE_GAMMA.md", 141, "src/core/spin.cpp:269-275"): (
+        "out.tensor = t;",
+        "the note says that for J = 1 the code uses P_zz = ⟨3J_z² − 2⟩ "
+        "with no division by 3; the block is that J = 1 branch, where t "
+        "is assigned undivided"),
+    ("SPIN32_FINITE_GAMMA.md", 144, "src/core/xsec.cpp:168-173"): (
+        "const double q_nn = (3.0 * m * m - j * (j + 1.0)) / 3.0;",
+        "the note says the cross-section kernel divides by 3 itself, "
+        "Q_NN = (3m^2 - J(J+1))/3 = c_m/3; the block is that line and "
+        "its function"),
+    ("SPIN32_FINITE_GAMMA.md", 145, "include/lipolgen/xsec.hpp:23-29"): (
+        "is ONE geometry for both spins",
+        "the note says the kernel gives one rank-2 geometry for both "
+        "spins; the block is the header paragraph that says exactly "
+        "that"),
+    ("SPIN32_FINITE_GAMMA.md", 145, "tests/test_xsec.cpp:297-316"): (
+        "the rank-2 geometry is one formula for both spins",
+        "the note says the one-geometry statement is pinned by a test; "
+        "the block is that TEST_CASE"),
+    ("SPIN32_FINITE_GAMMA.md", 146, "tests/test_xsec.cpp:318-335"): (
+        "the J = 1 geometry is the HJM transcription digit for digit",
+        "the note says the geometry is pinned against the HJM "
+        "transcription digit for digit; the block is that TEST_CASE"),
+    ("SPIN32_FINITE_GAMMA.md", 165, "src/core/spin.cpp:337-342"): (
+        "a[3][i] = (ms[i] * ms[i] * ms[i] - (41.0 / 20.0) * ms[i]) / "
+        "0.3;",
+        "the note says the solve's rows are exactly the four weight "
+        "vectors (1, m/J, Q_NN, R₃); the block is those four rows of "
+        "the 4×4 matrix"),
+    ("SPIN32_FINITE_GAMMA.md", 178, "include/lipolgen/xsec.hpp:24-26"): (
+        "///   t_geo = Q_NN P_2(cos theta_S)   and   c_eff = 3 Q_NN",
+        "the note says line 23 carries the t_ij form and 24-25 the Q_NN "
+        "definition with t_geo/c_eff; the block is those three lines"),
+    ("SPIN32_FINITE_GAMMA.md", 218, "include/lipolgen/bookkeeping.hpp:214-224"): (
+        "/// The geometric (spin-temperature) population ladder p_m ~ "
+        "t^m with",
+        "the note calls the default branch the spin-temperature "
+        "(maximum-entropy) ladder p_m ∝ u^m; the block is "
+        "SpinTemperatureLadder and the comment that states the same "
+        "ladder"),
+    ("SPIN32_FINITE_GAMMA.md", 242, "tests/test_spin.cpp:223-232"): (
+        "// the J = 3/2 anchor: pz = 0.7 gives tensor 0.4 and octupole "
+        "0.2 exactly,",
+        "the note says the u = 3 rational anchor -- populations (27, 9, "
+        "3, 1)/40, P_z = 0.7, T = 0.4, R₃ = 0.2 -- is pinned here; the "
+        "block is that half of the test case"),
+    ("SPIN32_FINITE_GAMMA.md", 244, "include/lipolgen/bookkeeping.hpp:217-218"): (
+        "/// giving (P_z, rank-2) = (8/13, 4/13) and (7/10, 2/5).",
+        "the note says the u = 3 rational anchor is quoted here; the "
+        "block is the two comment lines that carry (27,9,3,1)/40 and "
+        "(P_z, rank-2) = (7/10, 2/5)"),
+    ("SPIN32_FINITE_GAMMA.md", 277, "tests/test_pipeline.cpp:486-512"): (
+        "TEST_CASE(\"pipeline: 7Li generated events give <P2(cos "
+        "theta_k)> = -T/5\") {",
+        "the note cites this as the pipeline-level ⟨P₂(cos θ_k)⟩ = −T/5 "
+        "polarimeter test; the block is that test case"),
+    ("SPIN32_FINITE_GAMMA.md", 277, "tests/test_tagged.cpp:383-399"): (
+        "// the in-situ alignment polarimeter: <P2(cos theta_k)> = -T/5 "
+        "for ANY fill",
+        "the note cites this as the ⟨P₂(cos θ_k)⟩ = −T/5 polarimeter at "
+        "the model level; the block is that test case"),
+    ("SPIN32_FINITE_GAMMA.md", 360, "src/core/xsec.cpp:168-173"): (
+        "return std::make_pair(q_nn, 3.0 * q_nn);",
+        "the note's mapping result: the code extends Q_NN from J = 1 to "
+        "J = 3/2 with T = +-1 on the stretched state; the block is "
+        "where it does"),
+    ("SPIN32_FINITE_GAMMA.md", 400, "src/core/xsec.cpp:296-298"): (
+        "out.w_avg = out.w_avg + helicity * v * ct * a_parallel(t, x, "
+        "q2, y);",
+        "the note writes the same vector term as `w = λ_e P_e (m/J) cos "
+        "θ_S · A_∥`; the block is the three lines that compute it -- "
+        "re-pointed in run 2026-09-06 from :267-269"),
+    ("SPIN32_FINITE_GAMMA.md", 425, "tests/test_xsec.cpp:223-240"): (
+        "Cosyn Eq. 27: A_zz(theta_S=0)(1 + eps R) = -(2/3) b1/F1",
+        "the note says the -(2/3) b1/F1 sign is pinned at every y by "
+        "two tests; the block is the first of them"),
+    ("SPIN32_FINITE_GAMMA.md", 425, "tests/test_xsec.cpp:242-255"): (
+        "the program sign IS the literature sign, deliberately",
+        "the note's second pin for the published sign; the block is the "
+        "TEST_CASE that fixes TENSOR_LL_SIGN = -1"),
+    ("SPIN32_FINITE_GAMMA.md", 736, "include/lipolgen/xsec.hpp:263-272"): (
+        "/// theta_q between q and the beam, so the alignment tensor of "
+        "Eq. (9)",
+        "the note derives the spin axis in the photon frame at finite "
+        "γ; the block is the comment that sets up exactly that frame "
+        "and the θ_q it turns on"),
+    ("SPIN32_FINITE_GAMMA.md", 741, "include/lipolgen/xsec.hpp:274-275"): (
+        "N = (c s_S cos phi' + s c_S,  s_S sin phi',",
+        "the note says its Eq. (35) is verbatim these lines, and the "
+        "equation is displayed in the note as an indented block, which "
+        "carries no quotation marks for the rule to read; the block is "
+        "that vector N"),
+    ("SPIN32_FINITE_GAMMA.md", 770, "include/lipolgen/asymmetries.hpp:57-61"): (
+        "because x is per-nucleon",
+        "the variable note says the generator uses x per nucleon "
+        "throughout, which is why its x is [2]'s x_d; the block is the "
+        "per-nucleon comment that says so"),
+    ("SPIN32_FINITE_GAMMA.md", 790, "include/lipolgen/xsec.hpp:99-103"): (
+        "for ANY b2 and not only at the tensor Callan-Gross point.",
+        "the note says the header states the γ = 0 collapse 'for any "
+        "b2'; the block is that header comment, which writes it in "
+        "capitals"),
+    ("SPIN32_FINITE_GAMMA.md", 790, "src/core/xsec.cpp:29-32"): (
+        "o.f_l = (2.0 * onep * x * b1",
+        "the note says the code states the γ = 0 collapse F_TLL_L = (2 "
+        "x b1 − b2)/x; the block is cosyn_unpolarized_sfs' f_l, the "
+        "expression that collapses to it"),
+    ("SPIN32_FINITE_GAMMA.md", 810, "src/core/xsec.cpp:108-118"): (
+        "std::fabs(j - 1.5) < 1e-9",
+        "the note says `tables` dispatches to the _32 slots on "
+        "ion().spin == 1.5; the block is that branch"),
+    ("SPIN32_FINITE_GAMMA.md", 811, "src/core/xsec.cpp:119-122"): (
+        "// b3, b4 are filled for EVERY spin (xsec.py fills them "
+        "outside the rank-2",
+        "the note says tables() fills b3, b4 for every spin; the block "
+        "is those two fills and the comment that says so"),
+    ("SPIN32_FINITE_GAMMA.md", 905, "src/core/xsec.cpp:295-298"): (
+        "out.w_avg = out.w_avg + helicity * v * ct * a_parallel(t, x, "
+        "q2, y);",
+        "the note compares the proposed rank-3 term with the vector "
+        "term the code already computes; the block is that term"),
+    ("SPIN32_FINITE_GAMMA.md", 916, "include/lipolgen/xsec.hpp:13-21"): (
+        "///   W = 1 + w_avg + a_1 cos(phi') + a_2 cos(2 phi'),   phi' "
+        "= phi - phi_S",
+        "the note gives the J = 3/2 cross section in the generator's "
+        "own variables and normalisation; the block is that master "
+        "formula as the header states it"),
+    ("SPIN32_FINITE_GAMMA.md", 916, "src/core/xsec.cpp:320-328"): (
+        "return dsigma_unpol(x, q2, s) / (2.0 * kPi) * std::max(w, "
+        "0.0);",
+        "the note's master formula (46) is dσ/(dx dQ² dφ) = "
+        "[σ_U/2π]·W(φ'); the block is InclusiveKernel::dsigma, which is "
+        "that line for line -- re-pointed in run 2026-09-06 from "
+        ":283-285, which the P8 split had left on the signature of "
+        "amplitudes()"),
+    ("SPIN32_FINITE_GAMMA.md", 976, "src/core/xsec.cpp:108-118"): (
+        "df = &delta_32_func_;",
+        "the row says g1_rank3/g2_rank3 would be filled in the same "
+        "branch as the _32 slots; the block is that branch"),
+    ("SPIN32_FINITE_GAMMA.md", 981, "src/core/sampler.cpp:519-521"): (
+        "out[i * nk + k] += p_m * (1.0 + st.w_avg[c] +",
+        "the note's change list says the per-category φ density "
+        "evaluates 1 + w_avg + a1 cos φ′ + a2 cos 2φ′ by hand; the "
+        "block is that hand evaluation, in the code's own spelling "
+        "(st.w_avg[c], st.a1[c], st.a2[c]) -- re-pointed in run "
+        "2026-09-06 from :480-482, which the file had moved off"),
+    ("SPIN32_FINITE_GAMMA.md", 1009, "include/lipolgen/xsec.hpp:183-186"): (
+        "(DEFAULT TRUE since 2026-08-29",
+        "the note cites the rationale for `target_mass` defaulting to "
+        "true; the block is that rationale"),
+    ("SPIN32_FINITE_GAMMA.md", 1011, "src/core/xsec.cpp:124-131"): (
+        "t.g2 = (g2_mode_ == G2Mode::kWandzuraWilczek)",
+        "the note cites this for the Wandzura-Wilczek g2 table that "
+        "a_parallel_exact reads; the block is where tables() fills that "
+        "g2"),
+    ("SPIN32_FINITE_GAMMA.md", 1024, "include/lipolgen/xsec.hpp:188-191"): (
+        "chooses the g2 model",
+        "the note asks for a g2_rank3_scale mirroring g2_scale; the "
+        "block is the g2_mode/g2_scale documentation it mirrors"),
+    ("SPIN32_FINITE_GAMMA.md", 1039, "tests/test_xsec.cpp:223-240"): (
+        "terms of numerator and denominator combine into",
+        "the test inventory names this test for the A_zz identity at "
+        "every y; the block is that TEST_CASE"),
+    ("SPIN32_FINITE_GAMMA.md", 1041, "tests/test_xsec.cpp:257-278"): (
+        "TEST_CASE(\"the kernel thirds combination carries the same sign "
+        "as A_zz\") {",
+        "the note's test list describes this as 'the thirds combination "
+        "carries the sign of A_zz'; the block is the test case of that "
+        "name"),
+    ("SPIN32_FINITE_GAMMA.md", 1042, "tests/test_xsec.cpp:170-193"): (
+        "the population-averaged cross section is the unpolarized one",
+        "the test inventory names the population sum-rule test; the "
+        "block is that TEST_CASE"),
+    ("SPIN32_FINITE_GAMMA.md", 1043, "tests/test_xsec.cpp:297-316"): (
+        "{LI6(), {1.0, 0.0, -1.0}}, {LI7(), {1.5, 0.5, -0.5, -1.5}}",
+        "the proposed test list cites this test for the one-geometry "
+        "statement; the block is that TEST_CASE, which runs both ions"),
+    ("SPIN32_FINITE_GAMMA.md", 1043, "tests/test_xsec.cpp:318-335"): (
+        "0.5 * azz(t.b1, t.f1, t.f2, x, q2 / (s * x), &t.b2)",
+        "the proposed test list cites this test for the J = 1 HJM "
+        "transcription; the block is that TEST_CASE"),
+    ("SPIN32_FINITE_GAMMA.md", 1044, "tests/test_xsec.cpp:337-360"): (
+        "TEST_CASE(\"the spin-3/2 rate and cos-2phi channels are "
+        "mutually consistent\") {",
+        "the note's test list cites this for the spin-3/2 rate/cos-2φ "
+        "consistency; the block is that test case"),
+    ("SPIN32_FINITE_GAMMA.md", 1048, "tests/test_spin.cpp:132-145"): (
+        "TEST_CASE(\"spin-3/2 populations round trip through the "
+        "moments\") {",
+        "the note's test list cites this as the populations/moments "
+        "round trip; the block is that test case"),
+    ("SPIN32_FINITE_GAMMA.md", 1048, "tests/test_spin.cpp:207-232"): (
+        "TEST_CASE(\"max-entropy populations for spin 3/2, anchor (0.7, "
+        "0.4)\") {",
+        "the note's test list cites this as the max-entropy ladder "
+        "test; the block is that test case"),
+    ("SPIN32_FINITE_GAMMA.md", 1067, "tests/test_xsec.cpp:297-316"): (
+        "kp.tensor_moments(0.5).first == 0.0",
+        "proposed test 3 is to mirror this test for the octupole "
+        "pure-state weights; the block is the rank-2 TEST_CASE it "
+        "mirrors"),
+    ("SPIN32_FINITE_GAMMA.md", 1071, "tests/test_xsec.cpp:170-193"): (
+        "CHECK_CLOSE(tot * 2 * kPi, kern.dsigma_unpol(p.x, p.q2, s), "
+        "1e-9);",
+        "proposed test 4 is to extend this test to LI7 with all four "
+        "sectors live; the block is the test to extend"),
+    ("SPIN32_FINITE_GAMMA.md", 1075, "tests/test_xsec.cpp:388-406"): (
+        "TEST_CASE(\"the tensor rate follows P_2(cos theta_S), and the "
+        "magic angle kills it\") {",
+        "the note says the rank-2 magic angle (P₂ = 0 at θ_S = 54.74°) "
+        "is already tested here; the block is that test case, whose "
+        "`magic` is acos(1/√3)"),
+    ("SPIN32_FINITE_GAMMA.md", 1082, "tests/test_xsec.cpp:649-683"): (
+        "amplitudes refuse a spin state of the wrong J",
+        "proposed test 6 is a spin-1 rejection in the spirit of this "
+        "test; the block is that TEST_CASE"),
+    ("SPIN32_FINITE_GAMMA.md", 1100, "tests/test_xsec.cpp:223-240"): (
+        "for (const Point& p : kConventionPoints)",
+        "the note says the J = 3/2 contrast must mirror this spin-1 "
+        "test, which must keep pinning -(2/3) b1/F1 unchanged; the "
+        "block is that TEST_CASE"),
+    ("SPIN32_FINITE_GAMMA.md", 1168, "include/lipolgen/asymmetries.hpp:9-21"): (
+        "/// Spin-1 master formula (unpolarized e, target spin at angle "
+        "theta_m,",
+        "cited from the [HJM89] bibliography entry as where the spin-1 "
+        "b1..b4 basis and c_m = 3m² − 2 are transcribed; the block is "
+        "that master formula with its c_m line"),
+}
+
+
+
+# B2 (rule B, above): unnamed point citations whose sentence quotes nothing the
+# cited LINE carries.  Keyed on the CITATION -- (document, citing line,
+# `path:line`) -- not on the target: two documents, or two sentences in one
+# document, can cite the same line for different claims and each claim is its
+# own judgement (`src/core/beams.cpp:89` is cited twice by
+# docs/PHYSICS_CHANNELS.md, once for the Schellingerhout product and once from
+# the bibliography).  Each value is (pin, reason), with the same contract
+# RANGE_ALLOW's pin has: the pin must be ON the cited line and NOWHERE ELSE in
+# that file, so the exemption names the line by its content and cannot slide.
+# The citing line is part of the key deliberately: an exemption is a record
+# that a human read THIS sentence against that line, and a document edit that
+# moves the sentence retires it, loudly ("no citation reaches it"), instead of
+# quietly covering a sentence nobody read.
+UNNAMED_ALLOW: dict[tuple[str, int, str], tuple[str, str]] = {
+    ("PHYSICS_CHANNELS.md", 83, "docs/open_items/physics_literature.md:95"): (
+        "³He is P_n = 0.86, P_p = −0.028",
+        "the row contrasts the code's per-nucleon 3He numbers with the "
+        "register's whole-nucleus ones; the cited line is the convention "
+        "sentence that gives 3He as P_n = 0.86, P_p = -0.028"),
+    ("PHYSICS_CHANNELS.md", 83, "docs/open_items/physics_literature.md:99"): (
+        "JLab PR12-14-001",
+        "the row's claim is that the 0.866/-0.037 in `LI7()` are the "
+        "higher-precision Argonne online-table values as quoted by JLab "
+        "PR12-14-001; the cited line is the Wiringa 2014 row of the "
+        "register's reference table, which is where the register says that"),
+    ("PHYSICS_CHANNELS.md", 83, "src/core/beams.cpp:89"): (
+        "0.86995 x 0.9325 = 0.81123",
+        "the row says [Schell93] is named beside the cluster product; the "
+        "cited line IS that product, with the Schellingerhout reference on "
+        "it"),
+    ("PHYSICS_CHANNELS.md", 85, "include/lipolgen/beams.hpp:13"): (
+        "Au (110 GeV/u)",
+        "the row says the Au = 110 GeV/u number is only quoted in this "
+        "header comment (Au is not a supported species); this is the line "
+        "that quotes it"),
+    ("PHYSICS_CHANNELS.md", 87, "README.md:115"): (
+        "⁷Li ⟨P₂⟩ = −T/5",
+        "the row says the identity is stated in README.md; the cited line "
+        "is the external-anchors bullet that states it"),
+    ("PHYSICS_CHANNELS.md", 87, "docs/DEVELOPMENT_PLAN.md:92"): (
+        "⁷Li P₂ = −T/5 polarimeter",
+        "the row says the identity is stated in the development plan; the "
+        "cited line is the P4 row that states it"),
+    ("PHYSICS_CHANNELS.md", 87, "tests/test_pipeline.cpp:486"): (
+        "pipeline: 7Li generated events give <P2(cos theta_k)> = -T/5",
+        "the row calls the -T/5 identity test-pinned and cites the pipeline "
+        "test; the cited line is that TEST_CASE"),
+    ("PHYSICS_CHANNELS.md", 122, "docs/open_items/physics_literature.md:28"): (
+        "What is genuinely absent is the finite-γ",
+        "the row's claim is that the finite-gamma J = 3/2 decomposition "
+        "does not exist in the literature; the cited line is the register's "
+        "`Recommended path` sentence that says it is genuinely absent"),
+    ("PHYSICS_CHANNELS.md", 173, "src/core/pipeline.cpp:1110"): (
+        "kernel && is_tagged(channel)",
+        "the row says validate() refuses a caller-supplied kernel on any "
+        "tagged channel rather than record a backend that never ran; the "
+        "cited line is that guard, whose throw runs to :1120 and carries "
+        "the \"caller-supplied kernel\" meta label the row quotes at :1118 "
+        "(re-pointed 2026-09-15 from :1016, which is the unrelated unpol_sf "
+        "= toy refusal)"),
+    ("PHYSICS_CHANNELS.md", 201, "docs/open_items/physics_literature.md:102"): (
+        "reduced-matrix-element factor",
+        "the row notes that the register reads CBT Eqs. (26)/(27) as the K "
+        "= 1 reduced-matrix-element factor, against the row's own reading; "
+        "the cited line is the CBT06 register row that reads them that way"),
+    ("PHYSICS_CHANNELS.md", 206, "include/lipolgen/constants.hpp:136"): (
+        "Sather-Schmidt bag-model sum-rule coefficient",
+        "the row's [SS90] provenance for C_BAG = -0.012; the cited line is "
+        "the comment naming Sather-Schmidt PRD 42:1424, with the constant "
+        "itself two lines below (re-pointed 2026-09-15 from :86, which is "
+        "the b1-normalisation comment and has been since before bd775bc)"),
+    ("PHYSICS_CHANNELS.md", 235, "src/core/rng.cpp:2"): (
+        "xoshiro256** seeded via splitmix64",
+        "the row says xoshiro256**/splitmix64 are named at this line only "
+        "and that no Blackman-Vigna citation exists in the repo; this is "
+        "that line"),
+    ("PHYSICS_CHANNELS.md", 273, "src/core/spectator.cpp:300"): (
+        "Yellow Report Table 10.1, HADRON beam",
+        "the row's [YR] provenance for the hadron-beam divergences; the "
+        "cited line is the Table 10.1 transcription comment above the "
+        "numbers"),
+    ("PHYSICS_CHANNELS.md", 301, "docs/CONVENTIONS.md:383"): (
+        "a_nn = −18.9 fm",
+        "the row says a_nn = -18.9 fm has no primary reference and appears "
+        "only as an in-code constant and in CONVENTIONS.md; the cited line "
+        "is where CONVENTIONS.md carries it (re-pointed 2026-09-15 from "
+        ":357, which the file's growth since bd775bc turned into the "
+        "deuteron-control sentence)"),
+    ("PHYSICS_CHANNELS.md", 339, "docs/open_items/physics_literature.md:234"): (
+        "keep the coherent-cluster amplitude as the systematic variant",
+        "the row says the register calls the per-nucleon Glauber product "
+        "the citable primary and the coherent-cluster amplitude the "
+        "systematic variant, the opposite of the code's default; this is "
+        "the register line that says it (re-pointed 2026-09-15 from the "
+        "range :81-85, which is the W_FSI formula and its starting "
+        "parameters -- the other citation of that range, for the 30-70 mb "
+        "Deeps fit, is right and stays)"),
+    ("PHYSICS_CHANNELS.md", 417, "tests/test_rc.cpp:518"): (
+        "the first C0 zero lies in [2.9, 3.3] fm^-1",
+        "the row says T11 gates the whole refit window q0 in [2.9, 3.3] "
+        "fm^-1; the cited line is that SUBCASE of T11 (re-pointed "
+        "2026-09-15 from :496, a comment inside the <r^2>_point subcase, "
+        "which gates a different number)"),
+    ("PHYSICS_CHANNELS.md", 993, "include/lipolgen/spin.hpp:24"): (
+        "(Varshalovich) conventions",
+        "the [Varsh] bibliography entry says the Wigner-d / Clebsch-Gordan "
+        "conventions are named at this line and nowhere else in the "
+        "repository; this is that line"),
+    ("PHYSICS_CHANNELS.md", 1014, "src/core/beams.cpp:89"): (
+        "(Schellingerhout PRC 48:2714)",
+        "the [Schell93] bibliography entry says the reference is named "
+        "beside the 6Li cluster product; the cited line is the product "
+        "carrying it"),
+    ("SPIN32_FINITE_GAMMA.md", 142, "include/lipolgen/spin.hpp:23"): (
+        "Hoodbhoy-Jaffe-Manohar NPB 312:571",
+        "the note's conventions paragraph cites the HJM c_m = 3m^2 - 2 "
+        "convention; the cited line is the header line that states it"),
+    ("SPIN32_FINITE_GAMMA.md", 151, "examples/generate_tagged.cpp:123"): (
+        "1.0, j >= 1.0 ? 1.0 : 0.0);",
+        "the paragraph says this line RECORDED `pzz_true = 1.0` before "
+        "commit 0961c60 and that both CLIs now write `j >= 1.0 ? 1.0 : "
+        "0.0`; the cited line is that line as it stands after the fix, "
+        "which is what the paragraph's next sentence quotes"),
+    ("SPIN32_FINITE_GAMMA.md", 743, "tests/test_tensor_gamma.cpp:382"): (
+        "tensor_gamma: Table 1 row 2, a target polarized along q",
+        "the note says the frame choice is pinned by the paper's own Table "
+        "1 rows; the cited line is that TEST_CASE (its sibling `:406` is "
+        "the other row)"),
+    ("SPIN32_FINITE_GAMMA.md", 771, "src/core/xsec.cpp:116"): (
+        "2.0 * x * t.b1",
+        "the note's claim is that the generator's default is b2 = 2*x*b1 in "
+        "the per-nucleon normalisation; the cited line is that default "
+        "branch (the note writes the product with a middle dot, which is "
+        "why the quoted phrase does not match the code)"),
+    ("SPIN32_FINITE_GAMMA.md", 791, "tests/test_tensor_gamma.cpp:152"): (
+        "reduce to the HJM b-sector at gamma = 0",
+        "the note says this test pins the gamma -> 0 collapse explicitly "
+        "`for any b2`; the cited line is the TEST_CASE, and the `for any "
+        "b2` it quotes is in the test's own comment at :155"),
+    ("SPIN32_FINITE_GAMMA.md", 905, "include/lipolgen/xsec.hpp:19"): (
+        "lam_e P_e (m/J) cos(theta_S) * A_par(x,y)",
+        "the note compares the proposed rank-3 term with the vector term "
+        "the code already computes; the cited line is that term in the "
+        "header's master formula (the note writes it in Unicode)"),
+    ("SPIN32_FINITE_GAMMA.md", 948, "src/core/asymmetries.cpp:85"): (
+        "TENSOR_LL_SIGN * 2.0 / 3.0",
+        "the note says the spin-1 2/3 is an explicit factor in azz(); the "
+        "cited line is where azz() multiplies it in (the note quotes "
+        "`2.0/3.0`, the code spaces it)"),
+    ("SPIN32_FINITE_GAMMA.md", 983, "src/core/bookkeeping.cpp:89"): (
+        "leaves the octupole moment R_3 at its default 0",
+        "the row asks for an explicit `o` beside `pzz` because the explicit "
+        "branch silently sets R_3 = 0 today; the cited line is the comment "
+        "that states exactly that (the call itself is at :94, which is what "
+        "sec. 2.4 cites)"),
+    ("SPIN32_FINITE_GAMMA.md", 1064, "tests/test_tensor_gamma.cpp:152"): (
+        "reduce to the HJM b-sector at gamma = 0",
+        "test 2 of the proposed suite is to mirror this test at "
+        "`target_mass = true`; the cited line is that TEST_CASE"),
+    ("SPIN32_FINITE_GAMMA.md", 1167, "include/lipolgen/spin.hpp:23"): (
+        "Hoodbhoy-Jaffe-Manohar NPB 312:571",
+        "the [HJM89] bibliography entry says the spin-1 basis and the c_m = "
+        "3m^2 - 2 convention are carried at this line; this is that line"),
+}
 CTRL = {"if", "for", "while", "switch", "return", "else", "do", "case", "new",
         "delete", "throw", "goto", "sizeof", "static_cast", "const_cast",
         "dynamic_cast", "reinterpret_cast", "co_return", "co_await", "catch",
@@ -701,6 +1562,237 @@ def clip(s: str, n: int = 100) -> str:
     return s if len(s) <= n else s[:n - 1] + "…"
 
 
+# ------------------------------------------------------------- R5: recording evidence
+#
+# What a range citation has to SAY about its block before the sidecar will
+# fingerprint it.  See R5 in the module docstring for the rule and for what it
+# measured over the three covered documents.
+
+# `X:12`, `X:12-20`, `BeamRemnants.cc:662,935` -- a citation, never evidence.
+CITELIKE = re.compile(r"^\S*:\d+(?:[-,]\d+)*$")
+
+
+# A markdown LIST ITEM: `- `, `* `, `+ `, `1. `, `2) `.
+LIST_ITEM = re.compile(r"^[ \t]*(?:[-*+]|\d+[.)])[ \t]")
+# Whether a list item is its own paragraph.  A constant so that
+# `validation/record_rule_sweep.py` can measure the rule with it off; the gate
+# never turns it off.
+LIST_ITEM_PARAGRAPH = True
+
+
+def paragraph(text: str, start: int, end: int) -> tuple[int, int]:
+    """The enclosing paragraph of a citation.  A markdown TABLE ROW is its own
+    paragraph -- one row is one citing sentence (its claim cell and its
+    provenance cell belong to each other, and the row above belongs to
+    neither) -- and since 2026-09-15 so is a markdown LIST ITEM, for the same
+    reason: a bulleted list carries no blank lines, so the whole list was one
+    "sentence" and a phrase quoted in the NEXT bullet evidenced this bullet's
+    block.  That is not a hypothetical (D3.5): `docs/PHYSICS_CHANNELS.md:974`
+    cites `docs/USAGE.md:1501-1509` for the four C++ example generators and
+    was evidenced by the word `tier`, which belongs to the bullet BELOW it --
+    the block is the T1 tier section and the citation is wrong.  Clipping to
+    the item costs exactly ONE citation over the three covered documents of
+    a3c9ecb -- and that citation is the wrong one (recipe:
+    `validation/record_rule_sweep.py r5 --tree <a3c9ecb checkout with this
+    file copied in>`, rows one and two).  Anything else is the
+    blank-line-delimited paragraph."""
+    ls = text.rfind("\n", 0, start) + 1
+    le = text.find("\n", end)
+    le = len(text) if le < 0 else le
+    if text[ls:le].lstrip().startswith("|"):
+        return ls, le
+    lo = text.rfind("\n\n", 0, start)
+    lo = 0 if lo < 0 else lo + 2
+    hi = text.find("\n\n", end)
+    hi = len(text) if hi < 0 else hi
+    if not LIST_ITEM_PARAGRAPH:       # off only for the D3.5 measurement
+        return lo, hi
+    item = None                       # the enclosing list item, if any
+    i = ls
+    while i >= lo:
+        ie = text.find("\n", i)
+        ie = len(text) if ie < 0 else ie
+        if LIST_ITEM.match(text[i:ie]):
+            item = i
+            break
+        if i == lo:
+            break
+        i = text.rfind("\n", 0, i - 1) + 1
+        if i < lo:
+            break
+    if item is None:
+        return lo, hi
+    nxt, j = hi, text.find("\n", end)
+    while j != -1 and j < hi:
+        je = text.find("\n", j + 1)
+        je = len(text) if je < 0 else je
+        if LIST_ITEM.match(text[j + 1:je]):
+            nxt = j
+            break
+        j = je if je < hi else -1
+    return max(lo, item), min(hi, nxt)
+
+
+def citing_sentence(text: str, start: int, end: int, win: int | None = None) -> str:
+    """`win` characters either side of the citation, clipped to its paragraph.
+    This is what gets PRINTED; the phrases are read off the paragraph itself
+    (`quoted_phrases`), because a window cut through the middle of a code span
+    pairs the surviving backtick with the next one and reads a run of prose as
+    a quotation."""
+    win = RECORD_WIN if win is None else win
+    lo, hi = paragraph(text, start, end)
+    return text[max(lo, start - win):min(hi, end + win)]
+
+
+def quoted_phrases(text: str, start: int, end: int,
+                   win: int | None = None) -> list[str]:
+    """Every quoted phrase within `win` characters of the citation, in order,
+    minus the citations themselves.  Scanned over the whole paragraph and then
+    filtered by distance, so that backticks always pair as the document wrote
+    them and only whole phrases are considered."""
+    win = RECORD_WIN if win is None else win
+    lo, hi = paragraph(text, start, end)
+    near_lo, near_hi = start - win, end + win
+    out: list[str] = []
+    for m in QUOTED.finditer(text, lo, hi):
+        if m.end() < near_lo or m.start() > near_hi:
+            continue
+        q = (m.group(1) or m.group(2) or m.group(3) or "").strip()
+        if not q or BLANK_LINE.search(q) or CITELIKE.match(q):
+            continue
+        q = " ".join(q.split())
+        if q not in out:
+            out.append(q)
+    return out
+
+
+def symbol_bases(phrase: str) -> list[str]:
+    """The identifiers a phrase names, if it names any: `Optics::lumi_fraction`
+    -> [`lumi_fraction`], `spin1_populations(p)` -> [`spin1_populations`],
+    `--pzz` -> [`--pzz`].  A one-character name (`M`, `x`) is not taken as a
+    symbol: it matches everywhere and evidences nothing.  A slash-separated
+    run of names -- `HelicityFlipOptions::theta_s/phi_s`, `pe/pz/pzz`, the
+    documents' way of writing "these members" -- is every one of them, but
+    only when EVERY part is a name: `data/vmc/README.md` is a path, not three
+    symbols."""
+    head = re.split(r"[(<\[{ ]", phrase.strip(), 1)[0]
+    head = head.split("::")[-1].strip().rstrip(".,;:!?")
+    parts = head.split("/")
+    if len(parts) > 4:
+        return []
+    out = [q.strip() for q in parts]
+    if all((FLAG.match(q) or IDENT.match(q)) and len(q) >= MIN_SYMBOL
+           for q in out) and out:
+        return out
+    return []
+
+
+def flat(lines: list[str]) -> str:
+    return " ".join(" ".join(lines).split())
+
+
+def text_evidence_ok(src: "Source", a: int, b: int, want: str) -> bool:
+    """Whether a TEXT match is worth anything, MEASURED (D3.5, recipe
+    `validation/record_rule_sweep.py r5`).
+
+    Two limits, both of them the same statement -- a phrase evidences a block
+    only if finding it there says something about THAT block:
+
+      * a block of more than `EVIDENCE_MAX_BLOCK` lines is too big for a text
+        match to mean anything.  Measured over the three covered documents of
+        the committed tree a3c9ecb by the decoy test (the same citation
+        pointed at a same-length block shifted clear of the true one; recipe
+        `validation/record_rule_sweep.py r5 --tree <a3c9ecb checkout>`), text
+        evidence accepts a decoy 11.2 % of the time for blocks of 1-20 lines,
+        18.6 % for 20-60, 38.5 % for 60-150 and 50.0 % for 150+: in a 371-line
+        block the rule is a coin toss.  150 is where it becomes one; the two
+        blocks between 60 and 150 were read and each rests on a phrase
+        specific to it, so the threshold is not taken lower -- 60 costs two
+        more exemptions and buys nothing measurable (the last row of that
+        table).
+      * a ONE-WORD phrase must occur on at most `EVIDENCE_WORD_LINES` lines of
+        the target FILE.  `tier` is on 17 lines of `docs/USAGE.md` and `pzz`
+        on 39 of `python/bindings.cpp`: a word that common cannot tell one
+        block of that file from another, which is exactly how the 12 blocks
+        of D3.5 came to rest on `ratio`, `rates`, `applies`, `seed`, `tier`,
+        `bound`, `pzz`.  A multi-word phrase (`--x-max 0.95`, a formula, a
+        sentence) is not restricted: it is already specific."""
+    if EVIDENCE_MAX_BLOCK is not None and b - a + 1 > EVIDENCE_MAX_BLOCK:
+        return False
+    if EVIDENCE_WORD_LINES is not None and " " not in want:
+        if sum(1 for x in src.lines if want in x) > EVIDENCE_WORD_LINES:
+            return False
+    return True
+
+
+def phrase_in_block(src: "Source", a: int, b: int, phrase: str):
+    """How a quoted phrase is evidence for the block: as TEXT (a
+    whitespace-normalised substring, subject to `text_evidence_ok`) or as a
+    SYMBOL (declared or used in it)."""
+    want = " ".join(phrase.split())
+    body = flat(src.lines[a - 1:b])
+    if len(want) >= MIN_PHRASE and text_evidence_ok(src, a, b, want):
+        # A bare identifier has to match on WORD boundaries -- `rates` inside
+        # "generates" is not the block naming it.  Anything longer (a formula,
+        # a sentence) is matched as written.
+        if IDENT.match(want):
+            if word(want).search(body):
+                return "text"
+        elif want in body:
+            return "text"
+    for base in symbol_bases(phrase):
+        if any(src.declares(i, base) or src.in_code(i, base)
+               for i in range(a, b + 1)):
+            return "symbol"
+    return None
+
+
+def range_evidence(text: str, m: re.Match, src: "Source", a: int, b: int,
+                   name: str | None):
+    """R5 branches (a) and (b) on ONE range citation.
+
+    Returns `(how, detail)`: `how` is "name", "text" or "symbol" when the
+    citing sentence evidences the block, and None when it does not, `detail`
+    saying either what carried it or what the rule looked for and missed."""
+    if name and not CITELIKE.match(name):
+        bases = symbol_bases(name)
+        if bases:                                                        # (a)
+            if any(src.declares(i, base) or src.in_code(i, base)
+                   for base in bases for i in range(a, b + 1)):
+                return "name", f"the adjacent name `{name}` is in the block"
+            return None, (f"the adjacent name `{name}` is neither declared nor "
+                          f"used anywhere inside the block")
+        # a name that is not an identifier (`pe=0.7`) is a quoted phrase like
+        # any other, and is picked up by (b) below
+    phrases = quoted_phrases(text, m.start(), m.end())
+    for q in phrases:                                                    # (b)
+        how = phrase_in_block(src, a, b, q)
+        if how:
+            return how, f"`{clip(q, 60)}` occurs in the block as {how}"
+    if phrases:
+        shown = ", ".join("`%s`" % clip(q, 40) for q in phrases[:6])
+        more = f" and {len(phrases) - 6} more" if len(phrases) > 6 else ""
+        return None, (f"the citing sentence quotes {shown}{more}; none of them "
+                      f"is in the block")
+    return None, ("the citing sentence carries no adjacent name and quotes "
+                  "nothing, so there is nothing to check the block against: "
+                  + clip(" ".join(citing_sentence(text, m.start(),
+                                                  m.end()).split()), 140))
+
+
+def pin_state(src: "Source", a: int, b: int, pin: str):
+    """None when a RANGE_ALLOW pin still names this block, else why it does
+    not.  The pin has to be INSIDE the block and nowhere else in the file: an
+    exemption that matches two places in a file names neither."""
+    whole = "\n".join(src.lines)
+    if pin not in "\n".join(src.lines[a - 1:b]):
+        return "is not inside the block"
+    n = whole.count(pin)
+    if n != 1:
+        return f"occurs {n} times in the file, so it does not name this block"
+    return None
+
+
 # --------------------------------------------------------------- extra documents
 #
 # 2026-09-05 (Phase E, item E1).  `docs/PHYSICS_CHANNELS.md` is the document
@@ -740,15 +1832,20 @@ EXTRA_DOCS = [
 
 def check_document(doc: Path, allow: dict, *, fix: bool, record: bool,
                    strict: bool, cache: dict, recorded: dict, fresh: dict,
-                   seen: set, remap: dict, ext_dir):
+                   seen: set, remap: dict, ext_dir, evidence: dict | None = None,
+                   use_allow: bool = True, unnamed_seen: set | None = None):
     """Check one document's citations against the live tree.
 
     `cache` (path -> Source|None), `recorded` (the loaded sidecar, read-only
     here), `fresh` (sha256 entries this run actually reached), `seen` (keys
-    reached this run) and `remap` (moved-key old -> new, `--fix` only) are
+    reached this run), `remap` (moved-key old -> new, `--fix` only) and
+    `evidence` (R5's verdict per range key, when recording or auditing) are
     shared across every document `main()` processes in one invocation, since a
-    fingerprint or a "no longer cited anywhere" verdict is a property of the
-    whole run, not of one document.  Returns `(bad, new_text)`: `bad` is the
+    fingerprint, an R5 verdict or a "no longer cited anywhere" verdict is a
+    property of the whole run, not of one document: a block cited by two
+    documents is evidenced if EITHER sentence evidences it, and `evidence`
+    keeps the first verdict that passes, or the first that fails when none
+    does.  Returns `(bad, new_text)`: `bad` is the
     list of broken citations (empty means this document is clean) and
     `new_text` is the possibly-rewritten document text (`None` when `--fix`
     changed nothing), for the caller to write back.  Prints this document's
@@ -807,6 +1904,31 @@ def check_document(doc: Path, allow: dict, *, fix: bool, record: bool,
                       "first": clip(src.lines[a - 1]),
                       "last": clip(src.lines[b - 1])}
         if record:
+            # R5.  A fingerprint is only worth taking of the RIGHT block, and
+            # the citing sentence is the only thing that says which that is --
+            # THIS citing sentence.  Until 2026-09-15 the verdict was pooled
+            # per BLOCK ("a block cited by two documents is evidenced if
+            # EITHER sentence evidences it") and `RANGE_ALLOW` was keyed on
+            # the range, so a citation re-pointed onto an already-blessed
+            # block was accepted whatever its own sentence said: three of five
+            # deliberately wrong-block ranges passed that way, and 11
+            # citations on 7 keys in the committed documents had never been
+            # judged against their own sentence at all (D3.2).  The verdict is
+            # now per CITATION -- (document, citing line, range) -- and a
+            # block is fingerprinted only when EVERY citation of it is
+            # evidenced or exempted.
+            how, detail = range_evidence(text, m, src, a, b, name)
+            cite = (doc.name, text.count("\n", 0, m.start()) + 1, key)
+            if how is None and cite in RANGE_ALLOW and use_allow:
+                pin, why = RANGE_ALLOW[cite]
+                bad_pin = pin_state(src, a, b, pin)
+                if bad_pin is None:
+                    how, detail = "allow", why
+                else:
+                    detail = (f"exempted in RANGE_ALLOW, but the pin "
+                              f"{clip(pin, 60)!r} {bad_pin}")
+            if evidence is not None:
+                evidence[cite] = (how, detail, doc.name, key)
             return m.group(0)
         entry = recorded.get(key)
         if entry is None:                                                 # R4
@@ -849,13 +1971,57 @@ def check_document(doc: Path, allow: dict, *, fix: bool, record: bool,
             bad.append(f"{path}:{line}  (only {len(src)} lines)")
             return m.group(0)
         if not name:
-            # Rule B: nothing names the target, so the only assertion left is
-            # that the line is one somebody could have meant.
+            # Rule B.  B1: the line is one somebody could have meant -- in
+            # bounds, not blank, not a bare delimiter.
             if not src.substantive(line):
                 what = "blank" if not src.lines[line - 1].strip() else \
                        f"only punctuation ({src.lines[line - 1].strip()!r})"
                 bad.append(f"{path}:{line}  unnamed reference to a line that "
                            f"is {what}")
+                return m.group(0)
+            if not strict:
+                return m.group(0)
+            # B2 (2026-09-15): THE CITING SENTENCE MUST EVIDENCE THE LINE.
+            # B1 was the whole of rule B, and "non-blank" is a test nearly
+            # every line of every file passes: 14 of the 19 unnamed citations
+            # survived a +1 drift and 12 a -1 (RESIDUALS 1), and two had in
+            # fact gone stale weeks apart with the gate green throughout --
+            # `docs/PHYSICS_CHANNELS.md:301` pointing at
+            # `docs/CONVENTIONS.md:357` for a_nn (now at :383; :357 is the
+            # deuteron-control sentence) and `:206` pointing at
+            # `include/lipolgen/constants.hpp:86` for the [SS90] bag-model
+            # coefficient (`C_BAG` is at :136-138).  So an unnamed citation
+            # now carries R5's evidence test, applied to the cited LINE and
+            # nothing either side of it: a phrase the citing sentence QUOTES
+            # must occur on that line, as text or as a symbol.  MEASURED over
+            # the 42 unnamed citations the committed tree a3c9ecb carries
+            # (recipe: `validation/record_rule_sweep.py unnamed --tree <a
+            # checkout of a3c9ecb with this file copied in>`, D3.1): B1 alone
+            # flags 0 of them and lets 76.2 % of +1 and 76.2 % of -1 drifts
+            # through; this rule flags 30 and lets 2.4 % and 4.8 %; the R6
+            # shared-token rule, the obvious alternative, flags 19 and lets
+            # 16.7 % and 21.4 %.  The quoted-phrase rule is the one taken.  A
+            # citation it flags is not necessarily wrong -- it is "this gate
+            # cannot tell" again -- and the answer is the same as R5's: read
+            # the row and sign an exemption with a PIN in UNNAMED_ALLOW.
+            how, detail = range_evidence(text, m, src, line, line, None)
+            cite = (doc.name, text.count("\n", 0, m.start()) + 1,
+                    f"{path}:{line}")
+            if unnamed_seen is not None:
+                unnamed_seen.add(cite)
+            if how is not None:
+                return m.group(0)
+            if use_allow and cite in UNNAMED_ALLOW:
+                pin, why = UNNAMED_ALLOW[cite]
+                bad_pin = pin_state(src, line, line, pin)
+                if bad_pin is None:
+                    allowed.append(f"{path}:{line}  (unnamed) -- {why}")
+                    return m.group(0)
+                bad.append(f"{path}:{line}  unnamed citation exempted in "
+                           f"UNNAMED_ALLOW, but the pin {clip(pin, 60)!r} "
+                           f"{bad_pin}")
+                return m.group(0)
+            bad.append(f"{path}:{line}  unnamed citation, and {detail}")
             return m.group(0)
         base = re.split(r"[(<]", name)[0].split("::")[-1].strip()
         if not base:
@@ -1052,11 +2218,519 @@ def check_document(doc: Path, allow: dict, *, fix: bool, record: bool,
     return bad, (new_text if fix and fixed else None)
 
 
+# ------------------------------------------------------- R6: the dated run records
+#
+# `docs/open_items/` holds the DATED RUN RECORDS -- run_2026-09-02/,
+# run_2026-09-03/, run_2026-09-06/ -- and the older standing notes beside them
+# (`engineering.md`, `physics_literature.md`, `vmc_*.md`, `code_designs.md`).
+# Until 2026-09-15 (Phase D item D2) nothing gated them at all, and they carry
+# 503 `path:line` citations into the live tree that drift with every line shift.
+# Fourteen were re-pointed by hand at the 2026-09-06 close-out; nothing said
+# whether the rest were right.
+#
+# They are HISTORY, so the rules above are the wrong rules for them.  A record
+# says what was true on its date; R4's fingerprints would freeze a block that
+# the record never claimed was frozen, R5's evidence test is a RECORDING rule
+# and there is nothing here to record, and S1/S2/S3's declaration tests would
+# refuse the legitimate citation of a use site or of a line of prose in another
+# document.  So R6 is one RELAXED rule, and it asks only what a reader
+# following the anchor would ask:
+#
+#   R6  the target must be a line somebody could have meant, and it must have
+#       something to do with the sentence that cites it.
+#
+#       (i)   IN BOUNDS and NON-BLANK.  A point citation's line must carry
+#             something; a block must have at least one non-blank line in it.
+#             (This is deliberately weaker than R2, which demands a non-blank
+#             first AND last line: R2 protects a fingerprint, and there is no
+#             fingerprint here.)
+#       (ii)  a SHARED TOKEN, when the target is a LIVE file -- anything
+#             outside `docs/open_items/`.  At least one token of
+#             `RELAX_TOKEN` = 4 characters or more (a symbol, a number, a
+#             word) must occur BOTH in the citing sentence and in the target
+#             line or block.  The comparison is case-insensitive and the
+#             citations themselves are blanked out of the sentence first, so
+#             `src/core/xsec.cpp` cannot evidence `src/core/xsec.cpp`.
+#
+#             A POINT citation is held to more than that, since 2026-09-15:
+#             it names ONE line, so its shared token must be `RELAX_POINT_TOKEN`
+#             = 6 characters or more (or 5 with a digit in it -- `1.848` says
+#             more than `which`) AND must be absent from the two lines either
+#             side of the cited one.  A rule that the neighbouring lines
+#             satisfy too cannot see the drift it exists to catch: on the tree
+#             this phase leaves the one-token rule accepts 29.6 % of +1 drifts
+#             of these citations and this one 12.2 % (D3.3, thirty candidates,
+#             recipe `validation/record_rule_sweep.py drift --only points`).
+#             A RANGE keeps the one-token rule: a block shifted by a line
+#             still holds what the sentence says, and every candidate measured
+#             refused a crowd of honest citations to buy little.
+#       (iii) a citation into ANOTHER RECORD (a target under
+#             `docs/open_items/`) gets (i) and nothing else.  One record
+#             quoting another is a pointer inside the history, and the two
+#             move together or not at all.
+#
+# Nothing here is FINGERPRINTED.  A fingerprint is a promise that a block will
+# not change; a record makes no such promise about anyone else's file.
+#
+# THE HISTORICAL ANNOTATION.  Some of these citations point at a state that no
+# longer exists -- the `was` column of a re-point table, a survey of warning
+# text that has since been deleted, a design clause that was superseded.  The
+# honest repair is not to move the anchor (which would make the record claim
+# something it never claimed) but to say WHEN it was true.  Two forms, both
+# visible in the rendered document:
+#
+#     `src/core/xsec.cpp:266-270` (as of a3c9ecb)     -- in the citing sentence
+#     **Anchors as of `a3c9ecb`.**                    -- a section marker
+#
+# and, for an anchor a human FOLLOWED and found right, `(anchor read <date>)`,
+# which for a POINT citation must carry the text that reader saw on the line:
+#
+#     `src/core/xsec.cpp:295` (anchor read 2026-09-15 "double helicity")
+#     `python/bindings.cpp:1528` (anchor read 2026-09-15 `arg("emc_ratio`)
+#
+# in "straight quotes" or `backticks`, whichever the line does not contain.
+# Without the pin the annotation exempted the citation from (ii) and left only
+# (i), so the anchor was free to drift onto any non-blank line of the file --
+# 28 point citations were in exactly that state.  A section marker covers
+# RANGES only, for the same reason (ii) is weaker for them.
+#
+# The section marker covers every citation from the marker to the next
+# markdown heading.  An annotated citation is checked for (i) and is exempt
+# from (ii): the sentence is describing the past, so there is nothing in the
+# present for it to share a token with.  The commit named is not resolved here
+# -- this gate shells out to nothing -- but the suite does resolve every one of
+# them (`python/tests/test_doc_link_gate.py::test_record_asof_commits_resolve`).
+#
+# WHAT R6 DOES NOT CHECK, and why the count of citations it checks is smaller
+# than the count in the records:
+#
+#   * a citation whose PATH is carried by PROSE.  `:1285-1289` inside "The
+#     design (`:1285-1289`) states the window as ..." inherits its path from
+#     the word "design" three paragraphs up.  Two inheritance rules ARE
+#     implemented -- the same-line one the main gate already has
+#     (`inherited_path`) and a markdown-TABLE one (`column_path`: the last
+#     backticked path earlier in the row, else the nearest earlier row of the
+#     same table, which is how these records write a file column) -- and
+#     between them they resolve 81 of the 136 bare citations.  The other 55
+#     are prose-carried and no rule of this kind can read them; they are
+#     counted and named, not silently dropped.
+#   * a citation whose target does not exist under ROOT.  Nine of them, and
+#     none is a LiPolGen path: `src/nucleons.cpp`, `src/inputParameters.cpp`,
+#     `src/subnucleon_config.hpp`, `src/main.cpp` are eSTARlight's own sources
+#     (the design notes that read them), `src/HardDiffraction.cc` and
+#     `examples/main234.cc` are PYTHIA's, and `docs/note_*.md` /
+#     `docs/consistency_review_2026-09-02.md` belong to the PREDECESSOR
+#     project the physics notes quote.  They are listed by name on every run,
+#     exactly as the PYTHIA externals are, so deleting a live file shows up
+#     here as a new skipped line rather than as silence.
+
+RECORDS_REL = "docs/open_items"
+RELAX_WIN = 200                  # citing-sentence window, as R5's RECORD_WIN
+RELAX_TOKEN = 4                  # a shared token is this many characters or more
+# ... except for a POINT citation, which names ONE line and must therefore say
+# something about that line and not about its neighbourhood: the shared token
+# has to be this long AND absent from the lines either side of the cited one.
+# MEASURED (D3.3, recipe `validation/record_rule_sweep.py drift --only
+# points`, thirty candidate rules): over the 110 live-file POINT citations the
+# tree this phase leaves carries, the D2 one-token rule lets 29.1 % of +1
+# drifts and 23.6 % of -1 drifts through and accepts a decoy 16.1 % of the
+# time; this rule lets 12.7 %, 8.2 % and 9.3 % (98 / 29.6 / 23.5 / 15.7 /
+# 12.2 / 8.2 / 8.7 on the pre-section-D3 copy it was first measured on).  Applied to the tree D2 left,
+# it flagged 27 point citations -- every one read, then re-pointed, annotated
+# or pinned in D3.4, where they are listed one by one.  A NUMBER is allowed to
+# be shorter because it says more: `1.848`, `0.001` and `0.05` are five
+# characters that name one line of a file, and refusing them cost four honest
+# citations for nothing.  The rule is NOT applied to a range: a block shifted
+# by one line still contains what the sentence says it does, and no candidate
+# discriminated a shifted block at a price worth paying -- the cheapest that
+# gets ranges below 50 % at +1 refuses 93 of 156 honest citations (this tree;
+# 86 of 145 on the copy the rule was first measured on).
+RELAX_POINT_TOKEN = 6
+RELAX_POINT_NUMBER = 5           # ... or this long, if it carries a digit
+# A token: a word, a symbol, or a number.  Dotted runs (`0.440`, `xsec.cpp`,
+# `cfg_.coherent`) are one token AND their parts, so `0.440` can match `0.440`
+# and `xsec.cpp` can match `xsec`.
+RELAX_TOK = re.compile(r"[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)*")
+# ... except that a shared COMMON ENGLISH FUNCTION WORD is not evidence of
+# anything.  Both sides of this comparison are English prose as often as they
+# are code, so without this list `which`, `that` and `because` carry citations
+# that have nothing to do with their target.  Measured with
+# `validation/record_rule_sweep.py tokens [--no-stoplist]` (D2.4): against the
+# committed a3c9ecb these 115 words turn 17 apparent passes into failures --
+# every one of them a citation that shares nothing but a function word -- and
+# drop the decoy-acceptance rate from 31.4 % to 26.4 %, a true-to-decoy ratio
+# of 1.29 -> 1.37; against the tree this phase leaves they cost NO passes at
+# all and drop decoys 39.0 % -> 34.7 % (ratio 2.56 -> 2.88).  (Under the rule
+# D2 landed, before a list item became its own citing sentence, the same
+# figures were 16, 32.6 -> 27.7 % and 39.1 -> 34.6 %.)  Only words with
+# NO meaning in this tree are listed: `line`, `time`, `open`, `make`, `show`,
+# `state`, `part`, `left` and `still` are all domain words here and are
+# deliberately absent.
+RELAX_STOP = frozenset("""
+about after again against also although always among another because been
+before being below between both cannot could does doing done during each
+either else enough even ever every from further gave give given gives goes
+gone have having hence here however into itself just less many more most much
+must neither never none often once only other others otherwise over quite
+rather same seem seems several shall should simply since some something such
+than that their them themselves then there therefore these they thing things
+think this those though through thus together toward under unless until upon
+very were what when where whereas whether which while whose will with within
+without would your yours
+""".split())
+# The historical annotation.  It must follow ITS OWN citation -- immediately,
+# or immediately after the citation's adjacent `` `name` `` -- and nothing
+# else: keyed on the citing SENTENCE it silently exempted every other citation
+# within `RELAX_WIN` characters, which in these documents is most of a table
+# row (one annotation was measured covering four neighbours).
+ASOF_INLINE = re.compile(r"(?: `[^`\n]+`)? \(as of ([0-9a-f]{7,40})\)")
+# ... and as a section marker: a line of its own, covering every citation from
+# it to the next markdown heading.
+ASOF_SECTION = re.compile(r"^\s*(?:>\s*)?\**Anchors as of\s+`?([0-9a-f]{7,40})`?",
+                          re.MULTILINE)
+# The second annotation: READ BY HAND.  Measured over these records, HALF of
+# what R6 refuses is not a stale anchor at all -- it is an anchor that lands
+# exactly where the sentence says while the sentence names its subject in words
+# the target never uses ("the joint-sampling order", "the `--b1-unpol` help
+# string"), or a citation that is the SUBJECT of the sentence rather than a
+# pointer out of it (a re-point table's `was` and `is now` columns, a list of
+# the sidecar keys an exemption covers).  D1 hit the same wall one rung up and
+# answered it the same way: an R5 refusal is "this gate cannot tell", not "this
+# citation is wrong", and the answer is an exemption a human signs.  Here the
+# exemption is signed in the document itself, with the date it was read, and it
+# is counted and named on every run.
+# Since 2026-09-15 a POINT citation's annotation must carry a PIN -- the text
+# the reader saw on that line -- written `(anchor read 2026-09-15 "…")`.
+# Without one the annotation exempted the citation from (ii) and left only
+# (i), so an `(anchor read)` point citation drifted onto ANY non-blank line of
+# its target was accepted: 28 of them, pinned by nothing (D3.3).  A RANGE keeps
+# the bare form: a block that has been read is 62 of the 90 annotations, a
+# block's drift is the one R6 cannot discriminate anyway (D3.3's table), and
+# the pin would be 62 more transcriptions for a measurement that does not move.
+# The pin is written between "straight quotes" or between `backticks`,
+# whichever the line it transcribes does not itself contain.
+READ_INLINE = re.compile(
+    r"(?: `[^`\n]+`)? \(anchor read (\d{4}-\d{2}-\d{2})"
+    r"(?: (?:\"([^\"\n]{3,200})\"|`([^`\n]{3,200})`))?\)")
+READ_SECTION = re.compile(r"^\s*(?:>\s*)?\**Anchors read (\d{4}-\d{2}-\d{2})\b",
+                          re.MULTILINE)
+HEADING = re.compile(r"^#{1,6} ", re.MULTILINE)
+# Any backticked path, with or without a `:line` after it -- what a markdown
+# table's file column looks like.
+PATH_CELL = re.compile(r"`(" + PATH + r")(?:[:`])")
+# `REF`, but with the path OPTIONAL.  The main gate's `REF` requires one, so a
+# bare `` `:160` `` -- the point form of the inheritance these records use
+# everywhere -- matches no rule at all and is checked by nothing: 152 of them
+# in 16 records (and 4 in the three strictly gated documents, which is a hole
+# this item records but does not close, because widening `REF` would move the
+# strict gate's own counts).
+RECORD_REF = re.compile(r"`(" + PATH + r")?:(\d+)`(?:(?= `([^`\n]+)`))?")
+
+
+def relax_tokens(s: str) -> set[str]:
+    """The tokens of a string, lower-cased, `RELAX_TOKEN` characters or more."""
+    out: set[str] = set()
+    for m in RELAX_TOK.finditer(s):
+        t = m.group(0).lower()
+        if len(t) >= RELAX_TOKEN and t not in RELAX_STOP:
+            out.add(t)
+        if "." in t:
+            out.update(p for p in t.split(".")
+                       if len(p) >= RELAX_TOKEN and p not in RELAX_STOP)
+    return out
+
+
+def column_path(text: str, pos: int):
+    """A bare `` `:first-last` `` inside a markdown TABLE inherits the file
+    named in its row: the path in the row's file cell, else the nearest earlier
+    row of the same table that names one (a continuation row leaves the file
+    cell empty).  Returns None outside a table, and for a row that names no
+    file at all.
+
+    ONE path.  A row that names SEVERAL -- `validation/vmc_reconcile.py` and
+    `validation/vmc_tag_fractions.py` and a third in the same cell -- has no
+    file column, and guessing the last one is how this rule first resolved
+    `phase_CW_numbers.md`'s `:133-136` onto `vmc_tag_fractions.py` when the
+    sentence meant the GENERATED `docs/open_items/vmc_reconciliation.md`, and
+    reported a sound citation broken.  A gate that invents a failure is worse
+    than one that says it cannot tell, so an ambiguous row says it cannot
+    tell."""
+    ls = text.rfind("\n", 0, pos) + 1
+    le = text.find("\n", pos)
+    le = len(text) if le < 0 else le
+    if not text[ls:le].lstrip().startswith("|"):
+        return None
+    while True:
+        seen = {m.group(1) for m in PATH_CELL.finditer(text, ls, pos)}
+        if len(seen) == 1:
+            return seen.pop()
+        if seen or ls == 0:
+            return None                       # ambiguous row, or nothing above
+        end = ls - 1
+        ls = text.rfind("\n", 0, end) + 1
+        if not text[ls:end].lstrip().startswith("|"):
+            return None
+        pos = end
+
+
+# A `` `name:123` `` of any shape, path or not, for the record-local
+# inheritance rule below.
+ANY_AT = re.compile(r"`([^`\n]*?):\d")
+
+
+def record_inherited_path(text: str, pos: int):
+    """`inherited_path`, but it will not READ PAST a citation it cannot
+    resolve.  These records write `` (`tagged.hpp:255-257` -> `:364-375`) ``
+    with the file spelled WITHOUT its directory, which `PATH` does not match;
+    the main gate's rule then walks further left and inherits whatever fully
+    spelled path came before it on the line -- `src/core/xsec.cpp`, four
+    citations earlier -- and reports a sound citation broken (two of them, in
+    `run_2026-09-03/STATUS.md`, on the first run of R6).  So: take the LAST
+    `x:123` on the line before the citation whatever it looks like, and use it
+    only if it is a path this gate knows.  Returns `(path, saw_one)`, so the
+    caller can tell "no citation on this line" from "one this gate cannot
+    resolve" and not fall through to the table-column rule for the second."""
+    ls = text.rfind("\n", 0, pos) + 1
+    last = None
+    for m in ANY_AT.finditer(text, ls, pos):
+        if m.group(1):          # a BARE `:11-22` is another citation doing the
+            last = m            # same inheriting; look past it, not at it
+    if last is None:
+        return None, False
+    ok = re.fullmatch(PATH, last.group(1)) is not None
+    return (last.group(1) if ok else None), True
+
+
+def relax_sentence(text: str, start: int, end: int) -> str:
+    """`RELAX_WIN` characters either side of the citation, clipped to its
+    paragraph (a markdown table row being its own paragraph, as R5 has it),
+    with every citation in the window BLANKED OUT -- `src/core/xsec.cpp:295`
+    must not be allowed to evidence `src/core/xsec.cpp`.  Only the
+    `` `path:line` `` span is blanked; an adjacent `` `name` `` is the
+    sentence talking, and stays."""
+    lo, hi = paragraph(text, start, end)
+    a0, b0 = max(lo, start - RELAX_WIN), min(hi, end + RELAX_WIN)
+    out = list(text[a0:b0])
+    for rx in (REF, RANGE, EXT):
+        for m in rx.finditer(text, lo, hi):
+            close = text.find("`", m.start() + 1) + 1
+            for i in range(max(m.start() - a0, 0),
+                           min(max(close - a0, 0), len(out))):
+                out[i] = " "
+    return "".join(out)
+
+
+def marked_sections(text: str, rx: re.Pattern) -> list[tuple[int, int, str]]:
+    """`(start, end, note)` for every section marker `rx` finds in a record.
+    A marker reaches from its own line to the next markdown heading."""
+    out = []
+    for m in rx.finditer(text):
+        nxt = HEADING.search(text, m.end())
+        out.append((m.start(), nxt.start() if nxt else len(text),
+                    m.group(1) if m.groups() else "keys"))
+    return out
+
+
+def asof_sections(text: str) -> list[tuple[int, int, str]]:
+    return marked_sections(text, ASOF_SECTION)
+
+
+def record_files() -> list[Path]:
+    """Every dated run record and standing note, in a stable order."""
+    base = ROOT / RECORDS_REL
+    return sorted(base.rglob("*.md")) if base.is_dir() else []
+
+
+def check_records(*, cache: dict) -> tuple[list[str], dict]:
+    """R6 over every record.  Returns `(bad, tally)` and prints the report."""
+    tally = Counter()
+    bad: list[str] = []
+    skipped_path: list[str] = []
+    skipped_file: Counter = Counter()
+    # An exemption you cannot see is a hole -- the same rule ALLOW and
+    # RANGE_ALLOW follow.  Every section marker is named on every run, with
+    # the number of citations it covers.
+    markers: list[list] = []
+
+    def source_lines(rel: str):
+        if rel not in cache:
+            f = ROOT / rel
+            cache[rel] = (f.read_text(errors="replace").splitlines()
+                          if f.is_file() else None)
+        return cache[rel]
+
+    for doc in record_files():
+        rel = str(doc.relative_to(ROOT))
+        text = doc.read_text()
+        marks = marked_sections(text, ASOF_SECTION)
+        readm = marked_sections(text, READ_SECTION)
+        here = {}
+        for lo, hi, note in marks + readm:
+            row = [rel, text.count("\n", 0, lo) + 1,
+                   "as of " + note if (lo, hi, note) in marks
+                   else "read " + note, 0]
+            here[(lo, hi)] = row
+            markers.append(row)
+        cites = [(m, int(m.group(2)), int(m.group(2)))
+                 for m in RECORD_REF.finditer(text)]
+        cites += [(m, int(m.group(2)), int(m.group(3))) for m in RANGE.finditer(text)]
+        cites.sort(key=lambda c: c[0].start())
+        for m, a, b in cites:
+            tally["cited"] += 1
+            line = text.count("\n", 0, m.start()) + 1
+            path = m.group(1)
+            if path is None:
+                # the same line first, and if it names a citation this gate
+                # cannot resolve, STOP -- a table column two cells to the left
+                # is not what `(`tagged.hpp:255-257` -> `:364-375`)` means
+                path, online = record_inherited_path(text, m.start())
+                if path is None and not online:
+                    path = column_path(text, m.start())
+            if path is None:
+                tally["no path"] += 1
+                skipped_path.append(f"{rel}:{line}  {m.group(0)}  (the path is "
+                                    f"carried by the prose, not by the citation)")
+                continue
+            lines = source_lines(path)
+            if lines is None:
+                tally["no file"] += 1
+                skipped_file[path] += 1
+                continue
+            where = f"{rel}:{line}  -> {path}:{a}" + ("" if a == b else f"-{b}")
+            if not 1 <= a <= b <= len(lines):
+                tally["broken"] += 1
+                bad.append(f"{where}  (out of bounds: {path} has "
+                           f"{len(lines)} lines)")
+                continue
+            covered = [k for k in here if k[0] <= m.start() < k[1]]
+            for k in covered:
+                here[k][3] += 1
+            # The HISTORICAL annotation is read BEFORE (i)'s non-blank test, and
+            # deliberately: `(as of <commit>)` says the anchor is about that
+            # commit and not about the present tree, and four of these land on
+            # a line that has since gone blank -- which is not a defect in the
+            # annotation, it is the thing the annotation is FOR.  In bounds is
+            # still required: that catches a typed line number.
+            if ASOF_INLINE.match(text, m.end()) or any(
+                    (lo, hi, n) in marks for lo, hi in covered
+                    for n in [here[(lo, hi)][2][6:]]):
+                tally["historical"] += 1
+                continue
+            if not any(x.strip() for x in lines[a - 1:b]):
+                tally["broken"] += 1
+                bad.append(f"{where}  (the target is blank)")
+                continue
+            if path.startswith(RECORDS_REL + "/"):
+                tally["record target"] += 1      # (iii): existence and no more
+                continue
+            # `(anchor read <date>)` is the opposite claim -- a human FOLLOWED
+            # this anchor and it lands where the sentence says -- so it is read
+            # after the non-blank test, which it has to pass like any other.
+            ri = READ_INLINE.match(text, m.end())
+            if ri or covered:
+                if a == b:
+                    # a POINT annotation carries the text the reader saw
+                    pin = (ri.group(2) or ri.group(3)) if ri else None
+                    if pin is None:
+                        tally["broken"] += 1
+                        bad.append(
+                            f"{where}  (an `(anchor read)` on a POINT citation "
+                            f"must carry the text the reader saw on that line: "
+                            f"`(anchor read <date> \"…\")`; a section marker "
+                            f"covers ranges only)")
+                        continue
+                    if pin not in lines[a - 1]:
+                        tally["broken"] += 1
+                        bad.append(
+                            f"{where}  (the anchor-read pin {clip(pin, 60)!r} "
+                            f"is no longer on that line, which now reads "
+                            f"{clip(lines[a - 1].strip(), 60)!r}; read the "
+                            f"anchor again and re-date it)")
+                        continue
+                tally["read"] += 1
+                continue
+            sentence = relax_sentence(text, m.start(), m.end())
+            shared = relax_tokens(sentence) & relax_tokens(" ".join(lines[a - 1:b]))
+            if a != b:
+                if shared:
+                    tally["ok"] += 1
+                    continue
+                tally["broken"] += 1
+                bad.append(f"{where}  (no token of {RELAX_TOKEN}+ characters is "
+                           f"in both the citing sentence and the target; "
+                           f"re-point it, or say when it was true with "
+                           f"`(as of <commit>)`)")
+                continue
+            # (ii) for a POINT citation: the shared token must be long enough
+            # to mean something AND absent from the lines either side, so that
+            # a one-line drift changes the answer.
+            near = " ".join(lines[max(0, a - 2):a - 1]
+                            + lines[b:b + 1]).lower()
+            strong = {t for t in shared
+                      if t not in near
+                      and (len(t) >= RELAX_POINT_TOKEN
+                           or (len(t) >= RELAX_POINT_NUMBER
+                               and any(c.isdigit() for c in t)))}
+            if strong:
+                tally["ok"] += 1
+                continue
+            tally["broken"] += 1
+            bad.append(f"{where}  (no token of {RELAX_POINT_TOKEN}+ characters "
+                       f"(or {RELAX_POINT_NUMBER}+ with a digit in it) is in "
+                       f"both the citing sentence and the cited LINE and "
+                       f"absent from the lines either side of it"
+                       + (f"; the shared tokens are "
+                          + ", ".join(sorted(shared)[:5]) if shared else "")
+                       + f"; re-point it, record the reading with `(anchor "
+                       f"read <date> \"…\")`, or say when it was true with "
+                       f"`(as of <commit>)`)")
+
+    print(f"{tally['cited']} citations in {len(record_files())} dated run "
+          f"records (relaxed, R6): {tally['ok']} checked against a live file, "
+          f"{tally['record target']} into another record, "
+          f"{tally['historical']} annotated historical, "
+          f"{tally['read']} read by hand, "
+          f"{tally['no path'] + tally['no file']} skipped, "
+          f"{tally['broken']} broken  [docs/open_items]")
+    for s in skipped_path:
+        print("  skipped", s)
+    for p in sorted(skipped_file):
+        print(f"  skipped {p}  ({skipped_file[p]} citation(s)): no such file "
+              f"under ROOT -- an upstream or predecessor-project path this "
+              f"repository does not carry")
+    for rel, line, note, n in markers:
+        print(f"  marker  {rel}:{line}  anchors {note}, covering "
+              f"{n} citation(s) to the end of the section")
+    for x in bad:
+        print("  ", x)
+    return bad, tally
+
+
 def main(argv=None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     fix = "--fix" in argv
-    record = "--record-ranges" in argv
+    write = "--record-ranges" in argv
+    audit = "--audit-ranges" in argv
+    # R5 runs for both: `--audit-ranges` is `--record-ranges` with the writing
+    # taken out, so the rule can be measured without touching the sidecar (the
+    # suite runs it over the real documents, and it is the recipe behind every
+    # count published about R5).
+    record = write or audit
+    use_allow = "--no-range-allow" not in argv
     strict = "--loose" not in argv
+    # R6, the dated run records.  Opt-in, and OFF in a recording pass: every
+    # count D1 published is measured with `--audit-ranges ... | tail -1`, and a
+    # second report printed after it would silently invalidate those recipes.
+    records_only = "--records-only" in argv
+    do_records = (records_only or "--records" in argv) and not record
+    if record and not strict:
+        # `--loose` skips R4, the S3 pins and the D fingerprints, so there is
+        # nothing for a recording pass to collect: it would write an EMPTY
+        # sidecar over the real one.  Refuse instead of destroying it.
+        print("--record-ranges/--audit-ranges cannot be combined with --loose: "
+              "loose mode collects no fingerprints and would write an empty "
+              f"{RANGES_REL}")
+        return 1
     if not DOC.exists():
         print(f"missing {DOC}")
         return 1
@@ -1066,9 +2740,14 @@ def main(argv=None) -> int:
     fresh: dict[str, dict] = {}
     seen: set[str] = set()
     remap: dict[str, str] = {}
+    evidence: dict[tuple, tuple] = {}
+    unnamed_seen: set = set()
     ext_dir = pythia_source_dir()
 
     overall_bad = False
+    if records_only:
+        bad, _ = check_records(cache={})
+        return 1 if bad else 0
     for doc, allow in [(DOC, ALLOW)] + [(ROOT / p, a) for p, a in EXTRA_DOCS]:
         if not doc.exists():
             # Only the primary document is required; an extra document that
@@ -1078,7 +2757,9 @@ def main(argv=None) -> int:
         bad, new_text = check_document(doc, allow, fix=fix, record=record,
                                        strict=strict, cache=cache,
                                        recorded=recorded, fresh=fresh,
-                                       seen=seen, remap=remap, ext_dir=ext_dir)
+                                       seen=seen, remap=remap, ext_dir=ext_dir,
+                                       evidence=evidence, use_allow=use_allow,
+                                       unnamed_seen=unnamed_seen)
         if new_text is not None:
             doc.write_text(new_text)
         if bad:
@@ -1090,6 +2771,12 @@ def main(argv=None) -> int:
         moved = {remap[k]: v for k, v in recorded.items() if k in remap}
         kept = {k: v for k, v in recorded.items() if k not in remap}
         write_ranges({**kept, **moved})
+        for cite in sorted(c for c in RANGE_ALLOW if c[2] in remap):
+            # the exemption is keyed on the citation, and the block moved
+            print(f"  note      RANGE_ALLOW[{cite!r}] should become "
+                  f"{(cite[0], cite[1], remap[cite[2]])!r}: the block moved "
+                  f"and the exemption is keyed on (document, citing line, "
+                  f"range)")
     if ext_dir is None:
         # nothing was read, so nothing can be said: carry the external
         # fingerprints across untouched rather than dropping them.
@@ -1097,6 +2784,23 @@ def main(argv=None) -> int:
             if k.startswith(PYTHIA_KEY):
                 fresh[k] = v
                 seen.add(k)
+    if strict and use_allow:
+        # A dead B2 exemption hides the next drift exactly as a dead
+        # fingerprint does, and it is the shape a document edit leaves behind:
+        # the key carries the citing line, so a sentence that moved has an
+        # exemption nothing reaches.  Only a tree that HAS the file can say so
+        # (a fixture ROOT carries neither the document nor the target).
+        dead_unnamed = sorted(c for c in set(UNNAMED_ALLOW) - unnamed_seen
+                              if (ROOT / c[2].rsplit(":", 1)[0]).exists())
+        if dead_unnamed:
+            overall_bad = True
+            print(f"{len(dead_unnamed)} unnamed exemption(s) no longer reached "
+                  f"by any citation:")
+            for c in dead_unnamed:
+                print(f"   {c[0]}:{c[1]}  {c[2]}  exempted in UNNAMED_ALLOW "
+                      f"but no unnamed citation reaches it; the sentence "
+                      f"moved or the citation went away -- re-read the row "
+                      f"and re-key the exemption, or drop it")
     if strict and not record:
         dead = sorted(set(recorded) - seen - set(remap))
         if dead:
@@ -1107,6 +2811,47 @@ def main(argv=None) -> int:
                 print(f"   {key}  fingerprinted in {RANGES_REL} but no "
                       f"longer cited; drop it with --record-ranges")
     if record:
+        # R5 first: a refused range is NOT written, so the next ordinary run
+        # reports it as unfingerprinted and the gate stays red until a human
+        # re-points it or exempts it in RANGE_ALLOW.  One refused CITATION is
+        # enough to refuse the block: the fingerprint is shared, and a block
+        # blessed on one sentence while another sentence points at it wrongly
+        # is exactly the hole this closed.
+        refused = sorted(k for k, v in evidence.items() if v[0] is None)
+        for cite in refused:
+            print(f"  REFUSED   {cite[0]}:{cite[1]}  {cite[2]} -- "
+                  f"{evidence[cite][1]}")
+        refused_keys = {evidence[c][3] for c in refused}
+        fresh = {k: v for k, v in fresh.items() if k not in refused_keys}
+        by = {}
+        for k, v in evidence.items():
+            if v[0] is not None:
+                by[v[0]] = by.get(v[0], 0) + 1
+        # A dead exemption hides the next drift, exactly as a dead fingerprint
+        # does -- but only a tree that HAS the file can say the exemption is
+        # dead.  Under a fixture ROOT (or any tree that is not this repository)
+        # the file is simply absent, and nothing is asserted, which is the same
+        # rule EXTRA_DOCS and the external fingerprints already follow.
+        dead_allow = sorted(k for k in set(RANGE_ALLOW) - set(evidence)
+                            if (ROOT / k[2].rsplit(":", 1)[0]).exists()
+                            ) if use_allow else []
+        print(f"{len(evidence)} range citation(s) checked against their own "
+              f"citing sentences (R5), on {len({v[3] for v in evidence.values()})} "
+              f"blocks: "
+              + ", ".join(f"{by.get(h, 0)} by {w}" for h, w in
+                          (("name", "adjacent name"), ("text", "quoted text"),
+                           ("symbol", "quoted symbol"),
+                           ("allow", "RANGE_ALLOW exemption")))
+              + f", {len(refused)} REFUSED")
+        for cite in dead_allow:
+            print(f"   {cite[0]}:{cite[1]}  {cite[2]}  exempted in "
+                  f"RANGE_ALLOW but no range citation reaches it; the "
+                  f"document moved or the citation went away -- re-read the "
+                  f"row and re-key the exemption, or drop it")
+        if refused or dead_allow:
+            overall_bad = True
+        if not write:
+            return 1 if overall_bad else 0
         added = sorted(set(fresh) - set(recorded))
         dropped = sorted(set(recorded) - set(fresh))
         changed = sorted(k for k in set(fresh) & set(recorded)
@@ -1117,10 +2862,18 @@ def main(argv=None) -> int:
         for k in changed:
             print("  re-recorded", k)
         for k in dropped:
-            print("  dropped   ", k)
+            print("  dropped   ", k,
+                  " (REFUSED by R5, so it is no longer fingerprinted)"
+                  if k in set(refused) else "")
         print(f"{len(fresh)} fingerprints written to {RANGES_REL} "
               f"({len(added)} new, {len(changed)} changed, {len(dropped)} "
               f"dropped): cited BLOCKS, pinned USE SITES and EXTERNAL lines")
+    if do_records:
+        # printed LAST, after every strict document, so that nothing above it
+        # moves and `| tail -1` still names what it always named
+        bad, _ = check_records(cache={})
+        if bad:
+            overall_bad = True
     return 1 if overall_bad else 0
 
 

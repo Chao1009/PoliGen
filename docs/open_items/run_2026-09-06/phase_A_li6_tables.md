@@ -140,7 +140,7 @@ Both statements are measurements.
 
 **The `--unpol-sf` axis is exactly flat on x·b₁, and here is why it must be.**
 `Li6ConvolutionB1::b1(x, q2, f1)` **ignores its `f1` argument** — the parameter
-is unnamed in the definition (`src/core/b1_nuclear.cpp:710`) — so the kernel's
+is unnamed in the definition (`src/core/b1_nuclear.cpp:717`) — so the kernel's
 own F₁ has no path into b₁ except through `Li6ConvolutionOptions::unpol`, and
 `default_inclusive_kernel` fills that slot with the caller's `b1_unpol` object
 whenever one is named (`o.unpol = b1_unpol ? std::move(b1_unpol) : f2;`,

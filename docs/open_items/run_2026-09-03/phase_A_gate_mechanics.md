@@ -363,7 +363,7 @@ clause that would catch such a crossing migrating below 1.0. Widening the
 ceiling would delete a live constraint. Narrowing it to 0.5572 would too.
 
 **(ii) Scan floor: 0.01 → 0.001**, at `test:444`, `test:582` and
-`validation/b1_li6_table.py:133` (and `:136` if the G3b sub-grid is to stay
+`validation/b1_li6_table.py:133` (anchor read 2026-09-15 "floor as part of G3a") (and `:130` if the G3b sub-grid is to stay
 inside the union).
 
 Why 0.001 and not another number, in order of weight:
@@ -465,7 +465,7 @@ Run: `python3 <scratch>/grid_effect.py {toy_cur,toy_new,ct_cur,ct_new}`,
 #### 2.6a `integral_b1` must NOT be taken over the widened grid
 
 `b1_landmarks` computes `integral_b1` as a trapezoid of **b₁ = (x·b₁)/x** over
-the whole grid it is handed (`src/core/b1_nuclear.cpp:782-784`). Adding
+the whole grid it is handed (`src/core/b1_nuclear.cpp:782-784` (as of b1071b1)). Adding
 [0.001, 0.01] adds a region where x·b₁ is ~1.6e−5 and 1/x is ~10³, so b₁ itself
 is ~1.6e−2 there — two orders of magnitude above anything in the gate window.
 The integral is dominated by the extension.
@@ -473,7 +473,7 @@ The integral is dominated by the extension.
 The design already forbids this. G3c is *"∫b₁ dx from the new code **over the
 same range**, next to `close_kumano_integral(true)` = +4.592 × 10⁻⁴"*
 (`:1300-1301`), and that reference is computed over the digitized table's own
-[0.0100, 1.590] (`b1_landmarks_of_table`, `src/core/b1_nuclear.cpp:788-794`).
+[0.0100, 1.590] (`b1_landmarks_of_table`, `src/core/b1_nuclear.cpp:802-808`).
 Letting the computed integral run from 0.001 while the reference starts at 0.01
 breaks the like-for-like G3c comparison silently — the number would move 23 %
 for a reason that has nothing to do with physics.
@@ -735,29 +735,29 @@ the first is the ban proper.
 
 | # | file | anchors | class | what is there |
 |---|---|---|---|---|
-| 1 | `README.md` | `:49` | FAIL | "A = 2 magnitude gate is still open, see below" |
-| | | `:56-58` | BAN + FAIL | "gate fails its magnitude clause by a factor 2.27–3.68 … no ⁶Li number from the backend may be published until it closes" |
-| | | `:62` | — | the `r1998` follow-up, mentions the gate but is not a ban |
-| 2 | `docs/USAGE.md` | `:259` | FAIL | section heading "⚠ The A = 2 validation gate is NOT fully passed" |
-| | | `:262` | FAIL | "fails its magnitude clause" |
-| | | `:267-269` | FAIL | the clause table, G3b row: ratio 0.440, factor 2.27 |
-| | | `:271-275` | FAIL | "G3a's margin, stated" — the [0.02, 1.0] window and the scan floor |
-| | | `:284-289` | FAIL | the attributed residual, CT18 ×1.67 → 0.719 |
-| | | `:291-292` | **BAN** | "no ⁶Li number from this backend may be published while that stands. Open item 10 stays open. The CLI prints the warning on every run." |
-| 3 | `docs/PHYSICS_CHANNELS.md` | `:161` | **BAN** + FAIL | the whole row *"The A = 2 validation gate of that convolution — not passed, and what that forbids"*; also carries seven `b1_nuclear.hpp:NNN` line anchors (see §5) |
-| | | `:540` | **BAN** + FAIL | "fails its own A = 2 magnitude gate by a factor 2.27, so no number from it may be published (§3)" |
+| 1 | `README.md` | `:49` (as of 66dcda2) | FAIL | "A = 2 magnitude gate is still open, see below" |
+| | | `:171-173` | BAN + FAIL | "gate fails its magnitude clause by a factor 2.27–3.68 … no ⁶Li number from the backend may be published until it closes" |
+| | | `:62` (as of 66dcda2) | — | the `r1998` follow-up, mentions the gate but is not a ban |
+| 2 | `docs/USAGE.md` | `:259` (as of 66dcda2) | FAIL | section heading "⚠ The A = 2 validation gate is NOT fully passed" |
+| | | `:262` (as of 66dcda2) | FAIL | "fails its magnitude clause" |
+| | | `:295-297` | FAIL | the clause table, G3b row: ratio 0.440, factor 2.27 |
+| | | `:271-275` (as of 66dcda2) | FAIL | "G3a's margin, stated" — the [0.02, 1.0] window and the scan floor |
+| | | `:284-289` (as of 66dcda2) | FAIL | the attributed residual, CT18 ×1.67 → 0.719 |
+| | | `:291-292` (as of 66dcda2) | **BAN** | "no ⁶Li number from this backend may be published while that stands. Open item 10 stays open. The CLI prints the warning on every run." |
+| 3 | `docs/PHYSICS_CHANNELS.md` | `:161` (as of adec442) | **BAN** + FAIL | the whole row *"The A = 2 validation gate of that convolution — not passed, and what that forbids"*; also carries seven `b1_nuclear.hpp:NNN` line anchors (see §5) |
+| | | `:540` (as of 66dcda2) | **BAN** + FAIL | "fails its own A = 2 magnitude gate by a factor 2.27, so no number from it may be published (§3)" |
 | | | | | **this is the document `PLAN.md:119-120` means by "carries it twice"** — confirmed, exactly two |
-| 4 | `docs/OPEN_ITEMS_SOLUTIONS.md` | `:215` | FAIL (**MISSED**) | §"8-10. Theory notes": "The A = 2 validation was done and it **fails on magnitude** — see §10." Anchor as of 2026-09-04; not found by the original survey, and still stale a day after the lift, so a reader following its own pointer to §10 met the opposite claim |
-| | | `:19` | **BAN** + FAIL | item-10 table row: "the A = 2 validation gate FAILS its magnitude clause … so no ⁶Li number from it may be published and the item does not close" |
-| | | `:362` | FAIL | §10 heading "…and the gate is NOT passed" |
-| | | `:371-385` | **BAN** + FAIL | the "READ THIS BEFORE QUOTING ANY NUMBER BELOW" block |
-| | | `:406-415` | FAIL | "The A = 2 gate, measured" clause table (G3a margin at `:413`, G3b FAIL at `:414`) |
-| | | `:417-429` | FAIL | the residual budget; `:428` "the gate's default today … outside G3b" |
-| | | `:444` | **BAN** | heading "The ⁶Li numbers — RECORDED, NOT PUBLISHED (see the warning above)" |
-| | | `:556-572` | **BAN** | "What has to happen before item 10 can close", 7 conditions; `:572` "Only then re-open G3b. Until it passes, no ⁶Li number ships." |
-| 5 | `docs/CONVENTIONS.md` | `:132-133` | FAIL | "quoting the gate at κ = 1 overstated its deficit as a factor 3.68 instead of 2.27" — **no ban**, but the number is stated as current |
-| 6 | `docs/DEVELOPMENT_PLAN.md` | `:148` | FAIL | "ships opt-in behind a magnitude-gate warning" |
-| | | `:228-230` | **BAN** | "the b₁(⁶Li) convolution still carries a magnitude-gate warning and publishes no ⁶Li number until the gate closes" |
+| 4 | `docs/OPEN_ITEMS_SOLUTIONS.md` | `:215` (as of adec442) | FAIL (**MISSED**) | §"8-10. Theory notes": "The A = 2 validation was done and it **fails on magnitude** — see §10." Anchor as of 2026-09-04; not found by the original survey, and still stale a day after the lift, so a reader following its own pointer to §10 met the opposite claim |
+| | | `:19` (as of a98f0a0) | **BAN** + FAIL | item-10 table row: "the A = 2 validation gate FAILS its magnitude clause … so no ⁶Li number from it may be published and the item does not close" |
+| | | `:362` (as of 66dcda2) | FAIL | §10 heading "…and the gate is NOT passed" |
+| | | `:1034-1048` | **BAN** + FAIL | the "READ THIS BEFORE QUOTING ANY NUMBER BELOW" block |
+| | | `:406-415` | FAIL | "The A = 2 gate, measured" clause table (G3a margin at `:413` (as of 66dcda2), G3b FAIL at `:414` (as of 66dcda2)) |
+| | | `:1082-1094` | FAIL | the residual budget; `:428` (as of 66dcda2) "the gate's default today … outside G3b" |
+| | | `:444` (as of 66dcda2) | **BAN** | heading "The ⁶Li numbers — RECORDED, NOT PUBLISHED (see the warning above)" |
+| | | `:556-572` (as of a98f0a0) | **BAN** | "What has to happen before item 10 can close", 7 conditions; `:572` (as of 66dcda2) "Only then re-open G3b. Until it passes, no ⁶Li number ships." |
+| 5 | `docs/CONVENTIONS.md` | `:132-133` (as of b1071b1) | FAIL | "quoting the gate at κ = 1 overstated its deficit as a factor 3.68 instead of 2.27" — **no ban**, but the number is stated as current |
+| 6 | `docs/DEVELOPMENT_PLAN.md` | `:148` (as of 66dcda2) | FAIL | "ships opt-in behind a magnitude-gate warning" |
+| | | `:308-310` | **BAN** | "the b₁(⁶Li) convolution still carries a magnitude-gate warning and publishes no ⁶Li number until the gate closes" |
 | | | | | **NOT on `PLAN.md:116-120`'s list of fourteen** |
 | 7 | `docs/open_items/run_2026-09-02/design_D_b1_li6.md` | `:1197` | **BAN** | "Nothing about ⁶Li may be quoted, plotted or merged until this passes." |
 | | | `:1355-1360` | **BAN** | the *Escalation* clause itself — the source of every other ban line |
@@ -772,19 +772,19 @@ the first is the ban proper.
 | 9 | `docs/open_items/run_2026-09-02/phase_D_numbers.md` | `:9-17` | **BAN** + FAIL | the "READ THE GATE FIRST" block, "none of the ⁶Li numbers below may be published" |
 | 10 | `docs/open_items/run_2026-09-02/PLAN.md` | `:160-169` | **BAN** + FAIL | the phase-D OUTCOME block, `:166` "no ⁶Li number may be published: item 10 does not close" |
 | 11 | `docs/open_items/run_2026-09-02/STATUS.md` | `:13` | FAIL | "A = 2 gate: shape passes, magnitude factor 2.27 low (open)" |
-| 12 | `include/lipolgen/b1_nuclear.hpp` | `:11-22` | **BAN** + FAIL | the file's `\file` WARNING block; `:20-21` "Under design section 5.4 'Escalation' NO 6Li number from `Li6ConvolutionB1` may be published while that stands" |
-| | | `:24-28` | FAIL | G3a's margin: "counting window starts at x = 0.02 … drops below the scan floor" |
-| | | `:564-571` | FAIL | `finite_q_delta`'s doc comment, "moves the deficit from a factor 3.68 to 2.27" |
-| 13 | `python/bindings.cpp` | `:1235-1238` | FAIL | section comment "WARNING: the gate is NOT fully passed (G3b, magnitude)" |
-| | | `:1391-1393` | FAIL | `Li6ConvolutionB1`'s class docstring, "the A = 2 magnitude gate is NOT passed: band every number" |
-| | | `:3210-3214` | FAIL | `B1Model::Li6Convolution`'s enum docstring, same statement |
+| 12 | `include/lipolgen/b1_nuclear.hpp` | `:11-22` | **BAN** + FAIL | the file's `\file` WARNING block; `:20-21` (as of 66dcda2) "Under design section 5.4 'Escalation' NO 6Li number from `Li6ConvolutionB1` may be published while that stands" |
+| | | `:24-28` (as of 66dcda2) | FAIL | G3a's margin: "counting window starts at x = 0.02 … drops below the scan floor" |
+| | | `:564-571` (as of 66dcda2) | FAIL | `finite_q_delta`'s doc comment, "moves the deficit from a factor 3.68 to 2.27" |
+| 13 | `python/bindings.cpp` | `:1235-1238` (as of 66dcda2) | FAIL | section comment "WARNING: the gate is NOT fully passed (G3b, magnitude)" |
+| | | `:1391-1393` (as of 66dcda2) | FAIL | `Li6ConvolutionB1`'s class docstring, "the A = 2 magnitude gate is NOT passed: band every number" |
+| | | `:4055-4059` | FAIL | `B1Model::Li6Convolution`'s enum docstring, same statement |
 | | | | | **NOT on `PLAN.md:116-120`'s list of fourteen** |
 | 14 | `python/lipolgen/cli.py` | `:178-184` | FAIL | `--b1-model`'s `--help` text: "li6-convolution has NOT passed its A = 2 magnitude gate (a factor 2.27 … 3.68 …)" — this is the "`--help`" half of the Escalation clause |
-| | | `:383-390` | **BAN** + FAIL | the run banner; `:389-390` "See docs/…/phase_D_gate.md; no 6Li number from it may be published." |
-| 15 | `python/lipolgen/__init__.py` | `:149-151` | FAIL (**MISSED**) | the Sphinx docstring of the public `B1_MODELS` constant: "its A = 2 magnitude gate is NOT passed -- band every number with --b1-band-scale 0/1/2 and never quote one row alone". Anchor as of 2026-09-04. It **ships in the installed package** and describes the same enum as `python/bindings.cpp`, so after the lift the two shipped descriptions of one object said opposite things. **NOT on `PLAN.md:116-120`'s list, and not on this survey's original sixteen either** |
-| 16 | `tests/test_b1_nuclear.cpp` | `:487-494` | FAIL | G3b's comment block, "This FAILS at the default: the ratio is 0.440, a factor 2.27" |
-| | | `:504-506` | FAIL (**executable**) | `CHECK_CLOSE(ratio, 0.439986, 2e-3); CHECK(ratio < 0.5); // the gate's honest state, pinned` |
-| | | `:521-533` | FAIL (**executable**) | the two fragile-clause comments and `CHECK(z[0] > 0.02)`, `CHECK(z[0] - 0.02 < 0.005)`, `CHECK(|z1 − ref| > 0.05)` |
+| | | `:383-390` (as of a7b3d18) | **BAN** + FAIL | the run banner; `:389-390` (as of d3ac125) "See docs/…/phase_D_gate.md; no 6Li number from it may be published." |
+| 15 | `python/lipolgen/__init__.py` | `:154-156` | FAIL (**MISSED**) | the Sphinx docstring of the public `B1_MODELS` constant: "its A = 2 magnitude gate is NOT passed -- band every number with --b1-band-scale 0/1/2 and never quote one row alone". Anchor as of 2026-09-04. It **ships in the installed package** and describes the same enum as `python/bindings.cpp`, so after the lift the two shipped descriptions of one object said opposite things. **NOT on `PLAN.md:116-120`'s list, and not on this survey's original sixteen either** |
+| 16 | `tests/test_b1_nuclear.cpp` | `:487-494` (as of 66dcda2) | FAIL | G3b's comment block, "This FAILS at the default: the ratio is 0.440, a factor 2.27" |
+| | | `:504-506` (as of 66dcda2) | FAIL (**executable**) | `CHECK_CLOSE(ratio, 0.439986, 2e-3); CHECK(ratio < 0.5); // the gate's honest state, pinned` |
+| | | `:521-533` (as of 66dcda2) | FAIL (**executable**) | the two fragile-clause comments and `CHECK(z[0] > 0.02)`, `CHECK(z[0] - 0.02 < 0.005)`, `CHECK(|z1 − ref| > 0.05)` |
 | 17 | `validation/b1_li6_table.py` | `:21-26` | **BAN** + FAIL | module docstring, "READ THE GATE BEFORE QUOTING ANY 6Li NUMBER … no 6Li number from `Li6ConvolutionB1` may be published while that stands" |
 | | | `:243-248` | **BAN** + FAIL (**executable**) | the emitted footer: "THE GATE FAILS and no 6Li number may be published (design section 5.4, Escalation)" — this text is *printed into every report*, so it must move or every regenerated report will contradict the gate |
 

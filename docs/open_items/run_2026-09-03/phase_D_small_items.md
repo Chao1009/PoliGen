@@ -27,7 +27,7 @@ identical to the cluster one — the two 'variants' are one."* As implemented
 they are not, and the header already says so correctly and in more detail than
 the inventory line preserved.
 
-`src/core/fsi.cpp:186-198` — the whole of the difference:
+`src/core/fsi.cpp:191-198` (anchor read 2026-09-15) — the whole of the difference:
 
 ```cpp
   if (opt_.variant == FsiVariant::GlauberNucleon) {
@@ -94,7 +94,7 @@ Pointwise rows (θ_k = 90°):
 | 0.30 | 1.13927 | 4.07433 | 3.576 |
 | 0.50 | 0.63510 | 6.54603 | 10.307 |
 
-(The 0.10 GeV row reproduces the pair `docs/PHYSICS_CHANNELS.md:321` records
+(The 0.10 GeV row reproduces the pair `docs/PHYSICS_CHANNELS.md:340` records
 for the **production S+D tag**, 0.391 vs 0.321; `tests/test_fsi.cpp:258-281`
 pins the *pure-S prototype* channel's 0.381 / 0.309 instead, which is why the
 two pairs differ.)
@@ -120,8 +120,8 @@ Per-event ratio w_nucleon/w_cluster, percentiles [1, 5, 25, 50, 75, 95, 99] =
 **Verdict: the two variants are different on essentially every event, and by
 construction, not by parameter choice.** D3 should be closed as *premise
 false*, and `PLAN.md:332-333` retracted where it stands (it is the only place
-in the tree that carries the claim — `docs/PHYSICS_CHANNELS.md:321` and
-`docs/CONVENTIONS.md:328` already state it correctly).
+in the tree that carries the claim — `docs/PHYSICS_CHANNELS.md:340` and
+`docs/CONVENTIONS.md:422` (anchor read 2026-09-15 "40); variant") already state it correctly).
 
 ### D3.4 What a genuinely NON-identical per-nucleon variant would have to include
 
@@ -185,13 +185,13 @@ their total rate by 48 % / 42 %.
 `python/bindings.cpp:440-556` writes 23 base keys, the four `b1_*` keys
 **unconditionally**, and the whole `rc_*` block **conditionally**. There is no
 `fsi` key of any kind. The comment that justifies the `b1_*` block —
-`python/bindings.cpp:462-466`, *"without these three keys three otherwise
+`python/bindings.cpp:462-466` (as of adec442), *"without these three keys three otherwise
 identical npz files are indistinguishable — which is exactly the 'never quote a
 single row' rule failing silently"* — describes the FSI situation exactly, and
 was never applied to it. `fsi_sigma_mb` (the documented 20–40 mb band, the one
 knob the header says must never be quoted as a single row) is likewise absent.
 
-The setting *is* printed at the run surface, `python/lipolgen/cli.py:597-604`,
+The setting *is* printed at the run surface, `python/lipolgen/cli.py:1436-1443` (anchor read 2026-09-15),
 but that is stdout, not the record.
 
 Against the run's own ground rule — *exposed in bindings, reachable from
@@ -263,7 +263,7 @@ Two things the tree does not record:
   `xu = xd = xubar = xdbar = xs = xsbar` and `xc = xcbar = xb = xbbar = 0.`.
   The tree says "the H1 **LO** grids carry no charm or bottom at ANY (β, Q²)"
   (`src/pythia/pythia_bridge.cpp:598-601`,
-  `docs/PHYSICS_CHANNELS.md:450`) — true, and **also** true of the two H1 NLO
+  `docs/PHYSICS_CHANNELS.md:494`) — true, and **also** true of the two H1 NLO
   fits (3, 4), which the wording does not cover.
 * `BeamSetup.cc:1379-1387` — selecting an ACTW set (7–10) makes PYTHIA
   **overwrite** `SigmaDiffractive:PomFlux = 4` and set `PomFluxEpsilon`
@@ -275,10 +275,10 @@ Two things the tree does not record:
 
 ### D4.2 What the code exposes
 
-`include/lipolgen/pythia_bridge.hpp:211` `pom_set` (default 6) and `:218`
-`pom_rescale` (default 1.0), bound at `python/bindings.cpp:4094-4098` and
+`include/lipolgen/pythia_bridge.hpp:212` `pom_set` (default 6) and `:271`
+`pom_rescale` (default 1.0), bound at `python/bindings.cpp:5011-5015` and
 reachable as `--pom-set` / `--pom-rescale` (`python/lipolgen/cli.py:328-337`).
-The value is passed through as a raw integer, `src/pythia/pythia_bridge.cpp:326`.
+The value is passed through as a raw integer, `src/pythia/pythia_bridge.cpp:329` (anchor read 2026-09-15 "to_string(opt").
 No range check — which is fine, because an invalid value fails **hard and
 early**: `--pom-set 99` → `RuntimeError: PythiaBridge: pythia.init() failed for
 beam id 990` before any event is generated.
@@ -428,7 +428,7 @@ say which is which.
    vanishes, which is below the charm threshold, where charm is zero anyway —
    so the light-only restriction has never yet discarded anything.
 
-   Consequence for the docs: `docs/PHYSICS_CHANNELS.md:450`'s remedy —
+   Consequence for the docs: `docs/PHYSICS_CHANNELS.md:450` (as of adec442)'s remedy —
    *"raising `q2_pdf_min` to ≈1.75 removes it at the cost of clamping every
    flavour weight to that Q²"* — is true about the **counter** and false about
    the **cost**. It changes nothing at all. The light-only restriction should
@@ -444,12 +444,12 @@ Second instance of the D3.5 defect. The coherent npz `meta` carries **no**
 `meta` while their entire hadronic final state differs — which is precisely the
 band this item exists to establish.
 
-And `docs/PHYSICS_CHANNELS.md:450` says of the fallback *"Counted, so the
+And `docs/PHYSICS_CHANNELS.md:450` (as of adec442) says of the fallback *"Counted, so the
 fallback share of a run is visible."* It is counted
-(`include/lipolgen/pythia_bridge.hpp:259`, bound at
-`python/bindings.cpp:4112`) and **surfaced nowhere**: not in the `meta`, and
+(`include/lipolgen/pythia_bridge.hpp:341` (anchor read 2026-09-15 "n_pom_flavour_fallback = 0"), bound at
+`python/bindings.cpp:5045` (anchor read 2026-09-15 `def_readonly("n_pom_flavour_fallback"`)) and **surfaced nowhere**: not in the `meta`, and
 not in the run banner, which prints `n_ok`, `n_failed`, `n_retries` only
-(`python/lipolgen/cli.py:712-715`). On set 11 that is the difference between a
+(`python/lipolgen/cli.py:712-715` (as of a7b3d18)). On set 11 that is the difference between a
 run that used a Pomeron PDF and one that used none.
 
 ### D4.8 Reproduction
@@ -470,7 +470,7 @@ cd /home/cpeng/Projects/polli/LiPolGen && source env.sh
 
 ### D5.1 The arithmetic, reproduced
 
-`src/core/coherent.cpp:177-200`:
+`src/core/coherent.cpp:179-202` (anchor read 2026-09-15):
 
     c₂(|t|, P_zz) = −(P_zz/2)·eps_b0·B·|t| + amp·P_zz
     positivity_margin(t_max, P_zz) = 1 − |c₂(t_max, P_zz)|      (:202)
@@ -681,8 +681,8 @@ independent item.
 ### D5.6 `coherent_t_max` is absent from the npz `meta`, and from the CLI
 
 Third instance of the D3.5 defect, and the worst of the three: `coherent_t_max`
-is on `PipelineConfig` (`include/lipolgen/pipeline.hpp:555`) and bound
-(`python/bindings.cpp:3864`), but it is **not reachable from `cli.py` at all**
+is on `PipelineConfig` (`include/lipolgen/pipeline.hpp:835`) and bound
+(`python/bindings.cpp:3864` (as of adec442)), but it is **not reachable from `cli.py` at all**
 (there is no `--coherent-t-max`) and **not in the `meta`**. A Python caller who
 moves it changes the entire |t| spectrum, the tag acceptance and every c₂ in
 the file, and the sidecar cannot tell.
@@ -712,7 +712,7 @@ python -c "import lipolgen as lg; ..."     # 200k coherent events, seed 99, colu
 | `b1_model`, `b1_band_scale`, `b1_alpha_d_dwave_weight`, `b1_unpol` | yes | yes | **yes, unconditional** | yes |
 | the 19 `rc_*` keys | yes | yes | **yes, conditional** | yes |
 
-The rule is already written down in the code, at `python/bindings.cpp:462-466`
+The rule is already written down in the code, at `python/bindings.cpp:462-466` (as of adec442)
 and `:474-479`: *without these keys, otherwise identical npz files are
 indistinguishable*. It was applied to `b1_*` and to `rc_*` and to nothing else.
 Measured consequences, all three from this task:

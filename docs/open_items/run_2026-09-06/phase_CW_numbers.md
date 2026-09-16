@@ -696,8 +696,8 @@ brought onto the regenerated numbers with the reason named: `README.md`'s
 `OPEN_ITEMS_SOLUTIONS.md` §1 (three bullets, including the two-configuration
 check 0.0301 → 0.0365 at 5×41 and 0.0279 → 0.0348 at 18×275). One unrelated
 anchor slip found while checking them and fixed: `PHYSICS_CHANNELS.md`'s ⟨P₂⟩ =
-−T/5 row cited `README.md:109`, which is the rtol-1e-12 sentence; the statement
-is at `README.md:115`.
+−T/5 row cited `README.md:109` (anchor read 2026-09-15 "rtol 1e-12"), which is the rtol-1e-12 sentence; the statement
+is at `README.md:115` (anchor read 2026-09-15 "2025 Table 1").
 
 **Not changed by this pass:** `src/`, `validation/reference/` (SHA-256
 unchanged; `repin_tagged_from_lipolgen.py --check` still reports worst move

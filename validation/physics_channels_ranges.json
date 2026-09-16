@@ -174,11 +174,6 @@
   "first": "### Installing the Python package with pip",
   "last": "`docs/OPEN_ITEMS_SOLUTIONS.md` §12–13 and `docs/open_items/engineering.md` §C)."
  },
- "docs/USAGE.md:1501-1509": {
-  "sha256": "c8958c6536993541d5bf2508013977038b638531c53ac6057b128baf57c0188b",
-  "first": "### Tier T1 — the struck cluster is resolved (the default)",
-  "last": "* its `Role::PartnerSpectator` fragments (status 1, **on shell** at their"
- },
  "docs/USAGE.md:163-533": {
   "sha256": "6be731d99a9544bd8b29d14db62bd95ecba60805c4232df959c050d170f88474",
   "first": "X (pdg 92). The balance is **per-nucleon**, `k + P_N = k' + X`, exactly as",
@@ -424,20 +419,20 @@
   "first": "  /// DEPRECATED (2026-08-30, superseded by the T1 tier).  Hook: pick the",
   "last": "  /// `PythiaBridgeStats::n_cluster_fallback`."
  },
- "include/lipolgen/rc.hpp:195-202": {
-  "sha256": "78b79c4278535e4b171f0ba3f39f70ff1e7ca88f4cedd5ac116356683dd6fad6",
-  "first": "/// w_tensor/a1_tensor/a2_tensor` hold.  At an UNPOLARISED beam and along it",
-  "last": "/// DIS one -- see `RcModel::tensor_fraction`.  The band is then"
- },
- "include/lipolgen/rc.hpp:251-258": {
-  "sha256": "f1df66b413a50ee65ca1befab67a66283265062c7bc550910c5bb7f92b3dfd78",
-  "first": "///     transfers to 6Li is untested, and is the largest unquantified",
-  "last": "///     part), and the clipped fraction is reported per run and per event"
+ "include/lipolgen/rc.hpp:305-325": {
+  "sha256": "31fb33621c0fb91ae8031e4aabfbf1c3f498ec2a6fd56b964934622ae63b2841",
+  "first": "/// PR12-13-011 (E12-13-011 PROPOSAL, unpublished): \"no polarized radiative",
+  "last": "inline constexpr double RC_X_HIGH       = 0.16;"
  },
  "include/lipolgen/rc.hpp:383-465": {
   "sha256": "30a1ca60809dd42a0cda6e535db00f514a3e34eae278bd22c89fbeb5b927f69a",
   "first": "/// So the real basis of the anchor is \"THE PANEL'S LOWEST-x VALUE, CARRIED",
   "last": "  virtual double fm(double t_gev2) const = 0;"
+ },
+ "include/lipolgen/rc.hpp:414-421": {
+  "sha256": "dc243276fe175a6f800c9bc29000d423b465057e692dd22b273f985ebe5a1963",
+  "first": "/// Fermi momentum of 6Li, E. J. Moniz et al., PRL 26 (1971) 445 (the",
+  "last": "inline constexpr double RC_QE_KF_GEV = 0.169;"
  },
  "include/lipolgen/sampler.hpp:208-215": {
   "sha256": "518e363344f2c62f4ac59fef52bf52f49b6db0688025ddcb4a98b6e8a8ced921",
@@ -504,10 +499,10 @@
   "first": "/// CONVENTION (the one physics choice this file makes that the Python does not",
   "last": "/// carried explicitly rather than hidden."
  },
- "include/lipolgen/tagged.hpp:480-484": {
-  "sha256": "2299186020a9c0bc9ec07471d835af3189aecfb6b55e942673b04a6a009047a6",
-  "first": "/// One tagged event, before it is turned into an `Event` record.",
-  "last": "  double m_ion = 0.0, m_struck = 0.0;"
+ "include/lipolgen/tagged.hpp:496-499": {
+  "sha256": "288dc2c46b942dc4e6635ee56941c7f0a1252b93ad068182d1c019f7668e78d5",
+  "first": "/// Joint sampling, exactly the Python's: M from the fill populations weighted",
+  "last": "/// conditioned on m_S; then the lab boost and the far-forward route."
  },
  "include/lipolgen/tagged.hpp:54-62": {
   "sha256": "b4fa8b5f608a91a59fef65f8522ca3469f768d0a2f49967afb7afc74d5e3a524",
@@ -579,15 +574,15 @@
   "first": "  /// and cos 2phi' harmonics of the tensor rate shift.",
   "last": "  /// axis at (theta_S, phi_S) to the beam and phi' = phi - phi_S,"
  },
- "include/lipolgen/xsec.hpp:266-267": {
-  "sha256": "a040371ddf04ed494cb94839fdfc16b0c5c415fe8dc36d3db6767f12d407c829",
-  "first": "  /// phi-independent term, because at gamma = 0 the virtual photon is along",
-  "last": "  /// the beam and a spin axis at theta_S to the beam is at theta_S to q.  At"
+ "include/lipolgen/xsec.hpp:274-275": {
+  "sha256": "667b5b8019847e067b8336d1cef1279214cf8f4b2f7c80c4db1a45cbf06830a8",
+  "first": "  ///   N = (c s_S cos phi' + s c_S,  s_S sin phi',",
+  "last": "  ///        c c_S - s s_S cos phi'),      c, s = cos, sin theta_q,"
  },
- "include/lipolgen/xsec.hpp:324-326": {
-  "sha256": "685dac8bc2db21881b1b07ba0ec94c80e4d10ad026df45423dfae940bb904906",
-  "first": "                               bool with_delta = false) const;",
-  "last": "  /// (w_avg, a_1, a_2).  The VECTOR a_1 is only computed when `with_perp` (it"
+ "include/lipolgen/xsec.hpp:350-352": {
+  "sha256": "a231f6890f18a76a5d5625a7279953db6a04d40ab7feb459f1d2019a1adafad7",
+  "first": "  /// Exact minimum of W over phi, normalized by (1 + w_avg): negative means",
+  "last": "  static double positivity_margin(const Amplitudes& a);"
  },
  "include/lipolgen/xsec.hpp:99-103": {
   "sha256": "7fb6d1089c9747f3f25a2ea571cc07dc57b6beae645807b0b8a9e84c231ee546",
@@ -648,25 +643,25 @@
   "last": "  if (beamSetup.doVarEcm && doHardProc) {",
   "src": "pythia8317"
  },
- "python/bindings.cpp:1679-1688": {
-  "sha256": "affaf106a7d1dbfaf074e07ba11105a3835e01f11485f47742f9ceeb12103e36",
-  "first": "        py::arg(\"r_func\") = nullptr,",
-  "last": "     \"CDKS Eq. (10) and the text under their Eq. (16), and \""
+ "python/bindings.cpp:2180-2192": {
+  "sha256": "72ad89e79f50638eda95f70c4082d1e18bc4858d63176c34d32c069bac9a75ed",
+  "first": "  py::class_<Amplitudes>(m, \"Amplitudes\")",
+  "last": "        return std::string(b);"
  },
- "python/bindings.cpp:1719-1721": {
-  "sha256": "71b5b572842c7a109d0974c0f8c33cfccfc829e41f09a566c2f26854c94560dd",
-  "first": "        return copy_array(std::vector<double>(r.begin(), r.end()));",
-  "last": "         \"construction -- Machleidt's \\\"about 15 decimal digits\\\".\");"
+ "python/bindings.cpp:2220-2222": {
+  "sha256": "2146437e801d731124b8b045dc7823881c75bf72fbd68be43570bdbd3b37132b",
+  "first": "      .def_readwrite(\"b1_32_func\", &InclusiveKernel::Options::b1_32_func)",
+  "last": "      .def_readwrite(\"delta_32_func\", &InclusiveKernel::Options::delta_32_func)"
  },
- "python/bindings.cpp:1852-1853": {
-  "sha256": "ff2ba6207b4c08b0d8b4d06880682be5d71d23c4806853e78c8678e45c99de19",
-  "first": "      .def_property_readonly(\"options\", &LightConeDensities::options)",
-  "last": "      .def(\"convolve\", &LightConeDensities::convolve, py::arg(\"dens_at\"),"
+ "python/bindings.cpp:2334-2335": {
+  "sha256": "eae7eee385aad9ff0b413f93466a4356e1cf68cf62513c50a7b39218e6fe8491",
+  "first": "      .def_readwrite(\"use_explicit_pzz\", &HelicityFlipOptions::use_explicit_pzz)",
+  "last": "      .def_readwrite(\"pzz\", &HelicityFlipOptions::pzz)"
  },
- "python/bindings.cpp:2005-2006": {
-  "sha256": "daccc48f820e4b1ef3bf89f4377cb312f11e60d59ca82248a9bbf026b5cd153e",
-  "first": "           py::arg(\"q2\"))",
-  "last": "      .def(\"densities\", &DeuteronConvolutionB1::densities,"
+ "python/bindings.cpp:2481-2494": {
+  "sha256": "c5555554edb0fa110a0e4599c0367b8831f7afc12eb6006967bd703b05304d65",
+  "first": "      .def(\"state_tables\", [](const InclusiveSampler& s,",
+  "last": "        return d;"
  },
  "python/lipolgen/__init__.py:416": {
   "sha256": "42d1b3c1373ae738b90a7b6be6ecae2ac5f61b83ae6be3e1d9c25b4e27493adc",
@@ -813,35 +808,35 @@
   "line": "                                               with_perp_);",
   "name": "with_perp_"
  },
- "src/core/sampler.cpp:234-240": {
-  "sha256": "b1eda5c848ef02c2e1973f26692b641125d7b5dbc8ccb48a9ac2e2123284be1d",
-  "first": "      // the combination that first showed it is documented under \"the top x",
-  "last": "      // change, and the sampler's own accept-reject would then draw"
+ "src/core/sampler.cpp:276-279": {
+  "sha256": "859681a73ab0ce30583a5a75c5b6a60ccd4ee0a1fc2d278b43196d3e40eb6e16",
+  "first": "    st.a1n[i] = amp.a1 / den;",
+  "last": "    const double margin = density_min(st.a1n[i], st.a2n[i]);"
  },
- "src/core/sampler.cpp:305-322": {
-  "sha256": "f0877ef8c5f56d60988f0f97003290e5a892c6752a2271b8dd1474bd512e323b",
-  "first": "    it = cache_.emplace(key, std::move(st)).first;",
-  "last": "double InclusiveSampler::sigma_tot_pb(const SpinCategory& cat) const {"
- },
- "src/core/sampler.cpp:386-396": {
-  "sha256": "b8a3b784db641e7f60e580f386ad52cc91057e5765872c0f3b028022c4d481b7",
-  "first": "  return plan;",
-  "last": "      plan.m_cdf.begin());"
+ "src/core/sampler.cpp:335-362": {
+  "sha256": "fe4e16d09963eedbf6a14908df0539360333ee06ee59f78cbe35d9d6de7d5601",
+  "first": "InclusiveSampler::EffectiveModulation InclusiveSampler::effective_modulation(",
+  "last": "}"
  },
  "src/core/sampler.cpp:42": {
   "sha256": "0929d2ce38f733f070ebb51950f3b5bcc6bab5ec4701d5a92bb759506560e39e",
   "line": "  g.q2_edges = logspace(std::log10(q2_min), std::log10(q2_max),",
   "name": "q2_edges"
  },
- "src/core/sampler.cpp:480-482": {
-  "sha256": "eb792de5df016bb803a95d01f2252b0e43d6d54d9037a5067df970bccb1a4463",
-  "first": "  }",
-  "last": "  return out;"
+ "src/core/sampler.cpp:425-435": {
+  "sha256": "4afde4abc6250c5cb89c187402266c2009f1cbb1d61d705d84564d7499d62204",
+  "first": "  // 3. phi by accept-reject on the cell-center amplitudes",
+  "last": "  }"
  },
- "src/core/sampler.cpp:526-531": {
-  "sha256": "9fc055636781eaf7a95021030dc5579557e1a0fe3dacc946c6040b8be69c8c77",
-  "first": "}",
-  "last": "  // StateTables and WITHOUT the unpolarized 1.0: t[i, k] is the rank-2 part of"
+ "src/core/sampler.cpp:519-521": {
+  "sha256": "a92332906dacc1a8ebec6f63a135ae84146cb14988a0db081139eafe02554926",
+  "first": "        out[i * nk + k] += p_m * (1.0 + st.w_avg[c] +",
+  "last": "                                  st.a2[c] * std::cos(2.0 * phip));"
+ },
+ "src/core/sampler.cpp:595-604": {
+  "sha256": "5f2b4643644ceba11ee25c9aa058224365afffd2dc7371d56a6f4e47fbbe388f",
+  "first": "PhiHistogram phi_histogram_pseudo(double n_expected, double a2, int nbins,",
+  "last": "    throw std::runtime_error(msg);"
  },
  "src/core/spin.cpp:230-244": {
   "sha256": "e05e2e7ebd1f8358eac06734c6d677f93624bf70ec13ea55513e8b77c4c9b9a1",
@@ -933,64 +928,64 @@
   "first": "TensorHarmonics InclusiveKernel::tensor_harmonics_gamma(",
   "last": "}"
  },
- "src/core/xsec.cpp:214-276": {
-  "sha256": "e1d4732a60b3a48e5bde2c4700e250a41f1f447d82f5c2054db469725df7cd1f",
-  "first": "Amplitudes InclusiveKernel::tensor_amplitudes(const SFTables& t, double x,",
-  "last": "    }"
- },
- "src/core/xsec.cpp:248-264": {
-  "sha256": "0db628ac0beeced5a74c54ccdd194dbe93530002f8de25499fe4c24c4c4eb032",
-  "first": "  const double ct = std::cos(state.theta_s);",
-  "last": "      const double kern = tensor_kernel(t, x, y);"
+ "src/core/xsec.cpp:253-277": {
+  "sha256": "ce54a899f88f4dc93549d64c4890fcdcfec1a20323f6b0e45ea819eaabe729a4",
+  "first": "  if (j >= 1.0 - 1e-9 && j_ion >= 1.0 - 1e-9) {",
+  "last": "  }"
  },
  "src/core/xsec.cpp:255": {
   "sha256": "e97b5246b719dceed17aff7596918084016274d5279e80e4105ed8b68cc0d99b",
   "line": "    if (tensor_gamma_) {",
   "name": "tensor_gamma_"
  },
- "src/core/xsec.cpp:257-260": {
-  "sha256": "7b74ba74456bdbdc859d9330f64320f8ee412c58e553ce924deab92939bd8df1",
-  "first": "      out.w_avg = out.w_avg + h.h0;",
-  "last": "    } else {"
- },
  "src/core/xsec.cpp:259": {
   "sha256": "3f5c5443c61994b443e556c40510c021c51dfffa50f8736b2bc6eda02471236a",
   "line": "      out.a2 = out.a2 + h.h2;",
   "name": "a2"
  },
- "src/core/xsec.cpp:266-270": {
-  "sha256": "726a9aef0cde30b87c94940ec3f788ee0f41ada97ad5bf6d85235e4a6c2bdc59",
-  "first": "    }",
-  "last": "    // (RcScope::TensorRate) and `with_delta` is what buys it back"
+ "src/core/xsec.cpp:261-265": {
+  "sha256": "0976fba3416ff6a704e04590e8e0c829ceffcff5b4f3c7e1c61ddf2001dc04d3",
+  "first": "      // T_LL = Q_NN P_2(cos theta_S), one line for every spin",
+  "last": "      out.w_avg = out.w_avg + t_geo * kern / std::max(den, 1e-30);"
  },
- "src/core/xsec.cpp:266-274": {
-  "sha256": "3283f02fe3964ad5e6b08304c33f7cffb17fc2f8571eb07876e247f49708abb0",
-  "first": "    }",
-  "last": "      out.a2 = out.a2 + (-(1.0 - y) / (y * y) * qc.second * st * st * t.delta"
- },
- "src/core/xsec.cpp:267-269": {
-  "sha256": "d68e1d136d39b5578fd5240f87b9a4f8122c75aec9e4e58d3fa3e4043643fb6e",
-  "first": "    // Delta (gluon transversity) is rank 2 as well but is NOT in POLRAD's",
-  "last": "    // observable, so `rc.hpp` leaves it out of the band by default"
- },
- "src/core/xsec.cpp:272-274": {
-  "sha256": "4ad64ee42ca2535ca9a5fbb28e77acacd3289e9202b9663716a7584c795e475e",
-  "first": "    // wants it -- it is part of W.",
-  "last": "      out.a2 = out.a2 + (-(1.0 - y) / (y * y) * qc.second * st * st * t.delta"
- },
- "src/core/xsec.cpp:283-285": {
-  "sha256": "69a669992bf14cf8f17c5b47ae2186c5888250bb537d8e582435d00dcf9272e8",
-  "first": "                                       double s, const EventSpinState& state,",
-  "last": "  // The whole b-sector, in ONE place (`tensor_amplitudes`, which `rc.hpp` and"
+ "src/core/xsec.cpp:282-304": {
+  "sha256": "b7639d451d775ae1f30bbb87ee0740a3b182d761ebf4c67054ef2a0ed031c0b5",
+  "first": "Amplitudes InclusiveKernel::amplitudes(const SFTables& t, double x, double q2,",
+  "last": "}"
  },
  "src/core/xsec.cpp:29-32": {
   "sha256": "9be38473276492ef569293aff03af35f02c026039a11415f2c591e203726afdc",
   "first": "  o.f_l = (2.0 * onep * x * b1",
   "last": "           - (b2 / 3.0 - b3)) / x;"
  },
+ "src/core/xsec.cpp:295-298": {
+  "sha256": "b29c76b6d579e55af62a59ad7f472449d9e3003dc506bb98db32c66fbfececa7",
+  "first": "  const double helicity = state.lam_e * state.pe;",
+  "last": "    out.w_avg = out.w_avg + helicity * v * ct * a_parallel(t, x, q2, y);"
+ },
+ "src/core/xsec.cpp:295-302": {
+  "sha256": "fb5462af67c7e8632b30b23a8801dd6f07986b18e31101be2501beda8da6a2b6",
+  "first": "  const double helicity = state.lam_e * state.pe;",
+  "last": "  }"
+ },
+ "src/core/xsec.cpp:296-298": {
+  "sha256": "a99ada6acebc67fb1cf336677973b7a38ea4d922dbd10caa8856555257cb7055",
+  "first": "  const double v = (j > 0.0) ? state.m / j : 0.0;",
+  "last": "    out.w_avg = out.w_avg + helicity * v * ct * a_parallel(t, x, q2, y);"
+ },
+ "src/core/xsec.cpp:300-302": {
+  "sha256": "41410808579f2de7c826a74b62664e939371a977b1e98545d094a07fabfe9dc2",
+  "first": "  if (with_perp && helicity != 0.0 && v != 0.0 && std::fabs(st) > 1e-12) {",
+  "last": "  }"
+ },
  "src/core/xsec.cpp:311-318": {
   "sha256": "9dabe0b12eba848568226f9ad877e4c8b08699884ab21a17f618dcb1bf250ed2",
   "first": "double InclusiveKernel::density(const Amplitudes& a, double phip) {",
+  "last": "}"
+ },
+ "src/core/xsec.cpp:320-328": {
+  "sha256": "37bfeaf4884f9f420b8df7633805322d3c501548850e2399fce7bfab86d9699f",
+  "first": "double InclusiveKernel::dsigma(double x, double q2, double phi, double s,",
   "last": "}"
  },
  "src/core/xsec.cpp:39-42": {

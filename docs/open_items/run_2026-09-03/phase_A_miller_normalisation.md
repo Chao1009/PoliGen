@@ -2,7 +2,7 @@
 
 **Item.** `docs/OPEN_ITEMS_SOLUTIONS.md`:543-545 (Q5) and :568-571 ("What has to
 happen" items 5 and 6). Is `B1_PER_DEUTERON_TO_PER_NUCLEON = 0.5`
-(`include/lipolgen/constants.hpp:86`) right at **both** sites it is applied —
+(`include/lipolgen/constants.hpp:87`) right at **both** sites it is applied —
 `src/core/sf.cpp:350-354` (Miller table, reached by `MillerB1`/`toy_b1`) and
 `src/core/sf.cpp:356-361` (CDKS convolution, reached by `CdksB1`/`b1_convolution`)?
 
@@ -52,7 +52,7 @@ the **six HERMES data points overlaid on it** — evidence of a different kind,
 handled in §5. The right arbiter was never Miller's axis; it was always the
 normalisation of the HERMES b₁ᵈ that *both* camps plot against.
 
-A second, smaller correction while I am here: `include/lipolgen/constants.hpp:86`'s
+A second, smaller correction while I am here: `include/lipolgen/constants.hpp:86` (as of a98f0a0)'s
 comment —
 
 > `/// The published b1 curves are per DEUTERON; every consumer here pairs b1`
@@ -372,13 +372,13 @@ that asserts both need it.
 should return `xb1 / xs`. The digitized CDKS column is already per nucleon (§3);
 halving it makes `CdksB1` a factor 2 low. Blast radius, measured:
 
-* **`tests/test_sf.cpp:175-176`** — the only rtol-pinned CDKS values. Both double:
+* **`tests/test_sf.cpp:175-176` (as of 920c70f)** — the only rtol-pinned CDKS values. Both double:
   `b1_convolution(0.3, 2.5, 0.0)`: −2.816198975086724e-04 → −5.632397950173448e-04;
   `b1_convolution(0.05, 2.5, 0.0)`: +5.8517162680014353e-05 → +1.1703432536002871e-04.
-* The `|b1_convolution| < 1e-3` bounds at `tests/test_sf.cpp:177-178` **survive**
+* The `|b1_convolution| < 1e-3` bounds at `tests/test_sf.cpp:177-178` (as of 920c70f) **survive**
   doubling — I evaluated them: x = 0.25 → 5.328e-04, x = 0.3 → 5.632e-04, both
   still under 1e-3. No assertion has to be relaxed.
-* `tests/test_sf.cpp:405` (`cdks.b1_func()(…) == b1_convolution(…)`) is relative
+* `tests/test_sf.cpp:426` (`cdks.b1_func()(…) == b1_convolution(…)`) is relative
   and unaffected.
 * **`python/tests/`: no numeric pin on `CdksB1` exists** (`grep -n -i cdks
   python/tests/test_b1_model.py` shows only structural, CLI and validation tests —
@@ -386,14 +386,14 @@ halving it makes `CdksB1` a factor 2 low. Blast radius, measured:
 * **`validation/reference/*.json` is untouched**: the only b₁ reference,
   `b1_default_li6.json`, records `"b1_model": "miller"`. **The rtol 1e-12 gate does
   not move.**
-* `docs`-level: `validation/b1_li6_table.py:61` builds `lg.Li6B1(lg.CdksB1())` for
+* `docs`-level: `validation/b1_li6_table.py:81` builds `lg.Li6B1(lg.CdksB1())` for
   a comparison table; that column doubles and the table must be regenerated.
-* `src/core/b1_nuclear.cpp:573` already routes around the bug via
+* `src/core/b1_nuclear.cpp:625` already routes around the bug via
   `cdks_b1_raw_per_nucleon()`, so the ⁶Li convolution backend is **unaffected** —
   and once `b1_convolution()` is fixed, that accessor's reason for existing
   becomes documentation rather than a workaround. Its doc comment
-  (`include/lipolgen/b1_nuclear.hpp:115-125`) and the binding docstring
-  (`python/bindings.cpp:1247-1251`), which both say "`CdksB1` halves it a second
+  (`include/lipolgen/b1_nuclear.hpp:115-125` (as of 66dcda2)) and the binding docstring
+  (`python/bindings.cpp:1247-1251` (as of 66dcda2)), which both say "`CdksB1` halves it a second
   time", then need updating too.
 
 This *is* a behaviour change for the opt-in `--b1-model cdks` path. Under the
@@ -410,7 +410,7 @@ gate is untouched by this item**. What must change is the *justification*: the
 comment must stop pointing at Fig. 5's axis (§1) and point at Eqs. (1), (5) and (6)
 instead, and must record that the factor rests on reading (A) of §4.3.
 
-### 6.3 `include/lipolgen/constants.hpp:86` — **fix the comment, keep the number**
+### 6.3 `include/lipolgen/constants.hpp:86` (as of a98f0a0) — **fix the comment, keep the number**
 
 `B1_PER_DEUTERON_TO_PER_NUCLEON = 0.5` stays, one home, unchanged value. The two
 lines above it must stop claiming it applies to both curves. Something like: *the
@@ -430,7 +430,7 @@ should not be left unrecorded.
 
 ---
 
-## 7. `tests/test_sf.cpp:159-164` — the premise holds; one comment is wrong
+## 7. `tests/test_sf.cpp:159-164` (anchor read 2026-09-15) — the premise holds; one comment is wrong
 
 ```cpp
   // The tables hold the published PER-DEUTERON b1 and the accessor halves it,

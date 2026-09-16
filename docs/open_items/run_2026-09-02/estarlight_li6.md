@@ -91,7 +91,7 @@ that the ⁷Li numbers are directly comparable to arXiv:2511.05638, which ran th
 code unmodified.  The patched build supplies the `R_rms` variant rows.
 
 **Beams.**  LiPolGen configuration 1 = `ELECTRON_ENERGIES[1] = 10.0` GeV ×
-99.5 GeV/u (`src/core/beams.cpp:119`; `docs/USAGE.md:153` "10 GeV e × 99.5 GeV/u").
+99.5 GeV/u (`src/core/beams.cpp:120`; `docs/USAGE.md:1243` (anchor read 2026-09-15 "10 GeV e x 99.5") "10 GeV e × 99.5 GeV/u").
 eSTARlight parameterizes beams by Lorentz γ and internally uses
 `E_ion = γ·A·m_p` (`src/inputParameters.cpp:197`), so γ is fixed by the
 per-nucleon *momentum*:
@@ -224,7 +224,7 @@ before any branching fraction, acceptance or efficiency):
 | coherent J/ψ | 1.77 nb | 1.8 × 10⁶ | 1.1 × 10⁵ (J/ψ → e⁺e⁻, 5.97 %) |
 
 LiPolGen carries **no default integrated luminosity** — `PipelineConfig::lumi_pb`
-is 0.0 (`include/lipolgen/pipeline.hpp:323`) and every example takes `--lumi`
+is 0.0 (`include/lipolgen/pipeline.hpp:710`) and every example takes `--lumi`
 from the command line — so these are quoted per fb⁻¹.
 
 > *(Annotation, 2026-09-04.)* The *analysis*-side default does exist and is
@@ -459,7 +459,7 @@ wanted, the reference to use is eSTARlight's own published ep/eA benchmarks
 
 **This is the clean, directly transferable result.**
 
-`gaussian_slope(r_rms)` in `src/core/coherent.cpp:53` is
+`gaussian_slope(r_rms)` in `src/core/coherent.cpp:55` is
 
 ```cpp
 const double r = r_rms_fm / GEV_PER_FM_INV;   //  r_rms / ħc
@@ -577,7 +577,7 @@ identifies.  `slope_b`, by contrast, is now settled (§4).
    own ⁷Li top energy is 117.9 GeV/u, not ⁶Li's 137.5.
 7. **eSTARlight's per-nucleon mass is m_p**, not the AME2020 nuclear mass per
    nucleon LiPolGen boosts with (`nuclear_mass(3, 6)`/6 = 5.60152/6 =
-   0.93359 GeV for ⁶Li, `src/core/spectator.cpp:32`).  The γ values in §1
+   0.93359 GeV for ⁶Li, `src/core/spectator.cpp:33` (anchor read 2026-09-15 "6}, 5.601518702")).  The γ values in §1
    were chosen to make the per-nucleon *momentum* match at 99.5 GeV/u
    exactly, which is the quantity every cross section depends on; the
    per-nucleon mass differs by 0.50 % (0.93827 vs 0.93359) and at fixed

@@ -44,7 +44,7 @@ column is unchanged because the four defects it closes are all on the run
 SURFACE — `validate()`, `meta`, the banner and one message — and the C++ suite
 carries no test of any of those.
 
-§D7's single new reference is `python/bindings.cpp:608` `unpol_sf`, added
+§D7's single new reference is `python/bindings.cpp:651` `unpol_sf`, added
 where a row had said "nothing records it"; measured by ablation on 2026-09-05
 (removing that one citation and re-running the gate gives 1144). §D7 also
 re-anchored **71** citations that its own edits had displaced — counted
@@ -1807,7 +1807,7 @@ by §D2.8 and the A_∥ column was in it all along; neither moved again here —
 it was written. See §D2.1.
 
 **B. A citation the gate could not see.** `docs/PHYSICS_CHANNELS.md`'s
-coherent-scenario bullet cited `python/lipolgen/cli.py:421` for
+coherent-scenario bullet cited `python/lipolgen/cli.py:421` (anchor read 2026-09-15 "is no longer") for
 `--coherent-t-max`; that line is inside the `--x-max` help string. The flag is
 declared at cli.py:445 (444 before §D7's own `--b1-model` edit), and the
 citation now carries the flag NAME, which moves it from the gate's shape B
@@ -1861,7 +1861,7 @@ straight to a kernel's `Options::f2_source` means "nothing records it".
 Measured 2026-09-05 on a config carrying a `default_inclusive_kernel`:
 `meta["unpol_sf"]`, `["pol_sf"]`, `["b1_model"]` and `["b1_unpol"]` all read
 `caller-supplied kernel`. What is missing is the BACKEND, not the record, and
-the row says that now — with `python/bindings.cpp:608` `unpol_sf` cited, which
+the row says that now — with `python/bindings.cpp:651` `unpol_sf` cited, which
 is §D7's one new reference.
 
 ### D7.1 The reach sentences §D6 made obsolete
@@ -2092,7 +2092,7 @@ way, but it is then a numeric edge of a term that RAN. The matrix gained a
 The row keyed on `KnobRunContext::t2_bound`, which only a caller who went
 through `set_pythia_hadronizer` (or the CLI) sets. A hadronizer bound as a plain
 callable — `cfg.hadronizer = f`, the route `python/README.md:246` documents, and
-the C++ lambda of `docs/USAGE.md:1741` — was called on **every event** (measured:
+the C++ lambda of `docs/USAGE.md:1973` — was called on **every event** (measured:
 20 of 20) while the row said `hadronize = off`, "no T2 tier is bound: every
 record stops at T0", and the three Pomeron rows said "not read without
 `--hadronize`: no PYTHIA instance of any kind is built".
@@ -2159,7 +2159,7 @@ table, a third copy the review did not name —
 quotes "2.8000" as the figure NOT to publish is left alone, as is the code
 comment at `USAGE.md:1509` that shows what the function returns.
 
-`docs/PHYSICS_CHANNELS.md` cited `include/lipolgen/pythia_bridge.hpp:338` for
+`docs/PHYSICS_CHANNELS.md` cited `include/lipolgen/pythia_bridge.hpp:339` for
 `n_pom_flavour_fallback`; :338 is the doc comment (`/// Recorded per run since
 2026-09-04 as meta["n_pom_flavour_fallback"]`) and :340 the declaration. At
 `903fcc9` the citation was on the declaration, so `--fix` had re-anchored it

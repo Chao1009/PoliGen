@@ -75,7 +75,7 @@ both. See §1.4.7.
 Consequence: the whole design is **multiplicative weights on a finished
 event**, never a momentum shift. That is the FSI precedent
 (`include/lipolgen/fsi.hpp` file header; `src/core/pipeline.cpp:469-480` builds
-the model, `src/core/pipeline.cpp:865` applies `ev.weight *= te.weight`), with
+the model, `src/core/pipeline.cpp:3485` applies `ev.weight *= te.weight`), with
 one deliberate difference: **the RC weights do not multiply `Event::weight`.**
 FSI is a *correction to the model*, so it belongs on the nominal weight; the RC
 band is a *systematic variation family* and the tail is a *background*, and
@@ -101,7 +101,7 @@ of `w_avg` is
   D_phi    = F1 + (1-y)/(x y^2) F2             (InclusiveKernel::dphi)
 ```
 
-With `TENSOR_LL_SIGN = -1` (`include/lipolgen/constants.hpp:39`) and
+With `TENSOR_LL_SIGN = -1` (`include/lipolgen/constants.hpp:40`) and
 `azz()` (`src/core/asymmetries.cpp:79-87`)
 `A_zz = TENSOR_LL_SIGN·(2/3)·(K/D_phi)·P2(cos θ_m)`, this is **identically**
 
@@ -121,7 +121,7 @@ band leaks into the vector sector:
 
 * **`A_zz` here means the LONGITUDINAL asymmetry**, i.e.
   `A_zz ≡ azz(b1, f1, f2, x, y)` at its default `θ_m = 0`
-  (`src/core/asymmetries.cpp:79-87`). All of the axis geometry sits in
+  (`src/core/asymmetries.cpp:80-88` (anchor read 2026-09-15)). All of the axis geometry sits in
   `P_zz^eff = 3 Q_NN P₂(cos θ_S)`. Substituting `θ_m = θ_S` into `azz()` *as
   well* would apply `P₂(cos θ_S)` twice.
 * **The whole `A_zz` programme runs at `λ_e P_e = 0`** (an unpolarised beam).
@@ -1280,7 +1280,7 @@ which reproduces `A(Q²) = G_C² + (8/9)η²G_Q² + (2/3)ηG_M²` term by term.
 (`docs/CONVENTIONS.md`: constants live in the *owning* header).
 
 **One number DOES move into `constants.hpp`: `M_ELECTRON = 0.51099895e-3` GeV.**
-It is currently a bare literal in `src/hepmc/hepmc_writer.cpp:135`, and
+It is currently a bare literal in `src/hepmc/hepmc_writer.cpp:136`, and
 `RcOptions` needs it (the lepton mass is what makes `F_IR` finite and what sets
 `l_m = ln(Q²/m²)`). Defining it a second time in `rc.hpp` would violate
 `CONVENTIONS.md` "No physics number is hard-coded in two places", so the design
@@ -1677,7 +1677,7 @@ const char* pipeline_rc_name(PipelineRc r);
   std::vector<double> rc_weights;
 ```
 `Event::reset()` gains `rc_weights.clear();` beside `spin_weights.clear();`
-(`src/core/event.cpp:24`) — capacity kept, so the allocator still sees nothing
+(`src/core/event.cpp:26`) — capacity kept, so the allocator still sees nothing
 per event.
 
 **`include/lipolgen/xsec.hpp`** — one method, and `amplitudes()` refactored to
@@ -1743,7 +1743,7 @@ plus, on `Pipeline`, the accessor and the member (mirroring `fsi_weight()` /
   std::shared_ptr<RcModel> rc_;   ///< null when cfg_.rc == Off
 ```
 
-**`PipelineConfig::validate()`** (`src/core/pipeline.cpp:312`) gains, after the
+**`PipelineConfig::validate()`** (`src/core/pipeline.cpp:450`) gains, after the
 FSI block:
 
 ```cpp
@@ -2143,7 +2143,7 @@ Files it owns:
   **No Appendix B in v0** — that is `RcTailModel::PolradFull`, §1.4.6,
   **implemented 2026-09-06** (`../run_2026-09-06/phase_B_numbers.md` §B2).
 * `include/lipolgen/constants.hpp` — `M_ELECTRON`, and the one-line change in
-  `src/hepmc/hepmc_writer.cpp:135` to use it.
+  `src/hepmc/hepmc_writer.cpp:135` (as of 0145885) to use it.
 * `include/lipolgen/xsec.hpp` + `src/core/xsec.cpp` —
   `InclusiveKernel::tensor_amplitudes` and the `amplitudes()` refactor.
 * `include/lipolgen/sampler.hpp` + `src/core/sampler.cpp` — the three
@@ -2219,7 +2219,7 @@ Files it owns:
   `--rc-tail-tensor-scale`, `--rc-qe-suppression`; `DEFAULTS`; the banner),
   `export.py` (`RC_KEYS`, `rc_columns`, **and the three keys in
   `columns_from_events`**).
-* `src/hepmc/hepmc_writer.cpp:135` — replace the bare `0.51099895e-3` with
+* `src/hepmc/hepmc_writer.cpp:135` (as of 0145885) — replace the bare `0.51099895e-3` with
   `M_ELECTRON` from `constants.hpp` (agent 1 adds the constant; this is the
   one line of the change that lives in agent 2's file set, and it must land
   after agent 1's header commit).

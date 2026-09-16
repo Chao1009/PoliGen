@@ -219,7 +219,7 @@ sum_j D_j m_j^2 = -1.819e-12
 
 ## 4. Sign and normalisation — **measured, and it is not what Eq. (D13) says**
 
-This is the `(−i)^L` trap that `docs/PHYSICS_CHANNELS.md:246` and
+This is the `(−i)^L` trap that `docs/PHYSICS_CHANNELS.md:246` (as of bd775bc) and
 `b1_nuclear.hpp:159` already warn about, and CD-Bonn walks straight into it.
 
 Machleidt's Eq. (D13) is printed with a **bare** j_L kernel,
@@ -479,7 +479,7 @@ predicted it would have and could not quantify.
 ## 8. The measured effect on the A = 2 gate
 
 **How.** `DeuteronConvolutionB1::Options::fdeut_path` is bound to Python
-(`python/bindings.cpp:1449`), so CD-Bonn and the proxy were fed to the gate by
+(`python/bindings.cpp:1976`), so CD-Bonn and the proxy were fed to the gate by
 writing them as `fdeut`-format files **in the scratchpad**, with no repository
 file touched. The curve, the grid and the landmarks are
 `validation/b1_li6_table.py`'s own — `x·b1(x, 2.5, 0)` on

@@ -394,7 +394,7 @@ every docs edit, not once per phase.)*
 
 `--record-ranges` **was** run here, twice and deliberately, unlike in §B3:
 once for the re-pointed `docs/USAGE.md` §9 range above, and once to
-fingerprint `src/core/rc.cpp:1010`, the new row's use-site citation of
+fingerprint `src/core/rc.cpp:1481`, the new row's use-site citation of
 `sp_tensor_scale` (the gate requires a fingerprint for a use site in a file
 that names the symbol on more than one line). **No citation was deleted and no
 cited block's claim was changed**; the reference count moved 1224 → **1228**,
@@ -752,7 +752,7 @@ lands **4.41e−04** apart, **4.28e−04** relative. The cell estimator itself d
 not move with P_z.)*
 
 > **CORRECTION RECORD, 2026-09-06 (verification pass) — the shipped headers
-> were quoting a THIRD number, mislabelled.** `include/lipolgen/rc.hpp:265` and
+> were quoting a THIRD number, mislabelled.** `include/lipolgen/rc.hpp:268` and
 > the `RcTailModel::PolradFull` enum comment, `python/lipolgen/cli.py`'s
 > `--rc-tail-model` help and `tests/test_rc.cpp`'s T19(g) comment carried
 > *"Event-weighted mean rc_tail 1.02217080 → 1.04097066 → 1.03020526"* and
@@ -1218,7 +1218,7 @@ differ by **1.5 %**.
 
 | where | what |
 |---|---|
-| `include/lipolgen/rc.hpp:669` | `LI7_QUADRUPOLE_FM2 = -4.06`, with the provenance above, the eight-entry Stone table, the swap price, and the sentence that it is a **gate reference and not a model input** |
+| `include/lipolgen/rc.hpp:726` | `LI7_QUADRUPOLE_FM2 = -4.06`, with the provenance above, the eight-entry Stone table, the swap price, and the sentence that it is a **gate reference and not a model input** |
 | `include/lipolgen/b1_nuclear.hpp` | `struct AlphaTQuadrupole` (`r2_fm2`, `r_rms_fm`, `z_eff`, `q_fm2`), `alpha_t_quadrupole(const VmcRadial&, …)`, `li7_alpha_t_quadrupole(vmc_mc_sigma, r_max_fm, n_r, n_k)` |
 | `src/core/b1_nuclear.cpp` | the Fourier–Bessel L = 1 transform, Z_eff from `nuclear_mass`, and a **j₁ branch added to the file-local `sph_bessel`** — the l = 0 and l = 2 branches are untouched, so every number this file already published is bit for bit what it was |
 | `python/bindings.cpp` | `LI7_QUADRUPOLE_FM2`, `AlphaTQuadrupole`, `alpha_t_quadrupole`, `li7_alpha_t_quadrupole` |

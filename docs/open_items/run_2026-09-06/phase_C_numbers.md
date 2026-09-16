@@ -175,7 +175,7 @@ They are put in front of the author as decisions.
 
 ### C5.1 `HfsModel` names no class in the sibling (survey §C-S5)
 
-`validation/o5_a2_reach.py:437` and `:466` cite
+`validation/o5_a2_reach.py:437` (as of 7f68339) and `:466` (as of 7f68339) cite
 `HfsModel(pt_min_track=0.2)` / `HfsModel(eff_track=0.95)`;
 `docs/OPEN_ITEMS_SOLUTIONS.md` §11.3b and
 `run_2026-09-03/phase_C_numbers.md` §C2.3c(c) / §C2.8 repeat it.

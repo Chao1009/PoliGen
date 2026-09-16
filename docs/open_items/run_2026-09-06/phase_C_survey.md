@@ -24,7 +24,7 @@ this file.
 The quantity wanted is therefore ONE number: **ε_reco per decay lepton
 (e or μ) of a coherent J/ψ in the ePIC central detector**, given that the
 lepton is already inside the acceptance.  The pair costs its square
-(`EPS_TRACK_SIBLING_STANDIN ** 2` at `validation/o5_a2_reach.py:495`).
+(`EPS_TRACK_SIBLING_STANDIN ** 2` at `validation/o5_a2_reach.py:528`).
 
 The brief asked for five shapes of candidate: a tracking efficiency per track;
 a J/ψ → ℓℓ reconstruction efficiency; an `eic-smear` parameterisation; a
@@ -275,7 +275,7 @@ lepton.
 
 ## C-S5 Incidental finding (1): LiPolGen's citation names a class that does not exist
 
-`validation/o5_a2_reach.py:466-468` reads:
+`validation/o5_a2_reach.py:466-468` (as of 7f68339) reads:
 
 ```
 #: sibling ../PolarizedLithiumSim's own `HfsModel(eff_track=0.95)`, which that
@@ -398,8 +398,8 @@ available to whoever acts next, and both are author decisions, not this
 survey's to take:
 
 1. the citation fix of C-S5 (`HfsModel` → `polligen.hfs.HadronResponse`,
-   `evgen/polligen/hfs.py:251`), at `validation/o5_a2_reach.py:437` and `:466`
-   and at `docs/OPEN_ITEMS_SOLUTIONS.md:1991-1993`;
+   `evgen/polligen/hfs.py:251`), at `validation/o5_a2_reach.py:437` (as of 7f68339) and `:466` (as of 7f68339)
+   and at `docs/OPEN_ITEMS_SOLUTIONS.md:1991-1993` (as of af3f415);
 2. the sharpened reading of C-S6 — that 0.1775 is acceptance-only on the recoil
    leg too, by the paper's own §IV sentence — which, if adopted, would have to
    land at every site the ground rules name:

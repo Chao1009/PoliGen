@@ -94,8 +94,8 @@ conditions; A1–A7 are those seven.
   `UnpolSF` binding has no trampoline, so a Python-only prototype is impossible
   and the C++ class is mandatory. Doctest + pytest.
 - **A2** Two MSTW rows in `checklist_item4()`
-  (`validation/b1_li6_table.py:158-170`) and the gate rerun. **G3a will abort
-  before G3b is reached**: `tests/test_b1_nuclear.cpp:475` is a `REQUIRE(z.size()
+  (`validation/b1_li6_table.py:224-229`) and the gate rerun. **G3a will abort
+  before G3b is reached**: `tests/test_b1_nuclear.cpp:617` is a `REQUIRE(z.size()
   == 2)` inside a counting window `[0.02, 1.0]`, and the docs already record
   that a realistic PDF drops the low-x zero below the scan floor. The design's
   own tolerance for that clause is Δx = ±0.08 about 0.0656, i.e. it admits a

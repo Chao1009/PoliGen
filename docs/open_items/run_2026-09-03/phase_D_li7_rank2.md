@@ -97,19 +97,19 @@ unpolarised-backend decision is made once, for both isotopes.
 `InclusiveKernel::tables` (`src/core/xsec.cpp:96-117`) dispatches the rank-2
 slots on the **kernel's ion spin**: spin 1 reads `b1_func_ / b2_func_ /
 delta_func_`, spin 3/2 reads `b1_32_func_ / b2_32_func_ / delta_32_func_`
-(`include/lipolgen/xsec.hpp:225`), and an unset slot yields `0.0`. The
+(`include/lipolgen/xsec.hpp:226` (anchor read 2026-09-15 "b1_32_func, b2_32_func")), and an unset slot yields `0.0`. The
 `rank2` branch of `tensor_amplitudes` (`src/core/xsec.cpp:251-278`) is
 **entered** for ⁷Li — the geometry `tensor_moments(m)` is non-zero — but every
 structure function it multiplies is zero, so the tensor term of `w_avg` and the
 whole `a2` are zero.
 
-`default_inclusive_kernel` (`src/core/pipeline.cpp:676-737`) fills the rank-2
+`default_inclusive_kernel` (`src/core/pipeline.cpp:744-805`) fills the rank-2
 slots **only inside `if (std::fabs(ion.spin - 1.0) < 1e-9)`**
-(`src/core/pipeline.cpp:690`). There is no spin-3/2 branch. The Δ (gluon
+(`src/core/pipeline.cpp:690` (as of adec442)). There is no spin-3/2 branch. The Δ (gluon
 transversity) slot is set on the same line, so ⁷Li loses cos 2φ as well.
 
 `PipelineConfig::validate` then refuses every `b1_model` other than `Miller` on
-⁷Li, with an accurate message (`src/core/pipeline.cpp:580-588`): *"is 6Li ONLY,
+⁷Li, with an accurate message (`src/core/pipeline.cpp:592-600`): *"is 6Li ONLY,
 got isotope 7Li — spin 3/2 has no rank-2 input here (the 7Li rank-2 slots are
 empty by design; there is no published b1 for it)"*. So the flag cannot fill
 them either.
@@ -150,12 +150,12 @@ The two ⁷Li category cross sections are **the same double**. There is no
 
 | Surface | What a ⁷Li user sees |
 |---|---|
-| `--isotope` help (`python/lipolgen/cli.py:67`) | `"6Li, 7Li, d"` — nothing |
+| `--isotope` help (`python/lipolgen/cli.py:69`) | `"6Li, 7Li, d"` — nothing |
 | Run banner (`python/lipolgen/cli.py:561-598`) | Channel, optics, σ per category. The b₁ block prints **only** when `b1_model != Miller`, which ⁷Li can never reach — so **no line at all** |
-| npz / HFS `meta` (`python/bindings.cpp:469-471`) | **`b1_model = "miller"`** — a backend that did not run. `b1_band_scale = 1.0`, `b1_alpha_d_dwave_weight = 1.0`, `b1_unpol = "toy"`, all likewise |
-| `PipelineConfig::validate` | Accurate, but only fires if the user *asks* for `--b1-model` (`src/core/pipeline.cpp:580-588`) |
+| npz / HFS `meta` (`python/bindings.cpp:469-471` (as of adec442)) | **`b1_model = "miller"`** — a backend that did not run. `b1_band_scale = 1.0`, `b1_alpha_d_dwave_weight = 1.0`, `b1_unpol = "toy"`, all likewise |
+| `PipelineConfig::validate` | Accurate, but only fires if the user *asks* for `--b1-model` (`src/core/pipeline.cpp:592-600`) |
 | `docs/PHYSICS_CHANNELS.md:125` | Says it plainly: *"for spin 3/2 no slot is set, so the whole tensor and cos 2φ sector of a ⁷Li inclusive run vanishes."* An internal reference table |
-| `docs/USAGE.md:242` | *"`7Li` is spin 3/2 and has no rank-2 input here."* — inside the `--b1-model` bullet, about the **flag**, not about running ⁷Li |
+| `docs/USAGE.md:269` (anchor read 2026-09-15 "spin 3/2 and has") | *"`7Li` is spin 3/2 and has no rank-2 input here."* — inside the `--b1-model` bullet, about the **flag**, not about running ⁷Li |
 
 **The answer to the task's question: a user asking for ⁷Li A_zz gets zeros with
 no warning, and a metadata block that names a b₁ model.** The `meta` row is the
@@ -166,11 +166,11 @@ recorded as if it had* — applied here to the model name itself.
 ### 1.5 Three more run-surface defects found on the way
 
 **F1 — no ⁷Li tensor run plan exists.** `tensor_thirds_plan`,
-`transverse_tensor_plan` and `tensor_flip_plan` (`src/core/bookkeeping.cpp:111`,
+`transverse_tensor_plan` and `tensor_flip_plan` (`src/core/bookkeeping.cpp:112`,
 `:126`, `:134`) all hard-code spin 1. Only `helicity_flip_plan` takes `j`.
 
 **F2 — and `make_plan`'s refusal gives wrong advice.**
-`python/lipolgen/__init__.py:477` refuses `tensor-thirds` at J = 3/2 with
+`python/lipolgen/__init__.py:477` (as of adec442) refuses `tensor-thirds` at J = 3/2 with
 *"needs helicity-flip or transverse-tensor"*. Measured:
 
 ```
@@ -191,9 +191,9 @@ Bloch domain is smaller than the spin-1 one at R₃ = 0), but the message does n
 say which pair is reachable.
 
 **F4 — a three-line Python segfault.** `ClusterPartialWave`'s `k` setter
-(`python/bindings.cpp:1376-1378`) calls `rebuild()`, which builds
-`CubicSpline(k, phi)` (`src/core/b1_nuclear.cpp:177-180`) with `phi` still
-empty; the constructor indexes `y_[i+1]` (`src/core/b1_nuclear.cpp:64`) out of
+(`python/bindings.cpp:1376-1378` (as of adec442)) calls `rebuild()`, which builds
+`CubicSpline(k, phi)` (`src/core/b1_nuclear.cpp:177-180` (as of adec442)) with `phi` still
+empty; the constructor indexes `y_[i+1]` (`src/core/b1_nuclear.cpp:66` (anchor read 2026-09-15 "d[i] = (y_[i")) out of
 bounds. Reproduced:
 
 ```python
@@ -235,14 +235,14 @@ parity of the relative motion is (−1)^L. ⁷Li's ground state is **3/2⁻**:
 The intersection is **L = 1 alone**. L = 3 ⊗ ½ gives only 5/2 and 7/2, so there
 is no D-wave/F-wave partner and **no interference term anywhere in the α–t
 channel**. The repository already records this
-(`docs/CONVENTIONS.md:249`, `docs/PHYSICS_CHANNELS.md:221`,
+(`docs/CONVENTIONS.md:249` (as of adec442), `docs/PHYSICS_CHANNELS.md:221` (as of adec442),
 `docs/open_items/vmc_reconciliation.md:107-113`,
-`tests/test_tagged.cpp:1055` — *"Aat11 is a selection-rule zero"*), and the data
+`tests/test_tagged.cpp:1198` — *"Aat11 is a selection-rule zero"*), and the data
 files agree: `li7.at`'s second column `Aat11(k)` is the ½⁻ **excited** state's
 amplitude and is MC noise at the 1e−4 level in the 3/2⁻ block;
 `momenta/li7_at1.momentum` is the ½⁻ state's own full-size distribution
 (S = 0.98683) and `momenta/li7_at3.momentum` is the 3/2⁻ ground state
-(S_αt = **1.0084**, `VMC_S_ALPHA_T_LI7`, `include/lipolgen/tagged.hpp:106`).
+(S_αt = **1.0084**, `VMC_S_ALPHA_T_LI7`, `include/lipolgen/tagged.hpp:109`).
 
 **So the "L split" of the momenta block is a J split, not an L split.** There is
 one wave.
@@ -274,7 +274,7 @@ so for J = 3/2 the alignment weight is **Q_NN(±3/2) = +1 and Q_NN(±½) = −1*
 and for a pure state Q_NN = T. `tensor_moments` returns the pair (Q_NN, 3·Q_NN)
 for every spin: the b-sector multiplies Q_NN, the Δ (cos 2φ) sector multiplies
 3·Q_NN. **`helicity_flip_plan`'s `pzz` field carries T, not P_zz, when j = 3/2**
-(`include/lipolgen/bookkeeping.hpp:138`); the third moment R₃ is set to
+(`include/lipolgen/bookkeeping.hpp:155` (anchor read 2026-09-15 "the normalized T in")); the third moment R₃ is set to
 zero by `spin32_populations`'s default and there is no polarimeter for it
 (`SPIN32_FINITE_GAMMA.md` §2.4). None of that reaches an unpolarised-beam
 observable — the rank-≤2 theorem of `SPIN32_FINITE_GAMMA.md` §4 — so **A_zz and
@@ -312,7 +312,7 @@ Two things follow at once.
 
 **(a) Eq. (2) *is* the repository's ⁷Li polarimeter.** ⟨P₂⟩_M = −Q_NN(M)/5, and
 for any fill ⟨P₂⟩ = −T/5 — which is precisely
-`tests/test_tagged.cpp:336-353`, passing at tolerance 3e−4 today. The alignment
+`tests/test_tagged.cpp:383-400`, passing at tolerance 3e−4 today. The alignment
 input to a ⁷Li b₁ is therefore **already gated by a committed test**, before any
 b₁ exists.
 
@@ -357,8 +357,8 @@ phases φ₀ = U, φ₂ = −W at U = W = 1 and projecting onto P₂ by quadratu
 ### 3.1 The master formula
 
 Let the CDKS δ-function fix cos θ* = c*(k, y) (`ConvolutionKinematics::cos_star`,
-`src/core/b1_nuclear.cpp:281-285`) and write the repository's own prefactor
-`pre = y·m_struck/(2κ)` (`src/core/b1_nuclear.cpp:335`). Inserting Eq. (2) into
+`src/core/b1_nuclear.cpp:281-285` (as of ac22331)) and write the repository's own prefactor
+`pre = y·m_struck/(2κ)` (`src/core/b1_nuclear.cpp:377`). Inserting Eq. (2) into
 the light-cone reduction gives, with no approximation beyond the ones the ⁶Li
 kernel already makes,
 
@@ -378,7 +378,7 @@ with the two kinematics {m_struck, m_recoil} = {M_t, M_α} and {M_α, M_t},
 **3/7 and 4/7** replacing ⁶Li's 2/6 and 4/6. **Two terms, not four.**
 
 Eq. (4) is *literally* `LightConeDensities::f_d` and `::f_d_p2`
-(`include/lipolgen/b1_nuclear.hpp:410`) with the L = 1 wave placed in the φ₂
+(`include/lipolgen/b1_nuclear.hpp:411`) with the L = 1 wave placed in the φ₂
 slot — because those two members carry the same `pre` and differ only by the
 P₂(c*) weight (`src/core/b1_nuclear.cpp:351, 357, 360, 364`). That is how §5's
 numbers were produced, and §7 records why it is an *abuse* of the interface
@@ -428,7 +428,7 @@ rather than an implementation.
 
 | ⁶Li machinery | Transfers to ⁷Li? |
 |---|---|
-| `ClusterPartialWave` | **No, as typed.** `from_vmc` and `from_uw` throw *"i^L is real for even L only"* (`src/core/b1_nuclear.cpp:210`, `:233`). For a single wave the global phase is unobservable, so the refusal protects nothing here — but the type must be taught to say so |
+| `ClusterPartialWave` | **No, as typed.** `from_vmc` and `from_uw` throw *"i^L is real for even L only"* (`src/core/b1_nuclear.cpp:210` (as of ac22331), `:233` (as of ac22331)). For a single wave the global phase is unobservable, so the refusal protects nothing here — but the type must be taught to say so |
 | `ConvolutionKinematics` (`k_range`, `cos_star`, `y_max`) | **Yes, unchanged.** Only the two masses and ε change. Measured y_max = 1.6626 (struck t) and 1.3761 (struck α) |
 | `LightConeDensities` quadrature (3-segment y grid, Simpson in k, exact k endpoints, baryon-number renormalisation) | **Yes, unchanged.** Converged: doubling every grid moves b₁ by ≤ 0.05 % |
 | `LightConeDensities`' φ₀/φ₂ **interface** and its `delta_t_f` SD/DD split | **No.** There is no S–D interference to split. `f_d`/`f_d_p2` carry the needed objects but under names that lie about what they hold |
@@ -452,7 +452,7 @@ theory curve exists (CDKS Fig. 4). The A = 3 analogue of α + t would be the
 triton as t = d + n or ³He = d + p — and **³H and ³He are J = ½.** A spin-½
 target has no rank-2 multipole and therefore **no b₁ at all**, published or
 otherwise. `TaggedModel::tensor_dilution` throws for exactly this reason
-(`src/core/tagged.cpp:514-517`, *"tensor dilution defined for S_c = 1"*).
+(`src/core/tagged.cpp:527-530`, *"tensor dilution defined for S_c = 1"*).
 
 **So the escalation clause of design §5.4 has no A = 3 form. Nothing about the
 ⁷Li convolution can be validated by running it on a lighter system.** That must
@@ -549,7 +549,7 @@ necessary, not sufficient.
   b₁/F₁ ≤ 1.04e−02 this is satisfied by five orders of magnitude and is not a
   discriminating test at these sizes. It *would* become one for any toy input of
   order 0.05·F₁ — which is exactly the reference scenario
-  `validation/dump_polligen_reference.py:490` uses, so it is worth having, but
+  `validation/dump_polligen_reference.py:491` (anchor read 2026-09-15 "0.05 * f1") uses, so it is worth having, but
   it does not gate a physical b₁(⁷Li).
 * **The ⁶Li-core cross-check** (§5.5) is not a gate — it is a second model.
 
@@ -776,7 +776,7 @@ statistics, not the quadrature, not the VMC errors — is what sets it.**
 | **D3** | **The normalisation target.** S_αt = 1.0084 > 1 means the α–t overlap is **not a probability**, so the ⁶Li rule ("the non-α–d 18 % of ⁶Li is given b₁ = 0", `use_spectroscopic_factor`) has no ⁷Li form: renormalising to S puts *more* than all of ⁷Li in the α–t channel | Numerically 0.83 %, so this is a **provenance** decision, not a magnitude one — but it must be recorded, because "renormalise to the file's own S" and "renormalise to 1" are different claims about ⁷Li |
 | **D4** | **F₁ of the triton.** Isoscalar (the ⁶Li shortcut) or the true Z = 1, N = 2 triton | 0.6 … 8.6 % (§3.2 item 11). The ⁶Li code's `f1_alpha_ = f1_d_` is *correct* for a deuteron and *wrong* here; copying it would be a silent error, not a documented approximation. `include/lipolgen/triton_sf.hpp` already exists for the tagged channel |
 | **D5** | **κ: CDKS Eq. (17) or Eq. (21).** ⁶Li defaults to Eq. (17) because the switch costs −1…+7 % there | Costs +0.35 … +69 % here (§5.4). The ⁶Li default's stated justification ("the term κ multiplies is the small ORBITAL one") **inverts** for ⁷Li, where it is the only term |
-| **D6** | **Which A_zz.** `A_T` (= −b₁/F₁) or `A_zz^{(3/2)} ≡ (2/(3T))(σ_T/σ_U − 1)` (= −(2/3)b₁/F₁) | A factor 3/2. `SPIN32_FINITE_GAMMA.md` §5.4 says either is defensible and §6.4 test 10 pins whichever is adopted, but the spin-1 `azz()`'s explicit `2.0/3.0` (`src/core/asymmetries.cpp:84`) has **no J = 3/2 counterpart**. Must be chosen before any ⁷Li tensor number is published |
+| **D6** | **Which A_zz.** `A_T` (= −b₁/F₁) or `A_zz^{(3/2)} ≡ (2/(3T))(σ_T/σ_U − 1)` (= −(2/3)b₁/F₁) | A factor 3/2. `SPIN32_FINITE_GAMMA.md` §5.4 says either is defensible and §6.4 test 10 pins whichever is adopted, but the spin-1 `azz()`'s explicit `2.0/3.0` (`src/core/asymmetries.cpp:85` (anchor read 2026-09-15 "TENSOR_LL_SIGN")) has **no J = 3/2 counterpart**. Must be chosen before any ⁷Li tensor number is published |
 | **D7** | **`ClusterPartialWave` refuses odd L** (`b1_nuclear.cpp:244`, `:267`) | For a single wave the i^L phase is unobservable, so the refusal protects nothing — but it must be *taught* that, in the type, rather than worked around by passing `l = 0` as §9 does |
 | **D8** | **`LightConeDensities`' interface.** Its φ₀/φ₂ + SD/DD shape is an A = 2/⁶Li shape. §9 reuses `f_d`/`f_d_p2` with the L = 1 wave in the φ₂ slot — numerically exact, semantically a lie | A first-class implementation needs either an L-generic alignment slot or an explicit `Options::alignment_coefficient` (1 for L = 1/S = ½/J = 3/2, 1.5 for the L = 2 DD term, 6/√2 for the SD one) — which would also let the ⁶Li coefficients be *derived* rather than hard-coded at `b1_nuclear.cpp:355-356` |
 | **D9** | **b₂_32.** `TensorSF`'s base gives 2x·b₁ | No reason to differ, but the ⁷Li slot is separate (`b2_32_func`) and silence there means 2x·b₁ by default, which should be stated rather than inherited |
@@ -797,7 +797,7 @@ None of this needs a b₁ and none of it can be wrong.
 1. **`meta["b1_model"]`** must not say `"miller"` on a run where no rank-2 slot
    was filled. Say what happened: `"none (spin 3/2: no rank-2 input)"`, and the
    same for `b1_band_scale` / `b1_alpha_d_dwave_weight` / `b1_unpol`. This is the
-   repository's own rule (`src/core/pipeline.cpp:531-546`) applied to the model
+   repository's own rule (`src/core/pipeline.cpp:531-546` (as of adec442)) applied to the model
    name.
 2. **A banner line on every ⁷Li inclusive run**, unconditional, in the shape the
    `--b1-model` block already uses: *"7Li rank-2: b1_32 = b2_32 = Delta_32 = 0 —

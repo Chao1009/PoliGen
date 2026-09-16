@@ -34,9 +34,9 @@ same uncertainty and asserts nothing new.
 
 ## B1.1 The new knob
 
-`C0Shape { Ho, VmcFt }` on `HoSpin1FFOptions` (`include/lipolgen/rc.hpp:261`,
+`C0Shape { Ho, VmcFt }` on `HoSpin1FFOptions` (`include/lipolgen/rc.hpp:475`,
 field at `:321`) and on `RcOptions` (`:790`), read at exactly one place,
-`c0_point` (`src/core/rc.cpp:492`), which both `HoSpin1FF::fc` and
+`c0_point` (`src/core/rc.cpp:1061`), which both `HoSpin1FF::fc` and
 `HoSpin1FF::fq` call — they share **one** monopole, so the knob moves both
 together and cannot be rescaled out of one run. Plumbed through the same
 five-file chain `fq_scale` occupies: `RcOptions` → `src/core/rc.cpp` (`RcModel`'s
@@ -880,7 +880,7 @@ several hundred lines in `rc.hpp` and `rc.cpp`. **Its diff was reviewed and 21
 of its rewrites were reverted by hand.** The fixer resolves a broken reference
 to the *nearest* line containing the symbol name, which for a symbol also
 mentioned in prose above its own declaration lands on the **comment**, not the
-declaration — e.g. `` `include/lipolgen/rc.hpp:675` `qe_suppression` `` (the
+declaration — e.g. `` `include/lipolgen/rc.hpp:675` `qe_suppression` (as of 66dcda2) `` (the
 field) became `:592` (a sentence in `nucleon_ff`'s block). All 21 now point at
 the declaration again (`qe_suppression` → `:958`, `RcOptions` → `:919`,
 `RcModel` → `:1031`, `RcTailModel` → `:828`, `HoSpin1FF` → `:507`,
@@ -1424,9 +1424,9 @@ so `ε³(b₂/3+b₃+b₄) = (1/2)[F_m² + (4/(1+η))((η/3)F_q + F_c + ηF_m)F_
 **3. The code.** `RcTailModel::PolradFull` — the only path on which Eq. (A.4)
 at `Q_N ≠ 0` would ever be evaluated — throws
 `"NOT implemented in v0"` in `RcModel`'s constructor
-(`src/core/rc.cpp:933-935`). What v0 actually evaluates is Eq. (38)
+(`src/core/rc.cpp:933-935` (as of d3ac125)). What v0 actually evaluates is Eq. (38)
 (`polrad_sigma_el_u` and the `σ_q` integrand, `src/core/rc.cpp:258-294`) and
-the `Q_N = 0` Rosenbluth pair (`rosenbluth_spin1`, `src/core/rc.cpp:377-381`).
+the `Q_N = 0` Rosenbluth pair (`rosenbluth_spin1`, `src/core/rc.cpp:268-272`).
 A `grep` for the coefficient finds nothing: **there is no `ℑ^el_6` in the
 tree to be wrong.** So this is a **document-only** defect, and the larger
 finding the brief warned about does not exist.
@@ -1479,7 +1479,7 @@ what was done is the measurement that decides it (§B6.3).
 double a_transfer_frac = 0.0;
 ```
 
-read at exactly one place — `RcModel::delta` (`src/core/rc.cpp:1114`), which
+read at exactly one place — `RcModel::delta` (`src/core/rc.cpp:1639`), which
 is the **whole model's only call site of `rc_delta`**, so the term cannot be
 applied twice or skipped on a path:
 

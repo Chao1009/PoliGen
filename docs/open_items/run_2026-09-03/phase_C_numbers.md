@@ -1354,7 +1354,7 @@ declaration.
 the band documentation is replaced.** The reasons, in order:
 
 * `eps_b0` is pinned at rtol 1e−12 against `validation/reference/coherent.json`
-  (`tests/test_coherent.cpp:57`, the `scenario_defaults` block) and this run may not move a reference gate.
+  (`tests/test_coherent.cpp:71`, the `scenario_defaults` block) and this run may not move a reference gate.
   Changing it would move every generated coherent tensor number and every
   reference file that records one.
 * The number that *should* replace it is not a single number: the ⁶Li band is a
@@ -2064,7 +2064,7 @@ The `+1` / `+2` split across three files is the signature of a **uniform line
 shift applied to the document** that under-counted inserted header lines — not
 of `--fix`, which moves one reference at a time. **13** of the 53 land on a
 different symbol's declaration line, which is the worst shape: it reads as
-correct. `include/lipolgen/coherent.hpp:228` `x_coh` pointed at
+correct. `include/lipolgen/coherent.hpp:228` (anchor read 2026-09-15 "alone (o5_a2_reach") `x_coh` pointed at
 `double f0 = 0.04;`, `:230` `slope_b` at `double x_coh = 0.01;`, `:421`
 `x_pom_max` at `double m_x_min = …;`, `:508` `set_optics` at
 `xpom_model()`, `:509` `set_weighted_azimuth` at `t_max()`.
@@ -2090,7 +2090,7 @@ itself, with no window:
 
 S2 bites only in the declaring file, and that is the carve-out that replaces the
 ±2 window rather than widening it: the document cites call sites on purpose
-(`src/core/xsec.cpp:88` `g1_nucleus` is the one place a kernel calls it), and
+(`src/core/xsec.cpp:89` `g1_nucleus` is the one place a kernel calls it), and
 those live in translation units that do not declare the symbol, so they pass
 with no exemption. Recognised declaration forms are listed in the script's
 docstring; they include the two things the old window was really covering —
@@ -2213,7 +2213,7 @@ from `31ed181`, and the block of file content that lived at those numbers at
 | `include/lipolgen/beams.hpp` | +37 | 1 |
 | `python/lipolgen/__init__.py` | +3 | 1 |
 | `tests/test_tagged.cpp` | +1 | 1 |
-| `include/lipolgen/tagged.hpp:53-59` | 0 | 1 — the block was REWRITTEN in place, still at 53-59; **no change needed** |
+| `include/lipolgen/tagged.hpp:53-59` (anchor read 2026-09-15) | 0 | 1 — the block was REWRITTEN in place, still at 53-59; **no change needed** |
 
 Nineteen needed their numbers moved; the twentieth did not. The task that
 commissioned this pass predicted **six**. The criterion above is its own
@@ -2260,13 +2260,13 @@ it is the only mechanism that would have caught 16 of the 20 above.
   ("The spectator is put ON SHELL … so the struck cluster is the OFF-SHELL
   one. This is the standard impulse approximation of spectator tagging").
 * **1 range wrong since before `31ed181` in the other direction**:
-  `docs/CONVENTIONS.md:119-121` (the hadronic-X balance row) held the X-must-be-
+  `docs/CONVENTIONS.md:119-121` (as of 6f67d84) (the hadronic-X balance row) held the X-must-be-
   TIMELIKE rule at `6f67d84`, had drifted to `:189-191` by `31ed181` and to
   `:237-239` now. Re-pointed to `:237-239`.
 * **2 unnamed citations that landed on blank lines**:
-  `include/lipolgen/breakup.hpp:153` → `:160` (the `Nucleon,  ///< … the d /
+  `include/lipolgen/breakup.hpp:153` (as of 15b2662) → `:160` (as of adec442) (the `Nucleon,  ///< … the d /
   3He control channels` enumerator the row calls "the ³He control") — a **phase
-  C regression**, the block moved +7; and `tests/test_rc.cpp:588` → `:495`
+  C regression**, the block moved +7; and `tests/test_rc.cpp:588` (anchor read 2026-09-15 "LI6_VMC_C0_Q_CUT_FM + eps") → `:495` (as of d3ac125)
   (`SUBCASE("the first C0 zero lies in [2.9, 3.3] fm^-1")`, which is the refit
   window the row quotes) — **blank at `31ed181` too**, so pre-existing.
 
@@ -2350,8 +2350,8 @@ it is the only mechanism that would have caught 16 of the 20 above.
    > are pinned to declaration lines at all. **42 of the 1075 are not** — they
    > pass by the use-site carve-out, which pinned them to EVERY line of the
    > file carrying the name as code. **29 of those accepted more than one
-   > line**, the widest **14** (`python/lipolgen/__init__.py:249` `isotope`),
-   > then 11 (`src/core/pipeline.cpp:531` `B1Model`), 9, 6, 6, 6. Over all
+   > line**, the widest **14** (`python/lipolgen/__init__.py:416` `isotope`),
+   > then 11 (`src/core/pipeline.cpp:805` `B1Model`), 9, 6, 6, 6. Over all
    > 1075 the honest figure was **149**, not 120. §C9.3 closes that class
    > (rule S3, a fingerprint of the cited line): the 42 use-site citations now
    > accept exactly one line each, so over all 1075 it is **120**, which is
@@ -2525,8 +2525,8 @@ The 1075 named point citations split three ways, not one:
 
 So over all 1075 the honest figure was **149**, and the widest citations in the
 document were all in the class the residual did not mention: **14** accepting
-lines for `python/lipolgen/__init__.py:249` `isotope`, **11** for
-`src/core/pipeline.cpp:531` `B1Model`, then 9 (`__init__.py:424` `b1_model`),
+lines for `python/lipolgen/__init__.py:416` `isotope`, **11** for
+`src/core/pipeline.cpp:805` `B1Model`, then 9 (`__init__.py:424` `b1_model`),
 6, 6, 6 (`sampler.cpp:41` `q2_edges`, `pipeline.cpp:957` `InclusiveSampler`,
 `triton_sf.cpp:90` `HBARC_GEV_FM`).
 
@@ -2553,7 +2553,7 @@ are 6 (`fsi.hpp:238` `sigma_xn_mb`), 5 (`rc.cpp:695` `fc`), 5
 
 ### C9.4 The one exemption that was not per-citation — and where the leak was
 
-The sixth is **`src/core/pipeline.cpp:567` `coherent`**. Its `ALLOW` entry is
+The sixth is **`src/core/pipeline.cpp:841` `coherent`**. Its `ALLOW` entry is
 per-citation and pinned like the other five; the leak was **around** it, in the
 carve-out. The other five names are *declared* in the file that holds their
 exemption, so S2 governs every other citation of them there and says so
@@ -2583,7 +2583,7 @@ them** — it did not report them as unchecked either.
 
 Rule **D** now resolves them against the dependency tree `env.sh` sets up.
 *Two names exist for that prefix and both are honoured*: `env.sh` exports
-`$LIPOLGEN_DEPS`, while `CMakeLists.txt`, `README.md:188` and `docs/USAGE.md:19`
+`$LIPOLGEN_DEPS`, while `CMakeLists.txt`, `README.md:211` and `docs/USAGE.md:19`
 call the same directory `$LIPOLGEN_DEPS_PREFIX` (it is a CMake cache variable
 that CMakeLists.txt also reads from the environment). Both name
 `<...>/deps/install`; the unpacked sources sit beside it at
@@ -2615,8 +2615,8 @@ the old content); "−k" is *k* lines inserted.
 
 Every survivor is now declaration-pinned and is RESIDUALS 2 exactly: a
 `class X {` cited on N whose `virtual ~X() = default;` sits on N+2. The
-use-site survivors S3 removed were `python/lipolgen/cli.py:604` and
-`python/lipolgen/__init__.py:424` at +1, and `__init__.py:249` and `:424` at
+use-site survivors S3 removed were `python/lipolgen/cli.py:604` (as of adec442) and
+`python/lipolgen/__init__.py:424` (anchor read 2026-09-15 "20260713, run") at +1, and `__init__.py:249` and `:424` at
 +2. Ranges: all **89 distinct cited blocks** — hence all **97** range
 citations — are reported at every one of the four drifts.
 

@@ -109,7 +109,7 @@ script), every CLI option appears in some row, README links the doc.
   band language in the docs in favour of "VMC vs Hulthén default" (the β option
   stays in code). Sonnet for scripts/tables, Fable checks numbers against the ones
   already quoted (⁶Li α tag 0.0249 → 0.0348 at 10×99.5; ⁷Li 0.973 → 0.998).
-- Item 2 cosmetic: the writer already calls `set_generated_mass` (`src/hepmc/hepmc_writer.cpp:136`);
+- Item 2 cosmetic: the writer already calls `set_generated_mass` (`src/hepmc/hepmc_writer.cpp:158`);
   verify the electron row gets m_e = 0.51099895 MeV and the test in
   `tests/test_hepmc.cpp` pins it; fix if not.
 

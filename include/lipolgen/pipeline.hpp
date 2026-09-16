@@ -1174,8 +1174,8 @@ std::string pol_sf_unread_label(const PipelineConfig& cfg, const RunPlan& plan);
 // EVERY user-settable knob of a run with what the run did with it.  The npz
 // `meta` block, the CLI banner block and `python/tests/test_knob_provenance.py`
 // -- which rebuilds the measured (spec x knob) matrix (12 (isotope, channel,
-// plan) specs x 76 knob variants = 592 cells, re-measured 2026-09-06; not the
-// full channel x plan product -- USAGE.md sec. 7c) and asserts
+// plan) specs x 81 knob variants = 627 cells, re-measured 2026-09-15 (76 / 592
+// was phase A's, left behind by phase B; not the full product) and asserts
 // the table against the OUTPUT HASH -- all read this one table, so a knob
 // cannot be reported without a status and a new knob cannot be added without
 // one either.

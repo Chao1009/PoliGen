@@ -169,9 +169,21 @@ and nothing but line numbers**: `cluster_config.hpp` 679→690, 715→726;
 
 ## C5. Two findings the survey surfaced that are NOT this phase's to take
 
-Both are recorded here and **neither was applied**, because `PLAN.md` C1's
-second branch is "say so and stop" and neither is the quantity C1 asked for.
-They are put in front of the author as decisions.
+Neither **decision** was taken, because `PLAN.md` C1's second branch is "say so
+and stop" and neither is the quantity C1 asked for. They are put in front of
+the author.
+
+> **CORRECTED 2026-09-15 (close-out).** This preamble read *"Both are recorded
+> here and **neither was applied**"*, and §C5.1 below read *"Left untouched,
+> deliberately"* — and **the same commit that carried those sentences
+> (`aefd535`) applied C5.1's citation fix at three sites**: `o5_a2_reach.py`
+> (two) and `OPEN_ITEMS_SOLUTIONS.md` (one) all read
+> `polligen.hfs.HadronResponse` there, verified by `git show aefd535 --
+> validation/o5_a2_reach.py docs/OPEN_ITEMS_SOLUTIONS.md`. What was not
+> applied is C5.2's **bound**, and what was not taken is either **decision**.
+> A naming repair in a citation is not a decision — it moves no number — and
+> saying it was left untouched when it was not is the run's own recurring
+> defect at its own site.
 
 ### C5.1 `HfsModel` names no class in the sibling (survey §C-S5)
 
@@ -190,9 +202,18 @@ a "stand-in" in as many words, on the line that states it, and this phase read
 that line. The defect is that the citation is **unresolvable as written**: a
 reader who greps the sibling for `HfsModel` finds nothing and cannot confirm the
 label. It is a naming defect in a citation, not a factual one, and fixing it
-moves no number. **Left untouched**, deliberately: C1's branch says change
-nothing else, and the sentences this phase added cite `evgen/polligen/hfs.py:251`
-by file and line, which does resolve.
+moves no number — **which is why it WAS fixed, in this phase's own commit
+`aefd535`, at the three live sites**: `validation/o5_a2_reach.py:460` and
+`:490` and `docs/OPEN_ITEMS_SOLUTIONS.md:2012` now read
+`polligen.hfs.HadronResponse(...)`, and the sentences this phase added cite
+`evgen/polligen/hfs.py:251` by file and line as well, which also resolves.
+*(This paragraph read "**Left untouched**, deliberately" until 2026-09-15; it
+was never true of those three sites. Two further sites — the DATED record
+`../run_2026-09-03/phase_C_numbers.md:626` and `:1003` — did keep the old name
+until the close-out re-pointed them, the same treatment
+`LI7_QUADRUPOLE_FM2`'s `rc.hpp:669` → `:726` got.)* **So C5.1 is CLOSED as a citation repair and is not an
+author decision at all** — there is nothing left for the author to choose
+here. The one decision this section still carries is **C5.2's**.
 
 ### C5.2 The 17.75 % carries no detector efficiency either (survey §C-S6)
 

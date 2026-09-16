@@ -587,7 +587,7 @@ RANGE_ALLOW: dict[tuple[str, int, str], tuple[str, str]] = {
         "Q_matter(6Li, M) = (3M^2-2)",
         "the row says the (G1)/(G4)/(G5)/(G6) identities are derived in "
         "place here; the block is that derivation, (G1) through (G8)"),
-    ("PHYSICS_CHANNELS.md", 448, "docs/USAGE.md:2744-2941"): (
+    ("PHYSICS_CHANNELS.md", 448, "docs/USAGE.md:2751-2948"): (
         "## 9. Polarized ⁶Li configurations for coherent-diffraction "
         "codes",
         "the row cites USAGE sec. 9 in full for the configuration "
@@ -1013,7 +1013,7 @@ UNNAMED_ALLOW: dict[tuple[str, int, str], tuple[str, str]] = {
         "the row says the Au = 110 GeV/u number is only quoted in this "
         "header comment (Au is not a supported species); this is the line "
         "that quotes it"),
-    ("PHYSICS_CHANNELS.md", 87, "README.md:115"): (
+    ("PHYSICS_CHANNELS.md", 87, "README.md:126"): (
         "⁷Li ⟨P₂⟩ = −T/5",
         "the row says the identity is stated in README.md; the cited line "
         "is the external-anchors bullet that states it"),
@@ -2706,8 +2706,39 @@ def check_records(*, cache: dict) -> tuple[list[str], dict]:
     return bad, tally
 
 
+# Every flag `main` understands.  The parser below tests membership rather
+# than parsing, so an argv element that is in neither this set nor a known
+# alias would be SILENTLY IGNORED and the plain strict check would run and
+# exit 0 -- a mistyped `--record-range` or `--record` would look like a clean
+# gate, and `--help` would print a full passing report.  Reject leftovers
+# instead: the R5/R6 modes must not be skippable by a typo.
+KNOWN_FLAGS = frozenset({
+    "--fix", "--record-ranges", "--audit-ranges", "--no-range-allow",
+    "--loose", "--records", "--records-only",
+})
+USAGE = (
+    "usage: check_physics_channels_links.py [--fix] [--loose]\n"
+    "         [--record-ranges | --audit-ranges] [--no-range-allow]\n"
+    "         [--records | --records-only]\n"
+    "\n"
+    "  (no flags)        the strict documentation gate\n"
+    "  --fix             relocate drifted point citations in place\n"
+    "  --loose           skip R4, the S3 pins and the D fingerprints\n"
+    "  --record-ranges   R5: re-record the range sidecar\n"
+    "  --audit-ranges    R5 without writing the sidecar\n"
+    "  --no-range-allow  ignore RANGE_ALLOW exemptions during R5\n"
+    "  --records         also run R6 over the dated run records\n"
+    "  --records-only    run R6 alone\n"
+)
+
+
 def main(argv=None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
+    unknown = [a for a in argv if a not in KNOWN_FLAGS]
+    if unknown:
+        print(USAGE, end="")
+        print(f"\nunknown argument(s): {' '.join(unknown)}")
+        return 2
     fix = "--fix" in argv
     write = "--record-ranges" in argv
     audit = "--audit-ranges" in argv

@@ -781,7 +781,7 @@ statistics, not the quadrature, not the VMC errors — is what sets it.**
 | **D8** | **`LightConeDensities`' interface.** Its φ₀/φ₂ + SD/DD shape is an A = 2/⁶Li shape. §9 reuses `f_d`/`f_d_p2` with the L = 1 wave in the φ₂ slot — numerically exact, semantically a lie | A first-class implementation needs either an L-generic alignment slot or an explicit `Options::alignment_coefficient` (1 for L = 1/S = ½/J = 3/2, 1.5 for the L = 2 DD term, 6/√2 for the SD one) — which would also let the ⁶Li coefficients be *derived* rather than hard-coded at `b1_nuclear.cpp:355-356` |
 | **D9** | **b₂_32.** `TensorSF`'s base gives 2x·b₁ | No reason to differ, but the ⁷Li slot is separate (`b2_32_func`) and silence there means 2x·b₁ by default, which should be stated rather than inherited |
 | **D10** | **Δ_32 (cos 2φ gluon transversity).** ⁶Li gets `toy_delta_gluon(…, 1e-2)`; ⁷Li gets nothing | Filling `b1_32_func` alone leaves cos 2φ at zero. There is **no ⁷Li Δ model**; reusing the ⁶Li toy means adopting an arbitrary 1e−2 scale for a second nucleus. Note 3·Q_NN = ±3 for J = 3/2 against ±1/−2 for spin 1, so the same Δ gives a *larger* ⁷Li cos 2φ amplitude |
-| **D11** | ~~**Q(⁷Li) is not in the tree.**~~ **PAID 2026-09-06**: `LI7_QUADRUPOLE_FM2` = **−4.06 fm²** now sits beside `LI6_QUADRUPOLE_FM2` at `rc.hpp:669` | Exactly one copy, from a real source — TUNL's A = 5, 6, 7 evaluation (NPA 708 (2002) 3), the **same document** the ⁶Li constant comes from, which is what fixed the choice; the −4.00(3) vs −4.06 spread is recorded in the constant's own comment together with all eight of Stone's ⁷Li entries, and the predicted price is confirmed: ratio **0.871265 → 0.858389** |
+| **D11** | ~~**Q(⁷Li) is not in the tree.**~~ **PAID 2026-09-06**: `LI7_QUADRUPOLE_FM2` = **−4.06 fm²** now sits beside `LI6_QUADRUPOLE_FM2` at `include/lipolgen/rc.hpp:726` | Exactly one copy, from a real source — TUNL's A = 5, 6, 7 evaluation (NPA 708 (2002) 3), the **same document** the ⁶Li constant comes from, which is what fixed the choice; the −4.00(3) vs −4.06 spread is recorded in the constant's own comment together with all eight of Stone's ⁷Li entries, and the predicted price is confirmed: ratio **0.871265 → 0.858389** |
 | **D12** | **The run-plan surface.** No spin-3/2 tensor plan exists (§1.5 F1) | A ⁷Li A_zz programme needs `tensor_thirds_plan`'s J = 3/2 analogue — and §2.3's note that for J = 3/2 the pure-alignment fill (P_z = 0, symmetric populations) is *rank-3 clean by construction*, so the honest ⁷Li A_zz plan is the two-state T = +1 / T = −1 contrast of §1.3, not a thirds pattern |
 
 ---
@@ -817,7 +817,7 @@ It is worth having on its own merits (it is the only quantitative check the
 is the thing §4.1's absence of an A = 3 gate makes indispensable.
 
 **DONE 2026-09-06** (run 2026-09-06 task B3): the constant is
-`LI7_QUADRUPOLE_FM2` = −4.06 fm² at `rc.hpp:669`, the ~20 lines are
+`LI7_QUADRUPOLE_FM2` = −4.06 fm² at `include/lipolgen/rc.hpp:726`, the ~20 lines are
 `alpha_t_quadrupole` / `li7_alpha_t_quadrupole` in `b1_nuclear.{hpp,cpp}`, and
 the gate is `tests/test_b1_nuclear.cpp` **T13** + `python/tests/test_li7_rank2.py`
 **G8**. Step 2 is closed; steps 1, 3 and 4 of this section are not, and the

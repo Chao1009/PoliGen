@@ -506,30 +506,39 @@ not carry, and the same pre-fix tree then has 266 broken. The recipe names the
 gate it is run with, so the number a reader gets today is 266; 243 is what the
 D2 rule gave and is kept here because §D2.5's repair split is against it.
 
-**Against the tree this phase leaves:**
+**Against the tree this phase leaves (as of `ba773c1`):**
 
 ```
 python3 validation/check_physics_channels_links.py --records-only | head -1
 ```
 
-> `714 citations in 42 dated run records (relaxed, R6): 266 checked against a
-> live file, 35 into another record, 107 annotated historical, 115 read by
-> hand, 191 skipped, **0 broken**`
+> `721 citations in 42 dated run records (relaxed, R6): 267 checked against a
+> live file, 35 into another record, 107 annotated historical, 120 read by
+> hand, 192 skipped, **0 broken**`
 
-The 114-citation difference between the two is `phase_D_numbers.md` itself —
+> **Corrected 2026-09-15.** This box first published **714** (266 / 35 / 107 /
+> 115 / 191), which was measured before the phase's own final documentation
+> edits and does not reproduce on the tree the phase actually left. Re-measured
+> by `git archive ba773c1` into a scratch tree: **721** (267 / 35 / 107 / 120 /
+> 192). The load-bearing **0 broken** is unchanged, and so is every rule the
+> section establishes; only the census moved. The counts below are stamped to
+> the commit they were measured at, per this section's own `(as of <commit>)`
+> convention.
+
+The 121-citation difference between the two is `phase_D_numbers.md` itself —
 the 55 citations D1 wrote, which a3c9ecb does not carry, the 9 D2 added and the
-50 §D3 adds. A record that gates itself is the point: four of D2's nine were
-reported broken on its first run, and nineteen of §D3's citations (the section holds 43; 114 − 55 − 9 = 50 overall; the first-run state is not reproducible) on its
+57 §D3 adds. A record that gates itself is the point: four of D2's nine were
+reported broken on its first run, and nineteen of §D3's citations (the section holds 43; 121 − 55 − 9 = 57 overall; the first-run state is not reproducible) on its
 first run; all of them are re-pointed or annotated here.
 
 | | pre-fix (a3c9ecb) | after D2 | after D3 |
 |---|---|---|---|
-| citations found | 600 | 664 | 714 |
-| checked against a live file | 120 | 257 | 266 |
+| citations found (as of `a3c9ecb` / D2 / `ba773c1`) | 600 | 664 | **721** |
+| checked against a live file | 120 | 257 | **267** |
 | checked into another record | 31 | 31 | 35 |
 | annotated `(as of <commit>)` | — | 96 | 107 |
-| annotated `(anchor read …)` / under a marker | — | 90 (39 + 51) | 115 (64 + 51) |
-| skipped (prose path / not in this tree) | 183 | 190 | 191 |
+| annotated `(anchor read …)` / under a marker | — | 90 (39 + 51) | **120 (69 + 51)** |
+| skipped (prose path / not in this tree) | 183 | 190 | **192** |
 | **broken** | **266** *(243 under the D2 rule)* | **0** *(under the D2 rule)* | **0** |
 
 **The split by failure reason** (same recipe, on the pre-fix tree, D3 rule):
@@ -1253,8 +1262,9 @@ run records, and this file.
 
 ## D4 Residues recorded at the close of the phase (2026-09-15)
 
-1. **Anchor-read POINT pins are checked for presence, not uniqueness** (`check_physics_channels_links.py`, the `READ_INLINE` branch), unlike `RANGE_ALLOW`/`UNNAMED_ALLOW` pins, which go through `pin_state`. Three pins occur on more than one line of their target: `run_2026-09-03/phase_D_li7_rank2.md` line 552 → `validation/dump_polligen_reference.py:491` (anchor read 2026-09-15 "0.05 * f1"), a pin that occurs on 5 lines; `run_2026-09-06/phase_CW_numbers.md` line 699 → `README.md:109` (anchor read 2026-09-15 "rtol 1e-12"), a pin that occurs on 2 lines (drifted onto README.md's line 40 — the other line carrying that pin — the gate would report 0 broken); record line 1011 → `docs/CONVENTIONS.md:357` (anchor read 2026-09-15 "deuteron control channel"), a pin that occurs on 2 lines. None sits on an adjacent line, so ±1 is caught; a longer drift onto the twin line is not.
+1. **Anchor-read POINT pins are checked for presence, not uniqueness** (`check_physics_channels_links.py`, the `READ_INLINE` branch), unlike `RANGE_ALLOW`/`UNNAMED_ALLOW` pins, which go through `pin_state`. Three pins occur on more than one line of their target: `run_2026-09-03/phase_D_li7_rank2.md` line 552 → `validation/dump_polligen_reference.py:491` (anchor read 2026-09-15 "0.05 * f1"), a pin that occurs on 5 lines; `run_2026-09-06/phase_CW_numbers.md` line 699 → `README.md:120` (anchor read 2026-09-16 "rtol 1e-12"), a pin that occurs on 2 lines (drifted onto README.md's line 40 — the other line carrying that pin — the gate would report 0 broken); record line 1011 → `docs/CONVENTIONS.md:357` (anchor read 2026-09-15 "deuteron control channel"), a pin that occurs on 2 lines. None sits on an adjacent line, so ±1 is caught; a longer drift onto the twin line is not.
 2. **A neighbour's annotation text is evidence:** `relax_sentence` blanks citations but not the `(anchor read … "pin")` text beside them, so two bare live citations in the §D3.2 table (its record lines 1012 and 1013, which cite `tests/test_rc.cpp:496` (anchor read 2026-09-15 "derived") and `src/core/bookkeeping.cpp:89` (anchor read 2026-09-15 "octupole")) — pass the point rule only on the pin text of the annotated citation next to them. Bare `:N` points are likewise not blanked (29 live windows carry one; no live citation currently rests on such a digit token).
-3. Confirmed as designed and still true: an unpinned `(anchor read)` RANGE drifted +1 is accepted; an `(as of)` point onto a blank line is accepted; a range +1 is accepted 89.0 %.
+3. **The shared-token rule blessed a citation onto the wrong constant — a measured instance of residue 2, added 2026-09-15.** `run_2026-09-06/STATUS.md` line 10 and `run_2026-09-03/AUTHOR_DECISIONS.md` §B20's D11 row both cited `LI7_QUADRUPOLE_FM2` at `rc.hpp:669`, which is not that constant (it is at `rc.hpp:726`); `rc.hpp:669` is the ⁶Li comment line `/// Q = -0.818(17) mb (1998CE04) …`, and the citing sentences quote `1998CE04` because they name the ⁶Li value in the same breath. The record gate reported **0 broken** on both: the shared token was real, it was simply shared with the NEIGHBOURING constant. Two other sites (`AUTHOR_DECISIONS.md` §B20's CLOSED paragraph, `phase_B_numbers.md` §B3.3) carried the correct `:726` throughout, so the tree disagreed with itself for nine days. All six sites re-pointed to `include/lipolgen/rc.hpp:726` (anchor read 2026-09-15 "LI7_QUADRUPOLE_FM2 = -4.06") on 2026-09-15. **What would catch it:** a point citation whose shared token is itself a citation-like literal (`1998CE04`, a bibliography key) is weak evidence when the named SYMBOL is absent from the cited line; the symbol test the strict gate already applies to named citations would have refused it. Not implemented here.
+4. Confirmed as designed and still true: an unpinned `(anchor read)` RANGE drifted +1 is accepted; an `(as of)` point onto a blank line is accepted; a range +1 is accepted 89.0 %.
 
 Not fixed in this phase; the close-out's review will re-judge them.

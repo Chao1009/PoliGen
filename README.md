@@ -10,7 +10,7 @@ that is a drop-in, ~100× faster replacement for the numpy generator
 License: **GPL-3.0-or-later** (`LICENSE`). Every source file under
 `include/`, `src/`, `tests/`, `python/lipolgen/`, `python/bindings.cpp` and
 `validation/` carries an `SPDX-License-Identifier: GPL-3.0-or-later` line —
-**101 of 101 files** at the last run of `validation/check_spdx_headers.py`,
+**103 of 103 files** at the last run of `validation/check_spdx_headers.py`,
 which gates it. `AUTHORS` names the copyright holder(s) and `CITATION.cff`
 says how to cite this software; **both currently carry the literal
 placeholder `<AUTHOR NAME — to be filled by the author>` in their one name
@@ -48,7 +48,9 @@ is measured, and no number here stands without the window it was measured in.**
 | `--triton-sf {hulthen,ciofi-simula}` | `hulthen`, bit for bit | the Ciofi–Simula three-channel A = 3 spectral function | S₀ = **0.6525, untuned** |
 | `--fsi {off,glauber-cluster,glauber-nucleon}` | `off` | a Glauber survival **weight** on `Event::weight` — never a momentum shift | the two variants are **not** one: **99.50 %** of events differ by more than **1 %** (\|w_nucleon/w_cluster − 1\| > 0.01), ratio to **68.5**, on `tagged-6Li-alpha`, 20 000 events, seed 1234, `tensor-thirds`, **σ_XN = 40 mb** — one end of the mandatory 20–40 mb band |
 | `--rc {off,tensor-band}` | `off`, byte-identical | the tensor RC **band** `rc_tensor_lo/hi` plus the radiative tails, on `Event::rc_weights` and never on `Event::weight` | the band is the answer; a single edge is not. `--rc` is accepted and does nothing on `coherent`, and a non-default rc sub-knob there is refused |
-| `--rc-tail-model {t-peak,t-peak+ll}` | `t-peak`, bit for bit | POLRAD's t-peak **plus** the leading-log s-/p-peaks | the two edges agree to **+0.61 % event-weighted** in the Q² ≥ 20 GeV², y ≤ 0.9 window and disagree **per cell**: 331 of 1356 accepted cells (24.4 %) by > 1 %, worst ×6444 at x = 0.7943, y = 0.0088 |
+| `--rc-tail-model {t-peak,t-peak+ll,polrad-full}` | `t-peak`, bit for bit | POLRAD's t-peak; **`t-peak+ll`** adds the leading-log s-/p-peaks; **`polrad-full`** (2026-09-06) is the exact Eq. (18) + Appendix B + Eq. (A.4) tail | the two t-peak edges agree to **+0.62 % event-weighted at the CLI default P_z = 0.7** (8.719649e−03 → 8.773752e−03, 5194 of 200 000 events, seed 1234; **+0.61 %** / 5182 at P_z = 0, the fill both suites use) in the Q² ≥ 20 GeV², y ≤ 0.9 window, and disagree **per cell**: 331 of 1356 accepted cells (24.4 %) by > 1 %, worst ×6444 at x = 0.7943, y = 0.0088. **The pair is a price range, not a bracket**: the exact `polrad-full` tail lies **outside both edges on 1326 of 3051 accepted cells (43.5 %)** and above both in that window (8.815031e−03, +1.09 %) |
+| `--r-source {unset,sigma-lt,r1998}` | `unset`, bit for bit by construction | ONE R = σ_L/σ_T hook threaded through `default_inclusive_kernel` into both `Li6ConvolutionOptions::r_func` and `InclusiveKernel::Options::r_func`, so the tensor weight's numerator and denominator cannot disagree | registry **row 3**, priced not decided. `unset` does not enter the branch; `sigma-lt` is measured byte-identical (hence `not-read`); `r1998` moves K/D_φ — and A_zz with it — by **−3.8357 % / +26.3988 % / +3.3518 %** at x = 0.05 / 0.10 / 0.30, y = 0.5, Q² = 2.5, and moves the unpolarised rate (σ_pb **−0.684681 %**), which the numerator-only option cannot |
+| `--rc-sp-tensor-scale` | **0**, and refused unless `--rc-tail-model t-peak+ll` | the tensor fraction of the leading-log s-/p-peaks, which `t-peak+ll` otherwise adds to the **unpolarised** numerator alone | **a bound with no derivation, and EMPTY where it matters**: at the three standard points (x = 0.01 / 0.10 / 0.30, Q² = 5) ΔA_zz moves by exactly 0 at scale 0, 0.5 and 1 — **0.0 % of the collapse recovered**. It bites on 77 of 3051 accepted cells and recovers **at most 21.72 %** anywhere. Exactly linear, so one run rescales |
 | `--rc-c0-shape {ho,vmc-ft}` | `ho`, bit for bit | the j₀ transform of the committed ANL VMC ⁶Li point-proton density at the same ⟨r²⟩ | the ⁶Li C0 shape is a **band**, and both the sign and the magnitude are band edges: σ^el_T/σ^el_U at x = 0.10, Q² = 5 is **+9.357e−04 on `ho`** and **−2.442e−04 on `vmc-ft`** — a factor **68** resp. **≈ 260** below POLRAD's own deuteron value +0.064, with the SIGN flipping between the edges, so the published sign is withdrawn |
 | `--b1-model {miller,cdks,li6-convolution}` | `miller`, bit for bit | the four-term α–d convolution for b₁(⁶Li) | opt-in and **band-mandatory** (`--b1-band-scale` 0/1/2); the ±100 % band comes from Q(⁶Li) vs Q_d, not from the A = 2 gate, so it stays after the gate passes |
 | `--b1-unpol {toy,mstw,ct18nlo}` | `toy` | MSTW2008 LO — CDKS's own PDF — read from the grid PYTHIA already ships | this is the selector that **emits the gate's passing configuration**: G3b **0.843243** at CDKS Eq. (21), inside [0.5, 2], against **0.440** on the shipped `toy`, outside it. Needs the optional PYTHIA tier and is refused, never silently downgraded, without it |
@@ -58,8 +60,9 @@ is measured, and no number here stands without the window it was measured in.**
 | `--coherent-t-max` | 0.2 GeV² | a different coherent \|t\| ceiling | the ceiling's reason is the **anchor range** (\|t\| ≤ 0.30, knob-independent); positivity is the contingent second reason — its edge is 0.245 at the shipped `eps_b0` and 2.80 at the measured quadrupole. Truncation redistributes exp(−B t_max) = **4.5e−5** of the rate |
 
 **Every knob's read / not-read / refused status is one table** —
-`Pipeline::knob_provenance`, **68 rows on a default run** (66 before
-`--r-source` and `--pzz-mode`, both 2026-09-06) — written into
+`Pipeline::knob_provenance`, **69 rows on a default run** (66 before
+`--r-source`, `--pzz-mode` and `--rc-sp-tensor-scale`, all 2026-09-06;
+re-measured 2026-09-15) — written into
 `meta["knob_provenance"]` and printed as the banner's `KNOB PROVENANCE` block.
 A knob that did not run is never recorded as if it had: the value is replaced
 by a label (`not read on channel coherent-6Li`, `not read by plan
@@ -82,11 +85,19 @@ or through `--config-file` — is refused rather than silently resolved).
   with their reason — 28 lines, one per refused base configuration, each
   naming the cell and quoting `PipelineConfig::validate()`'s refusal
   (`python/tests/test_knob_provenance.py`, the knob-provenance matrix). The
-  doctest skip is RC test T9, the `PolradFull` Rosenbluth limit, a code path
-  v0 does not implement; its name and its reason are here and at
-  `tests/test_rc.cpp:1609` and nowhere else, because doctest 2.4.11 reports a
-  skipped case as a **count only** — a run filtered to that one case prints
+  doctest skip was RC test T9, the `PolradFull` Rosenbluth limit, a code path
+  v0 did not implement; its name and its reason were here and at
+  `tests/test_rc.cpp` and nowhere else, because doctest 2.4.11 reports a
+  skipped case as a **count only** — a run filtered to that one case printed
   `402 skipped` and no name at all.
+  **That skip is GONE since 2026-09-06** (`af3f415`): `PolradFull` is
+  implemented (`polrad_full_sigma_el`, `polrad_im_el_spin1`), T9 is a real
+  gate and carries the history in its own first comment
+  (`tests/test_rc.cpp:1876`, "THIS TEST CARRIED `doctest::skip(true)` FROM
+  2026-09-02 TO 2026-09-06"). **Measured at the 2026-09-06 run's close-out:
+  408 doctest cases / 17 241 975 assertions / 0 failed / 0 skipped, and
+  1085 pytest passed / 151 skipped** — the doctest suite now has **no
+  unconditional skip at all**.
 - A case that is nothing but an optional tier or an optional data tree is
   skipped at REGISTRATION time (`doctest::skip(...)`), so with an absent MSTW
   grid or `data/vmc` it is tallied SKIPPED rather than passed having measured
@@ -139,8 +150,10 @@ The 2026-09-03 open-items run that last revised all of it keeps its own
 records in `docs/open_items/run_2026-09-03/`: **`SUMMARY.md`** (one page —
 what the run measured and what it did **not** establish), `STATUS.md` (the
 phase board and the ONE decision registry — cite a decision by its row
-number), `AUTHOR_DECISIONS.md` (all 25 decisions stated in full with their
-options and measured cost) and the per-phase number tables.
+number), `AUTHOR_DECISIONS.md` (all 27 decisions stated in full with their
+options and measured cost — 25 at 2026-09-05, plus rows 26 and 27 added
+2026-09-15 for the tagged S–D interference phase and the sibling
+repository's published numbers) and the per-phase number tables.
 Rows 5–7, 9, 10, 12 and 14 now **ship code** (coherent T2 via a PYTHIA Pomeron
 beam, `--coherent-t2`; the Ciofi–Simula triton spectral function,
 `--triton-sf`; the Glauber spectator-FSI weight, `--fsi`; the tensor-sector

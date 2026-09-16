@@ -1568,7 +1568,12 @@ def test_every_anchor_read_pin_in_the_records_is_still_on_its_line(gate):
     # 28 annotations that existed before 2026-09-15 and were pinned when the
     # pin became compulsory, plus the 10 D3.4's repairs wrote and the 10 in
     # this phase's own record, which gates itself like any other
-    assert pins == 53  # 48 at the D3 count + 5 pinned anchor-read points added in phase_D_numbers.md D4 (2026-09-15), pins
+    assert pins == 61  # 53 at the D4 count + the 8 the 2026-09-15 review-fix
+    # pass added while correcting the CW tolerance record and adding registry
+    # rows 26/27: 6 in phase_CW_numbers.md sec. 9/10 (the three TABLE II rows,
+    # cited twice), 1 in phase_D_numbers.md D4 residue 3, and 1 in
+    # AUTHOR_DECISIONS.md sec. B27(c).  The load-bearing check is the
+    # `assert pin in lines[a - 1]` above, which is unchanged; this is a census.
 
 
 # The six `(as of <commit>)` anchors that do NOT pass the gate's own bar at the

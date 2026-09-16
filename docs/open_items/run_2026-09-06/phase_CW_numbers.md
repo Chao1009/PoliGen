@@ -500,24 +500,38 @@ SHA-256, before the fix and after the re-pin:
 Every re-pinned value carries a comment naming this fix and the pre-fix
 number. A fifth site, T25's four dilutions, is recorded in §7.2.
 
-> **ONE TOLERANCE WAS WIDENED, and it was not recorded here until 2026-09-06
-> (verification pass).** In the rewritten Cosyn–Weiss gate, TABLE II's
-> θ_k ≈ 90° cell-centre row went from `CHECK_CLOSE_AT(a_par_90, 0.9997, 0,
-> **1e-3**)` in the old gate to `CHECK_CLOSE_AT(azz_tensor_curve(v, ic90)[ik30],
-> +0.99931, 0, **2e-3**)` in the new one — the only loosened tolerance in the
-> diff. **The reason, measured:** the pin is now the cell value itself and the
-> residual against it is **2.77e−06** (measured 0.9993127695 against the pinned
-> +0.99931), so 2e−3 is slack by ×722 and the old 1e−3 would still have passed
-> by ×361; what makes a literal tolerance here awkward is CW's own **+1**,
-> which the cell centre misses by **6.87e−04** — within a factor 1.5 of the
-> 1e−3 the old row used. The tolerance is not load-bearing either way; the
-> load-bearing assertion for this row is the identity (a), residual 8.882e−16,
-> and the regression guard (g). **Everything else in the diff is equal or
-> tighter**: 0.02 → 0.01 on the √2 landmark, 3e−3 → 1e−3 on the factorised
-> extremes, T25 stays at rtol 1e−6, and the port gate's rtol 1e−12 / `norm`
-> 1e−9 are untouched. Of the other two TABLE II rows, the θ_k ≈ 0 one was
-> already at 2e−3 before the rewrite (`a_par_0` against −1.9378) and the
-> k ≈ 1.00 GeV one is new.
+> **NO TOLERANCE IS WIDENED IN THE COMMITTED TREE — corrected 2026-09-15.**
+> This box, as first written on 2026-09-06, said TABLE II's θ_k ≈ 90°
+> cell-centre row had been loosened from `CHECK_CLOSE_AT(a_par_90, 0.9997, 0,
+> **1e-3**)` in the old gate to `… +0.99931, 0, **2e-3**` in the new one. **It
+> never shipped that way.** `git show a7b3d18:tests/test_tagged.cpp` — the sign
+> fix itself, and the ONLY commit in `91e48b9..HEAD` that touches this file —
+> already carries **1e-4** on *both* k = 0.30 cell-centre rows. Commit
+> `53f6951`'s message says it "tightened the two slack CW tolerances
+> 2e-3 -> 1e-4"; `git show --stat 53f6951` lists five documentation files and
+> **no test**, so that message describes a change that had already landed in
+> `a7b3d18`. The commit cannot be rewritten; this is the correction.
+>
+> **The committed state, re-measured 2026-09-15 through the bindings**
+> (`TaggedModel(deuteron_channel(…, VmcAV18))`, the (+1,+1,−2) thirds
+> combination, grid 280 × 96):
+>
+> | `tests/test_tagged.cpp` row | pin | measured | residual | atol | slack |
+> |---|---|---|---|---|---|
+> | `tests/test_tagged.cpp:664` (anchor read 2026-09-15 "-1.9371243623") θ_k ≈ 0, k = 0.301150 | −1.93712 | −1.9371243623 | **4.36e−06** | **1e−4** | ×23 |
+> | `tests/test_tagged.cpp:665` (anchor read 2026-09-15 "+0.9993127695") θ_k ≈ 90°, k = 0.301150 | +0.99931 | +0.9993127695 | **2.77e−06** | **1e−4** | ×36 |
+> | `tests/test_tagged.cpp:667` (anchor read 2026-09-15 "+0.9673403636") θ_k ≈ 0, k = 0.997866 | +0.96734 | +0.9673403636 | **3.64e−07** | **1e−4** | ×275 |
+>
+> The k ≈ 1.00 GeV row stood at 2e−3 (slack ×5501) with no residual stated
+> until 2026-09-15, when it was tightened to 1e-4 to match its two neighbours;
+> that is the one tolerance this correction pass moved, and it moved
+> **tighter**. What makes a literal tolerance here awkward is CW's own **+1**,
+> which the cell centre misses by **6.87e−04**; the tolerance is not
+> load-bearing either way, because the load-bearing assertions for these rows
+> are the identity (a), residual 8.882e−16, and the regression guard (g).
+> **Everything else in the diff is equal or tighter**: 0.02 → 0.01 on the √2
+> landmark, 3e−3 → 1e−3 on the factorised extremes, T25 stays at rtol 1e−6,
+> and the port gate's rtol 1e−12 / `norm` 1e−9 are untouched.
 
 Tests that keep passing untouched, as the investigation predicted: the pure-S
 and pure-D limits, the whole ⁷Li block, *"every channel is normalized"*,
@@ -679,13 +693,13 @@ number in this section was re-measured in this pass.
 
 | what was wrong | where it was | what it now says |
 |---|---|---|
-| *"tag fractions are unaffected"* | `python/lipolgen/cli.py` `--cluster-wave` help (user-facing), §7.1 and §7.2 above, `07` §6.1/§6.5, `run_2026-09-06/STATUS.md` row 9 | A tag fraction is an acceptance-weighted integral over n_M: invariant only for a spin-blind or category-averaged fill. Uniform-M mix unmoved to **15 digits** (0.024675932148828 / 0.033810227625842), equal-thirds average +3.1e−9; but `tensor-thirds` categories **0.028127 → 0.018403** (azz±) and **0.017775 → 0.037222** (azz0), and the CLI's own `--pz 0.7` ladder **0.027030 → 0.020396** (−24.5 %). ⁶Li VMC 0.035296 → 0.032155, d Hulthén 0.025802 → 0.021492, d AV18 0.022175 → 0.019407; ⁷Li exactly unchanged |
+| *"tag fractions are unaffected"* | `python/lipolgen/cli.py` `--cluster-wave` help (user-facing), §7.1 and §7.2 above, `07` §6.1/§6.5, `run_2026-09-06/STATUS.md` row 9 | A tag fraction is an acceptance-weighted integral over n_M: invariant only for a spin-blind or category-averaged fill. Uniform-M mix unmoved to **15 digits** (0.024675932148828 / 0.033810227625842), equal-thirds average **+3.1e−6** (a per-M norm-residual effect — Σ n_M k² differs by 5e−5 between M = 0 and ±1 — not summation order; corrected in `53f6951`, which replaced the unmeasured +3.1e−9 this row carried, and restated here 2026-09-15); but `tensor-thirds` categories **0.028127 → 0.018403** (azz±) and **0.017775 → 0.037222** (azz0), and the CLI's own `--pz 0.7` ladder **0.027030 → 0.020396** (−24.5 %). ⁶Li VMC 0.035296 → 0.032155, d Hulthén 0.025802 → 0.021492, d AV18 0.022175 → 0.019407; ⁷Li exactly unchanged |
 | *"`USAGE.md`'s tag-fraction rows … were left alone"* (§7.1) | `docs/USAGE.md` (two tables), `docs/open_items/vmc_reconciliation.md` | Both **REGENERATED on the fixed build** by their own documented command (`vmc_tag_fractions.py --events 40000 --configs 0,1,2`, seed 20260829): ⁶Li YR high-acceptance **0.0301 / 0.0264 / 0.0279**, ⁶Li tagging **0.3451 / 0.2551 / 0.3145** (were 0.0286/0.0249/0.0266 and 0.3410/0.2530/0.3115); every ⁷Li row identical. The captions say the build and carry the invariance statement |
 | the false step, still live in two primary docs | `docs/USAGE.md`, `docs/PHYSICS_CHANNELS.md`, `docs/OPEN_ITEMS_SOLUTIONS.md` §C5.4 bullet, `run_2026-09-03/STATUS.md` row 9, plus the two test comments that assert the stored convention | ψ₂ = +W is the **stored** convention and stays; `build_amp2` consumes φ₂ = i²ψ₂ = **−W** and applied no phase until 2026-09-06 |
 | stale digits inheriting the quadrature residual | `USAGE.md` deuteron-control dilutions; `CONVENTIONS.md:93`, `PHYSICS_CHANNELS.md`, `beams.hpp`, `tagged.hpp`, `test_tagged.cpp` (comment) for the ⁶Li vector dilution; `constants.hpp` and `design_G_cluster_config.md` for 0.9219467; `breakup.hpp` for 0.932495 / 0.913595 | 0.932496109 / 0.959488878 / 0.913595979 / 0.948146339; **0.8699431789** against the closed form 0.869950, **7.84e−6** (was 1.22e−5); **0.9219490** (was 0.9219467); 0.932496 / 0.913596 |
 | the reconciliation record was one script run from losing its correction | `validation/vmc_reconcile.py` (template sentence, polarity inverted) and `validation/vmc_tag_fractions.py` (rewrites everything after the APPEND marker, where the hand-inserted box lived) | Both **GENERATORS** carry it now: the sentence reads −0.52 → +0.45 with the measured cells, the correction record and the tag-fraction invariance note are emitted by `vmc_tag_fractions.py`, the `vmc-flipD` column is relabelled *(= the PRE-FIX physics column)*, and the box's `:131-133` citation is replaced by a section anchor plus the correct `:133-136`. Regenerated and verified **idempotent** |
 | the re-pin record's magnitudes | `validation/README.md` and its generator `dump_polligen_reference.py`; `07` §6.1; §8.2 above | `norm` up to **5.81e−05 rel** (was "+2e-5"), `population_integrated` up to **3.02e−06 abs** (was "≤5e-7"), and `p2_moment_mixture_uniform` — **absent from the list**, recorded as a zero in `07` §6.1 — moves on every spin-1 channel (⁶Li Hulthén −5.3160743e−05 → −5.2153460e−05, 1.9e−2 rel) and was re-pinned. Measured as the re-pinned file against `git show HEAD:validation/reference/tagged.json` |
-| *"no tolerance was widened"* | §9 above | One was: the CW gate's TABLE II θ_k ≈ 90° row, atol **1e−3 → 2e−3**. Recorded with its measured residual (2.77e−6, slack by ×722) in §9's box; the test was not touched |
+| *"no tolerance was widened"* | §9 above | **Corrected 2026-09-15 — the claim was right and this row was wrong.** The committed tree has **1e-4** on both k = 0.30 cell-centre rows and has had it since `a7b3d18` itself; no CW tolerance was ever widened in `91e48b9..HEAD`. Measured residuals 4.36e−6 (`tests/test_tagged.cpp:664`, anchor read 2026-09-15 "-1.9371243623") and 2.77e−6 (`tests/test_tagged.cpp:665`, anchor read 2026-09-15 "+0.9993127695"). The k ≈ 1.00 GeV row (`tests/test_tagged.cpp:667`, anchor read 2026-09-15 "+0.9673403636") stood at 2e−3, slack ×5501, and was tightened to 1e-4 on 2026-09-15. See §9's box |
 | registry board not updated | `run_2026-09-03/STATUS.md` rows 9 and 10 | Both cells amended to §B9(c)'s "evidence moved" box and §B6(c)'s re-measured residual; no decision taken, both rows stay open |
 
 **Three more live sites carried the pre-fix tag-fraction SAMPLE** and were
@@ -696,8 +710,11 @@ brought onto the regenerated numbers with the reason named: `README.md`'s
 `OPEN_ITEMS_SOLUTIONS.md` §1 (three bullets, including the two-configuration
 check 0.0301 → 0.0365 at 5×41 and 0.0279 → 0.0348 at 18×275). One unrelated
 anchor slip found while checking them and fixed: `PHYSICS_CHANNELS.md`'s ⟨P₂⟩ =
-−T/5 row cited `README.md:109` (anchor read 2026-09-15 "rtol 1e-12"), which is the rtol-1e-12 sentence; the statement
-is at `README.md:115` (anchor read 2026-09-15 "2025 Table 1").
+−T/5 row cited `README.md:120` (anchor read 2026-09-16 "rtol 1e-12"), which is the rtol-1e-12 sentence; the statement
+is at `README.md:126` (anchor read 2026-09-16 "2025 Table 1"). *(Both
+re-pointed 2026-09-16 from `:112`/`:118`: the close-out's own README
+corrections moved every line below 84 down by eight, and this record's two
+anchors are exactly the drift class phase D's R6 rule exists to catch.)*
 
 **Not changed by this pass:** `src/`, `validation/reference/` (SHA-256
 unchanged; `repin_tagged_from_lipolgen.py --check` still reports worst move

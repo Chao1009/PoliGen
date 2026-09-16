@@ -320,7 +320,7 @@ both lengths. Both orders reach the same value, 1.6875 at k = 0.15 on the
   instead, with the −4.06 fm² alternative and the ratio it moves (0.871 →
   0.858) recorded there.
   **CLOSED 2026-09-06 by run 2026-09-06 task B3** (`../run_2026-09-06/phase_B_numbers.md`
-  §B3): the constant is `LI7_QUADRUPOLE_FM2` = **−4.06 fm²** (`rc.hpp:669`,
+  §B3): the constant is `LI7_QUADRUPOLE_FM2` = **−4.06 fm²** (`include/lipolgen/rc.hpp:726`,
   TUNL's A = 5, 6, 7 evaluation — the alternative, taken because it is the same
   document `LI6_QUADRUPOLE_FM2` comes from), the gate is
   `li7_alpha_t_quadrupole` + doctest T13 + pytest G8, and the ratio is
@@ -2092,7 +2092,7 @@ way, but it is then a numeric edge of a term that RAN. The matrix gained a
 The row keyed on `KnobRunContext::t2_bound`, which only a caller who went
 through `set_pythia_hadronizer` (or the CLI) sets. A hadronizer bound as a plain
 callable — `cfg.hadronizer = f`, the route `python/README.md:246` documents, and
-the C++ lambda of `docs/USAGE.md:1973` — was called on **every event** (measured:
+the C++ lambda of `docs/USAGE.md:1978` — was called on **every event** (measured:
 20 of 20) while the row said `hadronize = off`, "no T2 tier is bound: every
 record stops at T0", and the three Pomeron rows said "not read without
 `--hadronize`: no PYTHIA instance of any kind is built".
@@ -2153,7 +2153,7 @@ two-axis wording of `USAGE.md:628-638` / `PHYSICS_CHANNELS.md:164` /
 and the derived band gives 2.799047 — so the quotable figure is **2.80**, three
 figures, which is all a two-figure input supports, and the "never 2.8000"
 caveat sits one paragraph below each table. Three table CELLS still printed
-`2.8000`: `phase_D_numbers.md` §D5's, `docs/USAGE.md:1578`'s, and — the same
+`2.8000`: `phase_D_numbers.md` §D5's, `docs/USAGE.md:1583`'s, and — the same
 table, a third copy the review did not name —
 `docs/OPEN_ITEMS_SOLUTIONS.md`'s. All three now read 2.80. The prose that
 quotes "2.8000" as the figure NOT to publish is left alone, as is the code

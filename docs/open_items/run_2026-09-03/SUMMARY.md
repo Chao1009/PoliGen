@@ -4,7 +4,10 @@ What the open-items run measured, phase by phase, in the numbers a reader would
 cite — **each with the window it was measured in** — and, at the end, what it
 did **not** establish. Every number here is quoted from the phase record named
 beside it; `STATUS.md` is the board and the decision registry, `PLAN.md` the
-brief, `AUTHOR_DECISIONS.md` the 25 decisions stated in full.
+brief, `AUTHOR_DECISIONS.md` the decisions stated in full — **25 when this
+page was written, 27 since 2026-09-15**, when rows 26 and 27 were added for
+the tagged S–D interference phase and the sibling repository's published
+numbers (see item 9).
 
 **Start → end.** Baseline `a94fd6e`: 363 doctest cases / 17 203 863 assertions /
 1 skipped, 211 pytest. End of phase F, re-measured 2026-09-05: **401 doctest
@@ -14,6 +17,17 @@ broken / 6 allow-listed** (+ 19/115 on `SPIN32_FINITE_GAMMA.md`, 8 external on
 `PYTHIA_BRIDGE.md`), **SPDX 101/101**. All nine `validation/reference/*.json`
 are byte-identical to `a94fd6e`: **no shipped default moved in six phases**, and
 the rtol-1e−12 gates did not move.
+
+> **Two of the nine have moved since — 2026-09-06, and deliberately** (item 6b
+> below; registry row 26 / `AUTHOR_DECISIONS.md` §B27). Re-measured
+> 2026-09-15 by sha256 against `a94fd6e`: `b1_default_li6`, `beams`,
+> `bookkeeping`, `coherent`, `spectator`, `spin` and `xsec` are **still
+> identical**; `tagged.json` differs in its two spin-1 `model` blocks and
+> `_manifest.json` in the one provenance line that names it. So the sentence
+> above holds **as the record of this run** (`a94fd6e..dffe94e`) and, read as
+> a statement about the tree today, must be read as *byte-identical except
+> those two files, by row 26*. The follow-on run's own start→end line is in
+> `../run_2026-09-06/SUMMARY.md`.
 
 ## A — the b₁(⁶Li) publication ban (`ac22331`, `phase_A_*.md`)
 
@@ -184,7 +198,17 @@ and one do, since C5.4 (§10 and §8).
    half stands: that gate validates the α–t **wave function**, so **b₁(⁷Li)
    is still not implemented** and still blocked on the unpolarised-backend
    decision.
-5. **The exact Mo–Tsai elastic tail was never obtained** — and still has not
+5. ~~**The exact Mo–Tsai elastic tail was never obtained.** What ships is a band
+   of two stated models; the **tensor** fraction of the s-/p-peaks is *unknown,
+   not zero*;~~ **REVISED 2026-09-06** (restored here 2026-09-15 as a
+   strikethrough: this item had been rewritten in place, so the 2026-09-05
+   reading was not recoverable from the tree — the convention, stated on run
+   2026-09-06's own CW row, is that *dated records keep their originals and gain
+   a correction box*, which item 4 above follows and this one did not. The
+   pointer for what changed is
+   `../run_2026-09-06/phase_B_numbers.md` §B1/§B2.) **What stands now:**
+
+   **The exact Mo–Tsai elastic tail was never obtained** — and still has not
    been: `[MT69]` is not in this tree and no number from it is quoted anywhere.
    What ships is **three** tail models since 2026-09-06, when POLRAD's own
    exact one (`--rc-tail-model polrad-full`, Eq. (18) + Appendix B +
@@ -240,8 +264,30 @@ and one do, since C5.4 (§10 and §8).
    anchor alternatives 0.266 / 0.113, named with no band re-evaluation
    (row 17); and honouring `--pzz` on `helicity-flip`, which would move a
    shipped fill with no measured effect on any observable (row 20 / §15.5 D13).
-9. **Twenty-five decisions sit in the registry and this phase took none of
-   them.** Six are marked *applied* by the phase that applied them — four
+   **ALL THREE ARE PRICED SINCE 2026-09-06** (run 2026-09-06 phase A,
+   `cdd8591`): each was *implemented opt-in at a no-op default and run*, not
+   estimated — `--r-source {unset,sigma-lt,r1998}` (row 3; §A1), the three-row
+   δ_low band table (row 17; §A2, `python/tests/test_rc_low_x_anchor.py`) and
+   `--pzz-mode {ladder,typed}` (row 20 / D13; §A3), all in
+   `../run_2026-09-06/phase_A_numbers.md`. The word "unpriced" is gone from
+   all three rows, from §B7(d), §B13(d) and §B18(d), and from
+   `AUTHOR_DECISIONS.md`'s Part B item 8. **None of the three was decided**:
+   pricing a cost is not taking it, and all three rows are still open —
+   row 3 has in fact become a *narrower* question, *(iii) with which R?*
+9. **Twenty-five decisions sat in the registry and this phase took none of
+   them.** Six were marked *applied* by the phase that applied them — four
    *applied — confirm or revert* (rows 1, 11, 18, 19) and two *applied —
-   confirm* (rows 4, 12); the rest are open. All are listed in `STATUS.md`'s
+   confirm* (rows 4, 12); the rest were open. All are listed in `STATUS.md`'s
    table and stated in full in `AUTHOR_DECISIONS.md`.
+   **The registry is TWENTY-SEVEN rows since 2026-09-15**, and the follow-on
+   run took none of them either. Row **26** (§B27) is the tagged S–D
+   interference phase and the `tagged.json` re-pin, *applied — confirm or
+   revert*; row **27** (§B28) is the sibling repository's published
+   `A_zz^tag` numbers, open. Row **6** also became *applied in part — confirm*
+   on 2026-09-06, when the corrected `A_zz(Born)` column was republished
+   beside the original. Counted at HEAD from the index table: **eight rows are
+   marked applied** — five *confirm or revert* (1, 11, 18, 19, 26), two
+   *confirm* (4, 12) and one *applied in part — confirm* (6) — one is
+   *decided on the record* (7), three are *carried forward, confirm only*
+   (22, 23, 24) and **fifteen are open** (2, 3, 5, 8, 9, 10, 13, 14, 15, 16,
+   17, 20, 21, 25, 27).

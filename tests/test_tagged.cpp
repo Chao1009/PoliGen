@@ -661,10 +661,10 @@ TEST_CASE("tagged: the Cosyn-Weiss deuteron tensor gate (CW TABLE II)"
 
   // ---- (e) TABLE II row by row, at the actual cell centres.
   const std::size_t ic90 = argmin_abs(v.c(), 0.0);    // |c| = 0.010417
-  CHECK_CLOSE_AT(azz_tensor_curve(v, ic0)[ik30],  -1.93712, 0.0, 1e-4);  // CW -2 at the cell centre; residual 2.8e-6 (2e-3 was x722 slack)
-  CHECK_CLOSE_AT(azz_tensor_curve(v, ic90)[ik30], +0.99931, 0.0, 1e-4);  // CW +1 at the cell centre; residual 2.8e-6
+  CHECK_CLOSE_AT(azz_tensor_curve(v, ic0)[ik30],  -1.93712, 0.0, 1e-4);  // CW -2 at the cell centre; measured -1.9371243623, residual 4.4e-6 (x23 slack)
+  CHECK_CLOSE_AT(azz_tensor_curve(v, ic90)[ik30], +0.99931, 0.0, 1e-4);  // CW +1 at the cell centre; measured +0.9993127695, residual 2.8e-6 (x36 slack; 2e-3 would have been x722)
   const std::size_t ik100 = argmin_abs(v.k(), 1.00);
-  CHECK_CLOSE_AT(azz_tensor_curve(v, ic0)[ik100], +0.96734, 0.0, 2e-3);  // CW +1
+  CHECK_CLOSE_AT(azz_tensor_curve(v, ic0)[ik100], +0.96734, 0.0, 1e-4);  // CW +1; measured +0.9673403636, residual 3.6e-7 (x275 slack; 2e-3 here was x5501, tightened 2026-09-15)
 
   // ---- (f) the whole curve stays inside CW's stated range [-2, 1].
   for (std::size_t ic = 0; ic < v.nc(); ++ic)

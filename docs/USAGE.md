@@ -1311,12 +1311,17 @@ the control from that table at its own P_D = **0.057600**
 | change | +28.00 % | **−2.03 %** | **−1.18 %** |
 
 *(The four dilutions were re-measured on the fixed library 2026-09-06 and moved
-in the 7th decimal — 0.932494769 / 0.959488074 / 0.913594777 / 0.948145618
-before.  They are angle-integrated, so `∫Θ₀Θ₂ dc = 0` by L-orthogonality kills
+in the **6th–7th decimal, ≤ 1.4e−6 absolute** — 0.932494769 / 0.959488074 /
+0.913594777 / 0.948145618 before, i.e. the two **vector** dilutions move by
+1.34e−6 and 1.20e−6 (6th decimal) and the two **tensor** ones by 8.0e−7 and
+7.2e−7 (7th).  They are angle-integrated, so `∫Θ₀Θ₂ dc = 0` by L-orthogonality kills
 the S–D cross term the sign fix flips and only the 96-cell midpoint-quadrature
 residual of that zero survives: measured 0.932496109312 / 0.959488878164 /
 0.913595978560 / 0.948146339359, the two percentages **−2.026832 %** and
-**−1.182144 %**, unchanged to five decimals.  P_D does not move at all — it is
+**−1.182144 %** (−2.026820 % / −1.182136 % before: at five decimals the
+**vector** leg moves in the last place, −2.02682 → −2.02683, and the tensor
+leg not at all; at the three digits row 9 prints, −2.03 % / −1.18 %, neither
+moves).  P_D does not move at all — it is
 a norm.  `tests/test_tagged.cpp` T25 pins all four at rtol 1e−6.)*
 
 The relative S–D sign does **not** flip: CDKS fix φ₂ = −W with φ_L = i^L ψ_L,
@@ -2181,8 +2186,9 @@ nothing is ever refused so a channel scan need not special-case `--rc`):
   Unclamped, a 20 k-event tagged-alpha run published `rc_tensor_hi` down to
   **−1.79** (⁷Li: **−8.35**), i.e. **negative weights in the npz**.
   `RcOptions::band_tau_max` (default 1.0) holds every published edge inside
-  `[1 − δ, 1 + δ]`; the clipped fraction is **0.6 % of ⁶Li tagged-alpha
-  events and 2.6 % of ⁷Li**, is printed by the run and lands in
+  `[1 − δ, 1 + δ]`; the clipped fraction is **1.2 % of ⁶Li tagged-alpha
+  events and 2.6 % of ⁷Li** (re-measured 2026-09-15; the ⁶Li 0.6 % predates
+  the S–D fix `a7b3d18`), is printed by the run and lands in
   `meta["rc_clipped_band_event_fraction"]` and per event in
   `Event.rc_clipped`. `n_M → 0` is exactly where "rescale the tensor part by
   δ" stops meaning anything, so the clamp is a **choice**, not a fix.
@@ -2193,7 +2199,7 @@ quote the lo/hi envelope on `A_zz`:
 
 | knob | rows to run | what it prices |
 |---|---|---|
-| `--rc-delta-low-x` | **0.19 and 0.30** (and, since 2026-09-06, **0.266 and 0.113** as priced alternatives) | 0.30 is the conservative end of Gakh–Shekhovtsova's 10–30 %; 0.19 is the residual HERMES actually achieved at its lowest-x bin. **Which way the default errs:** the 0.30 is that paper's panel value **carried upward in x**, and **0.113 is what the panel reads at x = 0.00966, the x nearest the 0.01 anchor** (0.266 at its own bottom, x = 0.00226) — the shipped anchor is **×2.65** that reading. Priced, not adopted (registry row 17, `open_items/run_2026-09-06/phase_A_numbers.md` §A2): band half-width on A_zz at Q² = 5, P_zz = +1, ⁶Li config 1 = **1.358472e−04 / 1.204512e−04 / 5.116913e−05** at x = 0.01, **1.459067e−04 / 1.308566e−04 / 6.313127e−05** at x = 0.063 (where the band peaks on all three), **9.680016e−05 / 8.798804e−05 / 4.833349e−05** at x = 0.10 and **1.920691e−05** at x = 0.16 on all three — the high anchor pins x ≥ 0.16, so the whole choice lives below it. It moves **two columns and one `meta` key** and **not** the tagged band's clipped-event fraction (124 of 20 000 = 0.62 % on all three, seed 1: `clamp_tau` clips \|τ\| and δ never enters it) |
+| `--rc-delta-low-x` | **0.19 and 0.30** (and, since 2026-09-06, **0.266 and 0.113** as priced alternatives) | 0.30 is the conservative end of Gakh–Shekhovtsova's 10–30 %; 0.19 is the residual HERMES actually achieved at its lowest-x bin. **Which way the default errs:** the 0.30 is that paper's panel value **carried upward in x**, and **0.113 is what the panel reads at x = 0.00966, the x nearest the 0.01 anchor** (0.266 at its own bottom, x = 0.00226) — the shipped anchor is **×2.65** that reading. Priced, not adopted (registry row 17, `open_items/run_2026-09-06/phase_A_numbers.md` §A2): band half-width on A_zz at Q² = 5, P_zz = +1, ⁶Li config 1 = **1.358472e−04 / 1.204512e−04 / 5.116913e−05** at x = 0.01, **1.459067e−04 / 1.308566e−04 / 6.313127e−05** at x = 0.063 (where the band peaks on all three), **9.680016e−05 / 8.798804e−05 / 4.833349e−05** at x = 0.10 and **1.920691e−05** at x = 0.16 on all three — the high anchor pins x ≥ 0.16, so the whole choice lives below it. It moves **two columns and two of the 60 `meta` keys** (`rc_delta_low_x` and the `knob_provenance` row that records it) and **not** the tagged band's clipped-event fraction (245 of 20 000 = 1.2250 % on all three, seed 1 — re-measured 2026-09-15; 124 = 0.62 % predates the S–D fix `a7b3d18`: `clamp_tau` clips \|τ\| and δ never enters it) |
 | `--rc-a-transfer-frac` | **0 (default), 0.5, 1** | the **A = 2 → A = 6 TRANSFER** of the band. Every number δ(x) interpolates between is a **deuteron** number — HERMES's measured low-x residual, Gakh–Shekhovtsova's 10–30 % (itself a Q² = 0.1 GeV² figure — the only panel of its Fig. 2 inside the x ∼ 10⁻³–10⁻² the sentence quotes it for), E12-13-011's 1.5 % — and **no A > 2 tensor RC calculation exists at all**, so the default band silently assumes the deuteron *fractional* RC transfers to ⁶Li exactly. This adds `f·δ(x)` in quadrature: `δ_eff = δ√(1+f²)`, i.e. the band widens by **1× / 1.118× / 1.414×**. Half-widths on A_zz at x = 0.01, Q² = 5: **1.358e−04 / 1.519e−04 / 1.921e−04**. It moves the **band only** — not `rc_tail`, not τ — and **no measurement prefers any value**: it is a price tag, not a correction. `meta["rc_a_transfer_frac"]` records it |
 | `--rc-fq-scale` | **0, 1, 2** | ±100 % on the ⁶Li quadrupole form factor. σ^el_T is **quadratic** in it, so this band must be **RUN, never rescaled** from one row — the two edges are not symmetric about the nominal, and at `x = 0.01, Q² = 5` they even bracket a **sign change** of ΔA_zz |
 | `--rc-tail-tensor-scale` | **0.5, 1, 2** | the η·F_m² tensor sector, which `--rc-fq-scale` does **not** span |
@@ -2510,7 +2516,7 @@ fractions, since nodes are not event-weighted — and both land in the npz as
 the per-event bits on `Event.rc_clipped` (`1` = tail, `2` = band). At the
 current defaults **nothing clips on the tail** (the pre-2026-09-03 numbers,
 1.71 % of nodes and 21.95 % of the `y > 0.9` ones, were an artefact of the
-factor-6 per-nucleon error) and 0.6–2.6 % of tagged events clip on the band.
+factor-6 per-nucleon error) and 1.2–2.6 % of tagged events clip on the band.
 On `--rc-tail-model t-peak+ll` the **nodes** do clip again — **0.36 %**
 globally and **4.62 %** of the `y > 0.9` band on the 101 × 77 CLI grid — which
 is the same `y → 1` edge as everything else in this bullet; the **event**
@@ -2655,7 +2661,8 @@ an envelope; `cluster_beta`, `p_d`, `triton_sf`, `inclusive_b1` and
 `coherent_t2` / `pom_set` / `pom_rescale` are round 3.
 
 3. **`python/tests/test_knob_provenance.py`** rebuilds the (spec × knob)
-   matrix — 12 (isotope, channel, plan) specs, 76 knob variants, **592 cells**
+   matrix — 12 (isotope, channel, plan) specs, 81 knob variants, **627 cells**
+   (re-measured 2026-09-15; 76 / 592 was the count after Phase A)
    (re-measured 2026-09-06, after `--r-source` added three and `--pzz-mode`
    two):
    every knob on the 7 (isotope, channel) combinations under one plan each,

@@ -736,7 +736,7 @@ the first is the ban proper.
 | # | file | anchors | class | what is there |
 |---|---|---|---|---|
 | 1 | `README.md` | `:49` (as of 66dcda2) | FAIL | "A = 2 magnitude gate is still open, see below" |
-| | | `:171-173` | BAN + FAIL | "gate fails its magnitude clause by a factor 2.27–3.68 … no ⁶Li number from the backend may be published until it closes" |
+| | | `:184-186` | BAN + FAIL | "gate fails its magnitude clause by a factor 2.27–3.68 … no ⁶Li number from the backend may be published until it closes" |
 | | | `:62` (as of 66dcda2) | — | the `r1998` follow-up, mentions the gate but is not a ban |
 | 2 | `docs/USAGE.md` | `:259` (as of 66dcda2) | FAIL | section heading "⚠ The A = 2 validation gate is NOT fully passed" |
 | | | `:262` (as of 66dcda2) | FAIL | "fails its magnitude clause" |
@@ -750,8 +750,8 @@ the first is the ban proper.
 | 4 | `docs/OPEN_ITEMS_SOLUTIONS.md` | `:215` (as of adec442) | FAIL (**MISSED**) | §"8-10. Theory notes": "The A = 2 validation was done and it **fails on magnitude** — see §10." Anchor as of 2026-09-04; not found by the original survey, and still stale a day after the lift, so a reader following its own pointer to §10 met the opposite claim |
 | | | `:19` (as of a98f0a0) | **BAN** + FAIL | item-10 table row: "the A = 2 validation gate FAILS its magnitude clause … so no ⁶Li number from it may be published and the item does not close" |
 | | | `:362` (as of 66dcda2) | FAIL | §10 heading "…and the gate is NOT passed" |
-| | | `:1034-1048` | **BAN** + FAIL | the "READ THIS BEFORE QUOTING ANY NUMBER BELOW" block |
-| | | `:406-415` | FAIL | "The A = 2 gate, measured" clause table (G3a margin at `:413` (as of 66dcda2), G3b FAIL at `:414` (as of 66dcda2)) |
+| | | `:1051-1065` | **BAN** + FAIL | the "READ THIS BEFORE QUOTING ANY NUMBER BELOW" block |
+| | | `:422-431` | FAIL | "The A = 2 gate, measured" clause table (G3a margin at `:413` (as of 66dcda2), G3b FAIL at `:414` (as of 66dcda2)) |
 | | | `:1082-1094` | FAIL | the residual budget; `:428` (as of 66dcda2) "the gate's default today … outside G3b" |
 | | | `:444` (as of 66dcda2) | **BAN** | heading "The ⁶Li numbers — RECORDED, NOT PUBLISHED (see the warning above)" |
 | | | `:556-572` (as of a98f0a0) | **BAN** | "What has to happen before item 10 can close", 7 conditions; `:572` (as of 66dcda2) "Only then re-open G3b. Until it passes, no ⁶Li number ships." |

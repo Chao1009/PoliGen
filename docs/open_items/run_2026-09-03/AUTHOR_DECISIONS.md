@@ -70,10 +70,10 @@ The mapping is total in both directions, and was checked row by row on
 | 3 `Li6ConvolutionOptions` keeps `r_sigma_lt` | §B7 | open (third option implemented opt-in and **priced 2026-09-06**; the row becomes *(iii) with which R?*) |
 | 4 the ⁶Li publication ban is lifted, the band is not | §B4 | applied — confirm |
 | 5 the A = 2 gate's wave default stays `kFdeutFile` | §B17 | open |
-| 6 the published `A_zz(Born)` column is wrong ×3.253983 | §B11 | **republished beside the original 2026-09-06**; the choice (leave / delete the old column) is still open |
+| 6 the published `A_zz(Born)` column is wrong ×3.253983 | §B11 | **applied in part — confirm** (the corrected column is published beside the original, 2026-09-06, which executes option (ii) in all but the deletion); **the deletion of the original is still open** |
 | 7 the Gakh–Shekhovtsova δ(x) shape is rejected | §B14 | decided on the record |
 | 8 `eps_b0` stays −0.08 | §B5 | open (cost recorded) |
-| 9 the tagged deuteron control keeps Hulthén | §B9 | open — **evidence moved 2026-09-06**, see the box in §B9(c): the Cosyn–Weiss gate now runs on AV18, and `tagged.json`'s spin-1 model blocks are re-pinned from this library. No decision taken |
+| 9 the tagged deuteron control keeps Hulthén | §B9 | open — **evidence moved 2026-09-06**, see the box in §B9(c): the Cosyn–Weiss gate now runs on AV18, and `tagged.json`'s spin-1 model blocks are re-pinned from this library. No decision taken **on THIS row** — the phase fix and the re-pin themselves are **row 26 / §B27**, added 2026-09-15 |
 | 10 `LI6_CLUSTER_POLARIZATION` stays 0.811228 | §B6 | open (band mandatory) — **checked 2026-09-06 against the S–D interference fix: does not inherit it.** 0.811228 = (1 − 1.5 P_D^{αd})(1 − 1.5 P_D^{d}) is a closed form in two D-state probabilities, and P_D is a norm, phase-blind |
 | 11 the embedded deuteron follows `--cluster-wave` | §B10 | applied — confirm or revert. **Re-measured 2026-09-06**: §B10(d)'s +2.069 % is unmoved by the S–D interference fix (1.020687624664 vs 1.020687500612) |
 | 12 the coherent \|t\| ceiling stays 0.2, on the anchor range | §B16 | applied — confirm |
@@ -84,19 +84,23 @@ The mapping is total in both directions, and was checked row by row on
 | 17 the RC band's low-x anchor | §B13 | open (alternatives **priced 2026-09-06**) |
 | 18 G3a's counting window, and the floor this run changed | §B4 | applied — confirm or revert |
 | 19 `PDF:PomSet` = 11 is refused | §B19 | applied — confirm or revert |
-| 20 the thirteen ⁷Li rank-2 items of §15.5 | §B3 (D2), §B18 (D13), §B20 (the other eleven) | open (D13 priced 2026-09-06) |
-| 21 send the Mäntysaari-group letter | §B25 | open |
+| 20 the thirteen ⁷Li rank-2 items of §15.5 | §B3 (D2), §B18 (D13), §B20 (the other eleven) | open (**D13 priced and D11 PAID, both 2026-09-06**; D1, D3–D10 and D12 untouched, and the row stays open on them and on D2) |
+| 21 send the Mäntysaari-group letter | §B25 | open — **evidence moved 2026-09-15** (§B25(c)): the decay-lepton caveat surveyed and still UNBOUNDED, and the recoil leg's `COHERENT_JPSI_EFF_IR8_LI7` = 0.1775 now an UPPER bound, direction-only. No option's number moves; only (i)'s text does |
 | 22 `TENSOR_LL_SIGN` = −1 | §B1 | carried forward — confirm only |
 | 23 the ⁶Li effective polarization vs the naive 1/3 | §B6 | carried forward — confirm only |
-| 24 the licence, GPL-3.0-or-later | §B21 | carried forward — confirm only; 101 files stamped |
+| 24 the licence, GPL-3.0-or-later | §B21 | carried forward — confirm only; **103 files stamped** (101 when E2 stamped them, re-measured 2026-09-16) |
 | 25 the MSTW rows still tallied as PASSED when the grid is absent | §B26 | open — phase F's own |
+| 26 the tagged S–D interference phase, and the `tagged.json` re-pin | §B27 | **applied — confirm or revert** (added 2026-09-15; the one shipped output that moved in `91e48b9..HEAD`) |
+| 27 `PolarizedLithiumSim`'s published A_zz^tag numbers carry the same inverted sign | §B28 | open — about another repository; nothing in this tree changes either way (added 2026-09-15) |
 
 **The one section with no registry row is §B15**, and deliberately: the run
 does not call the promotion of its no-op opt-ins (`c0_shape`, `tail_model`,
 `qe_tensor_scale`, `a_transfer_frac`, `cluster_vmc_mc_sigma`, `pol_sf`) an
 author decision — it is listed so the batch is complete, and every one of those
 knobs moves nothing at the CLI default whichever way it goes. If the author
-wants it decided, it becomes row 26; nobody here made that call.
+wants it decided, it becomes a new row; nobody here made that call.
+*(This sentence read "it becomes row 26" until 2026-09-15, when rows 26 and
+27 were added for the tagged S–D phase and the sibling's published numbers.)*
 
 **Three entries are not one-to-one, and they are rows 20, 23 and 18.** Row 20
 is three sections, because §15.5's thirteen items split into one that gates
@@ -166,7 +170,7 @@ because it is a linear factor.
 `b1_default_li6.json` (`validation/dump_b1_default_li6.py`), re-pin T9 and
 `tests/test_sf.cpp`, and every document table quoting a default ⁶Li A_zz.
 Sites that will need the pointer changed: `constants.hpp:107`,
-`sf.hpp:398`, `CONVENTIONS.md:222`, `USAGE.md:199`, `README.md:173-174`.
+`sf.hpp:398`, `CONVENTIONS.md:222`, `USAGE.md:199`, `README.md:186-187` (re-pointed 2026-09-16; +10 from README's own close-out edits).
 
 ### B3. The unpolarised nucleon input — `ToyF2` or MSTW2008 LO — settled once, for both isotopes (`STATUS.md` decision **row 20**; `OPEN_ITEMS_SOLUTIONS.md` §15.5 **D2**)
 
@@ -188,7 +192,7 @@ convolution's **sign** flips with the backend at four of six x points
 (default bit-for-bit), not on evidence; the evidence favours the gate's
 input. A non-toy default has a build cost the run states: `--b1-unpol mstw`
 "needs the optional PYTHIA tier and is refused, never silently downgraded,
-without it" (`README.md:178-179`), so a core-only build could not run the
+without it" (`README.md:188-189`, re-pointed 2026-09-16), so a core-only build could not run the
 default.
 
 **(d)** Measured by Phase D on the ⁶Li inclusive channel
@@ -196,7 +200,7 @@ default.
 ×0.79847, A_zz ×1.25239, A_∥ ×0.82519; `mstw` A_zz ×1.26044. ⁷Li inclusive σ
 ×0.795936 (`ct18nlo`) / ×0.791318 (`mstw`); tagged-⁷Li-α ×0.792543 /
 ×0.788565 (`OPEN_ITEMS_SOLUTIONS.md` §15.3). On b₁ itself mstw/toy = 1.848 /
-1.276 / 0.817 at x = 0.10 / 0.30 / 0.50 (`README.md:181`). Option (i)
+1.276 / 0.817 at x = 0.10 / 0.30 / 0.50 (`README.md:194`, re-pointed 2026-09-16). Option (i)
 leaves the default's ⁶Li convolution numbers **outside the lift** (B4).
 
 **(e)** (i): nothing. (ii): `pipeline.hpp:857` default, `cli.py`'s
@@ -486,8 +490,10 @@ built from; `fdeut.av18` prints no MC errors, so the AV18 row carries no band;
 **(d)** (ii): P_D +28 %, **−2.03 %** / **−1.18 %** on the channel's vector /
 tensor dilutions; the relative S–D sign does not flip; `tagged.json` moves at
 rtol 1e−12. *(**Re-measured 2026-09-06** after the S–D interference fix: the
-two percentages are **unchanged to every printed digit** — −2.02683 % vector
-and −1.18214 % tensor, against −2.02682 % / −1.18214 % before — because both
+two percentages are **unchanged at the three digits row 9 prints** —
+−2.03 % vector and −1.18 % tensor. At six digits the **vector** leg moves in
+the last place, −2.026820 % → −2.026832 %, and the tensor leg not at all,
+−1.182136 % → −1.182144 % (−1.18214 % at five decimals either way) — because both
 dilutions are angle-integrated and the S–D cross term drops out of them by
 L-orthogonality. And *"the relative S–D sign does not flip"* is still true of
 the **stored** ψ₂ = +W, which is what it was about; what changed is that the
@@ -709,18 +715,29 @@ x ≥ `RC_X_HIGH` = 0.16 the E12-13-011 anchor pins δ = 0.015 and the half-widt
    ⁶Li inclusive run at seed 99 — no kinematics, no `weight`, no `rc_tail`.
    Mean |w_hi − 1| **6.153874e−05 → 5.484602e−05 → 2.472882e−05**.
 4. **On the tagged band, where the clamp bites, the anchor changes the clipped
-   fraction by NOTHING** — not "little": the **same 124** of 20 000 ⁶Li
-   tagged-α events (0.62 %, seed 1) and the **same 520** of 20 000 ⁷Li
+   fraction by NOTHING** — not "little": the **same 245** of 20 000 ⁶Li
+   tagged-α events (1.2250 %, seed 1) and the **same 520** of 20 000 ⁷Li
    (2.6 %, seed 11) clip at all three, and every non-band column is
    byte-identical. `RcModel::clamp_tau` clips |τ| against `band_tau_max` and
    δ never enters it. What the anchor sets **at** the clip is the width there:
    |τ| = 1 exactly, so those events' edges are exactly 1 ∓ δ_low —
    **[0.700, 1.300] / [0.734, 1.266] / [0.887, 1.113]** — and the mean
-   |w_hi − 1| over the ⁶Li 20 k falls 2.587195e−02 → 2.297940e−02 →
-   9.962921e−03. (Two bookkeeping notes from the same runs: §9's published
-   **0.62 %** is **seed 1**, the **top** of a ten-seed scan spanning
-   0.4850–0.6200 %, mean 0.5280 %, sd 0.0411 — the ⁷Li 2.6 % is seed 11, and
+   |w_hi − 1| over the ⁶Li 20 k falls 3.384715e−02 → 3.006184e−02 →
+   1.302792e−02. (Two bookkeeping notes from the same runs: the ⁶Li
+   **1.2250 %** is **seed 1** and sits mid-scatter in a ten-seed scan spanning
+   1.0950–1.3650 %, mean 1.2485 %, sd 0.0923 — the ⁷Li 2.6 % is seed 11, and
    seed 1 there gives 2.51 %.)
+
+   > **The ⁶Li figures in this item were RE-MEASURED 2026-09-15.** As first
+   > written they were **124 = 0.6200 %**, a ten-seed span 0.4850–0.6200 %
+   > (mean 0.5280 %, sd 0.0411) and mean |w_hi − 1| 2.587195e−02 →
+   > 2.297940e−02 → 9.962921e−03 — all measured in Phase A at `cdd8591`,
+   > **before** the tagged S–D interference fix `a7b3d18`, which moves the
+   > spin-1 (M, cos θ_k) draw `RcModel::tagged_tau` reads. The ⁷Li figures are
+   > J = 3/2 and reproduce unchanged. **The structural claim this item makes —
+   > that the anchor moves the clipped fraction by nothing — is unaffected and
+   > was re-verified on the fixed build at all three anchors.** The price this
+   > item carries (the ×2.65 width at the clip) is likewise unchanged.
 
 **The HIGH anchor: the record names no alternative, and this run does not
 invent one.** `RC_DELTA_HIGH_X` = 0.015 at `RC_X_HIGH` = 0.16 is
@@ -855,7 +872,7 @@ checked POLRAD-internally and against the leading-log fallback only. It costs
 
 **(e)** Per knob: its default line in `rc.hpp:431/1070/1079/1096/1189`
 (those five line numbers are as of the 2026-09-03 tree and have since shifted
-— `rc.hpp` grew from 1581 to 1788 lines (`wc -l`, HEAD to working tree) over the 2026-09-06 B3 and B1 edits —
+— `rc.hpp` grew from **1581 lines at `cdd8591`** to 1788 in the working tree of that day over the 2026-09-06 B3 and B1 edits, and stands at **2154 as committed at `af3f415`** (`wc -l`, re-measured 2026-09-15; "HEAD to working tree" named no commit and went false the same week) —
 and they are left as recorded rather than silently renumbered),
 `pipeline.hpp`, the `USAGE.md` §"knobs" table, and the shipped npz for `--rc`
 runs. `sp_tensor_scale`'s own default line is `rc.hpp:1452`, its numerator
@@ -1034,7 +1051,7 @@ number exists. D2 is B3 above; D13 is B18.
 | D8 | `LightConeDensities` interface | L-generic alignment slot / explicit coefficient / keep the A = 2 shape | reusing φ₂ for L = 1 is "numerically exact, semantically a lie" | an interface change that would also derive ⁶Li's 1.5 and 6/√2 |
 | D9 | b₂_32 | inherit 2x·b₁ / state it | none | one stated line |
 | D10 | Δ_32 (cos 2φ) | none / reuse ⁶Li's toy 1e−2 | 3·Q_NN = ±3 at J = 3/2 gives a larger amplitude for the same Δ | `delta_32_func` |
-| D11 | Q(⁷Li) constant — **PAID 2026-09-06** | −4.00(3) / −4.06 fm², with a source → **−4.06 fm² adopted** | not in the tree; ratio 0.871 → 0.858 — **confirmed: 0.871265 → 0.858389** | done: `LI7_QUADRUPOLE_FM2` = −4.06 beside `LI6_QUADRUPOLE_FM2` in `rc.hpp:669`, and §4.2's gate is `li7_alpha_t_quadrupole` + doctest T13 + pytest G8 |
+| D11 | Q(⁷Li) constant — **PAID 2026-09-06** | −4.00(3) / −4.06 fm², with a source → **−4.06 fm² adopted** | not in the tree; ratio 0.871 → 0.858 — **confirmed: 0.871265 → 0.858389** | done: `LI7_QUADRUPOLE_FM2` = −4.06 beside `LI6_QUADRUPOLE_FM2` in `include/lipolgen/rc.hpp:726`, and §4.2's gate is `li7_alpha_t_quadrupole` + doctest T13 + pytest G8 |
 | D12 | the J = 3/2 tensor run plan | two-state T = ±1 contrast / a thirds pattern | the pure-alignment fill is rank-3 clean by construction | a new plan in `spin.hpp`, `cli.py` |
 
 **(e)** Deciding any of them changes nothing shipped until step 3 of
@@ -1076,7 +1093,8 @@ permissive is excluded by the row's own note (forced by HepMC3/LHAPDF).
 site says it was confirmed. B24's licence statement (the wheel is a combined
 work under GPL-3.0-or-later) rests on it.
 
-**(d)** No number. Changing the identifier is 101 headers + `CITATION.cff` +
+**(d)** No number. Changing the identifier is **103** headers (101 when E2
+stamped them; re-measured 2026-09-16 by the gate itself) + `CITATION.cff` +
 `README.md`'s licence section + `ci.yml:33`/`PACKAGING.md`'s combined-work
 paragraphs, all gated by `test_spdx_headers.py` / `test_release_metadata.py`.
 
@@ -1194,9 +1212,39 @@ whole-tree greps — and supplies none, so that caveat stays **unbounded rather
 than bounded** and the draft's wording of it is unchanged
 (`run_2026-09-06/phase_C_numbers.md` §C1, `phase_C_survey.md`).
 
-**(d)** No number in the tree moves under any option.
+**And the ask's factor list gained a BOUND on a different leg, 2026-09-15**
+(`run_2026-09-06/phase_C_numbers.md` §C5.2; `phase_C_survey.md` §C-S6). By
+Chang *et al.*'s own §IV — *"only accounts for the acceptance effect and does
+not incorporate the efficiencies of the detector … nor the efficiency and
+acceptance of the reconstructed distribution"* — `COHERENT_JPSI_EFF_IR8_LI7`
+= **0.1775**, the single largest multiplier in the O5 chain, is a **pure
+geometric acceptance** and therefore an **UPPER bound** on the far-forward
+intact-recoil tagging efficiency × acceptance. Direction **DOWN**,
+**unquantified**: every omitted factor is ≤ 1 and nothing says how far. It is
+a **third** factor on the leptons' side, so it **compounds with the
+decay-lepton omission and breaks** the ×1.1224-UP / ×0.897-DOWN = 1.007
+balance that is the stated reason neither of those two may be quoted alone.
+**The tree STATES the bound and folds NO value in** — applied 2026-09-15 at
+the constant's home (`coherent.hpp:250-260`), in `o5_a2_reach.py` and in
+`OPEN_ITEMS_SOLUTIONS.md` §11.3 — so *"send the ask with its four
+unestablished factors inside it"* now means sending a list in which one entry
+is bounded ABOVE and three are not bounded at all.
 
-**(e)** Nothing in the tree; the draft is the artefact.
+**(d)** No number in the tree moves under any of (i)–(iii) — the letter is
+the artefact and the band was measured before it. **Including the recoil-leg
+bound: it is a direction, not a value**, so the O5 band is untouched at both
+ends and was re-verified bit-identical after it was recorded (2.618 σ at
+13.1 fb⁻¹/u headline; LOW 2.627 at 13.0; TOP 2.842 … 3.292 at 11.1 … 8.3;
+`o5_a2_reach.py` `self-check: OK`, every rung bit-identical). **What has no
+measured price and is stated as such:** folding any lower ε in. Nobody has a
+number to fold — that is the point of the bound — so the cost of doing it
+cannot be quoted, only its direction (down, on top of the decay leptons).
+Option (i) is the only one whose TEXT changes: the ask's fourth caveat reads
+differently once one of its factors is bounded above.
+
+**(e)** Nothing in the tree; the draft is the artefact. The bound's own
+sentences are already in the tree at the three sites above and are not
+contingent on this row.
 
 ---
 
@@ -1231,6 +1279,111 @@ cases and a duplicated helper.
 **(e)** If split: two new `TEST_CASE`s in `tests/test_b1_nuclear.cpp`, and
 `docs/USAGE.md` §2a's sentence — which now names exactly which rows are
 registration-skipped and which are tallied as passed — becomes "all of them".
+
+### B27. The tagged S–D interference phase, and the `tagged.json` re-pin that followed it — *applied, confirm or revert* (`STATUS.md` decision **row 26**, added 2026-09-15; `src/core/tagged.cpp` `build_amp2`; `../run_2026-09-06/STATUS.md` CW row; `../../benchmarking/07_cw_sign_investigation.md`)
+
+**(a)** Two questions that travel together. **(a1)** Confirm that
+`TaggedModel::build_amp2` must apply the partial-wave phase φ_L = i^L ψ_L
+(written `(-1)^floor(L/2)` on the real radial amplitudes), which it did not
+before `a7b3d18` — so **A_zz^tag flips sign on every spin-1 tagged channel at
+the shipped defaults**. **(a2)** Confirm that
+`validation/reference/tagged.json`'s two spin-1 `model` blocks stay re-pinned
+**from this library**, rather than from `polligen`, whose own
+`tagged._amp2_table` carries the same missing phase.
+
+**(b)** (a1): (i) keep the phase (applied); (ii) revert to the unphased sum.
+(a2): (i) keep the re-pin from this library (applied) — `tagged.json` stops
+being an external port gate for those two blocks; (ii) restore `polligen`'s
+blocks as a **known-wrong port gate under an `xfail`** that names the bug — an alternative OVERTAKEN on 2026-09-15: the sibling fixed its own phase (commit `1066555`), so the polligen port gate can simply be RESTORED with no `xfail`, the fixed polligen agreeing with the re-pin at 2e-13 (re-measured 2026-09-16) —
+keeping the external gate at the cost of a permanently failing pin.
+
+**(c)** The run calls (a1) **certain**, on three independent derivations
+(`07_cw_sign_investigation.md`). The Cosyn–Weiss Eq. (6.12) identity
+A_zz^wf = [(2 f₀ + f₂/√2)(f₂/√2)/(f₀² + f₂²)](1 − 3 cos²θ_k) holds to
+**8.882e−16** on every cell of the 280 × 96 grid on both wave functions, and
+CW TABLE II's three cell-centre rows reproduce to residuals **4.36e−06 /
+2.77e−06 / 3.64e−07** (`tests/test_tagged.cpp:664` (anchor read 2026-09-15 "-1.9371243623"),
+`tests/test_tagged.cpp:665` (anchor read 2026-09-15 "+0.9993127695"),
+`tests/test_tagged.cpp:667` (anchor read 2026-09-15 "+0.9673403636"), all
+pinned at atol 1e−4). A regression guard at
+`tests/test_tagged.cpp:682` (anchor read 2026-09-15 "ik30] < -1.5") pins the sign
+that separates the two amplitudes, so the pre-fix behaviour cannot return
+silently. This is a **bug fix against a published formula**, not a modelling
+choice — which is the argument for treating it differently from the other
+applied rows, and the reason a row exists at all is that it is nonetheless the
+one shipped output that moved in `91e48b9..HEAD`.
+
+**(d)** **Measured cost of the applied option** (re-measured 2026-09-15 on
+`86cd1e6`). A_zz^tag(k = 0.20 GeV): **+0.8450 → −1.2069** (Hulthén),
+**+0.4518 → −0.5191** (VMC). At the CLI's own default fill (`--pz 0.7`
+max-entropy ladder) the ⁶Li Hulthén tag-fraction prediction goes
+**0.02703 → 0.02040**, −24.5 %, and the tensor-thirds categories go
+0.02813 → 0.01840 (azz±) and 0.01778 → 0.03722 (azz0). **What does NOT move:**
+σ_pb to ≤ 2e−16 relative; every inclusive, coherent and ⁷Li tagged cell
+byte-identical on two seeds; P_D (a norm, phase-blind); the four dilutions to
+≤ 1.4e−6 absolute (angle-integrated, so ∫Θ₀Θ₂ dc = 0 kills the cross term and
+only the 96-cell quadrature residual survives); `LI6_CLUSTER_POLARIZATION`
+(§B6, checked). **Reference files:** `b1_default_li6`, `beams`, `bookkeeping`,
+`coherent`, `spectator`, `spin`, `xsec` all sha256-identical to `a94fd6e`;
+`tagged.json` differs **only** in `channels/deuteron/model` and
+`channels/li6_alpha/model` (8 fields each — e.g. deuteron `vector_dilution`
+0.932494769105 → 0.932496109312) plus two added provenance keys, with the
+`li7_alpha` block and every non-`model` part identical; `_manifest.json`
+differs in the one `tagged.json` provenance line. **The brief's expectation
+`validation/reference/` byte-identical to `a94fd6e` must therefore be read as
+byte-identical EXCEPT those two `model` blocks and the manifest line, by this
+row.** **Cost of (a1)(ii):** restores a sign the run calls refuted at blocker
+severity, re-breaks the CW gate, and moves every number above back.
+**Cost of (a2)(ii):** an `xfail` on a reference pin, i.e. a gate that is green
+only because it is told to expect failure.
+
+**(e)** Confirm both: close the row; the provenance note already in
+`validation/README.md` and `_manifest.json` stands. Revert (a1): one line in
+`src/core/tagged.cpp` `build_amp2`, the five re-pinned test sites listed in
+`../run_2026-09-06/phase_CW_numbers.md` §9, and a re-dump of `tagged.json`.
+Revert (a2) alone: re-run `validation/dump_polligen_reference.py` for those two
+blocks and mark the resulting pin `xfail` with the bug named.
+
+### B28. `PolarizedLithiumSim`'s published A_zz^tag numbers carry the same inverted sign (`STATUS.md` decision **row 27**, added 2026-09-15; `../run_2026-09-06/STATUS.md` CANDIDATE section)
+
+> **ANSWERED IN THE SIBLING (2026-09-15 19:50, its commit `1066555`, author Chao Peng — not this run):** `evgen/polligen/tagged.py` now applies the relative phase (−1)^(L//2), the AV18 deuteron control gate was added, money plot 4 was regenerated (90° curve −0.482 → +0.922; folded +0.491 → −0.843; `evgen/README.md:117` now reads "the folded A_zz reads −0.84"), and the sibling's commit records agreement with LiPolGen's re-pinned reference tables at 2e-13 — re-measured here 2026-09-16 against the sibling at fe1e58e: worst relative difference 1.33e-13 (li6_alpha) / 2.28e-13 (deuteron) between the fixed polligen's model blocks and LiPolGen's re-pinned `tagged.json`, inside the C++ gate's rtol 1e-12. The "+0.49 … −0.48" text quoted below exists only at the pre-fix commit 2a27972.
+
+**(a)** *(as it stood 2026-09-15 before the sibling's fix)* The sibling repository's `tagged.py:247` built its amplitude the way
+this library did before `a7b3d18`, so its published A_zz^tag numbers — and the
+figure made from them — carry the inverted S–D interference sign. Should they
+be regenerated?
+
+**(b)** (i) fix `tagged.py:247` and regenerate the numbers and the figure;
+(ii) fix the code and flag the existing figure as superseded, without
+regenerating; (iii) record the finding only — the status quo until 2026-09-15 19:50, when the sibling took option (i) itself. **Row 27 is therefore CONFIRM ONLY: the question is answered in the other repository.**
+
+**(c)** The defect is **inherited, not independent**: it is the same missing
+φ_L = i^L ψ_L, and §B27(c)'s three derivations settle it. This is a decision
+rather than a cost inside row 26 because it is about **another repository**
+with its own published output, and because nothing in this tree changes
+whichever way it goes.
+
+**(d)** **Not measured here, and stated as such — precisely.** Nothing in
+`PolarizedLithiumSim` was EXECUTED for this row: no script of that tree was
+run, and no number was produced from it. Numbers ARE quoted **from** it, and
+by reading: its `evgen/README.md:113-115` says *"the folded A_zz reads +0.49
+and −0.07 at k ≈ 0.33 GeV/c where the 90° curve says −0.48"*, and
+`evgen/money_tagged_azz_6Li.png` is named as the figure that carries the same
+sign. The one number that was **measured** is this tree's own reproduction of
+that curve value — **−0.4786 pre-fix, +0.9279 after** the fix
+(`../run_2026-09-06/phase_CW_numbers.md` §11.2, row 5) — which is a LiPolGen
+measurement standing beside the sibling's published figure, not a re-run of
+it. What is otherwise known is the code path and that it matches the pre-fix
+one. *(This paragraph read "no number from it is quoted" until 2026-09-15,
+which `STATUS.md` row 27 repeated and §11 of the phase record contradicted at
+eight itemised sites; both are corrected.)* (i) costs
+a regenerated figure and whatever cites it; (ii) costs a flag and leaves the
+numbers wrong; (iii) costs a published figure that this project has established
+carries a wrong sign.
+
+**(e)** (i) or (ii): a change in a repository this run did not touch, plus
+whatever announcement its publication history requires. (iii): close the row
+with the finding on the record.
 
 ---
 
@@ -1285,8 +1438,8 @@ one.
    13, 14/15** only (row 7 `phase_B_numbers.md:1664`; row 8 `coherent.hpp:84`,
    `USAGE.md:1566`, `OPEN_ITEMS_SOLUTIONS.md:2144`; row 12
    `phase_D_numbers.md:1432`; row 13 `test_release_metadata.py:7`,
-   `check_spdx_headers.py:14-16`, `README.md:275`; rows 14/15 `README.md:253` (anchor read 2026-09-15 "activates it")
-   and `README.md:241` (anchor read 2026-09-15 "PACKAGING.md")). Rows 1–6 and 9–11 were pointed at by none: their
+   `check_spdx_headers.py:14-16`, `README.md:288`; rows 14/15 `README.md:266` (anchor read 2026-09-16 "activates it")
+   and `README.md:254` (anchor read 2026-09-16 "PACKAGING.md")). Rows 1–6 and 9–11 were pointed at by none: their
    dependents cite `OPEN_ITEMS_SOLUTIONS.md` §10 (conditions 4/6),
    `phase_A_miller_normalisation.md`, or `phase_C_numbers.md` §C5 instead
    (`constants.hpp:107`, `CONVENTIONS.md:106/233/266`, `USAGE.md:207/292`,
@@ -1339,7 +1492,16 @@ one.
    `STATUS.md` row 20 carry the numbers, and the measured answer is that on
    ⁷Li it moves no observable (σ to 1 ulp) while moving 0.106 % of a
    100 000-event sample into other cells, and on ⁶Li it moves the rate by
-   −0.0023527 %. Row 17 still carries the word.
+   −0.0023527 %.
+   **CLOSED FOR ROW 17, 2026-09-06:** the RC-anchor alternatives were RUN, not
+   estimated — §B13(d)'s three-row band table
+   (`../run_2026-09-06/phase_A_numbers.md` §A2,
+   `python/tests/test_rc_low_x_anchor.py`) — and the word is gone from row 17
+   as well.  *(This line read "Row 17 still carries the word" until
+   2026-09-15; §B13(d), the index table's shape column and `STATUS.md` row 17
+   had all said PRICED since 2026-09-06, so the tree disagreed with itself at
+   this one site.  **All three of the run's unpriced costs are now priced**,
+   and `SUMMARY.md` item 8 carries the same correction.)*
 
 9. **The count of ban-lift sites is stated three ways**: `PLAN.md` A7
    "fourteen files", `phase_A_numbers.md` status note "the sixteen files",
@@ -1367,7 +1529,7 @@ one.
     paragraph — the same drift `validation/check_physics_channels_links.py`
     exists to catch. **APPLIED 2026-09-05:** every `path:line` in this file
     was re-read against the tree; **38 anchors moved**, and three were added
-    (`README.md:241` (anchor read 2026-09-15 "PACKAGING.md"), `:253` (anchor read 2026-09-15 "activates it"), `:298` (anchor read 2026-09-15 "and CITATION") — the rows 15/14/13 citations item 4's
+    (`README.md:254` (anchor read 2026-09-16 "PACKAGING.md"), `README.md:266` (anchor read 2026-09-16 "activates it"), `README.md:311` (anchor read 2026-09-16 "and CITATION") — the rows 15/14/13 citations item 4's
     list was missing). **NOT applied, and an option rather than an
     oversight:** putting this file into the gate's `EXTRA_DOCS`. Measured with
     the gate's own `REF`/`RANGE` regexes over this file with THIS ITEM
@@ -1378,7 +1540,7 @@ one.
     (`rc.hpp:270`, `USAGE.md:207`). Real coverage therefore means first
     rewriting every anchor in repository-relative form, and adding the
     document also moves every sentence in the tree that counts the gate's
-    documents: `README.md:101` "over three documents", `SUMMARY.md:106` "the
+    documents: `README.md:112` "over three documents", `SUMMARY.md:106` "the
     strict gate covers **three** documents", and the "both extra documents" of
     `docs/PACKAGING.md:164` and `phase_E_numbers.md:707`, plus §E1's own
     record of why those two and not others. Both are the author's call, not a

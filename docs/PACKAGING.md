@@ -166,8 +166,15 @@ libpythia8.so  => <scratch>/ci-clone/deps/install/lib/libpythia8.so
 
 The doctest line is **bit-for-bit the tallies the author's own prefix
 produced at the commit this was run against** (`7f68339`) —
-400 / 17 240 262 / 1 skipped / 0 failed; phase F has since added one case, so
-both trees now read 401 / 17 240 286. That is the strongest single statement
+400 / 17 240 262 / 1 skipped / 0 failed; phase F then added one case, so both
+trees read 401 / 17 240 286 at `5af0427`.  **The tally has moved twice since
+and this page's table is not re-measured with it** — the 2026-09-06 run's
+close-out measures **408 cases / 17 241 975 assertions / 0 skipped / 0
+failed**, **1085 pytest passed / 151 skipped**, and the two gate rows above
+read **1240 strict / 95 ranges / 7 external / 0 broken / 24 allow-listed**
+(+ 19/115 and 8 external in the extra documents) and **SPDX 103/103**.  The
+CI clone has not been re-run at those commits, so the bit-for-bit claim below
+stands **as of `7f68339` only**. That is the strongest single statement
 on this page: a dependency stack rebuilt from four URLs by
 the script in §1 reproduces, to the digit, the environment this generator's
 rtol-1e-12 pinned numbers were measured in.

@@ -139,8 +139,12 @@ def test_how_the_anchor_propagates_in_x():
 
 # ---------------------------------------------------------------- A4
 
-def test_the_anchor_moves_two_columns_and_one_meta_key():
-    """A4.  It is a band knob and nothing else: no kinematics, no weight."""
+def test_the_anchor_moves_two_columns_and_two_meta_keys():
+    """A4.  It is a band knob and nothing else: no kinematics, no weight.
+
+    TWO `meta` keys, of 60: `rc_delta_low_x` and the `knob_provenance` row
+    that RECORDS it -- which is what the assertion below has always said.
+    (Renamed 2026-09-15; it read `..._and_one_meta_key`.)"""
     base = _pipeline().generate(0)
     for anchor in ANCHORS[1:]:
         cols = _pipeline(anchor).generate(0)

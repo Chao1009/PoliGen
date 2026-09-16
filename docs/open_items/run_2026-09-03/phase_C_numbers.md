@@ -623,7 +623,12 @@ the beams can reach. SCHC transverse decay throughout — (3/8)(1 + cos²θ*), t
 *pessimistic* weighting, which pushes leptons toward the beam; isotropic gives
 0.9960. p_T(J/ψ) ≈ 0.16 GeV is neglected (it helps one lepton and hurts the
 other). The p_T > 0.2 GeV column is the sibling `../PolarizedLithiumSim`'s own
-`HfsModel(pt_min_track=0.2)` stand-in, not an in-tree number.
+`polligen.hfs.HadronResponse(pt_min_track=0.2)` stand-in, not an in-tree
+number. *(Re-pointed 2026-09-15: this record wrote the class as `HfsModel`,
+which names nothing in that repository — 0 grep hits against 26 for
+`HadronResponse`. The class is `polligen.hfs.HadronResponse`,
+`evgen/polligen/hfs.py:251` for the label and `:293` for the default;
+`run_2026-09-06/phase_C_numbers.md` §C5.1.)*
 
 **The reconstruction efficiency is UNBOUNDED here, and that is the result.**
 No per-lepton tracking or PID efficiency exists anywhere in this tree. The
@@ -1000,7 +1005,10 @@ sign were missing from it entirely.
    efficiency is UNBOUNDED HERE**: no tracking or PID efficiency for a decay
    lepton exists anywhere in this repository. The 0.95/track used to draw the
    band's low end is the sibling `../PolarizedLithiumSim`'s own
-   `HfsModel(eff_track=0.95)`, which that file labels a stand-in. This is what
+   `polligen.hfs.HadronResponse(eff_track=0.95)` (`evgen/polligen/hfs.py:251`),
+   which that file labels a stand-in on the line that states it. *(Re-pointed
+   2026-09-15 from `HfsModel`, which names no class there — see §C5.1 of
+   `run_2026-09-06/phase_C_numbers.md`.)* This is what
    leaves the verdict band open below. **Surveyed 2026-09-15**: that sibling
    was read end to end (`fastsim/polli_fastsim/`, `tools/fullsim/`,
    `tools/analysis/`, `plans/03`, `plans/09`, all 54 `refs/` entries) and has
@@ -1539,7 +1547,8 @@ channel.
 | `tensor_dilution` | 0.959488074 | 0.948145618 | **−1.182 %** |
 
 > **Re-measured 2026-09-06 after the S–D interference fix — the table's
-> conclusions are unmoved and its last two rows shift in the 7th decimal.**
+> conclusions are unmoved and its last two rows shift by ≤ 1.4e−6 absolute —
+> the **vector** row in its 6th decimal, the **tensor** row in its 7th.**
 > Both dilutions are angle-integrated and `∫Θ₀Θ₂ dc = 0` by L-orthogonality,
 > so the S–D cross term the fix flips cannot survive the integral; what is left
 > is the 96-cell midpoint-quadrature residual of that zero. Post-fix:
@@ -1758,7 +1767,8 @@ family. So the same +2.0688 % sat in the RECORD as well as in the rate:
 | AV18 `fdeut` deuteron | 0.913594777 | **+2.0688 %** apart |
 
 > **Re-measured 2026-09-06 after the S–D interference fix — the two dilutions
-> move in the 7th decimal and the +2.0688 % does not.** Both are
+> move by ≤ 1.4e−6 absolute (both are `vector_dilution`, so both move in
+> their 6th decimal) and the +2.0688 % does not.** Both are
 > angle-integrated, so only the 96-cell midpoint-quadrature residual of
 > `∫Θ₀Θ₂ dc = 0` moves: **0.932496109312** (Hulthén, P_D = 0.045) and
 > **0.913595978560** (AV18 `fdeut`), **1.020687624722** apart against
@@ -2583,7 +2593,7 @@ them** — it did not report them as unchecked either.
 
 Rule **D** now resolves them against the dependency tree `env.sh` sets up.
 *Two names exist for that prefix and both are honoured*: `env.sh` exports
-`$LIPOLGEN_DEPS`, while `CMakeLists.txt`, `README.md:211` and `docs/USAGE.md:19`
+`$LIPOLGEN_DEPS`, while `CMakeLists.txt`, `README.md:224` and `docs/USAGE.md:19`
 call the same directory `$LIPOLGEN_DEPS_PREFIX` (it is a CMake cache variable
 that CMakeLists.txt also reads from the environment). Both name
 `<...>/deps/install`; the unpacked sources sit beside it at

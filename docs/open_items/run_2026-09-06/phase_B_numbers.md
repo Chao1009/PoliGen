@@ -32,6 +32,14 @@ corrected "+3.1e-6" / "2e-3 -> 1e-4". This note does not fix that (read-only
 phase); it is flagged here so the next phase does not quote `STATUS.md`'s CW
 paragraph as the final word without checking `53f6951`'s diff.
 
+> **DISCHARGED 2026-09-15.** `STATUS.md`'s CW row now reads **+3.1e-6** with
+> the per-M norm-residual explanation, and its tolerance clause says what the
+> tree actually carries: **no** CW tolerance was ever widened — `a7b3d18`
+> itself shipped atol **1e-4** on both k = 0.30 cell-centre rows, so
+> `53f6951`'s message describes a tightening that had already landed. The
+> third TABLE II row (k ≈ 1.00 GeV) was tightened 2e-3 → 1e-4 on 2026-09-15.
+> `53f6951` is now named in the CW row's commit column beside `a7b3d18`.
+
 The doctest/pytest/gate/SPDX tallies above match the CW row's own
 "End state" line in `STATUS.md` (404 / 17 240 391 / 1 skipped; 1004 pytest /
 127 skipped; gate 1220/96/7/0/6; SPDX 102/102) digit for digit — i.e. `53f6951`
@@ -414,6 +422,7 @@ read-only baseline and is re-measured here rather than copied.
 | … `SPIN32_FINITE_GAMMA.md` | 19 / 115 / 0 broken | 19 / 115 / 0 broken | unchanged |
 | … `PYTHIA_BRIDGE.md` | 0 / 8 external / 0 broken | 0 / 8 external / 0 broken | unchanged |
 | `check_spdx_headers.py` | **102 files, all stamped** | **102 files, all stamped** | unchanged — **no source file was added** |
+| knob-provenance matrix (`len(SPECS)` / `len(VARIANTS)` / `len(CELLS)`) | **12 / 76 / 592** (measured at `cdd8591`) | 12 / 78 / 606 *(derived: +2 variants × 7 specs, from the pytest row above — B1 and B2 land in one commit, so this intermediate cannot be measured from a commit)* | **+2 variants, +14 cells** — the two B1 variants above. *(Row added 2026-09-15: the count was stated only in `CONVENTIONS.md`, `pipeline.hpp` and `USAGE.md`, which meant the next phase had nothing to diff against and all three went stale.)* |
 | `git diff --stat validation/reference/` | empty | **empty** | no rtol-1e-12 reference gate moved |
 
 *(The docs-gate "before" number was re-measured on a **temporarily reverted**
@@ -995,6 +1004,7 @@ present and uncommitted.
 | … `SPIN32_FINITE_GAMMA.md` | 19 / 115 / 0 broken | 19 / 115 / 0 broken | unchanged |
 | … `PYTHIA_BRIDGE.md` | 0 / 8 external / 0 broken | 0 / 8 external / 0 broken | unchanged |
 | `check_spdx_headers.py` | 102 files, all stamped | **102 files, all stamped** | unchanged — **no source file was added** |
+| knob-provenance matrix (`len(SPECS)` / `len(VARIANTS)` / `len(CELLS)`) | 12 / 78 / 606 *(derived, see the B1 table)* | **12 / 81 / 627** (measured at `af3f415`) | **+3 variants, +21 cells** — the three B2 variants above. **Measured at each commit of the run, 2026-09-15**, by importing the test module: **71 / 547 at `91e48b9`** → **76 / 592 at `cdd8591`** and `53f6951` → **81 / 627 at `af3f415`**, `ba773c1` and HEAD. |
 | `git diff --stat validation/reference/` | empty | **empty** | no rtol-1e-12 reference gate moved |
 
 **The line shifts were absorbed, and one of them needed hands.** `rc.cpp` grew

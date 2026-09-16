@@ -32,8 +32,8 @@ that go through `KnobProvenance::meta_value()` — `pol_sf`, `rc_scope`,
 time in `python/bindings.cpp` — the CLI's `KNOB PROVENANCE` banner block
 (`cli.knob_provenance_lines`), and `python/tests/test_knob_provenance.py`,
 which rebuilds the (spec × knob) matrix — 12 (isotope, channel, plan) specs
-× 76 knob variants = 592 cells (re-measured 2026-09-06), not the full
-(channel × plan) product; see
+× 81 knob variants = 627 cells (re-measured 2026-09-15; 76 / 592 was Phase A's,
+left behind by Phase B), not the full (channel × plan) product; see
 `USAGE.md` §7c — and asserts the table against
 the **output hash**. **A knob added without a row fails that test.** Do not add
 a per-knob reach sentence to the banner or a bare per-knob key to the `meta`:

@@ -365,8 +365,8 @@ inline constexpr double RC_X_HIGH       = 0.16;
 /// anchors by the log-linear interpolation (x0.4327 and x0.4993 at x = 0.063
 /// and 0.10 where the anchor itself is x0.3767), and IDENTICALLY ZERO at
 /// x >= RC_X_HIGH.  It moves exactly two columns (`rc_tensor_lo`,
-/// `rc_tensor_hi`) and one `meta` key, and NOT the clipped-event fraction on
-/// the tagged band: `clamp_tau` clips |tau| and delta never enters it.
+/// `rc_tensor_hi`) and TWO of the 60 `meta` keys (`rc_delta_low_x` and the
+/// `knob_provenance` row RECORDING it), and NOT the tagged clipped fraction.
 /// Pinned by `python/tests/test_rc_low_x_anchor.py`.  Still UNDECIDED.
 inline constexpr double RC_DELTA_LOW_X            = 0.30;
 /// The residual HERMES actually ACHIEVED at the lowest x: 2e-3 against a

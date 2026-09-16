@@ -179,22 +179,22 @@
   "first": "X (pdg 92). The balance is **per-nucleon**, `k + P_N = k' + X`, exactly as",
   "last": "number the generator could emit was made on the toy** — including after the"
  },
- "docs/USAGE.md:1933-2124": {
+ "docs/USAGE.md:1938-2129": {
   "sha256": "90a7c095fadc0dee726f4abe18f015cbe6f0854a37ea71d93e4fac3e9aa7eeef",
   "first": "## 5. Far-forward routing",
   "last": "  `rc_tensor_lo`/`rc_tensor_hi`/`rc_tail`. **Every other CLI plan is"
  },
- "docs/USAGE.md:2014-2020": {
+ "docs/USAGE.md:2019-2025": {
   "sha256": "cfa42994d7893afe53474900d5ca86ee2ae2bea465e3bb6860fbbbb5a36be9b1",
   "first": "## 7. Checks you get for free",
   "last": "```"
  },
- "docs/USAGE.md:2717-2724": {
+ "docs/USAGE.md:2724-2731": {
   "sha256": "9cf755a3c8b97c0b7abde6620cc7250bf839feba9aff18acc6a0239127260383",
   "first": "## 8. Command-line generators",
   "last": "```"
  },
- "docs/USAGE.md:2744-2941": {
+ "docs/USAGE.md:2751-2948": {
   "sha256": "09f5b2bb32ff0ac99ff94ea17b2d4d69cb0c936f487c70360ee1283946b4ecc0",
   "first": "## 9. Polarized ⁶Li configurations for coherent-diffraction codes",
   "last": "and `phase_G_numbers.md` the reproduced numbers."

@@ -203,13 +203,31 @@ describes actually happens.
 
 ⁶Li inclusive, config 1, `--b1-model li6-convolution`, `--x-max 0.95`,
 `tensor-thirds` at P_z = 0.7, P_zz = 0.6, 2000 events, seed 7, one thread.
-The hash is sha256 over every generated ndarray column.
 
-| `--r-source` | σ [pb] | σ(+1) ≈ σ(−1) [pb] (equal to 15 printed digits; 1 ulp apart at `unset`/`sigma-lt`, equal as doubles at `r1998`) | σ(0) [pb] | sha256/16 of all columns | `meta["r_source"]` |
-|---|---|---|---|---|---|
-| `unset (default)` | 591846.161405217 | 591841.960163281 | 591854.563889088 | `105e234556382ee6` | `unset` |
-| `sigma-lt` | 591846.161405217 | 591841.960163281 | 591854.563889088 | `105e234556382ee6` | `not read at r_source = sigma-lt` |
-| `r1998` | 587793.902124821 | 587789.915152379 | 587801.876069703 | `2ace7fc1bc3ffa9e` | `r1998` |
+**The hash recipe, stated (2026-09-15).** As first published this table gave
+two bare digests (`105e234556382ee6` / `2ace7fc1bc3ffa9e`) under the sentence
+*"the hash is sha256 over every generated ndarray column"*, which does not fix
+a digest: it names neither the column order nor whether the columns are hashed
+separately or concatenated, and six plausible readings of it reproduce none of
+the two. **They are replaced here by a recipe a reader can run** — one
+`sha256`, columns taken in `sorted()` name order, each contributing
+`name.encode("utf-8")` followed by `np.ascontiguousarray(col).tobytes()`,
+truncated to the first 16 hex characters, over the 48 columns of the `--npz`
+(`meta` excluded) — together with **the byte comparison the digests existed to
+make**, which needs no recipe at all.
+
+| `--r-source` | σ [pb] | σ(+1) ≈ σ(−1) [pb] (equal to 15 printed digits; 1 ulp apart at `unset`/`sigma-lt`, equal as doubles at `r1998`) | σ(0) [pb] | columns differing from `unset`, of 48 | sha256/16, recipe above | `meta["r_source"]` |
+|---|---|---|---|---|---|---|
+| `unset (default)` | 591846.161405217 | 591841.960163281 | 591854.563889088 | — | `da4e0c5cd2811390` | `unset` |
+| `sigma-lt` | 591846.161405217 | 591841.960163281 | 591854.563889088 | **0 — byte-identical** | `da4e0c5cd2811390` | `not read at r_source = sigma-lt` |
+| `r1998` | 587793.902124821 | 587789.915152379 | 587801.876069703 | **12** | `fc878f391d785aff` | `r1998` |
+
+Every σ in this table reproduces to every printed digit on the committed tree
+(`sigma_pb` 591846.1614052168 / 587793.9021248205; per-category
+591841.960163281 / 591841.9601632811 / 591854.5638890883 and 587789.9151523793
+/ 587789.9151523793 / 587801.8760697031); it is only the digests that were
+unreproducible, and the conclusion they carried — `sigma-lt` byte-identical to
+`unset`, `r1998` not — is re-measured directly above.
 
 σ moves by **−0.684681 %** (ratio 0.993153188), and every per-category cross
 section with it. Option (ii) **cannot** produce this: it never touches the
@@ -428,17 +446,26 @@ moves — the anchor is a band knob and nothing else.
 The one place the band is not a smooth rescaling is the tagged channels, where
 `tau_tag = 1 − n̄/n_M` diverges at the nodes of the M-dependent spectator
 density and `RcOptions::band_tau_max` = 1 clamps it. 20 000 events, `--config 1`,
-`--pzz 0.6`, ⁶Li at **seed 1** and ⁷Li at **seed 11** (the seeds that reproduce
-the published 0.62 % and 2.6 %):
+`--pzz 0.6`, ⁶Li at **seed 1** and ⁷Li at **seed 11**.
+
+> **RE-MEASURED 2026-09-15 — the ⁶Li column of this table was measured at
+> `cdd8591`, BEFORE the tagged S–D interference fix `a7b3d18`, and does not
+> reproduce on the committed tree.** The fix moves the spin-1 (M, cos θ_k)
+> draw that `RcModel::tagged_tau` reads, so the ⁶Li tagged clipped count moves
+> with it; ⁷Li is J = 3/2 and does **not** move. The pre-fix ⁶Li figures were
+> **124 = 0.6200 %** and mean \|w_hi − 1\| 2.587195e−02 / 2.297940e−02 /
+> 9.962921e−03; they are superseded by the row below and must not be quoted.
+> Every ⁷Li figure reproduces to every printed digit, as do all four
+> band-edge rows and the structural claim this section exists for.
 
 | | δ_low = 0.30 | 0.266 | 0.113 |
 |---|---|---|---|
-| ⁶Li clipped events / 20 000 | **124 = 0.6200 %** | **124 = 0.6200 %** | **124 = 0.6200 %** |
+| ⁶Li clipped events / 20 000 (re-measured 2026-09-15) | **245 = 1.2250 %** | **245 = 1.2250 %** | **245 = 1.2250 %** |
 | ⁷Li clipped events / 20 000 | **520 = 2.6000 %** | **520 = 2.6000 %** | **520 = 2.6000 %** |
 | non-band columns vs the 0.30 run | — | **all byte-identical** | **all byte-identical** |
 | min `rc_tensor_hi`, both isotopes, `== 1 − δ_low` exactly | **0.700** | **0.734** | **0.887** |
 | max `rc_tensor_lo`, both isotopes, `== 1 + δ_low` exactly | **1.300** | **1.266** | **1.113** |
-| mean \|w_hi − 1\|, ⁶Li | 2.587195e−02 | 2.297940e−02 | 9.962921e−03 |
+| mean \|w_hi − 1\|, ⁶Li (re-measured 2026-09-15) | 3.384715e−02 | 3.006184e−02 | 1.302792e−02 |
 | mean \|w_hi − 1\|, ⁷Li | 8.127222e−02 | 7.218497e−02 | 3.129231e−02 |
 
 **Identical, not merely close** — and the reason is structural, not
@@ -447,19 +474,21 @@ statistical: `RcModel::clamp_tau` (`src/core/rc.cpp`) clips |τ| against
 afterwards. So the anchor cannot move *which* events clip. What it moves is
 the **width of the band on the events that do**: |τ| is clamped to exactly 1
 there, so their edges are exactly 1 ∓ δ_low, and the extrapolated band on the
-worst-behaved 0.62 % of a tagged run is **[0.700, 1.300]** on the shipped
+worst-behaved 1.23 % of a tagged run is **[0.700, 1.300]** on the shipped
 anchor against **[0.887, 1.113]** on the panel's own reading. That is the real
 cost of the anchor at the clip: a factor 2.65 on the width of the least
 defensible part of the band.
 
 **Two bookkeeping facts from the same runs, recorded because they are quoted
-elsewhere.** The published **0.62 %** (⁶Li) is **seed 1**, and it is the
-**top** of a ten-seed scan — 0.4850 / 0.4900 / 0.4900 / 0.5100 / 0.5100 /
-0.5300 / 0.5400 / 0.5500 / 0.5550 / 0.6200 % at seeds 2 / 11 / 4242 / 3 / 4 /
-1234 / 20260713 / 99 / 42 / 1, **mean 0.5280 %, sd 0.0411** — so it should be
-read as the top of a scatter, not as *the* fraction. The ⁷Li **2.6 %** is
-**seed 11**; seed 1 there gives **2.51 %**. Both numbers reproduce; neither is
-republished as changed.
+elsewhere.** The ⁶Li **1.2250 %** is **seed 1** and sits mid-scatter in a
+ten-seed scan — 1.0950 / 1.1150 / 1.2000 / 1.2250 / 1.2450 / 1.2800 / 1.2800 /
+1.3350 / 1.3450 / 1.3650 % at seeds 4 / 2 / 20260713 / 1 / 1234 / 4242 / 99 /
+11 / 3 / 42, **mean 1.2485 %, sd 0.0923** (re-measured 2026-09-15; the
+pre-fix scan was 0.4850–0.6200 %, mean 0.5280 %, sd 0.0411, with seed 1 at its
+**top** — that reading of seed 1 does not survive the fix either). So it
+should be read as one draw from a scatter, not as *the* fraction. The ⁷Li
+**2.6 %** is **seed 11**; seed 1 there gives **2.51 %** — both reproduce
+unchanged on the fixed build.
 
 ### A2.6 The HIGH anchor: the record names no alternative
 
@@ -648,7 +677,7 @@ Ladder → typed, at the configuration of A3.3.
 | A_∥ from the rate, (σ₊−σ₋)/(σ₊+σ₋)/(P_e P_z) | −0.00117171560617921 → −0.00117174317396206, i.e. **−2.757 × 10⁻⁸ = −4.2717 × 10⁻⁶ σ_stat** | +4.019 × 10⁻¹⁶ absolute = **+6.23 × 10⁻¹⁴ σ_stat** |
 | δ(A_∥) = `err_a_parallel(N, P_e, P_z)` | 0.00645362787789465, **does not move** (it has no P_zz) | same, does not move |
 | δ(A_zz), δ(cos 2φ) at fixed N (∝ 1/P_zz) | **−18.119474 %** | **−20.000000 %** |
-| generated columns that move | **15 of 47** (`cell, e_prime, eta_e, kp, m, m_ion, nu, phi, pzz, q2, struck_pdg, theta_e, w2, x, y`; corrected 2026-09-06 — `R`, `m_struck` and `xL` are all-NaN, byte-identical columns on the inclusive channel that a NaN-blind `!=` counted as moved; the byte comparison `test_pzz_mode.py` P1 and the knob matrix use gives 15) | the same 15 |
+| generated columns that move | **15 of 48** (`cell, e_prime, eta_e, kp, m, m_ion, nu, phi, pzz, q2, struck_pdg, theta_e, w2, x, y`; corrected 2026-09-06 — `R`, `m_struck` and `xL` are all-NaN, byte-identical columns on the inclusive channel that a NaN-blind `!=` counted as moved; the byte comparison `test_pzz_mode.py` P1 and the knob matrix use gives 15) | the same 15 |
 | events landing in a different (x, Q²) cell | **1201 of 100 000 = 1.2010 %** | **106 of 100 000 = 0.1060 %** |
 | mean Q² of the accepted sample | 4.3162908488542 → 4.29061031437528 GeV², **−0.594968 %** | 4.21491916332097 → 4.2235038104617, **+0.203673 %** — *all of it from the 106 re-celled events, see A3.5* |
 
@@ -751,6 +780,22 @@ tensor factories, which have no ladder branch. This matters at J = 1, where
 the populations are fixed uniquely by (P_z, P_zz): a typed value that
 reproduced the ladder's fill exactly would have to be reported `not-read`, and
 a rule keyed on the plan name would get that wrong.
+
+> **Qualified 2026-09-15 — "a measurement" holds where the other fill can be
+> BUILT, and on three cells it cannot.** On the ⁶Li helicity-flip specs the
+> reason text does carry the count, verbatim: *"MEASURED here by rebuilding the
+> other mode's fill: 3 of 3 populations are different doubles"*. On the **three
+> J = 3/2 helicity-flip specs** — `inclusive-7Li/helicity-flip`,
+> `tagged-7Li-alpha/helicity-flip` and its `pe = 0` sibling — the typed fill is
+> **outside the plan's domain** at the matrix's own (P_z = 0.7, P_zz = 0.6):
+> `spin32_populations` refuses it (*"unphysical (pz = 0.7, t = 0.6, o = 0) —
+> p(m = −1/2) = −0.005 < 0"*). The row there is `read` **because the axis is
+> consulted and the refusal is quoted in the reason**, not because two
+> population vectors were compared — no populations were counted on those three
+> cells. The reason text has always said so; it is this section's
+> generalisation that was stronger than the J = 3/2 cell, and the matrix test
+> accepts the arrangement because a refused variant leaves the baseline row
+> unjudged (`test_knob_provenance.py:586-597`).
 
 The `--pzz` row moves with it. It was `not-read` under `helicity-flip`
 unconditionally; it is now `not read by plan helicity-flip at --pzz-mode

@@ -640,11 +640,24 @@ def test_the_table_matches_the_output_hash(cache, spec, variant):
 
 @pytest.mark.parametrize("spec", SPECS, ids=[s.tag for s in SPECS])
 def test_every_knob_row_is_covered(spec):
-    """A knob added without a matrix entry FAILS HERE.
+    """A knob_provenance ROW added without a matrix entry FAILS HERE.
 
     This is what makes the file a class fix rather than five instance fixes:
-    the table must enumerate every knob, and every row of it must be either
-    exercised above or excused by name with a reason.
+    every ROW of the table must be either exercised above or excused by name
+    with a reason.
+
+    WHAT IT DOES NOT CATCH, said plainly because this docstring used to claim
+    the stronger thing ("the table must enumerate every knob"): the assertion
+    compares `knob_provenance` ROWS against VARIANTS + EXCUSED, so a bound
+    `PipelineConfig` field that never got a row at all is invisible to it.
+    Walking the bound sub-structs against the table on 2026-09-16 found
+    several: `breakup.k_max`, `breakup.kappa_nn` (read at
+    `src/core/triton_sf.cpp`), `breakup.n_grid`, `struck.with_perp`, and the
+    three `Scenario::pol_electron` / `pol_ion_vector` / `pol_ion_tensor`
+    placeholders, which nothing in `src/` reads at all.  Closing that gap
+    needs a different test -- one that walks `dir(lg.make_config(...))`
+    recursively and requires each leaf to be a row, a row prefix (`rc_`,
+    `coherent_`) or a named exception -- and it is NOT this one.
     """
     got, _, rows, msg = _run(spec, {}, None, {})
     assert got == "ran", msg

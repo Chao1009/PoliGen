@@ -2360,8 +2360,8 @@ it is the only mechanism that would have caught 16 of the 20 above.
    > are pinned to declaration lines at all. **42 of the 1075 are not** — they
    > pass by the use-site carve-out, which pinned them to EVERY line of the
    > file carrying the name as code. **29 of those accepted more than one
-   > line**, the widest **14** (`python/lipolgen/__init__.py:416` `isotope`),
-   > then 11 (`src/core/pipeline.cpp:805` `B1Model`), 9, 6, 6, 6. Over all
+   > line**, the widest **14** (`python/lipolgen/__init__.py:422` `isotope`),
+   > then 11 (`src/core/pipeline.cpp:811` `B1Model`), 9, 6, 6, 6. Over all
    > 1075 the honest figure was **149**, not 120. §C9.3 closes that class
    > (rule S3, a fingerprint of the cited line): the 42 use-site citations now
    > accept exactly one line each, so over all 1075 it is **120**, which is
@@ -2535,8 +2535,8 @@ The 1075 named point citations split three ways, not one:
 
 So over all 1075 the honest figure was **149**, and the widest citations in the
 document were all in the class the residual did not mention: **14** accepting
-lines for `python/lipolgen/__init__.py:416` `isotope`, **11** for
-`src/core/pipeline.cpp:805` `B1Model`, then 9 (`__init__.py:424` `b1_model`),
+lines for `python/lipolgen/__init__.py:422` `isotope`, **11** for
+`src/core/pipeline.cpp:811` `B1Model`, then 9 (`__init__.py:424` `b1_model`),
 6, 6, 6 (`sampler.cpp:41` `q2_edges`, `pipeline.cpp:957` `InclusiveSampler`,
 `triton_sf.cpp:90` `HBARC_GEV_FM`).
 
@@ -2563,7 +2563,7 @@ are 6 (`fsi.hpp:238` `sigma_xn_mb`), 5 (`rc.cpp:695` `fc`), 5
 
 ### C9.4 The one exemption that was not per-citation — and where the leak was
 
-The sixth is **`src/core/pipeline.cpp:841` `coherent`**. Its `ALLOW` entry is
+The sixth is **`src/core/pipeline.cpp:847` `coherent`**. Its `ALLOW` entry is
 per-citation and pinned like the other five; the leak was **around** it, in the
 carve-out. The other five names are *declared* in the file that holds their
 exemption, so S2 governs every other citation of them there and says so
@@ -2593,7 +2593,7 @@ them** — it did not report them as unchecked either.
 
 Rule **D** now resolves them against the dependency tree `env.sh` sets up.
 *Two names exist for that prefix and both are honoured*: `env.sh` exports
-`$LIPOLGEN_DEPS`, while `CMakeLists.txt`, `README.md:224` and `docs/USAGE.md:19`
+`$LIPOLGEN_DEPS`, while `CMakeLists.txt`, `README.md:226` and `docs/USAGE.md:19`
 call the same directory `$LIPOLGEN_DEPS_PREFIX` (it is a CMake cache variable
 that CMakeLists.txt also reads from the environment). Both name
 `<...>/deps/install`; the unpacked sources sit beside it at
@@ -2626,7 +2626,7 @@ the old content); "−k" is *k* lines inserted.
 Every survivor is now declaration-pinned and is RESIDUALS 2 exactly: a
 `class X {` cited on N whose `virtual ~X() = default;` sits on N+2. The
 use-site survivors S3 removed were `python/lipolgen/cli.py:604` (as of adec442) and
-`python/lipolgen/__init__.py:424` (anchor read 2026-09-15 "20260713, run") at +1, and `__init__.py:249` and `:424` at
+`python/lipolgen/__init__.py:430` (anchor read 2026-09-15 "20260713, run") at +1, and `__init__.py:249` and `:424` at
 +2. Ranges: all **89 distinct cited blocks** — hence all **97** range
 citations — are reported at every one of the four drifts.
 

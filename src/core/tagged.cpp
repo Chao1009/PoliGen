@@ -417,9 +417,20 @@ std::vector<std::vector<double>> TaggedModel::build_amp2(double m_ion) const {
     for (std::size_t w = 0; w < rad.size(); ++w) {
       // phi_L = i^L psi_L.  Parity fixes L mod 2 inside one channel, so the
       // common i^(L mod 2) is an unobservable GLOBAL phase and the observable
-      // RELATIVE phase is real: (-1)^floor(L/2).  Identical rule to
-      // ClusterPartialWave::from_vmc / from_uw (src/core/b1_nuclear.cpp:249,
-      // :270), which is why the b1 and tagged sectors then agree.
+      // RELATIVE phase is real: (-1)^floor(L/2).  Identical PHASE rule to
+      // ClusterPartialWave::from_vmc / from_uw (src/core/b1_nuclear.cpp), and
+      // that is the extent of the agreement -- this comment claimed "which is
+      // why the b1 and tagged sectors then agree" until 2026-09-16 and no
+      // test compares the two modules.  MEASURED 2026-09-16: on the Hulthen
+      // waves the two are bit for bit (n_tag/n_b1 constant across all 96 c
+      // cells to <= 8.9e-16 at k = 0.0388 / 0.1979 / 0.4990 GeV, and
+      // psi2/psi0 = -phi2/phi0 exactly); on the VMC path the SIGN of the S-D
+      // interference agrees everywhere but the relative S/D MAGNITUDE differs
+      // by +0.78 % / +0.36 % / -4.4 % at k = 0.197 / 1.003 / 2.529 fm^-1
+      // (the last just above the D node), because this class renormalises
+      // each wave to sqrt(P_L) on its own 280-point grid with VmcRadial's
+      // LINEAR interpolation while b1_nuclear splines the file's nodes with
+      // one common unit factor.
       const double phase = ((l_of[w] / 2) % 2 == 0) ? 1.0 : -1.0;
       for (std::size_t ic = 0; ic < nc; ++ic) {
         ang[w][ic] = phase * cg_of[w] * theta_lm(l_of[w], ml_int, c_[ic]);
@@ -638,27 +649,26 @@ SpectatorLab boost_spectator(const TaggedChannel& channel, double k, double c,
     kx = kx2;
     ky = ky2;
   }
-  const double m = base.m_spec();
-  const double e_rest = std::sqrt(m * m + kx * kx + ky * ky + kz * kz);
-  const double m_beam = base.m_beam();
-  const double p_beam = base.beam_A * p_per_nucleon;
-  const double e_beam = std::sqrt(p_beam * p_beam + m_beam * m_beam);
-  const double gamma = e_beam / m_beam;
-  const double gbeta = p_beam / m_beam;
+  // Everything after the SPIN-FRAME ROTATION above is `spectator.hpp`'s own
+  // longitudinal boost, rigidity and x_L algebra -- the two spelled the same
+  // expressions line for line until 2026-09-16.  Verified bitwise identical
+  // on all seven shared fields at three (k, c, phi) points before the fold.
+  // What stays here is what `FragmentLab` has no slot for: the rotation, and
+  // the rest-frame (kx, ky, kz) the tagging block records.
+  const FragmentLab f =
+      boost_spectator_fragment(base, p_per_nucleon, kx, ky, kz);
   SpectatorLab out;
-  out.pz_lab = gamma * kz + gbeta * e_rest;
-  out.e_lab = gamma * e_rest + gbeta * kz;
-  out.pT = std::sqrt(kx * kx + ky * ky);
-  out.p_lab = std::sqrt(out.pT * out.pT + out.pz_lab * out.pz_lab);
-  out.theta = std::atan2(out.pT, out.pz_lab);
-  const double rigidity_beam = p_beam / base.beam_Z;
-  out.R = base.spectator_Z > 0 ? (out.p_lab / base.spectator_Z) / rigidity_beam
-                               : kNaN;
-  out.xL = out.p_lab / (base.spectator_A * p_per_nucleon);
+  out.pz_lab = f.pz_lab;
+  out.e_lab = f.e_lab;
+  out.pT = f.pT;
+  out.p_lab = f.p_lab;
+  out.theta = f.theta;
+  out.R = f.R;
+  out.xL = f.xL;
   out.kx = kx;
   out.ky = ky;
   out.kz = kz;
-  out.phi_spec = std::atan2(ky, kx);
+  out.phi_spec = f.phi;
   return out;
 }
 

@@ -322,8 +322,12 @@ gated at rtol 1e-12 against regenerated `validation/reference/*.json`
   polarized nuclear PDFs.
 - **Conventions, all decided**: `TENSOR_LL_SIGN = −1` (plans/08 D1, closed),
   ⁶Li effective polarization = the cluster picture's 0.81123 (plans/04 #6,
-  closed; the 0.81–0.85 band whose top is the Wiringa VMC 0.848 is the
-  remaining uncertainty, not the convention), `EmcBaseline` default = Epps21
+  closed; the **0.811 … 0.905** span the cluster product takes on this tree's
+  own wave functions, INSIDE which the Wiringa VMC 0.848 sits, is the
+  remaining uncertainty, not the convention — this line read "the 0.81–0.85
+  band whose top is the Wiringa VMC 0.848" until 2026-09-16, a reading
+  retracted on 2026-09-05 in `CONVENTIONS.md` and `PHYSICS_CHANNELS.md` and
+  corrected at those two sites only), `EmcBaseline` default = Epps21
   on the CT18ANLO denominator (mirrors the Python default).
 - **NOT ported, deliberately** (no C++ counterpart exists): the `reco.py` /
   `recopseudo.py` reconstruction chain and its published seven-bin coherent |t|

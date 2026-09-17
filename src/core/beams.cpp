@@ -93,9 +93,15 @@ const Ion& LI6() {
   // 6Li share one wave function.  Per-nucleon g1(6Li)/g1(d) is therefore
   // (1 - 1.5 P_D_LI6)/3 = 0.290 -- the deuteron's own dilution cancels
   // between the two isoscalar ions -- against the 0.358 the retired
-  // `LI6_NAIVE_ONE_THIRD` gave.  NOT adopted, and the upper end of the band:
-  // the six-body VMC of Wiringa PRC 89:024305 Table I reads the same
-  // whole-nucleus quantity ab initio as 0.848; 0.81-0.85 is the band.
+  // `LI6_NAIVE_ONE_THIRD` gave.  NOT adopted, and INSIDE the band: the
+  // six-body VMC of Wiringa PRC 89:024305 Table I reads the same
+  // whole-nucleus quantity ab initio as 0.848, which sits inside the
+  // 0.811228 ... 0.905427 span the cluster product takes on this tree's own
+  // wave functions (beams.hpp, C5.5), and the shipped 0.811228 is 4.3 %
+  // below it.  This comment said "the upper end of the band ... 0.81-0.85 is
+  // the band" until 2026-09-16; that reading was retracted on 2026-09-05 in
+  // docs/CONVENTIONS.md and docs/PHYSICS_CHANNELS.md and was corrected at
+  // those two sites only.
   static const Ion i{"6Li", 6, 3, 1.0, LI6_CLUSTER_POLARIZATION / 3.0,
                      LI6_CLUSTER_POLARIZATION / 3.0};
   return i;

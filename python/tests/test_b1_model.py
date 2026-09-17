@@ -49,10 +49,17 @@ N = 400
 SEED = 7
 
 # The CDKS camp's b1_d is a Q2 = 2.5 DIGITIZATION with no Q2 evolution, and in
-# the topmost cell of the default window (x = 0.955) its b1/F1 reaches 3.3 for
-# `cdks` and 5.6 for `li6-convolution` -- past where 1 + w_avg stays positive,
-# so `InclusiveSampler` refuses the run.  Both opt-in backends therefore need
-# a window that stops below it; Miller's b1 is a ratio model and does not.
+# the topmost cell of the default window (x = 0.954993) its b1/F1 reaches 6.52
+# for `cdks` and 5.91 for `li6-convolution` -- past where 1 + w_avg stays
+# positive, so `InclusiveSampler` refuses the run.  Both opt-in backends
+# therefore need a window that stops below it; Miller's b1 is a ratio model
+# (0.145 at the same point) and does not.
+#
+# Those two numbers live in ONE place, `cli.B1_TOP_CELL_B1_OVER_F1`, and
+# `test_the_top_cell_note_is_the_measured_one` below pins them against the
+# shipped kernel.  This comment said 3.3 / 5.6 until 2026-09-16, the `--x-max`
+# help said 6.6 / 5.6 and the refusal said 3.3 / 5.6: three spellings of one
+# measurement, none of them the measurement.
 X_MAX = 0.95
 
 
@@ -1283,3 +1290,36 @@ def test_r_source_moves_the_unpolarised_rate_unlike_b1_unpol():
     assert not np.array_equal(np.asarray(base.dis_sampler.cell_xsec_pb),
                               np.asarray(moved.dis_sampler.cell_xsec_pb))
     assert moved.sigma_pb() / base.sigma_pb() - 1 < 0.0
+
+
+def test_the_top_cell_note_is_the_measured_one():
+    """`cli.B1_TOP_CELL_B1_OVER_F1` must be what the shipped kernel computes.
+
+    Four sites quoted this pair and no two agreed: the `--x-max` help said
+    6.6 / 5.6, the `--b1-model` refusal said 3.3 / 5.6, this file's header
+    comment said 3.3 / 5.6 and `docs/USAGE.md` sec. 2a said 6.6 / 5.6, while
+    the code computes 6.52 / 5.91 -- the 3.3 being the pre-2026-09-03 half of
+    the `cdks` figure and the 6.6 twice its rounding.  One definition now, and
+    this test is what keeps it true.
+    """
+    import numpy as np
+    p = _l.Pipeline(lg.make_config(events=100), lg.tensor_thirds_plan(0.7, 0.6))
+    x = float(np.asarray(p.dis_sampler.x_cells).max())
+    assert x == pytest.approx(cli.B1_TOP_CELL_X, abs=5e-6), x
+    ion = _l.ion_by_name("6Li")
+    for name, want in cli.B1_TOP_CELL_B1_OVER_F1.items():
+        model = _l.b1_model_by_name(name) if hasattr(_l, "b1_model_by_name") \
+            else {"cdks": _l.B1Model.Cdks,
+                  "li6-convolution": _l.B1Model.Li6Convolution,
+                  "miller": _l.B1Model.Miller}[name]
+        d = _l.default_inclusive_kernel(ion, model).tables(
+            x, cli.B1_TOP_CELL_Q2).as_dict()
+        got = d["b1"] / d["f1"]
+        # The constants are quoted to the digits they are written with, so
+        # compare at half a unit in the last place quoted.
+        tol = 0.005 if want >= 1.0 else 0.0005
+        assert got == pytest.approx(want, abs=tol), (name, got, want)
+
+    # ... and the sentence the two CLI sites share really does carry them.
+    assert "6.52" in cli.B1_TOP_CELL_NOTE
+    assert "5.91" in cli.B1_TOP_CELL_NOTE

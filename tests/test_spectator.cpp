@@ -3,6 +3,7 @@
 // validation/reference/spectator.json (rtol 1e-12, the boost is closed form)
 // and against the analytic identities fastsim/tests/test_spectator.py pins.
 
+#include <fstream>
 #include <algorithm>
 #include <cmath>
 #include <string>
@@ -30,6 +31,24 @@ bool load_spectator(jsonmin::Value& out) {
                             out);
 }
 
+/// Is the reference blob on disk?  Called at doctest REGISTRATION time by the
+/// `doctest::skip()` decorators below, so that a checkout without
+/// `validation/reference/` reports these cases as SKIPPED in the tally
+/// instead of PASSED WITH ZERO ASSERTIONS.  The pattern is
+/// `tests/test_coherent.cpp`'s (phase F, 2026-09-05), which introduced it for
+/// exactly this reason and was applied to test_coherent / test_cluster /
+/// test_b1_nuclear and to no other file -- these twelve rtol-1e-12 port gates
+/// kept the in-case `MESSAGE(...); return;` and went on passing, silently and
+/// vacuously, until 2026-09-16.  A blob that IS there and does not parse is a
+/// FAILURE, not a skip: that is what the `REQUIRE` on the loader inside each
+/// case is for.
+bool spectator_present() {
+  return std::ifstream(std::string(LIPOLGEN_REFERENCE_DIR) +
+                       "/spectator.json")
+      .good();
+}
+
+
 double median(std::vector<double> v) {
   std::sort(v.begin(), v.end());
   const std::size_t n = v.size();
@@ -46,12 +65,10 @@ double quantile(std::vector<double> v, double q) {
 
 }  // namespace
 
-TEST_CASE("spectator: the AME2020 mass tables are the Python's") {
+TEST_CASE("spectator: the AME2020 mass tables are the Python's" *
+          doctest::skip(!spectator_present())) {
   jsonmin::Value ref;
-  if (!load_spectator(ref)) {
-    MESSAGE("spectator.json not found -- skipping");
-    return;
-  }
+  REQUIRE(load_spectator(ref));
   const jsonmin::Value& c = ref["constants"];
   CHECK_CLOSE(M_U, c["M_U"].num(), kRtol);
   for (const auto& kv : c["MASSES"].obj()) {
@@ -66,12 +83,10 @@ TEST_CASE("spectator: the AME2020 mass tables are the Python's") {
   }
 }
 
-TEST_CASE("spectator: every channel's masses, kappa and R(k=0)") {
+TEST_CASE("spectator: every channel's masses, kappa and R(k=0)" *
+          doctest::skip(!spectator_present())) {
   jsonmin::Value ref;
-  if (!load_spectator(ref)) {
-    MESSAGE("spectator.json not found -- skipping");
-    return;
-  }
+  REQUIRE(load_spectator(ref));
   for (const auto& kv : ref["channels"].obj()) {
     const ClusterChannel& ch = channel_by_name(kv.first);
     const jsonmin::Value& r = kv.second;
@@ -95,12 +110,10 @@ TEST_CASE("spectator: every channel's masses, kappa and R(k=0)") {
   }
 }
 
-TEST_CASE("spectator: the unnormalized momentum densities on the k grid") {
+TEST_CASE("spectator: the unnormalized momentum densities on the k grid" *
+          doctest::skip(!spectator_present())) {
   jsonmin::Value ref;
-  if (!load_spectator(ref)) {
-    MESSAGE("spectator.json not found -- skipping");
-    return;
-  }
+  REQUIRE(load_spectator(ref));
   for (const auto& kv : ref["channels"].obj()) {
     const ClusterChannel& ch = channel_by_name(kv.first);
     const jsonmin::Value& md = kv.second["momentum_density"];
@@ -115,12 +128,10 @@ TEST_CASE("spectator: the unnormalized momentum densities on the k grid") {
   }
 }
 
-TEST_CASE("spectator: _boost_fragment at fixed (kx, ky, kz)") {
+TEST_CASE("spectator: _boost_fragment at fixed (kx, ky, kz)" *
+          doctest::skip(!spectator_present())) {
   jsonmin::Value ref;
-  if (!load_spectator(ref)) {
-    MESSAGE("spectator.json not found -- skipping");
-    return;
-  }
+  REQUIRE(load_spectator(ref));
   for (const auto& kv : ref["channels"].obj()) {
     const ClusterChannel& ch = channel_by_name(kv.first);
     CAPTURE(kv.first);

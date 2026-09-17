@@ -170,7 +170,7 @@ and what the source docs got wrong by now.
    today's test run.** `docs/DEVELOPMENT_PLAN.md:110` (as of de1a040) — item 4's neutron gate:
    "P_p = 0.866 and P_n ≈ −0.037 (the neutron half is an *open* gate, report
    it)." Today's `lipolgen_tests` run prints, verbatim, at
-   `tests/test_tagged.cpp:426`: "P_n = -0.028 against the plans/05 gate
+   `tests/test_tagged.cpp:439`: "P_n = -0.028 against the plans/05 gate
    -0.037 -- OPEN, the model's own value is asserted and the gate is not."
    Items 1, 2, 3, 5, 6, 7, 8 of §4 carry no "open" language and are not
    listed here.
@@ -185,7 +185,7 @@ and what the source docs got wrong by now.
 9. **OPEN, default confirmed unchanged.** `docs/DEVELOPMENT_PLAN.md:211-216`
    — "the breakup fragments' own rescattering stays open" (no FSI moves any
    fragment's own four-vector; Glauber FSI is an optional per-event *weight*
-   only). Verified: `include/lipolgen/pipeline.hpp:802` still reads
+   only). Verified: `include/lipolgen/pipeline.hpp:840` still reads
    `PipelineFsi fsi = PipelineFsi::Off;`.
 10. **OPEN, as stated by the plan; not independently re-derived.**
     `docs/DEVELOPMENT_PLAN.md:223` (as of de1a040) — "Still open in the coherent sector: no
@@ -336,7 +336,7 @@ source (function/block boundaries re-read, not guessed) and corrected:
 | `src/core/bookkeeping.cpp:80-104` | `:80-109` | `helicity_flip_plan`, full body |
 | `include/lipolgen/bookkeeping.hpp:212-223` | `:213-223` | `SpinTemperatureLadder` doc comment + struct + decl |
 | `tests/test_tagged.cpp:335-351` | `:336-352` | the P2/polarimeter `TEST_CASE` body |
-| `src/core/xsec.cpp:282-289` | `:310-317` | `density()` + `positivity_margin()` (the P8 `tensor_amplitudes`/`amplitudes` split moved these ~28 lines) |
+| `src/core/xsec.cpp:282-289` | `:319-326` | `density()` + `positivity_margin()` (the P8 `tensor_amplitudes`/`amplitudes` split moved these ~28 lines) |
 | `tests/test_xsec.cpp:387-408` | `:387-405` | the magic-angle `TEST_CASE` (end only; start was already right) |
 | 4 bare `` `:a-b` `` ranges | given an explicit path | wrapped prose had put the path-bearing citation on a different raw text line than the bare range, so `inherited_path`'s same-line rule never reached them |
 

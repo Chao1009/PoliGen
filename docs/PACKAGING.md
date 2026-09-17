@@ -376,7 +376,7 @@ export LIPOLGEN_PYTHIA8_PDFDATA=$DATA/Pythia8/pdfdata
 the wheel a combined/linked work of all three, and the union of those terms is
 **GPL-3.0-or-later** — the licence this project already carries
 (`LICENSE`, `CITATION.cff`, and the `SPDX-License-Identifier: GPL-3.0-or-later`
-header on all 101 covered source files).
+header on all 103 covered source files; 101 when E2 stamped them on 2026-09-05, and this line still said 101 in the present tense until 2026-09-16, beside its own §1.4 correction to 103).
 
 So this is a **documentation statement, not a change**: nothing about
 LiPolGen's licensing moves because of packaging. What it does mean concretely,

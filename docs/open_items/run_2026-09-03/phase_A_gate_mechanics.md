@@ -736,7 +736,7 @@ the first is the ban proper.
 | # | file | anchors | class | what is there |
 |---|---|---|---|---|
 | 1 | `README.md` | `:49` (as of 66dcda2) | FAIL | "A = 2 magnitude gate is still open, see below" |
-| | | `:184-186` | BAN + FAIL | "gate fails its magnitude clause by a factor 2.27–3.68 … no ⁶Li number from the backend may be published until it closes" |
+| | | `:188-190` | BAN + FAIL | "gate fails its magnitude clause by a factor 2.27–3.68 … no ⁶Li number from the backend may be published until it closes" |
 | | | `:62` (as of 66dcda2) | — | the `r1998` follow-up, mentions the gate but is not a ban |
 | 2 | `docs/USAGE.md` | `:259` (as of 66dcda2) | FAIL | section heading "⚠ The A = 2 validation gate is NOT fully passed" |
 | | | `:262` (as of 66dcda2) | FAIL | "fails its magnitude clause" |
@@ -777,11 +777,11 @@ the first is the ban proper.
 | | | `:564-571` (as of 66dcda2) | FAIL | `finite_q_delta`'s doc comment, "moves the deficit from a factor 3.68 to 2.27" |
 | 13 | `python/bindings.cpp` | `:1235-1238` (as of 66dcda2) | FAIL | section comment "WARNING: the gate is NOT fully passed (G3b, magnitude)" |
 | | | `:1391-1393` (as of 66dcda2) | FAIL | `Li6ConvolutionB1`'s class docstring, "the A = 2 magnitude gate is NOT passed: band every number" |
-| | | `:4055-4059` | FAIL | `B1Model::Li6Convolution`'s enum docstring, same statement |
+| | | `:4063-4067` | FAIL | `B1Model::Li6Convolution`'s enum docstring, same statement |
 | | | | | **NOT on `PLAN.md:116-120`'s list of fourteen** |
 | 14 | `python/lipolgen/cli.py` | `:178-184` | FAIL | `--b1-model`'s `--help` text: "li6-convolution has NOT passed its A = 2 magnitude gate (a factor 2.27 … 3.68 …)" — this is the "`--help`" half of the Escalation clause |
 | | | `:383-390` (as of a7b3d18) | **BAN** + FAIL | the run banner; `:389-390` (as of d3ac125) "See docs/…/phase_D_gate.md; no 6Li number from it may be published." |
-| 15 | `python/lipolgen/__init__.py` | `:154-156` | FAIL (**MISSED**) | the Sphinx docstring of the public `B1_MODELS` constant: "its A = 2 magnitude gate is NOT passed -- band every number with --b1-band-scale 0/1/2 and never quote one row alone". Anchor as of 2026-09-04. It **ships in the installed package** and describes the same enum as `python/bindings.cpp`, so after the lift the two shipped descriptions of one object said opposite things. **NOT on `PLAN.md:116-120`'s list, and not on this survey's original sixteen either** |
+| 15 | `python/lipolgen/__init__.py` | `:160-162` | FAIL (**MISSED**) | the Sphinx docstring of the public `B1_MODELS` constant: "its A = 2 magnitude gate is NOT passed -- band every number with --b1-band-scale 0/1/2 and never quote one row alone". Anchor as of 2026-09-04. It **ships in the installed package** and describes the same enum as `python/bindings.cpp`, so after the lift the two shipped descriptions of one object said opposite things. **NOT on `PLAN.md:116-120`'s list, and not on this survey's original sixteen either** |
 | 16 | `tests/test_b1_nuclear.cpp` | `:487-494` (as of 66dcda2) | FAIL | G3b's comment block, "This FAILS at the default: the ratio is 0.440, a factor 2.27" |
 | | | `:504-506` (as of 66dcda2) | FAIL (**executable**) | `CHECK_CLOSE(ratio, 0.439986, 2e-3); CHECK(ratio < 0.5); // the gate's honest state, pinned` |
 | | | `:521-533` (as of 66dcda2) | FAIL (**executable**) | the two fragile-clause comments and `CHECK(z[0] > 0.02)`, `CHECK(z[0] - 0.02 < 0.005)`, `CHECK(|z1 − ref| > 0.05)` |

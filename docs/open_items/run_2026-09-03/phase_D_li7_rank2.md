@@ -150,11 +150,11 @@ The two ⁷Li category cross sections are **the same double**. There is no
 
 | Surface | What a ⁷Li user sees |
 |---|---|
-| `--isotope` help (`python/lipolgen/cli.py:69`) | `"6Li, 7Li, d"` — nothing |
+| `--isotope` help (`python/lipolgen/cli.py:142`) | `"6Li, 7Li, d"` — nothing |
 | Run banner (`python/lipolgen/cli.py:561-598`) | Channel, optics, σ per category. The b₁ block prints **only** when `b1_model != Miller`, which ⁷Li can never reach — so **no line at all** |
 | npz / HFS `meta` (`python/bindings.cpp:469-471` (as of adec442)) | **`b1_model = "miller"`** — a backend that did not run. `b1_band_scale = 1.0`, `b1_alpha_d_dwave_weight = 1.0`, `b1_unpol = "toy"`, all likewise |
 | `PipelineConfig::validate` | Accurate, but only fires if the user *asks* for `--b1-model` (`src/core/pipeline.cpp:592-600`) |
-| `docs/PHYSICS_CHANNELS.md:125` | Says it plainly: *"for spin 3/2 no slot is set, so the whole tensor and cos 2φ sector of a ⁷Li inclusive run vanishes."* An internal reference table |
+| `docs/PHYSICS_CHANNELS.md:128` | Says it plainly: *"for spin 3/2 no slot is set, so the whole tensor and cos 2φ sector of a ⁷Li inclusive run vanishes."* An internal reference table |
 | `docs/USAGE.md:269` (anchor read 2026-09-15 "spin 3/2 and has") | *"`7Li` is spin 3/2 and has no rank-2 input here."* — inside the `--b1-model` bullet, about the **flag**, not about running ⁷Li |
 
 **The answer to the task's question: a user asking for ⁷Li A_zz gets zeros with
@@ -237,7 +237,7 @@ is no D-wave/F-wave partner and **no interference term anywhere in the α–t
 channel**. The repository already records this
 (`docs/CONVENTIONS.md:249` (as of adec442), `docs/PHYSICS_CHANNELS.md:221` (as of adec442),
 `docs/open_items/vmc_reconciliation.md:107-113`,
-`tests/test_tagged.cpp:1198` — *"Aat11 is a selection-rule zero"*), and the data
+`tests/test_tagged.cpp:1344` — *"Aat11 is a selection-rule zero"*), and the data
 files agree: `li7.at`'s second column `Aat11(k)` is the ½⁻ **excited** state's
 amplitude and is MC noise at the 1e−4 level in the 3/2⁻ block;
 `momenta/li7_at1.momentum` is the ½⁻ state's own full-size distribution
@@ -265,7 +265,7 @@ Therefore, in the two-cluster picture,
 
 ### 2.3 P_zz for J = 3/2 in *this* repository
 
-`spin.hpp:89-91` and `src/core/xsec.cpp:167-172`:
+`spin.hpp:89-91` and `src/core/xsec.cpp:174-179`:
 
         J = 1    : P_zz = ⟨3J_z² − 2⟩ ∈ [−2, +1] ,   Q_NN(m) = (3m² − 2)/3
         J = 3/2  : T    = ⟨3J_z² − J(J+1)⟩/3 ∈ [−1, +1] ,  Q_NN(m) = (3m² − 15/4)/3 = m² − 5/4
@@ -378,7 +378,7 @@ with the two kinematics {m_struck, m_recoil} = {M_t, M_α} and {M_α, M_t},
 **3/7 and 4/7** replacing ⁶Li's 2/6 and 4/6. **Two terms, not four.**
 
 Eq. (4) is *literally* `LightConeDensities::f_d` and `::f_d_p2`
-(`include/lipolgen/b1_nuclear.hpp:411`) with the L = 1 wave placed in the φ₂
+(`include/lipolgen/b1_nuclear.hpp:435`) with the L = 1 wave placed in the φ₂
 slot — because those two members carry the same `pre` and differ only by the
 P₂(c*) weight (`src/core/b1_nuclear.cpp:351, 357, 360, 364`). That is how §5's
 numbers were produced, and §7 records why it is an *abuse* of the interface
@@ -452,7 +452,7 @@ theory curve exists (CDKS Fig. 4). The A = 3 analogue of α + t would be the
 triton as t = d + n or ³He = d + p — and **³H and ³He are J = ½.** A spin-½
 target has no rank-2 multipole and therefore **no b₁ at all**, published or
 otherwise. `TaggedModel::tensor_dilution` throws for exactly this reason
-(`src/core/tagged.cpp:527-530`, *"tensor dilution defined for S_c = 1"*).
+(`src/core/tagged.cpp:538-541`, *"tensor dilution defined for S_c = 1"*).
 
 **So the escalation clause of design §5.4 has no A = 3 form. Nothing about the
 ⁷Li convolution can be validated by running it on a lighter system.** That must

@@ -107,6 +107,128 @@ double p2(double c) { return 0.5 * (3.0 * c * c - 1.0); }
 
 // ------------------------------------------------- conservation, all channels
 
+TEST_CASE("pipeline: a TILTED fill and a spin-dependent struck-cluster term "
+          "are refused together on a tagged channel") {
+  // `InclusiveKinematicsSource::plan_for` builds the struck cluster's pure
+  // category at theta_S = phi_S = 0 WHATEVER the ion fill's axis is (the
+  // Python's `_pure_category` does the same), so the fill's axis reaches a
+  // tagged event through the SPECTATOR rotation alone.  That is exact while
+  // the struck-cluster DIS kernel is spin-blind and silently wrong when it is
+  // not.  MEASURED 2026-09-16 (6Li config 1, seed 1, helicity-flip at
+  // P_e = 0.7): the INCLUSIVE channel's asymmetry goes -5.741406e-04 at
+  // theta_S = 0 to exactly 0 at theta_S = pi/2, as P2(cos) requires, while
+  // tagged-6Li-alpha's `sigma_per_category_pb` came back BIT-IDENTICAL at
+  // both tilts -- and `--plan transverse-tensor --inclusive-b1` ran, and
+  // recorded `inclusive_b1` as READ, while applying the struck deuteron's b1
+  // with P2(cos 0) = +1 on a fill sitting at P2(cos 90 deg) = -1/2.
+  //
+  // The constructor refuses that combination now.  This case pins BOTH
+  // halves: what is refused, and -- the half that matters more -- how little
+  // is refused.
+  auto tagged_cfg = [](bool inclusive_b1) {
+    PipelineConfig cfg;
+    cfg.channel = PipelineChannel::TaggedLi6Alpha;
+    cfg.isotope = "6Li";
+    cfg.n_events = 64;
+    cfg.grid.nx = 20;
+    cfg.grid.nq2 = 14;
+    cfg.struck.inclusive_b1 = inclusive_b1;
+    return cfg;
+  };
+  // A tilted fill carrying a polarized electron: no SHIPPED plan is shaped
+  // like this (transverse-tensor and tensor-flip are the only two that tilt
+  // and both carry P_e = 0), so it is built by hand, which is exactly the
+  // route a caller would take.
+  const SpinCategory tilted_pe("tilt-pe", 1.0, {1.0, 0.0, 0.0}, +1, 0.7,
+                               kPi / 2.0, 0.0, 1.0);
+  const SpinCategory tilted_blind("tilt-blind", 1.0, {1.0, 0.0, 0.0}, 0, 0.0,
+                                  kPi / 2.0, 0.0, 1.0);
+  const SpinCategory upright_pe("up-pe", 1.0, {1.0, 0.0, 0.0}, +1, 0.7,
+                                0.0, 0.0, 1.0);
+
+  SUBCASE("P_e != 0 on a tilted fill is refused on every tagged channel") {
+    // P_e IS read on all three: measured the same day, `sigma_per_category_pb`
+    // moves between P_e = 0 and 0.7 on each (asymmetry -1.72e-03
+    // tagged-6Li-alpha, +6.41e-04 tagged-7Li-alpha, -5.73e-03 tagged-d-p).
+    CHECK_THROWS_AS(Pipeline(tagged_cfg(false), RunPlan({tilted_pe}, 0.0, 1.0,
+                                                        1.0)),
+                    std::runtime_error);
+  }
+
+  SUBCASE("inclusive_b1 on a tilted fill is refused where it is READ ...") {
+    CHECK_THROWS_AS(Pipeline(tagged_cfg(true),
+                             RunPlan({tilted_blind}, 0.0, 1.0, 1.0)),
+                    std::runtime_error);
+  }
+
+  SUBCASE("... and NOT where it is inert") {
+    // `inclusive_b1` is read on tagged-6Li-alpha ALONE: the struck clusters
+    // of tagged-7Li-alpha and tagged-d-p are spin 1/2 (dis_target = triton
+    // resp. free neutron), `InclusiveKernel::tables` opens no rank-2 sector
+    // there and the knob is measurably bit-for-bit inert -- which is what
+    // `Pipeline::knob_provenance` already reports.  Refusing a tilted fill
+    // for a knob that does nothing would be a false refusal with a false
+    // reason attached, so it is not refused.
+    PipelineConfig dp;
+    dp.channel = PipelineChannel::TaggedDeuteronP;
+    dp.isotope = "d";
+    dp.n_events = 64;
+    dp.grid.nx = 20;
+    dp.grid.nq2 = 14;
+    dp.struck.inclusive_b1 = true;
+    CHECK_NOTHROW(Pipeline(dp, RunPlan({tilted_blind}, 0.0, 1.0, 1.0)));
+  }
+
+  SUBCASE("NOTHING SPIN-BLIND AND NOTHING UPRIGHT MOVES, bit for bit") {
+    // The refusal is a configuration-time test on (sin theta_S, P_e,
+    // inclusive_b1) and touches no number.  Every combination below ran
+    // before it existed and still runs; the two shipped TILTED plans are
+    // built here by name so that a future plan gaining a P_e would fail this
+    // case rather than surprise a user.
+    const RunPlan tt = transverse_tensor_plan(kPZZ);
+    const RunPlan tf = tensor_flip_plan(kPZZ);
+    for (const RunPlan* rp : {&tt, &tf}) {
+      for (const SpinCategory& c : rp->categories()) {
+        CHECK(c.pe == 0.0);              // the reason they are still allowed
+        CHECK(std::fabs(std::sin(c.theta_s)) > 1e-12);   // they DO tilt
+      }
+      CHECK_NOTHROW(Pipeline(tagged_cfg(false), *rp));
+    }
+    // An UPRIGHT fill with a polarized electron, and an upright fill with
+    // inclusive_b1 on the channel that reads it: both untouched.
+    CHECK_NOTHROW(Pipeline(tagged_cfg(false),
+                           RunPlan({upright_pe}, 0.0, 1.0, 1.0)));
+    CHECK_NOTHROW(Pipeline(tagged_cfg(true),
+                           RunPlan({upright_pe}, 0.0, 1.0, 1.0)));
+    // ... and the rate a tilted spin-blind tagged run computes is EXACTLY the
+    // rate the untilted one computes, which is the fact the header states and
+    // the reason the refusal is needed at all: the DIS side never saw the
+    // tilt.  Bit for bit, not to a tolerance.
+    const Pipeline up(tagged_cfg(false),
+                      RunPlan({SpinCategory("up-blind", 1.0, {1.0, 0.0, 0.0},
+                                            0, 0.0, 0.0, 0.0, 1.0)},
+                              0.0, 1.0, 1.0));
+    const Pipeline tilt(tagged_cfg(false),
+                        RunPlan({tilted_blind}, 0.0, 1.0, 1.0));
+    REQUIRE(up.sigma_per_category_pb().size() == 1);
+    CHECK(up.sigma_per_category_pb()[0] == tilt.sigma_per_category_pb()[0]);
+  }
+
+  SUBCASE("the refusal names the three ways out") {
+    try {
+      Pipeline(tagged_cfg(true), RunPlan({tilted_blind}, 0.0, 1.0, 1.0));
+      FAIL("expected a refusal");
+    } catch (const std::runtime_error& e) {
+      const std::string msg = e.what();
+      CHECK(msg.find("theta_S") != std::string::npos);
+      CHECK(msg.find("inclusive_b1 = true") != std::string::npos);
+      CHECK(msg.find("SPIN-BLIND") != std::string::npos);
+      CHECK(msg.find("UNTILTED") != std::string::npos);
+      CHECK(msg.find("inclusive channel") != std::string::npos);
+    }
+  }
+}
+
 TEST_CASE("pipeline: every channel conserves four-momentum and charge") {
   struct Row { PipelineChannel ch; int cfg; const char* what; int plan; };
   const Row rows[] = {

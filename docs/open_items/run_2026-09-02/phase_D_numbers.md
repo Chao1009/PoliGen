@@ -214,9 +214,9 @@ which is what makes the ⁶Li convolution literally CDKS Eq. (16) one level up.
 `p_d_momentum()` is the table's own trapezoid D/(S+D) and sits **1.7e−4 below**
 `VMC_P_D_LI6`, which is built from the file's *printed* norms — that is the
 file's own quadrature spread (design §2.1), not an error. Likewise the table
-trapezoid S+D = 0.8194274 against the printed 0.8194810 (6.5e−5); part of that
-6.5e−5 is the 1.5e−5-per-power inconsistency between `HBARC_GEV_FM` = 0.19733
-and `cluster.cpp`'s file-local 0.1973269804 (three powers → 4.6e−5), recorded
+trapezoid S+D = 0.8194274 against the printed 0.8194810 (6.5e−5 relative, 5.4e−5 absolute); part of that
+6.5e−5 is the 1.5e−5-per-power RELATIVE inconsistency between `HBARC_GEV_FM` = 0.19733
+and `cluster.cpp`'s file-local 0.1973269804 (three powers → 4.6e−5 relative), recorded
 in `read_fdeut_k`'s header comment.
 
 ## T14 — the angular-average truncation, MEASURED (not asserted)

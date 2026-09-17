@@ -55,7 +55,7 @@ Which optional tiers a build carries is visible at runtime:
 
 ```bash
 source env.sh
-python3 -m pytest python/tests -q          # 114 cases
+python3 -m pytest python/tests -q          # count changes; see the run
 python3 -m pytest python/tests/test_throughput.py -s     # prints ev/s
 ```
 
@@ -86,7 +86,11 @@ ev = p.generate()                        # columnar dict of numpy arrays
 → event** as a pure function, so `p.event(i)` is thread-safe and
 `generate(..., nthreads=8)` is bit-identical to `nthreads=1`.
 
-The shortcut, which is what `lipolgen-run` uses:
+The shortcut. `lipolgen-run` does **not** call it — `cli.main` builds the same
+run itself — but since 2026-09-16 the two take the same run-plan arguments
+(`pzz_mode`, `rel_lumi_offset`, `theta_s`, `phi_s`, the run number) and write
+the same 69-row `meta["knob_provenance"]`; `lg.run()` used to raise
+`TypeError` on the first two and report 68 rows:
 
 ```python
 ev = lg.run(isotope="6Li", channel="tagged-alpha", plan="tensor-thirds",
@@ -109,14 +113,20 @@ exporter and by anything that walks particles).
 ### The columns
 
 ```
-kinematics   x q2 y phi w2 nu s
+kinematics   x q2 y phi w2 nu s cell
 spin         m (= m_ion) m_ion m_struck j pz pzz pe theta_s phi_s lam_e
 electron     kp (n,4)  e_prime  theta_e  eta_e
 tagging      k cos_theta_k phi_k alpha_s pt_s
+struck (T1)  n_partner struck_pdg struck_pol struck_virtuality
 spectator    pT theta p_lab R xL kx ky kz phi_spec route
 coherent     t x_pom
 bookkeeping  number weight category category_index category_names meta
+--rc only    rc_tensor_lo rc_tensor_hi rc_tail
 ```
+That is 49 npz arrays on a default tagged run (48 columns plus `meta`), and
+52 on an `--rc` run, which adds the three conditional `rc_*` columns. The list
+omitted `cell`, the four T1 struck-cluster columns and the three `rc_*` ones
+until 2026-09-16.
 
 `meta` is a dict carrying the beams, the seed, `sigma_pb` and `sigma_gen_mb`
 (the polligen key), the optics name and the frame convention.
@@ -327,13 +337,22 @@ o.pom_rescale = 1.0                     # PDF:PomRescale
 together with the broken fallback they gated.  On the command line the three
 knobs above are `--coherent-t2 pomeron|off`, `--pom-set` and `--pom-rescale`.
 
-### The one polligen key with no pipeline equivalent
+### `cell` — no longer the one polligen key with no pipeline equivalent
 
 `cell`, the flat accepted-(x, Q²)-cell index that
-`polligen.sample.weights_for` needs for Mode-W reweighting, is an
-`InclusiveSampler` internal and is **not** on the `Event` record. It is
-present in `InclusiveSampler.sample_n()`'s dict and absent from
-`Pipeline.generate()`'s. Reweight sampler batches, not pipeline output.
+`polligen.sample.weights_for` needs for Mode-W reweighting, **is**
+`Event.kin.cell` since 2026-08-30 and is written by `Pipeline.generate()`, by
+`columns_from_events` and into every npz `lipolgen-run --npz` writes
+(`python/lipolgen/export.py`, `docs/USAGE.md` sec. 7a). Pipeline output
+therefore reweights with `InclusiveSampler.weights_for` exactly like a sampler
+batch.
+
+Until 2026-09-16 this section said the opposite — that `cell` was an
+`InclusiveSampler` internal, absent from `Pipeline.generate()`, and that only
+sampler batches could be reweighted — while `export.py` in the same package
+already listed it. Note that `weights_for` now REFUSES a batch whose `cell`
+column is missing, the wrong length, or outside the sampler's accepted grid,
+rather than reading past its tables.
 
 ---
 

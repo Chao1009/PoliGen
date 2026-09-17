@@ -107,6 +107,98 @@ TEST_CASE("fsi: the prototype FSI/IA table and profile are reproduced") {
           << ", clipped fraction = " << f.clipped_grid_fraction());
 }
 
+TEST_CASE("fsi: elastic_gain rescales the QUADRATIC term and nothing else") {
+  // `GlauberFsiOptions::elastic_gain` is the one knob of this option block
+  // that no test typed: bound to Python, documented in fsi.hpp ("rescales the
+  // quadratic term alone, for a run that wants to impose a measured
+  // sigma_el/sigma_tot") and in PHYSICS_CHANNELS section 7, and until
+  // 2026-09-16 making it INERT (`1.0 * (cre*cre + cim*cim)` in
+  // src/core/fsi.cpp) left every FSI-touching test green -- 83 doctest cases
+  // and 25 pytest cases.
+  //
+  // Everything here is MEASURED (2026-09-16, on the prototype pure-S channel
+  // at the default sigma_XN = 40 mb):
+  //
+  //   gain   survival     w(k=0.10, 0 deg)   sigma_tot   sigma_el   B
+  //   0.0    0.40682602   0.55057394         131.045421  35.223685  27.189160
+  //   0.5    0.44187886   0.57852649         131.045421  35.223685  27.189160
+  //   1.0    0.51657302   0.60647905         131.045421  35.223685  27.189160
+  //   2.0    0.77371480   0.66238415         131.045421  35.223685  27.189160
+  const TaggedChannel& ch = pure_s_channel();
+  auto with_gain = [&ch](double g) {
+    GlauberFsiOptions o;
+    o.elastic_gain = g;
+    return GlauberFsiWeight(ch, o);
+  };
+  const GlauberFsiWeight g0 = with_gain(0.0);
+  const GlauberFsiWeight g05 = with_gain(0.5);
+  const GlauberFsiWeight& g1 = f40();          // the shipped default, gain 1
+  const GlauberFsiWeight g2 = with_gain(2.0);
+
+  // 1. MORE gain = more of the refracted amplitude comes back = more tags
+  //    survive.  Strictly monotone, not merely non-decreasing.
+  CHECK(g0.survival() < g05.survival());
+  CHECK(g05.survival() < g1.survival());
+  CHECK(g1.survival() < g2.survival());
+
+  // 2. It BITES harder than the prototype table's pins are wide, so an inert
+  //    `elastic_gain` could not hide behind them: at the pinned row
+  //    {k = 0.10 GeV, theta_k = 0} the gain-0 weight is 0.5506 against the
+  //    pinned 0.607 -- 0.056 away, where that pin's tolerance is 5e-3.
+  CHECK_CLOSE_AT(wt(g1, 0.10, 0.0), 0.607, 0.0, 5e-3);   // shipped, unmoved
+  CHECK(std::fabs(wt(g0, 0.10, 0.0) - 0.607) > 10.0 * 5e-3);
+
+  // 3. It rescales the QUADRATIC term ALONE, which is the claim fsi.hpp
+  //    makes.  The observable form of that claim: the per-cell weight is
+  //    AFFINE in the gain, so gain 0 and gain 1 predict every other gain
+  //    exactly -- BUT ONLY WHERE THE CELL IS UNCLIPPED.  `build_layer` floors
+  //    w at 0 and caps it at `w_max` (= 50), and outside the forward cone
+  //    both bite: at (k = 0.20, theta_k = 90 deg) the four gains measure
+  //    0 / 0 / 0.180 / 1.781, where affine would want 0.090 / 0.360.  The
+  //    points below were CHECKED to be strictly inside the clip at all four
+  //    gains; the clipped corner is asserted separately in 3b rather than
+  //    quietly left out.
+  struct Pt { double k, deg; };
+  const Pt affine[] = {
+      {0.02, 0.0}, {0.02, 45.0}, {0.02, 90.0},
+      {0.05, 0.0}, {0.05, 45.0}, {0.05, 90.0},
+      {0.10, 0.0}, {0.10, 45.0}, {0.10, 90.0},
+      {0.15, 0.0}, {0.15, 45.0},
+      {0.20, 0.0},
+  };
+  for (const Pt& q : affine) {
+    CAPTURE(q.k);
+    CAPTURE(q.deg);
+    const double a = wt(g0, q.k, q.deg);
+    const double b = wt(g1, q.k, q.deg);
+    REQUIRE(a > 0.0);                    // unclipped at the bottom ...
+    REQUIRE(b < 50.0);                   // ... and at the top
+    CHECK_CLOSE(wt(g05, q.k, q.deg), a + 0.5 * (b - a), 1e-12);
+    CHECK_CLOSE(wt(g2, q.k, q.deg), a + 2.0 * (b - a), 1e-12);
+  }
+
+  // 3b. And where the floor DOES bite, it bites as a floor: the gain-0 weight
+  //     is exactly 0 and the gain ordering survives the clip.
+  CHECK(wt(g0, 0.20, 90.0) == 0.0);
+  CHECK(wt(g05, 0.20, 90.0) == 0.0);
+  CHECK(wt(g1, 0.20, 90.0) > 0.0);
+  CHECK(wt(g2, 0.20, 90.0) > wt(g1, 0.20, 90.0));
+
+  // 4. The LINEAR term is untouched, so the X-alpha profile -- sigma_tot,
+  //    sigma_el and the diffractive slope -- does not move AT ALL (bit for
+  //    bit, not to a tolerance).  If the knob reached these it would be
+  //    rewriting the Glauber profile, not reweighting the gain.
+  for (const GlauberFsiWeight* f : {&g0, &g05, &g2}) {
+    CHECK(f->sigma_cluster_mb(40.0) == g1.sigma_cluster_mb(40.0));
+    CHECK(f->sigma_cluster_el_mb(40.0) == g1.sigma_cluster_el_mb(40.0));
+    CHECK(f->slope_cluster_gev2(40.0) == g1.slope_cluster_gev2(40.0));
+  }
+
+  MESSAGE("elastic_gain 0/0.5/1/2: survival = "
+          << g0.survival() << " / " << g05.survival() << " / "
+          << g1.survival() << " / " << g2.survival());
+}
+
 TEST_CASE("fsi: the production S+D channel row is on the record") {
   // The default 6Li alpha channel (P_D = 0.0867) SHIFTS the pinned numbers;
   // this row is what a production run at sigma_XN = 40 mb actually applies,

@@ -12,8 +12,9 @@ numbers (see item 9).
 **Start → end.** Baseline `a94fd6e`: 363 doctest cases / 17 203 863 assertions /
 1 skipped, 211 pytest. End of phase F, re-measured 2026-09-05: **401 doctest
 cases / 17 240 286 assertions / 1 skipped / 0 failed**, **926 pytest passed /
-112 skipped**, strict citation gate **1205 refs / 97 ranges / 7 external / 0
-broken / 6 allow-listed** (+ 19/115 on `SPIN32_FINITE_GAMMA.md`, 8 external on
+112 skipped**, strict citation gate **1206 refs / 96 ranges / 7 external / 0
+broken / 6 allow-listed** (re-measured 2026-09-16 from `git archive bd775bc`;
+**1205 / 97** was published on the day, off the pre-commit working tree) (+ 19/115 on `SPIN32_FINITE_GAMMA.md`, 8 external on
 `PYTHIA_BRIDGE.md`), **SPDX 101/101**. All nine `validation/reference/*.json`
 are byte-identical to `a94fd6e`: **no shipped default moved in six phases**, and
 the rtol-1e−12 gates did not move.

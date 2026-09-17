@@ -518,9 +518,9 @@ number. A fifth site, T25's four dilutions, is recorded in §7.2.
 >
 > | `tests/test_tagged.cpp` row | pin | measured | residual | atol | slack |
 > |---|---|---|---|---|---|
-> | `tests/test_tagged.cpp:664` (anchor read 2026-09-15 "-1.9371243623") θ_k ≈ 0, k = 0.301150 | −1.93712 | −1.9371243623 | **4.36e−06** | **1e−4** | ×23 |
-> | `tests/test_tagged.cpp:665` (anchor read 2026-09-15 "+0.9993127695") θ_k ≈ 90°, k = 0.301150 | +0.99931 | +0.9993127695 | **2.77e−06** | **1e−4** | ×36 |
-> | `tests/test_tagged.cpp:667` (anchor read 2026-09-15 "+0.9673403636") θ_k ≈ 0, k = 0.997866 | +0.96734 | +0.9673403636 | **3.64e−07** | **1e−4** | ×275 |
+> | `tests/test_tagged.cpp:723` (anchor read 2026-09-15 "-1.9371243623") θ_k ≈ 0, k = 0.301150 | −1.93712 | −1.9371243623 | **4.36e−06** | **1e−4** | ×23 |
+> | `tests/test_tagged.cpp:724` (anchor read 2026-09-15 "+0.9993127695") θ_k ≈ 90°, k = 0.301150 | +0.99931 | +0.9993127695 | **2.77e−06** | **1e−4** | ×36 |
+> | `tests/test_tagged.cpp:726` (anchor read 2026-09-15 "+0.9673403636") θ_k ≈ 0, k = 0.997866 | +0.96734 | +0.9673403636 | **3.64e−07** | **1e−4** | ×275 |
 >
 > The k ≈ 1.00 GeV row stood at 2e−3 (slack ×5501) with no residual stated
 > until 2026-09-15, when it was tightened to 1e-4 to match its two neighbours;
@@ -699,7 +699,7 @@ number in this section was re-measured in this pass.
 | stale digits inheriting the quadrature residual | `USAGE.md` deuteron-control dilutions; `CONVENTIONS.md:93`, `PHYSICS_CHANNELS.md`, `beams.hpp`, `tagged.hpp`, `test_tagged.cpp` (comment) for the ⁶Li vector dilution; `constants.hpp` and `design_G_cluster_config.md` for 0.9219467; `breakup.hpp` for 0.932495 / 0.913595 | 0.932496109 / 0.959488878 / 0.913595979 / 0.948146339; **0.8699431789** against the closed form 0.869950, **7.84e−6** (was 1.22e−5); **0.9219490** (was 0.9219467); 0.932496 / 0.913596 |
 | the reconciliation record was one script run from losing its correction | `validation/vmc_reconcile.py` (template sentence, polarity inverted) and `validation/vmc_tag_fractions.py` (rewrites everything after the APPEND marker, where the hand-inserted box lived) | Both **GENERATORS** carry it now: the sentence reads −0.52 → +0.45 with the measured cells, the correction record and the tag-fraction invariance note are emitted by `vmc_tag_fractions.py`, the `vmc-flipD` column is relabelled *(= the PRE-FIX physics column)*, and the box's `:131-133` citation is replaced by a section anchor plus the correct `:133-136`. Regenerated and verified **idempotent** |
 | the re-pin record's magnitudes | `validation/README.md` and its generator `dump_polligen_reference.py`; `07` §6.1; §8.2 above | `norm` up to **5.81e−05 rel** (was "+2e-5"), `population_integrated` up to **3.02e−06 abs** (was "≤5e-7"), and `p2_moment_mixture_uniform` — **absent from the list**, recorded as a zero in `07` §6.1 — moves on every spin-1 channel (⁶Li Hulthén −5.3160743e−05 → −5.2153460e−05, 1.9e−2 rel) and was re-pinned. Measured as the re-pinned file against `git show HEAD:validation/reference/tagged.json` |
-| *"no tolerance was widened"* | §9 above | **Corrected 2026-09-15 — the claim was right and this row was wrong.** The committed tree has **1e-4** on both k = 0.30 cell-centre rows and has had it since `a7b3d18` itself; no CW tolerance was ever widened in `91e48b9..HEAD`. Measured residuals 4.36e−6 (`tests/test_tagged.cpp:664`, anchor read 2026-09-15 "-1.9371243623") and 2.77e−6 (`tests/test_tagged.cpp:665`, anchor read 2026-09-15 "+0.9993127695"). The k ≈ 1.00 GeV row (`tests/test_tagged.cpp:667`, anchor read 2026-09-15 "+0.9673403636") stood at 2e−3, slack ×5501, and was tightened to 1e-4 on 2026-09-15. See §9's box |
+| *"no tolerance was widened"* | §9 above | **Corrected 2026-09-15 — the claim was right and this row was wrong.** The committed tree has **1e-4** on both k = 0.30 cell-centre rows and has had it since `a7b3d18` itself; no CW tolerance was ever widened in `91e48b9..HEAD`. Measured residuals 4.36e−6 (`tests/test_tagged.cpp:723`, anchor read 2026-09-15 "-1.9371243623") and 2.77e−6 (`tests/test_tagged.cpp:724`, anchor read 2026-09-15 "+0.9993127695"). The k ≈ 1.00 GeV row (`tests/test_tagged.cpp:726`, anchor read 2026-09-15 "+0.9673403636") stood at 2e−3, slack ×5501, and was tightened to 1e-4 on 2026-09-15. See §9's box |
 | registry board not updated | `run_2026-09-03/STATUS.md` rows 9 and 10 | Both cells amended to §B9(c)'s "evidence moved" box and §B6(c)'s re-measured residual; no decision taken, both rows stay open |
 
 **Three more live sites carried the pre-fix tag-fraction SAMPLE** and were
@@ -710,8 +710,8 @@ brought onto the regenerated numbers with the reason named: `README.md`'s
 `OPEN_ITEMS_SOLUTIONS.md` §1 (three bullets, including the two-configuration
 check 0.0301 → 0.0365 at 5×41 and 0.0279 → 0.0348 at 18×275). One unrelated
 anchor slip found while checking them and fixed: `PHYSICS_CHANNELS.md`'s ⟨P₂⟩ =
-−T/5 row cited `README.md:120` (anchor read 2026-09-16 "rtol 1e-12"), which is the rtol-1e-12 sentence; the statement
-is at `README.md:126` (anchor read 2026-09-16 "2025 Table 1"). *(Both
+−T/5 row cited `README.md:122` (anchor read 2026-09-16 "rtol 1e-12"), which is the rtol-1e-12 sentence; the statement
+is at `README.md:128` (anchor read 2026-09-16 "2025 Table 1"). *(Both
 re-pointed 2026-09-16 from `:112`/`:118`: the close-out's own README
 corrections moved every line below 84 down by eight, and this record's two
 anchors are exactly the drift class phase D's R6 rule exists to catch.)*

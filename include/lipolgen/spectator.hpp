@@ -27,6 +27,7 @@
 /// a ratio of mass-to-charge ratios -- 0.99813 for the 6Li alpha (not 1) and
 /// 0.85571 for the 7Li alpha (not 6/7).
 
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -232,12 +233,25 @@ inline constexpr double MEASURED_DELTA_MAX = 0.30;
 bool over_rigid_route(double r, double theta_x = 0.0,
                       const std::string& config = "18x275");
 
+/// The "not given" sentinel of `route_charged`'s two optional angles.  It is
+/// `quiet_NaN()` and NOT the literal `0.0 / 0.0` these defaults were spelled
+/// with until 2026-09-16: that is a division by zero evaluated at every
+/// defaulted call, and it is exactly the expression `-ffast-math` /
+/// `-ffinite-math-only` turn into an unspecified value -- at which point
+/// `std::isnan(phi)` and `std::isnan(theta_outer)` inside `route_charged`
+/// stop firing and the near-beam envelope silently changes shape.  Latent
+/// today (CMakeLists.txt builds -O2 with no fast-math), and every other NaN
+/// in the core is already `std::nan("")` or `quiet_NaN()`.
+inline constexpr double kAngleUnknown =
+    std::numeric_limits<double>::quiet_NaN();
+
 /// Classify a charged fragment.  `phi` NaN = azimuth unknown, `theta_outer`
 /// NaN = THETA_RP_OUTER.  `pT` is not used for the near-beam decision: the
 /// envelope is angular.  It is kept in the signature so the call reads like
 /// the Python's and so a caller cannot silently pass the wrong triple.
 int route_charged(double r, double theta, double pT, const Optics& optics,
-                  double phi = 0.0 / 0.0, double theta_outer = 0.0 / 0.0,
+                  double phi = kAngleUnknown,
+                  double theta_outer = kAngleUnknown,
                   const std::string& pot_config = "18x275");
 /// Neutrals: ZDC inside THETA_ZDC_MAX, else lost.
 int route_neutral(double theta);

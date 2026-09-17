@@ -47,8 +47,15 @@ import numpy as np
 from . import _lipolgen as _l
 
 __all__ = ["inclusive_dict", "tagged_dict", "columns_from_events",
+           "rp_accepted",
            "hfs_sample", "write_hfs_npz", "write_columns_npz",
            "load_hfs_npz", "RC_KEYS", "rc_columns"]
+
+#: The `meta["frame"]` string of an HFS sample.  ONE spelling: this module
+#: wrote "per-nucleon x,y,Q2" and `python/bindings.cpp` wrote "per-nucleon
+#: x, y, Q2" for the same field until 2026-09-16, so the two columnar paths
+#: disagreed on a metadata string by two spaces.
+HFS_FRAME = "head-on: ion +z, electron -z; per-nucleon x, y, Q2"
 
 #: `polligen.sample.InclusiveSampler.sample_category` keys.
 INCLUSIVE_KEYS = ("x", "q2", "y", "phi", "m", "cell", "category", "lam_e")
@@ -74,8 +81,12 @@ def _is_columns(obj):
 
 # ------------------------------------------------- Event sequence -> columns
 
-def columns_from_events(events, optics=None, pot_config="18x275"):
+def columns_from_events(events, optics=None, pot_config="18x275", plan=None):
     """Columnar dict from a sequence of `Event` records.
+
+    Pass `plan` (a `RunPlan`, e.g. `pipeline.plan`) to get `category_names` in
+    PLAN ORDER, the way the C++ `columns_to_dict` writes it; without one the
+    names are `sorted(set(...))` and `category_index` indexes THAT order.
 
     The spectator lab quantities are READ OFF `Event.kin` (`spec_pt`,
     `spec_theta`, `spec_p_lab`, `spec_r`, `spec_xl`, `spec_kx/ky/kz`,
@@ -168,7 +179,18 @@ def columns_from_events(events, optics=None, pot_config="18x275"):
             out["route"][i] = _l.route_of(ev, optics, pot_config)
     out["m"] = out["m_ion"]
     out["category"] = np.asarray(cats)
-    out["category_names"] = sorted(set(cats))
+    # PLAN ORDER when a plan is in hand, `sorted(set(...))` otherwise, and
+    # `category_index` alongside -- what the C++ `columns_to_dict` writes.  The
+    # two "columnar dicts" differed in those two keys until 2026-09-16: this
+    # one carried no `category_index` at all and ordered the names
+    # alphabetically, so a consumer that indexed `category_names` by the C++
+    # dict's `category_index` read the wrong label.
+    names = ([c.name for c in plan.categories] if plan is not None
+             else sorted(set(cats)))
+    order = {nm: i for i, nm in enumerate(names)}
+    out["category_names"] = np.asarray(names)
+    out["category_index"] = np.asarray([order.get(c, -1) for c in cats],
+                                       dtype=np.int32)
     return out
 
 
@@ -255,8 +277,17 @@ def tagged_dict(events, optics=None, pot_config="18x275", extra=()):
     return out
 
 
-def rp_accepted(events):
-    """`polligen.tagged.rp_accepted`: Roman-Pot main window + near-beam tail."""
+def rp_accepted(events, optics=None, pot_config="18x275"):
+    """`polligen.tagged.rp_accepted`: Roman-Pot main window + near-beam tail.
+
+    Takes either the columnar dict or a sequence of `Event` records, as this
+    module's header promises of every function here; it subscripted
+    `events["route"]` directly until 2026-09-16 and raised
+    `TypeError: list indices must be integers` on the record path.
+    """
+    if not isinstance(events, dict):
+        events = columns_from_events(events, optics=optics,
+                                     pot_config=pot_config)
     route = np.asarray(events["route"])
     return (route == _l.Route.RomanPots) | (route == _l.Route.RPNearBeam)
 
@@ -295,8 +326,7 @@ def hfs_sample(events, e_energy=None, p_per_nucleon=None, meta=None,
     a["meta"] = dict(meta or {})
     a["meta"].setdefault("generator", "LiPolGen")
     a["meta"].setdefault("version", _l.__version__)
-    a["meta"].setdefault(
-        "frame", "head-on: ion +z, electron -z; per-nucleon x,y,Q2")
+    a["meta"].setdefault("frame", HFS_FRAME)
     return a
 
 
@@ -340,9 +370,10 @@ def load_hfs_npz(path):
 def write_columns_npz(columns, path, keys=None):
     """Write a `Pipeline.generate()` dict to a .npz.
 
-    Non-array entries (`meta`, `category_names`, `pipeline`) are dropped;
-    `meta` is written as a JSON string under "meta", the way
-    `HFSSample.save` does it.
+    Non-array entries (`pipeline`, `bridge`, `events`) are dropped and `meta`
+    is written as a JSON string under "meta", the way `HFSSample.save` does
+    it.  `category_names` IS written, as a string array -- this docstring said
+    it was dropped, beside the four lines that write it, until 2026-09-16.
     """
     arrays = {}
     for k, v in columns.items():

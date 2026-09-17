@@ -9,6 +9,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstdio>
+#include <limits>
 #include <memory>
 #include <numeric>
 #include <string>
@@ -293,6 +294,139 @@ TEST_CASE("sampler: a run-plan share moves counts, never cross sections") {
   Scenario bad;
   bad.run_share = 0.0;
   CHECK_THROWS_AS(InclusiveSampler(kern, cfg, bad, spec), std::runtime_error);
+}
+
+TEST_CASE("sampler: a NON-FINITE phi amplitude is refused at build time, not "
+          "carried into draw_event") {
+  // THE ONE GUARD IN `build_state` THAT WAS WRITTEN THE WRONG WAY ROUND.
+  // `1 + w_avg` is tested as `!(den > 0.0)`, which is TRUE for a NaN and
+  // refuses it; the modulation's two tests were `margin < worst` and
+  // `margin < 0.0`, both FALSE for a NaN.  So a structure-function slot that
+  // returned NaN -- any of the documented `InclusiveKernel::Options`
+  // callables -- passed this function with `st.margin` still at its 1e300
+  // sentinel and `bad` still 0, and reached `draw_event`, whose accept-reject
+  // `u < 1 + a1n cos phi + a2n cos 2phi` is false for EVERY candidate: the
+  // draw never returned.  Reproduced 2026-09-16 from Python through the
+  // documented `delta_func` slot: `sigma_tot_pb` came back finite (514908.4),
+  // `bound[0]` was NaN, and `sample_n(cat, 1, ...)` ran until a 60 s timeout
+  // killed it.  A HANG is the worst possible report of a bad slot.
+  InclusiveKernel::Options opt;
+  opt.delta_func = [](double, double, double) {
+    return std::numeric_limits<double>::quiet_NaN();
+  };
+  const auto kern = std::make_shared<InclusiveKernel>(LI6(), opt);
+  const auto spec = spec_of(8, 6, 1e-3, 0.5, 1.5, 100.0);
+  const InclusiveSampler s(kern, mid_6li(), Scenario(), spec);
+  // The refusal is at STATE-TABLE time -- configuration time, where every
+  // other refusal in this function lives -- and it NAMES the slot.
+  CHECK_THROWS_AS(s.state_tables(unpol_category(), 1.0), std::runtime_error);
+  try {
+    s.state_tables(unpol_category(), 1.0);
+    FAIL("expected a refusal");
+  } catch (const std::runtime_error& e) {
+    const std::string msg = e.what();
+    CHECK(msg.find("non-finite") != std::string::npos);
+    CHECK(msg.find("delta_func") != std::string::npos);
+    CHECK(msg.find("draw_event") != std::string::npos);
+  }
+
+  // An INFINITE slot goes the same way.  `1 + w_avg` would let +inf through
+  // (`inf > 0.0` is true), so this half is not covered by the older guard at
+  // all.
+  InclusiveKernel::Options inf_opt;
+  inf_opt.delta_func = [](double, double, double) {
+    return std::numeric_limits<double>::infinity();
+  };
+  const InclusiveSampler si(std::make_shared<InclusiveKernel>(LI6(), inf_opt),
+                            mid_6li(), Scenario(), spec);
+  CHECK_THROWS_AS(si.state_tables(unpol_category(), 1.0), std::runtime_error);
+
+  // ... and a FINITE slot is untouched: same grid, same category, no throw,
+  // and a margin that is a real number.
+  const InclusiveSampler ok(make_kernel(true, 1e-2), mid_6li(), Scenario(),
+                            spec);
+  CHECK_NOTHROW(ok.state_tables(unpol_category(), 1.0));
+  CHECK(std::isfinite(ok.state_tables(unpol_category(), 1.0).margin));
+}
+
+TEST_CASE("sampler: weights_for REFUSES a batch it cannot index") {
+  // `EventBatch` is the CALLER's struct, and `EventBatch::size()` is
+  // `x.size()` alone.  `weights_for` and `tensor_weights_for` read
+  // `batch.cell[i]` and `batch.phi[i]` for every i < size() and indexed
+  // `st.w_avg[c]` with the result, unchecked, until 2026-09-16 -- so an
+  // x/q2/phi-only dict (which is what `dict_to_batch` builds when the dict
+  // carries no "cell" column) or the -1 "no cell" sentinel
+  // `KinematicsSource::sample_cells` documents was an out-of-bounds read
+  // reachable from the public Python API.  Reproduced that day:
+  // `s.weights_for({"x": [...], "q2": [...], "phi": [...]}, [cat])`
+  // SEGFAULTED the interpreter (shell exit 139).
+  const InclusiveSampler& s = shared_sampler();
+  const std::vector<SpinCategory> cats = {unpol_category()};
+  const std::size_t n_cells = s.n_cells();
+
+  auto batch_of = [](const std::vector<double>& x,
+                     const std::vector<double>& phi,
+                     const std::vector<int>& cell) {
+    EventBatch b;
+    b.x = x;
+    b.q2.assign(x.size(), 10.0);
+    b.phi = phi;
+    b.cell = cell;
+    return b;
+  };
+
+  // (a) no cell column at all
+  const EventBatch no_cell = batch_of({0.1, 0.2}, {0.0, 1.0}, {});
+  CHECK_THROWS_AS(s.weights_for(no_cell, cats), std::runtime_error);
+  CHECK_THROWS_AS(s.tensor_weights_for(no_cell, cats), std::runtime_error);
+
+  // (b) the documented -1 sentinel, which casts to SIZE_MAX
+  const EventBatch sentinel = batch_of({0.1}, {0.0}, {-1});
+  CHECK_THROWS_AS(s.weights_for(sentinel, cats), std::runtime_error);
+  CHECK_THROWS_AS(s.tensor_weights_for(sentinel, cats), std::runtime_error);
+
+  // (c) a cell past the end of THIS sampler's accepted grid
+  const EventBatch too_big =
+      batch_of({0.1}, {0.0}, {static_cast<int>(n_cells)});
+  CHECK_THROWS_AS(s.weights_for(too_big, cats), std::runtime_error);
+  CHECK_THROWS_AS(s.tensor_weights_for(too_big, cats), std::runtime_error);
+
+  // (d) a short phi column
+  const EventBatch short_phi = batch_of({0.1, 0.2}, {0.0}, {0, 1});
+  CHECK_THROWS_AS(s.weights_for(short_phi, cats), std::runtime_error);
+
+  // (e) ... and a WELL-FORMED batch still works, and its numbers are the ones
+  //     the sampler's own draw produces.  This is the half that matters: the
+  //     two functions were folded onto one `mix_weights` body at the same
+  //     time, and that fold has to be bit-for-bit.
+  const EventBatch drawn = s.sample_n(unpol_category(), 256, 3, 0, 0);
+  REQUIRE(drawn.cell.size() == drawn.x.size());
+  CHECK_NOTHROW(s.weights_for(drawn, cats));
+  const std::vector<double> w = s.weights_for(drawn, cats);
+  const std::vector<double> t = s.tensor_weights_for(drawn, cats);
+  REQUIRE(w.size() == drawn.size());
+  REQUIRE(t.size() == drawn.size());
+  // Recomputed HERE from the state tables, in the order the pre-fold bodies
+  // used: ((1 + w_avg) + a1 cos) + a2 cos 2 for the mixture, and the same
+  // without the unpolarized 1.0 for the tensor part.
+  const SpinCategory& cat = cats[0];
+  const std::vector<double> ms = m_values(cat.j);
+  for (std::size_t i = 0; i < drawn.size(); ++i) {
+    const std::size_t c = static_cast<std::size_t>(drawn.cell[i]);
+    double want_w = 0.0, want_t = 0.0;
+    for (std::size_t im = 0; im < ms.size(); ++im) {
+      const double p_m = cat.populations[im];
+      if (p_m <= 0.0) continue;
+      const InclusiveSampler::StateTables& st = s.state_tables(cat, ms[im]);
+      const double phip = drawn.phi[i] - cat.phi_s;
+      want_w += p_m * (1.0 + st.w_avg[c] + st.a1[c] * std::cos(phip) +
+                       st.a2[c] * std::cos(2.0 * phip));
+      want_t += p_m * (st.w_tensor[c] + st.a1_tensor[c] * std::cos(phip) +
+                       st.a2_tensor[c] * std::cos(2.0 * phip));
+    }
+    CHECK(w[i] == want_w);            // bit for bit, not to a tolerance
+    CHECK(t[i] == want_t);
+  }
 }
 
 TEST_CASE("sampler: the generator window is looser than the analysis one") {

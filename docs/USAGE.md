@@ -431,8 +431,16 @@ is `DeuteronConvolutionB1`'s default:
    still run — keep an in-case skip: they print
    `SKIPPED (MSTW2008 LO unavailable)` with what was not measured and are
    tallied as passed (the choice between splitting them out and leaving them
-   is `AUTHOR_DECISIONS.md` B26). Either way a build that cannot reproduce the
-   verdict row also cannot emit a number that claims it.
+   is `AUTHOR_DECISIONS.md` B26). **They are no longer the only two rows in
+   the tree with an in-case skip**, but they are the only ones left that are
+   *tallied as passed*: the twelve `validation/reference` port gates in
+   `test_reference.cpp`, `test_bookkeeping.cpp`, `test_spectator.cpp` and
+   `test_tagged.cpp` kept the same `MESSAGE`+`return` shape — and so passed
+   with **zero assertions** on a checkout without the blobs — until
+   2026-09-16, when they were given the same registration-time
+   `doctest::skip` and a `REQUIRE` on the loader (a blob that IS there and
+   does not parse is now a failure, not a skip). Either way a build that
+   cannot reproduce the verdict row also cannot emit a number that claims it.
 2. **It passes comfortably at Eq. (21) and marginally at Eq. (17).** At κ = 1
    MSTW gives **0.520** — inside [0.5, 2] by 4 % of its own value. Any
    statement of the form "the gate passes" that does not also say "at CDKS
@@ -612,15 +620,22 @@ cfg = lipolgen.make_config(b1_model="li6-convolution", b1_unpol="mstw",
 
 Both opt-in backends carry the CDKS camp's b₁ᵈ, which is a **Q² = 2.5
 digitization with no Q² evolution**. In the topmost cell of the default window
-(x = 0.955) F₁ has fallen far enough that b₁/F₁ reaches **6.6** for `cdks`
-(3.3 before the 2026-09-03 normalisation fix doubled that camp) and **5.6** for
-`li6-convolution` — past where the phi-averaged density 1 + w_avg
+(x = 0.954993) F₁ has fallen far enough that b₁/F₁ reaches **6.52** for `cdks`
+and **5.91** for `li6-convolution` — past where the phi-averaged density 1 + w_avg
 stays positive, and `InclusiveSampler` refuses the run with *"negative
 phi-averaged density"*. Use `--x-max 0.95` (or `cfg.scenario.x_max = 0.95`).
 `lipolgen-run` now checks this **before** building the pipeline and says which
 flag fixes it, rather than letting that message — which names neither `--x-max`
 nor the CDKS table — come out of the sampler three frames down.
 `miller`'s b₁ is a ratio model (0.145 at the same point) and does not need it.
+Those three figures are MEASURED off the shipped kernel (re-measured
+2026-09-16) and are defined once, in `python/lipolgen/cli.py`'s
+`B1_TOP_CELL_B1_OVER_F1`, which the `--x-max` help and the `--b1-model`
+refusal both format their sentence from. Until 2026-09-16 this page said
+6.6 / 5.6, that help said 6.6 / 5.6, the refusal said 3.3 / 5.6 and
+`python/tests/test_b1_model.py` said 3.3 / 5.6 — the 3.3 being the
+pre-2026-09-03 half of the `cdks` figure and the 6.6 twice its rounding, so
+none of the four was what the code computes.
 This is a property of the CDKS camp's table, not of the wiring: a hand-built
 kernel with `Li6B1(CdksB1())` behaves identically.
 
@@ -811,6 +826,31 @@ Read the three qualifications with the table.
    on (`--inclusive-b1 --x-max 0.95`) and it moves by the same factors the
    inclusive channel does: A_zz = −1.557969e−3 (`toy`) → −1.951190e−3
    (`ct18nlo`, ×1.25239) → −1.963721e−3 (`mstw`, ×1.26044).
+   **`--inclusive-b1` and a TILTED plan are refused together on
+   `tagged-6Li-alpha`** (since 2026-09-16): the struck cluster's |S_c m_S⟩ is
+   evaluated with its quantization axis along the **beam** whatever the ion
+   fill's axis is, so `--plan transverse-tensor|tensor-flip --inclusive-b1`
+   used to run — and to record `inclusive_b1` as READ — while applying the
+   struck deuteron's b₁ with P₂(cos 0) = +1 on a fill sitting at
+   P₂(cos 90°) = −½. The refusal names the three ways out: run the tilted fill
+   spin-blind, run the b₁ on an untilted fill, or use the inclusive channel,
+   whose kernel does carry the axis. The same refusal catches P_e ≠ 0 on a
+   tilted fill, on **all three** tagged channels. It does **not** fire for
+   `--inclusive-b1` on the ⁷Li alpha tag (C++ `tagged-7Li-alpha`) or on
+   `tagged-d-p`, where the struck cluster is spin ½ and the knob is measurably
+   inert. **Name the RESOLVED channel here, never the CLI alias**:
+   `--channel tagged-alpha` resolves against `--isotope` (the `CHANNELS`
+   table in `python/lipolgen/__init__.py`), so on the default ⁶Li it IS
+   `tagged-6Li-alpha` and `lipolgen-run --channel tagged-alpha --plan
+   transverse-tensor|tensor-flip --inclusive-b1` exits **1** with this refusal
+   (measured 2026-09-16, both tilted plans, `--events 2`). The same command
+   line under `--isotope 7Li` also exits 1 — but on a different refusal,
+   reached before this one: both shipped tilted plans are spin-1 patterns and
+   ⁷Li is J = 3/2, so there is no tilted ⁷Li fill for this test to see. With
+   `--channel tagged-d-p` it exits **0** under either isotope spelling (the
+   channel implies the deuteron). Nothing spin-blind and
+   nothing untilted moved: every CLI default, every reference gate and both
+   shipped tilted plans (which carry P_e = 0) are bit-identical.
    **Why `--x-max 0.95` is in that command line** (measured 2026-09-05, and it
    was prescribed here without a reason until then): with `--inclusive-b1` on
    a tagged channel *and* a non-toy unpolarised backend, the shipped window's
@@ -2553,8 +2593,12 @@ absolute rates are machine-dependent).
 Every run — every channel, every plan, the all-default one included — now
 answers one question in one place: **which of its knobs could have affected
 the file it just wrote?** `Pipeline.knob_provenance(context)` returns one row
-per user-settable knob (68 on the shipped default run; 66 before
-   `--r-source` and `--pzz-mode` were added on 2026-09-06):
+per user-settable knob (**69** on the shipped default `lipolgen-run`, and 69
+from `lg.run()` since 2026-09-16, when that entry point started passing
+`pzz_mode` — it reported 68 before, missing exactly that row; 65 with an
+EMPTY `KnobRunContext`, which is what a bare `Pipeline.knob_provenance()` in
+a notebook gets, because the four run-plan rows and `pzz_mode` are things the
+core cannot see):
 
 | field | what it is |
 |---|---|

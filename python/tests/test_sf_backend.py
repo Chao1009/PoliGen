@@ -672,7 +672,7 @@ def test_the_banner_makes_no_hand_written_reach_claim_at_all():
     plan = lg.helicity_flip_plan(1.0, 0.7, 0.7)
     unread = "\n".join(cli.sf_banner_lines(
         "ct18nlo", "nnpdfpol", 1.6770249, 0.4474601,
-        _l.pol_sf_is_read(cfg, plan), _l.pol_sf_reach_report(cfg, plan)))
+        _l.pol_sf_is_read(cfg, plan)))
     assert "reaches EVERY kernel" not in unread
     assert "44.75 %" in unread
     # ... and the run's own table is where the sentence now lives, verbatim.
@@ -691,7 +691,7 @@ def test_the_banner_drops_the_g1_clauses_where_g1_was_never_read():
     plan = lg.helicity_flip_plan(1.0, 0.7, 0.7)
     coh = "\n".join(cli.sf_banner_lines(
         "ct18nlo", "toy", 1.6770249, 0.4474601,
-        _l.pol_sf_is_read(cfg, plan), _l.pol_sf_reach_report(cfg, plan)))
+        _l.pol_sf_is_read(cfg, plan)))
     assert "does NOT mean g1 is unchanged" not in coh
     incl = "\n".join(cli.sf_banner_lines("ct18nlo", "toy", 1.6770249,
                                          0.3617907))

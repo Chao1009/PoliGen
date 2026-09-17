@@ -1464,14 +1464,32 @@ def test_the_records_pass_reaches_every_record_and_most_citations(gate):
     assert rc == 0
 
 
+def _require_git_checkout(gate):
+    """Skip unless `gate.ROOT` is inside a git work tree.
+
+    Every `git show` / `git rev-parse` test in this suite needs it: an sdist,
+    a wheel, a `git archive` export and the `LIPOLGEN_TESTS_USE_INSTALLED`
+    packaging flow `conftest.py` advertises all run the tests from a tree with
+    no `.git` anywhere above it.  The guard lived inline in
+    `test_every_as_of_commit_in_the_records_resolves` and nowhere else until
+    2026-09-16, so its sibling
+    `test_every_as_of_anchor_passes_the_bar_at_its_commit` FAILED there
+    (`assert 128 == 0`, git's "not a repository" exit code) instead of
+    skipping -- corrected at one site and not the other, in a file whose whole
+    job is to catch that.  Hoisted here so the next `git` user inherits it.
+    """
+    import subprocess
+    if subprocess.run(["git", "-C", str(gate.ROOT), "rev-parse", "--git-dir"],
+                      capture_output=True).returncode != 0:
+        pytest.skip("not a git checkout")
+
+
 def test_every_as_of_commit_in_the_records_resolves(gate):
     """`(as of <commit>)` is a claim about a commit; a commit that is not in
     this repository makes it unverifiable, which is worse than no annotation."""
     import subprocess
+    _require_git_checkout(gate)
     root = str(gate.ROOT)
-    if subprocess.run(["git", "-C", root, "rev-parse", "--git-dir"],
-                      capture_output=True).returncode != 0:
-        pytest.skip("not a git checkout")
     seen = set()
     for doc in gate.record_files():
         for m in gate.ASOF_INLINE.finditer(doc.read_text()):
@@ -1568,7 +1586,11 @@ def test_every_anchor_read_pin_in_the_records_is_still_on_its_line(gate):
     # 28 annotations that existed before 2026-09-15 and were pinned when the
     # pin became compulsory, plus the 10 D3.4's repairs wrote and the 10 in
     # this phase's own record, which gates itself like any other
-    assert pins == 61  # 53 at the D4 count + the 8 the 2026-09-15 review-fix
+    assert pins == 62  # 53 at the D4 count, + 8 (2026-09-15 review-fix),
+                       # + 1 (2026-09-16: the `docs/USAGE.md` 2.80 cell of
+                       # run_2026-09-03/phase_D_numbers.md sec. D8.8, whose
+                       # line number the review pass moved and which was
+                       # re-read rather than re-pointed blind)
     # pass added while correcting the CW tolerance record and adding registry
     # rows 26/27: 6 in phase_CW_numbers.md sec. 9/10 (the three TABLE II rows,
     # cited twice), 1 in phase_D_numbers.md D4 residue 3, and 1 in
@@ -1604,6 +1626,7 @@ def test_every_as_of_anchor_passes_the_bar_at_its_commit(gate):
     of the 107 that is machine-derived: the gate's own rule -- two shared tokens
     or one of six characters -- passes there.  The other nine are named above,
     with what each target reads at that commit, in D2.5."""
+    _require_git_checkout(gate)
     checked = by_hand = 0
     for rec in gate.record_files():
         rel = str(rec.relative_to(gate.ROOT)).replace("docs/open_items/", "")
@@ -1640,5 +1663,11 @@ def test_every_as_of_anchor_passes_the_bar_at_its_commit(gate):
             by_hand += 1
             assert (rel, path, a, b, commit) in ASOF_READ_BY_HAND, (
                 rel, path, a, b, commit, sorted(shared))
-    assert checked == 107, checked
+    # 107 until 2026-09-16, when the review pass moved
+    # `include/lipolgen/b1_nuclear.hpp` under
+    # run_2026-09-03/phase_D_sf_injection.md's `:505-506` and the quoted
+    # "clean fix, NOT made here" text was gone from the tree entirely (it is
+    # the header adec442 carries, and the opposite of what that header says
+    # today), so the anchor was annotated rather than re-pointed.
+    assert checked == 108, checked
     assert by_hand == 9, by_hand      # the six of D2.5 + three in this record

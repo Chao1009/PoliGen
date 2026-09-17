@@ -2,7 +2,7 @@
 
 **Item.** `docs/OPEN_ITEMS_SOLUTIONS.md`:543-545 (Q5) and :568-571 ("What has to
 happen" items 5 and 6). Is `B1_PER_DEUTERON_TO_PER_NUCLEON = 0.5`
-(`include/lipolgen/constants.hpp:87`) right at **both** sites it is applied —
+(`include/lipolgen/constants.hpp:90`) right at **both** sites it is applied —
 `src/core/sf.cpp:350-354` (Miller table, reached by `MillerB1`/`toy_b1`) and
 `src/core/sf.cpp:356-361` (CDKS convolution, reached by `CdksB1`/`b1_convolution`)?
 

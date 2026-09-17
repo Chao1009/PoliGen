@@ -384,8 +384,13 @@ changed — and the items this run opened itself.
    bounded above and three not bounded at all (row 21 / §B25).
 8. **The sibling repository was not touched.** `PolarizedLithiumSim` carries
    the same inverted S–D phase at `tagged.py:247` (until its own commit `1066555` of 2026-09-15 fixed it and regenerated the figure — folded A_zz +0.491 → −0.843), in a **published figure**
-   and in five of its own test pins. It was **read, never modified and never
-   executed**; whether its numbers are regenerated is registry **row 27**.
+   and in five of its own test pins. It was **read and never modified**; the
+   one execution is recorded in `AUTHOR_DECISIONS.md` §B28(d) — on 2026-09-16,
+   after the sibling's own fix `1066555`, its `polligen.tagged.TaggedModel`
+   was run read-only to produce that section's 1.33e-13 / 2.28e-13
+   comparison, which cannot be obtained by reading. This item said "never
+   executed" until 2026-09-16. Whether its numbers are regenerated is registry
+   **row 27**.
 9. **Twenty-seven decisions sit in the registry and this run took none of
    them.** It priced three that had been left unpriced (rows 3, 17, 20/D13),
    paid one (row 20's D11), moved the evidence under three more (rows 9, 10,

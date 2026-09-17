@@ -299,7 +299,7 @@ The *substance* of LiPolGen's claim is exactly right — the file does label it
 the citation, not a factual one.  But it is unresolvable as written: a reader
 who greps the sibling for `HfsModel` finds nothing and cannot confirm the
 label.  Two sites carry it (`o5_a2_reach.py:437` and `:466`);
-`docs/OPEN_ITEMS_SOLUTIONS.md:2008-2010` repeats it a third time (re-pointed 2026-09-16, eight lines down, by the close-out's own edits to that file's state board).
+`docs/OPEN_ITEMS_SOLUTIONS.md:2010-2012` repeats it a third time (re-pointed 2026-09-16, eight lines down, by the close-out's own edits to that file's state board).
 
 ## C-S6 Incidental finding (2): the 17.75% carries no detector efficiency either
 

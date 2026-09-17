@@ -109,8 +109,10 @@ or through `--config-file` — is refused rather than silently resolved).
   unavailable)` message inside a case that is still tallied as **passed** —
   the open decision is registry row 25
   (`docs/open_items/run_2026-09-03/AUTHOR_DECISIONS.md` §B26).
-- The strict citation gate reports **0 broken** over three documents: 1205 refs
-  / 97 ranges / 7 external / 6 allow-listed on `PHYSICS_CHANNELS.md`, 19 refs /
+- The strict citation gate reports **0 broken** over three documents: 1206 refs
+  / 96 ranges / 7 external / 6 allow-listed on `PHYSICS_CHANNELS.md` (the
+  1205 / 97 this line carried until 2026-09-16 was the pre-commit working
+  tree's; `git archive bd775bc` measures 1206 / 96), 19 refs /
   115 ranges on `theory/SPIN32_FINITE_GAMMA.md`, 8 external on
   `PYTHIA_BRIDGE.md`; `validation/check_spdx_headers.py` 101/101. All measured
   2026-09-05 at the end of the open-items run — the counts move with every

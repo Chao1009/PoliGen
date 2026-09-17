@@ -75,7 +75,7 @@ both. See §1.4.7.
 Consequence: the whole design is **multiplicative weights on a finished
 event**, never a momentum shift. That is the FSI precedent
 (`include/lipolgen/fsi.hpp` file header; `src/core/pipeline.cpp:469-480` builds
-the model, `src/core/pipeline.cpp:3485` applies `ev.weight *= te.weight`), with
+the model, `src/core/pipeline.cpp:3551` applies `ev.weight *= te.weight`), with
 one deliberate difference: **the RC weights do not multiply `Event::weight`.**
 FSI is a *correction to the model*, so it belongs on the nominal weight; the RC
 band is a *systematic variation family* and the tail is a *background*, and
@@ -91,7 +91,7 @@ both must leave the Born sample alone. They travel as separate named weights
   W(phi') = 1 + w_avg + a1 cos(phi') + a2 cos(2 phi'),   phi' = phi - phi_S
 ```
 
-and (`src/core/xsec.cpp:248-260`, massless default path) the **b-sector** part
+and (`src/core/xsec.cpp:255-267`, massless default path) the **b-sector** part
 of `w_avg` is
 
 ```
@@ -1743,7 +1743,7 @@ plus, on `Pipeline`, the accessor and the member (mirroring `fsi_weight()` /
   std::shared_ptr<RcModel> rc_;   ///< null when cfg_.rc == Off
 ```
 
-**`PipelineConfig::validate()`** (`src/core/pipeline.cpp:450`) gains, after the
+**`PipelineConfig::validate()`** (`src/core/pipeline.cpp:456`) gains, after the
 FSI block:
 
 ```cpp

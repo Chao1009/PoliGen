@@ -94,7 +94,7 @@ Pointwise rows (θ_k = 90°):
 | 0.30 | 1.13927 | 4.07433 | 3.576 |
 | 0.50 | 0.63510 | 6.54603 | 10.307 |
 
-(The 0.10 GeV row reproduces the pair `docs/PHYSICS_CHANNELS.md:340` records
+(The 0.10 GeV row reproduces the pair `docs/PHYSICS_CHANNELS.md:343` records
 for the **production S+D tag**, 0.391 vs 0.321; `tests/test_fsi.cpp:258-281`
 pins the *pure-S prototype* channel's 0.381 / 0.309 instead, which is why the
 two pairs differ.)
@@ -120,8 +120,8 @@ Per-event ratio w_nucleon/w_cluster, percentiles [1, 5, 25, 50, 75, 95, 99] =
 **Verdict: the two variants are different on essentially every event, and by
 construction, not by parameter choice.** D3 should be closed as *premise
 false*, and `PLAN.md:332-333` retracted where it stands (it is the only place
-in the tree that carries the claim — `docs/PHYSICS_CHANNELS.md:340` and
-`docs/CONVENTIONS.md:422` (anchor read 2026-09-15 "40); variant") already state it correctly).
+in the tree that carries the claim — `docs/PHYSICS_CHANNELS.md:343` and
+`docs/CONVENTIONS.md:454` (anchor read 2026-09-15 "40); variant") already state it correctly).
 
 ### D3.4 What a genuinely NON-identical per-nucleon variant would have to include
 
@@ -263,7 +263,7 @@ Two things the tree does not record:
   `xu = xd = xubar = xdbar = xs = xsbar` and `xc = xcbar = xb = xbbar = 0.`.
   The tree says "the H1 **LO** grids carry no charm or bottom at ANY (β, Q²)"
   (`src/pythia/pythia_bridge.cpp:598-601`,
-  `docs/PHYSICS_CHANNELS.md:494`) — true, and **also** true of the two H1 NLO
+  `docs/PHYSICS_CHANNELS.md:497`) — true, and **also** true of the two H1 NLO
   fits (3, 4), which the wording does not cover.
 * `BeamSetup.cc:1379-1387` — selecting an ACTW set (7–10) makes PYTHIA
   **overwrite** `SigmaDiffractive:PomFlux = 4` and set `PomFluxEpsilon`
@@ -447,7 +447,7 @@ band this item exists to establish.
 And `docs/PHYSICS_CHANNELS.md:450` (as of adec442) says of the fallback *"Counted, so the
 fallback share of a run is visible."* It is counted
 (`include/lipolgen/pythia_bridge.hpp:341` (anchor read 2026-09-15 "n_pom_flavour_fallback = 0"), bound at
-`python/bindings.cpp:5045` (anchor read 2026-09-15 `def_readonly("n_pom_flavour_fallback"`)) and **surfaced nowhere**: not in the `meta`, and
+`python/bindings.cpp:5053` (anchor read 2026-09-15 `def_readonly("n_pom_flavour_fallback"`)) and **surfaced nowhere**: not in the `meta`, and
 not in the run banner, which prints `n_ok`, `n_failed`, `n_retries` only
 (`python/lipolgen/cli.py:712-715` (as of a7b3d18)). On set 11 that is the difference between a
 run that used a Pomeron PDF and one that used none.
@@ -681,7 +681,7 @@ independent item.
 ### D5.6 `coherent_t_max` is absent from the npz `meta`, and from the CLI
 
 Third instance of the D3.5 defect, and the worst of the three: `coherent_t_max`
-is on `PipelineConfig` (`include/lipolgen/pipeline.hpp:835`) and bound
+is on `PipelineConfig` (`include/lipolgen/pipeline.hpp:873`) and bound
 (`python/bindings.cpp:3864` (as of adec442)), but it is **not reachable from `cli.py` at all**
 (there is no `--coherent-t-max`) and **not in the `meta`**. A Python caller who
 moves it changes the entire |t| spectrum, the tag acceptance and every c₂ in

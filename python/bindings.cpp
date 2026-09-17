@@ -547,6 +547,13 @@ py::dict columns_to_dict(Columns& c, const Pipeline& p, std::uint64_t n,
   meta["s_per_nucleon"] = p.beam_config().s_per_nucleon();
   meta["seed"] = p.config().seed;
   meta["run"] = p.config().run;
+  // THE PLAN'S NAME.  `--plan` was the one physics-relevant CLI flag with no
+  // provenance of any kind until 2026-09-16: `RunPlan` records its MOMENTS
+  // and not which pattern produced them, so the plan was recoverable from an
+  // npz only by reading `category_names` and the pz/pzz/pe/lam_e columns back
+  // out.  Written only when the caller supplied one (`cli.main` and `lg.run`
+  // both do), so a `Pipeline.generate()` with no context is unchanged.
+  if (!ctx.plan_name.empty()) meta["plan"] = ctx.plan_name;
   meta["n_events"] = n;
   meta["n_events_total"] = p.size();
   meta["sigma_pb"] = p.sigma_pb();
@@ -4045,9 +4052,10 @@ static void bind_pipeline(py::module_& m) {
       "inclusive tensor number was made with: Li6B1(MillerB1) through "
       "LI6_B1_RANK2_TRANSFER.  This IS the run PLAN's 'toy'.\n"
       "  Cdks            the same 6Li rank-2 transfer on the CDKS convolution "
-      "camp; |b1| two orders of magnitude smaller below x ~ 0.1, COMPARABLE "
-      "above it (peak |x b1| 1.67e-4 against Miller's 4.27e-4 at Q2 = 2.5, "
-      "and 4x larger at x = 0.3 with the opposite sign), and a different sign "
+      "camp; |b1| two orders of magnitude smaller below x ~ 0.1, comparable "
+      "or larger above it (peak |x b1| 3.34e-4 at x = 0.766 against Miller's "
+      "4.27e-4 at x = 0.084, both at Q2 = 2.5, and 7.7x larger at x = 0.3 "
+      "with the opposite sign), and a different sign "
       "structure.  Miller and CDKS are different CAMPS -- say which one a "
       "plot used.  INCLUSIVE CHANNEL ONLY and 6Li ONLY, like Li6Convolution: "
       "it is Li6B1's 6Li transfer (PipelineConfig.validate refuses the "

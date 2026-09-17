@@ -340,8 +340,8 @@ class TaggedModel {
   // granularity (one 26880-entry `lower_bound` dominates the call).  The
   // eager build wins on the guarantee instead: it is the only one that makes
   // the object immutable, so no caller has to know about a warm-up protocol.
-  // Its cost is paid once, in the constructor, and `Pipeline` was already
-  // paying it in its warm-up loop.
+  // Its cost is paid once, in the constructor.  `Pipeline` paid it a second
+  // time in a warm-up loop of its own until 2026-09-16, when that loop went.
   std::map<long long, std::vector<std::vector<double>>> amp2_;
   std::map<long long, std::vector<double>> n_;
   std::map<long long, std::vector<double>> cdf_;

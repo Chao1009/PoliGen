@@ -32,6 +32,13 @@
 /// per-cell pb number divides `n_events` by the EFFECTIVE luminosity
 /// (programme x `run_share`), so `cell_xsec_pb()` is share-invariant and the
 /// caller's `lumi_pb` applies the share exactly once (test_run_share.py).
+/// Share-invariant TO ONE ULP, not bit for bit, and deliberately so: the
+/// share is multiplied into `lumi_pb` and divided straight back out
+/// (`sampler.cpp` `cell_xsec_pb`), which is exact for most cells and one ulp
+/// for the rest -- MEASURED 2026-09-16 on the default 6Li sampler, 579 of
+/// 2750 cells differ between `run_share` 1 and 1/3, worst relative difference
+/// 2.22e-16.  The tests pin it at that: `tests/test_sampler.cpp` at 1e-12,
+/// `tests/test_pipeline.cpp` at 1e-15.
 ///
 /// DETERMINISM.  Every event i of a (seed, run, bunch) stream is drawn from
 /// its own counter-based `Rng(seed, run, bunch, i)`, so the batch is
@@ -189,7 +196,8 @@ class InclusiveSampler {
   std::size_t n_cells() const { return x_cells_.size(); }
   const std::vector<double>& x_cells() const { return x_cells_; }
   const std::vector<double>& q2_cells() const { return q2_cells_; }
-  /// Per-cell UNPOLARIZED accepted cross section [pb].  Share-invariant.
+  /// Per-cell UNPOLARIZED accepted cross section [pb].  Share-invariant to
+  /// one ulp -- see the LUMINOSITY paragraph at the top of this file.
   const std::vector<double>& cell_xsec_pb() const { return xsec_flat_; }
   const std::vector<double>& logx_lo() const { return logx_lo_; }
   const std::vector<double>& logx_hi() const { return logx_hi_; }
@@ -326,6 +334,19 @@ class InclusiveSampler {
       const EventBatch& batch, const std::vector<SpinCategory>& cats) const;
 
  private:
+  /// The shared body of `weights_for` and `tensor_weights_for`.  The two
+  /// validate the same batch (x, phi and cell of one length; every cell inside
+  /// this sampler's accepted grid) and mix the same population sum out of the
+  /// same `StateTables`; they differ only in WHICH (w, a1, a2) triple they
+  /// read and in whether the unpolarized 1.0 is part of the sum.
+  std::vector<double> mix_weights(const EventBatch& batch,
+                                  const std::vector<SpinCategory>& cats,
+                                  std::vector<double> StateTables::*w,
+                                  std::vector<double> StateTables::*a1,
+                                  std::vector<double> StateTables::*a2,
+                                  bool with_unpolarized,
+                                  const char* who) const;
+
   struct StateKey {
     int lam_e;
     double pe, j, m, theta_s, phi_s;

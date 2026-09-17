@@ -64,12 +64,15 @@ inline constexpr double PROTON_MASS = 0.938272088;
 ///   * `src/hepmc/hepmc_writer.cpp` stamps it as the GENERATED mass of an
 ///     electron the core builds massless, so that Geant4/DD4hep does not
 ///     nudge E by O(10 ppm) to satisfy E^2 - p^2 >= m_e^2;
-///   * `rc.hpp`'s `RcOptions::m_lepton` RESERVES it for the unimplemented
-///     `RcTailModel::PolradFull`, where the LEPTON mass is what keeps
-///     POLRAD's infrared factor F_IR finite and what sets l_m = ln(Q^2/m^2).
-///     The shipped `TPeak` tail carries no lepton mass, so `hepmc_writer` is
-///     the only consumer that reads this constant today, and
-///     `PipelineConfig::validate()` refuses a non-default `m_lepton`.
+///   * `rc.hpp`'s `RcOptions::m_lepton` defaults to it and is READ by
+///     `RcTailModel::PolradFull` -- implemented since 2026-09-06, so the
+///     reservation this bullet used to describe is discharged: it is the m^2
+///     of C_{1,2}(tau), of the infrared factor F_IR and of lambda_s, i.e.
+///     what regulates the s- and p-peaks (`src/core/rc.cpp`,
+///     `polrad_full_sigma_el` / `polrad_full_sigma_qe_u`).  The two t-peak
+///     tails read no lepton mass, so `PipelineConfig::validate()` refuses a
+///     non-default `m_lepton` ON THOSE TWO ONLY.  `hepmc_writer` and
+///     `PolradFull` are this constant's two consumers.
 /// The literal is unchanged from the one it replaces (tests/test_hepmc.cpp
 /// and python/tests/test_hepmc.py pin the written value).
 inline constexpr double M_ELECTRON = 0.51099895e-3;

@@ -14,45 +14,45 @@
   "first": "## `momenta/` — the cluster MOMENTUM DISTRIBUTIONS (fetched 2026-08-29, second pass)",
   "last": "**What each family is good for.**  The momentum files carry |ψ_L|² only — a"
  },
- "docs/CONVENTIONS.md:168-171": {
+ "docs/CONVENTIONS.md:181-184": {
   "sha256": "bf5cd1c67bb18dd608ff62ddaa5b8ffc67481638631d358db29c73b14d7c2874",
   "first": "- **Struck nucleon species.** Drawn `Z F2p(x, Q²) : N F2n(x, Q²)` at the",
   "last": "  limit and is wrong wherever `F2n/F2p ≠ 1` (0.5 against a true 0.615 for 6Li"
  },
- "docs/CONVENTIONS.md:194-198": {
+ "docs/CONVENTIONS.md:207-211": {
   "sha256": "bb956c6885e5f0b712f86395c4b9a2e03e9a1d56d50a38fbb965f1e34968b0d3",
   "first": "  come out of one code path; the EPPS21 depletion is the single stored number",
   "last": "  modification alone; against CT18NLO it was 0.02979, 4.2 % shallower.  On"
  },
- "docs/CONVENTIONS.md:312-314": {
+ "docs/CONVENTIONS.md:325-327": {
   "sha256": "3fdf426e67ab73b2f05da59956d200e817696c39e36b6d645e57a7b54a2d7a19",
   "first": "  momentum.  `β = x/x_P` and `M_X²` are on the record.  X must be TIMELIKE on",
   "last": "  `InclusiveGenerator`, never a clip."
  },
- "docs/CONVENTIONS.md:372-374": {
+ "docs/CONVENTIONS.md:404-406": {
   "sha256": "f04a60e7f41f903283d8776a21b7167f0068fde8a2f729dff110de5546c92654",
   "first": "  n₁(k) is Eq. (76) for A = 3 and Eq. (75)/Table A.3 for A = 4; k in fm⁻¹ is",
   "last": "  single definition since 2026-09-01, with `coherent.hpp`'s `GEV_PER_FM_INV`"
  },
- "docs/CONVENTIONS.md:508-509": {
+ "docs/CONVENTIONS.md:540-541": {
   "sha256": "79eb7bbe3851888930155576aa86ac57e39a7207d90d5e533133eea1b33a12cf",
   "first": "- **Luminosity shares.** `Optics::lumi_fraction` multiplies COUNTS and never",
   "last": "  cross sections (`PipelineConfig::apply_optics_lumi_fraction`, default true) —"
  },
- "docs/CONVENTIONS.md:66-72": {
+ "docs/CONVENTIONS.md:75-81": {
   "sha256": "f35ed6f252a00c78ab9fbb2a8871f8054bd774a6170fa07b07f958e8c0dfcac2",
   "first": "- **Tensor-sector sign.** `TENSOR_LL_SIGN = -1.0` since 2026-08-29 (author",
   "last": "  with P_zz = n₊ + n₋ − 2n₀, i.e. b₁ > 0 means the m = 0 state has the LARGER"
  },
- "docs/CONVENTIONS.md:66-74": {
+ "docs/CONVENTIONS.md:75-83": {
   "sha256": "1b166ad4f0c88cddcba9ddc2ceb9837551053a507342efe3b0cfcec635c9ec0c",
   "first": "- **Tensor-sector sign.** `TENSOR_LL_SIGN = -1.0` since 2026-08-29 (author",
   "last": "  Hoodbhoy–Jaffe–Manohar — until that date, and setting the constant back is"
  },
- "docs/CONVENTIONS.md:72-73": {
-  "sha256": "332f335d4de7e3135ba852c1394aabd2def59dcfb35a90618fe0430a7b0e0769",
+ "docs/CONVENTIONS.md:81-83": {
+  "sha256": "abd9e0def648ed6f82a92450db445ba4de1eb856735b8a61fc51f3a1f930f0ee",
   "first": "  with P_zz = n₊ + n₋ − 2n₀, i.e. b₁ > 0 means the m = 0 state has the LARGER",
-  "last": "  cross section.  It was `+1` — the repository's own transcription of"
+  "last": "  Hoodbhoy–Jaffe–Manohar — until that date, and setting the constant back is"
  },
  "docs/DEVELOPMENT_PLAN.md:61-65": {
   "sha256": "c243793dc9e98775b80cedbb46f12d5fbfafc754a9c24881a6e59a2a95bd4eaf",
@@ -175,41 +175,41 @@
   "last": "`docs/OPEN_ITEMS_SOLUTIONS.md` §12–13 and `docs/open_items/engineering.md` §C)."
  },
  "docs/USAGE.md:163-533": {
-  "sha256": "6be731d99a9544bd8b29d14db62bd95ecba60805c4232df959c050d170f88474",
+  "sha256": "ffb4c4f783629f0238de6a33a7016290661703112456dfa7e97cb49c78a03ce6",
   "first": "X (pdg 92). The balance is **per-nucleon**, `k + P_N = k' + X`, exactly as",
-  "last": "number the generator could emit was made on the toy** — including after the"
+  "last": "move every pinned gate number, and it is not a uniform improvement on an"
  },
- "docs/USAGE.md:1938-2129": {
+ "docs/USAGE.md:1978-2169": {
   "sha256": "90a7c095fadc0dee726f4abe18f015cbe6f0854a37ea71d93e4fac3e9aa7eeef",
   "first": "## 5. Far-forward routing",
   "last": "  `rc_tensor_lo`/`rc_tensor_hi`/`rc_tail`. **Every other CLI plan is"
  },
- "docs/USAGE.md:2019-2025": {
+ "docs/USAGE.md:2059-2065": {
   "sha256": "cfa42994d7893afe53474900d5ca86ee2ae2bea465e3bb6860fbbbb5a36be9b1",
   "first": "## 7. Checks you get for free",
   "last": "```"
  },
- "docs/USAGE.md:2724-2731": {
+ "docs/USAGE.md:2768-2775": {
   "sha256": "9cf755a3c8b97c0b7abde6620cc7250bf839feba9aff18acc6a0239127260383",
   "first": "## 8. Command-line generators",
   "last": "```"
  },
- "docs/USAGE.md:2751-2948": {
+ "docs/USAGE.md:2795-2992": {
   "sha256": "09f5b2bb32ff0ac99ff94ea17b2d4d69cb0c936f487c70360ee1283946b4ecc0",
   "first": "## 9. Polarized ⁶Li configurations for coherent-diffraction codes",
   "last": "and `phase_G_numbers.md` the reproduced numbers."
  },
- "docs/open_items/physics_literature.md:108-112": {
+ "docs/open_items/physics_literature.md:119-123": {
   "sha256": "590126d6d6102339410e72817fecf6527aa61f733b64f635e5c60af28cc750c9",
   "first": "| Slides' \"1/3\" | **1.00** | 0.333 | Naive α+d, no D-state, no cluster loss. **16% too big.** |",
   "last": "**Recommendation (whole-nucleus convention, no Z or N factor):**"
  },
- "docs/open_items/physics_literature.md:132-140": {
+ "docs/open_items/physics_literature.md:143-151": {
   "sha256": "e1f53a42b072dc598fb7f94976fcadc06a8476043e7f3683655ac2b55a69c478",
   "first": "**(b) HERMES, [arXiv:hep-ex/0506018](https://arxiv.org/abs/hep-ex/0506018), PRL 95 (2005) 242001.**…",
   "last": "**(d) Independent fourth check, POLRAD 2.0** ([arXiv:hep-ph/9706516](https://arxiv.org/abs/hep-ph/9…"
  },
- "docs/open_items/physics_literature.md:155-161": {
+ "docs/open_items/physics_literature.md:166-172": {
   "sha256": "aa2bb1a91d948c3bd69694e822fccb1e52bae6f2bb73c23033c178787ba0e054",
   "first": "| **H. Mäntysaari, F. Salazar, B. Schenke, C. Shen, W. Zhao, [arXiv:2408.13213](https://arxiv.org/a…",
   "last": "**What does *not* exist, checked several ways:** no coherent diffraction, exclusive VM, or DVCS cal…"
@@ -379,7 +379,7 @@
   "first": "///   is EXACTLY the covariant Bacchetta et al. (JHEP 02 (2007) 093) azimuth",
   "last": "///   is that the generator and the reconstruction agree."
  },
- "include/lipolgen/numerics.hpp:26-28": {
+ "include/lipolgen/numerics.hpp:27-29": {
   "sha256": "c4aabd936c68cc60f02dd366e5003949bf9ecdf100e775fe1f90078a23287d95",
   "first": "/// NumPy's pairwise summation (numpy/core/src/umath/loops_utils.h.src,",
   "last": "/// trapezoid integral bit-identical to `np.trapz`."
@@ -389,17 +389,17 @@
   "first": "/// ---------------------------------------------------------------------------",
   "last": "///                    p_z = (1 - x_P) A p_u; X = k + P_ion - k' - P_recoil is"
  },
- "include/lipolgen/pipeline.hpp:1450-1460": {
-  "sha256": "4a8c241bda67b8d311a5e3f8125e50c2ca117692377265485a90d2fe92eb0fb5",
+ "include/lipolgen/pipeline.hpp:1488-1504": {
+  "sha256": "baa2ea5d69991364255466f7b903f44af72b7a03bb026aaa09b5c81cf48dd4a3",
   "first": "  /// Accepted cross section [pb] per category, in plan order.  SHARE",
   "last": "  const std::vector<double>& lumi_per_category_pb() const { return lumi_; }"
  },
- "include/lipolgen/pipeline.hpp:287-299": {
+ "include/lipolgen/pipeline.hpp:316-328": {
   "sha256": "9fb03aba6576975a80bba63f800378576a8eac2efe5906577c2ba8ae785758e9",
   "first": "/// Fidelity tier of the final state a run writes (DEVELOPMENT_PLAN.md 2).",
   "last": "/// The switch does nothing on the inclusive and coherent channels, which have"
  },
- "include/lipolgen/pipeline.hpp:893-896": {
+ "include/lipolgen/pipeline.hpp:931-934": {
   "sha256": "edb4be8cb1bca399de805257f1dabe4d99512493d2bbb89bdf29a35cc14d5565",
   "first": "  /// the latter).  Run 0 / 1 / 2 and quote the envelope.  Q(6Li) =",
   "last": "  /// against Q_d = +0.2859(3) fm^2: the alpha-d relative"
@@ -434,7 +434,7 @@
   "first": "/// Fermi momentum of 6Li, E. J. Moniz et al., PRL 26 (1971) 445 (the",
   "last": "inline constexpr double RC_QE_KF_GEV = 0.169;"
  },
- "include/lipolgen/sampler.hpp:208-215": {
+ "include/lipolgen/sampler.hpp:216-223": {
   "sha256": "518e363344f2c62f4ac59fef52bf52f49b6db0688025ddcb4a98b6e8a8ced921",
   "first": "  struct StateTables {",
   "last": "    ///"
@@ -643,42 +643,42 @@
   "last": "  if (beamSetup.doVarEcm && doHardProc) {",
   "src": "pythia8317"
  },
- "python/bindings.cpp:2180-2192": {
+ "python/bindings.cpp:2187-2199": {
   "sha256": "72ad89e79f50638eda95f70c4082d1e18bc4858d63176c34d32c069bac9a75ed",
   "first": "  py::class_<Amplitudes>(m, \"Amplitudes\")",
   "last": "        return std::string(b);"
  },
- "python/bindings.cpp:2220-2222": {
+ "python/bindings.cpp:2227-2229": {
   "sha256": "2146437e801d731124b8b045dc7823881c75bf72fbd68be43570bdbd3b37132b",
   "first": "      .def_readwrite(\"b1_32_func\", &InclusiveKernel::Options::b1_32_func)",
   "last": "      .def_readwrite(\"delta_32_func\", &InclusiveKernel::Options::delta_32_func)"
  },
- "python/bindings.cpp:2334-2335": {
+ "python/bindings.cpp:2341-2342": {
   "sha256": "eae7eee385aad9ff0b413f93466a4356e1cf68cf62513c50a7b39218e6fe8491",
   "first": "      .def_readwrite(\"use_explicit_pzz\", &HelicityFlipOptions::use_explicit_pzz)",
   "last": "      .def_readwrite(\"pzz\", &HelicityFlipOptions::pzz)"
  },
- "python/bindings.cpp:2481-2494": {
+ "python/bindings.cpp:2488-2501": {
   "sha256": "c5555554edb0fa110a0e4599c0367b8831f7afc12eb6006967bd703b05304d65",
   "first": "      .def(\"state_tables\", [](const InclusiveSampler& s,",
   "last": "        return d;"
  },
- "python/lipolgen/__init__.py:416": {
+ "python/lipolgen/__init__.py:422": {
   "sha256": "42d1b3c1373ae738b90a7b6be6ecae2ac5f61b83ae6be3e1d9c25b4e27493adc",
   "line": "def ion_spin(isotope):",
   "name": "isotope"
  },
- "python/lipolgen/__init__.py:628": {
+ "python/lipolgen/__init__.py:634": {
   "sha256": "6e8d4548e6f69e6314bba0668e7b1547bd834f31f40a0b5a4cdc0e76c21ba6df",
   "line": "    if b1_model is not None:",
   "name": "b1_model"
  },
- "python/lipolgen/__init__.py:688": {
+ "python/lipolgen/__init__.py:694": {
   "sha256": "c8c6b8b1f6e0e97adaddb6d72a6a797fc2e2a16f2420869d61a8b5facd3c762b",
   "line": "            setattr(sc, k, float(v))",
   "name": "setattr"
  },
- "python/lipolgen/cli.py:1443": {
+ "python/lipolgen/cli.py:1636": {
   "sha256": "1d2f24498096c3b3855a2ea8b882f003dd6d6cae4a8b164319b6b93399cb564d",
   "line": "    if p.rc_model is not None:",
   "name": "rc_model"
@@ -713,22 +713,22 @@
   "first": "RunPlan helicity_flip_plan(double j, double pz, double pe,",
   "last": "}"
  },
- "src/core/breakup.cpp:158": {
+ "src/core/breakup.cpp:156": {
   "sha256": "f60fd6f0545f3ebd293329406d5b674863fdd68e5468eaec27730782b35bf6e2",
   "line": "  grid_ = linspace(1e-4, opt_.k_max, opt_.n_grid);",
   "name": "n_grid"
  },
- "src/core/breakup.cpp:209": {
+ "src/core/breakup.cpp:207": {
   "sha256": "67f299b0af3fd3f0f888f4ef7f1567535e0dce6bd45c253659b4795492577fc2",
   "line": "  if (in.species == ClusterSpecies::Nucleon) {",
   "name": "Nucleon"
  },
- "src/core/breakup.cpp:236": {
+ "src/core/breakup.cpp:234": {
   "sha256": "c01a5b95b87b835aee189b3aa8dc82633d138a3b6386b6361c46de0ba1e6b694",
   "line": "  if (in.species == ClusterSpecies::Deuteron) {",
   "name": "Deuteron"
  },
- "src/core/breakup.cpp:279": {
+ "src/core/breakup.cpp:292": {
   "sha256": "564a9509b1c75ccc86b1546a0b8d88264c40e87a04e8c3560797e3aee17991c8",
   "line": "  } else if (tsf_) {",
   "name": "tsf_"
@@ -743,42 +743,42 @@
   "line": "  if (opt_.variant == FsiVariant::GlauberNucleon) {",
   "name": "GlauberNucleon"
  },
- "src/core/pipeline.cpp:1143": {
+ "src/core/pipeline.cpp:1149": {
   "sha256": "ad29b4f734d2daf50ededfb2ff603d6de41d1b8da319bc33d14c67c502ab492a",
   "line": "  scenario.validate();",
   "name": "scenario"
  },
- "src/core/pipeline.cpp:1531": {
+ "src/core/pipeline.cpp:1537": {
   "sha256": "571044c1fb8fd3dc133d4a2f8c4f1fbbd0fef9e236c70ca707037264bd62b307",
   "line": "    sopt.grid = cfg_.grid;",
   "name": "grid"
  },
- "src/core/pipeline.cpp:1616": {
+ "src/core/pipeline.cpp:1680": {
   "sha256": "6143e100b50564bab6c2de1fe2548dfaaaff508e2a54ab925c5ecf6b7d57c068",
   "line": "      bo.beta = cfg_.cluster_beta;",
   "name": "beta"
  },
- "src/core/pipeline.cpp:1646": {
+ "src/core/pipeline.cpp:1710": {
   "sha256": "d19f53dd5ad472c8c3bfea196c1f40e4a25fc417a5bd7012b4b2a26ec5000ee3",
   "line": "    dis_sampler_ = std::make_shared<InclusiveSampler>(kernel, beams_,",
   "name": "InclusiveSampler"
  },
- "src/core/pipeline.cpp:1717": {
+ "src/core/pipeline.cpp:1781": {
   "sha256": "395b16a1d6eeba60e7a61a66a29573617ba01bf8ae148406e7366b9afb2a4ed5",
   "line": "      const bool fits = cfg_.coherent_xpom.x_pom_min(q2c[c], w2c)",
   "name": "x_pom_min"
  },
- "src/core/pipeline.cpp:3683": {
+ "src/core/pipeline.cpp:3749": {
   "sha256": "0ff9c4ac169c911d660a1430a75278c4de48e6709b20b7d4281b06c8e2f26adb",
   "line": "  if (cfg_.hadronizer) cfg_.hadronizer(out, rng);",
   "name": "hadronizer"
  },
- "src/core/pipeline.cpp:551": {
+ "src/core/pipeline.cpp:557": {
   "sha256": "42a04ad5bf71c64c729c88feab1dc7a0fe8d3a95b88ca96d5e7c35e6353d8bb9",
   "line": "    if (!(rc_options.a_transfer_frac >= 0.0)) {",
   "name": "a_transfer_frac"
  },
- "src/core/pipeline.cpp:805": {
+ "src/core/pipeline.cpp:811": {
   "sha256": "b759141159d6b71cd6d1c2ecf3f3ad41233f2134d9e01943218cbeebbf591b69",
   "line": "  if (b1_model == B1Model::Miller) {",
   "name": "B1Model"
@@ -803,37 +803,37 @@
   "line": "  if (channel_ == Channel::CoherentLi6) {",
   "name": "CoherentLi6"
  },
- "src/core/sampler.cpp:225": {
+ "src/core/sampler.cpp:232": {
   "sha256": "6dc4c4df16a23e5ab1832edf80bad5d373ab0218574d112de58d447ca227ecdf",
   "line": "                                               with_perp_);",
   "name": "with_perp_"
  },
- "src/core/sampler.cpp:276-279": {
+ "src/core/sampler.cpp:283-286": {
   "sha256": "859681a73ab0ce30583a5a75c5b6a60ccd4ee0a1fc2d278b43196d3e40eb6e16",
   "first": "    st.a1n[i] = amp.a1 / den;",
   "last": "    const double margin = density_min(st.a1n[i], st.a2n[i]);"
  },
- "src/core/sampler.cpp:335-362": {
+ "src/core/sampler.cpp:370-397": {
   "sha256": "fe4e16d09963eedbf6a14908df0539360333ee06ee59f78cbe35d9d6de7d5601",
   "first": "InclusiveSampler::EffectiveModulation InclusiveSampler::effective_modulation(",
   "last": "}"
  },
- "src/core/sampler.cpp:42": {
+ "src/core/sampler.cpp:43": {
   "sha256": "0929d2ce38f733f070ebb51950f3b5bcc6bab5ec4701d5a92bb759506560e39e",
   "line": "  g.q2_edges = logspace(std::log10(q2_min), std::log10(q2_max),",
   "name": "q2_edges"
  },
- "src/core/sampler.cpp:425-435": {
+ "src/core/sampler.cpp:460-470": {
   "sha256": "4afde4abc6250c5cb89c187402266c2009f1cbb1d61d705d84564d7499d62204",
   "first": "  // 3. phi by accept-reject on the cell-center amplitudes",
   "last": "  }"
  },
- "src/core/sampler.cpp:519-521": {
-  "sha256": "a92332906dacc1a8ebec6f63a135ae84146cb14988a0db081139eafe02554926",
-  "first": "        out[i * nk + k] += p_m * (1.0 + st.w_avg[c] +",
-  "last": "                                  st.a2[c] * std::cos(2.0 * phip));"
+ "src/core/sampler.cpp:588-591": {
+  "sha256": "ff6e68aa7ab6d63867168ca1ae68c333a1dfed6934f89a3fdaba4fa69332beed",
+  "first": "        const double base =",
+  "last": "                                  (st.*a2)[c] * std::cos(2.0 * phip));"
  },
- "src/core/sampler.cpp:595-604": {
+ "src/core/sampler.cpp:651-660": {
   "sha256": "5f2b4643644ceba11ee25c9aa058224365afffd2dc7371d56a6f4e47fbbe388f",
   "first": "PhiHistogram phi_histogram_pseudo(double n_expected, double a2, int nbins,",
   "last": "    throw std::runtime_error(msg);"
@@ -913,42 +913,42 @@
   "first": "  if (with_g2 || target_mass_) {",
   "last": "  }"
  },
- "src/core/xsec.cpp:145-152": {
-  "sha256": "af243cbc92546c6bdbce82b32a8dc7749d601c97928fd99e051deaa648735b87",
-  "first": "  if (!target_mass_) {",
+ "src/core/xsec.cpp:147-159": {
+  "sha256": "671b8b0e0852c11bd2485672379a9528de3592ce55e2fd15ea0e0c53ab187c61",
+  "first": "double InclusiveKernel::a_parallel(const SFTables& t, double x, double q2,",
   "last": "  return a_parallel_exact(t.g1, t.g2, t.f1, y, x, q2, r_func_);"
  },
- "src/core/xsec.cpp:168-173": {
+ "src/core/xsec.cpp:175-180": {
   "sha256": "9d1b1adb4bd7221e328769a4289443a091ef400d213c78b218ddbbb315bacf1f",
   "first": "std::pair<double, double> InclusiveKernel::tensor_moments(double m) const {",
   "last": "}"
  },
- "src/core/xsec.cpp:175-212": {
+ "src/core/xsec.cpp:182-219": {
   "sha256": "87500570a1a03d5fd474e2425ecb913cd6089f303c097c9f95288ef9d2a66379",
   "first": "TensorHarmonics InclusiveKernel::tensor_harmonics_gamma(",
   "last": "}"
  },
- "src/core/xsec.cpp:253-277": {
+ "src/core/xsec.cpp:260-284": {
   "sha256": "ce54a899f88f4dc93549d64c4890fcdcfec1a20323f6b0e45ea819eaabe729a4",
   "first": "  if (j >= 1.0 - 1e-9 && j_ion >= 1.0 - 1e-9) {",
   "last": "  }"
  },
- "src/core/xsec.cpp:255": {
+ "src/core/xsec.cpp:262": {
   "sha256": "e97b5246b719dceed17aff7596918084016274d5279e80e4105ed8b68cc0d99b",
   "line": "    if (tensor_gamma_) {",
   "name": "tensor_gamma_"
  },
- "src/core/xsec.cpp:259": {
+ "src/core/xsec.cpp:266": {
   "sha256": "3f5c5443c61994b443e556c40510c021c51dfffa50f8736b2bc6eda02471236a",
   "line": "      out.a2 = out.a2 + h.h2;",
   "name": "a2"
  },
- "src/core/xsec.cpp:261-265": {
+ "src/core/xsec.cpp:268-272": {
   "sha256": "0976fba3416ff6a704e04590e8e0c829ceffcff5b4f3c7e1c61ddf2001dc04d3",
   "first": "      // T_LL = Q_NN P_2(cos theta_S), one line for every spin",
   "last": "      out.w_avg = out.w_avg + t_geo * kern / std::max(den, 1e-30);"
  },
- "src/core/xsec.cpp:282-304": {
+ "src/core/xsec.cpp:289-311": {
   "sha256": "b7639d451d775ae1f30bbb87ee0740a3b182d761ebf4c67054ef2a0ed031c0b5",
   "first": "Amplitudes InclusiveKernel::amplitudes(const SFTables& t, double x, double q2,",
   "last": "}"
@@ -958,32 +958,32 @@
   "first": "  o.f_l = (2.0 * onep * x * b1",
   "last": "           - (b2 / 3.0 - b3)) / x;"
  },
- "src/core/xsec.cpp:295-298": {
+ "src/core/xsec.cpp:302-305": {
   "sha256": "b29c76b6d579e55af62a59ad7f472449d9e3003dc506bb98db32c66fbfececa7",
   "first": "  const double helicity = state.lam_e * state.pe;",
   "last": "    out.w_avg = out.w_avg + helicity * v * ct * a_parallel(t, x, q2, y);"
  },
- "src/core/xsec.cpp:295-302": {
+ "src/core/xsec.cpp:302-309": {
   "sha256": "fb5462af67c7e8632b30b23a8801dd6f07986b18e31101be2501beda8da6a2b6",
   "first": "  const double helicity = state.lam_e * state.pe;",
   "last": "  }"
  },
- "src/core/xsec.cpp:296-298": {
+ "src/core/xsec.cpp:303-305": {
   "sha256": "a99ada6acebc67fb1cf336677973b7a38ea4d922dbd10caa8856555257cb7055",
   "first": "  const double v = (j > 0.0) ? state.m / j : 0.0;",
   "last": "    out.w_avg = out.w_avg + helicity * v * ct * a_parallel(t, x, q2, y);"
  },
- "src/core/xsec.cpp:300-302": {
+ "src/core/xsec.cpp:307-309": {
   "sha256": "41410808579f2de7c826a74b62664e939371a977b1e98545d094a07fabfe9dc2",
   "first": "  if (with_perp && helicity != 0.0 && v != 0.0 && std::fabs(st) > 1e-12) {",
   "last": "  }"
  },
- "src/core/xsec.cpp:311-318": {
+ "src/core/xsec.cpp:318-325": {
   "sha256": "9dabe0b12eba848568226f9ad877e4c8b08699884ab21a17f618dcb1bf250ed2",
   "first": "double InclusiveKernel::density(const Amplitudes& a, double phip) {",
   "last": "}"
  },
- "src/core/xsec.cpp:320-328": {
+ "src/core/xsec.cpp:327-335": {
   "sha256": "37bfeaf4884f9f420b8df7633805322d3c501548850e2399fce7bfab86d9699f",
   "first": "double InclusiveKernel::dsigma(double x, double q2, double phi, double s,",
   "last": "}"
@@ -1003,12 +1003,12 @@
   "line": "  if (const Particle* pip = ev.find(Role::Pomeron)) {",
   "name": "Pomeron"
  },
- "tests/test_pipeline.cpp:486-512": {
+ "tests/test_pipeline.cpp:608-634": {
   "sha256": "55514592a62083495213b6f5120dbcb273c8b9c2b7f8e5cc0802af0fea29e804",
   "first": "TEST_CASE(\"pipeline: 7Li generated events give <P2(cos theta_k)> = -T/5\") {",
   "last": "    CHECK(std::fabs(got + t / 5.0) < 4.0 * err);"
  },
- "tests/test_reference.cpp:79-80": {
+ "tests/test_reference.cpp:96-97": {
   "sha256": "6c20738bfdd69019ff90a6aa9f1b0945025ee1e9460c8bcc0c80fe2846dcaf14",
   "first": "    opt.b1_32_func = [](double, double, double f1) { return 0.05 * f1; };",
   "last": "    opt.delta_32_func = [](double, double, double f1) { return -1e-2 * f1; };"
@@ -1038,12 +1038,12 @@
   "first": "  // the J = 3/2 anchor: pz = 0.7 gives tensor 0.4 and octupole 0.2 exactly,",
   "last": "}"
  },
- "tests/test_tagged.cpp:383-399": {
+ "tests/test_tagged.cpp:396-412": {
   "sha256": "91465246b606bf5d72bee050ad6c9f6fabf36034acb042184a270310fd0f413f",
   "first": "TEST_CASE(\"tagged: 7Li P2 moments and the <P2> = -T/5 polarimeter\") {",
   "last": "                 -moments_along_axis(1.5, pv2).tensor / 5.0, 0.0, tol);"
  },
- "tests/test_tagged.cpp:383-400": {
+ "tests/test_tagged.cpp:396-413": {
   "sha256": "baccc10d87451a586c15f368f1086ba8f219b05c29af6257027e93abb6e5da03",
   "first": "TEST_CASE(\"tagged: 7Li P2 moments and the <P2> = -T/5 polarimeter\") {",
   "last": "}"

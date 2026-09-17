@@ -7,6 +7,15 @@
 - Frame: head-on. Ion +z, electron −z. Lab (25 mrad crossing) only in an explicit transform.
 - Spin: populations ordered m = +J … −J. Quantization axis n̂(θ_S, φ_S) in the head-on frame.
   `TENSOR_LL_SIGN = -1.0` — one constant, defined once (`constants.hpp`), test-guarded.
+  **On a TAGGED channel that axis is the ION fill's and reaches the event through
+  the spectator rotation alone**: the struck cluster's |S_c m_S⟩ is evaluated with
+  its own axis along the BEAM (`InclusiveKinematicsSource::plan_for` builds the
+  pure category at θ_S = φ_S = 0 whatever the fill says, which is what `polligen`
+  does). That is exact while the struck-cluster DIS kernel is spin-blind, so
+  `Pipeline`'s constructor **refuses** a tilted fill together with a term that is
+  not — P_e ≠ 0 on any tagged channel, or `--inclusive-b1` on `tagged-6Li-alpha`,
+  the one channel that reads it. The two shipped tilted plans (`transverse-tensor`,
+  `tensor-flip`) carry P_e = 0 by construction and are untouched, bit for bit.
 - Structure-function inputs are `Backend` interfaces: toy implementation always available,
   table/LHAPDF implementations optional. No physics number is hard-coded in two places.
 - Randomness: counter-based stream keyed by (seed, run, bunch, event); never a global RNG.
@@ -73,9 +82,13 @@ knobs recorded nowhere at all
   cross section.  It was `+1` — the repository's own transcription of
   Hoodbhoy–Jaffe–Manohar — until that date, and setting the constant back is
   the whole of the change: nothing else in the library knows the sign.  The
-  guard test (`tests/test_xsec.cpp`, "the program sign IS the literature
-  sign") is written against the LITERATURE relation itself, with no reference
-  to the constant, so flipping it back fails it.  What flips with it: A_zz at
+  guard test (`tests/test_xsec.cpp`, "Cosyn Eq. 27: A_zz(theta_S=0)(1 + eps R)
+  = -(2/3) b1/F1") is written against the LITERATURE relation itself, with no
+  reference to the constant, so flipping it back fails it; the neighbouring
+  "the program sign IS the literature sign, deliberately" additionally pins
+  the constant's VALUE (`CHECK(TENSOR_LL_SIGN == -1.0)`), so the flip is a
+  visible act.  This bullet named the second case as the constant-free one
+  until 2026-09-16, which is the one case that does reference the constant.  What flips with it: A_zz at
   fixed b₁, the by-product κ of the spin-state ratio, and any b-sector
   subtraction built on κ — including the O(γ²) tensor leakage into cos 2φ.
   What does NOT: |A_zz|, the whole Δ (cos 2φ) sector, and `A_zz^tag(k)`
@@ -313,7 +326,15 @@ knobs recorded nowhere at all
   every channel — a hard check in `Pipeline::add_hadronic_x` and in
   `InclusiveGenerator`, never a clip.
 - **Cluster radial forms.** `ClusterWaveSource::Hulthen` is the DEFAULT
-  everywhere and is bit-compatible with every published number; the analytic
+  everywhere; its radial forms are bit-compatible with `polligen` and with
+  every number published **since** the 2026-09-06 S–D sign fix (which is every
+  ⁷Li number ever published).  The spin-1 tagged numbers published BEFORE that
+  date carry the inverted S–D sign and are not reproduced, by design —
+  A_zz^tag(0.20 GeV) went +0.845 → −1.207, and `tagged.json`'s `li6_alpha` and
+  `deuteron` blocks were deliberately re-pinned from the fixed C++ rather than
+  from polligen (`tests/test_tagged.cpp`, and eleven bullets below).  This
+  bullet said "bit-compatible with every published number" until 2026-09-16.
+  The analytic
   two-parameter forms and their `beta` band (0.20–0.40, default 0.30) are in
   `cluster.hpp`.  `ClusterWaveSource::VmcAV18` replaces them — on all three
   tagged channels: the two lithium α tags and, since 2026-09-04, the deuteron
@@ -357,8 +378,19 @@ knobs recorded nowhere at all
   deuteron control channel is always Hulthen … no d → p+n two-cluster table
   exists" — was false, and the flag had been *silently ignored* there.
   `deuteron_channel(beta, p_d, source)` now takes the flag and selects
-  P_D = 0.057600.  The Cosyn–Weiss tensor gate is pinned on the Hulthén
-  DEFAULT, which is bit for bit what it was.
+  P_D = 0.057600.  **The Cosyn–Weiss tensor gate runs on the AV18 control
+  since a7b3d18** (2026-09-06; `tests/test_tagged.cpp`, registration-skipped
+  without `data/vmc/deuteron/fdeut.av18`), because CW quote TABLE II *for*
+  AV18 — the Hulthén pair's f₂/f₀ never reaches √2 anywhere on the grid (it
+  tops out at 1.2866) and cannot carry the landmarks
+  (`docs/benchmarking/07_cw_sign_investigation.md` §8); the Hulthén pair keeps
+  only the two statements that do not depend on the wave function. The three
+  cell-centre rows are pinned at −1.937 / +0.999 / +0.967 (atol 1e−4).
+  This bullet said "pinned on the Hulthén DEFAULT, which is bit for bit what
+  it was" until 2026-09-16 — false since a7b3d18, and the pins had moved from
+  +0.617 / −0.318 / −1.656 with the S–D sign fix.
+  `AUTHOR_DECISIONS.md` §B9(c) and `run_2026-09-06/STATUS.md` both recorded
+  the change; this was the site that did not.
   Reconciliation, provenance and every number:
   `docs/open_items/vmc_reconciliation.md`, `data/vmc/README.md`.
 - **Triton spectral function.** `TritonSfChoice::Hulthen` is the DEFAULT

@@ -233,3 +233,36 @@ def test_gamma_zero_identity_is_exact_for_any_b2():
         dphi = f1 + (1.0 - y) / (x * y * y) * f2
         assert got == pytest.approx(kern / dphi, rel=1e-12)
         assert f_tt == 0.0
+
+
+def test_reference_manifest_lists_exactly_the_tables_on_disk(reference_dir,
+                                                             repo_root):
+    """`_manifest.json` is the directory's own index, and nothing read it.
+
+    A key walk over the eight reference blobs (2026-09-16) found every numeric
+    block asserted somewhere -- except `xsec.json`'s `toy_formulas` (they are
+    documentation strings) and `_manifest.json` itself, which `grep -rn
+    _manifest tests python/tests` matched ZERO times: only the three dump /
+    repin scripts ever wrote it.  So a table dropped from the directory, or
+    added to it and left out of the index, went unnoticed by every gate.
+    """
+    import json
+    import os
+
+    with open(os.path.join(reference_dir, "_manifest.json")) as f:
+        manifest = json.load(f)
+
+    on_disk = {p for p in os.listdir(reference_dir)
+               if p.endswith(".json") and p != "_manifest.json"}
+    listed = set(manifest["files"])
+    assert listed == on_disk, (
+        "manifest lists %s; the directory holds %s"
+        % (sorted(listed - on_disk), sorted(on_disk - listed)))
+
+    # Every blob names the script that made it, and that script exists.
+    generators = manifest["generators"]
+    assert set(generators) == on_disk, sorted(set(generators) ^ on_disk)
+    for blob, script in generators.items():
+        # The paths are recorded repo-relative with the repo name in front.
+        rel = script.split("LiPolGen/", 1)[-1]
+        assert os.path.isfile(os.path.join(repo_root, rel)), (blob, script)

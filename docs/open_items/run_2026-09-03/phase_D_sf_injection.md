@@ -25,12 +25,12 @@ The physics half of D2 is **confirmed, in full**:
   `ToyF2`, `ToyG1` (g₂ = Wandzura–Wilczek on that same g₁), `r_sigma_lt`, and
   an **empty** EMC hook.
 * Phase A's `--b1-unpol {toy,ct18nlo,mstw}` reaches **exactly one** object,
-  `Li6ConvolutionOptions::unpol` (`src/core/pipeline.cpp:1226` (anchor read 2026-09-15 "unpol = b1_unpol")), and nothing
+  `Li6ConvolutionOptions::unpol` (`src/core/pipeline.cpp:1232` (anchor read 2026-09-15 "unpol = b1_unpol")), and nothing
   else. Verified numerically: with `--b1-model li6-convolution --b1-unpol
   {toy,mstw,ct18nlo}` the kernel's whole-nucleus F₂A is *bit-identical* to
   `NuclearF2(LI6(), ToyF2())` on every setting.
 * The tagged channels have **no injection point at all**. `StruckClusterOptions`
-  (`include/lipolgen/pipeline.hpp:178`) carries five fields —
+  (`include/lipolgen/pipeline.hpp:207`) carries five fields —
   `inclusive_b1`, `delta_func`, `scenario`, `grid`, `with_perp` — and not one of
   them is an `UnpolSF`, a `PolSF` or an `RFunc`. `struck_cluster_kernel`
   (`src/core/pipeline.cpp:215` (as of adec442)) default-constructs `InclusiveKernel::Options`
@@ -45,7 +45,7 @@ correctly, including the tagged clause:
 > `inclusive_b1` and `delta_func`, so F₂, g₁, R and EMC there are hard-locked to
 > `ToyF2`/`ToyG1`/`r_sigma_lt`/none.
 
-and the EMC row (`docs/PHYSICS_CHANNELS.md:190`) already says
+and the EMC row (`docs/PHYSICS_CHANNELS.md:193`) already says
 `Options::emc_ratio` "is empty in every default kernel". `docs/USAGE.md`
 §§2a and the `B1UnpolSource` block in `include/lipolgen/pipeline.hpp:395-406`
 say the same about the scope of `--b1-unpol`. What is missing is not the
@@ -67,8 +67,8 @@ another site rather than making one.
 |---|---|---|---|---|---|---|---|
 | **K1** | `src/core/xsec.cpp:57-85` `InclusiveKernel::InclusiveKernel(Ion, Options)` | the class-level defaults | `options.f2_source`, **null → a fresh `ToyF2`** (`:61-63`) | `options.g1_model`, **null → `ToyG1(nf2_.base(), options.r_func)`** (`:81`) | `options.r_func`, **null → `r_sigma_lt`** via `resolve_r` | `options.emc_ratio`, null → 1 | `b1_func`/`b2_func`/`delta_func`/`b*_32_func`/`b3`/`b4`, all null → 0 |
 | **K2** | `src/core/pipeline.cpp:672-674` (as of adec442) `default_inclusive_kernel(const Ion&)` | forwards to K3 with `(Miller, 1.0, 1.0, nullptr)` | (inherit K3) | — | — | — | (inherit K3) |
-| **K3** | `src/core/pipeline.cpp:676-738` `default_inclusive_kernel(ion, model, band, w_alpha_d, b1_unpol)` | **the inclusive and coherent kernel of every `Pipeline` run** | **hard-wired `std::make_shared<const ToyF2>()`** (`:756-757`) | **not set** → K1's `ToyG1` on that same `ToyF2` | **not set** → `r_sigma_lt` | **not set** → 1 | spin-1 only: `Li6B1(MillerB1)` / `Li6B1(CdksB1)`·band / `Li6ConvolutionB1`·band, plus `toy_delta_gluon(…,1e-2)` |
-| **K4** | `src/core/pipeline.cpp:712-726` (as of adec442) the `Li6Convolution` branch inside K3 | `Li6ConvolutionOptions` | `o.unpol = b1_unpol ? b1_unpol : f2` (`:725` (as of adec442)) — **the one selectable slot in the whole tree** | n/a | **not set** → `Li6ConvolutionOptions::r_func` null → `r_sigma_lt` (`include/lipolgen/b1_nuclear.hpp:520`) | n/a | `deuteron_b1` not set → raw digitized CDKS column |
+| **K3** | `src/core/pipeline.cpp:676-738` `default_inclusive_kernel(ion, model, band, w_alpha_d, b1_unpol)` | **the inclusive and coherent kernel of every `Pipeline` run** | **hard-wired `std::make_shared<const ToyF2>()`** (`:762-763`) | **not set** → K1's `ToyG1` on that same `ToyF2` | **not set** → `r_sigma_lt` | **not set** → 1 | spin-1 only: `Li6B1(MillerB1)` / `Li6B1(CdksB1)`·band / `Li6ConvolutionB1`·band, plus `toy_delta_gluon(…,1e-2)` |
+| **K4** | `src/core/pipeline.cpp:712-726` (as of adec442) the `Li6Convolution` branch inside K3 | `Li6ConvolutionOptions` | `o.unpol = b1_unpol ? b1_unpol : f2` (`:725` (as of adec442)) — **the one selectable slot in the whole tree** | n/a | **not set** → `Li6ConvolutionOptions::r_func` null → `r_sigma_lt` (`include/lipolgen/b1_nuclear.hpp:544`) | n/a | `deuteron_b1` not set → raw digitized CDKS column |
 | **K5** | `src/core/pipeline.cpp:215-241` (as of adec442) `struck_cluster_kernel(channel, opt)` | **the DIS kernel of every tagged run** | **not set** → K1's `ToyF2` | **not set** → K1's `ToyG1` | **not set** → `r_sigma_lt` | **not set** → 1 | `b1_func = toy_b1` only when `opt.inclusive_b1`; `delta_func = opt.delta_func` |
 | **K6** | `src/core/pipeline.cpp:951-956` the `Pipeline`'s non-tagged branch | picks `cfg_.kernel` if non-null, else K3 | (inherit) | (inherit) | (inherit) | (inherit) | (inherit) |
 | **K7** | `src/core/pipeline.cpp:1541-1542` the `Pipeline`'s tagged branch | `make_struck_cluster_source` → K5. **`cfg_.kernel` is not read on this branch at all** | (inherit K5) | (inherit K5) | (inherit K5) | (inherit K5) | (inherit K5) |
@@ -87,7 +87,7 @@ need no new knob):
 |---|---|
 | `src/core/sampler.cpp:148-166` `InclusiveSampler` cell cross sections | `kernel_->nuclear_f2()` and **its** `r_func()` |
 | `src/core/generator.cpp:47-55` `InclusiveGenerator::proton_fraction` | `sampler_->kernel().nuclear_f2().base()` |
-| `src/core/breakup.cpp:178-186` `ClusterBreakup::proton_fraction` | its own `f2_`, fed from K8 |
+| `src/core/breakup.cpp:176-184` `ClusterBreakup::proton_fraction` | its own `f2_`, fed from K8 |
 | `src/core/pipeline.cpp:979` (as of adec442) the coherent channel's cell weights | `dis_sampler_->cell_xsec_pb()` — i.e. **K3's F₂ and R**, reweighted by `f_coh(x)` |
 | `src/core/rc.cpp:1140` (as of d3ac125) | `dis_->kernel().dsigma_unpol(x, q2, s)` |
 
@@ -328,7 +328,7 @@ Seven pieces, and the generalisation should copy all seven:
 7. **The CLI checks the tier at the command line** before the binding can throw
    three frames down (`require_b1_unpol_tier`, `python/lipolgen/cli.py:448-475`),
    and the **run banner prints the setting on every run, the default included**
-   (`python/lipolgen/cli.py:778-789`) — "a run that does not say which one it
+   (`python/lipolgen/cli.py:1588-1599`) — "a run that does not say which one it
    used is not reproducible from its own log".
 
 ---
@@ -370,9 +370,9 @@ list on this machine and there is no second row to offer. **Note that
 |---|---|---|
 | **K3** `default_inclusive_kernel(ion, model, band, w, b1_unpol)` | **YES** — two new trailing arguments, `unpol_sf` and `pol_sf`, both defaulting to `nullptr` | it is the inclusive **and** coherent kernel; the coherent channel inherits for free through `dis_sampler_->cell_xsec_pb()` |
 | **K5** `struck_cluster_kernel(channel, opt)` | **YES** — three new `StruckClusterOptions` fields: `f2_source`, `g1_model`, and (see §5.7) `r_func`; `Pipeline` fills them from the config at `src/core/pipeline.cpp:850-853` (as of adec442) beside `sopt.scenario` and `sopt.grid` | this is the gap D2 names; it is the *only* way a tagged run can reach a real backend |
-| **K2** `default_inclusive_kernel(const Ion&)` | **NO** — leave the one-argument overload exactly as it is | it is pinned bit-for-bit by `validation/reference/b1_default_li6.json` at rtol 1e-12 through `tests/test_b1_nuclear.cpp:1844` (T9) and `python/tests/test_b1_model.py:332`. Adding defaulted arguments to K3 keeps this call site untouched, which is how Phase A already did it |
-| **K1** `InclusiveKernel`'s own defaults (`src/core/xsec.cpp:57-85`) | **NO — absolutely not** | `validation/reference/xsec.json` is dumped from a *default-constructed* Python kernel and rebuilt in C++ at `tests/test_reference.cpp:48-82` with `f2_source`, `g1_model` and `r_func` all left at their defaults. Any change to the null-branch of `:62-64` (anchor read 2026-09-15) or `:80` (anchor read 2026-09-15 "return -1e-2") moves that gate. The selectors must live one layer up and hand the class an explicit object; they must never change what "null" means |
-| **K9** `ClusterBreakup`'s `ToyF2` fallback | **NO** | `Pipeline` already overwrites it from the kernel (`src/core/pipeline.cpp:1623`). The fallback only fires for a direct caller, and a second knob here would be a second definition of the same number |
+| **K2** `default_inclusive_kernel(const Ion&)` | **NO** — leave the one-argument overload exactly as it is | it is pinned bit-for-bit by `validation/reference/b1_default_li6.json` at rtol 1e-12 through `tests/test_b1_nuclear.cpp:1851` (T9) and `python/tests/test_b1_model.py:339`. Adding defaulted arguments to K3 keeps this call site untouched, which is how Phase A already did it |
+| **K1** `InclusiveKernel`'s own defaults (`src/core/xsec.cpp:57-85`) | **NO — absolutely not** | `validation/reference/xsec.json` is dumped from a *default-constructed* Python kernel and rebuilt in C++ at `tests/test_reference.cpp:48-82` with `f2_source`, `g1_model` and `r_func` all left at their defaults. Any change to the null-branch of `:62-64` (anchor read 2026-09-15) or `:97` (anchor read 2026-09-15 "return -1e-2") moves that gate. The selectors must live one layer up and hand the class an explicit object; they must never change what "null" means |
+| **K9** `ClusterBreakup`'s `ToyF2` fallback | **NO** | `Pipeline` already overwrites it from the kernel (`src/core/pipeline.cpp:1687`). The fallback only fires for a direct caller, and a second knob here would be a second definition of the same number |
 | **K11** `DeuteronConvolutionB1` (the A = 2 gate) | **NO** | its `unpol` default is `ToyF2` and its `r_func` default is `r1998` **on purpose** — it exists to reproduce CDKS's own Fig. 4, and its inputs are CDKS's choices. Sweeping it into a general selector would silently move the G3a/G3b verdict rows that `docs/USAGE.md` §2a and `phase_A_numbers.md` quote |
 | **K13** `examples/generate_inclusive.cpp` | **NO** | it is the documented "same choice as `default_inclusive_kernel`" example and is not a run surface |
 | **K14** `CoherentSampler` | **NO** | it has no structure function; it must not grow one |
@@ -388,9 +388,9 @@ list on this machine and there is no second row to offer. **Note that
   `bookkeeping.json`, `b1_default_li6.json` — are compared against kernels
   built either from K1's raw defaults (`tests/test_reference.cpp:48-82`, which
   never touches `f2_source`, `g1_model` or `r_func`) or from K2's one-argument
-  overload (`tests/test_b1_nuclear.cpp:1857` (anchor read 2026-09-15 "const auto kernel")). **No test in the tree calls
+  overload (`tests/test_b1_nuclear.cpp:1864` (anchor read 2026-09-15 "const auto kernel")). **No test in the tree calls
   `struck_cluster_kernel` directly** (`grep` finds it only in three comments at
-  `tests/test_b1_nuclear.cpp:1892-1898`), and none reaches K3's five-argument
+  `tests/test_b1_nuclear.cpp:1899-1905`), and none reaches K3's five-argument
   form except through the `b1_unpol` tests that already exist. So no reference
   file can move, `_manifest.json` needs no regeneration, and `--record-ranges`
   is not involved.
@@ -415,7 +415,7 @@ The reasons are physics reasons, not compatibility ones:
    `--unpol-sf` sets the whole-nucleus F₂A/F₁A of the *rate*, through
    `NuclearF2` and the massless `f1a`. `--b1-unpol` sets the *deuteron's*
    per-nucleon F₁ inside CDKS Eq. (22), through `f1_cdks`, which is explicitly
-   **not** `NuclearF2::f1a` (`include/lipolgen/b1_nuclear.hpp:475-478`,
+   **not** `NuclearF2::f1a` (`include/lipolgen/b1_nuclear.hpp:500-503`,
    design 2.4). Two objects, two conventions, at two different Q² regimes.
 2. **`--b1-unpol` is a CDKS-comparability choice, and it is load-bearing.**
    The A = 2 gate passes at G3b = 0.843243 with MSTW2008 LO and fails at 0.440
@@ -432,23 +432,23 @@ The reasons are physics reasons, not compatibility ones:
 
    | # | site | form |
    |---|---|---|
-   | 1 | `include/lipolgen/pipeline.hpp:448-459` | the `B1UnpolSource` header block (the origin) |
+   | 1 | `include/lipolgen/pipeline.hpp:486-497` | the `B1UnpolSource` header block (the origin) |
    | 2 | `src/core/pipeline.cpp:1211-1216` (anchor read 2026-09-15) | the comment in the `Li6Convolution` branch |
-   | 3 | `python/bindings.cpp:4071` | the `B1UnpolSource` enum docstring |
-   | 4 | `python/lipolgen/__init__.py:197` (anchor read 2026-09-15 "B1_UNPOL = {") | the `B1_UNPOL` comment |
-   | 5 | `python/lipolgen/cli.py:455` (anchor read 2026-09-15 `add_argument("--b1-unpol"`) | the `--b1-unpol` help string |
+   | 3 | `python/bindings.cpp:4079` | the `B1UnpolSource` enum docstring |
+   | 4 | `python/lipolgen/__init__.py:203` (anchor read 2026-09-15 "B1_UNPOL = {") | the `B1_UNPOL` comment |
+   | 5 | `python/lipolgen/cli.py:547` (anchor read 2026-09-16 `add_argument("--b1-unpol"`) | the `--b1-unpol` help string |
    | 6 | `python/lipolgen/cli.py:1401-1403` (anchor read 2026-09-15) | the run banner |
-   | 7 | `python/tests/test_b1_model.py:831` (anchor read 2026-09-15 "assert tm.f1") | the assertion `tm.f1 == tt.f1` and its comment |
-   | 8 | `tests/test_b1_nuclear.cpp:2075` (anchor read 2026-09-15 "ta.f1 == tb.f1") | the same assertion in C++ |
-   | 9 | `docs/USAGE.md:554-560` | "Scope, and the price of it" |
+   | 7 | `python/tests/test_b1_model.py:838` (anchor read 2026-09-15 "assert tm.f1") | the assertion `tm.f1 == tt.f1` and its comment |
+   | 8 | `tests/test_b1_nuclear.cpp:2082` (anchor read 2026-09-15 "ta.f1 == tb.f1") | the same assertion in C++ |
+   | 9 | `docs/USAGE.md:562-568` | "Scope, and the price of it" |
 
-   `docs/PHYSICS_CHANNELS.md:192-192` (anchor read 2026-09-15 "as `LhapdfSF") states the *consequence* rather than the
+   `docs/PHYSICS_CHANNELS.md:195-195` (anchor read 2026-09-15 "as `LhapdfSF") states the *consequence* rather than the
    sentence, so it is a tenth site to check by hand and no single grep pattern
    catches all ten — which is itself the reason to keep the two flags separate
    rather than re-derive this paragraph.
 
 **But there is a collision that must be closed.** Today
-`src/core/pipeline.cpp:1226` (anchor read 2026-09-15 "move(b1_unpol") reads
+`src/core/pipeline.cpp:1232` (anchor read 2026-09-15 "move(b1_unpol") reads
 
 ```cpp
 o.unpol = b1_unpol ? std::move(b1_unpol) : f2;   // f2 is the kernel's own ToyF2
@@ -517,7 +517,7 @@ selects the T2 struck-nucleon species draw, and:
   `pom_rescale` and `nucleon_choice`, and omits `f2_source` alone;
 * the CLI builds the bridge itself at `python/lipolgen/cli.py:545-552` (as of a7b3d18), so
   `Pipeline` never sees it and cannot forward the kernel's backend the way it
-  forwards it to the breakup at `src/core/pipeline.cpp:1623`.
+  forwards it to the breakup at `src/core/pipeline.cpp:1687`.
 
 Today that is harmless, because both ends are `ToyF2`. **The moment
 `--unpol-sf ct18nlo` exists it is a live inconsistency**: the T0 rate and the
@@ -539,7 +539,7 @@ measures why it cannot simply follow them: `r1998` differs from `r_sigma_lt` by
 up to 19 % in `(1+R)` and 38 % of the shipped window's rate is outside R1998's
 own support. `Li6ConvolutionOptions::r_func`'s header already states the clean
 fix and states that it was not made
-(`include/lipolgen/b1_nuclear.hpp:505-506`):
+(`include/lipolgen/b1_nuclear.hpp:505-506` (as of adec442)):
 
 > The clean fix, NOT made here, is to thread ONE R hook through
 > `default_inclusive_kernel` into both this and the kernel's `UnpolSF`.
@@ -597,7 +597,7 @@ here.
   arrives at the command line, not three frames down.
 * Two `UNPOL_SF` / `POL_SF` dicts in `python/lipolgen/__init__.py` beside
   `B1_UNPOL`, and `unpol_sf=` / `pol_sf=` parameters on `make_config`
-  (`python/lipolgen/__init__.py:423-424` and `:436-447`).
+  (`python/lipolgen/__init__.py:429-430` and `:436-447`).
 * `set_unpol_sf(cfg, source)` / `set_pol_sf(cfg, source)` bindings, copying
   `set_b1_unpol` (`python/bindings.cpp:4150-4188`) — the core cannot build
   either backend and must not try.
@@ -628,7 +628,7 @@ Ten tests, all with a direct ancestor in `python/tests/test_b1_model.py`:
 Plus one C++ doctest asserting that `default_inclusive_kernel(LI6())` — the
 one-argument overload — is still byte-identical to
 `validation/reference/b1_default_li6.json`, which T9
-(`tests/test_b1_nuclear.cpp:1844`) already does and which must be re-run rather
+(`tests/test_b1_nuclear.cpp:1851`) already does and which must be re-run rather
 than re-recorded.
 
 ---
@@ -652,8 +652,8 @@ Mechanically:
   is set by *no* site in `src/`, `python/` or `examples/` — grep confirms the
   only occurrences are the declaration (`include/lipolgen/xsec.hpp:230`), the
   consumption (`src/core/xsec.cpp:65`) and the pybind property
-  (`python/bindings.cpp:1528` (anchor read 2026-09-15 `arg("emc_ratio`)). So **no shipped run applies any EMC ratio to
-  F₂A on any channel**, exactly as `docs/PHYSICS_CHANNELS.md:172` states.
+  (`python/bindings.cpp:1535` (anchor read 2026-09-15 `arg("emc_ratio`)). So **no shipped run applies any EMC ratio to
+  F₂A on any channel**, exactly as `docs/PHYSICS_CHANNELS.md:175` states.
 
 Conceptually, the interaction is a **denominator-matching** trap that
 `include/lipolgen/sf.hpp:309-313` already documents for a different reason:
@@ -725,7 +725,7 @@ simpler and matches the existing rule. Note that closing §5.8 clause 3 does
 `default_inclusive_kernel(deuteron()).tables(x, q2).b1` is *identical* to the
 ⁶Li kernel's at every point, and is 0.307316 × `toy_b1(x, q2, f1)`. The isotope
 guard exists in `validate()` (`:571-589`) but only inside the **non-Miller**
-branch, and Miller is the default. `docs/PHYSICS_CHANNELS.md:125` already
+branch, and Miller is the default. `docs/PHYSICS_CHANNELS.md:128` already
 describes this behaviour ("for ANY spin-1 ion"), so it is documented — but a
 deuteron run is not a ⁶Li run and the 2/6 embedded-deuteron counting factor has
 no meaning for A = 2. Worth a decision in phase F.

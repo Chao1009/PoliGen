@@ -603,6 +603,13 @@ TEST_CASE("b1_nuclear T1 gate layer 3: CDKS Fig. 4 (G3a hard, G3b/G3c recorded)"
   //      and is load-bearing -- there is a real third crossing at x = 1.2204
   //      here (1.1977 with CT18NLO, 1.2177 with MSTW2008 LO) and "exactly
   //      two" is the only clause that excludes it.
+  //
+  //      THIS FLOOR IS REGISTRY ROW 18 (`AUTHOR_DECISIONS.md` §B17 ->
+  //      `run_2026-09-03/STATUS.md` row 18), APPLIED -- CONFIRM OR REVERT.
+  //      The 0.02 -> 0 change was taken on design 5.4's authority and the
+  //      author has not ruled on it; until 2026-09-16 no site in the tree
+  //      outside the run records pointed at row 18 at all, so the one place a
+  //      reader meets the change said only "design 5.4 now says (0, 1.0]".
   std::vector<double> z;
   std::vector<int> sl;
   for (std::size_t i = 0; i < got.zeros.size(); ++i) {

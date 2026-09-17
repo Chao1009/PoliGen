@@ -92,7 +92,18 @@ Starting parameters: **σ_eff = 30–70 mb** rising with W (Cosyn–Sargsian Dee
 
 **Verdict: 1/3 vs 0.81 was never a physics disagreement — it is a convention mismatch, and both ends are wrong. The ab-initio answer is 0.85.**
 
-Every source in this chain uses the **whole-nucleus sum**, Cloët–Bentz–Thomas Eq. (24): P_α = ⟨J,H| Σ_{i∈α} σ_z(i) |J,H⟩ = N_{↑α} − N_{↓α}, **with no division by Z or N**, feeding g_{1A} = P_p g_{1p} + P_n g_{1n}. (Same convention in which ³He is P_n = 0.86, P_p = −0.028.)
+Every source in this chain uses the **whole-nucleus sum**, Cloët–Bentz–Thomas Eq. (24): P_α = ⟨J,H| Σ_{i∈α} σ_z(i) |J,H⟩ = N_{↑α} − N_{↓α}, **with no division by Z or N**, feeding g_{1A} = P_p g_{1p} + P_n g_{1n}. (**³He is NOT in that convention.** Bissey et al. Eq. (2) reads, verbatim,
+`g1He(x, Q2) = Pn g1n(x, Q2) + 2Pp g1p(x, Q2)` with `Pn = 0.86±0.02` and
+`Pp = −0.028±0.004` — the proton term carries an explicit **2**, so P_p =
+−0.028 is **per proton** and the whole-nucleus proton sum is 2 P_p = −0.056.
+That is exactly how `HE3()` stores it, and `TRITON()` mirrors it. This
+parenthetical said "same convention" until 2026-09-16 and
+`docs/PHYSICS_CHANNELS.md` recorded the disagreement as "an unresolved
+convention conflict"; re-fetched from the source PDF that day, it is this line
+that was wrong, not the code. A reader who had "corrected" `HE3()`/`TRITON()`
+to half their proton values would have flipped the sign of g₁(³He): on the toy
+backends at x = 0.3, Q² = 5 the shipped code gives −2.7445e−03 and the
+whole-nucleus reading gives +8.3171e−04.)
 
 | Ref | What it gives |
 |---|---|

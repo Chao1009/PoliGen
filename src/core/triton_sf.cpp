@@ -187,13 +187,9 @@ std::vector<double> CiofiSimulaTriton::pair_cdf(double kappa,
 double CiofiSimulaTriton::draw_from(const std::vector<double>& cdf,
                                     const std::vector<double>& grid,
                                     double u) const {
-  const auto it = std::lower_bound(cdf.begin(), cdf.end(), u);
-  if (it == cdf.begin()) return grid.front();
-  if (it == cdf.end()) return grid.back();
-  const std::size_t i = static_cast<std::size_t>(it - cdf.begin());
-  const double c0 = cdf[i - 1], c1 = cdf[i];
-  const double t = (c1 > c0) ? (u - c0) / (c1 - c0) : 0.0;
-  return grid[i - 1] + t * (grid[i] - grid[i - 1]);
+  // numerics.hpp's `inverse_cdf_lookup`; this body and `ClusterBreakup::
+  // draw_k`'s were character-for-character the same until 2026-09-16.
+  return inverse_cdf_lookup(cdf, grid, u);
 }
 
 double CiofiSimulaTriton::n0_cs(double k_gev) const {

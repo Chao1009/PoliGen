@@ -115,11 +115,40 @@ namespace lipolgen {
 /// per spin state behind a mutex (`state_tables`).  Building N samplers would
 /// rebuild the same grid N times and change no number.
 ///
-/// The pure category is built at theta_S = phi_S = 0 whatever the ION fill's
-/// axis is, which is what the Python does: the struck-cluster quantization
-/// axis is the channel-spin axis of the two-cluster expansion, and the ion
-/// axis enters the event only through the spectator rotation in
-/// `boost_spectator`.
+/// THE PURE CATEGORY IS BUILT AT theta_S = phi_S = 0 WHATEVER THE ION FILL'S
+/// AXIS IS, which is what the Python does.  Read what that means, because the
+/// header said "the ion axis enters the event only through the spectator
+/// rotation in `boost_spectator`" until 2026-09-16 and that is true only when
+/// the DIS side is SPIN-BLIND: the struck cluster's |S_c m_S> is evaluated
+/// with its quantization axis along the BEAM, while the ion fill's own axis
+/// reaches the event only through the spectator rotation.  So a TILTED fill
+/// and a spin-dependent struck-cluster term do not compose: with P_e != 0, or
+/// a READ `StruckClusterOptions::inclusive_b1`, or an
+/// `InclusiveKernel::Options` callable that carries spin, the tagged rate
+/// would be computed for the wrong spin orientation.  MEASURED 2026-09-16
+/// (6Li config 1, seed 1, helicity-flip at P_e = 0.7): the INCLUSIVE
+/// channel's asymmetry goes -5.741406e-04 at theta_S = 0 to exactly 0 at
+/// theta_S = pi/2, while the tagged-6Li-alpha `sigma_per_category_pb` is
+/// BIT-IDENTICAL at both tilts (5.9082687641e+05 / 5.9286546134e+05).
+/// `Pipeline`'s constructor therefore REFUSES that combination rather than
+/// produce the wrong number.
+///
+/// "READ" is load-bearing on the b1 half and the constructor tests for it:
+/// P_e is read on all three tagged channels (measured the same day, the
+/// per-category rate moves between P_e = 0 and 0.7 on every one), but
+/// `inclusive_b1` is read on tagged-6Li-alpha ALONE -- the other two struck
+/// clusters are spin 1/2, `InclusiveKernel::tables` opens no rank-2 sector
+/// there, and the knob is measurably bit-for-bit inert, which is what
+/// `Pipeline::knob_provenance` already reports.  A tilted fill is therefore
+/// NOT refused for a knob that does nothing on the channel in hand.
+///
+/// The spin-blind tagged run -- every reference gate, every CLI default, and
+/// `transverse_tensor_plan` / `tensor_flip_plan`, whose P_e is 0 by
+/// construction and which are the only two shipped plans that tilt at all --
+/// is untouched, bit for bit.  Threading the fill's axis into this cache key
+/// (and into `KinematicsSource`'s signature) so that a tilted tagged fill
+/// computes instead of being refused is the open alternative; it is a
+/// maintainer call, not a registry row, and no default moves either way.
 class InclusiveKinematicsSource : public KinematicsSource {
  public:
   /// `s_channel` is the struck cluster's channel spin S_c (1 for the embedded
@@ -338,10 +367,19 @@ const char* triton_sf_name(TritonSfChoice s);
 ///   Cdks            the same 6Li rank-2 transfer on the CDKS convolution
 ///                   camp (`CdksB1`, the digitized PRD 95 (2017) 074036
 ///                   Fig. 4 column): |b1| two orders of magnitude smaller
-///                   than Miller's below x ~ 0.1, COMPARABLE above it (peak
-///                   |x b1| 1.7e-4 against Miller's 4.3e-4 at Q2 = 2.5, and
-///                   4x LARGER at x = 0.3 with the opposite sign), and a
-///                   different sign structure.  Miller (HERMES-like) and
+///                   than Miller's below x ~ 0.1, comparable or LARGER above
+///                   it (peak |x b1| 3.34e-4 at x = 0.766 against Miller's
+///                   4.27e-4 at x = 0.084, both at Q2 = 2.5, and 7.7x LARGER
+///                   at x = 0.3 with the opposite sign), and a different sign
+///                   structure.  The two peaks sit at DIFFERENT x, which is
+///                   why the comparison has to be read off the whole
+///                   digitized range: truncating the scan at x = 0.5 finds
+///                   the CDKS curve's local 5.43e-5 at x = 0.332 instead and
+///                   makes the model look eight times smaller than it is.
+///                   The 1.7e-4 / 4x this paragraph carried until 2026-09-16
+///                   were the PRE-2026-09-03 halves, corrected in
+///                   `python/lipolgen/cli.py` at the time and nowhere else;
+///                   re-measured 2026-09-16 off the shipped kernel.  Miller (HERMES-like) and
 ///                   CDKS (convolution) are different CAMPS for b1_d and the
 ///                   library does not adjudicate between them -- say which
 ///                   one a plot used.  INCLUSIVE CHANNEL ONLY and 6Li ONLY,
@@ -1449,7 +1487,13 @@ class Pipeline {
 
   /// Accepted cross section [pb] per category, in plan order.  SHARE
   /// INVARIANT: no `lumi_fraction` and no `Scenario::run_share` reaches it
-  /// (bookkeeping.hpp, `test_run_share.py`).
+  /// (bookkeeping.hpp, `test_run_share.py`) -- to ONE ULP, not bit for bit.
+  /// It is built out of `InclusiveSampler::cell_xsec_pb()`, which multiplies
+  /// the share into the luminosity and divides it straight back out; see that
+  /// accessor and `sampler.hpp`'s LUMINOSITY paragraph for the measurement
+  /// (worst relative difference 2.22e-16 between `run_share` 1 and 1/3).  The
+  /// tests pin it at 1e-12 (`tests/test_sampler.cpp`) and 1e-15
+  /// (`tests/test_pipeline.cpp`).
   const std::vector<double>& sigma_per_category_pb() const { return sigma_; }
   /// sum_k lumi_fraction_k * sigma_k [pb] -- the mixture one unit of the
   /// plan's luminosity buys.
@@ -1605,6 +1649,13 @@ class Pipeline {
 
   // coherent
   std::vector<std::unique_ptr<CoherentSampler>> csampler_;
+  /// `m_values(category.j)` per coherent category, HOISTED out of the event
+  /// loop.  `make_coherent` built this vector per event until 2026-09-16 --
+  /// one heap allocation per event, against this class's own
+  /// "allocation-light ... allocates nothing per event" promise and against
+  /// the hoisting `TaggedSampler::ms_ion_` and `RcModel::m_val_` already do
+  /// for the same quantity.  Empty on every non-coherent channel.
+  std::vector<std::vector<double>> coh_ms_;
   std::vector<double> coh_cdf_;     ///< over accepted cells, normalized
   /// The UNNORMALIZED per-cell coherent rate the line above is the CDF of,
   /// kept because `cell_rate_weights_pb()` needs the weights and not their

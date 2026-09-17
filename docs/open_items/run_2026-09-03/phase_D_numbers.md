@@ -44,7 +44,7 @@ column is unchanged because the four defects it closes are all on the run
 SURFACE — `validate()`, `meta`, the banner and one message — and the C++ suite
 carries no test of any of those.
 
-§D7's single new reference is `python/bindings.cpp:651` `unpol_sf`, added
+§D7's single new reference is `python/bindings.cpp:658` `unpol_sf`, added
 where a row had said "nothing records it"; measured by ablation on 2026-09-05
 (removing that one citation and re-running the gate gives 1144). §D7 also
 re-anchored **71** citations that its own edits had displaced — counted
@@ -1807,7 +1807,7 @@ by §D2.8 and the A_∥ column was in it all along; neither moved again here —
 it was written. See §D2.1.
 
 **B. A citation the gate could not see.** `docs/PHYSICS_CHANNELS.md`'s
-coherent-scenario bullet cited `python/lipolgen/cli.py:421` (anchor read 2026-09-15 "is no longer") for
+coherent-scenario bullet cited `python/lipolgen/cli.py:512` (anchor read 2026-09-16 "is no longer") for
 `--coherent-t-max`; that line is inside the `--x-max` help string. The flag is
 declared at cli.py:445 (444 before §D7's own `--b1-model` edit), and the
 citation now carries the flag NAME, which moves it from the gate's shape B
@@ -1861,7 +1861,7 @@ straight to a kernel's `Options::f2_source` means "nothing records it".
 Measured 2026-09-05 on a config carrying a `default_inclusive_kernel`:
 `meta["unpol_sf"]`, `["pol_sf"]`, `["b1_model"]` and `["b1_unpol"]` all read
 `caller-supplied kernel`. What is missing is the BACKEND, not the record, and
-the row says that now — with `python/bindings.cpp:651` `unpol_sf` cited, which
+the row says that now — with `python/bindings.cpp:658` `unpol_sf` cited, which
 is §D7's one new reference.
 
 ### D7.1 The reach sentences §D6 made obsolete
@@ -2091,8 +2091,8 @@ way, but it is then a numeric edge of a term that RAN. The matrix gained a
 
 The row keyed on `KnobRunContext::t2_bound`, which only a caller who went
 through `set_pythia_hadronizer` (or the CLI) sets. A hadronizer bound as a plain
-callable — `cfg.hadronizer = f`, the route `python/README.md:246` documents, and
-the C++ lambda of `docs/USAGE.md:1978` — was called on **every event** (measured:
+callable — `cfg.hadronizer = f`, the route `python/README.md:256` documents, and
+the C++ lambda of `docs/USAGE.md:2018` — was called on **every event** (measured:
 20 of 20) while the row said `hadronize = off`, "no T2 tier is bound: every
 record stops at T0", and the three Pomeron rows said "not read without
 `--hadronize`: no PYTHIA instance of any kind is built".
@@ -2119,7 +2119,7 @@ alone: the metadata writer overwrites it from the bridge actually bound.
 
 ### D8.7 Eight more `--pol-sf` reach claims, and where the correct wording is
 
-`include/lipolgen/pipeline.hpp:590-597` has said since §D6 that *the flag pair
+`include/lipolgen/pipeline.hpp:628-635` has said since §D6 that *the flag pair
 reaching "EVERY kernel" is true of `--unpol-sf` alone*, and the table agrees:
 `pol_sf` is `not-read` on the coherent channel under both plans and on EVERY
 channel under `tensor-thirds`, the CLI's own default. §D7.1 fixed the claim in
@@ -2153,8 +2153,10 @@ two-axis wording of `USAGE.md:628-638` / `PHYSICS_CHANNELS.md:164` /
 and the derived band gives 2.799047 — so the quotable figure is **2.80**, three
 figures, which is all a two-figure input supports, and the "never 2.8000"
 caveat sits one paragraph below each table. Three table CELLS still printed
-`2.8000`: `phase_D_numbers.md` §D5's, `docs/USAGE.md:1583`'s, and — the same
-table, a third copy the review did not name —
+`2.8000`: `phase_D_numbers.md` §D5's, the ⁶Li-quadrupole row of
+`docs/USAGE.md:1855` (anchor read 2026-09-16 "2.80 GeV²") — cited here as
+line 1612 until that re-read, which the file had long moved off — and, in
+the same table, a third copy the review did not name,
 `docs/OPEN_ITEMS_SOLUTIONS.md`'s. All three now read 2.80. The prose that
 quotes "2.8000" as the figure NOT to publish is left alone, as is the code
 comment at `USAGE.md:1509` that shows what the function returns.

@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
+#include <string>
 #include <utility>
 
 #include "lipolgen/numerics.hpp"
@@ -110,15 +111,12 @@ std::vector<double> ClusterBreakup::build_cdf(const std::vector<double>& grid,
 }
 
 double ClusterBreakup::draw_k(const std::vector<double>& cdf, double u) const {
-  // `np.interp(u, cdf, grid)`, the same inverse-CDF read `MomentumSampler`
-  // uses, so the two agree wherever they share a (kappa, beta).
-  const auto it = std::lower_bound(cdf.begin(), cdf.end(), u);
-  if (it == cdf.begin()) return grid_.front();
-  if (it == cdf.end()) return grid_.back();
-  const std::size_t i = static_cast<std::size_t>(it - cdf.begin());
-  const double c0 = cdf[i - 1], c1 = cdf[i];
-  const double t = (c1 > c0) ? (u - c0) / (c1 - c0) : 0.0;
-  return grid_[i - 1] + t * (grid_[i] - grid_[i - 1]);
+  // numerics.hpp's `inverse_cdf_lookup` -- the ONE spelling of this lookup
+  // since 2026-09-16; `CiofiSimulaTriton::draw_from` carried the same body.
+  // It is the same READ `MomentumSampler` performs (so the two agree wherever
+  // they share a (kappa, beta)) but not the same arithmetic: `k_of_u` goes
+  // through `np_interp`, which is why that one is not folded in here.
+  return inverse_cdf_lookup(cdf, grid_, u);
 }
 
 ClusterBreakup::ClusterBreakup(BreakupOptions opt) : opt_(std::move(opt)) {
@@ -236,9 +234,24 @@ bool ClusterBreakup::resolve(const BreakupInput& in, Rng& rng,
   if (in.species == ClusterSpecies::Deuteron) {
     // 1. the channel-spin projection m_sc of the np pair, given the
     //    deuteron's own projection m_S.
+    // NAMED, not defaulted.  `BreakupInput` is a public struct and `resolve`
+    // a public documented API, so an `m_s` that is not a deuteron projection
+    // is reachable; until 2026-09-16 it silently fell through to `i_m = 0`,
+    // i.e. drew the m_S = +1 channel-spin populations.  `TaggedModel::
+    // ms_index` throws on exactly this, and so does this now.
     std::size_t i_m = 0;
+    bool found = false;
     for (std::size_t i = 0; i < ms_deuteron_.size(); ++i) {
-      if (std::fabs(ms_deuteron_[i] - in.m_s) < 1e-9) { i_m = i; break; }
+      if (std::fabs(ms_deuteron_[i] - in.m_s) < 1e-9) {
+        i_m = i;
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      throw std::runtime_error(
+          "ClusterBreakup::resolve: m_s = " + std::to_string(in.m_s) +
+          " is not a deuteron projection (+1, 0, -1)");
     }
     const std::vector<double>& pop = dpop_[i_m];
     const double us = rng.uniform();

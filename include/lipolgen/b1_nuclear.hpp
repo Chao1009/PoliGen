@@ -260,9 +260,33 @@ struct ClusterPartialWave {
 
 /// The 6Li alpha-d relative partial waves in the CDKS convention, normalised
 /// so that int k^2 (|phi_0|^2 + |phi_2|^2) dk = the file's own printed
-/// S + D norm (0.8194650 by trapezoid, `VMC_N_ALPHA_D_LI6` = 0.819481 as the
-/// file prints it -- 2.0e-5 apart, which is the file's own quadrature spread
-/// and is what T3 measures).
+/// S + D norm.  WHAT THE SHIPPED CODE ACTUALLY PRODUCES is 0.819427 by
+/// trapezoid against `VMC_N_ALPHA_D_LI6` = 0.819481 as the file prints it --
+/// 5.36e-5 ABSOLUTE, 6.54e-5 RELATIVE (re-measured 2026-09-16 at
+/// 0.8194273712; this line said "6.5e-5 apart", which is the relative one,
+/// and named neither kind) -- and that is what T3 measures and prints
+/// (`tests/test_b1_nuclear.cpp`, "T3: table trapezoid S+D = 0.819427").
+/// This sentence read "0.8194650 ... 2.0e-5 apart ... and is what T3
+/// measures" until 2026-09-16, and 0.8194650 is the ONE-hbar-c number: this
+/// function applies its fm -> GeV unit factor with `HBARC_GEV_FM` = 0.19733
+/// while `src/core/cluster.cpp` converts the VMC k-grid it reads with a
+/// second, CODATA, definition (`kHbarCGeVfm` = 0.1973269804), so one object
+/// mixes two hbar-c values.  THE GAP SPLITS IN TWO, both parts measured
+/// 2026-09-16: the one-hbar-c figure itself sits 1.60e-5 ABSOLUTE / 1.95e-5
+/// RELATIVE below the file's printed norm, which is the file's own
+/// quadrature spread; the mixing then takes a further factor
+/// (0.1973269804/0.19733)^3 = 1 - 4.59e-5 off it, i.e. 3.76e-5 ABSOLUTE /
+/// 4.59e-5 RELATIVE, and 0.8194273712 x (0.19733/0.1973269804)^3 = 0.8194650
+/// is how the one-hbar-c number is reproduced from the shipped one.  This
+/// line quoted the 1.95e-5 with neither word on it too.  The mixing is
+/// `docs/PHYSICS_CHANNELS.md`'s open single-definition violation; PRICED
+/// 2026-09-16, and collapsing `kHbarCGeVfm` onto `HBARC_GEV_FM` moves 13 pinned
+/// assertions in 4 cases (T3 raw.norm 0.817678 -> 0.817714; the A = 7 gate's
+/// <r^2> 12.5348 -> 12.5344, Q(7Li) -3.48506 -> -3.48495 and its two ratios,
+/// all pinned at rtol 1e-9 and quoted in `docs/PHYSICS_CHANNELS.md`; T16
+/// 1.84777 -> 1.84781; `tests/test_cluster.cpp`'s node 43.685 -> 43.6909) and
+/// no validation/reference JSON at all.  The numbers are kept and the claim is
+/// corrected: nothing published moves.
 ///
 /// Magnitudes from `momenta/li6_ad1.momentum`, sign structure from
 /// `li6_alpha_d/li6.ad`, exactly as `li6_vmc_waves()` builds them -- this

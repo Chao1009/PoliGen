@@ -24,8 +24,10 @@ cases / 17 240 286 assertions / 1 skipped / 0 failed** (one case added, `item
 5v`, splitting gate condition 3 out of checklist item 5, plus the `REQUIRE`s of
 the cases whose data guard became a `doctest::skip` decorator), **926 pytest
 passed / 112 skipped** (one test added, for `--lumi` alone), and
-**1205 references checked (strict) / 97 ranges / 7 external / 0 broken / 6
-allow-listed** — 27 citations added when the findings were applied, 33 more
+**1206 references checked (strict) / 96 ranges / 7 external / 0 broken / 6
+allow-listed** (re-measured 2026-09-16 from `git archive bd775bc`; the
+**1205 / 97** published on the day was the pre-commit working tree's) — 27
+citations added when the findings were applied, 33 more
 when the close-out closed the consistency lens's remaining gaps, all
 re-measured here at the end of the day. SPDX is unchanged at 101/101.
 Nothing in this file's evidence depends on those four numbers.)*
@@ -170,7 +172,7 @@ because it is a linear factor.
 `b1_default_li6.json` (`validation/dump_b1_default_li6.py`), re-pin T9 and
 `tests/test_sf.cpp`, and every document table quoting a default ⁶Li A_zz.
 Sites that will need the pointer changed: `constants.hpp:107`,
-`sf.hpp:398`, `CONVENTIONS.md:222`, `USAGE.md:199`, `README.md:186-187` (re-pointed 2026-09-16; +10 from README's own close-out edits).
+`sf.hpp:398`, `CONVENTIONS.md:222`, `USAGE.md:199`, `README.md:188-189` (re-pointed 2026-09-16; +10 from README's own close-out edits).
 
 ### B3. The unpolarised nucleon input — `ToyF2` or MSTW2008 LO — settled once, for both isotopes (`STATUS.md` decision **row 20**; `OPEN_ITEMS_SOLUTIONS.md` §15.5 **D2**)
 
@@ -710,7 +712,8 @@ x ≥ `RC_X_HIGH` = 0.16 the E12-13-011 anchor pins δ = 0.015 and the half-widt
    three anchors — 1.459067e−04 / 1.308566e−04 / 6.313127e−05 — and the
    0.063 : 0.010 ratio rises 1.074 → 1.086 → 1.234 as the anchor falls.
 3. **What moves in a file**: exactly **two of the 51 columns**
-   (`rc_tensor_lo`, `rc_tensor_hi`) and **two of the 59 `meta` keys**
+   (`rc_tensor_lo`, `rc_tensor_hi`) and **two of the 60 `meta` keys**
+   (59 at `cdd8591`, before B1 added `rc_sp_tensor_scale`)
    (`rc_delta_low_x` and `knob_provenance`, which records it) on a 2000-event
    ⁶Li inclusive run at seed 99 — no kinematics, no `weight`, no `rc_tail`.
    Mean |w_hi − 1| **6.153874e−05 → 5.484602e−05 → 2.472882e−05**.
@@ -995,7 +998,7 @@ running on ⁷Li instead of quietly filling 0.4.
 **(e)** (i): add the row to the table and close it. (ii): `make_plan` /
 `cli.py` validation. (iii): DONE opt-in 2026-09-06 — `--pzz-mode`
 (`cli.py:99`), `PZZ_MODES` and `make_plan(pzz_mode=...)`
-(`python/lipolgen/__init__.py:395`, `:763`, the ONE place the string becomes
+(`python/lipolgen/__init__.py:401`, `:769`, the ONE place the string becomes
 `HelicityFlipOptions::use_explicit_pzz`), `KnobRunContext::pzz_mode`
 (`pipeline.hpp:1283`) with its `knob_provenance` row (`pipeline.cpp:2407`),
 the spin-1 refusal taught to name its edges (`spin.cpp` `spin1_populations`),
@@ -1302,11 +1305,11 @@ keeping the external gate at the cost of a permanently failing pin.
 A_zz^wf = [(2 f₀ + f₂/√2)(f₂/√2)/(f₀² + f₂²)](1 − 3 cos²θ_k) holds to
 **8.882e−16** on every cell of the 280 × 96 grid on both wave functions, and
 CW TABLE II's three cell-centre rows reproduce to residuals **4.36e−06 /
-2.77e−06 / 3.64e−07** (`tests/test_tagged.cpp:664` (anchor read 2026-09-15 "-1.9371243623"),
-`tests/test_tagged.cpp:665` (anchor read 2026-09-15 "+0.9993127695"),
-`tests/test_tagged.cpp:667` (anchor read 2026-09-15 "+0.9673403636"), all
+2.77e−06 / 3.64e−07** (`tests/test_tagged.cpp:723` (anchor read 2026-09-15 "-1.9371243623"),
+`tests/test_tagged.cpp:724` (anchor read 2026-09-15 "+0.9993127695"),
+`tests/test_tagged.cpp:726` (anchor read 2026-09-15 "+0.9673403636"), all
 pinned at atol 1e−4). A regression guard at
-`tests/test_tagged.cpp:682` (anchor read 2026-09-15 "ik30] < -1.5") pins the sign
+`tests/test_tagged.cpp:741` (anchor read 2026-09-15 "ik30] < -1.5") pins the sign
 that separates the two amplitudes, so the pre-fix behaviour cannot return
 silently. This is a **bug fix against a published formula**, not a modelling
 choice — which is the argument for treating it differently from the other
@@ -1363,10 +1366,17 @@ rather than a cost inside row 26 because it is about **another repository**
 with its own published output, and because nothing in this tree changes
 whichever way it goes.
 
-**(d)** **Not measured here, and stated as such — precisely.** Nothing in
-`PolarizedLithiumSim` was EXECUTED for this row: no script of that tree was
-run, and no number was produced from it. Numbers ARE quoted **from** it, and
-by reading: its `evgen/README.md:113-115` says *"the folded A_zz reads +0.49
+**(d)** **Not measured here, with ONE exception, stated as such —
+precisely.** On 2026-09-16 — and only then, after the sibling's own fix
+`1066555` — `evgen/polligen/tagged.py`'s `TaggedModel` WAS executed,
+read-only, to produce the box above: the 1.33e-13 (li6_alpha) / 2.28e-13
+(deuteron) comparison against LiPolGen's re-pinned `tagged.json`. That
+comparison cannot be made by reading, and the sibling ships no dumped model
+JSON, so the blocks had to be computed. **No other script of that tree was
+run, and nothing in it was written by this project.** This paragraph said
+"nothing ... was EXECUTED ... and no number was produced from it" until
+2026-09-16, which the box eleven lines above already contradicted. Other
+numbers ARE quoted **from** it by reading: its `evgen/README.md:113-115` says *"the folded A_zz reads +0.49
 and −0.07 at k ≈ 0.33 GeV/c where the 90° curve says −0.48"*, and
 `evgen/money_tagged_azz_6Li.png` is named as the figure that carries the same
 sign. The one number that was **measured** is this tree's own reproduction of
@@ -1438,8 +1448,8 @@ one.
    13, 14/15** only (row 7 `phase_B_numbers.md:1664`; row 8 `coherent.hpp:84`,
    `USAGE.md:1566`, `OPEN_ITEMS_SOLUTIONS.md:2144`; row 12
    `phase_D_numbers.md:1432`; row 13 `test_release_metadata.py:7`,
-   `check_spdx_headers.py:14-16`, `README.md:288`; rows 14/15 `README.md:266` (anchor read 2026-09-16 "activates it")
-   and `README.md:254` (anchor read 2026-09-16 "PACKAGING.md")). Rows 1–6 and 9–11 were pointed at by none: their
+   `check_spdx_headers.py:14-16`, `README.md:290`; rows 14/15 `README.md:268` (anchor read 2026-09-16 "activates it")
+   and `README.md:256` (anchor read 2026-09-16 "PACKAGING.md")). Rows 1–6 and 9–11 were pointed at by none: their
    dependents cite `OPEN_ITEMS_SOLUTIONS.md` §10 (conditions 4/6),
    `phase_A_miller_normalisation.md`, or `phase_C_numbers.md` §C5 instead
    (`constants.hpp:107`, `CONVENTIONS.md:106/233/266`, `USAGE.md:207/292`,
@@ -1529,7 +1539,7 @@ one.
     paragraph — the same drift `validation/check_physics_channels_links.py`
     exists to catch. **APPLIED 2026-09-05:** every `path:line` in this file
     was re-read against the tree; **38 anchors moved**, and three were added
-    (`README.md:254` (anchor read 2026-09-16 "PACKAGING.md"), `README.md:266` (anchor read 2026-09-16 "activates it"), `README.md:311` (anchor read 2026-09-16 "and CITATION") — the rows 15/14/13 citations item 4's
+    (`README.md:256` (anchor read 2026-09-16 "PACKAGING.md"), `README.md:268` (anchor read 2026-09-16 "activates it"), `README.md:313` (anchor read 2026-09-16 "and CITATION") — the rows 15/14/13 citations item 4's
     list was missing). **NOT applied, and an option rather than an
     oversight:** putting this file into the gate's `EXTRA_DOCS`. Measured with
     the gate's own `REF`/`RANGE` regexes over this file with THIS ITEM

@@ -5,6 +5,7 @@
 // the run-share rule -- a share moves COUNTS, never CROSS SECTIONS
 // (evgen/tests/test_bookkeeping.py, test_run_share.py).
 
+#include <fstream>
 #include <array>
 #include <cmath>
 #include <map>
@@ -38,6 +39,24 @@ bool load_bookkeeping(jsonmin::Value& out) {
                                 "/bookkeeping.json",
                             out);
 }
+
+/// Is the reference blob on disk?  Called at doctest REGISTRATION time by the
+/// `doctest::skip()` decorators below, so that a checkout without
+/// `validation/reference/` reports these cases as SKIPPED in the tally
+/// instead of PASSED WITH ZERO ASSERTIONS.  The pattern is
+/// `tests/test_coherent.cpp`'s (phase F, 2026-09-05), which introduced it for
+/// exactly this reason and was applied to test_coherent / test_cluster /
+/// test_b1_nuclear and to no other file -- these twelve rtol-1e-12 port gates
+/// kept the in-case `MESSAGE(...); return;` and went on passing, silently and
+/// vacuously, until 2026-09-16.  A blob that IS there and does not parse is a
+/// FAILURE, not a skip: that is what the `REQUIRE` on the loader inside each
+/// case is for.
+bool bookkeeping_present() {
+  return std::ifstream(std::string(LIPOLGEN_REFERENCE_DIR) +
+                       "/bookkeeping.json")
+      .good();
+}
+
 
 /// The plan each named reference block was dumped from.
 RunPlan build_plan(const std::string& name) {
@@ -86,12 +105,10 @@ std::vector<double> ladder_populations(double j, double pz) {
 
 }  // namespace
 
-TEST_CASE("reference tables: bookkeeping.json plans") {
+TEST_CASE("reference tables: bookkeeping.json plans" *
+          doctest::skip(!bookkeeping_present())) {
   jsonmin::Value doc;
-  if (!load_bookkeeping(doc)) {
-    MESSAGE("validation/reference/bookkeeping.json absent -- skipping");
-    return;
-  }
+  REQUIRE(load_bookkeeping(doc));
   const jsonmin::Value& plans = doc["plans"];
   for (const auto& entry : plans.obj()) {
     const std::string& name = entry.first;
@@ -156,12 +173,10 @@ TEST_CASE("reference tables: bookkeeping.json plans") {
   }
 }
 
-TEST_CASE("reference tables: spin-temperature ladder and rel-lumi biases") {
+TEST_CASE("reference tables: spin-temperature ladder and rel-lumi biases" *
+          doctest::skip(!bookkeeping_present())) {
   jsonmin::Value doc;
-  if (!load_bookkeeping(doc)) {
-    MESSAGE("validation/reference/bookkeeping.json absent -- skipping");
-    return;
-  }
+  REQUIRE(load_bookkeeping(doc));
   const jsonmin::Value& lad = doc["spin_temperature_ladder_t3"];
 
   const SpinTemperatureLadder j1 = spin_temperature_ladder(1.0, 8.0 / 13.0);

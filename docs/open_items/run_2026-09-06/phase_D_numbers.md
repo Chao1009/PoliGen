@@ -55,7 +55,7 @@ Details that matter, each of them a bug found while measuring:
   surviving backtick with the next one and reads a run of prose as a quotation
   (it invented phrases like `` `), fed through the dedicated J = 3/2 sl…` ``).
 * **a quotation may wrap.** These documents are hard-wrapped at ~80 columns, so
-  `docs/CONVENTIONS.md:72-73`'s own quotation — *"b₁ > 0 means the m = 0 state
+  `docs/CONVENTIONS.md:81-82`'s own quotation — *"b₁ > 0 means the m = 0 state
   has the LARGER cross section"* — runs across a line break. A blank line still
   ends a phrase; 240 characters caps one.
 * **a slash-run of names is every name in it** (`HelicityFlipOptions::theta_s/phi_s`,
@@ -200,7 +200,7 @@ carried over unchanged when the table was re-keyed.
 on the exact range and carrying `(pin, reason)`. 69 are pre-existing blocks whose
 sentence evidences nothing; 5 are blocks created by a re-point in §D1.4 whose
 new sentence still evidences nothing (`include/lipolgen/xsec.hpp:274-275`,
-`src/core/sampler.cpp:519-521`, `src/core/xsec.cpp:295-298`, `:296-298`,
+`src/core/sampler.cpp:519-521`, `src/core/xsec.cpp:298-302`, `:296-298`,
 `:320-328`). Each was read on 2026-09-15 before it was written.
 
 The pin is what makes an exemption drift-proof, and the gate enforces it at
@@ -424,7 +424,7 @@ So R6 asks only what a reader following the anchor would ask:
 line: R2 protects a fingerprint and nothing here is fingerprinted. The citing
 sentence is R5's — `RELAX_WIN` = 200 characters either side, clipped to the
 paragraph, a markdown table row being its own paragraph — with every citation
-in the window **blanked out** first, so `src/core/xsec.cpp:295` (anchor read 2026-09-15 "lam_e * state") cannot
+in the window **blanked out** first, so `src/core/xsec.cpp:302` (anchor read 2026-09-15 "lam_e * state") cannot
 evidence `src/core/xsec.cpp`. Tokens are compared case-insensitively; a dotted run is
 itself and its parts (`0.440`, `xsec.cpp` → also `xsec`); and 115 common English
 function words are not evidence (`which`, `because`, `that` …), because both
@@ -981,8 +981,8 @@ weeks with the gate green:
 
 | citation | points at | says it points at | actually at |
 |---|---|---|---|
-| `docs/PHYSICS_CHANNELS.md:301` | `docs/CONVENTIONS.md:357` (anchor read 2026-09-15 "always Hulthen") | "a_nn = −18.9 fm … appears only as an in-code constant and in `docs/CONVENTIONS.md`" | `docs/CONVENTIONS.md:383` (anchor read 2026-09-15 "a_nn = −18.9 fm") — `:357` has been the deuteron-control sentence since `cdd8591` |
-| `docs/PHYSICS_CHANNELS.md:206` | `include/lipolgen/constants.hpp:86` (as of a3c9ecb) | "[SS90] bag-model sum-rule coefficient" | `include/lipolgen/constants.hpp:136-138` — line 86 has been the b₁-normalisation comment since before `bd775bc` |
+| `docs/PHYSICS_CHANNELS.md:304` | `docs/CONVENTIONS.md:378` (anchor read 2026-09-15 "always Hulthen") | "a_nn = −18.9 fm … appears only as an in-code constant and in `docs/CONVENTIONS.md`" | `docs/CONVENTIONS.md:415` (anchor read 2026-09-15 "a_nn = −18.9 fm") — `:378` has been the deuteron-control sentence since `cdd8591` |
+| `docs/PHYSICS_CHANNELS.md:209` | `include/lipolgen/constants.hpp:86` (as of a3c9ecb) | "[SS90] bag-model sum-rule coefficient" | `include/lipolgen/constants.hpp:139-141` — line 86 has been the b₁-normalisation comment since before `bd775bc` |
 
 B2 is R5's own rule with the window closed to zero: a phrase the citing
 sentence QUOTES must occur on the cited line, as text or as a symbol. The
@@ -1016,9 +1016,9 @@ writes a formula in Unicode where the code writes ASCII — and are exempted in
 | # | citation | was | is now | why |
 |---|---|---|---|---|
 | 1 | `PHYSICS_CHANNELS.md:173` | `src/core/pipeline.cpp:1016` | `:1110` | `:1016` is the unrelated `unpol_sf = toy` refusal; `:1110` is the guard that refuses a caller-supplied kernel on a tagged channel |
-| 2 | `PHYSICS_CHANNELS.md:206` | `include/lipolgen/constants.hpp:86` (as of a3c9ecb) | `include/lipolgen/constants.hpp:136` (anchor read 2026-09-15 "Sather-Schmidt") | the line naming Sather-Schmidt PRD 42:1424, two above `C_BAG` |
-| 3 | `PHYSICS_CHANNELS.md:299` | `python/lipolgen/cli.py:101` (anchor read 2026-09-15 "'ladder' (the DEFAULT)") | `python/lipolgen/cli.py:139` (anchor read 2026-09-15 `add_argument("--p-d"`) | `--p-d` is declared there; line 101 is the `--pzz-mode` help |
-| 4 | `PHYSICS_CHANNELS.md:301` | `docs/CONVENTIONS.md:357` (anchor read 2026-09-15 "deuteron control channel") | `docs/CONVENTIONS.md:383` (anchor read 2026-09-15 "KAPPA_NN_VIRTUAL") | where `a_nn = −18.9 fm` is |
+| 2 | `PHYSICS_CHANNELS.md:206` | `include/lipolgen/constants.hpp:86` (as of a3c9ecb) | `include/lipolgen/constants.hpp:139` (anchor read 2026-09-15 "Sather-Schmidt") | the line naming Sather-Schmidt PRD 42:1424, two above `C_BAG` |
+| 3 | `PHYSICS_CHANNELS.md:299` | `python/lipolgen/cli.py:183` (anchor read 2026-09-16 "'ladder' (the DEFAULT)") | `python/lipolgen/cli.py:221` (anchor read 2026-09-16 `add_argument("--p-d"`) | `--p-d` is declared there; line 101 is the `--pzz-mode` help |
+| 4 | `PHYSICS_CHANNELS.md:301` | `docs/CONVENTIONS.md:378` (anchor read 2026-09-15 "deuteron control channel") | `docs/CONVENTIONS.md:415` (anchor read 2026-09-15 "KAPPA_NN_VIRTUAL") | where `a_nn = −18.9 fm` is |
 | 5 | `PHYSICS_CHANNELS.md:417` | `tests/test_rc.cpp:496` (anchor read 2026-09-15 "derived by SUBTRACTING") | `tests/test_rc.cpp:518` (anchor read 2026-09-15 "the first C0 zero lies") | the SUBCASE that gates q₀ ∈ [2.9, 3.3] fm⁻¹; `:496` is a comment in the ⟨r²⟩ subcase |
 | 6 | `SPIN32_FINITE_GAMMA.md:260` | `src/core/bookkeeping.cpp:89` (anchor read 2026-09-15 "octupole moment R_3") | `src/core/bookkeeping.cpp:94` | the sentence quotes the CALL `spin32_populations(pz, opt.pzz)`, which is there; `:89` is the comment, and SPIN32_FINITE_GAMMA.md:983 cites it rightly |
 | 7 | `SPIN32_FINITE_GAMMA.md:795` | `src/core/xsec.cpp:41` | `src/core/sf.cpp:52` | `r_sigma_lt` is not in `xsec.cpp` and never has been; `sf.cpp:52` is `return 0.18 / (1.0 + q2 / 50.0);`, which is what "is not zero" means |
@@ -1051,11 +1051,11 @@ edit at a time (`--audit-ranges`):
 
 | # | the citation moved | to | before | now |
 |---|---|---|---|---|
-| W1 | `PHYSICS_CHANNELS.md:302`'s triton-SF sentence | `docs/CONVENTIONS.md:18-21`, never blessed | REFUSED | **REFUSED** |
+| W1 | `PHYSICS_CHANNELS.md:302`'s triton-SF sentence | `docs/CONVENTIONS.md:27-30`, never blessed | REFUSED | **REFUSED** |
 | W2 | the same | `docs/CONVENTIONS.md:194-198` (anchor read 2026-09-15), an EXEMPTED block | accepted | **REFUSED** |
 | W3 | the same | `docs/CONVENTIONS.md:66-74` (anchor read 2026-09-15), evidenced by another citation | accepted | **REFUSED** |
 | W4 | `PHYSICS_CHANNELS.md:78`'s θ_S/φ_S sentence | `include/lipolgen/bookkeeping.hpp:98-100` (anchor read 2026-09-15) | REFUSED | **REFUSED** |
-| W5 | `SPIN32_FINITE_GAMMA.md:426`'s b₁ > 0 sentence | `docs/CONVENTIONS.md:508-509`, the luminosity-shares block | accepted | **REFUSED** |
+| W5 | `SPIN32_FINITE_GAMMA.md:426`'s b₁ > 0 sentence | `docs/CONVENTIONS.md:540-541`, the luminosity-shares block | accepted | **REFUSED** |
 
 and two controls in the same shape — the same citation moved onto a block its
 own sentence DOES evidence (`include/lipolgen/bookkeeping.hpp:175-176`, which
@@ -1073,7 +1073,7 @@ are right** and are exempted per citation; **2 were wrong**:
 
 | citation | was | is now | why |
 |---|---|---|---|
-| `PHYSICS_CHANNELS.md:974` | `docs/USAGE.md:1501-1509` ("§12") | `docs/USAGE.md:2717-2724` ("§8") | the sentence is about the four C++ example generators and their flag spellings; `:1501-1509` is the Tier T1 section, and USAGE.md has no §12. This is the citation the previous session's notes flagged as "probably stale by content" and asked this phase to catch |
+| `PHYSICS_CHANNELS.md:974` | `docs/USAGE.md:1541-1549` ("§12") | `docs/USAGE.md:2761-2768` ("§8") | the sentence is about the four C++ example generators and their flag spellings; `:1542-1550` is the Tier T1 section, and USAGE.md has no §12. This is the citation the previous session's notes flagged as "probably stale by content" and asked this phase to catch |
 | `PHYSICS_CHANNELS.md:339` | `docs/open_items/physics_literature.md:81-85` | `:234` (now a point citation) | the claim is that the register calls the per-nucleon Glauber product the citable primary and the coherent-cluster amplitude the systematic variant; that sentence is at `:234`. `:81-85` is the W_FSI formula and its starting parameters — which is what the OTHER citation of that range, the one at PHYSICS_CHANNELS.md:343 for the 30 → 70 mb Deeps fit, is right about |
 
 `RANGE_ALLOW` grows from 74 range keys to **103 citation keys**: 64 carried
@@ -1234,7 +1234,7 @@ state §D2.8 measured.
 point citation (§D3.3's second re-point). The allow-listed count goes 6 → 24
 because rule B2's exemptions are printed beside rule A's, as they must be: an
 exemption you cannot see is a hole. The sidecar loses one entry, the block
-`docs/USAGE.md:1501-1509` (anchor read 2026-09-15), the Tier T1 section, which
+`docs/USAGE.md:1530-1538` (anchor read 2026-09-15), the Tier T1 section, which
 nothing cites any more. **No fingerprint
 changed**: the one recording pass this section ran reported *0 new, 0 changed,
 1 dropped*, and a second pass reports *0 new, 0 changed, 0 dropped* and leaves
@@ -1262,7 +1262,7 @@ run records, and this file.
 
 ## D4 Residues recorded at the close of the phase (2026-09-15)
 
-1. **Anchor-read POINT pins are checked for presence, not uniqueness** (`check_physics_channels_links.py`, the `READ_INLINE` branch), unlike `RANGE_ALLOW`/`UNNAMED_ALLOW` pins, which go through `pin_state`. Three pins occur on more than one line of their target: `run_2026-09-03/phase_D_li7_rank2.md` line 552 → `validation/dump_polligen_reference.py:491` (anchor read 2026-09-15 "0.05 * f1"), a pin that occurs on 5 lines; `run_2026-09-06/phase_CW_numbers.md` line 699 → `README.md:120` (anchor read 2026-09-16 "rtol 1e-12"), a pin that occurs on 2 lines (drifted onto README.md's line 40 — the other line carrying that pin — the gate would report 0 broken); record line 1011 → `docs/CONVENTIONS.md:357` (anchor read 2026-09-15 "deuteron control channel"), a pin that occurs on 2 lines. None sits on an adjacent line, so ±1 is caught; a longer drift onto the twin line is not.
+1. **Anchor-read POINT pins are checked for presence, not uniqueness** (`check_physics_channels_links.py`, the `READ_INLINE` branch), unlike `RANGE_ALLOW`/`UNNAMED_ALLOW` pins, which go through `pin_state`. Three pins occur on more than one line of their target: `run_2026-09-03/phase_D_li7_rank2.md` line 552 → `validation/dump_polligen_reference.py:491` (anchor read 2026-09-15 "0.05 * f1"), a pin that occurs on 5 lines; `run_2026-09-06/phase_CW_numbers.md` line 699 → `README.md:122` (anchor read 2026-09-16 "rtol 1e-12"), a pin that occurs on 2 lines (drifted onto README.md's line 40 — the other line carrying that pin — the gate would report 0 broken); record line 1011 → `docs/CONVENTIONS.md:378` (anchor read 2026-09-15 "deuteron control channel"), a pin that occurs on 2 lines. None sits on an adjacent line, so ±1 is caught; a longer drift onto the twin line is not.
 2. **A neighbour's annotation text is evidence:** `relax_sentence` blanks citations but not the `(anchor read … "pin")` text beside them, so two bare live citations in the §D3.2 table (its record lines 1012 and 1013, which cite `tests/test_rc.cpp:496` (anchor read 2026-09-15 "derived") and `src/core/bookkeeping.cpp:89` (anchor read 2026-09-15 "octupole")) — pass the point rule only on the pin text of the annotated citation next to them. Bare `:N` points are likewise not blanked (29 live windows carry one; no live citation currently rests on such a digit token).
 3. **The shared-token rule blessed a citation onto the wrong constant — a measured instance of residue 2, added 2026-09-15.** `run_2026-09-06/STATUS.md` line 10 and `run_2026-09-03/AUTHOR_DECISIONS.md` §B20's D11 row both cited `LI7_QUADRUPOLE_FM2` at `rc.hpp:669`, which is not that constant (it is at `rc.hpp:726`); `rc.hpp:669` is the ⁶Li comment line `/// Q = -0.818(17) mb (1998CE04) …`, and the citing sentences quote `1998CE04` because they name the ⁶Li value in the same breath. The record gate reported **0 broken** on both: the shared token was real, it was simply shared with the NEIGHBOURING constant. Two other sites (`AUTHOR_DECISIONS.md` §B20's CLOSED paragraph, `phase_B_numbers.md` §B3.3) carried the correct `:726` throughout, so the tree disagreed with itself for nine days. All six sites re-pointed to `include/lipolgen/rc.hpp:726` (anchor read 2026-09-15 "LI7_QUADRUPOLE_FM2 = -4.06") on 2026-09-15. **What would catch it:** a point citation whose shared token is itself a citation-like literal (`1998CE04`, a bibliography key) is weak evidence when the named SYMBOL is absent from the cited line; the symbol test the strict gate already applies to named citations would have refused it. Not implemented here.
 4. Confirmed as designed and still true: an unpinned `(anchor read)` RANGE drifted +1 is accepted; an `(as of)` point onto a blank line is accepted; a range +1 is accepted 89.0 %.

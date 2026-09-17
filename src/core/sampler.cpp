@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstdio>
 #include <stdexcept>
+#include <string>
 #include <thread>
 #include <utility>
 
@@ -151,7 +152,13 @@ InclusiveSampler::InclusiveSampler(std::shared_ptr<const InclusiveKernel> kernel
   const RFunc& r_func = nf2.r_func();
   // The ONE luminosity line: programme luminosity x this observable's share.
   // Dividing `n_events` by the EFFECTIVE luminosity is what makes the per-cell
-  // pb number share-invariant (test_run_share.py).
+  // pb number share-invariant (test_run_share.py) -- to ONE ULP, because the
+  // share is multiplied in and divided back out in floating point rather than
+  // never entering: MEASURED 2026-09-16 on the default 6Li sampler, 579 of
+  // 2750 cells differ between run_share 1 and 1/3, worst relative difference
+  // 2.22e-16 (366 cells at 0.1, 553 at 0.7).  Writing `cell_pb = xsec*dx*dq2`
+  // would make it exact, and would move the DEFAULT run_share = 1 numbers by
+  // up to an ulp as well, so the bits are kept and the claim is qualified.
   const double lumi_pb = scenario_.lumi_effective_pb_per_nucleon();
 
   for (int i = 0; i < spec_.nx; ++i) {
@@ -277,6 +284,34 @@ const InclusiveSampler::StateTables& InclusiveSampler::build_state(
     st.a2n[i] = amp.a2 / den;
     st.bound[i] = 1.0 + std::fabs(st.a1n[i]) + std::fabs(st.a2n[i]);
     const double margin = density_min(st.a1n[i], st.a2n[i]);
+    // NON-FINITE IS A CONFIGURATION-TIME REFUSAL TOO, and this is the one
+    // guard that used to be written the wrong way round.  `1 + w_avg` above
+    // is tested as `!(den > 0.0)`, which is TRUE for a NaN; the two tests
+    // below are `margin < worst` and `margin < 0.0`, both FALSE for a NaN.
+    // A NaN a1/a2 -- what a structure-function slot that returns NaN produces
+    // (`InclusiveKernel::Options::delta_func`, `a_perp`'s g2, the tensor h1)
+    // -- therefore passed here, left `st.margin` at its 1e300 sentinel and
+    // `bad` at 0, and reached `draw_event`, whose accept-reject
+    // `u < 1 + a1n cos phi + a2n cos 2phi` is false for EVERY candidate: the
+    // draw then never returns.  A HANG is the worst possible report of a bad
+    // slot, so the slot is named here instead, at configuration time, like
+    // every other refusal in this function.
+    if (!std::isfinite(den) || !std::isfinite(amp.a1) ||
+        !std::isfinite(amp.a2) || !std::isfinite(margin)) {
+      char msg[640];
+      std::snprintf(msg, sizeof(msg),
+                    "non-finite phi amplitude for m=%g at x = %.4g, "
+                    "Q2 = %.4g (a1 = %g, a2 = %g, 1 + w_avg = %g): a "
+                    "structure-function slot returned NaN or inf.  The "
+                    "sampler refuses it here, at configuration time, rather "
+                    "than carry it into draw_event, whose accept-reject "
+                    "would then accept no candidate at all and never "
+                    "return.  Check the Options callables of the kernel "
+                    "(delta_func, r_func) and the backends behind "
+                    "f1/f2/g1/g2/b1 at that cell.",
+                    key.m, x_cells_[i], q2_cells_[i], amp.a1, amp.a2, den);
+      throw std::runtime_error(msg);
+    }
     if (margin < worst) { worst = margin; worst_cell = i; }
     if (margin < 0.0) ++bad;
     acc += xsec_flat_[i] * den;
@@ -498,10 +533,41 @@ EventBatch InclusiveSampler::sample_lumi(const SpinCategory& cat,
   return sample_n(cat, n, seed, run, bunch, 0, nthreads);
 }
 
-std::vector<double> InclusiveSampler::weights_for(
-    const EventBatch& batch, const std::vector<SpinCategory>& cats) const {
-  const std::size_t n = batch.size();
+std::vector<double> InclusiveSampler::mix_weights(
+    const EventBatch& batch, const std::vector<SpinCategory>& cats,
+    std::vector<double> StateTables::*w, std::vector<double> StateTables::*a1,
+    std::vector<double> StateTables::*a2, bool with_unpolarized,
+    const char* who) const {
+  const std::size_t n = batch.size();   // == batch.x.size(), and ONLY that
   const std::size_t nk = cats.size();
+  // THE BATCH IS THE CALLER'S STRUCT, not one this sampler built.
+  // `EventBatch::size()` is `x.size()` alone, and `dict_to_batch`
+  // (python/bindings.cpp) fills `cell` only when the dict carries the column,
+  // so an x/q2/phi-only dict arrives here with an EMPTY `cell` -- and
+  // `KinematicsSource::sample_cells` documents -1 as a "no cell" sentinel,
+  // which casts to SIZE_MAX.  Both used to index `st.w_avg[c]` unchecked:
+  // an out-of-bounds read reachable from the public Python API, i.e. a
+  // segfault of the interpreter.  Named here, once, before any state table is
+  // built, so the cost is O(n) on the batch and nothing on the physics.
+  if (batch.phi.size() != n || batch.cell.size() != n) {
+    throw std::runtime_error(
+        std::string(who) +
+        ": the batch needs x, phi and cell columns of ONE length (got x = " +
+        std::to_string(n) + ", phi = " + std::to_string(batch.phi.size()) +
+        ", cell = " + std::to_string(batch.cell.size()) +
+        ").  The weight of an event is read off its (x, Q2) CELL, so a batch "
+        "without the cell column cannot be reweighted by this sampler.");
+  }
+  for (std::size_t i = 0; i < n; ++i) {
+    if (batch.cell[i] < 0 ||
+        static_cast<std::size_t>(batch.cell[i]) >= x_cells_.size()) {
+      throw std::runtime_error(
+          std::string(who) + ": cell " + std::to_string(batch.cell[i]) +
+          " of event " + std::to_string(i) + " is outside this sampler's " +
+          std::to_string(x_cells_.size()) +
+          " accepted cells (-1 is the sample_cells \"no cell\" sentinel).");
+    }
+  }
   std::vector<double> out(n * nk, 0.0);
   for (std::size_t k = 0; k < nk; ++k) {
     const SpinCategory& cat = cats[k];
@@ -516,13 +582,23 @@ std::vector<double> InclusiveSampler::weights_for(
       for (std::size_t i = 0; i < n; ++i) {
         const std::size_t c = static_cast<std::size_t>(batch.cell[i]);
         const double phip = batch.phi[i] - cat.phi_s;
-        out[i * nk + k] += p_m * (1.0 + st.w_avg[c] +
-                                  st.a1[c] * std::cos(phip) +
-                                  st.a2[c] * std::cos(2.0 * phip));
+        // `base` carries the ONLY difference between the two callers, and it
+        // is written this way so that the summation order is the one each of
+        // them had before the fold: ((base + a1 cos) + a2 cos 2), bit for bit.
+        const double base =
+            with_unpolarized ? 1.0 + (st.*w)[c] : (st.*w)[c];
+        out[i * nk + k] += p_m * (base + (st.*a1)[c] * std::cos(phip) +
+                                  (st.*a2)[c] * std::cos(2.0 * phip));
       }
     }
   }
   return out;
+}
+
+std::vector<double> InclusiveSampler::weights_for(
+    const EventBatch& batch, const std::vector<SpinCategory>& cats) const {
+  return mix_weights(batch, cats, &StateTables::w_avg, &StateTables::a1,
+                     &StateTables::a2, true, "weights_for");
 }
 
 std::vector<double> InclusiveSampler::tensor_weights_for(
@@ -530,29 +606,9 @@ std::vector<double> InclusiveSampler::tensor_weights_for(
   // The exact mirror of `weights_for` above, on the tensor vectors of the same
   // StateTables and WITHOUT the unpolarized 1.0: t[i, k] is the rank-2 part of
   // the density w[i, k], so their ratio is the tau the RC band scales.
-  const std::size_t n = batch.size();
-  const std::size_t nk = cats.size();
-  std::vector<double> out(n * nk, 0.0);
-  for (std::size_t k = 0; k < nk; ++k) {
-    const SpinCategory& cat = cats[k];
-    const std::vector<double> ms = m_values(cat.j);
-    if (cat.populations.size() != ms.size()) {
-      throw std::runtime_error("populations must have 2j+1 entries");
-    }
-    for (std::size_t im = 0; im < ms.size(); ++im) {
-      const double p_m = cat.populations[im];
-      if (p_m <= 0.0) continue;
-      const StateTables& st = state_tables(cat, ms[im]);
-      for (std::size_t i = 0; i < n; ++i) {
-        const std::size_t c = static_cast<std::size_t>(batch.cell[i]);
-        const double phip = batch.phi[i] - cat.phi_s;
-        out[i * nk + k] += p_m * (st.w_tensor[c] +
-                                  st.a1_tensor[c] * std::cos(phip) +
-                                  st.a2_tensor[c] * std::cos(2.0 * phip));
-      }
-    }
-  }
-  return out;
+  return mix_weights(batch, cats, &StateTables::w_tensor,
+                     &StateTables::a1_tensor, &StateTables::a2_tensor, false,
+                     "tensor_weights_for");
 }
 
 // ------------------------------------------------------- pseudo-experiments

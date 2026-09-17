@@ -2172,8 +2172,17 @@ double RcModel::tensor_fraction(const Event& ev, std::size_t k) const {
   if (is_tagged_channel(ev.channel)) return tagged_tau(ev, &cat.populations);
 
   const int cell = ev.kin.cell;
-  if (cell < 0) {
-    throw std::runtime_error("RcModel::tensor_fraction: Event::kin.cell < 0");
+  // BOTH bounds, as the slot-0 overload above already checks and as
+  // `tagged_tau` checks: this one tested `cell < 0` alone until 2026-09-16,
+  // and `states_[k][im]->w_avg[c]` below then read past the StateTables for
+  // any hand-built `Event` whose cell is >= n_cells -- and rc.hpp advertises
+  // that a test may build the record by hand.  `weights(ev, k)` calls this
+  // first, so the later indexing there is covered by this one check.
+  if (cell < 0 || static_cast<std::size_t>(cell) >= dis_->n_cells()) {
+    throw std::runtime_error(
+        "RcModel::tensor_fraction: Event::kin.cell = " + std::to_string(cell) +
+        " is outside the sampler's accepted-cell range (0 .. " +
+        std::to_string(dis_->n_cells()) + ")");
   }
   const std::size_t c = static_cast<std::size_t>(cell);
   // The MIXTURE sum_m p_m W_m, mirroring `InclusiveSampler::weights_for` --

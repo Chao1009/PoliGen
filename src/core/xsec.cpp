@@ -133,7 +133,11 @@ SFTables InclusiveKernel::tables(double x, double q2, bool with_g2) const {
 }
 
 double InclusiveKernel::dphi(const SFTables& t, double x, double y) {
-  return t.f1 + (1.0 - y) / (x * y * y) * t.f2;
+  // asymmetries.hpp's "ONE implementation, used by both halves of the
+  // library" rule: delegate rather than re-spell.  Verified bitwise identical
+  // to the copy this replaced at 11 (x, Q2) points on the 6Li kernel,
+  // 2026-09-16.
+  return phi_averaged_density(t.f1, t.f2, x, y);
 }
 
 double InclusiveKernel::tensor_kernel(const SFTables& t, double x, double y) {
@@ -143,7 +147,10 @@ double InclusiveKernel::tensor_kernel(const SFTables& t, double x, double y) {
 double InclusiveKernel::a_parallel(const SFTables& t, double x, double q2,
                                    double y) const {
   if (!target_mass_) {
-    return depolarization_d(y, x, q2, r_func_) * t.g1 / std::max(t.f1, 1e-30);
+    // Same rule: `lipolgen::a_parallel(g1, f1, y, x, q2, r_func)` IS this
+    // expression (asymmetries.cpp), and the finite-gamma branch below already
+    // delegates to `a_parallel_exact`.
+    return lipolgen::a_parallel(t.g1, t.f1, y, x, q2, r_func_);
   }
   if (!t.has_g2) {
     throw std::runtime_error(
@@ -157,12 +164,12 @@ double InclusiveKernel::a_perp(const SFTables& t, double x, double q2,
   if (!t.has_g2) {
     throw std::runtime_error("tables(..., with_g2=true) required for a_perp");
   }
-  const double eps = (1.0 - y) / (1.0 - y + 0.5 * y * y);
-  const double d = depolarization_d(y, x, q2, r_func_)
-                   * std::sqrt(std::max(2.0 * eps / (1.0 + eps), 0.0));
-  const double gamma = 2.0 * M_NUCLEON * x / std::sqrt(q2);
-  const double amp = gamma * (0.5 * y * t.g1 + t.g2) / std::max(t.f1, 1e-30);
-  return d * amp;
+  // This was a verbatim copy of `lipolgen::a_perp` (asymmetries.cpp) --
+  // same eps, d, gamma and amp in the same order -- against
+  // asymmetries.hpp's "ONE implementation, used by both halves of the
+  // library".  Verified bitwise identical to the copy at 11 (x, Q2) points,
+  // 2026-09-16.
+  return lipolgen::a_perp(t.g1, t.g2, t.f1, y, x, q2, r_func_);
 }
 
 std::pair<double, double> InclusiveKernel::tensor_moments(double m) const {

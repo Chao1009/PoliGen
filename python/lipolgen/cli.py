@@ -36,13 +36,53 @@ from . import export
 from . import (B1_MODELS, B1_UNPOL, CHANNELS, CLUSTER_WAVES, FSI, OPTICS,
                R_SOURCE, UNPOL_SF, POL_SF,
                PLANS, PZZ_MODES, RC, TRITON_SFS,
-               ion_spin,
+               _ION_SPIN, ion_spin,
                make_config, make_plan)
+
+#: b1/F1 in the TOPMOST cell of the default acceptance window, per
+#: `--b1-model`.  ONE definition, because it is quoted in four places that
+#: drifted apart: this module's `--x-max` help and its `--b1-model` refusal,
+#: `python/tests/test_b1_model.py` and `docs/USAGE.md` sec. 2a said 6.6 / 5.6,
+#: 3.3 / 5.6, 3.3 / 5.6 and 6.6 / 5.6 respectively, and none of the four was
+#: what the code computes.  MEASURED 2026-09-16 off the shipped kernel at the
+#: default window's top cell (x = 0.954993, Q2 = 167.34413006, 6Li):
+#:
+#:     python -c "import lipolgen as lg, numpy as np; _l = lg._lipolgen; \
+#:       p = _l.Pipeline(lg.make_config(events=100), \
+#:                       lg.tensor_thirds_plan(0.7, 0.6)); \
+#:       x = np.asarray(p.dis_sampler.x_cells).max(); \
+#:       [print(_l.b1_model_name(m), _l.default_inclusive_kernel( \
+#:            _l.ion_by_name('6Li'), m).tables(x, 167.34413006) \
+#:            .as_dict()) for m in _l.B1Model.__members__.values()]"
+#:
+#: The 3.3 was the PRE-2026-09-03 half of the cdks figure and the 6.6 was
+#: twice the rounded 3.3 -- rounded arithmetic, not a measurement.
+B1_TOP_CELL_X = 0.954993
+B1_TOP_CELL_Q2 = 167.34413006
+B1_TOP_CELL_B1_OVER_F1 = {"cdks": 6.52, "li6-convolution": 5.91,
+                          "miller": 0.145}
+
+#: The sentence those numbers are quoted in, written ONCE.
+B1_TOP_CELL_NOTE = (
+    "both opt-in backends carry the CDKS camp's b1_d, a Q2 = 2.5 "
+    "digitization with no Q2 evolution, and in the topmost default cell "
+    "(x = %.3f) b1/F1 reaches %.2f (cdks) resp. %.2f (li6-convolution) -- "
+    "past where the phi-averaged density 1 + w_avg stays positive, so "
+    "InclusiveSampler refuses the run" % (
+        B1_TOP_CELL_X, B1_TOP_CELL_B1_OVER_F1["cdks"],
+        B1_TOP_CELL_B1_OVER_F1["li6-convolution"]))
 
 
 def _load_config_file(path):
-    with open(path) as f:
-        text = f.read()
+    # A MISSING OR MALFORMED --config-file IS A REFUSAL, not a traceback: this
+    # function already turned "not a mapping" and "PyYAML missing" into
+    # SystemExit and let FileNotFoundError and JSONDecodeError through until
+    # 2026-09-16.
+    try:
+        with open(path) as f:
+            text = f.read()
+    except OSError as e:
+        raise SystemExit("--config-file %s: %s" % (path, e))
     if path.lower().endswith((".yaml", ".yml")):
         try:
             import yaml
@@ -50,12 +90,27 @@ def _load_config_file(path):
             raise SystemExit(
                 "%s looks like YAML but PyYAML is not installed; use JSON "
                 "or `pip install pyyaml`" % path)
-        data = yaml.safe_load(text)
+        try:
+            data = yaml.safe_load(text)
+        except yaml.YAMLError as e:
+            raise SystemExit("--config-file %s is not valid YAML: %s"
+                             % (path, e))
     else:
-        data = json.loads(text)
+        try:
+            data = json.loads(text)
+        except json.JSONDecodeError as e:
+            raise SystemExit("--config-file %s is not valid JSON: %s"
+                             % (path, e))
     if not isinstance(data, dict):
         raise SystemExit("%s must hold a mapping of option names" % path)
     return data
+
+
+#: `--isotope` spellings that are not the canonical one -> the key
+#: `_ION_SPIN` carries.  Built from `_ION_SPIN` itself, so a species added
+#: there is spellable in any case the day it lands and this table cannot
+#: drift from that one.
+_ISOTOPE_CANON = {name.lower(): name for name in _ION_SPIN}
 
 
 def build_parser():
@@ -66,22 +121,49 @@ def build_parser():
     p.add_argument("--config-file", default=None,
                    help="JSON (or YAML, if PyYAML is installed) file of the "
                         "same options; command-line switches win")
-    p.add_argument("--isotope", default=None, help="6Li, 7Li, d")
+    # `choices` so an unknown species is argparse's own one-line refusal and
+    # not `ion_spin`'s KeyError traceback, and so the help lists what is
+    # ACTUALLY accepted: the help read "6Li, 7Li, d" until 2026-09-16 while
+    # "p" and "3He" ran.  `type=_isotope_name` runs FIRST and normalises the
+    # CASE, because `choices` on its own narrowed the surface instead of
+    # describing it -- MEASURED 2026-09-16 against b647c16, where
+    # `--isotope 6li --channel tagged-d-p` exits 0 and `--isotope 6li
+    # --channel inclusive` exits 1 on `ion_spin`'s KeyError:
+    #   * every name `_ION_SPIN` carries, IN ANY CASE (6li, 6LI, D, 3HE, ...),
+    #     still runs and still resolves to the isotope it did -- that is what
+    #     the normaliser restores, and what test_cli.py pins over
+    #     `ISOTOPE_SPELLINGS` (`test_every_isotope_casing_resolves_to_its_canonical_name`, `test_a_lower_case_isotope_still_runs`);
+    #   * a spelling `_ION_SPIN` does not carry AT ALL (`zzz`, `6 Li`) now
+    #     stops at argparse with exit 2.  It used to exit 1 through the
+    #     KeyError refusal on a channel that implies no species, and to exit 0
+    #     -- silently, the typed species dropped by `channel_isotope`'s rule
+    #     -- on one that does.  THAT run does stop running; it is the point of
+    #     the flag, and it is written here rather than claimed away.
+    p.add_argument("--isotope", default=None, type=_isotope_name,
+                   choices=sorted(_ION_SPIN),
+                   help="ion species, in any case (6li = 6Li).  6Li "
+                        "(default), 7Li and d are the three the physics "
+                        "channels are built for; p and 3He are accepted as "
+                        "beam species.  A --channel that implies an isotope "
+                        "WINS over this flag (a 6Li alpha tag is a 6Li run "
+                        "whatever was typed), and the override is said on the "
+                        "banner when a species was actually typed")
     p.add_argument("--config", type=int, default=None,
                    help="beam configuration index 0/1/2 = low/mid/top")
     p.add_argument("--channel", default=None, choices=sorted(CHANNELS),
                    help="physics channel")
     p.add_argument("--plan", default=None, choices=sorted(set(PLANS)),
                    help="spin run plan")
-    p.add_argument("--events", type=int, default=None,
+    p.add_argument("--events", type=_nonneg_int, default=None,
                    help="fixed event count (exclusive with --lumi)")
     p.add_argument("--lumi", type=float, default=None,
                    help="integrated luminosity [pb^-1]: it SETS the count "
                         "from the luminosity, so --events is not needed and "
                         "is left at 0 when only this is typed (exclusive "
                         "with an --events given here or in --config-file)")
-    p.add_argument("--seed", type=int, default=None)
-    p.add_argument("--run", type=int, default=None, help="run number")
+    p.add_argument("--seed", type=_nonneg_int, default=None)
+    p.add_argument("--run", type=_nonneg_int, default=None,
+                   help="run number")
     p.add_argument("--optics", default=None, choices=sorted(OPTICS),
                    help="far-forward envelope the route label is priced at")
     p.add_argument("--pz", type=float, default=None, help="fill P_z")
@@ -203,12 +285,17 @@ def build_parser():
                         "assumes one -- so on 7Li the ONLY CLI route to the "
                         "band is '--plan helicity-flip --pe 0'; every other "
                         "CLI plan is refused (helicity plans at pe != 0 by "
-                        "RcModel, spin-1 tensor plans by Pipeline), and an "
+                        "RcModel, spin-1 tensor plans by make_plan -- in "
+                        "Python, before a Pipeline exists), and an "
                         "explicit (P_z, T) J = 3/2 fill still needs the API "
-                        "(USAGE sec. 7b).  rc_tail is the t-PEAK ONLY: a "
-                        "LOWER BOUND on the dilution.  For 6Li at "
+                        "(USAGE sec. 7b).  At the DEFAULT --rc-tail-model "
+                        "t-peak, rc_tail is the t-PEAK ONLY: a LOWER BOUND "
+                        "on the dilution -- t-peak+ll and polrad-full change "
+                        "exactly that, and the banner says which one ran.  "
+                        "For 6Li at "
                         "Q^2 >= 20 GeV^2, y <= 0.9 it carries the whole tail "
-                        "to +0.61 %% of the EVENT-WEIGHTED mean, but PER "
+                        "to +0.61 %% of the EVENT-WEIGHTED mean at --pz 0 "
+                        "(+0.62 %% at this CLI's default P_z = 0.7), but PER "
                         "CELL 24.4 %% of that window is off by > 1 %% and the "
                         "worst cell by x6444 (high x, y ~ 0.009); per-cell "
                         "agreement holds only for 0.15 <= y <= 0.7.  Low by "
@@ -415,10 +502,15 @@ def build_parser():
                         "the other CAMP for b1_d, the digitized CDKS Fig. 4 "
                         "column: |b1| two orders of magnitude smaller below "
                         "x ~ 0.1, comparable or larger above it -- peak "
-                        "|x b1| 3.34e-4 against Miller's 4.27e-4 at Q2 = 2.5, "
-                        "and 8x LARGER at x = 0.3 with the opposite sign.  "
-                        "DOUBLED on 2026-09-03: the CDKS column is already "
-                        "per nucleon and is no longer halved) or "
+                        "|x b1| 3.34e-4 at x = 0.766 against Miller's "
+                        "4.27e-4 at x = 0.084, both at Q2 = 2.5, and 7.7x "
+                        "LARGER at x = 0.3 with the opposite sign.  The two "
+                        "peaks sit at DIFFERENT x, so read the comparison off "
+                        "the whole digitized range: a scan truncated at "
+                        "x = 0.5 finds the CDKS curve's local 5.43e-5 at "
+                        "x = 0.332 instead.  DOUBLED on 2026-09-03: the CDKS "
+                        "column is already per nucleon and is no longer "
+                        "halved) or "
                         "'li6-convolution' (the four-term alpha-d convolution "
                         "of b1_nuclear.hpp).  BOTH opt-in models are "
                         "INCLUSIVE CHANNEL ONLY and 6Li ONLY: on a tagged "
@@ -605,11 +697,12 @@ def build_parser():
                         "Scenario::x_max).  NEEDED by --b1-model cdks and "
                         "li6-convolution: both carry the CDKS camp's b1_d, a "
                         "Q2 = 2.5 DIGITIZATION with no Q2 evolution, and in "
-                        "the topmost default cell (x = 0.955) its b1/F1 "
-                        "reaches 6.6 resp. 5.6 -- past the point where "
+                        "the topmost default cell (x = %.3f) its b1/F1 "
+                        "reaches %.2f resp. %.2f -- past the point where "
                         "1 + w_avg stays positive and the sampler refuses the "
                         "run.  Use --x-max 0.95.  Miller's b1 is a ratio "
-                        "model and does not need it.  ALSO NEEDED, for the "
+                        "model (%.3f at the same point) and does not need "
+                        "it.  ALSO NEEDED, for the "
                         "SAME positivity reason but in the VECTOR sector, by "
                         "'--isotope d --channel tagged-d-p --unpol-sf "
                         "{ct18nlo,mstw} --pol-sf nnpdfpol --plan "
@@ -626,7 +719,10 @@ def build_parser():
                         "'--channel tagged-6Li-alpha --inclusive-b1 "
                         "--unpol-sf ct18nlo' gives 1 + w_avg = -0.1302 at "
                         "the same top cell (x = 0.955, Q2 = 167.3) and mstw "
-                        "gives -0.03496, while --unpol-sf toy runs")
+                        "gives -0.03496, while --unpol-sf toy runs"
+                        % (B1_TOP_CELL_X, B1_TOP_CELL_B1_OVER_F1["cdks"],
+                           B1_TOP_CELL_B1_OVER_F1["li6-convolution"],
+                           B1_TOP_CELL_B1_OVER_F1["miller"]))
     p.add_argument("--coherent-f0", type=float, default=None)
     p.add_argument("--coherent-slope-b", type=float, default=None)
     p.add_argument("--coherent-amp", type=float, default=None)
@@ -762,6 +858,16 @@ def resolve(argv=None):
     if (args.get("lumi") is not None and args.get("events") is None
             and "events" not in fromfile):
         opts["events"] = 0
+    # WHO ASKED FOR THE SPECIES.  `DEFAULTS` fills 6Li, so `opts["isotope"]`
+    # alone cannot tell a typed species from the filled one -- and `main`'s
+    # override notice must fire only for a species the CALLER asked for
+    # (2026-09-16: `lipolgen-run --channel tagged-d-p` printed "--isotope 6Li
+    # overridden" with no --isotope anywhere on the command line).  The fill
+    # happens above and this records what it covered; the command line and
+    # the config file both count as typed, the config file taking the same
+    # option names the switches do.
+    opts["isotope_typed"] = (args.get("isotope") is not None
+                             or "isotope" in fromfile)
     return opts
 
 
@@ -940,7 +1046,7 @@ def require_pol_sf_tier(name, have_lhapdf=None):
 
 
 def sf_banner_lines(unpol_name, pol_name, q2_min=None, below_frac=None,
-                    pol_read=True, pol_reach=None):
+                    pol_read=True):
     """The `--unpol-sf` / `--pol-sf` block of the run banner.
 
     A pure function of the two names, the run's own grid report and the run's
@@ -950,11 +1056,16 @@ def sf_banner_lines(unpol_name, pol_name, q2_min=None, below_frac=None,
     own log.  Printed on EVERY run, the all-default one included, because
     "toy" is a physics choice too and it is the one that costs the most.
 
-    `pol_read` / `pol_reach` are `_l.pol_sf_is_read(cfg, plan)` and
-    `_l.pol_sf_reach_report(cfg, plan)` -- ONE definition, shared with
-    `meta["pol_sf"]` / `meta["pol_sf_reach"]` and with the `pol_sf` row of
-    `Pipeline.knob_provenance`.  They are read here for the two PRICE clauses
+    `pol_read` is `_l.pol_sf_is_read(cfg, plan)` -- ONE definition, shared
+    with `meta["pol_sf"]` and with the `pol_sf` row of
+    `Pipeline.knob_provenance`.  It is read here for the two PRICE clauses
     below, which are true only where g1 actually ran.
+
+    There was a second parameter, `pol_reach` (`_l.pol_sf_reach_report`),
+    until 2026-09-16: declared, documented, passed -- and never read in this
+    body, so the call that built it was work thrown away on every run.  The
+    reach sentence it would have carried is the `pol_sf` row of the KNOB
+    PROVENANCE block, which is where reach now lives.
 
     WHAT THIS BLOCK NO LONGER SAYS, AND WHY.  Until 2026-09-05 its first line
     read "--unpol-sf reaches EVERY kernel this run builds ...; --pol-sf
@@ -1091,6 +1202,56 @@ def knob_provenance_lines(rows, width=74):
     return lines
 
 
+def _isotope_name(text):
+    """`--isotope`'s spelling, normalised BEFORE argparse checks `choices`.
+
+    CASE IS THE WHOLE OF IT.  `_ION_SPIN`'s keys are the canonical spellings
+    (`3He`, `6Li`, `7Li`, `d`, `p`) and this maps any casing of one of them
+    onto its key; anything else is handed back unchanged, so argparse's own
+    `choices` refusal names it.  MEASURED 2026-09-16 -- b647c16's
+    `python/lipolgen/` on this build's extension module, the two halves of the
+    question being argparse's alone: `--isotope 6li --channel tagged-d-p`
+    exits 0 there and exited 2 with the bare `choices=` this replaces, while
+    `--isotope 6li --channel inclusive` exits 1 there on `ion_spin`'s KeyError,
+    exited 2 with the bare `choices=`, exits 0 with this (measured).  A `--channel` that implies its own species drops the typed
+    one (`channel_isotope`'s rule), so on that channel the typed spelling
+    never reached `ion_spin` and any casing ran.
+    """
+    return _ISOTOPE_CANON.get(text.lower(), text)
+
+
+def _nonneg_int(text):
+    """A count that reaches an UNSIGNED pybind slot.
+
+    `PipelineConfig::events` / `seed` / `run` are `std::uint64_t`, so a
+    negative number met the user as pybind's
+    `TypeError: incompatible function arguments ... SupportsInt` with the
+    whole overload table pasted under it.  argparse says it in one line
+    instead, before anything is built (2026-09-16).
+    """
+    try:
+        v = int(text)
+    except ValueError:
+        raise argparse.ArgumentTypeError("%r is not an integer" % text)
+    if v < 0:
+        raise argparse.ArgumentTypeError(
+            "%d is negative; this count is unsigned" % v)
+    return v
+
+
+def _refusal(exc):
+    """The one-line text of a configuration-time refusal.
+
+    `str(KeyError("6li"))` is `"'6li'"` -- the repr, quotes and all -- which
+    is why the message is built from the key rather than from `str`.
+    """
+    if isinstance(exc, KeyError):
+        return ("unknown isotope %s; know %s"
+                % (exc.args[0] if exc.args else "?",
+                   ", ".join(sorted(_ION_SPIN))))
+    return str(exc)
+
+
 def main(argv=None):
     opts = resolve(argv)
     quiet = bool(opts["quiet"])
@@ -1098,36 +1259,71 @@ def main(argv=None):
 
     if opts["events"] and opts["lumi"]:
         raise SystemExit("--events and --lumi are exclusive")
+    if opts["hepmc"] and not _l.HAVE_HEPMC3:
+        # BEFORE the run, not after it.  This check sat below the generation
+        # loop until 2026-09-16, so `--events 1000000 --hepmc out.hepmc` on a
+        # build without HepMC3 generated the whole run and then refused --
+        # while the PYTHIA-tier check a few lines down, and the
+        # --hfs-npz/--hadronize check beside it, have always run first.
+        raise SystemExit("this build has no HepMC3 writer")
     require_b1_unpol_tier(opts["b1_unpol"])
     require_unpol_sf_tier(opts["unpol_sf"])
     require_pol_sf_tier(opts["pol_sf"])
-    cfg = make_config(isotope=opts["isotope"], config=opts["config"],
-                      channel=opts["channel"], events=opts["events"],
-                      lumi_pb=opts["lumi"], seed=opts["seed"], run=opts["run"],
-                      optics=opts["optics"], cluster_beta=opts["cluster_beta"],
-                      p_d=opts["p_d"], cluster_wave=opts["cluster_wave"],
-                      triton_sf=opts["triton_sf"],
-                      fsi=opts["fsi"], fsi_sigma_mb=opts["fsi_sigma_mb"],
-                      rc=opts["rc"],
-                      rc_delta_low_x=opts["rc_delta_low_x"],
-                      rc_delta_high_x=opts["rc_delta_high_x"],
-                      rc_a_transfer_frac=opts["rc_a_transfer_frac"],
-                      rc_fq_scale=opts["rc_fq_scale"],
-                      rc_tail_tensor_scale=opts["rc_tail_tensor_scale"],
-                      rc_qe_suppression=opts["rc_qe_suppression"],
-                      rc_qe_tensor_scale=opts["rc_qe_tensor_scale"],
-                      rc_sp_tensor_scale=opts["rc_sp_tensor_scale"],
-                      rc_c0_shape=opts["rc_c0_shape"],
-                      rc_tail_model=opts["rc_tail_model"],
-                      inclusive_b1=opts["inclusive_b1"],
-                      b1_model=opts["b1_model"],
-                      b1_band_scale=opts["b1_band_scale"],
-                      b1_alpha_d_dwave_weight=opts["b1_alpha_d_dwave_weight"],
-                      b1_unpol=opts["b1_unpol"],
-                      r_source=opts["r_source"],
-                      unpol_sf=opts["unpol_sf"], pol_sf=opts["pol_sf"],
-                      coherent_t_max=opts["coherent_t_max"],
-                      coherent=opts["coherent"])
+    # EVERY CONFIGURATION-TIME REFUSAL IS A ONE-LINE MESSAGE, NOT A TRACEBACK
+    # -- the rule this module already states for `make_plan` below and for the
+    # PYTHIA bridge, and which `make_config` was outside of until 2026-09-16.
+    # `PipelineConfig::validate()` throws `RuntimeError` (--fsi
+    # glauber-cluster off a tagged channel, --cluster-wave vmc off its
+    # channels, --b1-band-scale off {0,1,2}, --rc-sp-tensor-scale on a
+    # non-tensor-band --rc, ...), `make_config` itself raises `ValueError`
+    # (--config 5), a pybind setter raises `TypeError` (--events -5, --seed -1
+    # through the unsigned cast) and `ion_spin` raises `KeyError` (--isotope
+    # xx); all four reached the user as a stack trace naming a line of
+    # `__init__.py`.  Caught here by TYPE, not by message, so a refusal added
+    # to `validate()` later is covered the day it lands.
+    try:
+        cfg = make_config(isotope=opts["isotope"], config=opts["config"],
+                          channel=opts["channel"], events=opts["events"],
+                          lumi_pb=opts["lumi"], seed=opts["seed"], run=opts["run"],
+                          optics=opts["optics"], cluster_beta=opts["cluster_beta"],
+                          p_d=opts["p_d"], cluster_wave=opts["cluster_wave"],
+                          triton_sf=opts["triton_sf"],
+                          fsi=opts["fsi"], fsi_sigma_mb=opts["fsi_sigma_mb"],
+                          rc=opts["rc"],
+                          rc_delta_low_x=opts["rc_delta_low_x"],
+                          rc_delta_high_x=opts["rc_delta_high_x"],
+                          rc_a_transfer_frac=opts["rc_a_transfer_frac"],
+                          rc_fq_scale=opts["rc_fq_scale"],
+                          rc_tail_tensor_scale=opts["rc_tail_tensor_scale"],
+                          rc_qe_suppression=opts["rc_qe_suppression"],
+                          rc_qe_tensor_scale=opts["rc_qe_tensor_scale"],
+                          rc_sp_tensor_scale=opts["rc_sp_tensor_scale"],
+                          rc_c0_shape=opts["rc_c0_shape"],
+                          rc_tail_model=opts["rc_tail_model"],
+                          inclusive_b1=opts["inclusive_b1"],
+                          b1_model=opts["b1_model"],
+                          b1_band_scale=opts["b1_band_scale"],
+                          b1_alpha_d_dwave_weight=opts["b1_alpha_d_dwave_weight"],
+                          b1_unpol=opts["b1_unpol"],
+                          r_source=opts["r_source"],
+                          unpol_sf=opts["unpol_sf"], pol_sf=opts["pol_sf"],
+                          coherent_t_max=opts["coherent_t_max"],
+                          coherent=opts["coherent"])
+    except (RuntimeError, ValueError, TypeError, KeyError) as e:
+        raise SystemExit(_refusal(e))
+    if opts["isotope_typed"] and opts["isotope"] != cfg.isotope:
+        # SAY THE OVERRIDE -- AND ONLY WHEN THERE IS ONE TO SAY.
+        # `make_config` resolves the isotope a --channel IMPLIES over the one
+        # that was typed (`channel_isotope`'s rule), so `--isotope 7Li
+        # --channel tagged-d-p` is a deuteron run; until 2026-09-16 nothing on
+        # the banner or in the meta said the typed species had been dropped.
+        # `opts["isotope_typed"]`, not `opts["isotope"] is not None`: DEFAULTS
+        # fills 6Li, so the second test was true on every run and the notice
+        # fired for a species nobody typed (`lipolgen-run --channel
+        # tagged-d-p` announced "--isotope 6Li overridden").  Typed on the
+        # command line or in the config file; filled by DEFAULTS is not typed.
+        say("  --isotope %s overridden: --channel %s implies %s"
+            % (opts["isotope"], opts["channel"], cfg.isotope))
     if opts["x_max"] is not None:
         # `Scenario` comes back BY VALUE from the binding, so it is written on
         # a copy and assigned back -- the `cfg.struck` / `cfg.rc_options`
@@ -1146,19 +1342,15 @@ def main(argv=None):
         # whose plain invocation always fails.  See docs/USAGE.md sec. 2a,
         # "The top x cell".
         raise SystemExit(
-            "--b1-model %s needs --x-max 0.95: both opt-in backends carry the "
-            "CDKS camp's b1_d, a Q2 = 2.5 digitization with no Q2 evolution, "
-            "and in the topmost default cell (x = 0.955) b1/F1 reaches 3.3 "
-            "(cdks) resp. 5.6 (li6-convolution) -- past where the "
-            "phi-averaged density 1 + w_avg stays positive, so InclusiveSampler "
-            "refuses the run.  See docs/USAGE.md sec. 2a, 'The top x cell'."
-            % _l.b1_model_name(cfg.b1_model))
+            "--b1-model %s needs --x-max 0.95: %s.  See docs/USAGE.md sec. 2a, "
+            "'The top x cell'."
+            % (_l.b1_model_name(cfg.b1_model), B1_TOP_CELL_NOTE))
     try:
         plan = make_plan(opts["plan"], j=ion_spin(cfg.isotope), pz=opts["pz"],
                          pzz=opts["pzz"], pe=opts["pe"],
                          rel_lumi_offset=opts["rel_lumi_offset"],
                          pzz_mode=opts["pzz_mode"])
-    except (RuntimeError, ValueError) as e:
+    except (RuntimeError, ValueError, KeyError) as e:
         # A FILL OUTSIDE THE PLAN'S DOMAIN IS A REFUSAL, not a traceback, and
         # it is never CLAMPED to the edge: clamping would publish an alignment
         # nobody typed.  `spin1_populations` / `spin32_populations` name the
@@ -1167,8 +1359,10 @@ def main(argv=None):
         # command line (--pzz 0.6 at --pz 0.7 is outside the J = 3/2 domain by
         # 0.02: the edge is T = 0.58, where p(-1/2) = 0).  The same clause
         # carries make_plan's spin-1-pattern refusal, which reached the user
-        # as a traceback until 2026-09-06.
-        raise SystemExit(str(e))
+        # as a traceback until 2026-09-06, and `ion_spin`'s KeyError on an
+        # unknown --isotope until 2026-09-16 (KeyError is in the clause, and
+        # `_refusal` strips the quotes `str(KeyError)` would otherwise leave).
+        raise SystemExit(_refusal(e))
 
     nthreads = max(1, int(opts["nthreads"]))
     bridge = None
@@ -1364,8 +1558,7 @@ def main(argv=None):
         for line in sf_banner_lines(_l.unpol_sf_name(cfg.unpol_sf),
                                     _l.pol_sf_name(cfg.pol_sf),
                                     q2_min, below,
-                                    _l.pol_sf_is_read(cfg, plan),
-                                    _l.pol_sf_reach_report(cfg, plan)):
+                                    _l.pol_sf_is_read(cfg, plan)):
             say(line)
     # THE KNOB-PROVENANCE BLOCK, on every run and every channel: ONE table
     # (`Pipeline.knob_provenance`) saying what this run read and what it did
@@ -1496,7 +1689,8 @@ def main(argv=None):
                     "exact tail.  Measured (test_rc.cpp T8(c), T8(d)) against "
                     "the leading-log s-/p-peaks, for 6Li at Q^2 >= 20 GeV^2 "
                     "and y <= 0.9: it carries the EVENT-WEIGHTED mean tail to "
-                    "0.61 %, but PER CELL only to 0.55 % over 0.15 <= y <= "
+                    "0.61 % at P_z = 0 (0.62 % at the CLI default P_z = 0.7), "
+                    "but PER CELL only to 0.55 % over 0.15 <= y <= "
                     "0.7 -- 331 of that window's 1356 accepted cells (24.4 %) "
                     "are off by > 1 % and the worst by a factor 6444, at "
                     "x = 0.79, y = 0.0088.  It is 62.8 % of the total at the "
@@ -1633,8 +1827,7 @@ def main(argv=None):
         say("  wrote %s (%.1f MB)"
             % (opts["hfs_npz"], os.path.getsize(opts["hfs_npz"]) / 1e6))
     if opts["hepmc"]:
-        if not _l.HAVE_HEPMC3:
-            raise SystemExit("this build has no HepMC3 writer")
+        # Availability was checked before the run (see main()'s tier block).
         t0 = time.time()
         if "events" in cols:
             with _l.HepMC3Writer(opts["hepmc"]) as w:

@@ -62,9 +62,14 @@ __all__ = [n for n in dir(_lipolgen) if not n.startswith("_")] + [
     "export", "inclusive_dict", "tagged_dict", "hfs_sample", "write_hfs_npz",
     "write_columns_npz", "CHANNELS", "PLANS", "TRITON_SFS", "FSI", "RC",
     "B1_MODELS", "B1_UNPOL", "R_SOURCE", "UNPOL_SF", "POL_SF", "PZZ_MODES",
-    "RC_C0_SHAPES", "RC_TAIL_MODELS",
-    "make_config", "make_plan", "make_pipeline", "run", "__version__",
+    "RC_C0_SHAPES", "RC_TAIL_MODELS", "OPTICS", "CLUSTER_WAVES",
+    "make_config", "make_plan", "make_pipeline", "run", "ion_spin",
+    "__version__",
 ]
+# `OPTICS`, `CLUSTER_WAVES` and `ion_spin` were missing from the list until
+# 2026-09-16 while every sibling name table was on it and `cli.py` imports all
+# three, so `from lipolgen import *` gave FSI and RC but not OPTICS.
+
 
 # --------------------------------------------------------------- name tables
 
@@ -144,8 +149,9 @@ RC = {
 #: b1_func is Li6B1(MillerB1), which is what `toy_b1` reaches.  "cdks" is the
 #: same 6Li rank-2 transfer on the other CAMP for b1_d (the digitized CDKS
 #: PRD 95 (2017) 074036 Fig. 4 column: |b1| two orders of magnitude smaller
-#: below x ~ 0.1, COMPARABLE above it -- peak |x b1| 1.67e-4 against Miller's
-#: 4.27e-4 at Q2 = 2.5, and 4x LARGER at x = 0.3 with the opposite sign) --
+#: below x ~ 0.1, comparable or larger above it -- peak |x b1| 3.34e-4 at
+#: x = 0.766 against Miller's 4.27e-4 at x = 0.084, both at Q2 = 2.5, and 7.7x
+#: LARGER at x = 0.3 with the opposite sign) --
 #: Miller and CDKS disagree and the library does not adjudicate, so say which
 #: one a plot used.  INCLUSIVE CHANNEL ONLY and 6Li ONLY, like
 #: "li6-convolution".  "li6-convolution" is
@@ -786,8 +792,10 @@ def make_pipeline(config=None, plan=None, **kw):
 
 
 def run(isotope="6Li", config=1, channel="inclusive", plan="tensor-thirds",
-        events=100000, lumi_pb=0.0, seed=20260713, optics="yr-high-acceptance",
-        pz=0.7, pzz=0.6, pe=0.7, nthreads=1, keep_events=False, hadronize=False,
+        events=100000, lumi_pb=0.0, seed=20260713, run_number=1,
+        optics="yr-high-acceptance", pz=0.7, pzz=0.6, pe=0.7,
+        theta_s=0.0, phi_s=None, pzz_mode="ladder", rel_lumi_offset=0.0,
+        nthreads=1, keep_events=False, hadronize=False,
         pythia_options=None, **kw):
     """Build a run and generate it; returns the columnar dict.
 
@@ -795,11 +803,21 @@ def run(isotope="6Li", config=1, channel="inclusive", plan="tensor-thirds",
     so that cross sections, optics and the far-forward re-routing stay
     reachable.  `hadronize=True` binds a `PythiaBridge` (T2 tier) into the
     configuration, which forces single-threaded generation.
+
+    THE RUN-PLAN ARGUMENTS ARE THE CLI'S.  `pzz_mode`, `rel_lumi_offset`,
+    `theta_s`, `phi_s` and the run number reached neither `make_plan` nor the
+    `KnobRunContext` until 2026-09-16: they fell through `**kw` into
+    `make_config`, which raised `TypeError: make_config() got an unexpected
+    keyword argument 'pzz_mode'`, and `meta["knob_provenance"]` came back with
+    68 rows against the CLI's 69 -- the missing one being `pzz_mode` itself.
+    The two entry points now write the same table for the same run.
     """
     cfg = make_config(isotope=isotope, config=config, channel=channel,
-                      events=events, lumi_pb=lumi_pb, seed=seed, optics=optics,
-                      **kw)
-    rp = make_plan(plan, j=ion_spin(cfg.isotope), pz=pz, pzz=pzz, pe=pe)
+                      events=events, lumi_pb=lumi_pb, seed=seed,
+                      run=run_number, optics=optics, **kw)
+    rp = make_plan(plan, j=ion_spin(cfg.isotope), pz=pz, pzz=pzz, pe=pe,
+                   theta_s=theta_s, phi_s=phi_s,
+                   rel_lumi_offset=rel_lumi_offset, pzz_mode=pzz_mode)
     bridge = None
     if hadronize:
         if not _lipolgen.HAVE_PYTHIA8:
@@ -842,9 +860,10 @@ def run(isotope="6Li", config=1, channel="inclusive", plan="tensor-thirds",
     ctx.pz = float(pz)
     ctx.pzz = float(pzz)
     ctx.pe = float(pe)
-    # `make_plan` above took `rel_lumi_offset`'s own default and this function
-    # exposes no other value, so 0.0 is what was asked for, not a guess.
-    ctx.rel_lumi_offset = 0.0
+    ctx.rel_lumi_offset = float(rel_lumi_offset)
+    # The row the CLI had and this function did not: without it the table came
+    # back with 68 rows against `lipolgen-run`'s 69.
+    ctx.pzz_mode = pzz_mode
     # The luminosity is already on the config, so the pipeline resolved the
     # per-category counts in its constructor: generate(0) is the whole run in
     # both modes.

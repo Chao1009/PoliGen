@@ -91,7 +91,7 @@ that the ⁷Li numbers are directly comparable to arXiv:2511.05638, which ran th
 code unmodified.  The patched build supplies the `R_rms` variant rows.
 
 **Beams.**  LiPolGen configuration 1 = `ELECTRON_ENERGIES[1] = 10.0` GeV ×
-99.5 GeV/u (`src/core/beams.cpp:120`; `docs/USAGE.md:1243` (anchor read 2026-09-15 "10 GeV e x 99.5") "10 GeV e × 99.5 GeV/u").
+99.5 GeV/u (`src/core/beams.cpp:126`; `docs/USAGE.md:1283` (anchor read 2026-09-16 "10 GeV e x 99.5") "10 GeV e × 99.5 GeV/u").
 eSTARlight parameterizes beams by Lorentz γ and internally uses
 `E_ion = γ·A·m_p` (`src/inputParameters.cpp:197`), so γ is fixed by the
 per-nucleon *momentum*:
@@ -224,7 +224,7 @@ before any branching fraction, acceptance or efficiency):
 | coherent J/ψ | 1.77 nb | 1.8 × 10⁶ | 1.1 × 10⁵ (J/ψ → e⁺e⁻, 5.97 %) |
 
 LiPolGen carries **no default integrated luminosity** — `PipelineConfig::lumi_pb`
-is 0.0 (`include/lipolgen/pipeline.hpp:710`) and every example takes `--lumi`
+is 0.0 (`include/lipolgen/pipeline.hpp:748`) and every example takes `--lumi`
 from the command line — so these are quoted per fb⁻¹.
 
 > *(Annotation, 2026-09-04.)* The *analysis*-side default does exist and is

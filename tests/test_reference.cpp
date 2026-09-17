@@ -8,6 +8,7 @@
 // directory is empty the test SKIPS with a message rather than failing, so
 // the suite is green before and after they land.
 
+#include <fstream>
 #include <cmath>
 #include <cstdio>
 #include <string>
@@ -44,6 +45,22 @@ std::string ref_path(const char* name) {
 bool load(const char* name, jsonmin::Value& out) {
   return jsonmin::load_file(ref_path(name), out);
 }
+
+/// Is the reference blob on disk?  Called at doctest REGISTRATION time by the
+/// `doctest::skip()` decorators below, so that a checkout without
+/// `validation/reference/` reports these cases as SKIPPED in the tally
+/// instead of PASSED WITH ZERO ASSERTIONS.  The pattern is
+/// `tests/test_coherent.cpp`'s (phase F, 2026-09-05), which introduced it for
+/// exactly this reason and was applied to test_coherent / test_cluster /
+/// test_b1_nuclear and to no other file -- these twelve rtol-1e-12 port gates
+/// kept the in-case `MESSAGE(...); return;` and went on passing, silently and
+/// vacuously, until 2026-09-16.  A blob that IS there and does not parse is a
+/// FAILURE, not a skip: that is what the `REQUIRE` on the loader inside each
+/// case is for.
+bool reference_blob_present(const char* name) {
+  return std::ifstream(ref_path(name)).good();
+}
+
 
 /// Rebuild the kernel a named reference block was dumped with.
 InclusiveKernel build_kernel(const std::string& ion_name,
@@ -84,12 +101,10 @@ InclusiveKernel build_kernel(const std::string& ion_name,
 
 }  // namespace
 
-TEST_CASE("reference tables: beams.json") {
+TEST_CASE("reference tables: beams.json" *
+          doctest::skip(!reference_blob_present("beams.json"))) {
   jsonmin::Value doc;
-  if (!load("beams.json", doc)) {
-    MESSAGE("validation/reference/beams.json absent -- skipping");
-    return;
-  }
+  REQUIRE(load("beams.json", doc));
   const jsonmin::Value& c = doc["constants"];
   CHECK_CLOSE(PROTON_TOP_MOMENTUM, c["PROTON_TOP_MOMENTUM"].num(), kRtol);
   CHECK_CLOSE(PROTON_MASS, c["PROTON_MASS"].num(), kRtol);
@@ -156,12 +171,10 @@ TEST_CASE("reference tables: beams.json") {
   }
 }
 
-TEST_CASE("reference tables: spin.json") {
+TEST_CASE("reference tables: spin.json" *
+          doctest::skip(!reference_blob_present("spin.json"))) {
   jsonmin::Value doc;
-  if (!load("spin.json", doc)) {
-    MESSAGE("validation/reference/spin.json absent -- skipping");
-    return;
-  }
+  REQUIRE(load("spin.json", doc));
 
   for (const jsonmin::Value& e : doc["wigner_d"].arr()) {
     const double j = e["j"].num();
@@ -273,12 +286,10 @@ TEST_CASE("reference tables: spin.json") {
   }
 }
 
-TEST_CASE("reference tables: xsec.json") {
+TEST_CASE("reference tables: xsec.json" *
+          doctest::skip(!reference_blob_present("xsec.json"))) {
   jsonmin::Value doc;
-  if (!load("xsec.json", doc)) {
-    MESSAGE("validation/reference/xsec.json absent -- skipping");
-    return;
-  }
+  REQUIRE(load("xsec.json", doc));
 
   const jsonmin::Value& consts = doc["constants"];
   CHECK_CLOSE(ALPHA_EM, consts["ALPHA_EM"].num(), kRtol);

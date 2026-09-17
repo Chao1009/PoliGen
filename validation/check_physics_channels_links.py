@@ -369,12 +369,12 @@ ALLOW = {
         "no rank-3 (octupole) slot",
         "no such symbol exists in the tree, deliberately: the row cites the "
         "comment that states why there is no rank-3 slot"),
-    ("src/core/pipeline.cpp", 841, "coherent"): (
+    ("src/core/pipeline.cpp", 847, "coherent"): (
         "on the coherent channel the tensor signal is in the recoil",
         "the cited line is inside PipelineConfig::validate()'s refusal "
         "message; `coherent` there is the English word in that message, which "
         "is the text the row quotes"),
-    ("src/core/pipeline.cpp", 1811, "optics_lumi_factor"): (
+    ("src/core/pipeline.cpp", 1877, "optics_lumi_factor"): (
         "cfg_.lumi_pb * optics_lumi_factor()",
         "the row's claim is that luminosity mode multiplies the optics factor "
         "in, so it cites the multiplication, not the accessor (declared at "
@@ -384,7 +384,7 @@ ALLOW = {
         "one of three consecutive branch lines of RcModel::exclusion_reason "
         "the row cites together; the neighbours are use sites in files that "
         "do not declare their symbol"),
-    ("src/core/breakup.cpp", 333, "proton_fraction"): (
+    ("src/core/breakup.cpp", 346, "proton_fraction"): (
         "proton_fraction(in.x, in.q2, 1, 3)",
         "the triton branch's own proton/neutron draw, which is what the row "
         "describes; the definition is generic over (Z, A)"),
@@ -441,250 +441,250 @@ EVIDENCE_MAX_BLOCK = 150
 # the phrases the rule looked for, and that listing is the worksheet they were
 # filled in from.
 RANGE_ALLOW: dict[tuple[str, int, str], tuple[str, str]] = {
-    ("PHYSICS_CHANNELS.md", 80, "include/lipolgen/spin.hpp:19-21"): (
+    ("PHYSICS_CHANNELS.md", 83, "include/lipolgen/spin.hpp:19-21"): (
         "///   octupole J=3/2   O    = <J_z^3 - (41/20) J_z>/(3/10)",
         "the row says the (41/20, 3/10) octupole normalisation is "
         "stated only here; the block is the three moment lines, the "
         "last of which is that normalisation"),
-    ("PHYSICS_CHANNELS.md", 87, "tests/test_tagged.cpp:383-400"): (
+    ("PHYSICS_CHANNELS.md", 90, "tests/test_tagged.cpp:396-413"): (
         "CHECK_CLOSE_AT(m.p2_moment_mixture(pv), -mom.tensor / 5.0, "
         "0.0, tol);",
         "the row calls ⟨P₂(cos θ_k)⟩ = −T/5 a test-pinned identity; the "
         "block is the test case that pins it, including the mixture "
         "form"),
-    ("PHYSICS_CHANNELS.md", 107, "src/core/xsec.cpp:295-298"): (
+    ("PHYSICS_CHANNELS.md", 110, "src/core/xsec.cpp:302-305"): (
         "const double helicity = state.lam_e * state.pe;",
         "the row's claim is that the vector-L term is evaluated only "
         "when lam_e*P_e != 0 and m != 0, so an m = 0 state has no "
         "vector-L term for any spin; the block is that guard and the "
         "term it protects"),
-    ("PHYSICS_CHANNELS.md", 120, "docs/open_items/physics_literature.md:132-140"): (
+    ("PHYSICS_CHANNELS.md", 123, "docs/open_items/physics_literature.md:143-151"): (
         "**(d) Independent fourth check, POLRAD 2.0**",
         "the row cites [POLRAD]'s Born Eqs. (9)/(10) as an independent "
         "fourth sign check; the block is the register entry that makes "
         "that check, (b) through (d)"),
-    ("PHYSICS_CHANNELS.md", 188, "include/lipolgen/sf.hpp:43-45"): (
+    ("PHYSICS_CHANNELS.md", 191, "include/lipolgen/sf.hpp:43-45"): (
         "/// R = sigma_L/sigma_T, simplified R1990-like magnitude "
         "(TOY).  The DEFAULT R",
         "the row says both defaults are explicitly labelled TOY here "
         "and at :109-112; the block is the R default's comment, which "
         "carries that label"),
-    ("PHYSICS_CHANNELS.md", 200, "docs/CONVENTIONS.md:194-198"): (
+    ("PHYSICS_CHANNELS.md", 203, "docs/CONVENTIONS.md:207-211"): (
         "the EPPS21 depletion is the single stored number",
         "the row's provenance for EMC_VALENCE_DEPLETION_EPPS21 = "
         "0.031052077003862335 and for the superseded CT18NLO 0.02979; "
         "the block states both and why the denominator is CT18ANLO"),
-    ("PHYSICS_CHANNELS.md", 200, "include/lipolgen/sf.hpp:322-336"): (
+    ("PHYSICS_CHANNELS.md", 203, "include/lipolgen/sf.hpp:322-336"): (
         "/// PROVENANCE: "
         "`polli_fastsim.polarized.valence_depletion(mode=\"epps21\")` --",
         "the row's provenance for EMC_VALENCE_DEPLETION_EPPS21, its "
         "301-point window and the superseded CT18NLO value; the block "
         "is that provenance comment and the constant"),
-    ("PHYSICS_CHANNELS.md", 201, "include/lipolgen/sf.hpp:341-343"): (
+    ("PHYSICS_CHANNELS.md", 204, "include/lipolgen/sf.hpp:341-343"): (
         "/// eq = 23 is the R^{3/2 3/2}_{As} of their Eq. (23), eq = 26 "
         "the",
         "the row reads eq = 23 as R^{3/2 3/2}_As and eq = 26 as R^{(3/2 "
         "1)}_As 'per' this block; the block is the comment that assigns "
         "exactly those two"),
-    ("PHYSICS_CHANNELS.md", 205, "include/lipolgen/pipeline.hpp:893-896"): (
+    ("PHYSICS_CHANNELS.md", 208, "include/lipolgen/pipeline.hpp:931-934"): (
         "-0.0818(17) fm^2 (`LI6_QUADRUPOLE_FM2`, TUNL A = 6, 1998CE04",
         "the row says the measured Q(⁶Li) and Q_d are quoted here; the "
         "block is the comment carrying −0.0818(17) fm² against Q_d = "
         "+0.2859(3) fm² with their sources"),
-    ("PHYSICS_CHANNELS.md", 207, "include/lipolgen/sf.hpp:331-334"): (
+    ("PHYSICS_CHANNELS.md", 210, "include/lipolgen/sf.hpp:331-334"): (
         "4.2 % shallower",
         "the row says the only quantified CT18NLO-vs-CT18ANLO "
         "difference in the repo is the 4.2 % depletion shift; the block "
         "is the comment that states it, with both constants"),
-    ("PHYSICS_CHANNELS.md", 227, "include/lipolgen/generator.hpp:22-28"): (
+    ("PHYSICS_CHANNELS.md", 230, "include/lipolgen/generator.hpp:22-28"): (
         "Bacchetta et al. (JHEP 02 (2007) 093) azimuth",
         "the row says [Bacchetta07]'s phi_S convention is cited only "
         "here and echoed in sampler.hpp, and is registered nowhere; the "
         "block is that citation and the sign convention it fixes"),
-    ("PHYSICS_CHANNELS.md", 227, "include/lipolgen/sampler.hpp:26-29"): (
+    ("PHYSICS_CHANNELS.md", 230, "include/lipolgen/sampler.hpp:26-29"): (
         "phi_S of the alignment axis exactly (massless target; "
         "`reco.py`",
         "two rows say [Bacchetta07]'s φ_S convention is echoed here; "
         "the block is that echo"),
-    ("PHYSICS_CHANNELS.md", 233, "include/lipolgen/bookkeeping.hpp:170-172"): (
+    ("PHYSICS_CHANNELS.md", 236, "include/lipolgen/bookkeeping.hpp:170-172"): (
         "/// Spin-1 A_zz run plan: equal-thirds fills (pz, +pzz), (-pz, "
         "+pzz) and the",
         "the row cites [HERMES05] for the thirds pattern; the block is "
         "the doc comment that names the HERMES-style pattern and the "
         "three fills"),
-    ("PHYSICS_CHANNELS.md", 263, "data/vmc/README.md:85-118"): (
+    ("PHYSICS_CHANNELS.md", 266, "data/vmc/README.md:85-118"): (
         "the cluster MOMENTUM DISTRIBUTIONS (fetched 2026-08-29, second "
         "pass)",
         "the row says the repo carries no journal citation for the "
         "momenta/ AV18+UX files beyond Wiringa's ANL page and the "
         "Wayback URLs in this block; the block is that section of the "
         "inventory"),
-    ("PHYSICS_CHANNELS.md", 263, "docs/open_items/vmc_reconciliation.md:120-131"): (
+    ("PHYSICS_CHANNELS.md", 266, "docs/open_items/vmc_reconciliation.md:120-131"): (
         "| k < 0.678 fm⁻¹ = 0.134 GeV (below the **S** node) | **−1** |",
         "the row says the VMC node values are recorded here; the block "
         "is the sign table with the S node at 0.678 fm⁻¹ = 0.134 GeV "
         "and the D node at 2.250"),
-    ("PHYSICS_CHANNELS.md", 264, "data/vmc/README.md:65-103"): (
+    ("PHYSICS_CHANNELS.md", 267, "data/vmc/README.md:65-103"): (
         "## Files fetched, one row per subdirectory",
         "the row cites the VMC inventory table and its Wayback URLs in "
         "unquoted prose; the block is that inventory (both fetch "
         "passes) with the Wayback-snapshot column"),
-    ("PHYSICS_CHANNELS.md", 268, "docs/open_items/vmc_reconciliation.md:197-206"): (
+    ("PHYSICS_CHANNELS.md", 271, "docs/open_items/vmc_reconciliation.md:197-206"): (
         "| VMC D-sign flipped (= the PRE-FIX physics column) |",
         "the row calls this 'that table, REGENERATED on the fixed "
         "library'; the block is the regenerated k-table whose header "
         "names the pre-fix physics column"),
-    ("PHYSICS_CHANNELS.md", 271, "docs/surveys/beagle_survey.md:120-127"): (
+    ("PHYSICS_CHANNELS.md", 274, "docs/surveys/beagle_survey.md:120-127"): (
         "### 2f. The eD mode with spectator tagging",
         "the row's [BeAGLE22] provenance for the "
         "struck-cluster/spectator split; the block is the survey "
         "section on BeAGLE's eD spectator-tagging mode"),
-    ("PHYSICS_CHANNELS.md", 298, "docs/surveys/beagle_survey.md:120-127"): (
+    ("PHYSICS_CHANNELS.md", 301, "docs/surveys/beagle_survey.md:120-127"): (
         "- **No FSI at all in eD** (paper, §II).",
         "the row's provenance for the impulse approximation and for "
         "BeAGLE's four-momentum-balance-only closure; the block is the "
         "eD section, whose last line is the no-FSI statement the row "
         "leans on"),
-    ("PHYSICS_CHANNELS.md", 301, "docs/DEVELOPMENT_PLAN.md:61-65"): (
+    ("PHYSICS_CHANNELS.md", 304, "docs/DEVELOPMENT_PLAN.md:61-65"): (
         "| tier | content | source of truth |",
         "the row points at the in-repo pointers to plans/05 step 5.D; "
         "the block is the T0/T1/T2 tier table whose T1 row names "
         "`plans/05` 5.D"),
-    ("PHYSICS_CHANNELS.md", 342, "include/lipolgen/fsi.hpp:213-220"): (
+    ("PHYSICS_CHANNELS.md", 345, "include/lipolgen/fsi.hpp:213-220"): (
         "a^2 = (r_ch^2(cluster) - r_ch^2(p)) / 3 .",
         "the row says the a² values are quoted from measured charge "
         "radii with no bibliographic source; the block is that formula "
         "and the α number 0.7001 fm² it produces"),
-    ("PHYSICS_CHANNELS.md", 343, "docs/open_items/physics_literature.md:81-85"): (
+    ("PHYSICS_CHANNELS.md", 346, "docs/open_items/physics_literature.md:81-85"): (
         "**σ_eff = 30–70 mb** rising with W (Cosyn–Sargsian Deeps fit)",
         "two rows cite this block: for the register's only fitted σ(W) "
         "(30–70 mb rising) and for its calling the coherent-α amplitude "
         "a variant; both sentences are inside it"),
-    ("PHYSICS_CHANNELS.md", 343, "include/lipolgen/fsi.hpp:176-179"): (
+    ("PHYSICS_CHANNELS.md", 346, "include/lipolgen/fsi.hpp:176-179"): (
         "THE OPEN PHYSICS INPUT.  sigma_XN(W) is the weakest number in "
         "the model.",
         "the row says the decreasing σ anchors encode a "
         "formation-length argument; the block is the comment that makes "
         "that argument and calls σ_XN(W) the weakest number in the "
         "model"),
-    ("PHYSICS_CHANNELS.md", 422, "include/lipolgen/coherent.hpp:631-637"): (
+    ("PHYSICS_CHANNELS.md", 425, "include/lipolgen/coherent.hpp:631-637"): (
         "ONE thing, the t_min kinematic cut; it never forms M_X",
         "the row says the Python recopseudo.CoherentResponse drew x_P "
         "only for a t_min cut and never formed M_X; the block is the "
         "comment that states exactly that and why LiPolGen cannot"),
-    ("PHYSICS_CHANNELS.md", 425, "docs/PYTHIA_BRIDGE.md:574-575"): (
+    ("PHYSICS_CHANNELS.md", 428, "docs/PYTHIA_BRIDGE.md:574-575"): (
         "veto = 0 at `M_X ≥ 1.4`.",
         "cited as the CHAIN TEST for the M_X floor; the block is the "
         "sentence that says the T2 chain test re-measures the veto "
         "table per run and pins veto = 0 at M_X >= 1.4"),
-    ("PHYSICS_CHANNELS.md", 426, "src/core/coherent.cpp:290-291"): (
+    ("PHYSICS_CHANNELS.md", 429, "src/core/coherent.cpp:290-291"): (
         "// 6Li: TUNL A=6 (Tilley et al. NPA 708:3).  7Li: recomputed "
         "from",
         "the row cites [TUNL6] for the ⁶Li breakup thresholds; the "
         "block is the comment that names Tilley et al. NPA 708:3 as "
         "their source"),
-    ("PHYSICS_CHANNELS.md", 446, "include/lipolgen/cluster_config.hpp:19-71"): (
+    ("PHYSICS_CHANNELS.md", 449, "include/lipolgen/cluster_config.hpp:19-71"): (
         "Q_matter(6Li, M) = (3M^2-2)",
         "the row says the (G1)/(G4)/(G5)/(G6) identities are derived in "
         "place here; the block is that derivation, (G1) through (G8)"),
-    ("PHYSICS_CHANNELS.md", 448, "docs/USAGE.md:2751-2948"): (
+    ("PHYSICS_CHANNELS.md", 451, "docs/USAGE.md:2795-2992"): (
         "## 9. Polarized ⁶Li configurations for coherent-diffraction "
         "codes",
         "the row cites USAGE sec. 9 in full for the configuration "
         "format and its committed example sidecar; the block is that "
         "section (198 lines, so no text match evidences it since "
         "EVIDENCE_MAX_BLOCK)"),
-    ("PHYSICS_CHANNELS.md", 486, "docs/PYTHIA_BRIDGE.md:145-146"): (
+    ("PHYSICS_CHANNELS.md", 489, "docs/PYTHIA_BRIDGE.md:145-146"): (
         "worst |λ − 1| = 1.2 × 10⁻¹³ over",
         "cited as the MEASUREMENT behind the row's worst |λ−1| ≈ "
         "1.2e-13; the block is that measurement over 400 events"),
-    ("PHYSICS_CHANNELS.md", 486, "docs/PYTHIA_BRIDGE.md:219-230"): (
+    ("PHYSICS_CHANNELS.md", 489, "docs/PYTHIA_BRIDGE.md:219-230"): (
         "## 5. The frame map",
         "cited as the DERIVATION of the frame map the row describes; "
         "the block is §5 and its triad construction"),
-    ("PHYSICS_CHANNELS.md", 486, "docs/PYTHIA_BRIDGE.md:429-432"): (
+    ("PHYSICS_CHANNELS.md", 489, "docs/PYTHIA_BRIDGE.md:429-432"): (
         "| worst relative 4-momentum deviation | 8.4 × 10⁻¹⁴ |",
         "cited as a MEASUREMENT for the row's 8.4e-14 and 1.2e-13; the "
         "block is the performance table carrying both"),
-    ("PHYSICS_CHANNELS.md", 488, "docs/PYTHIA_BRIDGE.md:137-161"): (
+    ("PHYSICS_CHANNELS.md", 491, "docs/PYTHIA_BRIDGE.md:137-161"): (
         "P(q) ∝ e_q² · x f_q(ζ, max(Q², q2_pdf_min))",
         "the row's subject is the bridge's flavour choice and its "
         "q2_pdf_min floor (and the c/b table mass it sits beside); the "
         "block is §2's m_q rule and §3 Flavour choice, including the "
         "sampling probability that carries q2_pdf_min"),
-    ("PHYSICS_CHANNELS.md", 492, "docs/T2_CHAIN.md:79-96"): (
+    ("PHYSICS_CHANNELS.md", 495, "docs/T2_CHAIN.md:79-96"): (
         "`Role::StruckNucleon` verbatim; its `Role::StruckCluster` "
         "branch is",
         "the row is about which nucleon the bridge is handed; the block "
         "is the T2 record of the struck-nucleon hook, its deprecated "
         "cluster branch and the measured disappearance of the "
         "no-surrogate tail"),
-    ("PHYSICS_CHANNELS.md", 492, "include/lipolgen/pythia_bridge.hpp:358-373"): (
+    ("PHYSICS_CHANNELS.md", 495, "include/lipolgen/pythia_bridge.hpp:358-373"): (
         "DEPRECATED (2026-08-30, superseded by the T1 tier)",
         "the row is about which nucleon the bridge is handed; the block "
         "is the deprecated NucleonInCluster hook's own comment, which "
         "is the alternative the row's NucleonChoice replaced"),
-    ("PHYSICS_CHANNELS.md", 493, "docs/PYTHIA_BRIDGE.md:473-475"): (
+    ("PHYSICS_CHANNELS.md", 496, "docs/PYTHIA_BRIDGE.md:473-475"): (
         "**990 is a legal user beam**",
         "the row cites this for the two PYTHIA upstream pointers it "
         "names (BeamSetup.cc:869-875, BeamParticle.cc:178); the block "
         "is the sentence that carries both and says why 990 works as a "
         "beam"),
-    ("PHYSICS_CHANNELS.md", 496, "docs/surveys/beagle_survey.md:120-127"): (
+    ("PHYSICS_CHANNELS.md", 499, "docs/surveys/beagle_survey.md:120-127"): (
         "`ISTHKK == 14`",
         "the row says the intact-recoil roles are never read and never "
         "touched -- the BeAGLE light-nucleus rule; the block is the eD "
         "section that shows BeAGLE finding the spectator and leaving it "
         "alone"),
-    ("PHYSICS_CHANNELS.md", 497, "docs/PYTHIA_BRIDGE.md:360-375"): (
+    ("PHYSICS_CHANNELS.md", 500, "docs/PYTHIA_BRIDGE.md:360-375"): (
         "is the statement that is",
         "the row lists the three HFS identities; the block is the "
         "numbered list of exactly those three, ending with the exact "
         "hfs_sigma_empz_exact one"),
-    ("PHYSICS_CHANNELS.md", 497, "docs/T2_CHAIN.md:102-106"): (
+    ("PHYSICS_CHANNELS.md", 500, "docs/T2_CHAIN.md:102-106"): (
         "the closed-form collinear `hfs_sigma_empz_truth` is now "
         "approximate at the",
         "the row's first HFS identity is the approximate one; the block "
         "is the T2 measurement of how approximate (1.4 % ⁶Li α, 0.7 % "
         "⁷Li) and why"),
-    ("PHYSICS_CHANNELS.md", 511, "docs/CONVENTIONS.md:312-314"): (
+    ("PHYSICS_CHANNELS.md", 514, "docs/CONVENTIONS.md:325-327"): (
         "X must be TIMELIKE on",
         "the row's claim is that the hadronic X is timelike on every "
         "channel and is checked, never clipped; the block is the "
         "convention that says exactly that"),
-    ("PHYSICS_CHANNELS.md", 511, "include/lipolgen/pipeline.hpp:13-39"): (
+    ("PHYSICS_CHANNELS.md", 514, "include/lipolgen/pipeline.hpp:13-39"): (
         "WHAT X IS, PER CHANNEL.",
         "the row states the per-channel hadronic-X balance; the block "
         "is the header comment that writes that balance out for "
         "inclusive, tagged and coherent"),
-    ("PHYSICS_CHANNELS.md", 512, "include/lipolgen/pipeline.hpp:287-299"): (
+    ("PHYSICS_CHANNELS.md", 515, "include/lipolgen/pipeline.hpp:316-328"): (
         "Fidelity tier of the final state a run writes",
         "the row says no CLI or config-file key sets the tier, only the "
         "PipelineConfig field; the block is that field's own T0/T1/T2 "
         "documentation"),
-    ("PHYSICS_CHANNELS.md", 515, "docs/HEPMC3_CONVENTION.md:6-12"): (
+    ("PHYSICS_CHANNELS.md", 518, "docs/HEPMC3_CONVENTION.md:6-12"): (
         "**proposed convention for ion-spin states in HepMC3** flagged "
         "as open item",
         "the row says the ion-spin attribute convention is LiPolGen's "
         "own proposal and open item #17; the block is the paragraph "
         "that states it and that nothing upstream exists"),
-    ("PHYSICS_CHANNELS.md", 515, "docs/HEPMC3_CONVENTION.md:95-121"): (
+    ("PHYSICS_CHANNELS.md", 518, "docs/HEPMC3_CONVENTION.md:95-121"): (
         "- **Role → status/PDG map**, complete, with the tier that "
         "writes each row:",
         "the row cites the 'role/status table'; the block is that table "
         "and the PartnerSpectator note under it"),
-    ("PHYSICS_CHANNELS.md", 999, "include/lipolgen/sf.hpp:152-158"): (
+    ("PHYSICS_CHANNELS.md", 1002, "include/lipolgen/sf.hpp:152-158"): (
         "Wandzura-Wilczek g2(x) = -g1(x)",
         "the [WW] bibliography entry says the relation is carried by "
         "name only, with no journal or arXiv identifier; the block is "
         "the g2_ww comment and declaration that carry the name"),
-    ("PHYSICS_CHANNELS.md", 1033, "include/lipolgen/beams.hpp:25-41"): (
+    ("PHYSICS_CHANNELS.md", 1036, "include/lipolgen/beams.hpp:25-41"): (
         "/// Physical nuclear masses [GeV] -- the same AME2020-derived "
         "values as",
         "cited from the [AME2020] bibliography entry as where the "
         "AME2020 masses are tabulated; the block is that table's header "
         "comment and nucleus_mass"),
-    ("PHYSICS_CHANNELS.md", 1038, "include/lipolgen/generator.hpp:22-28"): (
+    ("PHYSICS_CHANNELS.md", 1041, "include/lipolgen/generator.hpp:22-28"): (
         "`reco.azimuth_wrt_lepton_plane` is written and tested",
         "the [Bacchetta07] bibliography entry says the convention is "
         "cited in this block only; the block is that citation"),
@@ -703,7 +703,7 @@ RANGE_ALLOW: dict[tuple[str, int, str], tuple[str, str]] = {
         "the note says the rank-2 block reuses the spin-1 machinery "
         "verbatim through one Q_NN geometry; the block is the header's "
         "RANK-2 GEOMETRY paragraph that states it for any J"),
-    ("SPIN32_FINITE_GAMMA.md", 33, "src/core/xsec.cpp:168-173"): (
+    ("SPIN32_FINITE_GAMMA.md", 33, "src/core/xsec.cpp:175-180"): (
         "InclusiveKernel::tensor_moments",
         "the note cites the code that computes the Q_NN geometry; the "
         "block is `tensor_moments`, which returns (Q_NN, 3 Q_NN)"),
@@ -752,7 +752,7 @@ RANGE_ALLOW: dict[tuple[str, int, str], tuple[str, str]] = {
         "the note says that for J = 1 the code uses P_zz = ⟨3J_z² − 2⟩ "
         "with no division by 3; the block is that J = 1 branch, where t "
         "is assigned undivided"),
-    ("SPIN32_FINITE_GAMMA.md", 144, "src/core/xsec.cpp:168-173"): (
+    ("SPIN32_FINITE_GAMMA.md", 144, "src/core/xsec.cpp:175-180"): (
         "const double q_nn = (3.0 * m * m - j * (j + 1.0)) / 3.0;",
         "the note says the cross-section kernel divides by 3 itself, "
         "Q_NN = (3m^2 - J(J+1))/3 = c_m/3; the block is that line and "
@@ -798,22 +798,22 @@ RANGE_ALLOW: dict[tuple[str, int, str], tuple[str, str]] = {
         "the note says the u = 3 rational anchor is quoted here; the "
         "block is the two comment lines that carry (27,9,3,1)/40 and "
         "(P_z, rank-2) = (7/10, 2/5)"),
-    ("SPIN32_FINITE_GAMMA.md", 277, "tests/test_pipeline.cpp:486-512"): (
+    ("SPIN32_FINITE_GAMMA.md", 277, "tests/test_pipeline.cpp:608-634"): (
         "TEST_CASE(\"pipeline: 7Li generated events give <P2(cos "
         "theta_k)> = -T/5\") {",
         "the note cites this as the pipeline-level ⟨P₂(cos θ_k)⟩ = −T/5 "
         "polarimeter test; the block is that test case"),
-    ("SPIN32_FINITE_GAMMA.md", 277, "tests/test_tagged.cpp:383-399"): (
+    ("SPIN32_FINITE_GAMMA.md", 277, "tests/test_tagged.cpp:396-412"): (
         "// the in-situ alignment polarimeter: <P2(cos theta_k)> = -T/5 "
         "for ANY fill",
         "the note cites this as the ⟨P₂(cos θ_k)⟩ = −T/5 polarimeter at "
         "the model level; the block is that test case"),
-    ("SPIN32_FINITE_GAMMA.md", 360, "src/core/xsec.cpp:168-173"): (
+    ("SPIN32_FINITE_GAMMA.md", 360, "src/core/xsec.cpp:175-180"): (
         "return std::make_pair(q_nn, 3.0 * q_nn);",
         "the note's mapping result: the code extends Q_NN from J = 1 to "
         "J = 3/2 with T = +-1 on the stretched state; the block is "
         "where it does"),
-    ("SPIN32_FINITE_GAMMA.md", 400, "src/core/xsec.cpp:296-298"): (
+    ("SPIN32_FINITE_GAMMA.md", 400, "src/core/xsec.cpp:303-305"): (
         "out.w_avg = out.w_avg + helicity * v * ct * a_parallel(t, x, "
         "q2, y);",
         "the note writes the same vector term as `w = λ_e P_e (m/J) cos "
@@ -863,7 +863,7 @@ RANGE_ALLOW: dict[tuple[str, int, str], tuple[str, str]] = {
         "outside the rank-2",
         "the note says tables() fills b3, b4 for every spin; the block "
         "is those two fills and the comment that says so"),
-    ("SPIN32_FINITE_GAMMA.md", 905, "src/core/xsec.cpp:295-298"): (
+    ("SPIN32_FINITE_GAMMA.md", 905, "src/core/xsec.cpp:302-305"): (
         "out.w_avg = out.w_avg + helicity * v * ct * a_parallel(t, x, "
         "q2, y);",
         "the note compares the proposed rank-3 term with the vector "
@@ -874,7 +874,7 @@ RANGE_ALLOW: dict[tuple[str, int, str], tuple[str, str]] = {
         "the note gives the J = 3/2 cross section in the generator's "
         "own variables and normalisation; the block is that master "
         "formula as the header states it"),
-    ("SPIN32_FINITE_GAMMA.md", 916, "src/core/xsec.cpp:320-328"): (
+    ("SPIN32_FINITE_GAMMA.md", 916, "src/core/xsec.cpp:327-335"): (
         "return dsigma_unpol(x, q2, s) / (2.0 * kPi) * std::max(w, "
         "0.0);",
         "the note's master formula (46) is dσ/(dx dQ² dφ) = "
@@ -886,13 +886,18 @@ RANGE_ALLOW: dict[tuple[str, int, str], tuple[str, str]] = {
         "df = &delta_32_func_;",
         "the row says g1_rank3/g2_rank3 would be filled in the same "
         "branch as the _32 slots; the block is that branch"),
-    ("SPIN32_FINITE_GAMMA.md", 981, "src/core/sampler.cpp:519-521"): (
-        "out[i * nk + k] += p_m * (1.0 + st.w_avg[c] +",
+    ("SPIN32_FINITE_GAMMA.md", 981, "src/core/sampler.cpp:588-591"): (
+        "out[i * nk + k] += p_m * (base + (st.*a1)[c] * std::cos(phip) +",
         "the note's change list says the per-category φ density "
         "evaluates 1 + w_avg + a1 cos φ′ + a2 cos 2φ′ by hand; the "
-        "block is that hand evaluation, in the code's own spelling "
-        "(st.w_avg[c], st.a1[c], st.a2[c]) -- re-pointed in run "
-        "2026-09-06 from :480-482, which the file had moved off"),
+        "block is that hand evaluation, in the code's own spelling, "
+        "which the 2026-09-16 fold into `mix_weights` moved to "
+        "pointer-to-member form and split over two statements: the "
+        "1 + w_avg is `1.0 + (st.*w)[c]` on the `base` line, the two "
+        "harmonics `(st.*a1)[c]` / `(st.*a2)[c]` on the accumulate "
+        "line -- re-pointed in run 2026-09-06 from :480-482, which the "
+        "file had moved off, and widened from :590-592 (which had lost "
+        "the 1 + w_avg line and ended on a bare brace)"),
     ("SPIN32_FINITE_GAMMA.md", 1009, "include/lipolgen/xsec.hpp:183-186"): (
         "(DEFAULT TRUE since 2026-08-29",
         "the note cites the rationale for `target_mass` defaulting to "
@@ -992,45 +997,45 @@ RANGE_ALLOW: dict[tuple[str, int, str], tuple[str, str]] = {
 # moves the sentence retires it, loudly ("no citation reaches it"), instead of
 # quietly covering a sentence nobody read.
 UNNAMED_ALLOW: dict[tuple[str, int, str], tuple[str, str]] = {
-    ("PHYSICS_CHANNELS.md", 83, "docs/open_items/physics_literature.md:95"): (
-        "³He is P_n = 0.86, P_p = −0.028",
+    ("PHYSICS_CHANNELS.md", 86, "docs/open_items/physics_literature.md:95"): (
+        "Bissey et al. Eq. (2) reads, verbatim,",
         "the row contrasts the code's per-nucleon 3He numbers with the "
         "register's whole-nucleus ones; the cited line is the convention "
         "sentence that gives 3He as P_n = 0.86, P_p = -0.028"),
-    ("PHYSICS_CHANNELS.md", 83, "docs/open_items/physics_literature.md:99"): (
+    ("PHYSICS_CHANNELS.md", 86, "docs/open_items/physics_literature.md:110"): (
         "JLab PR12-14-001",
         "the row's claim is that the 0.866/-0.037 in `LI7()` are the "
         "higher-precision Argonne online-table values as quoted by JLab "
         "PR12-14-001; the cited line is the Wiringa 2014 row of the "
         "register's reference table, which is where the register says that"),
-    ("PHYSICS_CHANNELS.md", 83, "src/core/beams.cpp:89"): (
+    ("PHYSICS_CHANNELS.md", 86, "src/core/beams.cpp:89"): (
         "0.86995 x 0.9325 = 0.81123",
         "the row says [Schell93] is named beside the cluster product; the "
         "cited line IS that product, with the Schellingerhout reference on "
         "it"),
-    ("PHYSICS_CHANNELS.md", 85, "include/lipolgen/beams.hpp:13"): (
+    ("PHYSICS_CHANNELS.md", 88, "include/lipolgen/beams.hpp:13"): (
         "Au (110 GeV/u)",
         "the row says the Au = 110 GeV/u number is only quoted in this "
         "header comment (Au is not a supported species); this is the line "
         "that quotes it"),
-    ("PHYSICS_CHANNELS.md", 87, "README.md:126"): (
+    ("PHYSICS_CHANNELS.md", 90, "README.md:128"): (
         "⁷Li ⟨P₂⟩ = −T/5",
         "the row says the identity is stated in README.md; the cited line "
         "is the external-anchors bullet that states it"),
-    ("PHYSICS_CHANNELS.md", 87, "docs/DEVELOPMENT_PLAN.md:92"): (
+    ("PHYSICS_CHANNELS.md", 90, "docs/DEVELOPMENT_PLAN.md:92"): (
         "⁷Li P₂ = −T/5 polarimeter",
         "the row says the identity is stated in the development plan; the "
         "cited line is the P4 row that states it"),
-    ("PHYSICS_CHANNELS.md", 87, "tests/test_pipeline.cpp:486"): (
+    ("PHYSICS_CHANNELS.md", 90, "tests/test_pipeline.cpp:608"): (
         "pipeline: 7Li generated events give <P2(cos theta_k)> = -T/5",
         "the row calls the -T/5 identity test-pinned and cites the pipeline "
         "test; the cited line is that TEST_CASE"),
-    ("PHYSICS_CHANNELS.md", 122, "docs/open_items/physics_literature.md:28"): (
+    ("PHYSICS_CHANNELS.md", 125, "docs/open_items/physics_literature.md:28"): (
         "What is genuinely absent is the finite-γ",
         "the row's claim is that the finite-gamma J = 3/2 decomposition "
         "does not exist in the literature; the cited line is the register's "
         "`Recommended path` sentence that says it is genuinely absent"),
-    ("PHYSICS_CHANNELS.md", 173, "src/core/pipeline.cpp:1110"): (
+    ("PHYSICS_CHANNELS.md", 176, "src/core/pipeline.cpp:1116"): (
         "kernel && is_tagged(channel)",
         "the row says validate() refuses a caller-supplied kernel on any "
         "tagged channel rather than record a backend that never ran; the "
@@ -1038,35 +1043,35 @@ UNNAMED_ALLOW: dict[tuple[str, int, str], tuple[str, str]] = {
         "the \"caller-supplied kernel\" meta label the row quotes at :1118 "
         "(re-pointed 2026-09-15 from :1016, which is the unrelated unpol_sf "
         "= toy refusal)"),
-    ("PHYSICS_CHANNELS.md", 201, "docs/open_items/physics_literature.md:102"): (
+    ("PHYSICS_CHANNELS.md", 204, "docs/open_items/physics_literature.md:113"): (
         "reduced-matrix-element factor",
         "the row notes that the register reads CBT Eqs. (26)/(27) as the K "
         "= 1 reduced-matrix-element factor, against the row's own reading; "
         "the cited line is the CBT06 register row that reads them that way"),
-    ("PHYSICS_CHANNELS.md", 206, "include/lipolgen/constants.hpp:136"): (
+    ("PHYSICS_CHANNELS.md", 209, "include/lipolgen/constants.hpp:139"): (
         "Sather-Schmidt bag-model sum-rule coefficient",
         "the row's [SS90] provenance for C_BAG = -0.012; the cited line is "
         "the comment naming Sather-Schmidt PRD 42:1424, with the constant "
         "itself two lines below (re-pointed 2026-09-15 from :86, which is "
         "the b1-normalisation comment and has been since before bd775bc)"),
-    ("PHYSICS_CHANNELS.md", 235, "src/core/rng.cpp:2"): (
+    ("PHYSICS_CHANNELS.md", 238, "src/core/rng.cpp:2"): (
         "xoshiro256** seeded via splitmix64",
         "the row says xoshiro256**/splitmix64 are named at this line only "
         "and that no Blackman-Vigna citation exists in the repo; this is "
         "that line"),
-    ("PHYSICS_CHANNELS.md", 273, "src/core/spectator.cpp:300"): (
+    ("PHYSICS_CHANNELS.md", 276, "src/core/spectator.cpp:300"): (
         "Yellow Report Table 10.1, HADRON beam",
         "the row's [YR] provenance for the hadron-beam divergences; the "
         "cited line is the Table 10.1 transcription comment above the "
         "numbers"),
-    ("PHYSICS_CHANNELS.md", 301, "docs/CONVENTIONS.md:383"): (
+    ("PHYSICS_CHANNELS.md", 304, "docs/CONVENTIONS.md:415"): (
         "a_nn = −18.9 fm",
         "the row says a_nn = -18.9 fm has no primary reference and appears "
         "only as an in-code constant and in CONVENTIONS.md; the cited line "
         "is where CONVENTIONS.md carries it (re-pointed 2026-09-15 from "
         ":357, which the file's growth since bd775bc turned into the "
         "deuteron-control sentence)"),
-    ("PHYSICS_CHANNELS.md", 339, "docs/open_items/physics_literature.md:234"): (
+    ("PHYSICS_CHANNELS.md", 342, "docs/open_items/physics_literature.md:245"): (
         "keep the coherent-cluster amplitude as the systematic variant",
         "the row says the register calls the per-nucleon Glauber product "
         "the citable primary and the coherent-cluster amplitude the "
@@ -1075,18 +1080,18 @@ UNNAMED_ALLOW: dict[tuple[str, int, str], tuple[str, str]] = {
         "range :81-85, which is the W_FSI formula and its starting "
         "parameters -- the other citation of that range, for the 30-70 mb "
         "Deeps fit, is right and stays)"),
-    ("PHYSICS_CHANNELS.md", 417, "tests/test_rc.cpp:518"): (
+    ("PHYSICS_CHANNELS.md", 420, "tests/test_rc.cpp:518"): (
         "the first C0 zero lies in [2.9, 3.3] fm^-1",
         "the row says T11 gates the whole refit window q0 in [2.9, 3.3] "
         "fm^-1; the cited line is that SUBCASE of T11 (re-pointed "
         "2026-09-15 from :496, a comment inside the <r^2>_point subcase, "
         "which gates a different number)"),
-    ("PHYSICS_CHANNELS.md", 993, "include/lipolgen/spin.hpp:24"): (
+    ("PHYSICS_CHANNELS.md", 996, "include/lipolgen/spin.hpp:24"): (
         "(Varshalovich) conventions",
         "the [Varsh] bibliography entry says the Wigner-d / Clebsch-Gordan "
         "conventions are named at this line and nowhere else in the "
         "repository; this is that line"),
-    ("PHYSICS_CHANNELS.md", 1014, "src/core/beams.cpp:89"): (
+    ("PHYSICS_CHANNELS.md", 1017, "src/core/beams.cpp:89"): (
         "(Schellingerhout PRC 48:2714)",
         "the [Schell93] bibliography entry says the reference is named "
         "beside the 6Li cluster product; the cited line is the product "

@@ -204,7 +204,7 @@ reader who greps the sibling for `HfsModel` finds nothing and cannot confirm the
 label. It is a naming defect in a citation, not a factual one, and fixing it
 moves no number — **which is why it WAS fixed, in this phase's own commit
 `aefd535`, at the three live sites**: `validation/o5_a2_reach.py:460` and
-`:490` and `docs/OPEN_ITEMS_SOLUTIONS.md:2012` now read
+`:490` and `docs/OPEN_ITEMS_SOLUTIONS.md:2014` now read
 `polligen.hfs.HadronResponse(...)`, and the sentences this phase added cite
 `evgen/polligen/hfs.py:251` by file and line as well, which also resolves.
 *(This paragraph read "**Left untouched**, deliberately" until 2026-09-15; it

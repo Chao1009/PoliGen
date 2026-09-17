@@ -181,9 +181,15 @@ const InclusiveSampler::CategoryPlan& InclusiveKinematicsSource::plan_for(
   if (it != plans_.end()) return it->second;
 
   // The PURE struck-cluster category: spin S_c, all the population on m_S,
-  // quantization axis along z (the Python's `_pure_category`, which does not
-  // pass the ion fill's axis either -- the axis enters the event through the
-  // spectator rotation in `boost_spectator`).
+  // quantization axis along z -- the BEAM axis, NOT the ion fill's (the
+  // Python's `_pure_category` does not pass the fill's axis either).  The
+  // fill's axis reaches the event only through the spectator rotation in
+  // `boost_spectator`, so this category is the right one exactly as long as
+  // the struck-cluster DIS kernel is SPIN-BLIND; `Pipeline`'s constructor
+  // refuses a tilted fill on a tagged channel when it is not (P_e != 0 on any
+  // of the three, or `StruckClusterOptions::inclusive_b1` on the one channel
+  // that reads it).  See the class comment in pipeline.hpp for the
+  // measurement and for the alternative.
   SpinCategory cat;
   cat.j = s_channel_;
   cat.lam_e = lam_e;
@@ -1557,26 +1563,19 @@ Pipeline::Pipeline(PipelineConfig config, RunPlan plan)
       tsampler_->set_fsi(fsi_);
     }
 
-    // Warm every cache the event loop reads.  `TaggedModel`'s amplitude,
-    // density and cell-CDF maps are `mutable` and NOT mutex-protected, so
-    // building them all here is what makes threaded generation safe; the
-    // sampler's own per-state cache is guarded, so warming it is only an
+    // NO WARM-UP LOOP HERE, and the comment that asked for one is gone with
+    // it (2026-09-16).  It read "`TaggedModel`'s amplitude, density and
+    // cell-CDF maps are `mutable` and NOT mutex-protected, so building them
+    // all here is what makes threaded generation safe" and then walked every
+    // (M, m_S) through `n_of_kc`, `population_integrated` and
+    // `sample_kc_one`.  Since C3 those maps are built in FULL by
+    // `TaggedModel`'s constructor and never written again (tagged.hpp:
+    // "the object is immutable after construction ... no lock is needed on
+    // any path"), so every one of those calls was a pure lookup on an
+    // already-built table: the loop cost a constructor pass and changed no
+    // number.  The sampler's OWN per-state cache is still warmed below, per
+    // category -- that one is mutex-guarded and warming it is a real
     // anti-contention measure.
-    const std::vector<double> ms_ion = m_values(channel_->j_ion);
-    const std::vector<double>& ms_c = model_->m_struck_values();
-    Rng warm_rng(1, 0, 0, 0);
-    for (double mi : ms_ion) {
-      (void)model_->n_of_kc(mi);
-      const std::vector<double> p_ms = model_->population_integrated(mi);
-      for (std::size_t b = 0; b < ms_c.size(); ++b) {
-        // A (M, m_S) pair the CG factors forbid (|M - m_S| > L_max) has no
-        // density at all and `sample_kc_one` would throw on its empty CDF;
-        // `rates()` gives it weight zero, so the event loop never asks.
-        if (!(p_ms[b] > 0.0)) continue;
-        double kk = 0.0, cc = 0.0, pp = 0.0;
-        model_->sample_kc_one(mi, ms_c[b], warm_rng, kk, cc, pp);
-      }
-    }
     fills_.reserve(nc);
     rate_cdf_.reserve(nc);
     for (std::size_t k = 0; k < nc; ++k) {
@@ -1584,6 +1583,71 @@ Pipeline::Pipeline(PipelineConfig config, RunPlan plan)
       if (std::fabs(c.j - channel_->j_ion) > 1e-9) {
         throw std::runtime_error("Pipeline: run-plan spin " +
                                  std::to_string(c.j) + " != channel ion spin");
+      }
+      // A TILTED FILL AND A SPIN-DEPENDENT STRUCK-CLUSTER KERNEL DO NOT
+      // COMPOSE ON A TAGGED CHANNEL.  `InclusiveKinematicsSource::plan_for`
+      // builds the struck cluster's pure category at theta_S = phi_S = 0
+      // whatever this fill's axis is (the Python's `_pure_category` does the
+      // same), so the ion axis reaches the event through the SPECTATOR
+      // rotation alone.  That is exact while the DIS side is spin-blind and
+      // wrong the moment it is not: MEASURED 2026-09-16 (6Li config 1, seed
+      // 1), tagged-6Li-alpha `sigma_per_category_pb` is bit-identical at
+      // theta_S = 0 and theta_S = pi/2 under helicity-flip at P_e = 0.7,
+      // where the inclusive channel's asymmetry correctly collapses from
+      // -5.741406e-04 to 0; and `--plan transverse-tensor --inclusive-b1`
+      // used to run and record `inclusive_b1` as READ while applying the
+      // struck deuteron's b1 with P2(cos 0) = +1 on a fill at
+      // P2(cos 90 deg) = -1/2.  Refused here, at configuration time, rather
+      // than silently computed for the wrong orientation.
+      //
+      // ONLY THE TERMS THIS CHANNEL ACTUALLY READS COUNT, which is why the
+      // two halves of the test are not the same shape.  P_e is read on all
+      // three tagged channels -- MEASURED 2026-09-16, `sigma_per_category_pb`
+      // moves between P_e = 0 and 0.7 on every one (asymmetry -1.72e-03
+      // tagged-6Li-alpha, +6.41e-04 tagged-7Li-alpha, -5.73e-03 tagged-d-p).
+      // `inclusive_b1` is read on tagged-6Li-alpha ALONE: the other two
+      // struck clusters are spin 1/2 (dis_target = triton resp. free
+      // neutron), `InclusiveKernel::tables` opens no rank-2 sector there and
+      // the slot is never filled -- which is what `knob_provenance`'s own
+      // `ib1_read` says, and MEASURED the same day, the knob moves
+      // tagged-6Li-alpha (5.9184617e+05 -> 5.9156954e+05 / 5.9239941e+05 per
+      // category) and is bit-for-bit inert on tagged-7Li-alpha and tagged-d-p.
+      // Refusing a tilted fill for an INERT knob would be a false refusal
+      // with a false reason attached, so it is not refused.
+      //
+      // NOTHING SPIN-BLIND MOVES: P_e = 0 without a read `inclusive_b1` is
+      // every reference gate, every CLI default, and
+      // `transverse_tensor_plan` / `tensor_flip_plan`, whose P_e is 0 by
+      // construction -- the only two shipped plans that tilt at all.
+      // Threading the axis into `plan_for`'s cache key and into
+      // `KinematicsSource`'s signature -- so that a tilted tagged fill
+      // COMPUTES instead of being refused -- is the alternative, and it is
+      // the maintainer's call, not a registry row.
+      const bool ib1_read =
+          cfg_.struck.inclusive_b1 &&
+          cfg_.channel == PipelineChannel::TaggedLi6Alpha;
+      if (std::fabs(std::sin(c.theta_s)) > 1e-12 &&
+          (c.pe != 0.0 || ib1_read)) {
+        const std::string terms =
+            (c.pe != 0.0 ? "P_e = " + fmt_g(c.pe) : std::string("")) +
+            (c.pe != 0.0 && ib1_read ? ", " : "") +
+            (ib1_read ? std::string("inclusive_b1 = true") : std::string(""));
+        throw std::runtime_error(
+            "Pipeline: run-plan category \"" + c.name + "\" sits at "
+            "theta_S = " + fmt_g(c.theta_s) + " rad (sin theta_S = " +
+            fmt_g(std::sin(c.theta_s)) + "), and channel " +
+            pipeline_channel_name(cfg_.channel) + " reads a SPIN-DEPENDENT "
+            "struck-cluster DIS term here (" + terms +
+            ").  The struck cluster's |S_c m_S> is evaluated with its "
+            "quantization axis along the BEAM whatever the fill's axis is, so "
+            "the tagged rate would be computed for the wrong spin "
+            "orientation -- tagged sigma_per_category_pb is bit-identical at "
+            "theta_S = 0 and pi/2, where the inclusive channel's asymmetry "
+            "correctly goes to zero.  Either run the tilted fill SPIN-BLIND "
+            "(P_e = 0 and --inclusive-b1 off, which is what "
+            "transverse-tensor and tensor-flip already are), or run the "
+            "spin-dependent term on an UNTILTED fill (theta_S = 0), or use "
+            "the inclusive channel, whose kernel does carry the axis.");
       }
       dis_source_->warm(c.lam_e, c.pe);
       IonFill f;
@@ -1729,8 +1793,10 @@ Pipeline::Pipeline(PipelineConfig config, RunPlan plan)
     }
     sigma_coh_pb_ = acc;
     for (double& v : coh_cdf_) v /= acc;
+    coh_ms_.reserve(nc);
     for (std::size_t k = 0; k < nc; ++k) {
       const SpinCategory& c = plan_.categories()[k];
+      coh_ms_.push_back(m_values(c.j));
       const double pzz = c.j >= 1.0 ? c.moments().tensor : 0.0;
       csampler_.emplace_back(new CoherentSampler(cfg_.coherent, p_u, pzz,
                                                  c.phi_s, beams_.ion.A,
@@ -3546,7 +3612,7 @@ void Pipeline::make_coherent(std::size_t k, std::uint64_t local,
   //    independent and the tensor modulation is an ENSEMBLE coefficient
   //    carried by the recoil azimuth -- `CoherentScenario::a2_m_state` is the
   //    per-m relation, kept analytic).
-  const std::vector<double> ms = m_values(cat.j);
+  const std::vector<double>& ms = coh_ms_[k];
   double acc = 0.0;
   const double um = rng.uniform();
   double m_ion = ms.back();

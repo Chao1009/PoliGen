@@ -31,6 +31,7 @@
 #include "lipolgen/sf.hpp"
 #include "lipolgen/numerics.hpp"
 #include "lipolgen/spin.hpp"
+#include "lipolgen/b1_nuclear.hpp"
 #include "lipolgen/tagged.hpp"
 #include "lipolgen/xsec.hpp"
 
@@ -51,6 +52,24 @@ bool load_tagged(jsonmin::Value& out) {
   return jsonmin::load_file(std::string(LIPOLGEN_REFERENCE_DIR) + "/tagged.json",
                             out);
 }
+
+/// Is the reference blob on disk?  Called at doctest REGISTRATION time by the
+/// `doctest::skip()` decorators below, so that a checkout without
+/// `validation/reference/` reports these cases as SKIPPED in the tally
+/// instead of PASSED WITH ZERO ASSERTIONS.  The pattern is
+/// `tests/test_coherent.cpp`'s (phase F, 2026-09-05), which introduced it for
+/// exactly this reason and was applied to test_coherent / test_cluster /
+/// test_b1_nuclear and to no other file -- these twelve rtol-1e-12 port gates
+/// kept the in-case `MESSAGE(...); return;` and went on passing, silently and
+/// vacuously, until 2026-09-16.  A blob that IS there and does not parse is a
+/// FAILURE, not a skip: that is what the `REQUIRE` on the loader inside each
+/// case is for.
+bool tagged_blob_present() {
+  return std::ifstream(std::string(LIPOLGEN_REFERENCE_DIR) +
+                       "/tagged.json")
+      .good();
+}
+
 
 const TaggedModel& li6_model() {
   static const TaggedModel m(li6_alpha_channel());
@@ -135,12 +154,10 @@ double quantile(std::vector<double> v, double q) {
 
 // --------------------------------------------------------- reference tables
 
-TEST_CASE("tagged: channel construction against polligen") {
+TEST_CASE("tagged: channel construction against polligen" *
+          doctest::skip(!tagged_blob_present())) {
   jsonmin::Value ref;
-  if (!load_tagged(ref)) {
-    MESSAGE("tagged.json not found -- skipping");
-    return;
-  }
+  REQUIRE(load_tagged(ref));
   CHECK_CLOSE(P_D_LI6, ref["P_D_LI6"].num(), kRtol);
   CHECK_CLOSE(P_D_DEUTERON, ref["P_D_DEUTERON"].num(), kRtol);
   for (const auto& kv : ref["channels"].obj()) {
@@ -162,7 +179,8 @@ TEST_CASE("tagged: channel construction against polligen") {
   }
 }
 
-TEST_CASE("tagged: the model grid and its tables against polligen") {
+TEST_CASE("tagged: the model grid and its tables against polligen" *
+          doctest::skip(!tagged_blob_present())) {
   // 2026-09-06 RE-PIN.  `li6_alpha` and `deuteron` no longer read polligen's
   // numbers: polligen's `tagged._amp2_table` sums psi_L with no i^L, i.e. the
   // INVERTED S-D interference sign this file's `build_amp2` fix removed, so
@@ -177,10 +195,7 @@ TEST_CASE("tagged: the model grid and its tables against polligen") {
   // docs/benchmarking/07_cw_sign_investigation.md section 7.2;
   // docs/open_items/run_2026-09-06/phase_CW_numbers.md.
   jsonmin::Value ref;
-  if (!load_tagged(ref)) {
-    MESSAGE("tagged.json not found -- skipping");
-    return;
-  }
+  REQUIRE(load_tagged(ref));
   for (const auto& kv : ref["channels"].obj()) {
     const TaggedModel& model = model_by_key(kv.first);
     const jsonmin::Value& m = kv.second["model"];
@@ -260,12 +275,10 @@ TEST_CASE("tagged: the model grid and its tables against polligen") {
   }
 }
 
-TEST_CASE("tagged: boost_spectator against polligen (closed form, rtol 1e-12)") {
+TEST_CASE("tagged: boost_spectator against polligen (closed form, rtol 1e-12)" *
+          doctest::skip(!tagged_blob_present())) {
   jsonmin::Value ref;
-  if (!load_tagged(ref)) {
-    MESSAGE("tagged.json not found -- skipping");
-    return;
-  }
+  REQUIRE(load_tagged(ref));
   for (const auto& kv : ref["channels"].obj()) {
     const TaggedChannel& ch = model_by_key(kv.first).channel();
     CAPTURE(kv.first);
@@ -427,6 +440,52 @@ TEST_CASE("tagged: 7Li triton polarization and the forward-limit gate") {
   MESSAGE("7Li forward limit: P_p = " << p_p << " (gate 0.866 +- 0.02, met); "
           "P_n = " << p_n << " against the plans/05 gate -0.037 -- OPEN, the "
           "model's own value is asserted and the gate is not");
+}
+
+TEST_CASE("tagged: the A = 3 slots are BISSEY's convention, with the explicit "
+          "factor 2 on the proton") {
+  // [Bissey02] (Bissey, Guzey, Strikman, Thomas, hep-ph/0109069, PRC 65
+  // (2002) 064317) Eq. (2), quoted verbatim off the source PDF (re-fetched
+  // 2026-09-16):
+  //
+  //     g1He(x, Q2) = Pn g1n(x, Q2) + 2 Pp g1p(x, Q2)
+  //
+  //   with "Pn = 0.86 +- 0.02 and Pp = -0.028 +- 0.004 [10]".
+  //
+  // THE FACTOR 2 IS THE WHOLE POINT.  It says P_p is PER PROTON, so the
+  // whole-nucleus proton sum is 2 P_p = -0.056 -- which is what `HE3()` and
+  // `TRITON()` store and what `PolSF::g1_nucleus`'s Z * eff_pol_p then
+  // reproduces.  `docs/PHYSICS_CHANNELS.md` recorded this as "an unresolved
+  // convention conflict" with `docs/open_items/physics_literature.md:95`
+  // until 2026-09-16; the paper resolves it, the literature note was the site
+  // in error, and only `TRITON().eff_pol_n == -0.028` was pinned, so nothing
+  // guarded the COMBINATION a reader following that note would have halved.
+  //
+  // Halving them flips the sign of g1(3He): on these backends the shipped
+  // code gives -2.74450912e-03 and the whole-nucleus misreading gives
+  // +8.31711655e-04.
+  const ToyF2 f2;
+  const ToyG1 g(std::make_shared<ToyF2>(f2));
+  const double x = 0.3, q2 = 5.0;
+  const double g1p = g.g1p(x, q2), g1n = g.g1n(x, q2);
+
+  CHECK(HE3().Z == 2);
+  CHECK(HE3().N() == 1);
+  CHECK(HE3().eff_pol_p == -0.028);
+  CHECK(HE3().eff_pol_n == 0.86);
+  CHECK_CLOSE(g.g1_nucleus(HE3(), x, q2),
+              0.86 * g1n + 2.0 * (-0.028) * g1p, 1e-12);
+
+  // The mirror nucleus, the same equation with p <-> n.
+  CHECK(TRITON().Z == 1);
+  CHECK(TRITON().N() == 2);
+  CHECK_CLOSE(g.g1_nucleus(TRITON(), x, q2),
+              0.86 * g1p + 2.0 * (-0.028) * g1n, 1e-12);
+
+  // And the misreading is FAR away, not a rounding: opposite sign on 3He.
+  const double whole_nucleus = 0.86 * g1n + (-0.028) * g1p;
+  CHECK(g.g1_nucleus(HE3(), x, q2) < 0.0);
+  CHECK(whole_nucleus > 0.0);
 }
 
 // -------------------------------------- 6Li dilutions + inclusive reduction
@@ -1175,6 +1234,93 @@ bool vmc_data_present() {
 }
 
 }  // namespace
+
+TEST_CASE("tagged: the S-D interference SIGN agrees with b1_nuclear, and only "
+          "the sign" * doctest::skip(!vmc_data_present())) {
+  // `TaggedModel::build_amp2` applies the CDKS relative phase
+  // `(-1)^floor(L/2)` and its comment claimed, until 2026-09-16, that this is
+  // "identical to ClusterPartialWave::from_vmc / from_uw ... WHICH IS WHY THE
+  // b1 AND TAGGED SECTORS THEN AGREE".  No test compared the two modules, and
+  // they do NOT agree beyond the sign: this class renormalises each wave to
+  // sqrt(P_L) on its own 280-point grid through `VmcRadial`'s LINEAR
+  // interpolation, while `b1_nuclear` splines the file's own nodes with one
+  // common unit factor, so the relative S/D MAGNITUDE differs by +0.78 % /
+  // +0.36 % / -4.4 % at k = 0.197 / 1.003 / 2.529 fm^-1 (the last just above
+  // the D node).  What DOES hold, and what this case pins, is the phase rule.
+  //
+  // MEASURED 2026-09-16, both modules on the VMC (AV18) path:
+  //
+  //   k [fm^-1]  k [GeV]    phi0        phi2        sign  n(c=+1) - n(c=0)
+  //   0.197      0.03887   +6.605e+01  +8.888e-01    +     +1.159e+01
+  //   1.003      0.19792   -6.984e+00  +1.374e+00    -     -2.055e+00
+  //   2.529      0.49905   -2.174e-01  -2.907e-02    +     +1.134e-03
+  const std::pair<ClusterPartialWave, ClusterPartialWave> pw =
+      li6_alpha_d_partial_waves();
+  const TaggedModel m(li6_alpha_channel(BETA_DEFAULT, P_D_LI6,
+                                        ClusterWaveSource::VmcAV18));
+  const std::vector<double>& k = m.k();
+  const std::vector<double>& c = m.c();
+  const std::size_t nc = c.size();
+  const std::vector<double>& n1 = m.n_of_kc(1.0);
+
+  // The forward-most and the equatorial cell of the M = +1 density: their
+  // difference carries the S-D interference, whose sign is what the common
+  // phase rule fixes.
+  const std::size_t ic_fwd = nc - 1;
+  const std::size_t ic_eq = nc / 2;
+  int compared = 0;
+  for (const double k_fm : {0.197, 1.003, 2.529}) {
+    const double k_gev = k_fm * HBARC_GEV_FM;
+    CAPTURE(k_fm);
+    // nearest grid k of the tagged model
+    std::size_t ik = 0;
+    for (std::size_t i = 1; i < k.size(); ++i) {
+      if (std::fabs(k[i] - k_gev) < std::fabs(k[ik] - k_gev)) ik = i;
+    }
+    const double phi0 = pw.first(k_gev);
+    const double phi2 = pw.second(k_gev);
+    const double interference = n1[ik * nc + ic_fwd] - n1[ik * nc + ic_eq];
+    REQUIRE(phi0 != 0.0);
+    REQUIRE(phi2 != 0.0);
+    REQUIRE(interference != 0.0);
+    CHECK((phi0 * phi2 > 0.0) == (interference > 0.0));
+    ++compared;
+  }
+  CHECK(compared == 3);
+
+  // ... and the RADIAL tables are where the two part company, in two separate
+  // ways that the old comment's "the b1 and tagged sectors then agree"
+  // covered up.
+  //
+  // (i) SIGN.  `TaggedModel` keeps its radial tables UNSIGNED-by-L and applies
+  //     `(-1)^floor(L/2)` in `build_amp2`, on the ANGULAR factor; `b1_nuclear`
+  //     folds the same phase into `phi` itself.  So psi2/psi0 = -(phi2/phi0)
+  //     by construction -- which is why the sign comparison above has to be
+  //     made on `n_of_kc`, where the phase has been applied, and not here.
+  // (ii) MAGNITUDE.  Even then the two differ: this class renormalises each
+  //      wave to sqrt(P_L) on its own 280-point grid with LINEAR
+  //      interpolation, `b1_nuclear` splines the file's nodes with one common
+  //      unit factor.  MEASURED 2026-09-16 at k = 1.003 fm^-1:
+  //      phi2/phi0 = -0.195594 against psi2/psi0 = +0.196269, i.e. +0.35 % on
+  //      the magnitude.  Bounded, not pinned: the bound is what the comment
+  //      now claims (<= 0.8 % away from the nodes), and a bit-for-bit pin
+  //      here would break on any re-spline.
+  const double k_gev = 1.003 * HBARC_GEV_FM;
+  const double ratio_b1 = pw.second(k_gev) / pw.first(k_gev);
+  std::size_t ik = 0;
+  for (std::size_t i = 1; i < k.size(); ++i) {
+    if (std::fabs(k[i] - k_gev) < std::fabs(k[ik] - k_gev)) ik = i;
+  }
+  const double r2 = m.radial_table(2)[ik] / m.radial_table(0)[ik];
+  MESSAGE("S-D at k = 1.003 fm^-1: b1_nuclear phi2/phi0 = " << ratio_b1
+          << ", tagged psi2/psi0 = " << r2 << " (opposite sign by the "
+          "build_amp2 phase convention; |ratio| differs by "
+          << 100.0 * (std::fabs(r2 / ratio_b1) - 1.0) << " %)");
+  CHECK((ratio_b1 > 0.0) != (r2 > 0.0));          // (i)
+  const double mag = std::fabs(r2 / ratio_b1);
+  CHECK(mag != 1.0);                              // (ii): NOT bit for bit ...
+  CHECK(std::fabs(mag - 1.0) < 0.008);            // ... but <= 0.8 %
+}
 
 TEST_CASE("tagged: the VMC channels are built from the tables, and normalize" *
           doctest::skip(!vmc_data_present())) {

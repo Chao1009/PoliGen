@@ -1,0 +1,1000 @@
+{
+ "_about": "Merge-ready refs_dict.json entries for the RADIATIVE domain of the 2026-09-16 reference-research pass (docs/references/01_radiative.md). Schema matches PolarizedLithiumSim/refs/refs_dict.json's 'entries' map: file, arxiv, journal, title, authors, year, keywords, key_content, used_in, and optionally url and repo_usage_note. These were NOT appended by the domain stage: parallel domain agents were writing refs/ and refs_dict.json concurrently and a read-modify-write would race. Merge them in ONE write, after re-reading the dictionary.",
+ "_pass": "2026-09-16 reference research, domain: radiative",
+ "_already_added_by_a_sibling_domain_in_the_same_pass": {
+  "hermes2005-b1-tensor": "HERMES b1 PRL, hep-ex/0506018 - the radiative domain's R4; RC_DELTA_LOW_X_OPTIMISTIC = 0.19 is derived from its Table II, and its RC paragraph (RADGEN, coherent+QE tails from Abbott+Stein, polarized QE tail neglected citing Zhou) is quoted verbatim in 01_radiative.md sec. 7.1",
+  "hermes2007-g1": "HERMES g1 long paper, hep-ex/0609039 - R29; its 'Unfolding of Radiative and Instrumental Smearing' section + Appendix A are the full RC method the b1 PRL compresses into one sentence. There is NO long companion to the b1 PRL",
+  "abbott2000-ff-parametrization": "Abbott et al., nucl-ex/0002003 - R30; HERMES's ref. [11], the deuteron form factors behind their coherent and quasi-elastic tails, and the parametrization benchmarking/02_data_nucleon_deuteron.md says 'exist ... and are not used' by the RC elastic tail",
+  "poudel2025-tensor-sf-review": "Poudel et al., 2506.04506 - R34; source of RC_X_HIGH = 0.16, and NOT of RC_DELTA_HIGH_X = 0.015 (which is in the unpublished proposal only)"
+ },
+ "entries": {
+  "motsai1969-rc-elastic-inelastic": {
+   "file": "refs/SLAC-PUB-0380.pdf",
+   "arxiv": null,
+   "journal": "Rev. Mod. Phys. 41 (1969) 205 (DOI 10.1103/RevModPhys.41.205); free preprint SLAC-PUB-380 (January 1968), INSPIRE recid 52657",
+   "title": "Radiative Corrections to Elastic and Inelastic ep and mu-p Scattering",
+   "authors": [
+    "L. W. Mo",
+    "Y.-S. Tsai"
+   ],
+   "year": 1969,
+   "keywords": [
+    "radiative corrections",
+    "elastic radiative tail",
+    "peaking approximation",
+    "exact formula",
+    "Mo-Tsai",
+    "MT69",
+    "unfolding",
+    "internal bremsstrahlung",
+    "external bremsstrahlung"
+   ],
+   "key_content": [
+    "The RMP article itself is paywalled at APS and has no arXiv entry; the INSPIRE record for it serves SLAC-PUB-380 (https://inspirehep.net/files/1fcaa81f63f50d7bf56a22ce2c6b8b58, HTTP 200, application/pdf, 2 791 721 B), whose title page reads 'RADIATIVE CORRECTIONS TO ELASTIC AND INELASTIC ep AND mu-p SCATTERING ... (To be submitted to Rev. Mod. Phys.)' - i.e. the preprint of this article. Verified 2026-09-16.",
+    "Section III computes the ELASTIC RADIATIVE TAIL with the exact lowest-order bremsstrahlung formula; Appendix B carries that exact expression (Eq. (B.5) in the preprint's numbering, in terms of the target's G_E/G_M).",
+    "The paper contains its own section 'Comparisons of Various Versions of Peaking Approximations with the Exact' - it measures its peaking approximation against its own exact answer, on the elastic peak and on the 3-3 resonance.",
+    "CAVEAT: equation numbers in the preprint need not match the published RMP. Cite a gate as 'SLAC-PUB-380 Eq. (B.5)' unless the RMP text is checked."
+   ],
+   "used_in": [
+    "docs/references/01_radiative.md",
+    "tests/test_rc.cpp (the [MT69] gate, deliberately not written)",
+    "docs/PHYSICS_CHANNELS.md #50",
+    "docs/benchmarking/04_theory.md T-35",
+    "docs/benchmarking/00_in_tree_checks.md sec. 9 item 5"
+   ],
+   "url": "https://doi.org/10.1103/RevModPhys.41.205",
+   "repo_usage_note": "Closes gap G1 of docs/references/00_corpus.md: the tree recorded Mo-Tsai as unobtainable. It is obtainable as the SLAC preprint of the same article. Bounds (a) polrad_sigma_el_u's absolute normalisation and (b) the exact-vs-peaking error inherited by RcTailModel::TPeak / TPeakPlusLL."
+  },
+  "tsai1971-slac-pub-848": {
+   "file": "refs/SLAC-PUB-0848.pdf",
+   "arxiv": null,
+   "journal": "SLAC-PUB-848 (January 1971); INSPIRE recid 67278, 93 citations; no DOI, no journal version",
+   "title": "Radiative Corrections to Electron Scatterings",
+   "authors": [
+    "Y.-S. Tsai"
+   ],
+   "year": 1971,
+   "keywords": [
+    "radiative corrections",
+    "nuclei",
+    "straggling",
+    "external bremsstrahlung",
+    "ionization",
+    "high-Z targets",
+    "equivalent radiator",
+    "Mo-Tsai improved"
+   ],
+   "key_content": [
+    "Abstract (INSPIRE): radiative corrections to electron scattering from nucleons AND NUCLEI above ~50 MeV; 'Many formulas in the Mo and Tsai's article in Review of Modern Physics are improved and better derivations of them are presented'; straggling from external bremsstrahlung and ionization included; a method for large-Z targets is proposed.",
+    "Free fulltext verified at https://inspirehep.net/files/3ce239706be17b0eefec145433700c64 (HTTP 200, application/pdf, 4 112 884 B), 2026-09-16.",
+    "The external-bremsstrahlung/straggling half does NOT apply to a collider: there is no target material at the EIC and RcModel implements internal radiation only."
+   ],
+   "used_in": [
+    "docs/references/01_radiative.md",
+    "docs/benchmarking/04_theory.md T-36 (action item 8: 'obtain Tsai SLAC-PUB-848 and retire the Mo-Tsai not obtained status')"
+   ],
+   "url": "https://inspirehep.net/literature/67278",
+   "repo_usage_note": "Together with motsai1969 this closes 04_theory.md's action item 8. Because Tsai treats NUCLEI, it is also the natural source for the Z/A-dependence question that RcOptions::a_transfer_frac prices without a citation."
+  },
+  "polrad2-1997": {
+   "file": "refs/hep-ph_9706516.pdf",
+   "arxiv": "hep-ph/9706516",
+   "journal": "Comput. Phys. Commun. 104 (1997) 201-244 (DOI 10.1016/S0010-4655(97)00062-3); CPC Program Library catalogue id ADGH_v1_0",
+   "title": "POLRAD 2.0. FORTRAN code for the Radiative Corrections Calculation to Deep Inelastic Scattering of Polarized Particles",
+   "authors": [
+    "I. Akushevich",
+    "A. Ilyichev",
+    "N. Shumeiko",
+    "A. Soroko",
+    "A. Tolkachev"
+   ],
+   "year": 1997,
+   "keywords": [
+    "POLRAD",
+    "radiative corrections",
+    "polarized DIS",
+    "nuclei",
+    "spin-1",
+    "tensor",
+    "b1",
+    "elastic radiative tail",
+    "quasi-elastic tail",
+    "t-peak",
+    "exact tail"
+   ],
+   "key_content": [
+    "Abstract, verbatim: 'The FORTRAN code POLRAD 2.0 for radiative correction calculation in inclusive and semi-inclusive deep inelastic scattering of polarized leptons by polarized nucleons and nuclei is described. Its theoretical basis, structure and algorithms are discussed in details.' (arXiv API, verified 2026-09-16.)",
+    "Born Eqs. (9)/(10) carry the spin-1 tensor sector with the -1/3 : +1/6 = P_2(cos Theta) ratio; Eqs. (A.1)/(A.3) the eight generalized structure functions Im_1..Im_8 with Im_5-Im_8 the quadrupole ones in b1-b4; Eq. (A.4) the TENSOR elastic radiative tail via the quadrupole form factor F_q; Eq. (18) + Appendix B the exact tail; Eqs. (37)-(39) + (43) the t-peak closed forms; Eq. (44) the quasi-elastic tail; Eqs. (110)/(111) the iterative b1 unfolding. (Equation map from open_items/physics_literature.md sec. 3 and benchmarking/04_theory.md T-33, not re-derived in this pass.)",
+    "The tree's own transcription check found polrad2t.tex's Appendix B WRONG IN FIVE PLACES against POLRAD's FORTRAN - the paper is necessary but not sufficient; the FORTRAN (ADGH_v1_0) is the arbiter."
+   ],
+   "used_in": [
+    "docs/references/01_radiative.md",
+    "include/lipolgen/rc.hpp (throughout)",
+    "src/core/rc.cpp",
+    "docs/open_items/run_2026-09-02/polrad_transcription_check.md",
+    "docs/open_items/run_2026-09-02/design_C_tensor_rc.md",
+    "docs/open_items/run_2026-09-03/phase_B_numbers.md",
+    "docs/benchmarking/04_theory.md T-33"
+   ],
+   "repo_usage_note": "The single most load-bearing missing reference in the radiative sector: every equation number quoted in rc.hpp pointed at a paper with no copy in either repository. Implementation target for polrad_sigma_el_u/_el_t/_qe_u, polrad_im_el_spin1, polrad_full_sigma_el, polrad_full_sigma_qe_u, polrad_tpeak_quadrature, polrad_eta_limits, polrad_tau_limits, rosenbluth_spin1."
+  },
+  "zhou1999-tensor-analyzing-powers": {
+   "file": "refs/nucl-ex_9809002.pdf",
+   "arxiv": "nucl-ex/9809002",
+   "journal": "Phys. Rev. Lett. 82 (1999) 687 (DOI 10.1103/PhysRevLett.82.687); INSPIRE recid 476516, 19 citations",
+   "title": "Tensor Analyzing Powers for Quasi-Elastic Electron Scattering from Deuterium",
+   "authors": [
+    "Z.-L. Zhou",
+    "M. Bouwhuis",
+    "M. Ferro-Luzzi",
+    "E. Passchier",
+    "R. Alarcon",
+    "M. Anghinolfi",
+    "H. Arenhoevel",
+    "et al."
+   ],
+   "year": 1999,
+   "keywords": [
+    "tensor analyzing power",
+    "quasi-elastic",
+    "deuteron",
+    "polarized quasi-elastic tail",
+    "T20",
+    "FSI",
+    "MEC",
+    "isobar currents"
+   ],
+   "key_content": [
+    "Abstract, verbatim: 'We report on a first measurement of tensor analyzing powers in quasi-elastic electron-deuteron scattering at an average three-momentum transfer of 1.7 fm^-1. Data sensitive to the spin-dependent nucleon density in the deuteron were obtained for missing momenta up to 150 MeV/c with a tensor polarized 2H target internal to an electron storage ring. The data are well described by a calculation that includes the effects of final-state interaction, meson-exchange and isobar currents, and leading-order relativistic contributions.'",
+    "READ CAREFULLY BEFORE RE-USING: this is an exclusive coincidence measurement at low momentum transfer with a NON-ZERO measured tensor analyzing power. It is not a null result. HERMES's sentence 'there is no net tensor effect by inclusive scattering on weakly-bound spin-1/2 objects [13]' is the claim; this paper is its citation, and whatever supports the inclusive statement must be an integral over this measurement, not the measurement itself - and that integral has never been done for A = 6."
+   ],
+   "used_in": [
+    "docs/references/01_radiative.md",
+    "include/lipolgen/rc.hpp (RcOptions::qe_tensor_scale)",
+    "docs/open_items/run_2026-09-03/phase_B_numbers.md sec. B3",
+    "docs/open_items/physics_literature.md sec. 3",
+    "docs/PHYSICS_CHANNELS.md (polarised quasi-elastic tail row)"
+   ],
+   "repo_usage_note": "Closes gap G7 of docs/references/00_corpus.md. phase_B_numbers.md sec. B3 already withdrew the A = 2 -> A = 6 transfer of the neglect argument and measured the quasi-elastic term at 22 % / 73 % / 99.9 % of the tail at x = 0.01 / 0.10 / 0.30."
+  },
+  "gakh-shekhovtsova2004-tensor-rc": {
+   "file": "refs/hep-ph_0403262.pdf",
+   "arxiv": "hep-ph/0403262",
+   "journal": "J. Exp. Theor. Phys. 99 (2004) 898-914 (DOI 10.1134/1.1842872); INSPIRE recid 647050, ZERO citations. The Russian volume is recorded inconsistently: arXiv journal_ref says Zh. Eksp. Teor. Fiz. 99 (2004) 1034-1050, INSPIRE says Zh. Eksp. Teor. Fiz. 123 (2004) 1034",
+   "title": "Radiative corrections to deep-inelastic ed scattering. Case of tensor polarized deuteron",
+   "authors": [
+    "G. I. Gakh",
+    "O. Shekhovtsova"
+   ],
+   "year": 2004,
+   "keywords": [
+    "tensor polarization",
+    "radiative corrections",
+    "deuteron",
+    "elastic radiative tail",
+    "quadrupole polarization tensor",
+    "HERMES kinematics",
+    "b1",
+    "RC_DELTA_LOW_X"
+   ],
+   "key_content": [
+    "Abstract, verbatim: 'The model-independent radiative corrections to deep-inelastic scattering of unpolarized electron beam off the tensor polarized deuteron target have been considered. The contribution to the radiative corrections due to the hard-photon emission from the elastic electron-deuteron scattering (the so-called elastic radiative tail) is also investigated. The calculation is based on the covariant parametrization of the deuteron quadrupole polarization tensor. The numerical estimates of the radiative corrections to the polarization observables have been done for the kinematical conditions of the current experiment at HERA'.",
+    "Source of RC_DELTA_LOW_X = 0.30. The tree's corrected reading (rc.hpp lines ~326-393; run_2026-09-03/phase_B_numbers.md sec. B6.3): the '10 % to 30 %' pair is the two ends of ONE panel's x window at Q^2 = 0.1, |delta| = 0.1133 at x = 0.00966 and 0.2662 at x = 0.00226, and the shipped 0.30 is x2.65 the panel's reading at the x nearest the anchor.",
+    "Its SHAPE is a recorded REJECTION (run_2026-09-03/STATUS.md row 7): singular across the b1 zero-crossing (-1.691...+7.810 at Q^2 = 4), not monotone, no panel covering x = 0.01 Q^2 = 5, and a ratio against THEIR Born (ALLM97 F2, Callan-Gross b2)."
+   ],
+   "used_in": [
+    "docs/references/01_radiative.md",
+    "include/lipolgen/rc.hpp (RC_DELTA_LOW_X, RcOptions::delta_low_x)",
+    "docs/open_items/run_2026-09-03/phase_B_numbers.md sec. B6.3",
+    "docs/benchmarking/04_theory.md T-34",
+    "docs/open_items/run_2026-09-06/phase_A_numbers.md sec. A2"
+   ],
+   "repo_usage_note": "The ONLY dedicated analytic tensor-DIS RC calculation in the literature, and it has zero independent checks. Having the PDF in the corpus is what lets the next reader verify the 2026-09-04 correction instead of inheriting it."
+  },
+  "bardin-shumeiko1977-exact-ir": {
+   "file": "refs/JINR-P2-10113.pdf",
+   "arxiv": null,
+   "journal": "Nucl. Phys. B 127 (1977) 242 (DOI 10.1016/0550-3213(77)90213-9), paywalled; free JINR preprint P2-10113 via INSPIRE recid 111694 - IN RUSSIAN",
+   "title": "An Exact Calculation of the Lowest Order Electromagnetic Correction to the Elastic Scattering",
+   "authors": [
+    "D. Yu. Bardin",
+    "N. M. Shumeiko"
+   ],
+   "year": 1977,
+   "keywords": [
+    "infrared divergence",
+    "covariant separation",
+    "bremsstrahlung",
+    "exact lowest order",
+    "elastic scattering",
+    "POLRAD foundation"
+   ],
+   "key_content": [
+    "Abstract: a covariant procedure for separating the infrared-divergent part of the lowest-order bremsstrahlung cross section; the contribution of that part to the EM correction to point-particle elastic scattering is calculated EXACTLY, for experiments that measure the energy (or energy and angle) of one final particle and cannot distinguish elastic from bremsstrahlung events.",
+    "The downloaded free copy is the JINR preprint P2-10113 and is in RUSSIAN (Cyrillic title page). The English text is the paywalled NPB article.",
+    "This is the method POLRAD's exact tail (Eq. (18) + Appendix B) is built on - the reason the tail is an exact integral with a covariantly-subtracted IR piece rather than a peaking formula."
+   ],
+   "used_in": [
+    "docs/references/01_radiative.md",
+    "include/lipolgen/rc.hpp (RcTailModel::PolradFull)",
+    "src/core/rc.cpp polrad_tpeak_quadrature"
+   ],
+   "url": "https://doi.org/10.1016/0550-3213(77)90213-9",
+   "repo_usage_note": "The paper behind the distinction rc.hpp draws between 'exact' and 'exact in the peaking sense'. Needed if PolradFull's status as the controlled O(alpha) answer is ever argued rather than asserted."
+  },
+  "akushevich-shumeiko1994-light-nuclei": {
+   "file": null,
+   "arxiv": null,
+   "journal": "J. Phys. G 20 (1994) 513-530 (DOI 10.1088/0954-3899/20/4/001); INSPIRE recid 383295, 144 citations. NO free copy located (INSPIRE carries no fulltext and no report number; checked 2026-09-16)",
+   "title": "Radiative effects in deep inelastic scattering of polarized leptons by polarized light nuclei",
+   "authors": [
+    "I. V. Akushevich",
+    "N. M. Shumeiko"
+   ],
+   "year": 1994,
+   "keywords": [
+    "radiative corrections",
+    "polarized light nuclei",
+    "deuteron",
+    "3He",
+    "transverse target",
+    "covariant variables",
+    "A-dependence",
+    "POLRAD theory paper"
+   ],
+   "key_content": [
+    "Abstract: principal QED radiative effects in DIS of polarized leptons by polarized H, D and 3He targets, at Born level and with RC; the transversely polarized target case is also treated; all quantities in covariant variables; exact results for low-order corrections; and a discussion of 'two points of view on calculation of RC to experimental data' (correct-the-data vs correct-the-model).",
+    "This is POLRAD's own theory paper FOR NUCLEAR TARGETS and the closest published statement to what LiPolGen does: polarized lepton on a polarized light nucleus in nuclear invariants."
+   ],
+   "used_in": [
+    "docs/references/01_radiative.md",
+    "include/lipolgen/rc.hpp (RcOptions::a_transfer_frac; the Q_N -> P_zz^eff substitution)"
+   ],
+   "url": "https://doi.org/10.1088/0954-3899/20/4/001",
+   "repo_usage_note": "HIGHEST-VALUE PAYWALLED ITEM in the radiative domain: the A = 2 -> A = 6 transfer of delta(x) (a_transfer_frac, default 0.0) has no cited source, and this is where the A-dependence of the polarized RC is actually worked out (for D and 3He)."
+  },
+  "akushevich2001-polarized-rc-review": {
+   "file": "refs/hep-ph_0106180.pdf",
+   "arxiv": "hep-ph/0106180",
+   "journal": "arXiv:hep-ph/0106180 (2001); no journal reference on the arXiv record",
+   "title": "Radiative effects in scattering of polarized leptons by polarized nucleons and light nuclei",
+   "authors": [
+    "I. Akushevich",
+    "A. Ilyichev",
+    "N. Shumeiko"
+   ],
+   "year": 2001,
+   "keywords": [
+    "review",
+    "POLRAD",
+    "RADGEN",
+    "HAPRAD",
+    "DIFFRAD",
+    "MASCARAD",
+    "covariant approach",
+    "inclusive",
+    "semi-inclusive",
+    "diffractive",
+    "elastic"
+   ],
+   "key_content": [
+    "Abstract, verbatim: 'Recent developments in the field of radiative effects in polarized lepton-nuclear scattering are reviewed. The processes of inclusive, semi-inclusive, diffractive and elastic scattering are considered. The explicit formulae obtained within the covariant approach are discussed. FORTRAN codes POLRAD, RADGEN, HAPRAD, DIFFRAD and MASCARAD created on the basis of the formulae are briefly described. Applications for data analysis of the current experiments on lepton-nuclear scattering at CERN, DESY, SLAC and TJNAF are illustrated by numerical results.'",
+    "One document mapping formula -> code -> experiment for the whole Minsk-school RC family; the diffractive and semi-inclusive sections are the coherent-6Li and tagged analogues."
+   ],
+   "used_in": [
+    "docs/references/01_radiative.md"
+   ],
+   "repo_usage_note": "Orientation document for anyone extending RcModel beyond the inclusive channel, and the fastest way to confirm that a statement like 'POLRAD supplies no sigma_T counterpart at the s- or p-peak' is about the formalism and not one code's options."
+  },
+  "maximon-tjon2000-rc-ep": {
+   "file": "refs/nucl-th_0002058.pdf",
+   "arxiv": "nucl-th/0002058",
+   "journal": "Phys. Rev. C 62 (2000) 054320 (DOI 10.1103/PhysRevC.62.054320)",
+   "title": "Radiative Corrections to Electron-Proton Scattering",
+   "authors": [
+    "L. C. Maximon",
+    "J. A. Tjon"
+   ],
+   "year": 2000,
+   "keywords": [
+    "radiative corrections",
+    "soft photon exact",
+    "Mo-Tsai comparison",
+    "peaking approximation error",
+    "proton vertex correction",
+    "finite size"
+   ],
+   "key_content": [
+    "Abstract: elastic ep RC in a hadronic model including nucleon finite size; soft-photon emission calculated EXACTLY; explicit comparison with 'the generally used expressions previously obtained by Mo and Tsai'; above 8 GeV at large angles the proton vertex correction raises the Rosenbluth factor by at least 2 %.",
+    "The standard modern quantification of what the Mo-Tsai soft-photon/peaking package leaves out - the package RcTailModel::TPeak and TPeakPlusLL inherit."
+   ],
+   "used_in": [
+    "docs/references/01_radiative.md",
+    "include/lipolgen/rc.hpp (RcTailModel comments)"
+   ],
+   "repo_usage_note": "The tree today has NO external number for 'how wrong is the peaking approximation' - only the internal spread between its own three tail models (up to x6444 in the low-y corner). This supplies one."
+  },
+  "tsai1961-rc-ep": {
+   "file": null,
+   "arxiv": null,
+   "journal": "Phys. Rev. 122 (1961) 1898 (DOI 10.1103/PhysRev.122.1898); INSPIRE recid 46623, 253 citations. No free copy located",
+   "title": "Radiative Corrections to Electron-Proton Scattering",
+   "authors": [
+    "Y.-S. Tsai"
+   ],
+   "year": 1961,
+   "keywords": [
+    "radiative corrections",
+    "proton recoil",
+    "historical",
+    "elastic tail root"
+   ],
+   "key_content": [
+    "Abstract: RC to ep scattering with proton recoil included, for the Hofstadter experimental condition (only final electrons momentum-analyzed); the anisotropy of the maximum radiated-photon energy and radiation from the proton current are both treated; mesonic two-photon effects are not.",
+    "Historical root of the elastic-tail formula; superseded for practical use by Mo-Tsai (1969) and SLAC-PUB-848 (1971)."
+   ],
+   "used_in": [
+    "docs/references/01_radiative.md"
+   ],
+   "url": "https://doi.org/10.1103/PhysRev.122.1898",
+   "repo_usage_note": "Cite-only. Listed for completeness of the Tsai chain the task asked about."
+  },
+  "tsai1974-pair-bremsstrahlung": {
+   "file": null,
+   "arxiv": null,
+   "journal": "Rev. Mod. Phys. 46 (1974) 815 (DOI 10.1103/RevModPhys.46.815) with erratum RMP 49 (1977) 421 (DOI 10.1103/RevModPhys.49.421); free as SLAC-PUB-1365 via INSPIRE recid 81153",
+   "title": "Pair Production and Bremsstrahlung of Charged Leptons",
+   "authors": [
+    "Y.-S. Tsai"
+   ],
+   "year": 1974,
+   "keywords": [
+    "equivalent radiator",
+    "external bremsstrahlung",
+    "radiator thickness",
+    "pair production",
+    "radiation length"
+   ],
+   "key_content": [
+    "The standard source for the equivalent-radiator technique and for external bremsstrahlung/pair-production in matter.",
+    "FREE but NOT downloaded in this pass (6.7 MB at https://inspirehep.net/files/be2ffc45ed59b1b28208cc386c1e16b3, verified HTTP 200 application/pdf, content-disposition slac-pub-1365.pdf): external bremsstrahlung does not exist at a collider, so only the radiator half applies and kuraev-fadin1985 / esfrad2022 cover it better."
+   ],
+   "used_in": [
+    "docs/references/01_radiative.md",
+    "include/lipolgen/rc.hpp ll_radiator (uncited)"
+   ],
+   "url": "https://inspirehep.net/literature/81153",
+   "repo_usage_note": "Fetch it if the ll_radiator citation is ever written out in full."
+  },
+  "kuraev-fadin1985-structure-function": {
+   "file": null,
+   "arxiv": null,
+   "journal": "Sov. J. Nucl. Phys. 41 (1985) 466 [Yad. Fiz. 41 (1985) 733]; INSPIRE recid 217313. NO DOI, NO e-print, NO free copy located (checked 2026-09-16)",
+   "title": "On Radiative Corrections to e+ e- Single Photon Annihilation at High Energy",
+   "authors": [
+    "E. A. Kuraev",
+    "V. S. Fadin"
+   ],
+   "year": 1985,
+   "keywords": [
+    "electron structure function",
+    "equivalent radiator",
+    "leading log",
+    "exponentiation",
+    "D(z)",
+    "soft photon"
+   ],
+   "key_content": [
+    "The canonical source for the electron structure function / equivalent-radiator D(z, Q^2) and its soft-photon EXPONENTIATED form.",
+    "FLAGGED, NOT ASSERTED: no copy was obtained, so the text was not read. Conventions for the coefficient differ between sources (alpha/2pi vs alpha/pi; whether the -1 in beta = (2 alpha/pi)(ln(Q^2/m^2) - 1) is kept). lipolgen's ll_radiator uses (alpha/pi) ln(Q^2/m_e^2)(1+z^2)/(1-z). Whoever writes the citation should pin the convention against a source they have read and satisfy themselves the alpha/pi is intended and not a factor-2 slip; this pass did not check it."
+   ],
+   "used_in": [
+    "docs/references/01_radiative.md",
+    "include/lipolgen/rc.hpp ll_radiator",
+    "src/core/rc.cpp"
+   ],
+   "url": "https://inspirehep.net/literature/217313",
+   "repo_usage_note": "ll_radiator's own comment states it is a SINGLE-z LEADING LOG with no exponent and an uncancelled 1/(1-z) that reaches 13.5 at x = 0.744, y = 0.0071. The exponentiated cure has a name and a source, and the code cites neither."
+  },
+  "gakh-konchatnij-merenkov2012-elastic-ed": {
+   "file": "refs/1202.2225.pdf",
+   "arxiv": "1202.2225",
+   "journal": "J. Exp. Theor. Phys. 115 (2012) 212 (DOI 10.1134/S1063776112070060); INSPIRE recid 1088719, 13 citations",
+   "title": "Radiative Corrections to Polarization Observables in Elastic Electron-Deuteron Scattering in Leptonic Variables",
+   "authors": [
+    "G. I. Gakh",
+    "M. I. Konchatnij",
+    "N. P. Merenkov"
+   ],
+   "year": 2012,
+   "keywords": [
+    "radiative corrections",
+    "elastic ed",
+    "tensor polarization",
+    "leptonic variables",
+    "Drell-Yan representation",
+    "model independent",
+    "polarization observables"
+   ],
+   "key_content": [
+    "Abstract: model-independent QED radiative corrections to polarization observables in elastic scattering of unpolarized and longitudinally polarized electrons off the deuteron, in LEPTONIC variables; 'The experimental setup when the deuteron target is arbitrarily polarized is considered and the procedure for applying derived results to the vector or tensor polarization of the recoil deuteron is discussed'; built on the Drell-Yan-like representation.",
+    "This is the SECOND tensor-polarized-deuteron RC calculation in the literature (the first being gakh-shekhovtsova2004, which is deep-inelastic). It is elastic, which is exactly the channel of POLRAD Eq. (A.4).",
+    "CAVEAT: leptonic variables and elastic kinematics; extracting a number comparable to Eq. (A.4)'s tail requires mapping their observables onto POLRAD's Im^el basis - estimated 2-4 days, not a table lookup."
+   ],
+   "used_in": [
+    "docs/references/01_radiative.md",
+    "include/lipolgen/rc.hpp (polrad_im_el_spin1, polrad_full_sigma_el, sp_tensor_scale)"
+   ],
+   "repo_usage_note": "The ONLY external check available on the tensor elastic tail: rc.hpp's tensor half is POLRAD Eq. (A.4) transcribed once, with a spurious eta_A already found in the design record (phase_B_numbers.md sec. B5) and five Appendix-B errors found in the paper against its own FORTRAN. There is no second implementation anywhere in the project."
+  },
+  "gakh-shekhovtsova2003-proceedings": {
+   "file": null,
+   "arxiv": "hep-ph/0309123",
+   "journal": "eConf C030626 (2003) 351; INSPIRE recid 627954",
+   "title": "Radiative events in DIS of unpolarized electron by tensor polarized deuteron: Radiative corrections",
+   "authors": [
+    "G. I. Gakh",
+    "O. Shekhovtsova"
+   ],
+   "year": 2003,
+   "keywords": [
+    "tensor polarization",
+    "radiative corrections",
+    "proceedings",
+    "precursor"
+   ],
+   "key_content": [
+    "The conference precursor of gakh-shekhovtsova2004 (JETP 99 (2004) 898). Open access; not downloaded, superseded.",
+    "Listed so the dating is on the record: the JETP paper is a 2004 write-up of a 2003 result, and the zero-citation status applies to both."
+   ],
+   "used_in": [
+    "docs/references/01_radiative.md"
+   ],
+   "url": "https://arxiv.org/abs/hep-ph/0309123"
+  },
+  "afanasev2001-coincidence-rc": {
+   "file": "refs/hep-ph_0105032.pdf",
+   "arxiv": "hep-ph/0105032",
+   "journal": "J. Exp. Theor. Phys. 93 (2001) 449-461 (DOI 10.1134/1.1410589)",
+   "title": "Radiative Corrections to Polarized Inelastic Scattering in Coincidence",
+   "authors": [
+    "A. V. Afanasev",
+    "I. Akushevich",
+    "G. I. Gakh",
+    "N. P. Merenkov"
+   ],
+   "year": 2001,
+   "keywords": [
+    "radiative corrections",
+    "coincidence",
+    "semi-inclusive",
+    "electron-nucleus",
+    "polarized",
+    "Drell-Yan representation",
+    "tagged"
+   ],
+   "key_content": [
+    "Abstract: 'The complete analysis of the model-independent leading radiative corrections to cross-section and polarization observables in semi-inclusive deep-inelastic electron-nucleus scattering with detection of a proton and scattered electron in coincidence has been performed. The basis of the calculations consists of the Drell-Yan like representation in electrodynamics for both spin-independent and spin-dependent parts of the cross-section ... The applications to the polarization transfer effect from longitudinally polarized electron beam to detected proton as well as to scattering by the polarized target are considered.'",
+    "This is the calculation for the COINCIDENCE topology on a NUCLEUS with polarization - the topology of every Tagged* channel."
+   ],
+   "used_in": [
+    "docs/references/01_radiative.md",
+    "include/lipolgen/rc.hpp (rc_tail_applies: rc_tail == 1 exactly on every Tagged* channel)",
+    "docs/open_items/run_2026-09-03/phase_B_numbers.md sec. B4"
+   ],
+   "repo_usage_note": "The tagged channels ship rc_tail identically 1.0. phase_B_numbers.md sec. B4 calls that 'half a kinematic fact - the elastic half is a veto, the quasi-elastic half is an OMISSION of the same order as the inclusive quasi-elastic dilution'. If one number in this project deserves a bound rather than a paragraph, it is that one, and this is the paper it should be bounded against (with Ent et al., PRC 64 (2001) 054610, paywalled)."
+  },
+  "afanasev2001-mascarad": {
+   "file": "refs/hep-ph_0102086.pdf",
+   "arxiv": "hep-ph/0102086",
+   "journal": "Phys. Rev. D 64 (2001) 113009 (DOI 10.1103/PhysRevD.64.113009)",
+   "title": "Model independent radiative corrections in processes of polarized electron-nucleon elastic scattering",
+   "authors": [
+    "A. Afanasev",
+    "I. Akushevich",
+    "N. Merenkov"
+   ],
+   "year": 2001,
+   "keywords": [
+    "MASCARAD",
+    "elastic",
+    "polarized",
+    "beam-target asymmetry",
+    "recoil polarization",
+    "experimental acceptance",
+    "radiative corrections"
+   ],
+   "key_content": [
+    "Abstract: explicit RC formulae for elastic ep scattering for two typical polarization measurements (beam-target asymmetry; recoil proton polarization), with possibilities to take realistic experimental ACCEPTANCES into account; the FORTRAN code MASCARAD; numerics for TJNAF kinematics.",
+    "The acceptance discussion is the published treatment of the question phase_B_numbers.md raises and leaves open: POLRAD Eq. (44) is an inclusive formula being compared against a tagged or binned sample."
+   ],
+   "used_in": [
+    "docs/references/01_radiative.md",
+    "include/lipolgen/rc.hpp (polrad_sigma_qe_u, ll_peaks_qe, rosenbluth_nucleon)"
+   ]
+  },
+  "radgen1999": {
+   "file": "refs/hep-ph_9906408.pdf",
+   "arxiv": "hep-ph/9906408",
+   "journal": "arXiv:hep-ph/9906408 (1999); no journal reference on the arXiv record",
+   "title": "RADGEN 1.0. Monte Carlo Generator for Radiative Events in DIS on Polarized and Unpolarized Targets",
+   "authors": [
+    "I. Akushevich",
+    "H. Boettcher",
+    "D. Ryckbosch"
+   ],
+   "year": 1999,
+   "keywords": [
+    "RADGEN",
+    "Monte Carlo",
+    "radiative events",
+    "polarized DIS",
+    "HERMES",
+    "unfolding"
+   ],
+   "key_content": [
+    "Abstract, verbatim: 'A new Monte-Carlo generator including real radiated photons in DIS on polarized and unpolarized targets is presented. Analytical and numerical tests are performed and discussed in details.'",
+    "It is POLRAD's formulae turned into an EVENT GENERATOR - the natural comparison object for LiPolGen, which is also an event generator applying POLRAD's formulae, but as weights rather than as generated photons.",
+    "HERMES's b1 measurement was radiatively corrected with 'a Monte Carlo generator based on RADGEN [9]' (hep-ex/0506018, verbatim)."
+   ],
+   "used_in": [
+    "docs/references/01_radiative.md",
+    "include/lipolgen/rc.hpp (RC_DELTA_LOW_X_OPTIMISTIC = 0.19, the 'as good as HERMES' edge)"
+   ],
+   "repo_usage_note": "Every statement the tree makes about 'HERMES's residual RC systematic' is a statement about this code's output."
+  },
+  "heracles1992": {
+   "file": null,
+   "arxiv": null,
+   "journal": "Comput. Phys. Commun. 69 (1992) 155 (DOI 10.1016/0010-4655(92)90136-M); DESY-90-041; INSPIRE recid 296225, 451 citations. No free copy located",
+   "title": "HERACLES: an event generator for ep interactions at HERA energies including radiative processes",
+   "authors": [
+    "A. Kwiatkowski",
+    "H. Spiesberger",
+    "H.-J. Mohring"
+   ],
+   "year": 1992,
+   "keywords": [
+    "HERACLES",
+    "collider kinematics",
+    "QED radiative corrections",
+    "one-loop weak corrections",
+    "neutral current",
+    "charged current",
+    "HERA"
+   ],
+   "key_content": [
+    "Abstract: a MC event generator for NC and CC ep interactions at HERA energies and beyond; structure-function parametrizations or parton distributions; single-photon emission from the lepton line, self-energy corrections and the complete set of one-loop weak corrections.",
+    "The QED content underneath DJANGO6/DJANGOH, at COLLIDER kinematics - which is the regime rc.hpp warns POLRAD's fixed-target normalisation must not be naively carried into."
+   ],
+   "used_in": [
+    "docs/references/01_radiative.md",
+    "docs/benchmarking/BENCHMARK_PLAN.md T4 and sec. 4 item 7"
+   ],
+   "url": "https://doi.org/10.1016/0010-4655(92)90136-M"
+  },
+  "django6-1994": {
+   "file": null,
+   "arxiv": null,
+   "journal": "Comput. Phys. Commun. 81 (1994) 381 (DOI 10.1016/0010-4655(94)90086-8); CERN-TH-7133-94; INSPIRE recid 372027, 269 citations. No free copy located",
+   "title": "Combined QED and QCD radiative effects in deep inelastic lepton-proton scattering: the Monte Carlo generator DJANGO6",
+   "authors": [
+    "K. Charchula",
+    "G. A. Schuler",
+    "H. Spiesberger"
+   ],
+   "year": 1994,
+   "keywords": [
+    "DJANGO6",
+    "DJANGOH",
+    "QED and QCD radiative effects",
+    "HERACLES",
+    "LEPTO",
+    "Rad/noRad"
+   ],
+   "key_content": [
+    "Abstract: DJANGO6 simulates DIS including both QED and QCD radiative effects; it is an interface of HERACLES 4.4 and LEPTO 6.1, with LUND string fragmentation for the hadronic final state and the LEPTO matrix-element options for O(alpha_s) non-logarithmic corrections.",
+    "This is where the methodology of the published Rad/noRad comparison tables is defined."
+   ],
+   "used_in": [
+    "docs/references/01_radiative.md",
+    "docs/benchmarking/BENCHMARK_PLAN.md sec. 4 item 7 (top-ten: 'DJANGOH published Rad/noRad four-bin table', hours, zero dependencies)"
+   ],
+   "url": "https://doi.org/10.1016/0010-4655(94)90086-8",
+   "repo_usage_note": "The only RC cross-check in the benchmarking plan that is not another transcription of POLRAD, and the only one at collider kinematics."
+  },
+  "djangoh-manual": {
+   "file": null,
+   "arxiv": null,
+   "journal": "H. Spiesberger, DJANGOH (maintained descendant of DJANGO6/HERACLES), version 4.6.x; web manual, free",
+   "title": "DJANGOH: a Monte Carlo generator for deep inelastic lepton-nucleon scattering with QED and QCD radiative effects",
+   "authors": [
+    "H. Spiesberger"
+   ],
+   "year": 2019,
+   "keywords": [
+    "DJANGOH",
+    "manual",
+    "polarized NC and CC",
+    "radiative corrections",
+    "EIC"
+   ],
+   "key_content": [
+    "Homepage and manual: http://wwwthep.physik.uni-mainz.de/~hspiesb/djangoh/djangoh.html ; EIC wiki mirror: https://wiki.bnl.gov/eic/index.php/DJANGOH (both verified reachable 2026-09-16 via web search result listings, not fetched in full).",
+    "From version 4.6.10 onward DJANGOH simulates LONGITUDINALLY POLARIZED DIS for both NC and CC events including QED and QCD radiative effects.",
+    "No arXiv paper exists for the maintained version; cite django6-1994 + heracles1992 plus this manual."
+   ],
+   "used_in": [
+    "docs/references/01_radiative.md"
+   ],
+   "url": "http://wwwthep.physik.uni-mainz.de/~hspiesb/djangoh/djangoh.html"
+  },
+  "pepsi1992": {
+   "file": null,
+   "arxiv": null,
+   "journal": "Comput. Phys. Commun. 71 (1992) 305 (DOI 10.1016/0010-4655(92)90016-R); HD-THEP-91-47, MPIH-V38-1991; INSPIRE recid 321673, 63 citations. No free copy located",
+   "title": "PEPSI: A Monte Carlo generator for polarized leptoproduction",
+   "authors": [
+    "L. Mankiewicz",
+    "A. Schafer",
+    "M. Veltri"
+   ],
+   "year": 1992,
+   "keywords": [
+    "PEPSI",
+    "polarized leptoproduction",
+    "LEPTO",
+    "JETSET",
+    "polarization-dependent QCD cross section"
+   ],
+   "key_content": [
+    "Abstract: PEPSI (Polarized Electron Proton Scattering Interactions), a MC for polarized DIS mediated by the electromagnetic interaction; a modification of LEPTO 4.3; the hard virtual-photon-parton scattering is generated with the first-order-in-alpha_s polarization-dependent QCD cross section; JETSET supplies fragmentation.",
+    "PEPSI carries NO radiative corrections of its own - it is paired with RADGEN for that, which is how BENCHMARK_PLAN.md T4 lists it."
+   ],
+   "used_in": [
+    "docs/references/01_radiative.md",
+    "docs/benchmarking/BENCHMARK_PLAN.md T4"
+   ],
+   "url": "https://doi.org/10.1016/0010-4655(92)90016-R"
+  },
+  "esfrad2022": {
+   "file": "refs/2212.04730.pdf",
+   "arxiv": "2212.04730",
+   "journal": "arXiv:2212.04730 (2022); no journal reference on the arXiv record",
+   "title": "ESFRAD. FORTRAN code for calculation of QED corrections to polarized ep-scattering by the electron structure function method",
+   "authors": [
+    "A. Afanasev",
+    "I. Akushevich",
+    "A. Ilyichev",
+    "N. Merenkov"
+   ],
+   "year": 2022,
+   "keywords": [
+    "ESFRAD",
+    "electron structure function",
+    "higher-order QED",
+    "exponentiation",
+    "POLRAD comparison",
+    "RADGEN comparison"
+   ],
+   "key_content": [
+    "Abstract: the electron structure function method for HIGHER-ORDER QED radiative effects in polarized DIS; the new FORTRAN code ESFRAD; 'A detailed quantitative comparison between the results of ESFRAD and other methods implemented in the codes POLRAD and RADGEN for calculation of the higher order radiative corrections is performed.'",
+    "That comparison is exactly the measurement LiPolGen needs: how much an O(alpha) single-emission leading-log treatment leaves out."
+   ],
+   "used_in": [
+    "docs/references/01_radiative.md",
+    "include/lipolgen/rc.hpp (RcTailModel::TPeakPlusLL, ll_radiator)"
+   ],
+   "repo_usage_note": "RcModel is O(alpha) with a single-emission leading log and NO exponentiation; rc.hpp says so and flags the uncancelled 1/(1-z). This paper measures the size of what that omits, against the two codes the tree already treats as authoritative."
+  },
+  "byer2022-sidis-rc-evgen": {
+   "file": "refs/2210.03785.pdf",
+   "arxiv": "2210.03785",
+   "journal": "Comput. Phys. Commun. 287 (2023) 108702 (DOI 10.1016/j.cpc.2023.108702)",
+   "title": "SIDIS-RC EvGen: a Monte-Carlo event generator of semi-inclusive deep inelastic scattering with the lowest-order QED radiative corrections",
+   "authors": [
+    "D. Byer",
+    "V. Khachatryan",
+    "H. Gao",
+    "I. Akushevich",
+    "A. Ilyichev",
+    "C. Peng",
+    "A. Prokudin",
+    "S. Srednyak",
+    "Z. Zhao"
+   ],
+   "year": 2023,
+   "keywords": [
+    "SIDIS-RC EvGen",
+    "C++ generator",
+    "lowest-order QED",
+    "TMD",
+    "multi-dimensional integration",
+    "polarized target"
+   ],
+   "key_content": [
+    "Abstract: a C++ standalone MC generator for SIDIS at medium-to-high beam energies, with binary and library components, for unpolarized or longitudinally polarized beam and unpolarized/longitudinally/transversely polarized target; built on 'recent elaborate QED calculations of the lowest-order radiative effects, applied to the leading order Born cross section'; flowcharts, example programs and numerical results on azimuthal transverse single-spin asymmetries.",
+    "Spin-1/2 and semi-inclusive only: it validates nothing for a spin-1 target. It is an IMPLEMENTATION reference for how a modern C++ generator integrates the radiative kernel and bounds its weights."
+   ],
+   "used_in": [
+    "docs/references/01_radiative.md",
+    "include/lipolgen/rc.hpp (build_tail_tables, tail_ratio_at, RcOptions::tail_max)"
+   ],
+   "repo_usage_note": "This is what the reference-research brief's 'Byer-Afanasev-Kalantarians' resolves to. NO paper with those three authors exists: INSPIRE (author 'Byer, Duane', all four records; author Kalantarians + title radiative) and the arXiv API (au:Byer AND au:Afanasev) were both searched on 2026-09-16 and return none. The other real referent is cfns2020-rc-whitepaper, which has both Afanasev and Byer among its authors."
+  },
+  "afanasev2023-rc-review": {
+   "file": "refs/2306.14578.pdf",
+   "arxiv": "2306.14578",
+   "journal": "arXiv:2306.14578 (2023); Eur. Phys. J. A topical review",
+   "title": "Radiative Corrections: From Medium to High Energy Experiments",
+   "authors": [
+    "A. Afanasev",
+    "J. C. Bernauer",
+    "P. Blunden",
+    "J. Blumlein",
+    "E. W. Cline",
+    "J. M. Friedrich",
+    "F. Hagelstein",
+    "T. Husek",
+    "M. Kohl",
+    "F. Myhrer",
+    "G. Paz",
+    "S. Schadmand",
+    "et al."
+   ],
+   "year": 2023,
+   "keywords": [
+    "review",
+    "radiative corrections",
+    "two-photon exchange",
+    "QED in DIS",
+    "Monte Carlo codes",
+    "precision"
+   ],
+   "key_content": [
+    "Abstract: an overview of the state of radiative corrections focused on lepton-proton scattering, QED corrections in DIS, and radiative light-hadron decays, with emphasis on two-photon exchange and the associated Monte-Carlo codes.",
+    "benchmarking/04_theory.md T-37 records the paper as a 63-page EPJ A topical review with 27 figures and 3 tables (fetched abstract)."
+   ],
+   "used_in": [
+    "docs/references/01_radiative.md",
+    "docs/benchmarking/04_theory.md T-37",
+    "include/lipolgen/rc.hpp (RC_DELTA_HIGH_X context)"
+   ],
+   "repo_usage_note": "The citable modern baseline for what '1.5 % on A_zz' means and for which RC codes are maintained - both matter, since RC_DELTA_HIGH_X = 0.015 comes from an UNPUBLISHED proposal and the tree's own audit found no modern successor to POLRAD in the tensor sector."
+  },
+  "liu2021-factorized-rc": {
+   "file": "refs/2008.02895.pdf",
+   "arxiv": "2008.02895",
+   "journal": "Phys. Rev. D 104 (2021) 094033 (DOI 10.1103/PhysRevD.104.094033)",
+   "title": "Factorized approach to radiative corrections for inelastic lepton-hadron collisions",
+   "authors": [
+    "Tianbo Liu",
+    "W. Melnitchouk",
+    "Jian-Wei Qiu",
+    "N. Sato"
+   ],
+   "year": 2021,
+   "keywords": [
+    "factorization",
+    "QED radiation",
+    "lepton distribution functions",
+    "EIC",
+    "frame rotation",
+    "Breit frame",
+    "collider kinematics"
+   ],
+   "key_content": [
+    "Abstract: a factorized approach to QED radiative corrections for inclusive and semi-inclusive DIS, resumming logarithmically enhanced QED radiation into universal lepton distribution and fragmentation (or jet) functions; 'the QED effects induced by the rotational distortion of the hadron transverse momentum, arising from the mismatch between the experimental Breit frame and the true photon-hadron frame, can be as large as 50% for moderate Q'; aimed at current and future facilities such as the EIC.",
+    "The hazard it flags is DIFFERENT from the one rc.hpp flags: at a collider the radiative distortion shows up as a FRAME effect on reconstructed kinematics, not only as a multiplicative weight."
+   ],
+   "used_in": [
+    "docs/references/01_radiative.md",
+    "include/lipolgen/rc.hpp (RcMode::TensorBand; 'a shift would need a photon-energy sampler')"
+   ],
+   "repo_usage_note": "LiPolGen applies a fixed-target O(alpha) formalism at collider kinematics and hands events to the ePIC reconstruction chain. This is the paper that says what that costs."
+  },
+  "cammarota2025-factorized-qed-qcd": {
+   "file": "refs/2505.23487.pdf",
+   "arxiv": "2505.23487",
+   "journal": "arXiv:2505.23487 (2025); no journal reference on the arXiv record as of 2026-09-16",
+   "title": "Factorized QED and QCD Contribution to Deeply Inelastic Scattering",
+   "authors": [
+    "Justin Cammarota",
+    "Jian-Wei Qiu",
+    "Kazuhiro Watanabe",
+    "Jia-Yue Zhang"
+   ],
+   "year": 2025,
+   "keywords": [
+    "joint QED QCD factorization",
+    "NLO",
+    "lepton distribution functions",
+    "infrared safe",
+    "DIS"
+   ],
+   "key_content": [
+    "Abstract: the first calculation of NLO factorized QED and QCD contributions to the short-distance hard coefficients of inclusive DIS in a joint factorization approach; QED radiation from all charged leptons and quarks treated equally, collinear sensitivities factorized into universal lepton and parton distributions; the NLO factorized QED contribution is shown to be infrared safe and calculable with no parameter beyond the factorization scale.",
+    "The current state of liu2021-factorized-rc's programme."
+   ],
+   "used_in": [
+    "docs/references/01_radiative.md"
+   ],
+   "repo_usage_note": "Cite-only today; the frame in which a future EIC radiative treatment will most likely be stated, if the project ever moves from a band to a correction."
+  },
+  "cfns2020-rc-whitepaper": {
+   "file": "refs/2012.09970.pdf",
+   "arxiv": "2012.09970",
+   "journal": "arXiv:2012.09970 (2020); CFNS ad-hoc meeting whitepaper, input to the EIC Yellow Report process",
+   "title": "CFNS Ad-Hoc meeting on Radiative Corrections Whitepaper",
+   "authors": [
+    "A. Afanasev",
+    "J. Ahmed",
+    "I. Akushevich",
+    "J. C. Bernauer",
+    "P. G. Blunden",
+    "A. Bressan",
+    "D. Byer",
+    "E. Cline",
+    "M. Diefenthaler",
+    "J. M. Friedrich",
+    "H. Gao",
+    "A. Ilyichev",
+    "et al."
+   ],
+   "year": 2020,
+   "keywords": [
+    "EIC",
+    "radiative corrections",
+    "systematics",
+    "whitepaper",
+    "community"
+   ],
+   "key_content": [
+    "Abstract: current precision scattering experiments, and more so those planned for the EIC, will be limited by systematics, of which the correct treatment of radiative effects is a fundamental theory-side source; the community met at CFNS/Stony Brook to gauge the state of technique and give input to the Yellow Report process.",
+    "21.7 MB - the largest file the radiative domain added; drop it if the sibling repo's size policy bites. Largely superseded by afanasev2023-rc-review."
+   ],
+   "used_in": [
+    "docs/references/01_radiative.md"
+   ],
+   "repo_usage_note": "The document that frames RC as a systematics limitation for the EIC rather than a calculational exercise - the framing this project's band adopts."
+  },
+  "stein1975-slac-4deg": {
+   "file": "refs/SLAC-PUB-1528.pdf",
+   "arxiv": null,
+   "journal": "Phys. Rev. D 12 (1975) 1884 (DOI 10.1103/PhysRevD.12.1884), paywalled; free preprint SLAC-PUB-1528 (January 1975) via INSPIRE recid 100597",
+   "title": "Electron Scattering at 4 Degrees with Energies of 4.5-20 GeV",
+   "authors": [
+    "S. Stein",
+    "W. B. Atwood",
+    "E. D. Bloom",
+    "R. L. A. Cottrell",
+    "H. DeStaebler",
+    "C. L. Jordan",
+    "H. G. Piel",
+    "C. Y. Prescott",
+    "R. Siemann",
+    "R. E. Taylor"
+   ],
+   "year": 1975,
+   "keywords": [
+    "radiative tail",
+    "quasi-elastic tail",
+    "elastic tail",
+    "inclusive electron scattering",
+    "unfolding",
+    "Fermi smearing",
+    "Mo-Tsai recipe"
+   ],
+   "key_content": [
+    "Free fulltext verified 2026-09-16 at https://inspirehep.net/files/3b475998b3e06e92047bc4d758c8f0be (content-disposition slac-pub-1528.pdf, 5 628 589 B); title page read: 'SLAC-PUB-1528, January 1975, ELECTRON SCATTERING AT 4 DEG WITH ENERGIES OF 4.5 - 20 GeV'.",
+    "Its appendices carry the working recipe for the ELASTIC and QUASI-ELASTIC radiative tails of inclusive electron-nucleus scattering built on Mo-Tsai: how each is unfolded in practice, with the nuclear form-factor and Fermi-smearing inputs spelled out.",
+    "It is HERMES's reference [12], paired with Abbott, as the source of the tail parametrizations for their b1 measurement (hep-ex/0506018 reference list, read 2026-09-16)."
+   ],
+   "used_in": [
+    "docs/references/01_radiative.md",
+    "include/lipolgen/rc.hpp (polrad_sigma_qe_u, ll_peaks_qe, pauli_suppression, RC_QE_KF_GEV)"
+   ],
+   "url": "https://doi.org/10.1103/PhysRevD.12.1884",
+   "repo_usage_note": "The reference implementation of the object polrad_sigma_qe_u + ll_peaks_qe + pauli_suppression collectively are. The tree derives that object from POLRAD Eq. (44) alone and prices qe_kf_gev / qe_suppression as 'the tail's dominant knobs' with no external recipe to compare against."
+  },
+  "moniz1971-fermi-momenta": {
+   "file": null,
+   "arxiv": null,
+   "journal": "Phys. Rev. Lett. 26 (1971) 445 (DOI 10.1103/PhysRevLett.26.445); INSPIRE recid 67648. No free copy located",
+   "title": "Nuclear Fermi momenta from quasielastic electron scattering",
+   "authors": [
+    "E. J. Moniz",
+    "I. Sick",
+    "R. R. Whitney",
+    "J. R. Ficenec",
+    "R. D. Kephart",
+    "W. P. Trower"
+   ],
+   "year": 1971,
+   "keywords": [
+    "Fermi momentum",
+    "k_F",
+    "quasielastic electron scattering",
+    "Fermi gas",
+    "6Li",
+    "Pauli suppression"
+   ],
+   "key_content": [
+    "The quasi-elastic e-A scaling fit from which k_F values for light and heavy nuclei are quoted; source of RC_QE_KF_GEV = 0.169 GeV for 6Li in include/lipolgen/rc.hpp (POLRAD's own target block carries 0.221 for C and 0.164 for 3He, adgh:696-714).",
+    "NOT verified line-by-line in this pass: the paper is paywalled and the 0.169 was not read off its table. Before the next time 0.169 is quoted with three digits, read the table."
+   ],
+   "used_in": [
+    "docs/references/01_radiative.md",
+    "include/lipolgen/rc.hpp RC_QE_KF_GEV",
+    "docs/PHYSICS_CHANNELS.md [Moniz71]"
+   ],
+   "url": "https://doi.org/10.1103/PhysRevLett.26.445",
+   "repo_usage_note": "rc.hpp: 'It is RcOptions::qe_kf_gev's default and drives the de Forest-Walecka Pauli suppression S(q) of the QUASI-ELASTIC tail -- which is NOT a small choice: the t-peak reaches down to t_min ~ (x M_N)^2, so at x <= 0.1 most of the QRT integral sits below 2 k_F.'"
+  },
+  "deforest-walecka1966": {
+   "file": null,
+   "arxiv": null,
+   "journal": "Adv. Phys. 15 (1966) 1 (DOI 10.1080/00018736600101254); INSPIRE recid 50061. No free copy located",
+   "title": "Electron scattering and nuclear structure",
+   "authors": [
+    "T. de Forest Jr.",
+    "J. D. Walecka"
+   ],
+   "year": 1966,
+   "keywords": [
+    "Pauli suppression",
+    "Fermi gas",
+    "quasi-elastic",
+    "electron scattering",
+    "nuclear structure",
+    "S(q)"
+   ],
+   "key_content": [
+    "The source of the Fermi-gas Pauli suppression factor S(q) = (3/4)u - u^3/16 for u = q/k_F < 2, else 1, implemented as pauli_suppression in include/lipolgen/rc.hpp.",
+    "NOT verified line-by-line in this pass: paywalled at Taylor & Francis, no free copy located."
+   ],
+   "used_in": [
+    "docs/references/01_radiative.md",
+    "include/lipolgen/rc.hpp pauli_suppression",
+    "docs/PHYSICS_CHANNELS.md [dFW66]"
+   ],
+   "url": "https://doi.org/10.1080/00018736600101254",
+   "repo_usage_note": "PHYSICS_CHANNELS.md lists [dFW66] with 'no id recorded'; the identification as Adv. Phys. 15 (1966) 1 is confirmed by INSPIRE recid 50061 (title and authors match)."
+  },
+  "polrad-cpc-library-adgh": {
+   "file": null,
+   "arxiv": null,
+   "journal": "CPC Program Library catalogue entry ADGH_v1_0 (POLRAD 2.0 FORTRAN source), distributed with Comput. Phys. Commun. 104 (1997) 201",
+   "title": "POLRAD 2.0 program library entry (ADGH_v1_0)",
+   "authors": [
+    "I. Akushevich",
+    "A. Ilyichev",
+    "N. Shumeiko",
+    "A. Soroko",
+    "A. Tolkachev"
+   ],
+   "year": 1997,
+   "keywords": [
+    "CPC Program Library",
+    "ADGH",
+    "FORTRAN source",
+    "PATCHY",
+    "polrad20.cra",
+    "apptai",
+    "elu",
+    "elp",
+    "elq"
+   ],
+   "key_content": [
+    "The old CPC Program Library summary host cpc.cs.qub.ac.uk/summaries/ADGH_v1_0.html DOES NOT RESOLVE (checked 2026-09-16); the Elsevier CPC Program Library has moved to Mendeley Data. The catalogue identifier ADGH_v1_0 is still correct.",
+    "docs/open_items/run_2026-09-02/polrad_transcription_check.md records that the tree already holds the FORTRAN (decks apptai, elu, elp, elq under the PATCHY switch approx; steering file polrad20.cra) and that the DEFAULT build does not compile the t-peak closed forms at all - it uses the exact Eq. (18) + Appendix-B path.",
+    "The catalogue id in the tree was corrected from ADXQ to ADGH_v1_0 in that check."
+   ],
+   "used_in": [
+    "docs/references/01_radiative.md",
+    "docs/open_items/run_2026-09-02/polrad_transcription_check.md"
+   ],
+   "repo_usage_note": "The authoritative artifact for the sector: the paper's Appendix B is wrong in five places against this source."
+  }
+ }
+}

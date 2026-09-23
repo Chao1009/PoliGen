@@ -51,7 +51,7 @@ is measured, and no number here stands without the window it was measured in.**
 | `--rc-tail-model {t-peak,t-peak+ll,polrad-full}` | `t-peak`, bit for bit | POLRAD's t-peak; **`t-peak+ll`** adds the leading-log s-/p-peaks; **`polrad-full`** (2026-09-06) is the exact Eq. (18) + Appendix B + Eq. (A.4) tail | the two t-peak edges agree to **+0.62 % event-weighted at the CLI default P_z = 0.7** (8.719649e−03 → 8.773752e−03, 5194 of 200 000 events, seed 1234; **+0.61 %** / 5182 at P_z = 0, the fill both suites use) in the Q² ≥ 20 GeV², y ≤ 0.9 window, and disagree **per cell**: 331 of 1356 accepted cells (24.4 %) by > 1 %, worst ×6444 at x = 0.7943, y = 0.0088. **The pair is a price range, not a bracket**: the exact `polrad-full` tail lies **outside both edges on 1326 of 3051 accepted cells (43.5 %)** and above both in that window (8.815031e−03, +1.09 %) |
 | `--r-source {unset,sigma-lt,r1998}` | `unset`, bit for bit by construction | ONE R = σ_L/σ_T hook threaded through `default_inclusive_kernel` into both `Li6ConvolutionOptions::r_func` and `InclusiveKernel::Options::r_func`, so the tensor weight's numerator and denominator cannot disagree | registry **row 3**, priced not decided. `unset` does not enter the branch; `sigma-lt` is measured byte-identical (hence `not-read`); `r1998` moves K/D_φ — and A_zz with it — by **−3.8357 % / +26.3988 % / +3.3518 %** at x = 0.05 / 0.10 / 0.30, y = 0.5, Q² = 2.5, and moves the unpolarised rate (σ_pb **−0.684681 %**), which the numerator-only option cannot |
 | `--rc-sp-tensor-scale` | **0**, and refused unless `--rc-tail-model t-peak+ll` | the tensor fraction of the leading-log s-/p-peaks, which `t-peak+ll` otherwise adds to the **unpolarised** numerator alone | **a bound with no derivation, and EMPTY where it matters**: at the three standard points (x = 0.01 / 0.10 / 0.30, Q² = 5) ΔA_zz moves by exactly 0 at scale 0, 0.5 and 1 — **0.0 % of the collapse recovered**. It bites on 77 of 3051 accepted cells and recovers **at most 21.72 %** anywhere. Exactly linear, so one run rescales |
-| `--rc-c0-shape {ho,vmc-ft}` | `ho`, bit for bit | the j₀ transform of the committed ANL VMC ⁶Li point-proton density at the same ⟨r²⟩ | the ⁶Li C0 shape is a **band**, and both the sign and the magnitude are band edges: σ^el_T/σ^el_U at x = 0.10, Q² = 5 is **+9.357e−04 on `ho`** and **−2.442e−04 on `vmc-ft`** — a factor **68** resp. **≈ 260** below POLRAD's own deuteron value +0.064, with the SIGN flipping between the edges, so the published sign is withdrawn |
+| `--rc-c0-shape {ho,vmc-ft}` | `ho`, bit for bit | the j₀ transform of the committed ANL VMC ⁶Li point-proton density at the same ⟨r²⟩ | the ⁶Li C0 shape is a **band**, and both the sign and the magnitude are band edges: σ^el_T/σ^el_U at x = 0.10, Q² = 5 is **+9.357e−04 on `ho`** and **−2.442e−04 on `vmc-ft`** — a factor **67** resp. **≈ 255** below POLRAD's own deuteron value +0.062 (re-driven 2026-09-23; was 68 / ≈ 260 / +0.064), with the SIGN flipping between the edges, so the published sign is withdrawn |
 | `--b1-model {miller,cdks,li6-convolution}` | `miller`, bit for bit | the four-term α–d convolution for b₁(⁶Li) | opt-in and **band-mandatory** (`--b1-band-scale` 0/1/2); the ±100 % band comes from Q(⁶Li) vs Q_d, not from the A = 2 gate, so it stays after the gate passes |
 | `--b1-unpol {toy,mstw,ct18nlo}` | `toy` | MSTW2008 LO — CDKS's own PDF — read from the grid PYTHIA already ships | this is the selector that **emits the gate's passing configuration**: G3b **0.843243** at CDKS Eq. (21), inside [0.5, 2], against **0.440** on the shipped `toy`, outside it. Needs the optional PYTHIA tier and is refused, never silently downgraded, without it |
 | `--unpol-sf {toy,mstw,ct18nlo}` | `toy`, bit for bit | one unpolarised structure-function backend for **every** kernel the run builds, the tagged struck-cluster kernel included | cost of having been on the toy, ⁶Li at config 1: accepted σ **×0.7985** (ct18nlo) / **×0.7934** (mstw), run-level A_zz ×1.2524 / ×1.2604 |
@@ -119,11 +119,11 @@ or through `--config-file` — is refused rather than silently resolved).
   phase, so read them off the gates and not off this line.
 - Kernel, ρ-moments, tagged densities, spectator boosts, coherent scenario and
   bookkeeping agree with `polligen` (run 16, tensor sign to the literature
-  convention) at **rtol 1e-12** against `validation/reference/*.json` — with
-  one deliberate exception since 2026-09-06: the two spin-1 `model` blocks of
-  `validation/reference/tagged.json` are dumped from **this** library, because
-  `polligen`'s `tagged._amp2_table` carries the S–D interference bug fixed
-  below and cannot be the reference for it (`validation/README.md`).
+  convention) at **rtol 1e-12** against `validation/reference/*.json` — every table, `tagged.json` included:
+  from 2026-09-06 to 2026-09-23 its two spin-1 `model` blocks were dumped from **this** library while `polligen`'s
+  `tagged._amp2_table` still carried the S–D interference bug fixed below; `polligen` took the same fix (PolarizedLithiumSim
+  `1066555`) and the file is `polligen`'s again (`validation/README.md`). (`b1_default_li6.json` there is not a `polligen`
+  table: it is a self-pin of this library's own C++, a regression guard — its `provenance` key says so.)
 - External anchors reproduced: Cosyn Eq. 27, **Cosyn–Weiss deuteron Eq. (6.12)
   and TABLE II**, Cosyn 2025 Table 1 finite-γ rows, ⁷Li ⟨P₂⟩ = −T/5,
   P_p = 0.866.
@@ -173,8 +173,8 @@ sector, **exactly zero**, saying so since phase D in the run banner and in
 decision row 20. Each item's state — closed, answered as a band, opt-in
 shipped, deferred with design, or an author decision — is the board at the top
 of that file, with the deciding number and its window.
-Row 11's coherent-⁶Li amplitude on-ramp gained the eSTARlight unpolarized
-baseline (`docs/open_items/run_2026-09-02/estarlight_li6.md`) and the polarized
+Row 11's coherent-⁶Li amplitude on-ramp gained the eSTARlight unpolarized exclusive-VM rate
+scale (`docs/open_items/run_2026-09-02/estarlight_li6.md`) and the polarized
 α+d configuration sampler (`cluster_config.hpp`, console script
 `lipolgen-configs`), and 2026-09-04 an answer: the ⁶Li tensor a₂ is
 **marginally measurable** in coherent J/ψ at one EIC year — S = **2.63 σ**
@@ -326,6 +326,17 @@ six-body VMC 0.848;
 `EmcBaseline::Epps21`; γ-matched beam energies (⁶Li 40.8 / 99.5 / 137.5,
 ⁷Li 40.8 / 99.5 / 117.9 GeV/u); counter-based RNG keyed by (seed, run, bunch,
 event) — identical output for any thread count.
+
+## Benchmarks
+
+The plan is `docs/benchmarking/BENCHMARK_PLAN.md`; its §4 table carries each
+row's status. The harnesses live in `validation/benchmarks/` (one file per row,
+reference tables vendored under `data/` with their provenance; conventions and
+the full list with verdicts and runtimes in `validation/benchmarks/README.md`)
+and run under pytest as `python/tests/test_bench_*.py`. Every row costs
+under 30 s today, so all of them run by default; a row that costs more is to
+run only with `LIPOLGEN_BENCH=1` — a convention only: no row needs it yet and no test reads the variable. A harness that disagrees with the tree is
+recorded, never tuned. As of 2026-09-23: 3 pass, 2 fail (recorded), 3 blocked.
 
 ## Citing
 

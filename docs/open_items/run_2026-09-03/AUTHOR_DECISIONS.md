@@ -134,7 +134,7 @@ sign) favours −1.
 **(d)** Not a run measurement — it is exact: +1 flips the sign of every tensor
 asymmetry and every tensor weight in every channel, and every rtol-1e−12
 reference carrying a tensor entry (`validation/reference/{xsec,b1_default_li6,
-tagged,spin,bookkeeping}.json` all mention b₁/A_zz/tensor). Nothing this run
+tagged,spin,bookkeeping}.json` all mention b₁/A_zz/tensor; the `b1_default_li6` one is a self-pin of LiPolGen's own C++, not a polligen reference). Nothing this run
 published depends on the sign being *re*-decided; everything depends on it
 staying.
 
@@ -160,6 +160,17 @@ by exactly this factor. The run's verdict: **likely per deuteron, not
 certain**. What would settle it: Miller, or his Eq. (20) at x = 0.012
 (10.5 × 10⁻² ⇒ per nucleon; 5.25 × 10⁻² ⇒ per deuteron), which needs a pion
 PDF set the tree does not have.
+
+> **Priced against data 2026-09-23** (`../run_2026-09-23/phase_B1_spin_deuteron.md` §3, `validation/benchmarks/t2_hermes_b1_table2.py`, no tuning; re-run 2026-09-23 by the Documents stage with the same output): against HERMES Table II (six bins, stat ⊕ syst), keep 0.5 gives χ²(b₁ᵈ) = 5.262/6 (4 bins within 1σ), drop it 5.297/6 (5 within); χ²(A_zzᵈ, F₁ rebuilt with MSTW + R1990) = 5.550 vs 4.514 (R1998: 5.410 vs 4.587); b₁ = 0 gives 21.80. At x = 0.012 the two options read 5.71 and 11.43 (×10⁻²) against HERMES 11.20 ± 6.17. **HERMES does not decide this row** (Δχ² = +0.035 on b₁), and Miller's P₆q was tuned to a HERMES point, so neither χ² is an independent test.
+>
+> | configuration | χ²(b₁ᵈ)/6 | bins within 1σ | χ²(A_zzᵈ)/6 (R1990; R1998) | bins within |
+> |---|---|---|---|---|
+> | `MillerB1` shipped (×0.5 — keep) | 5.262 | 4/6 | 5.550; 5.410 | 4/6 |
+> | Miller ×1 (drop the 0.5) | 5.297 | 5/6 | 4.514; 4.587 | 5/6 |
+> | `DeuteronConvolutionB1` + `MstwSF` (the A = 2 gate's configuration) | 22.264 | 2/6 | 22.009; 22.008 | 2/6 |
+> | b₁ = 0 (baseline, not a model) | 21.799 | 2/6 | 21.586; 21.586 | 2/6 |
+>
+> The status label does not move: *likely, not certain*, keep 0.5.
 
 **(d)** Keep: nothing moves. Drop the 0.5: **every `MillerB1` number doubles,
 exactly** — the DEFAULT inclusive tensor rate, A_zz on the default `--b1-model
@@ -485,7 +496,7 @@ built from; `fdeut.av18` prints no MC errors, so the AV18 row carries no band;
 > blocks were **deliberately re-pinned on 2026-09-06** from this library
 > rather than from `polligen` (whose `_amp2_table` carries the S–D sign bug),
 > so "the reference pins it" is now a statement about a file this project
-> generates, not an external port gate. That leg is **weaker** than it was.
+> generates, not an external port gate. That leg is **weaker** than it was. (2026-09-23: back to an external port gate — `tagged.json` is again `polligen`'s in every block. The row stays open.)
 > Legs (3) *no MC errors* and (4) *the analytic family* are untouched. **The
 > row stays open**; what changed is the evidence, not a decision.
 
@@ -873,6 +884,8 @@ checked POLRAD-internally and against the leading-log fallback only. It costs
 > census is P_z-free — measured identical on both plans. The decision this
 > paragraph asks for is unchanged: no default moved.
 
+> **2026-09-23 — the ⁶Li C0 zero priced against data (`OPEN_ITEMS_SOLUTIONS.md` open item Q1; filed here because §B15's `c0_shape` is its nearest relative — NO registry row names `LI6_FF_HO_*` or Q1, measured by `grep`, and none is created here).** `validation/benchmarks/t3_li6_charge_ff_fb.py` (`../run_2026-09-23/phase_B2_nuclear.md` §3): the shipped `HoSpin1FF` C0 zero q₀ = **3.0998 fm⁻¹** lies **+0.2713 fm⁻¹ (+9.6 %)** above the band [2.6944 (UVa Fourier–Bessel zero), 2.8284 (Li *et al.* 1971 \|F_L\|² minimum)] fm⁻¹ — a recorded FAIL; T11's [2.9, 3.3] window does not reach the band (gap 0.072 fm⁻¹) and was not moved. Inside the model the C2 fill-in cannot close it (C2 shares the C0 monopole, so the model's \|F_L\|² minimum is q₀ to 1.7e−11); only Coulomb distortion, not computed, remains. **What adopting the FB shape would move** (a scratch `Spin1ElasticFF` subclass, never in the tree; F_q scaled with F_c, F_m shipped; every `ho` entry reproduces §B1.5 to every printed digit), Q² = 5: (1/6)σ^el_T/σ^el_U at x = 0.01 / 0.03 / 0.10 / 0.30 goes **−5.094e−04 / −7.358e−04 / +1.560e−04 / +1.329e−02** (`ho`) → **−5.613e−04 / −8.263e−04 / −8.167e−05 / +1.574e−02** (FB), against `vmc-ft`'s −5.470e−04 / −8.043e−04 / −4.070e−05 / +1.556e−02 — **the data-derived shape lies OUTSIDE the [ho, vmc-ft] band at every one of these points**, and it lands on the NEGATIVE side of the x = 0.10 sign question (it does not settle it: the FB row's provenance is UNVERIFIED). σ^el_U moves ×1.019 / ×1.038 / ×1.152 / ×3.532. ΔA_zz from the whole tail moves −1.770e−07 → −2.241e−07 (x = 0.01), +2.127e−09 → +2.033e−09 (0.10), +5.130e−12 → +1.093e−11 (0.30) — at most 2.2e−07 absolute, three orders below the 4.4e−04 band half-width, so the tail stays *not the leading RC systematic*. **As an option for this section's `c0_shape` (b):** a third C0 edge `fb` (the UVa row, R = 6.0 fm) — costs a new `Spin1ElasticFF` class, a vendored-row provenance still unverified, and every `--rc` tensor-fraction number at x ≥ 0.1 moving outside today's band; nothing at the CLI default moves (`--rc` is opt-in). **Not applied; no label moved.**
+
 **(e)** Per knob: its default line in `rc.hpp:431/1070/1079/1096/1189`
 (those five line numbers are as of the 2026-09-03 tree and have since shifted
 — `rc.hpp` grew from **1581 lines at `cdd8591`** to 1788 in the working tree of that day over the 2026-09-06 B3 and B1 edits, and stands at **2154 as committed at `af3f415`** (`wc -l`, re-measured 2026-09-15; "HEAD to working tree" named no commit and went false the same week) —
@@ -1249,6 +1262,8 @@ differently once one of its factors is bounded above.
 sentences are already in the tree at the three sites above and are not
 contingent on this row.
 
+> **2026-09-23 — two wording corrections to the draft, requested by the benchmark run and NOT applied** (the draft is outward-facing; it is the author's). (1) **G-17** (`../run_2026-09-23/phase_B2_nuclear.md` §8): the draft's "anchored on the *measured* asymptotic α–d D/S ratio η = −0.025 ± 0.006 ± 0.010, George & Knutson" → "anchored on the asymptotic α–d D/S ratio η = −0.025 ± 0.006 ± 0.010 from George & Knutson's restricted phase-shift analysis" — the paper's title says it is a restricted phase-shift analysis, not a measurement of d + α tensor analysing powers, and η is exactly linear in the quadrupole dial, so it is a consistency band on that dial. The record names the site at the draft's lines 102-104 (anchor read 2026-09-23 "anchored on the *measured*"); the letter body repeats the claim at its line 531 (anchor read 2026-09-23 "dial anchored on the measured asymptotic D/S ratio"), which the record did not list. (2) `mantysaari_collaboration_draft.md:67` (`../run_2026-09-23/phase_B3_chain_rc.md` §6.2): "An unpolarized coherent-rate baseline that IS citable" → "An unpolarized exclusive-VM coherent-rate scale that IS citable" — 85.2 % (J/ψ), 95.4 % (φ), 97.2 % (ρ) of eSTARlight's rate is at Q² < 0.1 GeV², where `coherent.hpp` generates nothing. Outside the letter, every live site a grep finds carries both corrections as of 2026-09-23 — the last of them only after the run's fix stage (George–Knutson: `tests/test_cluster_config.cpp` comments at T22b/T23, `docs/PHYSICS_CHANNELS.md` §13's Good–Walker item, `OPEN_ITEMS_SOLUTIONS.md` §11.2 and §11.3b, `python/lipolgen/configs.py`; eSTARlight: `docs/PHYSICS_CHANNELS.md` §13's eSTARlight item, `docs/benchmarking/00_in_tree_checks.md` §8, `docs/benchmarking/01_generators.md` §4, `docs/references/00_corpus.md`, `docs/references/01_generators-chain.md`, `docs/open_items/physics_literature.md`, the `estarlight_li6_coherent` docstring in `python/bindings.cpp`). Not changed: the dated records, which carry an adjacent dated note for George–Knutson (`run_2026-09-02/design_G_cluster_config.md`, `run_2026-09-02/phase_G_numbers.md`, `run_2026-09-03/phase_C_numbers.md`, `run_2026-09-03/PLAN.md`) and none for eSTARlight (`run_2026-09-02/estarlight_li6.md`'s title, `run_2026-09-02/STATUS.md`, left as written on their date); the TEST_CASE name "the eSTARlight 6Li baseline" in `tests/test_coherent.cpp` (its comment carries the scope); and `06_critic.md`'s D-4 row label, which names the entry it critiques. Nothing else in the letter moves, and nothing has been sent. The row's options (i)–(iii) are unchanged; a send under (i) or (ii) would carry the two sentences as they stand unless the author applies them.
+
 ---
 
 ### B26. The MSTW rows still tallied as PASSED when the grid is absent — split T16/T17 out, or leave them (`STATUS.md` decision **row 25**, added 2026-09-05)
@@ -1300,6 +1315,8 @@ being an external port gate for those two blocks; (ii) restore `polligen`'s
 blocks as a **known-wrong port gate under an `xfail`** that names the bug — an alternative OVERTAKEN on 2026-09-15: the sibling fixed its own phase (commit `1066555`), so the polligen port gate can simply be RESTORED with no `xfail`, the fixed polligen agreeing with the re-pin at 2e-13 (re-measured 2026-09-16) —
 keeping the external gate at the cost of a permanently failing pin.
 
+> **2026-09-23 — (a2) overtaken in the tree:** the carry-through was removed and `tagged.json` is dumped from `polligen` in every block again (provenance `"polligen"`, the fix commit `1066555` named); the two blocks moved by ≤ 1.33e−13 / 2.28e−13 relative. (a2)(i)'s "`tagged.json` stops being an external port gate" no longer holds, and (a1)(ii) now also costs a failing `polligen` port gate. The row stays *applied — confirm or revert* for (a1). `../run_2026-09-23/phase_A_port_gate.md`.
+
 **(c)** The run calls (a1) **certain**, on three independent derivations
 (`07_cw_sign_investigation.md`). The Cosyn–Weiss Eq. (6.12) identity
 A_zz^wf = [(2 f₀ + f₂/√2)(f₂/√2)/(f₀² + f₂²)](1 − 3 cos²θ_k) holds to
@@ -1326,13 +1343,13 @@ max-entropy ladder) the ⁶Li Hulthén tag-fraction prediction goes
 byte-identical on two seeds; P_D (a norm, phase-blind); the four dilutions to
 ≤ 1.4e−6 absolute (angle-integrated, so ∫Θ₀Θ₂ dc = 0 kills the cross term and
 only the 96-cell quadrature residual survives); `LI6_CLUSTER_POLARIZATION`
-(§B6, checked). **Reference files:** `b1_default_li6`, `beams`, `bookkeeping`,
+(§B6, checked). **Reference files:** `b1_default_li6` (a self-pin of LiPolGen's own C++, not a polligen reference), `beams`, `bookkeeping`,
 `coherent`, `spectator`, `spin`, `xsec` all sha256-identical to `a94fd6e`;
 `tagged.json` differs **only** in `channels/deuteron/model` and
 `channels/li6_alpha/model` (8 fields each — e.g. deuteron `vector_dilution`
 0.932494769105 → 0.932496109312) plus two added provenance keys, with the
 `li7_alpha` block and every non-`model` part identical; `_manifest.json`
-differs in the one `tagged.json` provenance line. **The brief's expectation
+differs in the one `tagged.json` provenance line. (Since 2026-09-23 `_manifest.json` is byte-identical to `a94fd6e` again and `tagged.json` differs from it only in the two spin-1 model blocks and the two provenance keys; the same day `b1_default_li6.json` gained a `provenance` label, whole-file sha256 `d7bd8ce6…` → `8373db8e…` with every numeric block byte-identical — `../run_2026-09-23/phase_B3_chain_rc.md` §4.) **The brief's expectation
 `validation/reference/` byte-identical to `a94fd6e` must therefore be read as
 byte-identical EXCEPT those two `model` blocks and the manifest line, by this
 row.** **Cost of (a1)(ii):** restores a sign the run calls refuted at blocker
@@ -1345,11 +1362,11 @@ only because it is told to expect failure.
 `src/core/tagged.cpp` `build_amp2`, the five re-pinned test sites listed in
 `../run_2026-09-06/phase_CW_numbers.md` §9, and a re-dump of `tagged.json`.
 Revert (a2) alone: re-run `validation/dump_polligen_reference.py` for those two
-blocks and mark the resulting pin `xfail` with the bug named.
+blocks and mark the resulting pin `xfail` with the bug named. (Moot since 2026-09-23: the restored `polligen` blocks carry the fix, so there is nothing to `xfail`.)
 
 ### B28. `PolarizedLithiumSim`'s published A_zz^tag numbers carry the same inverted sign (`STATUS.md` decision **row 27**, added 2026-09-15; `../run_2026-09-06/STATUS.md` CANDIDATE section)
 
-> **ANSWERED IN THE SIBLING (2026-09-15 19:50, its commit `1066555`, author Chao Peng — not this run):** `evgen/polligen/tagged.py` now applies the relative phase (−1)^(L//2), the AV18 deuteron control gate was added, money plot 4 was regenerated (90° curve −0.482 → +0.922; folded +0.491 → −0.843; `evgen/README.md:117` now reads "the folded A_zz reads −0.84"), and the sibling's commit records agreement with LiPolGen's re-pinned reference tables at 2e-13 — re-measured here 2026-09-16 against the sibling at fe1e58e: worst relative difference 1.33e-13 (li6_alpha) / 2.28e-13 (deuteron) between the fixed polligen's model blocks and LiPolGen's re-pinned `tagged.json`, inside the C++ gate's rtol 1e-12. The "+0.49 … −0.48" text quoted below exists only at the pre-fix commit 2a27972.
+> **ANSWERED IN THE SIBLING (2026-09-15 19:50, its commit `1066555`, author Chao Peng — not this run):** `evgen/polligen/tagged.py` now applies the relative phase (−1)^(L//2), the AV18 deuteron control gate was added, money plot 4 was regenerated (90° curve −0.482 → +0.922; folded +0.491 → −0.843; `evgen/README.md:117` now reads "the folded A_zz reads −0.84"), and the sibling's commit records agreement with LiPolGen's re-pinned reference tables at 2e-13 — re-measured here 2026-09-16 against the sibling at fe1e58e: worst relative difference 1.33e-13 (li6_alpha) / 2.28e-13 (deuteron) between the fixed polligen's model blocks and LiPolGen's re-pinned `tagged.json`, inside the C++ gate's rtol 1e-12. The "+0.49 … −0.48" text quoted below exists only at the pre-fix commit 2a27972. On 2026-09-23 that agreement was used: `tagged.json`'s port gate against `polligen` was restored in every block (`../run_2026-09-23/phase_A_port_gate.md`, re-measured at the sibling's `c0f86a8`: the same 1.33e−13 / 2.28e−13).
 
 **(a)** *(as it stood 2026-09-15 before the sibling's fix)* The sibling repository's `tagged.py:247` built its amplitude the way
 this library did before `a7b3d18`, so its published A_zz^tag numbers — and the

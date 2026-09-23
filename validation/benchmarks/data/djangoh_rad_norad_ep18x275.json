@@ -1,0 +1,52 @@
+{
+ "_note": "Vendored FACTS (eight published cross-section numbers and the run settings that produced them), quoted with attribution; see licence below.",
+ "name": "DJANGOH 4.6.21 Rad=1 / Rad=0 NC e-p 18x275 four-Q2-bin cross sections",
+ "provenance": {
+  "source_table": "https://github.com/eic/InclusiveDjangohSamples/blob/9869d9a0d21b9191a1bbec7294b4851feb5ee20a/README.md",
+  "source_raw": "https://raw.githubusercontent.com/eic/InclusiveDjangohSamples/9869d9a0d21b9191a1bbec7294b4851feb5ee20a/README.md",
+  "repository_commit": "9869d9a0d21b9191a1bbec7294b4851feb5ee20a (main, committed 2025-12-07T21:57:32Z, 'Upload script that \"repairs\" djangoh hepmc files')",
+  "readme_sha256": "19445e90bf06244c50b88634196e111df1ce0a5e8bffc2bd5838f5958caca132",
+  "readme_bytes": 698,
+  "readme_statement": "All samples are produced with Djangoh Version 4.6.21. ... The cross sections are not recorded in the log files. The cross sections as recorded in the output files for each sample are [the table below].",
+  "date_fetched": "2026-09-23",
+  "fetched_by": "curl -sS https://raw.githubusercontent.com/eic/InclusiveDjangohSamples/main/README.md (main resolved to the commit above via https://api.github.com/repos/eic/InclusiveDjangohSamples/commits/main); the eight metadata/*.log and the runcards/*.in quoted below fetched from the same commit with curl on the same date",
+  "licence": "NONE STATED: the GitHub API reports license = null for eic/InclusiveDjangohSamples and no LICENSE file exists at the pinned commit. Only the eight numbers and the run settings are reproduced here (facts, with attribution); no file of that repository is copied.",
+  "producer": "ePIC / EIC production (the same samples are on root://dtn-eic.jlab.org//volatile/eic/EPIC/EVGEN/DIS/DJANGOH4.6.21-1.0/NC/{Rad,noRad}/ep/18x275/, docs/benchmarking/05_chain.md sec. 2.3; the store itself was NOT read by this vendoring, because the four numbers were already quoted in the tree, docs/benchmarking/01_generators.md sec. 2.4)",
+  "papers": [
+   "A. Kwiatkowski, H. Spiesberger, H.-J. Moehring, 'HERACLES: an event generator for ep interactions at HERA energies including radiative processes', Comput. Phys. Commun. 69 (1992) 155",
+   "K. Charchula, G. A. Schuler, H. Spiesberger, 'Combined QED and QCD radiative effects in deep inelastic lepton-proton scattering: the Monte Carlo generator DJANGO6', Comput. Phys. Commun. 81 (1994) 381",
+   "H. Spiesberger, 'HERACLES and DJANGOH: Event Generation of ep Interactions at HERA Including Radiative Processes', manual MZ-TH/05-15 (DJANGOH 1.6 / HERACLES 4.6.6, 2005), https://raw.githubusercontent.com/eic/documents/master/software/general/Djangoh_m.pdf (196 416 B, fetched 2026-09-23) -- sec. 3.1.1 defines INT-OPT-NC and KINEM-CUTS as quoted below"
+  ]
+ },
+ "run_settings": {
+  "beams": "e- 18 GeV (EL-BEAM 18D0 0.0D0 -1, unpolarised) x p 275 GeV (PR-BEAM 275D0 0.0D0, unpolarised); NUCLEUS 275D0 1.0D0 1.0D0 (A = Z = 1)",
+  "s_gev2": 19800.0,
+  "kinem_cuts": "ICUT = 3: 1e-5 <= x_l <= 1, 1e-4 <= y_l <= 1, Q2 bin edges on Q2_l, W_h >= 3.0 GeV (manual: cuts on the LEPTONIC variables x_l, y_l, Q2_l and on the hadronic final-state mass)",
+  "structure_functions": "STRUCTFUNC 0 2 10150 = LHAPDF5 set 10150, CTEQ6.1M central (the logs load cteq61.LHgrid member 0); LO",
+  "rad_1": "GSW-PARAM 2 1 3 1 1 1 2 1 1 1 1; INT-OPT-NC 1 18 18 18 18 0 0 0 0, i.e. INC2 = 1 (non-radiative incl. virtual + soft), INC31..INC34 = 18 (initial-state lepton, final-state lepton, Compton, quark-line radiation -- INC34 'not active in DJANGOH' per the manual), IEL2 = IEL31 = IEL32 = IEL33 = 0",
+  "rad_0": "GSW-PARAM 2 0 3 1 0 0 2 1 1 1 1; INT-OPT-NC 1 0 0 0 0 0 0 0 0 (Born only)",
+  "IMPORTANT_elastic_tail_off": "IEL2 = IEL31 = IEL32 = IEL33 = 0 in ALL EIGHT logs (checked 2026-09-23): per the manual these are elastic ep -> ep and the 'quasielastic tail ep -> ep gamma' from initial-state, final-state and Compton radiation. So Rad=1 / Rad=0 here is the INELASTIC O(alpha) correction ONLY, with the ELASTIC RADIATIVE TAIL SWITCHED OFF."
+ },
+ "units": "microbarn, per e-p collision (A = 1: per nucleus = per nucleon)",
+ "columns": ["q2_lo_gev2", "q2_hi_gev2", "sigma_rad1_ub", "sigma_rad0_ub"],
+ "rows": [
+  [1.0, 10.0, 0.6733778912, 0.6278853416],
+  [10.0, 100.0, 0.07405000239, 0.06797276736],
+  [100.0, 1000.0, 0.003760005602, 0.003239636940],
+  [1000.0, 10000.0, 0.00008615325533, 0.00007015936779]
+ ],
+ "ratio_note": "sigma_rad1/sigma_rad0 is NOT stored: the harness computes it from the two columns (1.072454 / 1.089407 / 1.160626 / 1.227965).",
+ "log_cross_check": {
+  "what": "'Cross-section from HERACLES' line of each metadata log at the pinned commit (5 significant figures, nb) -- agrees with the README column to every printed digit for the seven logs that carry it",
+  "logs": [
+   {"file": "metadata/djangoh.NC.Rad.18x275_Q2_1_10.log", "bytes": 9067, "sha256": "411094cc5fe99a50140c396b574830433246b5868d177602a68fd2477cc13d3a", "sigma_nb": null, "note": "TRUNCATED: ends after PYINIT, before the integration summary -- this bin's Rad=1 number rests on the README alone"},
+   {"file": "metadata/djangoh.NC.Rad.18x275_Q2_10_100.log", "bytes": 25919, "sha256": "bb6039cc951a5eb1df4ab63d83f8cf80db461b1abcc2a66f3115e439baf5efa6", "sigma_nb": 74.050, "rel_err": 0.43e-3},
+   {"file": "metadata/djangoh.NC.Rad.18x275_Q2_100_1000.log", "bytes": 25921, "sha256": "fef83405a70c2a8efba2fe0d32dfc94b3fe4ead9e21b9a32375b55cf6f8caca7", "sigma_nb": 3.7600, "rel_err": 0.47e-3},
+   {"file": "metadata/djangoh.NC.Rad.18x275_Q2_1000_10000.log", "bytes": 25923, "sha256": "f9f2530e496dd230204427ec46f43312e7069581710a30ea2bb2b1e2cac896fa", "sigma_nb": 0.086153, "rel_err": 0.45e-3},
+   {"file": "metadata/djangoh.NC.norad.18x275_Q2_1_10.log", "bytes": 11059, "sha256": "9a33d149c4aa07a598b8f837343f815d791b5320ef0e598e7d1684974a279dee", "sigma_nb": 627.89, "rel_err": 0.10e-3},
+   {"file": "metadata/djangoh.NC.norad.18x275_Q2_10_100.log", "bytes": 11002, "sha256": "c403dfc94114e7cb5247a097fbeca31dbe29d938f3cce2ea64bc3f532927ed82", "sigma_nb": 67.973, "rel_err": 0.10e-3},
+   {"file": "metadata/djangoh.NC.norad.18x275_Q2_100_1000.log", "bytes": 11004, "sha256": "e4978cf50128620c67de91a9bf299895dbbc41cf8960ffa9035850c7e1a975df", "sigma_nb": 3.2396, "rel_err": 0.10e-3},
+   {"file": "metadata/djangoh.NC.norad.18x275_Q2_1000_10000.log", "bytes": 11006, "sha256": "eb251786e31cf69ef42cbc3842cb5adedac16238ac86a8530210dad41aa94515", "sigma_nb": 0.070159, "rel_err": 0.10e-3}
+  ]
+ }
+}

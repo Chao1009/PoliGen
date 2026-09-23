@@ -385,7 +385,7 @@ list on this machine and there is no second row to offer. **Note that
 * **The rtol 1e-12 reference gates.** All eight files in
   `validation/reference/_manifest.json` — `xsec.json`, `spin.json`,
   `beams.json`, `tagged.json`, `spectator.json`, `coherent.json`,
-  `bookkeeping.json`, `b1_default_li6.json` — are compared against kernels
+  `bookkeeping.json`, `b1_default_li6.json` (seven polligen references and one self-pin, `b1_default_li6.json`) — are compared against kernels
   built either from K1's raw defaults (`tests/test_reference.cpp:48-82`, which
   never touches `f2_source`, `g1_model` or `r_func`) or from K2's one-argument
   overload (`tests/test_b1_nuclear.cpp:1864` (anchor read 2026-09-15 "const auto kernel")). **No test in the tree calls

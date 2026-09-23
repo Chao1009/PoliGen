@@ -1,7 +1,8 @@
 # polligen reference tables
 
 Numeric reference tables dumped from the Python event generator `polligen`
-(`PolarizedLithiumSim/evgen/polligen`) by `dump_polligen_reference.py`, for a
+(`PolarizedLithiumSim/evgen/polligen`) by `dump_polligen_reference.py` -- except
+`b1_default_li6.json`, a self-pin of LiPolGen's own C++ (see its section) -- for a
 C++ reimplementation (LiPolGen) to be checked against at `rtol=1e-12`
 unless a table's description says otherwise (a few quantities in polligen
 are themselves iterative/quadrature results, e.g. `spin.populations_maxent`,
@@ -13,10 +14,10 @@ computed numbers, organized per table below. Floats are written with Python's
 `repr()`-precision JSON serialization, i.e. full IEEE-754 double precision
 round-trips exactly.
 
-Regenerate with:
+Regenerate with (the TREE's `env.sh` must be sourced first: it sets `PYTHONPATH` and `LIPOLGEN_DEPS` relative to itself, and a scratch copy's own `env.sh` resolves elsewhere and reproduces the floats only to about one ULP -- measured 2026-09-23):
 
 ```
-python3 LiPolGen/validation/dump_polligen_reference.py
+source LiPolGen/env.sh && python3 LiPolGen/validation/dump_polligen_reference.py
 ```
 
 This script only *imports* `polligen`/`polli_fastsim` from `PolarizedLithiumSim`;
@@ -175,95 +176,100 @@ every ion at that configuration is gamma-matched to.
 `polligen.tagged` (PolarizedLithiumSim/evgen/polligen/tagged.py) using
 the DEFAULT channel constructors (all default beta=0.30, and for 6Li
 p_d=tagged.P_D_LI6, for the deuteron control p_d=tagged.P_D_DEUTERON).
+Line numbers `tagged.py:N` below are as of PolarizedLithiumSim c0f86a8
+(its polligen code is identical at HEAD 4726812, which touches refs/ only).
 
-**THIS FILE NO LONGER TRACKS polligen FOR THE SPIN-1 MODEL BLOCKS (2026-09-06).**
-`polligen.tagged._amp2_table` (tagged.py:243-248) sums the partial waves with
-NO `i^L`: it feeds `psi_L` into an amplitude that needs `phi_L = i^L psi_L`.
-For an S+D channel that is not a global phase -- it is +1 on L=0 and -1 on
-L=2 -- so polligen's tagged sector carries the S-D interference sign
-INVERTED, against Cosyn-Weiss II Eq. (6.12) (by up to 2.74 in an asymmetry
-whose whole range is [-2, 1]), against LiPolGen's own deuteron quadrupole
-sign gate, and against LiPolGen's own b1 sector, which applies the phase
-explicitly.  LiPolGen fixed it on 2026-09-06 (`src/core/tagged.cpp`
-`build_amp2`, one `(-1)^floor(L/2)`); polligen was NOT touched and still
-carries the bug.  Regenerating `channels.li6_alpha.model` or
-`channels.deuteron.model` from polligen would therefore re-bake the refuted
-sign and the rtol-1e-12 gate would go on certifying it.
+EVERY block of this file is polligen's (file keys `provenance` =
+`"polligen"`, `provenance_note`), and `dump_polligen_reference.py` is
+its only generator (`_manifest.json`).  It requires a polligen whose
+`TaggedModel._amp2_table` (tagged.py:764-796) sums the partial waves as
+`phi_L = i^L psi_L` -- the relative phase `(-1)^(L//2)` added in
+PolarizedLithiumSim commit 1066555 (2026-09-15).  Without it the S-D
+interference sign of the two S+D channels (`li6_alpha`, `deuteron`) is
+inverted, so the script REFUSES to write any file when polligen's
+`p2_moment(M=0)` is not positive on either of them (pre-fix: -0.0898 on
+6Li and -0.0642 on the deuteron; fixed: +0.1243 and +0.0821).  The C++
+side of the same phase is `src/core/tagged.cpp` `build_amp2`,
+`(-1)^floor(L/2)`.
 
-Those two blocks are instead RE-PINNED from the fixed C++ library by
-`validation/repin_tagged_from_lipolgen.py` (provenance `"LiPolGen post-fix,
-formerly polligen"`, recorded in the file's own `provenance` /
-`provenance_note` keys), and `dump_polligen_reference.py` carries them
-through unchanged rather than overwriting them.  What moved in the re-pin,
-MEASURED 2026-09-06 as the re-pinned file against the pre-fix dump
-(`git show HEAD:validation/reference/tagged.json`), not copied from the
-investigation's own table: `n_of_kc` (up to +725% on 6Li, +19215% on the
-AV18 deuteron control), `struck_populations` (up to 0.86 absolute),
-`p2_moment` (sign flip, x1.28 to x2.03), `p2_moment_mixture_uniform`
-(-5.3160743e-05 -> -5.2153460e-05 on 6Li, 1.9e-2 rel; -5.3694953e-05 ->
--5.3337762e-05 on the deuteron, 6.7e-3 rel -- it is gated at 1e-9, so it had
-to be re-pinned too), `norm` (up to 5.8e-5 rel: 6Li M=0 1.000026689626 ->
-0.999968571520; 4.0e-5 on the deuteron), `population_integrated` (up to
-3.0e-6 abs: 6Li M=0 0.947966373524 -> 0.947963349333) and the dilutions
-(<=4.3e-6 rel).  Until 2026-09-06 this list read `norm` "+2e-5" and
-`population_integrated` "<=5e-7 abs" and did not mention
-`p2_moment_mixture_uniform` at all -- three figures taken from
-`07_cw_sign_investigation.md` section 6.1 rather than measured here, where
-that section records the last one as not moving.  Reason, derivations and
-the full before/after tables: `docs/benchmarking/07_cw_sign_investigation.md`
-and `docs/open_items/run_2026-09-06/phase_CW_numbers.md`.
+Regenerate with `python3 validation/dump_polligen_reference.py` (it
+rewrites every polligen table and this README).
+`python3 validation/repin_tagged_from_lipolgen.py` is now a CHECK-ONLY
+cross-check of the three `model` blocks against the installed `lipolgen`
+module at rtol 1e-12; it writes nothing.
 
-EVERYTHING ELSE IN THE FILE IS STILL polligen's, untouched: `waves`,
-`base`, `beam_configs`, `boost_spectator`, `P_D_LI6`, `P_D_DEUTERON`, the
-channel scalars, and the WHOLE of `channels.li7_alpha.model` -- 7Li alpha-tag
-is a single L=1 wave, so the common `i` is a global phase, and the fix
-moves its `n_of_kc` and `p2_moment` by exactly zero (measured, bit for bit).
-The re-pin script re-checks that block against the live C++ at rtol 1e-12
-instead of overwriting it.  No other reference JSON moved.
+History (2026-09-06 to 2026-09-23).  On 2026-09-06 the tagged sector's
+S-D interference sign was found inverted -- the partial-wave sum had no
+`i^L` -- against Cosyn-Weiss II Eq. (6.12), LiPolGen's own deuteron
+quadrupole sign gate and LiPolGen's own b1 sector.  LiPolGen's C++ was
+fixed that day; polligen was not yet, so `channels.li6_alpha.model` and
+`channels.deuteron.model` were RE-PINNED from the fixed C++ by
+`validation/repin_tagged_from_lipolgen.py` (provenance `"LiPolGen
+post-fix, formerly polligen"`) and this script carried them through
+unchanged (`TAGGED_MODEL_NOT_FROM_POLLIGEN`).  What that re-pin moved,
+measured 2026-09-06 against the pre-fix polligen dump: `n_of_kc` (up to
++725% on 6Li, +19215% on the deuteron control), `struck_populations` (up
+to 0.86 absolute), `p2_moment` (sign flip, x1.28 to x2.03),
+`p2_moment_mixture_uniform` (1.9e-2 rel on 6Li, 6.7e-3 on the deuteron),
+`norm` (up to 5.8e-5 rel), `population_integrated` (up to 3.0e-6 abs)
+and the dilutions (<=4.3e-6 rel); `li7_alpha` (one L=1 wave, a global
+phase) moved by exactly zero.  polligen took the same phase in
+PolarizedLithiumSim 1066555 (2026-09-15), and on 2026-09-23 the carry-
+through was removed and the whole file re-dumped from polligen at
+PolarizedLithiumSim c0f86a8 (= HEAD 4726812 for polligen's code).
+Measured against the LiPolGen re-pin it
+replaced: the `li6_alpha` and `deuteron` model blocks differ by at most
+1.33e-13 and 2.28e-13 relative (both in `p2_moment_mixture_uniform`, a
+quadrature gated at 1e-9; every other model entry <=6.1e-15), and every
+other block of the file is bit-identical.  No other reference JSON
+moved.  Reason, derivations and tables:
+`docs/benchmarking/07_cw_sign_investigation.md`,
+`docs/open_items/run_2026-09-06/phase_CW_numbers.md` and
+`docs/open_items/run_2026-09-23/phase_A_port_gate.md`.
 
 `channels.<li6_alpha|li7_alpha|deuteron>`: built by
-`tagged.li6_alpha_channel()` / `li7_alpha_channel()` / `deuteron_channel()` (tagged.py:181,188,195). `base` is the underlying
+`tagged.li6_alpha_channel()` / `li7_alpha_channel()` / `deuteron_channel()` (tagged.py:370,408,435). `base` is the underlying
 `polli_fastsim.spectator.ClusterChannel` (spectator.py:111): `m_spec`
 (spectator.py:124), `m_beam` (spectator.py:128, physical nuclear mass),
 `m_partner` (spectator.py:143), `kappa` (spectator.py:168, sqrt(2*mu*S)).
 
-`waves[i]`: one `tagged.Wave` (tagged.py:126) of `channel.waves` --
+`waves[i]`: one `tagged.Wave` (tagged.py:180) of `channel.waves` --
 `l`, `prob`, `beta`, and `radial` = `Wave.radial(k_grid, kappa)`
-(tagged.py:140; L=0 Hulthen 1/(k^2+kappa^2)-1/(k^2+beta^2), L=1
+(tagged.py:193; L=0 Hulthen 1/(k^2+kappa^2)-1/(k^2+beta^2), L=1
 k/((k^2+kappa^2)(k^2+beta^2)), L=2 k^2/((k^2+kappa^2)(k^2+beta^2)^2)) on
 `k_grid` = 40 points linspace(1e-4, 1.2, 40) GeV -- UNNORMALIZED (the
 TaggedModel normalizes internally, see below).
 
-`model`: `tagged.TaggedModel(channel)` (tagged.py:203) at its DEFAULT
+`model`: `tagged.TaggedModel(channel)` (tagged.py:743) at its DEFAULT
 grid (k_max=1.2, nk=280, nc=96 -- `grid` records the exact edges/sizes,
 which the C++ port must reproduce bit-for-bit since `n_of_kc` looks up
-the NEAREST cell at or below the query point, `np.clip(np.searchsorted(model.k, k)-1, 0, nk-2)`, tagged.py:256-258 -- this script replicates
+the NEAREST cell at or below the query point, `np.clip(np.searchsorted(model.k, k)-1, 0, nk-2)`, tagged.py:806-807 -- this script replicates
 that exact lookup in Python to pick `k_pts`/`c_pts` cell values, so the
 reference values are themselves grid CELL values, not interpolated).
-  * `n_of_kc[i].n_at_k_c`: `TaggedModel.n_of_kc(M)` (tagged.py:248) at
+  * `n_of_kc[i].n_at_k_c`: `TaggedModel.n_of_kc(M)` (tagged.py:798) at
     `k_pts` x `c_pts` (6x5), indexed [k][c].
   * `struck_populations[i].p_at_k_c`: `TaggedModel.struck_populations(M)`
-    (tagged.py:260), shape (n_mS, nk, nc), sliced at the same
+    (tagged.py:810), shape (n_mS, nk, nc), sliced at the same
     (k_pts, c_pts) cells; `m_s_order` gives the m_S ordering (+S_c...-S_c).
   * `population_integrated[i].p_m_s`: `TaggedModel.population_integrated(M)`
-    (tagged.py:266), the k/khat-integrated channel-spin populations.
-  * `norm[i].value`: `TaggedModel.norm(M)` (tagged.py:272), grid
+    (tagged.py:816), the k/khat-integrated channel-spin populations.
+  * `norm[i].value`: `TaggedModel.norm(M)` (tagged.py:822), grid
     quadrature of the normalization integral (should be ~1, NOT exact
     -- it is itself a finite-grid quadrature, so match this one at a
     looser tolerance, e.g. 1e-6, not rtol=1e-12).
-  * `vector_dilution`: `TaggedModel.vector_dilution()` (tagged.py:292).
+  * `vector_dilution`: `TaggedModel.vector_dilution()` (tagged.py:842).
   * `tensor_dilution` (only present when s_channel=1, i.e. li6_alpha and
     deuteron -- s_channel=0.5 for li7_alpha, where `tensor_dilution`
-    raises `ValueError` by design, tagged.py:299-302; see the JSON's
-    top-level `_could_not_call` list): `TaggedModel.tensor_dilution()`
-    (tagged.py:299).
-  * `p2_moment[i]`: `TaggedModel.p2_moment(M)` (tagged.py:307), per M.
+    raises `ValueError` by design, tagged.py:849-852; see
+    `_manifest.json`'s `could_not_call` list): `TaggedModel.tensor_dilution()`
+    (tagged.py:849).
+  * `p2_moment[i]`: `TaggedModel.p2_moment(M)` (tagged.py:857), per M.
   * `p2_moment_mixture_uniform`: `TaggedModel.p2_moment_mixture(pops)`
-    (tagged.py:314) at a uniform fill (also a grid quadrature; same
+    (tagged.py:864) at a uniform fill (also a grid quadrature; same
     looser-tolerance caveat as `norm`).
 
 `boost_spectator`: `tagged.boost_spectator(channel, k, c, phi_k,
-p_per_nucleon, theta_s, phi_s)` (tagged.py:335), an EXACT closed-form
+p_per_nucleon, theta_s, phi_s)` (tagged.py:885), an EXACT closed-form
 boost (no grid quadrature -- rtol=1e-12 applies), at a fixed set of
 (k, c, phi_k) x (theta_s, phi_s) x each of the channel's 3
 `beam_configs` (`beams.default_configs` for the channel's own beam
@@ -400,6 +406,26 @@ independent construction the maxent anchors above should match.
 (bookkeeping.py:193, = -(2/3)*offset/pzz) and
 `bookkeeping.apar_rel_lumi_bias(offset, pe, pz)` (bookkeeping.py:199,
 = offset/(2*pe*pz)) at offset=1e-4 (the plans/05 reference delta).
+
+## b1_default_li6.json
+
+**A SELF-PIN, NOT A REFERENCE OF ANY KIND.** This file is the one exception
+to the paragraph at the top: it is not dumped from `polligen` and not by
+`dump_polligen_reference.py`. `validation/dump_b1_default_li6.py` wrote it
+from LiPolGen's OWN C++ -- `InclusiveKernel::tables(x, q2)` of
+`default_inclusive_kernel(LI6())` (b1 backend `Li6B1(MillerB1)`, delta
+`toy_delta_gluon(scale = 1e-2)`), f1 / b1 / b2 / delta on 200 x in
+[1e-3, 0.95] at Q^2 = 1, 2.5, 10 GeV^2 -- through the pybind11 module
+(last committed 2026-09-03, `b1071b1`). No external source, no polligen
+output and no measurement enters it. It is a REGRESSION GUARD: T9 in
+`tests/test_b1_nuclear.cpp` and `python/tests/test_b1_model.py` check at
+rtol 1e-12 that the library still returns what it returned then, so
+agreement with it proves "unchanged", never "correct". The file's own
+`provenance` field says the same (a metadata-only label added 2026-09-23,
+BENCHMARK_PLAN.md sec. 5.5; every numeric block byte-identical to the
+committed dump). Regenerate with `python3 validation/dump_b1_default_li6.py`
+only when a default is deliberately changed; since 2026-09-23 that script
+writes the `provenance` field itself, so a regeneration keeps the label.
 
 ## Functions this script could not call
 

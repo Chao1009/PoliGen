@@ -2880,9 +2880,9 @@ static void bind_tagged(py::module_& m) {
       }, py::arg("m_ion"))
       .def("struck_populations", [](const TaggedModel& t, double m_ion) {
         // (n_mS, nk, nc), the same shape polligen's TaggedModel returns.
-        // Exposed 2026-09-06 so validation/repin_tagged_from_lipolgen.py can
-        // dump the reference through the INSTALLED module rather than
-        // reimplementing build_amp2 in Python.
+        // Exposed 2026-09-06 so validation/repin_tagged_from_lipolgen.py could
+        // re-pin tagged.json through the INSTALLED module; since 2026-09-23 that
+        // script is CHECK-ONLY (it compares, writes nothing) and still uses it.
         const std::vector<std::vector<double>> p = t.struck_populations(m_ion);
         std::vector<double> flat;
         flat.reserve(p.size() * t.nk() * t.nc());
@@ -3864,7 +3864,7 @@ static void bind_coherent(py::module_& m) {
       });
   m.def("estarlight_li6_coherent", &estarlight_li6_coherent,
         py::return_value_policy::reference,
-        "The eSTARlight unpolarized coherent VM baseline for e 10 GeV x 6Li "
+        "The eSTARlight unpolarized exclusive-VM rate scale (not a coherent-channel benchmark) for e 10 GeV x 6Li "
         "99.5 GeV/u (open item 11.1); see coherent.hpp for the caveats.");
   m.attr("COHERENT_JPSI_EFF_IR8_LI7") = COHERENT_JPSI_EFF_IR8_LI7;
   m.attr("COHERENT_JPSI_EFF_IR8_LI7_E_ION_GEV") =

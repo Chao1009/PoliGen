@@ -1,59 +1,44 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Re-pin `validation/reference/tagged.json`'s MODEL blocks from LiPolGen.
+"""CHECK-ONLY: LiPolGen's tagged `model` blocks against `tagged.json`.
 
-WHY THIS SCRIPT EXISTS INSTEAD OF `dump_polligen_reference.py`
---------------------------------------------------------------
-`tagged.json` was a port gate: numbers dumped from the Python generator
-`polligen` (PolarizedLithiumSim/evgen/polligen/tagged.py) that the C++ port
-had to reproduce at rtol 1e-12.  On 2026-09-06 the tagged sector's S-D
-interference sign was found to be INVERTED -- against Cosyn-Weiss II
-Eq. (6.12), against the repository's own quadrupole sign gate, and against
-the repository's own b1 sector, which applies `phi_L = i^L psi_L` explicitly
-(docs/benchmarking/07_cw_sign_investigation.md).  The fix is one phase,
-`(-1)^floor(L/2)`, in `TaggedModel::build_amp2` (src/core/tagged.cpp).
+CURRENT STATE (2026-09-23)
+--------------------------
+`validation/reference/tagged.json` is again a polligen port gate: EVERY block
+is dumped from polligen by `validation/dump_polligen_reference.py`
+(provenance "polligen"), which refuses to write it from a polligen without
+the i^L partial-wave phase (PolarizedLithiumSim commit 1066555, 2026-09-15).
+This script no longer writes anything.  It re-computes the three channels'
+`model` blocks from the installed pybind11 module (`import lipolgen`, the same
+C++ the tests call) on the file's own grid and sample points and checks them
+against the file at rtol 1e-12 -- the same comparison tests/test_tagged.cpp
+makes, from the Python side.  Exit status 1 on any disagreement.
 
-`polligen.tagged._amp2_table` (tagged.py:243-248) carries the SAME missing
-phase.  So the reference CANNOT be regenerated from polligen: doing that
-would re-bake the inverted sign and the 1e-12 gate would keep certifying the
-bug.  The reference is therefore re-pinned from the FIXED C++ library, and
-the tagged model block no longer tracks polligen.
-
-WHAT MOVES AND WHAT DOES NOT
-----------------------------
-Only the SPIN-1 channels' `model` blocks are rewritten -- `li6_alpha` and
-`deuteron` -- and only from the installed pybind11 module
-(`import lipolgen`), the same C++ the tests call, exactly as
-`dump_b1_default_li6.py` does.
-
-`li7_alpha` is a single L = 1 wave: the common i is then a global phase and
-the fix moves nothing (measured: `n_of_kc` and `p2_moment` identical to the
-BIT across the fix).  Its model block therefore stays polligen's, byte for
-byte, and the script re-checks the C++ against it at rtol 1e-12 rather than
-overwriting a port gate that is still good.
-
-Everything else in the file -- `waves`, `base`, `beam_configs`,
-`boost_spectator`, `P_D_*`, the channel scalars -- is carried through
-UNTOUCHED and still comes from polligen: none of it goes through
-`build_amp2`.
-
-Every other reference JSON is untouched by this script.
-
-NOTE ON THE LAST ULP.  LiPolGen and polligen agree on the untouched
-quantities to ~1e-16 relative, not to the bit -- different summation orders
-in C++ and NumPy.  That is what the gate's rtol 1e-12 has always absorbed,
-and it is why the 7Li cross-check below is a 1e-12 comparison and not an
-equality.
+HISTORY (2026-09-06 to 2026-09-23)
+----------------------------------
+On 2026-09-06 the tagged sector's S-D interference sign was found INVERTED
+(docs/benchmarking/07_cw_sign_investigation.md): the partial-wave sum needs
+`phi_L = i^L psi_L`, and both `TaggedModel::build_amp2` (src/core/tagged.cpp)
+and polligen's `tagged._amp2_table` summed `psi_L` without it.  LiPolGen was
+fixed that day with one `(-1)^floor(L/2)`; polligen was not, so this script
+RE-PINNED the `li6_alpha` and `deuteron` model blocks from the fixed C++
+(provenance "LiPolGen post-fix, formerly polligen", manifest generator = this
+script) and the dump script carried them through.  `li7_alpha` (one L = 1
+wave, a global phase) was checked, not rewritten.  polligen took the same
+phase in PolarizedLithiumSim 1066555; on 2026-09-23 the carry-through was
+removed and the whole file re-dumped from polligen (the two re-pinned blocks
+moved by at most 2.28e-13 relative;
+docs/open_items/run_2026-09-23/phase_A_port_gate.md).  The write mode was
+removed at the same time: re-pinning from LiPolGen would now overwrite a live
+polligen port gate.
 
 Run:
     source env.sh
-    python3 validation/repin_tagged_from_lipolgen.py
-    python3 validation/repin_tagged_from_lipolgen.py --check   # no writes
+    python3 validation/repin_tagged_from_lipolgen.py     # check only
 """
 
 import json
 import pathlib
-import sys
 
 import numpy as np
 
@@ -63,29 +48,11 @@ HERE = pathlib.Path(__file__).resolve().parent
 OUT = HERE / "reference"
 NAME = "tagged.json"
 
-PROVENANCE = "LiPolGen post-fix, formerly polligen"
-PROVENANCE_NOTE = (
-    "The li6_alpha and deuteron `model` blocks are dumped from the FIXED "
-    "LiPolGen C++ library (validation/repin_tagged_from_lipolgen.py), not "
-    "from polligen.  polligen's tagged._amp2_table omits the i^L "
-    "partial-wave phase and therefore carries the INVERTED S-D interference "
-    "sign; regenerating those blocks from it would re-bake the bug the "
-    "2026-09-06 fix removed.  See "
-    "docs/benchmarking/07_cw_sign_investigation.md and "
-    "docs/open_items/run_2026-09-06/phase_CW_numbers.md.  Everything else in "
-    "this file -- including li7_alpha's model block, one L = 1 wave with "
-    "nothing to interfere with -- is still polligen's."
-)
-
-# The spin-1 channels: S + D, so `build_amp2`'s (-1)^floor(L/2) is a REAL
-# relative phase and these are the blocks the 2026-09-06 fix moves.
-REPINNED = {
+# Every channel of the file; all three are checked, none is written.
+CHANNELS = {
     "li6_alpha": lambda: lg.li6_alpha_channel(),
-    "deuteron": lambda: lg.deuteron_channel(),
-}
-# One L = 1 wave: nothing to interfere with, nothing moves.  Checked, kept.
-UNCHANGED = {
     "li7_alpha": lambda: lg.li7_alpha_channel(),
+    "deuteron": lambda: lg.deuteron_channel(),
 }
 RTOL = 1e-12
 
@@ -150,18 +117,6 @@ def model_dump(channel, old_model):
     return out
 
 
-def update_manifest(path):
-    """Point `tagged.json`'s generator at THIS script, idempotently."""
-    if not path.is_file():
-        return
-    doc = json.loads(path.read_text())
-    gens = doc.setdefault("generators", {})
-    gens[NAME] = "LiPolGen/validation/repin_tagged_from_lipolgen.py"
-    for f in doc.get("files", []):
-        gens.setdefault(f, doc.get("generator", ""))
-    path.write_text(json.dumps(doc, indent=1, sort_keys=True) + "\n")
-
-
 def worst_rel(a, b, path="", acc=None):
     """Worst |a-b|/|b| over two identically-shaped JSON trees."""
     if acc is None:
@@ -181,45 +136,23 @@ def worst_rel(a, b, path="", acc=None):
 
 
 def main():
-    check_only = "--check" in sys.argv[1:]
     path = OUT / NAME
     doc = json.loads(path.read_text())
-
-    # 7Li: the port gate against polligen is untouched by the fix.  Verify it
-    # still holds and leave the stored block exactly where it is.
-    for key, make in UNCHANGED.items():
+    print("%s provenance: %r" % (NAME, doc.get("provenance")))
+    bad = []
+    for key, make in CHANNELS.items():
         stored = doc["channels"][key]["model"]
         fresh = model_dump(make(), stored)
         r, where = worst_rel(fresh, stored)
-        print("%s: kept polligen's block; LiPolGen agrees to %.3e (worst at %s)"
-              % (key, r, where))
-        if r > RTOL:
-            raise SystemExit(
-                "%s has ONE partial wave, so the i^L phase is global and this "
-                "block must still track polligen at rtol %g.  It does not "
-                "(%.3e at %s) -- stop and find out why before writing "
-                "anything." % (key, RTOL, r, where))
-
-    moved = []
-    for key, make in REPINNED.items():
-        old = doc["channels"][key]["model"]
-        new = model_dump(make(), old)
-        r, where = worst_rel(new, old)
-        print("%s: re-pinned from LiPolGen; worst move vs the old file %.3e "
+        print("%s: LiPolGen vs the file, worst relative difference %.3e "
               "(at %s)" % (key, r, where))
-        moved.append(key)
-        doc["channels"][key]["model"] = new
-
-    doc["provenance"] = PROVENANCE
-    doc["provenance_note"] = PROVENANCE_NOTE
-    if check_only:
-        print("--check: nothing written.  Would re-pin: %s" % ", ".join(moved))
-        return
-    with open(path, "w") as fh:
-        json.dump(doc, fh, indent=1, sort_keys=True)
-        fh.write("\n")
-    update_manifest(OUT / "_manifest.json")
-    print("rewrote %s (model blocks re-pinned: %s)" % (path, ", ".join(moved)))
+        if r > RTOL:
+            bad.append(key)
+    if bad:
+        raise SystemExit("LiPolGen disagrees with %s at rtol %g on: %s"
+                         % (NAME, RTOL, ", ".join(bad)))
+    print("all %d model blocks agree at rtol %g; nothing written."
+          % (len(CHANNELS), RTOL))
 
 
 if __name__ == "__main__":

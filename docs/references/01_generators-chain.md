@@ -192,7 +192,7 @@ no DOI" note is stale. Cite PRD 106 (2022) 012007.
 **GC-10 / GC-11 — DJANGO6 and HERACLES.** These are the two papers behind
 "DJANGOH", the code `benchmarking/01` §2.4 calls "the strongest L1
 candidate" and whose published Rad = 1 / Rad = 0 cross-section table is
-recommendation #1 of that survey. Verified on INSPIRE: **DJANGO6** is
+recommendation #1 of that survey *(2026-09-23: wired and BLOCKED — the published table has the elastic radiative tail OFF, IEL2 = IEL31..33 = 0, so it shares no term with `rc_tail`; `../open_items/run_2026-09-23/phase_B3_chain_rc.md` §1.2.)*. Verified on INSPIRE: **DJANGO6** is
 Charchula, Schuler & Spiesberger, CPC 81 (1994) 381 (recid 372027, 269
 citations, CERN-TH-7133-94), an interface of HERACLES 4.4 to LEPTO 6.1;
 **HERACLES** is Kwiatkowski, Spiesberger & Möhring, CPC 69 (1992) 155
@@ -291,7 +291,7 @@ a code paper.
 **GC-21 / GC-22 / GC-23 — the exclusive/coherent trio.** These belong
 primarily to the coherent-diffraction domain and are listed here because
 they are *generators*; expect overlap with that domain's file.
-eSTARlight (GC-21) is the in-tree `D-4` baseline; STARlight (GC-22) is
+eSTARlight (GC-21) is the in-tree `D-4` exclusive-VM rate scale (85–97 % of its rate at Q² < 0.1 GeV², below `coherent.hpp`'s q2_min = 0.7 — not a coherent-channel baseline); STARlight (GC-22) is
 its Q²→0 parent with by far the strongest data pedigree (a decade of
 RHIC/LHC UPC measurements); Sartre (GC-23) matters for its **negative**
 statement — §3.3.4 of the code paper enumerates the supported nuclei (p,

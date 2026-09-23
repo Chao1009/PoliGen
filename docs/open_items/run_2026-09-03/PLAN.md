@@ -177,7 +177,7 @@ conditions; A1–A7 are those seven.
 - **C1** O1, the 7.5× quadrupole budget, closed **quantitatively**. The
   mechanism is real and undocumented: `quadrupole_target_fm2` bisects a dial that
   mutates `ad_f2_` in place (`cluster_config.cpp:398-435`), so η moves with it —
-  at the measured η = −0.025 the dial is 0.5200 and Q = −0.18557 fm². The budget
+  at the measured η = −0.025 [*Note 2026-09-23 (`../run_2026-09-23/phase_B2_nuclear.md` §5): George–Knutson's η is a restricted phase-shift analysis — a consistency band on the quadrupole dial, not a measurement of the D wave; wording left as written on its date.*] the dial is 0.5200 and Q = −0.18557 fm². The budget
   is **two** factors, not three: 3.317 × 2.269 = 7.524 exactly. The
   1/√S_αd = 1.17 is *already inside* the −0.615 baseline
   (`cluster_config.cpp:369-374`) and must be written as a ceiling on what a
@@ -238,7 +238,7 @@ conditions; A1–A7 are those seven.
   the ⁶Li band is −(0.0070…0.0527), and the default is **kept** with the cost
   written down because it is a reference gate.)*
 - **C5** The VMC inputs: the α–d asymptotic D/S ratio (η = −0.048 model against
-  −0.025 measured) with a dial that actually constrains it; the parsed-then-
+  −0.025 measured) [*Note 2026-09-23 (`../run_2026-09-23/phase_B2_nuclear.md` §5): George–Knutson's η is a restricted phase-shift analysis — a consistency band on the quadrupole dial, not a measurement of the D wave; wording left as written on its date.*] with a dial that actually constrains it; the parsed-then-
   discarded Monte-Carlo errors; the 5 % N_αd and 7 % P_D spreads; the Hulthén-
   pinned deuteron control channel; and the inclusive-vs-tagged P_D split under
   `--cluster-wave vmc`.

@@ -181,21 +181,21 @@ TEST_CASE("tagged: channel construction against polligen" *
 
 TEST_CASE("tagged: the model grid and its tables against polligen" *
           doctest::skip(!tagged_blob_present())) {
-  // 2026-09-06 RE-PIN.  `li6_alpha` and `deuteron` no longer read polligen's
-  // numbers: polligen's `tagged._amp2_table` sums psi_L with no i^L, i.e. the
-  // INVERTED S-D interference sign this file's `build_amp2` fix removed, so
-  // those two `model` blocks are dumped from the FIXED C++ by
-  // validation/repin_tagged_from_lipolgen.py and the file's own
-  // `provenance` key reads "LiPolGen post-fix, formerly polligen".
-  // `li7_alpha`'s block is still polligen's -- one L = 1 wave, the common i
-  // is a global phase, and the fix moves its n_of_kc and p2_moment by
-  // exactly zero (measured, bit for bit) -- so for THAT channel this is
-  // still the port gate it always was.  Everything outside `model` (waves,
-  // base, beam_configs, boost_spectator, P_D_*) is untouched polligen.
-  // docs/benchmarking/07_cw_sign_investigation.md section 7.2;
-  // docs/open_items/run_2026-09-06/phase_CW_numbers.md.
+  // The port gate against polligen, all three channels.  2026-09-06 to
+  // 2026-09-23 the li6_alpha / deuteron model blocks were re-pinned from this
+  // library ("LiPolGen post-fix, formerly polligen"): polligen's _amp2_table
+  // lacked the i^L phase `build_amp2` gained on 2026-09-06.  polligen took it
+  // in PolarizedLithiumSim 1066555; since 2026-09-23 every block is dumped
+  // from polligen by validation/dump_polligen_reference.py (which refuses a
+  // polligen without it), <=2.28e-13 rel from the re-pin (6.1e-15 outside
+  // p2_moment_mixture_uniform).  The file's `provenance` is asserted below.
+  // docs/benchmarking/07_cw_sign_investigation.md and
+  // docs/open_items/run_2026-09-23/phase_A_port_gate.md.
   jsonmin::Value ref;
   REQUIRE(load_tagged(ref));
+  // The file must be polligen's again, not a LiPolGen self-comparison.
+  REQUIRE(ref.has("provenance"));
+  CHECK(ref["provenance"].str() == "polligen");
   for (const auto& kv : ref["channels"].obj()) {
     const TaggedModel& model = model_by_key(kv.first);
     const jsonmin::Value& m = kv.second["model"];

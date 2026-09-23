@@ -12,6 +12,7 @@
   "target_mass": true,
   "tensor_gamma": false
  },
+ "provenance": "SELF-PIN, NOT A REFERENCE OF ANY KIND.  Every number in this file was dumped from LiPolGen's OWN C++ (default_inclusive_kernel(LI6()) through the pybind11 module) by validation/dump_b1_default_li6.py (last committed 2026-09-03, b1071b1); no external source, no polligen output and no measurement enters it.  It is a REGRESSION GUARD: T9 (tests/test_b1_nuclear.cpp) and python/tests/test_b1_model.py check that the library still returns what it returned then, at rtol 1e-12.  Agreement with it proves 'unchanged', never 'correct'.  Unlike every other file in this directory it does not come from dump_polligen_reference.py.  Label added 2026-09-23 (BENCHMARK_PLAN.md sec. 5.5) as a metadata-only edit: every numeric block (x, q2, tables, kernel) is byte-identical to that dump.",
  "q2": [
   1.0,
   2.5,

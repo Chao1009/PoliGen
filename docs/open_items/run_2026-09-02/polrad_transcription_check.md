@@ -26,7 +26,7 @@ of Eq. (38)) that the implementer must resolve before `rc_tail` is trusted.
 | source | how | check |
 |---|---|---|
 | **Paper LaTeX** | `curl -sL -o src.tar.gz https://arxiv.org/e-print/hep-ph/9706516` → `tar xzf` → **`polrad2t.tex`** (4201 lines) | the fraction macro is `\def\ot#1#2{\textstyle \frac{#1}{#2}}` (line 9), so `\ot 3 4` **is** 3/4 and `\ot 4 3` **is** 4/3 — no ordering ambiguity |
-| **FORTRAN** | Mendeley Data, dataset `37vgvzgr2w`: `curl -sL "https://data.mendeley.com/public-files/datasets/37vgvzgr2w/files/50bc36c4-d146-4487-b697-218850c0a057/file_downloaded" -o adgh_v1_0.gz` (97 335 B, `sha256 = 83703668bacfbffe073a63c75374be261b4b36dab8ea8de951762120fba1ea7b`) → `gunzip` → one PATCHY archive `adgh`, 11 593 lines | `+deck,elu` @ 8878, `+deck,elp` @ 8915, `+deck,elq` @ 8972, `+deck,apptai` @ 8559, `+deck,strf` @ 4147, `+deck,ffdeu` @ 5479, `+deck,ffco` @ 5576. Line numbers below are lines of `adgh`. |
+| **FORTRAN** | Mendeley Data, dataset `37vgvzgr2w`: `curl -sL "https://data.mendeley.com/public-files/datasets/37vgvzgr2w/files/50bc36c4-d146-4487-b697-218850c0a057/file_downloaded" -o adgh_v1_0.gz` (*2026-09-23: Mendeley now answers a plain `curl -sL` with a 395-byte JSON error; add `-A "Mozilla/5.0"` — `../run_2026-09-23/phase_B3_chain_rc.md` §3.1*) (97 335 B, `sha256 = 83703668bacfbffe073a63c75374be261b4b36dab8ea8de951762120fba1ea7b`) → `gunzip` → one PATCHY archive `adgh`, 11 593 lines | `+deck,elu` @ 8878, `+deck,elp` @ 8915, `+deck,elq` @ 8972, `+deck,apptai` @ 8559, `+deck,strf` @ 4147, `+deck,ffdeu` @ 5479, `+deck,ffco` @ 5576. Line numbers below are lines of `adgh`. |
 
 `pdftotext -layout` on the PDF renders `\frac{8}{9}` as `98` but `\frac{2}{3}` as
 `23` — the reading order of a stacked fraction flips with the glyph widths. **The
@@ -530,7 +530,7 @@ own limits and prefactors (deuteron, `M_d = 1.8756280`):
 | beam / `x` / `y` | `∫dη elu` | `σ_u^d` | `σ_q^d` | `σ_q/σ_u` |
 |---|---|---|---|---|
 | 27.6 GeV, 0.05, 0.60 | −4.320e+03 | **−2.352e−05** | −2.492e−06 | +0.1060 |
-| 27.6 GeV, 0.012, 0.50 | −2.133e+05 | **−1.001e−03** | −6.429e−05 | +0.0642 |
+| 27.6 GeV, 0.012, 0.50 | −2.195e+05 | **−1.030e−03** | −6.423e−05 | +0.0623 *(corrected 2026-09-23 — this row read −2.133e+05 / −1.001e−03 / −6.429e−05 / +0.0642, which a re-drive of POLRAD's own `ffdeu`/`qunc8` does not reproduce; rows 1 and 3 reproduce to every digit: `../run_2026-09-23/phase_B3_chain_rc.md` §3.2)*
 | 11.0 GeV, 0.20, 0.50 | −1.333e+01 | **−1.570e−07** | +1.829e−08 | −0.1165 |
 
 (`α³/S · Y₊ · ter`, `ter = m_p/M_d`, no `barn`; the sign is the point, not the units.)
@@ -565,7 +565,7 @@ cannot remove them. A literal transcription of Eq. (38) gives `σ^el_U < 0` and
   is the single cheapest guard against shipping a tail that anti-dilutes;
 * keep the **ratio** `σ_q^d/σ_u^d` as the tensor-tail gate rather than the
   absolute normalisation — it is sign-convention-free, and the three values above
-  (+0.106, +0.064, −0.117) are usable reference numbers for a **deuteron**
+  (+0.106, +0.062, −0.117; the middle one read +0.064 until 2026-09-23) are usable reference numbers for a **deuteron**
   regression before ⁶Li form factors exist. Note it **changes sign** between
   `x = 0.05` and `x = 0.20`: the tensor tail is not a fixed fraction of the
   unpolarised one, which is a second reason §1.4.5 must carry `σ^el_T`

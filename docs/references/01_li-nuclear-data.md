@@ -134,7 +134,7 @@ three were fetched and their lithium/helium rows read in this pass.
   **∫ρ dV = 2.991** against Z = 3 (0.3 %, the FB truncation), **r_rms =
   2.5206 fm**, and the first two zeros of the point-charge F_ch at
   **q = 2.6944 and 3.3774 fm⁻¹**. The first of those is the number
-  `BENCHMARK_PLAN.md` §4 item 5 quotes as 2.695 — confirmed independently
+  `BENCHMARK_PLAN.md` §4 item 5 quoted as 2.695 (2.694 since 2026-09-23) — confirmed independently
   here, and it sits **outside** T11's asserted [2.9, 3.3] fm⁻¹ window, on
   the same side as Li *et al.*'s measured diffraction minimum (2.83 fm⁻¹).
 * **`dldata/tabletr.txt`** (274 rows). The analytic-model parameter table.
@@ -457,8 +457,8 @@ paper where the equal-spin-temperature relation the tree implements as
 `spin_temperature_pzz` is derived, and G2 (Goertz 1995) is the ⁶LiD material
 paper — irradiation, DNP and radiation resistance. All three are closed
 access. They matter to BENCHMARK_PLAN §4 item 9, whose honest half is that
-**P_zz of ⁶Li has never been measured by anyone**; nothing found in this
-pass changes that.
+**no measurement of the tensor polarization of ⁶Li was found by any search**
+(COMPASS's ⁶LiD value was estimated from EST, not measured — `06_critic.md` §4.1 N-2, re-read 2026-09-23); nothing found in this pass changes that.
 
 ---
 
@@ -468,8 +468,8 @@ Stated once, because every item above is unpolarized:
 
 1. **Nothing here touches b₁, A_zz or any tensor observable of lithium.**
    C1–C6 are unpolarized cross sections: they constrain |φ₀|² + |φ₂|²
-   summed, never the S–D interference b₁ is built from. The 1.93× η
-   discrepancy (C-1) is untouched by all of it.
+   summed, never the S–D interference b₁ is built from. The 1.93× distance
+   of the undialled tables from the phase-shift-analysis η (C-1, a consistency band on a dial) is untouched by all of it.
 2. **No ⁷Li DIS measurement exists**, so the CBT polarized-EMC curve the
    tree carries has no ⁷Li unpolarized data under it either.
 3. **No separated ⁶Li C2 form factor exists.** Longitudinal elastic data

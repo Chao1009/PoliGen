@@ -382,7 +382,7 @@ unchanged to every digit they carry.
 `ClusterPartialWave::from_vmc`, which already applied `φ_L = i^L ψ_L`, and
 only *reads* the tagged channel's `Wave::vmc` tables, which the fix leaves
 untouched. Verified: `validation/reference/b1_default_li6.json` is
-**byte-identical** (SHA-256 `d7bd8ce6…`), the CDKS shape gate,
+**byte-identical** (SHA-256 `d7bd8ce6…` (true on 2026-09-06; since 2026-09-23 the file carries a `provenance` label and hashes to `8373db8e…`, every numeric block byte-identical — `../run_2026-09-23/phase_B3_chain_rc.md` §4)), the CDKS shape gate,
 `alpha_d_quadrupole_fm2` and `LI6_B1_RANK2_TRANSFER` all pass unchanged. So do
 the inclusive sector, the coherent channel, the RC sector, `boost_spectator`
 and every `spectator.json` / `coherent.json` / `xsec.json` / `spin.json` /
@@ -476,7 +476,7 @@ SHA-256, before the fix and after the re-pin:
 
 | file | before | after |
 |---|---|---|
-| `b1_default_li6.json` | `d7bd8ce6a01b581d…` | **same** |
+| `b1_default_li6.json` | `d7bd8ce6a01b581d…` | **same** (true on 2026-09-06; since 2026-09-23 the file carries a `provenance` label and hashes to `8373db8e…`, every numeric block byte-identical — `../run_2026-09-23/phase_B3_chain_rc.md` §4) |
 | `beams.json` | `00d24891685d9fe6…` | **same** |
 | `bookkeeping.json` | `2db57d2168fc8fcc…` | **same** |
 | `coherent.json` | `f77dcf04681e11f7…` | **same** |
@@ -679,6 +679,9 @@ scripts under `validation/` say so, and so does `validation/README.md`.
 `evgen/polligen/tagged.py:247`.** Until it lands, the two trees disagree on
 every angle-differential spin-1 tagged quantity, and **this tree is the one
 that agrees with Cosyn–Weiss Eq. (6.12)** — as an identity, to 8.88e−16.
+
+> **2026-09-23:** superseded — the port gate is restored against the fixed
+> `polligen`; `../run_2026-09-23/phase_A_port_gate.md`.
 
 ---
 

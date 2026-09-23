@@ -548,8 +548,8 @@ struct HoSpin1FFOptions {
 /// the zero; it says only that C2 is "much smaller than C0 below 3 fm^-1",
 /// that "for q >= 3 fm^-1 the C2 contribution becomes dominant", and that
 /// two-body currents "shift the minimum to lower values of q" with no number.
-/// Fit q_0 over [2.9, 3.3] fm^-1 and pin the REFIT result, with the refit's
-/// own uncertainty (T11).  Note the shell-model alpha = (Z-2)/3 = 1/3 puts the
+/// T11 gates q_0 over [2.9, 3.3] fm^-1; two data-derived numbers sit BELOW it: the UVa FB zero 2.694
+/// and Li71's minimum 2.828 fm^-1 (t3_li6_charge_ff_fb.py, 2026-09-23).  Note the shell-model alpha = (Z-2)/3 = 1/3 puts the
 /// zero at 2.33 fm^-1, far too low, so alpha must be FREE: this is a
 /// phenomenological fit and must be labelled as such, not a shell model.
 /// (These two reproduce both targets exactly:
@@ -937,7 +937,7 @@ double polrad_sigma_el_u(const Spin1ElasticFF& ff, double x_a, double y,
 ///
 /// It is a SEPARATE TABLE from `polrad_sigma_el_u` and never a scale factor on
 /// it: `sigma_q/sigma_u` changes SIGN between x = 0.05 and x = 0.20
-/// (check sec. 8: +0.106, +0.064, -0.117 at three deuteron points).
+/// (check sec. 8: +0.106, +0.062, -0.117 at three deuteron points).
 double polrad_sigma_el_t(const Spin1ElasticFF& ff, double x_a, double y,
                          double s_a, double m_a, int n_eta = 128);
 
@@ -1573,12 +1573,12 @@ struct RcOptions {
   ///       labels the same row "this tree, `ho` edge"),
   ///       sigma^el_T/sigma^el_U = -3.057e-03 / +9.357e-04 /
   ///       +7.972e-02 at x = 0.01 / 0.10 / 0.30, against POLRAD's own DEUTERON
-  ///       elastic-tail numbers +0.106 / +0.064 / -0.117 (transcription check
-  ///       sec. 8) -- a factor 35 / 68 at the first two and only 1.5 at the
+  ///       elastic-tail numbers +0.106 / +0.062 / -0.117 (transcription check
+  ///       sec. 8, row 2 re-driven 2026-09-23) -- a factor 35 / 67 at the first two and only 1.5 at the
   ///       third.  THE MAGNITUDE IS A BAND EDGE TOO, not only the sign of
   ///       point (4): the `vmc-ft` edge gives -3.282e-03 / -2.442e-04 /
-  ///       +9.333e-02 on the same three x, so the x = 0.10 factor is 68 on
-  ///       one edge and ~260 on the other.  Design sec. 2.1 says why: what sets the fraction is Q_A/Z,
+  ///       +9.333e-02 on the same three x, so the x = 0.10 factor is 67 on
+  ///       one edge and ~255 on the other.  Design sec. 2.1 says why: what sets the fraction is Q_A/Z,
   ///       and Q(6Li)/Q(d) = 0.29 against Z = 3.  But that near-vanishing 6Li
   ///       quadrupole is a cancellation in the COHERENT charge distribution,
   ///       while the alignment of the NUCLEON MOMENTUM distribution -- what a

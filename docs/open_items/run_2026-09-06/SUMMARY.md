@@ -50,7 +50,7 @@ the board and the rest is the working tree):
   `spectator`, `spin`, `xsec` **identical**; `tagged.json` and
   `_manifest.json` **differ, by registry row 26 and nothing else**. The
   brief's "byte-identical to `a94fd6e`" must be read that way for this run,
-  and §B27(d) says so in the registry.
+  and §B27(d) says so in the registry. (2026-09-23: `_manifest.json` is byte-identical to `a94fd6e` again; `../run_2026-09-23/phase_A_port_gate.md` §4. The same day `b1_default_li6.json` gained a `provenance` label — its whole-file sha256 moved `d7bd8ce6…` → `8373db8e…`, every numeric block byte-identical; `../run_2026-09-23/phase_B3_chain_rc.md` §4.)
 
 ---
 
@@ -167,8 +167,8 @@ figure first published here said.
 cannot be the source for those two blocks; `validation/reference/tagged.json`'s
 `channels/deuteron/model` and `channels/li6_alpha/model` are dumped from **this**
 library instead (8 fields each; the ⁷Li block came through **byte-identical**),
-and `tagged.json` is no longer an external port gate for them. The priced
-alternative — keep `polligen`'s blocks under an `xfail` naming the bug — was priced before the sibling fixed its own phase (2026-09-15 19:50, commit `1066555`; the fixed polligen agrees with the re-pin at 2e-13, re-measured 2026-09-16), so the polligen port gate can now simply be restored; that alternative is a
+and `tagged.json` is no longer an external port gate for them. (Until 2026-09-23; see below.) The priced
+alternative — keep `polligen`'s blocks under an `xfail` naming the bug — was priced before the sibling fixed its own phase (2026-09-15 19:50, commit `1066555`; the fixed polligen agrees with the re-pin at 2e-13, re-measured 2026-09-16), and the polligen port gate WAS restored on 2026-09-23 — every block of `tagged.json` re-dumped from `polligen` at the sibling's `c0f86a8`, the two re-pinned blocks moving by at most 1.33e−13 (li6_alpha) / 2.28e−13 (deuteron) relative, `../run_2026-09-23/phase_A_port_gate.md`; the `xfail` alternative was a
 gate that is green only because it is told to expect failure.
 
 ## B — the s/p tensor bound, the exact tail, and Q(⁷Li) (`af3f415`, `phase_B_numbers.md`)

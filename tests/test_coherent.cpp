@@ -142,7 +142,7 @@ TEST_CASE("coherent: the coherent fraction and the slope have the right shape") 
 }
 
 // T10a (open item O5).  The eSTARlight table is the SINGLE code home of the
-// unpolarized coherent rates of estarlight_li6.md; the reach arithmetic built
+// unpolarized exclusive-VM rates of estarlight_li6.md (an exclusive-VM rate scale, not a check on the coherent channel's rate); the reach arithmetic built
 // on it is `validation/o5_a2_reach.py` + `python/tests/test_o5_reach.py`, and
 // the write-up is phase_C_numbers.md sec. C2.  What is pinned here is the
 // table and the two closed forms the verdict turns on, so that the C++ side

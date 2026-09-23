@@ -142,13 +142,13 @@ inline constexpr double LI6_R_POINT_VMC_FM = 2.4433;
 inline constexpr double LI6_QUADRUPOLE_GFMC_FM2     = -0.20;
 inline constexpr double LI6_QUADRUPOLE_GFMC_ERR_FM2 = 0.06;
 
-/// The MEASURED asymptotic D/S ratio of the alpha-d channel,
-/// eta = C_2/C_0 = -0.025 +- 0.006 (stat) +- 0.010 (syst).  George & Knutson,
-/// PRC 59, 598 (1999), from d + alpha elastic tensor analysing powers; other
-/// determinations lie in -0.01 .. -0.03.  The repo's own record is
-/// docs/PHYSICS_CHANNELS.md's reference [GK99] -- NOT physics_literature.md,
-/// which predates this citation and does not carry it.  The comparison point
-/// for `asymptotic_ds_ratio()`; nowhere else is it retyped.
+/// The EMPIRICAL asymptotic D/S ratio of the alpha-d channel, eta = C_2/C_0 =
+/// -0.025 +- 0.006 (stat) +- 0.010 (syst): George & Knutson PRC 59, 598 (1999),
+/// "... by a restricted phase shift analysis" (the title; REFERENCES.md sec. 1
+/// #31) -- NOT a direct d + alpha tensor-analysing-power measurement, as this
+/// line said until 2026-09-23; others -0.01 .. -0.03.  Record: [GK99] of
+/// docs/PHYSICS_CHANNELS.md.  For `asymptotic_ds_ratio()` it is a CONSISTENCY
+/// BAND ON THE QUADRUPOLE DIAL, not a D-wave benchmark (06_critic.md C-1).
 ///
 /// READ THE BAND, NOT THE CENTRAL VALUE.  `asymptotic_ds_ratio()` is EXACTLY
 /// LINEAR in `quadrupole_dial_s()` (the dial multiplies R_2 by s and both
@@ -454,15 +454,15 @@ class ClusterConfigSampler {
   /// retyped: kappa = 0.3074 fm^-1, eta_c = 0.3002.  The naive R_2/R_0 is NOT
   /// eta -- W_2/W_0 is 3.34 / 2.92 / 2.63 at R = 6 / 7 / 8 fm.  -0.0482 for
   /// the default tables (-0.0538 +- 0.0021 for `OverlapRaw`, propagating
-  /// li6.ad's own MC errors) against the MEASURED `LI6_ETA_DS_GK`
-  /// = -0.025 +- 0.006 +- 0.010: a real but MODERATE D-wave excess, ~2x, not
-  /// the 5-15x a naive ratio suggests.
+  /// li6.ad's own MC errors) against GK's phase-shift-analysis `LI6_ETA_DS_GK`
+  /// = -0.025 +- 0.006 +- 0.010: the undialled tables sit ~2x off, not 5-15x --
+  /// a consistency band on the quadrupole dial, not a D-wave measurement.
   ///
   /// IT IS NOT AN INDEPENDENT CHECK ON A DIALLED CONFIGURATION.  The (G9)
   /// dial scales R_2 by s and both waves by the same 1/sqrt(n(s)), so
   /// eta(s) = s * eta(1) EXACTLY; running the dial to a target Q and then
   /// reading eta back recovers the dial, not the wave function.  What that
-  /// buys is a budget leg anchored on a MEASUREMENT rather than on GFMC:
+  /// buys is a budget leg anchored on an EMPIRICAL number, not on GFMC:
   /// eta = -0.025 <-> Q_charge = -0.1842 fm^2, so 3.317x of the 7.52x gap is
   /// "too much D wave" and the remaining 2.269x is everything else (T22b).
   /// What it costs is that the leg inherits GK's error bar, which spans

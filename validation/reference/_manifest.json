@@ -31,7 +31,7 @@
   "coherent.json": "LiPolGen/validation/dump_polligen_reference.py",
   "spectator.json": "LiPolGen/validation/dump_polligen_reference.py",
   "spin.json": "LiPolGen/validation/dump_polligen_reference.py",
-  "tagged.json": "LiPolGen/validation/repin_tagged_from_lipolgen.py",
+  "tagged.json": "LiPolGen/validation/dump_polligen_reference.py",
   "xsec.json": "LiPolGen/validation/dump_polligen_reference.py"
  },
  "polligen_version": "0.1.0"

@@ -14,7 +14,7 @@ every number it multiplies is read from code, none retyped:
   1. `a2_from_quadrupole` (cluster_config.hpp), the closed-form
      quadrupole -> a_2 map, evaluated at the MEASURED `LI6_QUADRUPOLE_FM2`;
   2. `estarlight_li6_coherent()` and `estarlight_li6_q2_floors()`
-     (coherent.hpp), the eSTARlight unpolarized coherent rate baseline at
+     (coherent.hpp), the eSTARlight unpolarized EXCLUSIVE coherent-VM rate scale (not a coherent-channel benchmark) at
      e 10 GeV x 6Li 99.5 GeV/u -- the second table is the 2026-09-04
      PHOTOPRODUCTION scan, the Q^2 < 0.1 GeV^2 region the first one omits;
   3. `Scenario` / `tensor_flip_plan` (sampler.hpp / bookkeeping.hpp), the

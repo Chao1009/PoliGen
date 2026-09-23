@@ -209,8 +209,8 @@ physics-channels reference document (`docs/PHYSICS_CHANNELS.md`, gated by
 radiative-correction band (`include/lipolgen/rc.hpp`, `src/core/rc.cpp`,
 `--rc tensor-band`); the spin-3/2 finite-γ theory note
 (`docs/theory/SPIN32_FINITE_GAMMA.md`); packaging (`pyproject.toml` with
-scikit-build-core, `pip install -e .`); the eSTARlight unpolarized coherent
-⁶Li baseline (`docs/open_items/run_2026-09-02/estarlight_li6.md`) and the
+scikit-build-core, `pip install -e .`); the eSTARlight unpolarized exclusive-VM
+rate scale on ⁶Li (`docs/open_items/run_2026-09-02/estarlight_li6.md`) and the
 polarized ⁶Li α+d configuration sampler (`include/lipolgen/cluster_config.hpp`,
 console script `lipolgen-configs`). Landed, and its A = 2 gate CLOSED on
 2026-09-03: the four-term α–d convolution backend for b₁(⁶Li)
@@ -314,8 +314,8 @@ gated at rtol 1e-12 against regenerated `validation/reference/*.json`
   agreement with CDKS; `docs/open_items/run_2026-09-03/phase_A_numbers.md`),
   which lifted its publication ban — the mandatory ±100 % band stays, and the
   gate is A = 2 and says nothing about the α–d step. The coherent amplitude
-  for polarized A > 2 has a first rung — the eSTARlight unpolarized ⁶Li
-  baseline plus the polarized α+d configuration sampler — but not yet a full
+  for polarized A > 2 has a first rung — the eSTARlight unpolarized exclusive-VM ⁶Li
+  rate scale plus the polarized α+d configuration sampler — but not yet a full
   polarized coherent amplitude. The spin-3/2 rank-2 basis has its theory note
   (`docs/theory/SPIN32_FINITE_GAMMA.md`); the rank-3 sector it describes stays
   off by default, so no code behaviour changed. Still wholly external:

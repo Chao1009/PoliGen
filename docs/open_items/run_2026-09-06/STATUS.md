@@ -148,7 +148,7 @@ angle-differential spin-1 tagged quantity, and **this tree is the one that
 agrees with Cosyn–Weiss Eq. (6.12)** — as an identity, `8.881784e−16` over
 26 880 cells against `2.740499e+00`. `validation/reference/tagged.json` has
 already stopped tracking polligen for the two spin-1 `model` blocks (§8), so
-the port gate no longer catches a future divergence there.
+the port gate no longer catches a future divergence there. **Superseded 2026-09-23:** the sibling took the same phase in `1066555` and `tagged.json` is again dumped from `polligen` in every block, so the port gate catches a divergence there again (`../run_2026-09-23/phase_A_port_gate.md`).
 
 **(e) Not taken here.** No file in `/home/cpeng/Projects/polli/PolarizedLithiumSim`
 was modified by this project. Nothing in it was executed **for this row as it

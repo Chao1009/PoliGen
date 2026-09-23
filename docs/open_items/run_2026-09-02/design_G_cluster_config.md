@@ -353,7 +353,7 @@ the committed tables):
 
 so **η ≈ −0.05(1)**, not −0.15. And the literature value is **not** unsettled:
 it is measured — **η = −0.025 ± 0.006 ± 0.010** (George & Knutson, PRC 59, 598
-(1999), from d + α elastic tensor analysing powers; other determinations lie in
+(1999), from d + α elastic tensor analysing powers [*Note 2026-09-23 (`../run_2026-09-23/phase_B2_nuclear.md` §5): George–Knutson's η is from a restricted phase-shift analysis (the paper's title), not from d + α elastic tensor analysing powers, and it is a consistency band on the quadrupole dial, not a D-wave benchmark. This record's wording is left as written on its date.*]; other determinations lie in
 −0.01…−0.03). The table's D-wave tail is therefore **≈ 2× the measured η**, not
 5–15×. That is a genuine but *moderate* D-wave excess, entirely compatible with
 the missing 15 % non-α+d component and with cluster distortion — it does **not**
@@ -905,7 +905,7 @@ class ClusterConfigSampler {
   /// divided by the Whittaker ratio W_{-eta_c,5/2}/W_{-eta_c,1/2}(2 kappa R),
   /// averaged over R = 6..8 fm (kappa = 0.3074 fm^-1, eta_c = 0.3002).
   /// -0.05(1) for the committed tables, against the MEASURED -0.025(12)
-  /// (George & Knutson, PRC 59, 598 (1999)).  Sec. 2.7, O1.
+  /// (George & Knutson, PRC 59, 598 (1999)).  Sec. 2.7, O1. [Note 2026-09-23: GK's eta is a restricted phase-shift analysis, a consistency band on the dial, not a measurement; run_2026-09-23/phase_B2_nuclear.md sec. 5.]
   double asymptotic_ds_ratio() const;
   /// a_2(m) at |t| for THIS sampler's 6Li geometry -- a2_from_quadrupole()
   /// with q_matter_analytic_fm2(m) and A = 6.
@@ -1309,7 +1309,7 @@ for `AlphaCoreSource::Gaussian`), not replaced by an iterated source.
 | **T19** | **Options validation throws**: `exact_coherence = true`; `n_r` or `n_c` < 8; a grid that would drop more than **1e-3 of any table's norm** | `std::runtime_error`. **Two rules removed from the first draft**: (a) "θ_S = 0 with a request for a₂ (warn)" — there is no warning channel in the core (no `std::cerr` in `src/core`), a₂ ≡ 0 is the *correct* value there, and the human-facing warning belongs in `configs.py` (§6); (b) "r_max below the table extent throws" — that fires on the **defaults** (`he4.density` runs to 20.05 > `r_max_fm` = 20, `fdeut.av18` to 100 > `rnp_max_fm` = 25). The norm-loss rule is the right form of the same check |
 | **T20** | **Timing**: `sample_set(10⁵)` wall time recorded and asserted under a generous ceiling | < 5 µs/config (expect 1–2; `TaggedModel::sample_kc` measures 5.2 M draws/s for the same primitive, `tagged.hpp:214`) |
 | **T21** | **The m_S conditioning of R̂** (§2.6) — the one error no moment test can see. For M = +1: ⟨P₂(cosθ_R) \| m_S = −1⟩ = **−2/7** and ⟨P₂(cosθ_R) \| m_S = 0⟩ = **+1/7** exactly (pure L = 2, m_L = 2 and 1). Gate the **grid tables** at 1e-6 (deterministic) and the MC draws at 5σ | grid 1e-6; MC 5σ. An m_S-marginal draw gives ⟨P₂⟩ = −0.0355 in *both* branches and fails by ~15 σ even at N = 10⁴ |
-| **T22** | **`asymptotic_ds_ratio()`**: the Whittaker-divided η of §2.7 from the `FitRescaled` tables | −0.05 ± 0.01, and **> the measured −0.025(12) in magnitude by ≈ 2×, not 5–15×** — the assertion is the *number*, the factor is documented in O1 |
+| **T22** | **`asymptotic_ds_ratio()`**: the Whittaker-divided η of §2.7 from the `FitRescaled` tables | −0.05 ± 0.01, and **> the measured −0.025(12) in magnitude by ≈ 2×, not 5–15×** [*Note 2026-09-23 (`../run_2026-09-23/phase_B2_nuclear.md` §5): George–Knutson's η is a restricted phase-shift analysis — a consistency band on the quadrupole dial, not a measurement of the D wave; wording left as written on its date.*] — the assertion is the *number*, the factor is documented in O1 |
 
 pytest mirrors: bindings return the right array shapes and dtypes ((N, 6, 3)
 float64 and (N, 6) int); the CLI writes a file with the right row count;
@@ -1435,7 +1435,7 @@ array helper), `CMakeLists.txt` (the one-line `lipolgen-configs` shim, §6),
   3.3 at 6 fm and 2.6 at 8 fm, so the naive ratio is *not* the asymptotic
   D/S ratio — gives **η = −0.05(1)** against the measured **η = −0.025 ± 0.006
   ± 0.010** (George & Knutson, PRC 59, 598 (1999), from d + α elastic tensor
-  analysing powers; other determinations −0.01…−0.03). The tail D-wave is
+  analysing powers [*Note 2026-09-23 (`../run_2026-09-23/phase_B2_nuclear.md` §5): George–Knutson's η is from a restricted phase-shift analysis (the paper's title), not from d + α elastic tensor analysing powers, and it is a consistency band on the quadrupole dial, not a D-wave benchmark. This record's wording is left as written on its date.*]; other determinations −0.01…−0.03). The tail D-wave is
   therefore **≈ 2× the measured value, not 5–15×**, which changes the reading:
   hypothesis **(c)** — an ANL L = 2 normalization or phase convention different
   from the standard [Y_L ⊗ χ_1]^{JM} one — is **no longer the leading
@@ -1447,7 +1447,7 @@ array helper), `CMakeLists.txt` (the one-line `lipolgen-configs` shim, §6),
   missing component together make a factor 7.5 in Q.~~ **CLOSED 2026-09-03,
   §2.7 and `run_2026-09-03/phase_C_numbers.md` §C1, T22b.** It is **two**
   factors: **3.3165** from the model to the η-matched dial (η is exactly
-  linear in `quadrupole_dial_s()`, so a *measured* observable supplies the leg)
+  linear in `quadrupole_dial_s()`, so a *measured* observable supplies the leg) [*Note 2026-09-23 (`../run_2026-09-23/phase_B2_nuclear.md` §5): George–Knutson's η is a restricted phase-shift analysis — a consistency band on the quadrupole dial, not a measurement of the D wave; wording left as written on its date.*]
   × **2.2686** from there to the measurement = **7.5238**, identically. The
   15 % missing component is **not** a third factor — 1/S_αd = 1.1706 is already
   inside the −0.615, because both waves are divided by √S_αd before the moments
@@ -1473,7 +1473,7 @@ array helper), `CMakeLists.txt` (the one-line `lipolgen-configs` shim, §6),
   (84 % of the ⟨R²⟩ gap is inside the fit's own domain), where the fit sits
   **−2.7 σ** off the raw's own MC error in the 6–8 fm η window. **Author
   decision: `FitRescaled` stays the default** — neither source is closer to the
-  one measured quantity in play (−2.0 σ vs −2.4 σ against GK), the choice moves
+  one measured quantity in play (−2.0 σ vs −2.4 σ against GK), [*Note 2026-09-23 (`../run_2026-09-23/phase_B2_nuclear.md` §5): George–Knutson's η is a restricted phase-shift analysis — a consistency band on the quadrupole dial, not a measurement of the D wave; wording left as written on its date.*] the choice moves
   Q by 8.7 % inside a band that is already a factor 7.5 wide, and the raw block
   is rough at ≈1 σ per point (mean |Δ²R|/σ = 0.6–1.0, against 0.02–0.17 for the
   fit) which a *sampler* would turn into structure. Cost of that decision,

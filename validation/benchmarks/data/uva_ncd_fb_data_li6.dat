@@ -1,0 +1,39 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# ============================================================================
+# VENDORED REFERENCE ROW -- BENCHMARK_PLAN.md sec. 4 row 5 (tier T3)
+# 6Li Fourier-Bessel CHARGE density, UVa Nuclear Charge Density archive
+# ----------------------------------------------------------------------------
+# Source:   https://discovery.phys.virginia.edu/research/groups/ncd/dldata/FB_data.dat
+#           (index: https://discovery.phys.virginia.edu/research/groups/ncd/index.html,
+#           maintained by D. Day, University of Virginia).  The archive states
+#           its provenance as "data from Atomic and Nuclear Data Tables,
+#           Volumes 14, 36 and 60" (index page, read 2026-09-23).
+# Fetched:  2026-09-23, once: HTTP 200, 18306 bytes,
+#           sha256(FB_data.dat) = e977046004c97f03cbe77c908cad501e5d454d6eece0107351aef3e7b3577c5d
+#           (06_critic.md sec. 4.5 recorded the same 18 306-byte size on
+#           2026-09-06; its sha256 was not recorded then).
+# Vendored: ONLY the column-header line and the 6Li row, byte for byte (the
+#           two lines below the marker).  sha256 of the 6Li row's bytes
+#           (without its newline) = b9655bdc97151a58614cd949c5d5a03c54abfee8ae4609c2053c65e482b24a00.
+# Licence:  NONE STATED by the archive.  What is reproduced is eight published
+#           fit parameters (numerical facts from a compilation), with
+#           attribution; the full file is NOT redistributed here.
+# Paper lineage: de Jager, de Vries, de Vries, ADNDT 14 (1974) 479;
+#           de Vries, de Jager, de Vries, ADNDT 36 (1987) 495; ADNDT 60 (1995).
+#           PROVENANCE OF THIS ROW IS UNVERIFIED (06_critic.md sec. 4.5): 6Li
+#           is in NEITHER the 1974 nor the 1987 Table IV, so the row must come
+#           from ADNDT 60 or from the archive maintainers.  "Verified content,
+#           unverified provenance."
+# COLUMN ORDER -- READ THIS: the archive's header line labels the columns
+#           "Atom Z A", but the VALUES are A then Z (6Li row: 6, 3; the 3He
+#           row reads 3, 2).  The harness reads A = 6, Z = 3.
+# FORM:     rho(r) = SUM_n a_n j0(n pi r / R) for r <= R, 0 beyond; R = 6.0 fm
+#           (last column); a_1..a_7 non-zero, a_8..a_17 = 0.  Units: e fm^-3.
+# CONVENTION (06_critic.md sec. 5.1): a CHARGE density (nucleon finite size
+#           included), PER NUCLEUS, normalised to 4 pi INT rho r^2 dr = Z e;
+#           this truncation integrates to 2.99117 (0.29 % low) -- the harness
+#           normalises F_C(q) by its own F_C(0).
+# ============================================================================
+# ---- BEGIN VERBATIM FB_data.dat LINES ----
+---Atom---Z---A---Rn----------Rn----------Rn----------Rn----------Rn----------Rn----------Rn----------Rn----------Rn----------Rn----------Rn----------Rn----------Rn----------Rn----------Rn----------Rn---------Rn-----------RR
+    6Li   6   3   1.6353e-02  2.9603e-02  2.0807e-02  7.2731e-03  4.7580e-04 -8.7510e-04  1.1413e-03  0.0000e+00  0.0000e+00  0.0000e+00  0.0000e+00  0.0000e+00  0.0000e+00  0.0000e+00  0.0000e+00  0.0000e+00  0.0000e+00  6.0

@@ -383,8 +383,8 @@ halving it makes `CdksB1` a factor 2 low. Blast radius, measured:
 * **`python/tests/`: no numeric pin on `CdksB1` exists** (`grep -n -i cdks
   python/tests/test_b1_model.py` shows only structural, CLI and validation tests —
   registry membership, `--x-max` behaviour, band handling). Nothing there moves.
-* **`validation/reference/*.json` is untouched**: the only b₁ reference,
-  `b1_default_li6.json`, records `"b1_model": "miller"`. **The rtol 1e-12 gate does
+* **`validation/reference/*.json` is untouched**: the only b₁ self-pin,
+  `b1_default_li6.json` (LiPolGen's own C++ output, not a reference), records `"b1_model": "miller"`. **The rtol 1e-12 gate does
   not move.**
 * `docs`-level: `validation/b1_li6_table.py:81` builds `lg.Li6B1(lg.CdksB1())` for
   a comparison table; that column doubles and the table must be regenerated.

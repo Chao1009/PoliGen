@@ -129,8 +129,8 @@ struct MantysaariRow {
 const std::vector<MantysaariRow>& mantysaari_a2_deuteron();
 
 /// One eSTARlight coherent vector-meson row for e 10 GeV x 6Li 99.5 GeV/u
-/// (LiPolGen beam configuration 1), the EXTERNAL unpolarized rate baseline of
-/// open item 11.1.  Run 2026-09-02 at commit
+/// (config 1) -- an EXCLUSIVE-VM rate scale (item 11.1), NOT a check on the
+/// coherent channel rate (ESTARLIGHT SCOPE, end of file).  Run 2026-09-02 at commit
 /// 939b11a24499398392d959db81c7502aeec91046, 2e5 events per channel; the run
 /// log, the input files and the adversarial re-check are
 /// docs/open_items/run_2026-09-02/estarlight_li6.md (sec. 2a, 2b, 2e, 5).
@@ -771,6 +771,21 @@ class CoherentSampler {
   Optics optics_;
   std::string pot_config_;
 };
+
+// ---------------------------------------------------------------------------
+// ESTARLIGHT SCOPE (2026-09-23, BENCHMARK_PLAN.md sec. 5.3; 06_critic.md
+// sec. 3.1, D-4).  `estarlight_li6_coherent()` / `estarlight_li6_q2_floors()`
+// are a RATE SCALE FOR EXCLUSIVE rho/phi/J/psi PRODUCTION on 6Li, and NOT a
+// benchmark of this file's coherent channel rate.  That channel is coherent
+// diffractive DIS with a continuum M_X >= `COHERENT_MX_MIN_DEFAULT` = 1.2 GeV
+// at Q^2 > `Scenario::q2_min` = 0.7 GeV^2; eSTARlight generates exclusive
+// vector mesons only, and 85-97 % of its rate sits at Q^2 < 0.1 GeV^2, where
+// this channel generates nothing -- 1 - sigma(0.1 floor)/sigma(no floor) of
+// `estarlight_li6_q2_floors()` = 1 - 1.773/11.971 (J/psi, 85.2 %),
+// 1 - 30.16/654.344 (phi, 95.4 %), 1 - 506.4/17823 (rho, 97.2 %).  Its
+// legitimate uses are the ones O5 makes of it: the exclusive coherent J/psi
+// rate and the |t| slope `slope_b` is checked against.
+// ---------------------------------------------------------------------------
 
 }  // namespace lipolgen
 

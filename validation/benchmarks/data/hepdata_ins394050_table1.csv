@@ -1,0 +1,70 @@
+# SPDX-License-Identifier: CC0-1.0
+# ============================================================================
+# VENDORED REFERENCE TABLE -- BENCHMARK_PLAN.md sec. 4 row 4 (tier T3)
+# NMC F2(6Li)/F2(D), HEPData ins394050 "Table 1" (24 points)
+# ----------------------------------------------------------------------------
+# Paper:    M. Arneodo et al. (New Muon Collaboration), "The structure function
+#           ratios F2(Li)/F2(D) and F2(C)/F2(D) at small x",
+#           Nucl. Phys. B441 (1995) 12-30, doi:10.1016/0550-3213(95)00023-2,
+#           arXiv:hep-ex/9504002 (held: PolarizedLithiumSim/refs/hep-ex_9504002.pdf)
+# Record:   https://www.hepdata.net/record/ins394050  (HEPData id 47955, v1)
+# Table:    doi:10.17182/hepdata.47955.v1/t1   (HEPData "location": Data from T 2,F 11)
+# Fetched:  2026-09-23, once, from
+#           https://hepdata.net/download/table/ins394050/Table%201/1/csv
+#           (the www. host is behind a Cloudflare challenge; the bare host
+#           served HTTP 200 to a plain user agent).  No test re-fetches it.
+# Licence:  CC0 1.0 (HEPData "table_license": CC0,
+#           https://creativecommons.org/publicdomain/zero/1.0/)
+# Integrity: every byte BELOW the marker line is the download, unmodified;
+#           sha256(body) = 3d8b92785ac82f3fccc3b440e66e8eb0852375e6bdc7fc31dfef1b14e4c1b376
+#           (t3_nmc_li6_over_d.py re-hashes it and refuses a mismatch).
+# CONVENTION (06_critic.md sec. 5.1): a ratio of PER-NUCLEON structure
+#           functions, numerator 6Li, denominator the DEUTERON (not the
+#           free isoscalar nucleon -- 03_data_nuclear.md sec. 1.4).  Read in
+#           the held preprint (hep-ex/9504002, experimental section): the 6Li
+#           targets contained 4.5 % 7Li and the D targets 1.5 % H (HD), and
+#           "a correction was also applied to take into account the slight
+#           non-isoscalarity of the targets" -- so the published ratio is an
+#           ISOSCALAR-corrected 6Li/D.  Errors: stat and sys given separately,
+#           symmetric;
+#           an overall normalisation uncertainty of 0.004 is NOT included
+#           (the table's own description line).
+# ============================================================================
+# ---- BEGIN VERBATIM HEPDATA CSV ----
+#: table_doi: 10.17182/hepdata.47955.v1/t1
+#: name: Table 1
+#: description: Additional normalization error of 0.004 not included.
+
+#: data_file: Table1.yaml
+#: keyword reactions: MU+ DEUT --> MU+ X | MU+ LI --> MU+ X | MU+ NUCLEUS --> MU+ X
+#: keyword observables: F2
+#: keyword phrases: Inclusive | Structure Function | Muon production | Neutral Current | Deep Inelastic Scattering
+#: PLAB [GeV],200.0
+#: RE(Q=DEUT),MU+ DEUT --> MU+ X
+#: RE(Q=LI),MU+ LI --> MU+ X
+X,Q**2 [GEV**2],Y,F2(Q=LI)/F2(Q=DEUT),stat +,stat -,sys +,sys -
+0.00014,0.034,0.64,0.935,0.066,-0.066,0.021,-0.021
+0.00028,0.066,0.65,0.922,0.051,-0.051,0.03,-0.03
+0.00045,0.11,0.64,0.865,0.038,-0.038,0.022,-0.022
+0.00067,0.15,0.61,0.897,0.036,-0.036,0.016,-0.016
+0.0009,0.21,0.67,0.894,0.027,-0.027,0.021,-0.021
+0.0015,0.34,0.63,0.888,0.012,-0.012,0.022,-0.022
+0.0035,0.61,0.61,0.921,0.009,-0.009,0.01,-0.01
+0.0055,1.0,0.56,0.947,0.008,-0.008,0.008,-0.008
+0.0085,1.4,0.51,0.951,0.009,-0.009,0.006,-0.006
+0.0125,1.8,0.47,0.98,0.008,-0.008,0.006,-0.006
+0.0175,2.3,0.41,0.992,0.009,-0.009,0.005,-0.005
+0.025,2.8,0.36,0.994,0.007,-0.007,0.005,-0.005
+0.035,3.6,0.31,0.971,0.008,-0.008,0.005,-0.005
+0.045,4.2,0.28,0.997,0.01,-0.01,0.005,-0.005
+0.055,4.8,0.27,0.986,0.011,-0.011,0.005,-0.005
+0.07,6.0,0.25,1.003,0.01,-0.01,0.005,-0.005
+0.09,7.2,0.24,1.004,0.012,-0.012,0.005,-0.005
+0.125,9.2,0.23,1.009,0.01,-0.01,0.005,-0.005
+0.175,12.0,0.23,1.002,0.014,-0.014,0.005,-0.005
+0.25,17.0,0.22,0.992,0.015,-0.015,0.005,-0.005
+0.35,23.0,0.21,0.99,0.027,-0.027,0.005,-0.005
+0.45,29.0,0.2,0.91,0.043,-0.043,0.005,-0.005
+0.55,33.0,0.15,0.988,0.082,-0.082,0.006,-0.006
+0.65,39.0,0.13,0.801,0.108,-0.108,0.014,-0.014
+

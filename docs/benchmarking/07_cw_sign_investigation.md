@@ -581,6 +581,13 @@ norm}`. Entries that do **not**: everything under `li7_alpha.model`,
 > missing `i^L`, regenerating from it will re-bake the wrong sign. The fix must
 > land in *both* implementations, or the JSON must be regenerated from the
 > corrected C++ and the port note updated to say so.
+>
+> **Resolved.** The fix landed in both implementations (LiPolGen 2026-09-06;
+> `polligen` in PolarizedLithiumSim `1066555`, 2026-09-15); the JSON was
+> regenerated from the corrected C++ from 2026-09-06 to 2026-09-23 and from the
+> corrected `polligen` since, and `validation/dump_polligen_reference.py` now
+> refuses a `polligen` without the phase
+> (`../open_items/run_2026-09-23/phase_A_port_gate.md`).
 
 ### 7.3 Bug fix, not a registry decision
 

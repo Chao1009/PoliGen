@@ -1,0 +1,237 @@
+{
+ "_provenance": {
+  "what": "The CLAS Physics Database's answer to 'target = deuteron, quantity = any, all rows' -- the query BENCHMARK_PLAN.md sec. 4 row 10 asks for (machine-readable BONuS / EG1b tables).",
+  "url": "https://clas.sinp.msu.ru/cgi-bin/jlab/db.cgi?tgt=deuteron&quantity=0&limit=0&search=Start+search (GET, plus selected-fields=id,final,q2min,q2max,wmin,wmax,quantity,title,authors,year,reference)",
+  "fetched": "2026-09-23; HTTP 200, 320804 bytes, 918 measurement rows, md5 6760b8b7d5f6f6270e03eaae9378e15b",
+  "licence": "no licence or terms of use are stated on the database pages (front page, search results, measurement pages all checked 2026-09-23); the rows below are a catalogue summary (facts) with attribution to the CLAS Physics Database (SINP MSU / JLab)",
+  "per_quantity_queries": "also run with tgt = deuteron and quantity = 56 (F2*P(Pt)), 57 (F2*P(Ps)), 58 (F2(x*,Q2)), 93 and 94 (d sigma/(dQ2 dPn [dOmega_n])), 173 (F2n/F2p), 13 (F2): every hit is inside the experiments listed here.",
+  "verdict_for_row_10": "BONuS (E-03-012, eid 135) is in the database as ONE measurement, E135M1: the ratio F2n/F2p vs W* (Baillie et al., PRL 108 (2012) 142001). There is NO BONuS spectator-momentum spectrum and no Tkachenko 2014 (PRC 89 045206) entry. EG1b (eid 95, 146) is there as g1, A1, g1/F1, Gamma_1 etc. -- inclusive, no spectator. The only spectator-momentum distribution for a deuteron target in the database is Deeps (eid 90; Klimenko et al., PRC 73 (2006) 035212, nucl-ex/0510032): F2N x P(p_s, cos theta_pq) at p_s = 300-560 MeV/c -- vendored separately in clas_deeps_klimenko2006_f2P.json."
+ },
+ "experiments": [
+  {
+   "eid": 12,
+   "title": "E1D and E6A runs CLAS data",
+   "spokespersons": "M. Osipenko",
+   "year": "2005",
+   "n_measurements": 113,
+   "quantities": [
+    "F2"
+   ]
+  },
+  {
+   "eid": 20,
+   "title": "e6a CLAS experiment",
+   "spokespersons": "K. Sh. Egiyan, K. A. Griffioen and M. Strikman",
+   "year": "2006",
+   "n_measurements": 4,
+   "quantities": [
+    "dσ/(dQ2 dPn)",
+    "dσ/(dQ2 dPn dΩn)"
+   ]
+  },
+  {
+   "eid": 24,
+   "title": "g10a CLAS experiment",
+   "spokespersons": "K. Hicks, S. Stepanyan",
+   "year": "2007",
+   "n_measurements": 10,
+   "quantities": [
+    "dσ/dt",
+    "W(cosθ)",
+    "W(φ)"
+   ]
+  },
+  {
+   "eid": 31,
+   "title": "PR-03-113",
+   "spokespersons": "S. Anefalos Pereira",
+   "year": "2004",
+   "n_measurements": 1,
+   "quantities": [
+    "dσ/dcos(θK+)"
+   ]
+  },
+  {
+   "eid": 66,
+   "title": "E93-017",
+   "spokespersons": "P. Rossi, E. De Sanctis",
+   "year": "1999",
+   "n_measurements": 25,
+   "quantities": [
+    "dσ/dΩ"
+   ]
+  },
+  {
+   "eid": 81,
+   "title": "E93-031 CLAS experiment",
+   "spokespersons": "J. Yun",
+   "year": "0",
+   "n_measurements": 6,
+   "quantities": [
+    "A1+ηA2",
+    "g1d"
+   ]
+  },
+  {
+   "eid": 83,
+   "title": "E93-017 CLAS Experiment",
+   "spokespersons": "M. Mirazita",
+   "year": "0",
+   "n_measurements": 16,
+   "quantities": [
+    "dσ/dΩ"
+   ]
+  },
+  {
+   "eid": 90,
+   "title": "Electron Scattering from a High-Momentum Neutron in Deuterium",
+   "spokespersons": "Sebastian Kuhn",
+   "year": "2002",
+   "n_measurements": 251,
+   "quantities": [
+    "F2 * P(Ps)",
+    "F2(x*,Q2)",
+    "F2 * P(Pt)"
+   ]
+  },
+  {
+   "eid": 95,
+   "title": "EG1b(E-93-009)",
+   "spokespersons": "S. Kuhn, G. Dodge, M. Taiuti",
+   "year": "2001",
+   "n_measurements": 13,
+   "quantities": [
+    "A1",
+    "g1/F1",
+    "g1",
+    "Rmodel",
+    "FRC",
+    "ARC",
+    "Cx"
+   ]
+  },
+  {
+   "eid": 101,
+   "title": "g2a run CLAS data",
+   "spokespersons": "N/A",
+   "year": "1999",
+   "n_measurements": 124,
+   "quantities": [
+    "dσ/dΩ"
+   ]
+  },
+  {
+   "eid": 103,
+   "title": "g7a: Search for medium modification of light vector mesons off nuclei",
+   "spokespersons": "D. Weygand, C. Djalali, M. Kossov",
+   "year": "2007",
+   "n_measurements": 2,
+   "quantities": [
+    "dY/dM(e+, e−)",
+    "dY/dMρ(e+, e−)"
+   ]
+  },
+  {
+   "eid": 109,
+   "title": "E5",
+   "spokespersons": "W. K. Brooks and M. F. Vineyard",
+   "year": "2000",
+   "n_measurements": 1,
+   "quantities": [
+    "RGMn"
+   ]
+  },
+  {
+   "eid": 110,
+   "title": "E5",
+   "spokespersons": "W. K. Brooks and M. F. Vineyard",
+   "year": "2000",
+   "n_measurements": 1,
+   "quantities": [
+    "RGMn"
+   ]
+  },
+  {
+   "eid": 111,
+   "title": "E5",
+   "spokespersons": "W. K. Brooks and M. F. Vineyard",
+   "year": "2000",
+   "n_measurements": 1,
+   "quantities": [
+    "GMnreduced"
+   ]
+  },
+  {
+   "eid": 128,
+   "title": "E1b(E-91-023)",
+   "spokespersons": "V. Burkert, D. Crabb, R. Minehart",
+   "year": "2001",
+   "n_measurements": 3,
+   "quantities": [
+    "Γ1dmeas",
+    "Γ1dextrp",
+    "Γ1dtot"
+   ]
+  },
+  {
+   "eid": 135,
+   "title": "E-03-012 BoNuS: The Structure of the Free Neutron Via Spectator Tagging",
+   "spokespersons": "S. Kuhn, H. Fenker, C. Keppel, W. Melnitchouk",
+   "year": "2011",
+   "n_measurements": 1,
+   "quantities": [
+    "F2n/F2p"
+   ]
+  },
+  {
+   "eid": 146,
+   "title": "EG1b: Precise Determination of the Deuteron Spin Structure at Low to Moderate Q2 with CLAS and Extraction of the Neutron Contribution",
+   "spokespersons": "S. Kuhn, N. Guler, R. Fersch",
+   "year": "2001",
+   "n_measurements": 17,
+   "quantities": [
+    "A1",
+    "g1",
+    "g1/F1",
+    "A1+ηA2",
+    "γ0",
+    "Γ1",
+    "Γ3",
+    "Γ5"
+   ]
+  },
+  {
+   "eid": 160,
+   "title": "g13",
+   "spokespersons": "Paul Mattione",
+   "year": "2006",
+   "n_measurements": 157,
+   "quantities": [
+    "dσ/dΩ"
+   ]
+  },
+  {
+   "eid": 187,
+   "title": "e1e",
+   "spokespersons": "Y. Tian, R. W. Gothe V.I. Mokeev, and G. Hollis",
+   "year": "2022",
+   "n_measurements": 172,
+   "quantities": [
+    "dσ/dΩ (exclusive)",
+    "dσ/dΩ (quasi-free)",
+    "A0 (Legendre moment)",
+    "A1 (Legendre moment)",
+    "A2 (Legendre moment)",
+    "A3 (Legendre moment)",
+    "A4 (Legendre moment)",
+    "B0 (Legendre moment)",
+    "B1 (Legendre moment)",
+    "B2 (Legendre moment)",
+    "C0 (Legendre moment)",
+    "C1 (Legendre moment)",
+    "C2 (Legendre moment)",
+    "C3 (Legendre moment)"
+   ]
+  }
+ ]
+}

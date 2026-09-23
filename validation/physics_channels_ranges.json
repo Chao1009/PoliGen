@@ -175,7 +175,7 @@
   "last": "`docs/OPEN_ITEMS_SOLUTIONS.md` §12–13 and `docs/open_items/engineering.md` §C)."
  },
  "docs/USAGE.md:163-533": {
-  "sha256": "ffb4c4f783629f0238de6a33a7016290661703112456dfa7e97cb49c78a03ce6",
+  "sha256": "cdf7e29d8b94889b3de959c204d6697b2281510c6aa893259486a0281c1a8b0d",
   "first": "X (pdg 92). The balance is **per-nucleon**, `k + P_N = k' + X`, exactly as",
   "last": "move every pinned gate number, and it is not a uniform improvement on an"
  },
@@ -195,7 +195,7 @@
   "last": "```"
  },
  "docs/USAGE.md:2795-2992": {
-  "sha256": "09f5b2bb32ff0ac99ff94ea17b2d4d69cb0c936f487c70360ee1283946b4ecc0",
+  "sha256": "27a4b5f37e0e8a42bb95b60c65c037a5522404656f987e8b31ce4be6e609698f",
   "first": "## 9. Polarized ⁶Li configurations for coherent-diffraction codes",
   "last": "and `phase_G_numbers.md` the reproduced numbers."
  },

@@ -331,8 +331,8 @@ knobs recorded nowhere at all
   ⁷Li number ever published).  The spin-1 tagged numbers published BEFORE that
   date carry the inverted S–D sign and are not reproduced, by design —
   A_zz^tag(0.20 GeV) went +0.845 → −1.207, and `tagged.json`'s `li6_alpha` and
-  `deuteron` blocks were deliberately re-pinned from the fixed C++ rather than
-  from polligen (`tests/test_tagged.cpp`, and eleven bullets below).  This
+  `deuteron` blocks were re-pinned from the fixed C++ from 2026-09-06 until `polligen` took the same phase (PolarizedLithiumSim `1066555`);
+  since 2026-09-23 every block is dumped from `polligen` again (`validation/README.md` §`tagged.json`; `tests/test_tagged.cpp`, and eleven bullets below).  This
   bullet said "bit-compatible with every published number" until 2026-09-16.
   The analytic
   two-parameter forms and their `beta` band (0.20–0.40, default 0.30) are in

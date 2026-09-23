@@ -48,6 +48,12 @@ GROUPS = [
     "python/bindings.cpp",
     "python/lipolgen/*.py",
     "validation/*.py",
+    # Added 2026-09-23: the benchmark harnesses (BENCHMARK_PLAN.md sec. 3).
+    # `validation/*.py` is not recursive, so they were outside the gate while
+    # carrying the header (run_2026-09-23/phase_B1_spin_deuteron.md, E16).
+    # `python/tests/*.py` is NOT added: 20 of its 28 files carry no header,
+    # and stamping them is a separate change.
+    "validation/benchmarks/*.py",
 ]
 
 HEAD_WINDOW = 5  # lines scanned for the header: enough for a shebang + SPDX

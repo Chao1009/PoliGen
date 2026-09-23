@@ -43,7 +43,7 @@ void lhapdf_quiet();
 /// nuclear = EPPS21nlo_CT18Anlo_Li6 (6Li, the only nucleus installed),
 /// proton = CT18NLO (matching `PartonF2`/`LhapdfSF`, NOT the nominal
 /// CT18ANLO EPPS21 was fit on; the two proton baselines differ from each
-/// other by a few tenths of a percent at DIS kinematics, see
+/// other by 0.13 % in the valence-window mean of R, i.e. 4.0 % relative on <1 - R> (0.029803 on CT18NLO vs 0.031052 on CT18ANLO, 03_data_nuclear.md sec. 1.2); see
 /// `lhapdf_sf.cpp` for the measured spread -- pass `proton_set` to change
 /// it).
 class Epps21Ratio {

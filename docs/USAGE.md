@@ -179,7 +179,7 @@ choice, not a fact:
 
 | `--b1-model` | `B1Model` | what it is |
 |---|---|---|
-| `miller` (default) | `B1Model::Miller` | `Li6B1(MillerB1)` through `LI6_B1_RANK2_TRANSFER` and `LI6_B1_PER_NUCLEON` (2/6). **Bit-for-bit what every published inclusive tensor number was made with**, and pinned at rtol 1e-12 by `validation/reference/b1_default_li6.json` (`tests/test_b1_nuclear.cpp` T9). This IS the run PLAN's "toy": today's default `b1_func` is `Li6B1(MillerB1)`, which is what `toy_b1` reaches. |
+| `miller` (default) | `B1Model::Miller` | `Li6B1(MillerB1)` through `LI6_B1_RANK2_TRANSFER` and `LI6_B1_PER_NUCLEON` (2/6). **Bit-for-bit what every published inclusive tensor number was made with**, and pinned at rtol 1e-12 by the **self-pin** `validation/reference/b1_default_li6.json` (this library's own C++ output — a regression guard, not a reference) (`tests/test_b1_nuclear.cpp` T9). This IS the run PLAN's "toy": today's default `b1_func` is `Li6B1(MillerB1)`, which is what `toy_b1` reaches. |
 | `cdks` | `B1Model::Cdks` | the same ⁶Li rank-2 transfer on the **other camp** for b₁ᵈ — the digitized Cosyn–Dong–Kumano–Sargsian PRD **95** (2017) 074036 Fig. 4 column. \|b₁\| is **two orders of magnitude smaller below x ≈ 0.1 and comparable to or larger than Miller's above it**: peak \|x·b₁\| **3.34e−4** against Miller's 4.27e−4 over x ∈ [0.02, 0.95] at Q² = 2.5, and at x = 0.3 it is **8× larger** with the opposite sign (∫b₁ dx **1.39e−4** against 9.1e−4). Different sign structure throughout. **These numbers DOUBLED on 2026-09-03**: `b1_convolution()` stopped applying `B1_PER_DEUTERON_TO_PER_NUCLEON` to a column that CDKS Eq. (10) and the text under their Eq. (16) say is already per nucleon (§2a "The two b₁ camps are not per the same thing"). |
 | `li6-convolution` | `B1Model::Li6Convolution` | `Li6ConvolutionB1` (`b1_nuclear.hpp`): the **four-term α–d convolution** of `docs/open_items/run_2026-09-02/design_D_b1_li6.md`. |
 
@@ -2329,7 +2329,7 @@ number is in `docs/OPEN_ITEMS_SOLUTIONS.md` §9.
   a starting guess no data in this repository can refit — while the committed
   VMC point-proton density has no C0 zero below q ≈ 4.3 fm⁻¹ at all, and the
   `vmc-ft` edge accordingly has none anywhere. The uncited "`|t| ≈ 0.31 GeV²`"
-  that `PHYSICS_CHANNELS.md` carried until 2026-09-04 is withdrawn.
+  that `PHYSICS_CHANNELS.md` carried until 2026-09-04 is withdrawn. (Since 2026-09-23 it has a source: it is Li *et al.* 1971's measured minimum, q = 2.828 fm⁻¹, and the UVa FB density's C0 zero 2.694 fm⁻¹ is lower still — both below T11's window, which did not move; `validation/benchmarks/t3_li6_charge_ff_fb.py`.)
 * **No RC calculation exists for a tagged tensor asymmetry**, so the tagged
   band is a defensible but **uncited extrapolation**; and none exists for any
   φ-dependent tensor observable at any axis, which is why the `Δ` cos 2φ
@@ -2920,7 +2920,7 @@ variant in `docs/open_items/run_2026-09-02/phase_G_numbers.md`):
 | δ⊥ per nucleon (transverse axis) | −0.1026 fm² |
 | eps_b0 equivalent (B = 52.04 GeV⁻²) | −0.0506 (−0.0527 at `CoherentScenario::slope_b` = 50 — see the ΔB note below) |
 | a₂(±1) at \|t\| = 0.3 GeV² | +0.1976 |
-| asymptotic η (D/S, Whittaker-divided) | −0.0482 (measured `LI6_ETA_DS_GK` = −0.025 ± 0.006 ± 0.010; `OverlapRaw` gives −0.0538 ± 0.0021 stat) |
+| asymptotic η (D/S, Whittaker-divided) | −0.0482 (George–Knutson phase-shift analysis `LI6_ETA_DS_GK` = −0.025 ± 0.006 ± 0.010; `OverlapRaw` gives −0.0538 ± 0.0021 stat) |
 
 **The caveats, which the CLI prints on every run and the sidecar stamps.**
 The α+d truncation reproduces the ⁶Li point radius to **3 %** — r_rms
@@ -2933,20 +2933,20 @@ sources) against the measured −0.0818 fm² and GFMC AV18+IL7's −0.20(6) fm²
 Always quote `quadrupole_band_fm2()`, never one number, and never derive a
 published tensor input from these wave functions —
 `docs/OPEN_ITEMS_SOLUTIONS.md` §11's rule stands. The asymptotic D/S ratio η
-says the excess is a real but *moderate* ≈ 2× effect, not the 5–15× a naive
+puts the undialled tables ≈ 2× from George–Knutson's phase-shift-analysis value — a consistency band on the dial, not a D-wave measurement — not the 5–15× a naive
 R₂/R₀ ratio would suggest (§2.1 of `phase_G_numbers.md`).
 
 That 7.5× is **two factors, not three**: **3.3165** from the model to the dial
-setting that matches the *measured* η, × **2.2686** from there to the
+setting that matches the *empirical* η, × **2.2686** from there to the
 measurement. The missing ≈15 % non-α+d component (1/S_αd = 1.1706) is **not** a
 third factor — both waves are divided by √S_αd before the moments are taken, so
-it is already inside the −0.615. **Quote the band, not the leg**: the measured
+it is already inside the −0.615. **Quote the band, not the leg**: the empirical
 η carries ±0.011662, and mapped through the (exactly linear) dial that spans
 model Q from −0.4005 fm² to **+0.0298 fm² — through zero**. So the 3.32× is
 *3.32× (1 σ: 1.54× … sign change)*, and η cannot separate the measured
 −0.0818 fm² (+0.48 σ) from GFMC's −0.20 (−0.07 σ).
 `docs/open_items/run_2026-09-03/phase_C_numbers.md` §C1 has the derivation;
-`LI6_ETA_DS_GK` / `_STAT` / `_SYST` are the single home of the measurement.
+`LI6_ETA_DS_GK` / `_STAT` / `_SYST` are the single home of that number.
 
 **Driving the one dial from η: `quadrupole_for_eta`** (open item C5.1,
 2026-09-04). η has deliberately **no dial of its own** — it is exactly linear

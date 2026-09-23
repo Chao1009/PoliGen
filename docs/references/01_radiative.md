@@ -557,7 +557,7 @@ paired Rad/noRad tables; POLRAD ADGH compiled numbers; PEPSI+RADGEN") and §4 it
 makes the **DJANGOH published Rad/noRad four-bin table** one of the top-ten items to
 wire, at "hours" of effort and "zero dependencies", because it "turns the RC
 'must-not-contradict' bound into a Q²-trend comparison". The DJANGO6 paper is where that
-table's methodology is defined, and HERACLES is where its QED content is defined.
+table's methodology is defined, and HERACLES is where its QED content is defined. *(2026-09-23: wired and BLOCKED — the published table has the elastic radiative tail OFF, IEL2 = IEL31..33 = 0, so it shares no term with `rc_tail`; `../open_items/run_2026-09-23/phase_B3_chain_rc.md` §1.2.)*
 
 *What they bound or validate.* The whole of `rc_tail` at **collider** kinematics — the
 single most important caveat in `rc.hpp` is that POLRAD is a fixed-target code and the
@@ -954,7 +954,7 @@ overturn.
 | # | Action | References | Effort | What it closes |
 |---|---|---|---|---|
 | 1 | Write the `[MT69]` gate in `tests/test_rc.cpp` against SLAC-PUB-380 Eq. (B.5) — σ^el normalisation for a point target, then the deuteron control channel | R1, R2 | 1–2 d | `benchmarking/00` §9 item 5; `SUMMARY.md` item 5; `04_theory.md` T-35/T-36 |
-| 2 | Wire the DJANGOH published Rad/noRad four-bin table as a Q²-trend comparison | R20, R21, R19 | hours | `BENCHMARK_PLAN.md` §4 item 7 (top-ten, zero dependencies) |
+| 2 | Wire the DJANGOH published Rad/noRad four-bin table as a Q²-trend comparison | R20, R21, R19 | hours | `BENCHMARK_PLAN.md` §4 item 7 (top-ten, zero dependencies). *(2026-09-23: wired and BLOCKED — the published table has the elastic radiative tail OFF, IEL2 = IEL31..33 = 0, so it shares no term with `rc_tail`; `../open_items/run_2026-09-23/phase_B3_chain_rc.md` §1.2.)* |
 | 3 | Wire HERMES Table II as an assertion **and** re-derive `RC_DELTA_LOW_X_OPTIMISTIC` from the PDF rather than from the comment | R4 | ½ d | `BENCHMARK_PLAN.md` §4 item 3 |
 | 4 | Read R8 and put a **sourced** number on `a_transfer_frac` — the A = 2 → A = 6 transfer of δ(x) | R8 (paywalled: needs library access), R2 | 2–3 d + access | registry row B6 / `AUTHOR_DECISIONS.md` §B14 |
 | 5 | Wire Abbott's G_C/G_M/G_Q into the deuteron control channel's `Spin1ElasticFF` and un-blind the T8(a)/T10 shape gates | R30 | 1–2 d | `02_data_nucleon_deuteron.md`'s "exist … and are not used" |

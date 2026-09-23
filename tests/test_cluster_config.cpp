@@ -934,10 +934,10 @@ TEST_CASE("T21 R-hat is conditioned on m_S, not on the m_S-summed density") {
 
 // ----------------------------------------------------------------------- T22
 
-TEST_CASE("T22 the asymptotic D/S ratio, Whittaker-divided") {
+TEST_CASE("T22 the asymptotic D/S ratio, Whittaker-divided -- a consistency band on the dial, not a D-wave benchmark") {
   const ClusterConfigSampler& s = default_sampler();
   const double eta = s.asymptotic_ds_ratio();
-  MESSAGE("T22 eta = " << eta << " (FitRescaled), measured "
+  MESSAGE("T22 eta = " << eta << " (FitRescaled), George-Knutson phase-shift analysis "
           << LI6_ETA_DS_GK << " +- " << LI6_ETA_DS_GK_STAT << " +- "
           << LI6_ETA_DS_GK_SYST);
   CHECK_CLOSE_AT(eta, -0.05, 0.0, 0.01);
@@ -947,7 +947,7 @@ TEST_CASE("T22 the asymptotic D/S ratio, Whittaker-divided") {
                        / np_interp(7.0, s.alpha_d_grid(), s.alpha_d_wave(0));
   CHECK_CLOSE_AT(naive, -0.149, 0.0, 0.01);
   CHECK(std::fabs(naive / eta) > 2.5);
-  // ~2x the measured value, not 5-15x: a real but MODERATE D-wave excess.
+  // ~2x the phase-shift-analysis value, not 5-15x: a consistency band on the quadrupole dial (eta is linear in it, T22b), not a D-wave measurement.
   CHECK(std::fabs(eta / LI6_ETA_DS_GK) < 3.0);
   CHECK(std::fabs(eta / LI6_ETA_DS_GK) > 1.2);
   ClusterConfigOptions o;
@@ -967,7 +967,7 @@ TEST_CASE("T22 the asymptotic D/S ratio, Whittaker-divided") {
 //     eta(s) = s * eta(1)      EXACTLY, to machine precision,
 //
 // and eta is a relabelling of the dial, not an independent check on it.  That
-// is what lets a MEASURED observable, rather than the GFMC number, supply the
+// is what lets an EMPIRICAL number (GK's phase-shift-analysis eta), rather than the GFMC number, supply the
 // first leg of the Q budget -- and, in the same breath, what makes the leg's
 // error bar enormous.  Every literal below is a REGRESSION ANCHOR.
 TEST_CASE("T22b eta rides the quadrupole dial: the TWO-factor Q budget") {
@@ -1009,7 +1009,7 @@ TEST_CASE("T22b eta rides the quadrupole dial: the TWO-factor Q budget") {
   // a0 and a2 by sqrt(s_alpha_d_) BEFORE ad_m_ is recomputed, so the 1.1706
   // is ALREADY INSIDE q0.  It is a CEILING on what any coherent missing-
   // component model could add, never a multiplier: the three-factor product
-  // overshoots the measured ratio by 17 %.
+  // overshoots q0 / Q(6Li, spectroscopic `LI6_QUADRUPOLE_FM2`) by 17 %.
   CHECK_CLOSE(1.0 / base.s_alpha_d(), 1.1706416896, 1e-10);
   CHECK_CLOSE(f_eta * (1.0 / base.s_alpha_d()) * f_res, 8.80769421057, 1e-10);
   CHECK(f_eta * (1.0 / base.s_alpha_d()) * f_res
@@ -1034,7 +1034,7 @@ TEST_CASE("T22b eta rides the quadrupole dial: the TWO-factor Q budget") {
     n.quadrupole_target_fm2 = 0.0297575059;
     const ClusterConfigSampler sn(n);
     CHECK_CLOSE(sn.asymptotic_ds_ratio(), LI6_ETA_DS_GK + sig, 1e-9);
-    // the WRONG SIGN against the measurement, still inside 1 sigma of GK
+    // the WRONG SIGN against the spectroscopic Q(6Li) < 0, still inside GK's 1-sigma consistency band
     CHECK(sn.quadrupole_band_fm2()[2] > 0.0);
     CHECK(LI6_QUADRUPOLE_FM2 < 0.0);
   }
@@ -1201,7 +1201,7 @@ TEST_CASE("T23 eta -> quadrupole is a converter, and the a_2 map inverts") {
   const double eta0 = base.asymptotic_ds_ratio();
   CHECK_CLOSE(eta0, -0.0482160903696, 1e-9);
 
-  // (a) round trip: ask for the Q that lands on the MEASURED eta, dial to it,
+  // (a) round trip: ask for the Q that lands on GK's phase-shift-analysis eta, dial to it,
   // and read eta back.  This is sec. C1.4's -0.1842160147 fm^2, now derived.
   const double q_gk = base.quadrupole_for_eta(LI6_ETA_DS_GK);
   CHECK_CLOSE(q_gk, -0.1842160146606, 1e-9);

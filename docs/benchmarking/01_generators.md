@@ -55,7 +55,7 @@ Nothing sits at an "L5 — polarized nucleus" level, because no such code exists
 | Tagged α/d/t spectator with cluster wave functions | STEG (deuteron, S-wave Hulthén), BeAGLE eD | that the tagged **kinematics and spectral-function machinery** is the standard one at A = 2 | the α+d / α+t cluster wave function; the D-state; the tensor spectator asymmetry |
 | T1 breakup | BeAGLE (FLUKA evaporation), Sartre (GEMINI++) | that ⁶Li* → α+d energetics and far-forward fragment η/rigidity are physical | pre-formed clusters — both codes only make clusters by *statistical evaporation* |
 | Glauber FSI on the spectator | BeAGLE (INC, A > 12 only), Sartre (Glauber for the dipole) | nothing directly: neither implements eikonal *cluster*-spectator survival | the whole FSI weight. §5.4 |
-| Coherent ⁶Li diffraction | eSTARlight (already in tree, `D-4`), STARlight (γ limit), Sartre (saturation) | the unpolarized coherent rate, the \|t\| slope and the VM ratios; and a **second dipole model** at the deuteron | ⁶Li in Sartre (§5.3); the tensor a₂ modulation everywhere |
+| Coherent ⁶Li diffraction | eSTARlight (already in tree, `D-4`), STARlight (γ limit), Sartre (saturation) | the unpolarized **exclusive-VM** rate scale, the \|t\| slope and the VM ratios (not the coherent continuum channel's rate); and a **second dipole model** at the deuteron | ⁶Li in Sartre (§5.3); the tensor a₂ modulation everywhere |
 | PYTHIA Pomeron tier (T2 coherent) | stock PYTHIA 8 diffraction, RAPGAP | that the DPDF tier is stock physics (already `F-8`) | — |
 | Radiative corrections, **vector** | DJANGOH/HERACLES (independent engine), PEPSI/RADGEN, POLRAD 2.0 itself | the **magnitude and Q² trend** of the RC against a second, independently written one-loop engine | — |
 | Radiative corrections, **tensor band** | RADGEN's `pnrun = ±2` branch (§2.5) | the *kernel structure* — how b₁, b₂ enter the RC integrals | the tensor structure functions themselves; RADGEN's b₁ is a placeholder |
@@ -209,9 +209,12 @@ validate.**
      | 100 – 1000 | 0.003760005602 | 0.003239636940 | 1.1606 |
      | 1000 – 10000 | 0.00008615325533 | 0.00007015936779 | 1.2280 |
 
-     (ratios computed here from the published numbers.) This is an
-     **obtainable-today table** against which the magnitude and Q² trend of
-     LiPolGen's unpolarized RC can be sanity-checked without running anything.
+     (ratios computed here from the published numbers.) This table
+     **excludes the elastic radiative tail**: every run has IEL2 = IEL31 = IEL32 =
+     IEL33 = 0 (logs at `9869d9a`). Its ratio is the inelastic O(α) correction
+     only, so it constrains no term LiPolGen applies, and LiPolGen's `rc_tail` is
+     the elastic (and nuclear quasi-elastic) radiative tail only
+     (`../open_items/run_2026-09-23/phase_B3_chain_rc.md` §1.2).
 * **Runnable here.** Not without the source. If obtained: gfortran 11.4.0 is
   present, but it needs **LHAPDF 5** (tested against 5.8.6; only LHAPDF 6.5.5 is
   installed here) and CERNLIB `ranlux` — the same two dependencies the BeAGLE
@@ -326,8 +329,8 @@ validate.**
   `cweiss_pol/tag_user_wf.f` is a **Hulthén S-wave**, verified in full:
   `A = 0.045647`, `B = 0.2719`, `PSI = (1/(p²+A²) − 1/(p²+B²))/√C`. **There is
   no D-wave.** A deuteron with no D state has no tensor structure at all, so
-  this code cannot reach b₁, A_zz, or the D/S ratio η that `C-1` and `E-1`
-  live on. `TAGWF` is declared a user-defined routine and is meant to be
+  this code cannot reach b₁, A_zz, or the D/S ratio η (C-1's consistency band) and
+  the tensor observable `E-1` lives on. `TAGWF` is declared a user-defined routine and is meant to be
   replaced — replacing it with CD-Bonn (which this tree already has,
   `C-6`) is a genuinely small piece of work and would turn STEG into a real
   cross-check of the *vector* tagged sector.
@@ -352,7 +355,7 @@ validate.**
   and decay" and is "based on parameterized HERA data" — i.e. its pedigree is a
   **fit to HERA γ*p exclusive data**, extended to nuclei by a Glauber
   calculation, not a first-principles nuclear calculation.
-* **Overlap.** Already exhausted for the coherent ⁶Li rate, the \|t\| slopes and
+* **Overlap.** Already exhausted for the exclusive-VM coherent ⁶Li rate (a scale for exclusive ρ/φ/J/ψ, not for `coherent.hpp`'s continuum), the \|t\| slopes and
   a nine-row Q²-floor scan (`D-4`, `docs/open_items/run_2026-09-02/estarlight_li6.md`).
 * **What would *strengthen* `D-4`.** Not more eSTARlight. Two things: (a) a
   **second, independent** dipole model at a species both codes support — Sartre
@@ -545,11 +548,11 @@ So `D-1` is measurable and passing in this checkout; the ratio quoted in
 | in-tree row | its present limit | external generator that would move it | what would actually change |
 |---|---|---|---|
 | `D-1` PYTHIA closure | one observable (charged multiplicity), one (x, Q²) point, ±20 % window | the same PYTHIA 8 | broaden, don't replace: add HFS energy/pT flow and a second kinematic point. No new code needed. |
-| `D-3` POLRAD elastic tail | magnitudes gated 0.25×–4× because the tree uses a different deuteron form factor than POLRAD's `ffdeu` | **DJANGOH/HERACLES** | a *second, independently written* one-loop RC engine. Even the published Rad=1/Rad=0 table (§2.4) constrains the RC magnitude without running anything. |
-| `D-3` / `C-8` RC band δ(x) | anchored on one HERMES residual and a must-not-contradict bound | DJANGOH `Rad=1` vs `Rad=0` ratios (§2.4 table); PEPSI/RADGEN for the polarized case | turns a one-point bound into a Q²-trend comparison |
+| `D-3` POLRAD elastic tail | magnitudes gated 0.25×–4× because the tree uses a different deuteron form factor than POLRAD's `ffdeu` | **DJANGOH/HERACLES** | a *second, independently written* one-loop RC engine. The published Rad=1/Rad=0 table (§2.4) has the elastic tail OFF and so constrains no LiPolGen term. |
+| `D-3` / `C-8` RC band δ(x) | anchored on one HERMES residual and a must-not-contradict bound | DJANGOH `Rad=1` vs `Rad=0` ratios (§2.4 table); PEPSI/RADGEN for the polarized case | would turn a one-point bound into a Q²-trend comparison, **with the elastic tail on**; the published table has it off |
 | the tensor RC band | pinned only against POLRAD's own paper and FORTRAN | **PEPSI's `radgen.f`** `pnrun = ±2` branch | checks the *kernel* — `qn/6` weighting, `sfm` assembly, elastic `2τ²F_m²` tail — against a second copy of the same engine, with LiPolGen's own b₁ substituted for RADGEN's placeholder |
 | `E-1` CW TABLE II tagged tensor | a **paper table**, not running code | **STEG `cweiss_pol/tag_core_pol.f`** — same author | the tagged cross-section normalisation and the spectral-function → (α_R, p_T) map become executable. Requires replacing the Hulthén S-wave `TAGWF` with CD-Bonn (already in the tree, `C-6`). Reaches the **vector** sector only. |
-| `D-4` eSTARlight ⁶Li baseline | a single code, with a Gaussian ⁶Li form factor and `R = 1.2A^{1/3}` | STARlight (Q²→0 limit); Sartre **at Au/Ca only** | a photoproduction-limit consistency check and a dipole-model second opinion at a species both support. **Not** a ⁶Li cross-check — no second code does ⁶Li. |
+| `D-4` eSTARlight ⁶Li exclusive-VM rate scale (85–97 % of its rate at Q² < 0.1 GeV², below `coherent.hpp`'s q2_min = 0.7) | a single code, with a Gaussian ⁶Li form factor and `R = 1.2A^{1/3}` | STARlight (Q²→0 limit); Sartre **at Au/Ca only** | a photoproduction-limit consistency check and a dipole-model second opinion at a species both support. **Not** a ⁶Li cross-check — no second code does ⁶Li. |
 | `E-16` far-forward efficiencies | a published table (Chang *et al.*), with ⁷Li standing in for ⁶Li | **BeAGLE** via the container | fragment η and rigidity distributions generated rather than read off a table — though for A ≥ 5 BeAGLE's own nuclear input is a generic Woods–Saxon with a known Fermi-distribution bug |
 | `E-15` Glauber FSI | analytic limits and a Python prototype (`B-2`) | **none** — see §5.4 | nothing today |
 | `F-1` / `F-2` chain | passed once, not re-run, needs external containers | `eic/genpythia` + `eic-shell`, or one external generator through `eic-smear TreeToHepMC` | a same-machine known-good reference file, so a future `npsim` failure is attributable |
@@ -631,10 +634,11 @@ code is obtained by contacting the author or the ePIC production team.
 
 ## 6. Recommended order, with the honest payoff of each
 
-1. **DJANGOH's published Rad=1 / Rad=0 table** (§2.4). Zero code, zero
-   dependencies, obtainable this minute. Constrains the *magnitude and Q²
-   trend* of the unpolarized RC against an independent one-loop engine.
-   Payoff: turns `C-8`'s single must-not-contradict bound into a trend check.
+1. **DJANGOH's published Rad=1 / Rad=0 table** (§2.4). Wired 2026-09-23
+   (`validation/benchmarks/t4_djangoh_rad_noRad.py`) and BLOCKED: the table is
+   the inelastic RC with the elastic tail off, and shares no term with
+   `rc_tail`. Payoff after a DJANGOH run with IEL31..33 on: a check of the
+   elastic-tail magnitude on a proton.
 2. **PEPSI's `radgen.f`, linked standalone** (§2.5). Needs CERNLIB only for the
    full PEPSI; the RC kernel can be exercised on its own. Payoff: the only
    external statement anywhere of *how* b₁ and b₂ enter the POLRAD radiative

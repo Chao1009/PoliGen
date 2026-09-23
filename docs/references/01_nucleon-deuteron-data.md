@@ -404,8 +404,8 @@ written with a page reference rather than from memory.
 
 PRC 41 (1990) 898 (INSPIRE 312974). The measurement of the deuteron's asymptotic
 D/S ratio, η_d = 0.0256(4), from sub-Coulomb d + ⁴He tensor analysing powers —
-the same technique and group as the George–Knutson η(⁶Li → α+d) the tree
-already gates on. η is an *asymptotic* observable, so it constrains the tail of
+the same group as the George–Knutson η(⁶Li → α+d) (a restricted phase-shift
+analysis, not this technique), which the tree carries as a consistency band on the quadrupole dial. η is an *asymptotic* observable, so it constrains the tail of
 w(r) directly and is not representation-dependent the way P_D is. Its role here
 is attribution: `test_cluster.cpp:386` already carries 0.0256(4) via Machleidt's
 Table XV, but as a model output rather than as a measurement. **Download link:

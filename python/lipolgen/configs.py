@@ -53,7 +53,7 @@ docs/open_items/run_2026-09-02/design_G_cluster_config.md sec. 2.7.
 
 That ~7.5 is TWO factors, not three (measured 2026-09-03,
 docs/open_items/run_2026-09-03/phase_C_numbers.md sec. C1): 3.3165 from the
-model to the dial setting that matches the MEASURED asymptotic D/S ratio, times
+model to the dial setting matching George & Knutson's (phase-shift-analysis) D/S ratio, times
 2.2686 from there to the measurement.  1/S_alpha-d = 1.1706 is NOT a third
 factor -- both waves are divided by sqrt(S_alpha-d) before the moments are
 taken, so it is already inside the -0.615.  And the leg's error bar is the

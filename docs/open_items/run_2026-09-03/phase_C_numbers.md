@@ -53,7 +53,7 @@ Two consequences, and they point in opposite directions:
 * **It buys a budget leg anchored on a measurement.** The first leg of the
   quadrupole gap can now be derived from George & Knutson's *measured*
   η = −0.025 ± 0.006 ± 0.010 (PRC 59, 598 (1999)) instead of from the GFMC
-  number, which is what §2.7 of design G had to use.
+  number, which is what §2.7 of design G had to use. [*Note 2026-09-23 (`../run_2026-09-23/phase_B2_nuclear.md` §5): George–Knutson's η is from a restricted phase-shift analysis (the paper's title), not from d + α elastic tensor analysing powers, and it is a consistency band on the quadrupole dial, not a D-wave benchmark. This record's wording is left as written on its date.*]
 * **It is not an independent check.** Dialling to a target Q and reading η back
   recovers the dial, not the wave function. η and `quadrupole_dial_s()` are the
   same number in different units.
@@ -158,7 +158,7 @@ Running the dial the other way, onto each published quadrupole:
 | GFMC −0.14 (+1σ) | 0.4687884 | −0.0226031 | +0.21 σ_comb |
 | GFMC −0.26 (−1σ) | 0.6034578 | −0.0290964 | −0.35 σ_comb |
 
-**Both literature values sit inside GK's 1 σ.** The measured η is consistent
+**Both literature values sit inside GK's 1 σ.** [*Note 2026-09-23 (`../run_2026-09-23/phase_B2_nuclear.md` §5): George–Knutson's η is a restricted phase-shift analysis — a consistency band on the quadrupole dial, not a measurement of the D wave; wording left as written on its date.*] The measured η is consistent
 with a ⁶Li quadrupole anywhere from −0.0818 to −0.26 fm² and with zero. It
 cannot be used to prefer one over the other, and it cannot be used to argue
 that the model's −0.615 is "3.3× too big" to better than a factor ~2 either
@@ -1162,7 +1162,7 @@ choice measured:
 
 **Why not `OverlapRaw`, given it is the direct measurement.**
 
-1. **Neither is meaningfully closer to the one measured quantity in play.**
+1. **Neither is meaningfully closer to the one measured quantity in play.** [*Note 2026-09-23 (`../run_2026-09-23/phase_B2_nuclear.md` §5): George–Knutson's η is a restricted phase-shift analysis — a consistency band on the quadrupole dial, not a measurement of the D wave; wording left as written on its date.*]
    Against GK's η = −0.025(12): `FitRescaled` is **−2.0 σ**, `OverlapRaw`
    **−2.4 σ**. The 2.7 σ by which they differ from *each other* is on the raw
    MC error, which is **5.6× smaller** (0.00208 against 0.011662) than the
@@ -1394,7 +1394,7 @@ half wrong and the correction matters more than the original question**.
 ### C5.1 The α–d asymptotic D/S ratio: **no second dial** — a converter instead
 
 **The question:** η = −0.0482 (model) against the measured
-`LI6_ETA_DS_GK` = −0.025 ± 0.006 ± 0.010, with no dial that constrains it
+`LI6_ETA_DS_GK` = −0.025 ± 0.006 ± 0.010, [*Note 2026-09-23 (`../run_2026-09-23/phase_B2_nuclear.md` §5): George–Knutson's η is a restricted phase-shift analysis — a consistency band on the quadrupole dial, not a measurement of the D wave; wording left as written on its date.*] with no dial that constrains it
 directly. Does η deserve a first-class dial?
 
 **No, and the reason is arithmetic, not taste.** §C1 measured that η is
@@ -2860,7 +2860,7 @@ pytest**, and changed no citation count.
 ## What was changed in the tree by this pass
 
 * `include/lipolgen/cluster_config.hpp` — new `LI6_ETA_DS_GK` /
-  `_STAT` / `_SYST` (single home for the George & Knutson measurement); the
+  `_STAT` / `_SYST` (single home for the George & Knutson measurement); [*Note 2026-09-23 (`../run_2026-09-23/phase_B2_nuclear.md` §5): George–Knutson's η is a restricted phase-shift analysis — a consistency band on the quadrupole dial, not a measurement of the D wave; wording left as written on its date.*] the
   `LI6_QUADRUPOLE_GFMC_FM2` attribution nit (it lives in *this* header, not
   `rc.hpp`); the two-vs-three-factor budget note; the exact-linearity note on
   `asymptotic_ds_ratio()`; and the corrected description of the raw block above

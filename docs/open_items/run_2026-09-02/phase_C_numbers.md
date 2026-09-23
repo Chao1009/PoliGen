@@ -212,7 +212,7 @@ Three things this table settles:
    result.** Adding the `fq_scale` band widens x = 0.10 to −9.0e−05 … +4.0e−04,
    still spanning zero on both edges. This is the ⁶Li counterpart of the
    deuteron sign change the transcription check measured with POLRAD's own code
-   (+0.106, +0.064, −0.117 at three points) and it is the reason **`σ^el_T` is a
+   (+0.106, +0.062, −0.117 at three points; the middle one read +0.064 until 2026-09-23, `../run_2026-09-23/phase_B3_chain_rc.md` §3.2) and it is the reason **`σ^el_T` is a
    separate table and never a scale factor on `σ^el_U`**. Design §2.1 expected
    `O(10⁻²)` per unit `Q_N`; that is met at `x = 0.30` and is **20–60× too large
    at `x ≤ 0.1`** — on **both** edges, so that part of the conclusion stands.

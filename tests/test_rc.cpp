@@ -530,7 +530,7 @@ TEST_CASE("T11: the 6Li form-factor anchors, and for_ion's refusals") {
     // |t| ~ 0.31 GeV^2" -- that is q = 2.82 fm^-1, 9.6 % below the shipped
     // q_0 and OUTSIDE this window, i.e. the two sites contradicted each
     // other.  The 0.31 was withdrawn rather than the window widened: it had
-    // no source, and the one piece of ab-initio evidence this repository
+    // no source cited (2026-09-23: it is Li et al. 1971's q^2 = 8 fm^-2 minimum; t3_li6_charge_ff_fb.py), and the one piece of ab-initio evidence this repository
     // owns disfavours it MORE than it disfavours 3.1 -- the j0 transform of
     // `data/vmc/density/li6.density` is 2.454e-3 +- 1.76e-4 at 2.82 fm^-1
     // (14 sigma from zero) against 1.076e-3 +- 1.60e-4 at 3.0999 (6.7
@@ -1245,7 +1245,7 @@ TEST_CASE("T8(c'): POLRAD's OWN compiled deuteron numbers") {
   // which is a DIFFERENT shape (the HO stand-in of T10, not `ffdeu`) -- so the
   // magnitudes are gated loosely and the SIGN STRUCTURE tightly.  What this
   // catches is a wrong power of A, a wrong prefactor, a missing Y_+ or a
-  // dropped leading minus: any of those moves the magnitude by 6x or more.
+  // dropped leading minus: at A = 2 those move it 2x (A), 2.5-2.9x (Y_+); the sign gate catches the minus.
   const std::shared_ptr<HoSpin1FF> ff = deuteron_ff();
   const double m_d = DEUTERON().mass();
   struct Row { double e, x, y, sigma_u_polrad, ratio_polrad; };
@@ -1254,7 +1254,7 @@ TEST_CASE("T8(c'): POLRAD's OWN compiled deuteron numbers") {
   // so that it is POSITIVE here.
   const Row rows[] = {
       {27.6, 0.050, 0.60, 2.352e-05 / (PROTON_MASS / 1.8756280),  0.1060},
-      {27.6, 0.012, 0.50, 1.001e-03 / (PROTON_MASS / 1.8756280),  0.0642},
+      {27.6, 0.012, 0.50, 1.03034e-03 / (PROTON_MASS / 1.8756280), 0.0623},  // re-driven 2026-09-23 (was 1.001e-03, 0.0642)
       {11.0, 0.200, 0.50, 1.570e-07 / (PROTON_MASS / 1.8756280), -0.1165},
   };
   for (const Row& r : rows) {
@@ -1264,13 +1264,13 @@ TEST_CASE("T8(c'): POLRAD's OWN compiled deuteron numbers") {
     const double su = polrad_sigma_el_u(*ff, x_a, r.y, s_a, m_d, 256);
     const double st = polrad_sigma_el_t(*ff, x_a, r.y, s_a, m_d, 256);
     CHECK(su > 0.0);                                    // the sign gate again
-    // Measured with this repository's HO stand-in: 0.883, 0.983, 0.390 of
+    // Measured with this repository's HO stand-in: 0.883, 0.955, 0.390 of
     // POLRAD's own numbers at the three points (the map change moved them by
     // 0.1-0.3 %).  The x = 0.2 point is the
     // loose one because its t-peak starts at q ~ 1 fm^-1, exactly where a
     // two-parameter HO and `ffdeu` differ most; the two low-x points, where
     // the t-peak lives at q < 0.3 fm^-1 and the shape hardly matters, agree to
-    // 2-12 %, which is the real normalisation statement.
+    // 4.5-12 %, which is the real normalisation statement.
     CHECK_MESSAGE(su > 0.25 * r.sigma_u_polrad,
                   "sigma_u is " << su / r.sigma_u_polrad
                                 << "x POLRAD's at x = " << r.x);

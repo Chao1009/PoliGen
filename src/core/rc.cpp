@@ -1957,7 +1957,7 @@ double RcModel::tail_ratio_at(double x, double q2, double q_n,
 
   // sigma_u and sigma_qe are POSITIVE (the Eq. (18) leading minus, T8(0)) and
   // span decades, so they interpolate in ln.  sigma_t CHANGES SIGN with x
-  // (check sec. 8: +0.106, +0.064, -0.117 at three deuteron points), so ln is
+  // (check sec. 8: +0.106, +0.062, -0.117 at three deuteron points), so ln is
   // not available for it and its RATIO to sigma_u -- smooth, O(0.1) -- is
   // what is interpolated linearly.  That is an INTERPOLATION device and NOT a
   // physics scale factor: sigma_t is its own independent quadrature at every

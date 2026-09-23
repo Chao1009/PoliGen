@@ -100,7 +100,7 @@ verification record must be read before acting.
 | entry | severity | what was refuted | what is **not** refuted | what replaces it |
 |---|---|---|---|---|
 | **`C-1` George–Knutson η(⁶Li → α+d)** | major | **The claim that it benchmarks what it says it benchmarks.** The verdict is explicit: "REFUTED as a benchmark of the claimed thing." | The reference (INSPIRE 522531, PRC **59** (1999) 598–606), the value η = −0.025 ± 0.006 ± 0.010, its transcription into `LI6_ETA_DS_GK{,_STAT,_SYST}`, and the honesty of the "in-tree" obtainability label. The number is real and correctly typed. | **Nothing does.** `00` already knew the gate asserts `1.2 < \|η/η_GK\| < 3.0`, i.e. it pins a documented 1.93× discrepancy, and `T22b` shows η is **exactly linear** in the quadrupole dial — so it is a relabelling of that dial. The correct action is to **retitle the row** (it is a *consistency band on a dial*, not a D/S benchmark) and to demote it out of the DATA class. Candidate replacement, still absent: an ab-initio α–d D/S ratio (`T-23`, Hebborn–Brune–Phillips `arXiv:2510.19067`, "read the paper first"). |
-| **`D-3` POLRAD 2.0 deuteron elastic** | major | Not the core: "CORE OF THE CLAIM STANDS; THE ENTRY AS WRITTEN **OVERSTATES ITS SCOPE IN FIVE PLACES** AND CARRIES ONE STALE NUMBER." | The three σ^el numbers are genuinely POLRAD's — the verifier re-downloaded CPC `ADGH_v1_0` (Mendeley `10.17632/37vgvzgr2w.1`, CPC licence, sha256 `83703668…`) and reproduced them. | The entry, rewritten to its actual scope, plus the stale number corrected. The **substantive** replacement is `01` §4: DJANGOH/HERACLES as an independently written second one-loop engine — and its published Rad=1/Rad=0 table (`01` §2.4) needs no code at all. |
+| **`D-3` POLRAD 2.0 deuteron elastic** | major | Not the core: "CORE OF THE CLAIM STANDS; THE ENTRY AS WRITTEN **OVERSTATES ITS SCOPE IN FIVE PLACES** AND CARRIES ONE STALE NUMBER." | The three σ^el numbers are genuinely POLRAD's — the verifier re-downloaded CPC `ADGH_v1_0` (Mendeley `10.17632/37vgvzgr2w.1`, CPC licence, sha256 `83703668…`) and reproduced them. *(2026-09-23 re-drive with POLRAD's own `ffdeu`/`qunc8`: rows 1 and 3 reproduce to every printed digit; row 2 does not — σ_u = −1.0303e−03, σ_q/σ_u = +0.0623 — so the stale number is that row, `../open_items/run_2026-09-23/phase_B3_chain_rc.md` §3.)* | The entry, rewritten to its actual scope, plus the stale number corrected. The **substantive** replacement is `01` §4: DJANGOH/HERACLES as an independently written second one-loop engine — and its published Rad=1/Rad=0 table (`01` §2.4) needs no code at all. *(2026-09-23: that table was generated with the elastic radiative tail OFF, IEL2 = IEL31..33 = 0 in every log, so it shares no term with `rc_tail` and cannot be this comparison; `../open_items/run_2026-09-23/phase_B3_chain_rc.md` §1.2.)* |
 | **`D-4` eSTARlight ⁶Li baseline** | major | **The "claimed to benchmark" line.** "It is not a like-for-like benchmark of `coherent.hpp`'s channel rate": `coherent.hpp` generates **coherent diffractive DIS with a continuum M_X ≥ 1.2 GeV**, while eSTARlight produces **exclusive vector mesons**. Different final state, different observable. | The run itself, the references, the commit, the tables and the O5 reach arithmetic all check out. | The table stays as what it always physically was — an **unpolarized rate and \|t\|-slope scale for exclusive VM production on ⁶Li**, and the input to the O5 J/ψ reach arithmetic. It must stop being described as a check on the coherent **channel rate**. Nothing else does ⁶Li (`01` §5.3: Sartre has no light nucleus); the nearest independent contact is Guzey *et al.* on ³He/⁴He (`T-44`). |
 | **`E-1` Cosyn–Weiss II TABLE II** | **blocker** | **Like-for-likeness.** "The claimed benchmark is NOT like-for-like and its pass masks a physics …" — *the finding text handed to this file is truncated at exactly this point.* | The reference is real and cited accurately: `arXiv:2603.23700`, JLAB-THY-26-4661, 24 Mar 2026, 45 pp, CC BY 4.0; the local PDF p. 35 carries Eqs. (6.11)–(6.14) and TABLE II exactly as described; the "in-tree" obtainability label is honest. | **Nothing.** This was `00`'s strongest external physics check. Until the truncated finding is read in full and acted on, the tree should be described as having **no** like-for-like external check of a tensor observable. The nearest unexploited substitute is `T-8` (Cosyn–Weiss PRC 102 (2020) 065204), which gates the **vector** tagged sector — a different observable, and it would not repair this. |
 
@@ -146,7 +146,7 @@ running them. Five returned something the survey does not contain.
 | the **1974** de Jager–de Vries–de Vries compilation (the survey read only the 1987 one) | **yes** | **§4.6 — a measured ⁶Li *and* ⁷Li magnetization density. `N-6`, `N-7`.** |
 | the UVa nuclear-charge-density **archive files** (not the scan) | **yes** | **§4.5 — a machine-readable ⁶Li charge density. `N-5`.** Contradicts `03` §8 item 4. |
 | EIC user group / ePIC software generator list | partly | §4.7 — the canonical URL 404s; the substantive answer is that the EICUG **MCEG** working group and the CFNS **EPIOS** community exist and are the right addressees, not a list. |
-| CLAS Physics Database (not HEPData) | **yes, reachability only** | §4.7 — reachable, searchable by observable including F₁, F₂, g₁, g₂. Plausible route to EG1b / BONuS tables that INSPIRE does not index. Not queried in detail. |
+| CLAS Physics Database (not HEPData) | **yes, reachability only** | §4.7 — reachable, searchable by observable including F₁, F₂, g₁, g₂. Plausible route to EG1b / BONuS tables that INSPIRE does not index. **Queried 2026-09-23** (§4.7): 918 measurements / 19 experiment ids for a deuteron target; BONuS is one F₂ⁿ/F₂ᵖ-vs-W* measurement, no spectator spectrum; EG1b inclusive only; the only spectator-momentum distribution is Deeps (Klimenko 2006) at 0.30–0.53 GeV/c. |
 | IAEA **EXFOR** | attempted | §4.7 — the two documented query endpoints 404 from here; EXFOR's electron-scattering coverage is thin and the QES archive (`03` §4) already supplies the ⁶Li (e,e′) points. **Low expected yield; not pursued.** |
 | PDG / Durham structure-function review compilations | **no** | Deliberately not run. These are plots over the same HEPData records `02` already enumerates; they would add a citation, not a number. Stated so the next reader does not re-derive it. |
 
@@ -199,8 +199,8 @@ Three things follow, all new:
 1. **Zero free parameters, exact rationals.** Every published source mode maps
    through the tree's own inversion onto exactly the pure two-substate (or
    single-substate) population pattern the three RF transitions physically
-   produce. Every mode lands **on the boundary** of the physical domain
-   (min p_m = 0). That is a genuine external gate on the spin algebra, obtainable
+   produce. Every polarized mode (1–7) lands **on the boundary** of the physical domain
+   (min p_m = 0); the unpolarized mode 0 is interior (1/3, 1/3, 1/3). That is a genuine external gate on the spin algebra, obtainable
    today from a PDF already in `refs/`, at an effort of hours.
 2. **The tree's DEFAULT is the wrong model for an EIC beam.** `--pzz-mode
    ladder` (`use_explicit_pzz = false`) is the equal-spin-temperature fill.
@@ -208,19 +208,28 @@ Three things follow, all new:
    gives **0**. Only mode 0 is on the EST curve. EST describes a **solid target
    in thermal equilibrium**, not an atomic-beam ion source; `--pzz-mode typed`
    is the physically right default for an EIC ion beam and the docs do not say so.
+   *(2026-09-23, measured — `../open_items/run_2026-09-23/phase_B1_spin_deuteron.md` §1: the EST
+   fill reproduces the ideal P_zz of 3 of the 8 modes (0, and the two |P_z| = 1 pure states, where
+   the tree throws) and cannot produce P_zz < 0 at any P_z. That an atomic-beam DEUTERON source is
+   not an EST system is measured; which fill an EIC LITHIUM beam will have is not — no lithium
+   source-mode table exists. No default was changed.)*
 3. **An honesty correction to the paper, which must ride with any citation.**
    Table II's caption says "the **measured** vector and tensor polarizations";
    the table prints only a measured **P_z^LEP** column. **The P_zz column is the
-   ideal RFT value, not a measurement.** The measured/ideal vector ratio is
-   0.73–0.91, i.e. the real source delivers 76–91 % of nominal — a realisation
+   ideal RFT value, not a measurement.** The caption's "relative beam intensities" are not printed either. The measured/ideal vector ratio is
+   0.73–0.91, i.e. the real source delivers 73–91 % of nominal (0.731–0.906 re-read 2026-09-23; "76–91 %" until then) — a realisation
    factor LiPolGen's run plans do not carry.
 
 The same paper (§V D, read here) records that the **polarized ⁶Li/⁷Li source is
-under development** at ANL + University of Kentucky, and (p. 3009 of the text
-layer) that "tensor polarization presents additional challenges, requiring
-specialized polarimeter development such as Lamb-shift-based systems or BRP-type"
-— i.e. **there is not yet a tensor polarimeter for a lithium beam.** That is the
-correct citation for why U-11's measured counterpart does not exist for lithium.
+under development** at ANL + University of Kentucky, and, in §VIII B 4, lists a "Li-6/Li-7 beam polarimeter" (an atomic-beam target for
+Li–Li CNI scattering with Breit–Rabi calibration) as **proposed** R&D — i.e.
+**there is not yet a polarimeter of any kind for a lithium beam**, and the tensor
+case is not addressed. (The sentence "tensor polarization presents additional
+challenges, requiring specialized polarimeter development such as Lamb-shift-based
+systems or BRP-type" is in §VIII A 2, the *deuteron* source, and ends
+"…specifically designed for deuteron ions"; it was misattributed to lithium here
+until 2026-09-23.) That is the correct citation for why U-11's measured
+counterpart does not exist for lithium.
 
 **`N-2` — the equal-spin-temperature relation, and COMPASS's ⁶LiD target.**
 Run read-only:
@@ -235,7 +244,7 @@ j=1 ladder vs the polarized-target closed form P_zz = 2 - sqrt(4 - 3 Pz^2)
 ```
 
 `spin_temperature_pzz(1, ·)` **is** the polarized-target community's
-equal-spin-temperature relation, to machine precision. That identity is
+equal-spin-temperature relation, to the bisection's 1e-13-in-β tolerance: max 1.14e-14 over 19 999 points of (−1, 1) (the five points above are a sample, not the bound), and the tree throws at \|P_z\| = 1. That identity is
 uncited anywhere in the tree (grep for `NMR`, `spin temperature`, `equal spin`,
 `polarized target` returns nothing outside `bookkeeping.hpp`'s own prose).
 
@@ -251,10 +260,16 @@ measured deuteron polarization at a common spin temperature.
 
 **And the limitation, which is the honest half:** *"In the absence of quadrupole
 splitting, only one narrow nuclear magnetic resonance line, 3 kHz wide, is
-seen"*, and the integrated signal is proportional to **p₊ − p₋** alone. So in
-the one material where ⁶Li has ever been polarized, the NMR line carries the
-**vector** polarization only and **P_zz was never measured**. The tensor
-polarization of ⁶Li has never been measured by anybody, by any method. Solid
+seen"*, and the integrated signal is proportional to **p₊ − p₋** alone. So in the COMPASS ⁶LiD target the NMR line carries the **vector** polarization
+only, and the tensor polarization was **estimated** from the EST relation, not
+measured — Fig. 1's caption: "The tensor polarization can be estimated to be
+T = 1/2(1 − 3p₀) = 11 %" (for the deuteron; note their T is **half** the
+Cartesian P_zz = 1 − 3p₀ of this tree). No measurement of the tensor
+polarization of ⁶Li was found by any search run for this survey: the INSPIRE
+full-text search of §4.2 returned none, and EPIOS §VIII B 4 lists a ⁶Li/⁷Li beam
+polarimeter only as proposed R&D (no lithium beam polarimeter exists; tensor
+polarimetry is not addressed there). (Re-read and checked numerically
+2026-09-23, `../open_items/run_2026-09-23/phase_B1_spin_deuteron.md` §2.) Solid
 targets that *do* show a quadrupole-split (Pake) doublet — ND₃, deuterated
 alcohols — are where both P_z and P_zz are extracted from the lineshape and
 where the EST relation is deliberately broken by RF manipulation: Keller, Crabb
@@ -342,7 +357,7 @@ file with the JSON API and a browser user agent: `search/?q=…&format=json`,
 `record/ins684394?format=json` and `record/ins394050?format=json` all return
 **HTTP 403** (5.7 kB challenge page). `02` §0's method — INSPIRE's `data`
 collection with the `literature` back-link resolved — remains the only route
-from this environment, and its qualifier ("not in INSPIRE's HEPData index", never
+from this environment — superseded 2026-09-23: the bare host `hepdata.net` (no `www.`) served ins394050 Table 1 with HTTP 200 to a plain user agent (`../open_items/run_2026-09-23/phase_B2_nuclear.md` §2.1) — and its qualifier ("not in INSPIRE's HEPData index", never
 "does not exist on HEPData") stands.
 
 ### 4.5 `N-5` — a machine-readable ⁶Li charge density, and it moves the C0 zero
@@ -362,13 +377,13 @@ Evaluated here (ρ(r) = Σ aₙ j₀(nπr/R) for r ≤ R):
 ```
   4*pi*int rho r^2 dr = 2.991170          (should be Z = 3; a 7-term FB truncation)
   <r^2>^(1/2)         = 2.5206 fm         (e-scattering analyses 2.54-2.57; Angeli 2.589)
-  first zero of F_C(q)= 2.6950 fm^-1
+  first zero of F_C(q)= 2.6944 fm^-1   (closed form; 2.6950 in this file's first printing)
   measured |F_L|^2 diffraction minimum (Li et al. 1971, q^2 = 8 fm^-2) = 2.8284 fm^-1
   LiPolGen HoSpin1FF ships q0 = 3.0998 fm^-1, test window [2.9, 3.3]
 ```
 
 So the row is self-consistent and physical, and it gives a **second, independent,
-data-derived** number for the ⁶Li C0 zero. **Both external numbers (2.695 and
+data-derived** number for the ⁶Li C0 zero. **Both external numbers (2.694 and
 2.828 fm⁻¹) lie below the tree's asserted [2.9, 3.3] fm⁻¹ window.** `03` §2.4
 found one of them and called it "a substantive finding"; there are two, and they
 bracket each other rather than the model.
@@ -382,7 +397,7 @@ lithium in either (both PDFs fetched and their Table IV blocks read). The row
 must therefore come from the archive's third stated source (ADNDT **60**) or from
 the archive maintainers. The tree's own `docs/open_items/physics_literature.md:260`
 already flags exactly this ("verify against the primary source"). Mark it
-**UNVERIFIED provenance, verified content**.
+**UNVERIFIED provenance, verified content**. FB_data.dat re-fetched 2026-09-23, 18 306 bytes, sha256 `e9770460…3577c5d`; the ⁶Li row is vendored in `validation/benchmarks/data/uva_ncd_fb_data_li6.dat`. The archive states no licence.
 
 Effort if the provenance holds: **hours.** `TabulatedSpin1FF::from_data_dir("ff/li6_elastic.csv", …)`
 is implemented and its data directory does not exist; this fills its **C0**
@@ -424,7 +439,7 @@ body not read". Its Table V row is now readable without the paywall.
 "the q-dependence… is an unfitted **model band** ([2.9, 3.3] fm⁻¹) with **no
 elastic ⁶Li data in this repository** to close it". These rows close the
 **q → 0 slope**: F_m(q) ≈ 1 − q²⟨r²⟩_mag/6 with a measured ⟨r²⟩^½_mag. `HoSpin1FF`
-anchors F_m(0) on μ (`C-3`) and leaves the slope free; this fixes it.
+anchors F_m(0) on μ (`C-3`) and fixes the slope with the unfitted (q_z, b) = (1.30 fm⁻¹, 1.85 fm): r_mag(⁶Li) = 2.9469 fm (measured 2026-09-23, `../open_items/run_2026-09-23/phase_B2_nuclear.md` §4), uncompared until RFY66 / ADNDT 14 is held; these rows would test it.
 
 **What they do not.** (i) They are **magnetization-density model parameters**,
 not tabulated F_M(q) — the underlying form-factor points are in the 1966 and 1971
@@ -481,7 +496,7 @@ proposal. `02` §1.2's "does-not-exist (yet)" is correct and unchanged.
 reachable (HTTP 200, 45 kB), searchable by observable including F₁, F₂, F_L, g₁,
 g₂ and asymmetries. It is a **plausible machine-readable route to the EG1b and
 BONuS numbers** that `02` F-9 / §5.5 and D-9 could only reach as digitizable
-figures. Not queried in detail here. **Effort: hours to check. Priority: medium.**
+figures. **Queried 2026-09-23** (`../open_items/run_2026-09-23/phase_B1_spin_deuteron.md` §4): for a deuteron target, 918 measurements in 19 experiment ids. BONuS is one measurement (F₂ⁿ/F₂ᵖ vs W*), EG1b is inclusive (g₁, A₁, g₁/F₁), and the only spectator-momentum distribution is Deeps (Klimenko 2006, F₂ᴺ × P(p_s) at 0.30–0.53 GeV/c, 115 tables, vendored unwired). The BONuS p_s tables are in PRC 89 045206's Supplemental Material (HTTP 401 without an APS login).
 
 **EXFOR.** Both documented query endpoints 404 from this environment. EXFOR's
 electron-scattering coverage is thin and the QES archive (`03` §4, 133 ⁶Li
@@ -567,11 +582,11 @@ silent.
 2. **No generator implements a tensor-polarized target of any species.**
    Unchanged.
 3. **No calculation of b₁ for any A > 2.** Unchanged, re-confirmed.
-4. **No measurement of P_zz for ⁶Li, by any method.** New, and now sourced: the
-   one material in which ⁶Li has ever been polarized (COMPASS ⁶LiD) shows **no
+4. **No measurement of P_zz for ⁶Li was found by any search run for this survey** — an absence, stated with its searches, not a proof (reworded 2026-09-23). New: the
+   INSPIRE full-text search of §4.2 returned none; the one material in which ⁶Li has ever been polarized (COMPASS ⁶LiD) shows **no
    quadrupole splitting**, so its NMR line carries the vector polarization only
-   (§4.1); and EPIOS records that a tensor polarimeter for a lithium beam does
-   not yet exist.
+   (§4.1); and EPIOS §VIII B 4 lists a ⁶Li/⁷Li beam polarimeter only as proposed R&D, tensor polarimetry not addressed (the tensor-polarimeter
+   sentence once attributed to it here is EPIOS §VIII A 2, on deuteron sources).
 5. **No like-for-like external check of a tensor observable survives in the
    tree** (§1, §3.1).
 6. Everything in `00` §9, `01` §5, `02` §11, `03` §8, `04` §11 and `05` §7 that

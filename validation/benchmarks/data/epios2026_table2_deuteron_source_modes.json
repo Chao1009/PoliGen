@@ -1,0 +1,26 @@
+{
+  "_provenance": {
+    "paper": "G. Atoian et al. (EPIOS Scientific Consortium), 'Realizing the Scientific Program with Polarized Ion Beams at EIC', Phys. Rev. C 113 (2026) 060501, arXiv:2510.10794",
+    "table": "TABLE II (printed page 18 of the arXiv PDF, 47 pages)",
+    "original_source_of_the_table": "ref. [81] of the paper: D. Chiladze, A. Kacharava, F. Rathmann, C. Wilkin et al., Phys. Rev. ST Accel. Beams 9 (2006) 050101 (the COSY/ANKE polarized deuteron source, LEP measurements of November 2003)",
+    "url": "https://arxiv.org/abs/2510.10794",
+    "local_copy": "PolarizedLithiumSim/refs/2510.10794.pdf (md5 012cbaa46e0ca9a57f2f71306651eea4)",
+    "transcribed": "2026-09-23, from `pdftotext -layout` of the local copy, cross-read against docs/benchmarking/06_critic.md sec. 4.1 (N-1)",
+    "licence": "arXiv non-exclusive distribution licence 1.0 (http://arxiv.org/licenses/nonexclusive-distrib/1.0/, checked 2026-09-23 on the abs page). Only the eight numeric rows are transcribed here (facts), with attribution.",
+    "caption_verbatim": "The table lists eight configurations of the polarized deuteron ion source, showing the ideal values of the vector and tensor polarizations and the relative beam intensities obtained by operating the three radio-frequency transitions(RFTs). Also shown are the measured vector and tensor polarizations of the deuteron beam with statistical errors. The measurements of PzLEP were carried out at a momentum of 539 MeV/c, using the Low Energy Polarimeter (LEP) during the ANKE run at COSY in November 2003 [81].",
+    "caption_caveat": "The caption says 'measured vector and tensor polarizations' and 'relative beam intensities'; the printed table has NEITHER a measured tensor column NOR an intensity column. The Pzz column is the IDEAL value of the RF-transition scheme, not a measurement (06_critic.md sec. 4.1 item 3). Only Pz_LEP is measured.",
+    "convention": "dimensionless, per ion (a spin-1 deuteron), CARTESIAN: Pz = n(+1) - n(-1), Pzz = n(+1) + n(-1) - 2 n(0) = 1 - 3 n(0), Pzz in [-2, 1]. This is LiPolGen's spin-1 convention (include/lipolgen/spin.hpp, spin1_populations: <Jz> = pz, <3Jz^2-2> = pzz); NOT the spherical t20/T20 of the Madison convention (06_critic.md sec. 5.1, trap T-8).",
+    "normalisation_rules_sec8": "Rule 1 (b1 normalisations): not applicable, no b1. Rule 2 (isoscalar denominator): not applicable, no structure function. Rule 3 (per nucleus vs per nucleon): the moments are per ION (one deuteron, spin 1), not per nucleon."
+  },
+  "columns": ["mode", "pz_ideal", "pzz_ideal", "rft1", "rft2", "rft3", "pz_lep", "pz_lep_stat"],
+  "rows": [
+    {"mode": 0, "pz_ideal": "0",    "pzz_ideal": "0",    "rft1": "Off", "rft2": "Off", "rft3": "Off", "pz_lep":  0.000, "pz_lep_stat": 0.010},
+    {"mode": 1, "pz_ideal": "-2/3", "pzz_ideal": "0",    "rft1": "Off", "rft2": "Off", "rft3": "On",  "pz_lep": -0.572, "pz_lep_stat": 0.011},
+    {"mode": 2, "pz_ideal": "1/3",  "pzz_ideal": "1",    "rft1": "Off", "rft2": "On",  "rft3": "Off", "pz_lep":  0.285, "pz_lep_stat": 0.011},
+    {"mode": 3, "pz_ideal": "-1/3", "pzz_ideal": "-1",   "rft1": "Off", "rft2": "On",  "rft3": "On",  "pz_lep": -0.302, "pz_lep_stat": 0.011},
+    {"mode": 4, "pz_ideal": "1/2",  "pzz_ideal": "-1/2", "rft1": "On",  "rft2": "Off", "rft3": "Off", "pz_lep":  0.395, "pz_lep_stat": 0.014},
+    {"mode": 5, "pz_ideal": "-1",   "pzz_ideal": "1",    "rft1": "On",  "rft2": "Off", "rft3": "On",  "pz_lep": -0.758, "pz_lep_stat": 0.015},
+    {"mode": 6, "pz_ideal": "1",    "pzz_ideal": "1",    "rft1": "On",  "rft2": "On",  "rft3": "Off", "pz_lep":  0.731, "pz_lep_stat": 0.014},
+    {"mode": 7, "pz_ideal": "-1/2", "pzz_ideal": "-1/2", "rft1": "On",  "rft2": "On",  "rft3": "On",  "pz_lep": -0.417, "pz_lep_stat": 0.015}
+  ]
+}

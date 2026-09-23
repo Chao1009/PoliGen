@@ -59,7 +59,7 @@ built **isoscalar** as ½(F₂ᵖ + F₂ⁿ) from `lipolgen.LhapdfSF`:
 | 0.0015 | 0.34 | 0.888 ± 0.025 | *below grid* | 0.9116 |
 | 0.0035 | 0.61 | 0.921 ± 0.013 | *below grid* | 0.9246 |
 | 0.0055 | 1.0 | 0.947 ± 0.011 | *below grid* | 0.9357 |
-| 0.0085 | 1.4 | 0.951 ± 0.011 | 0.9469 | 0.9488 |
+| 0.0085 | 1.4 | 0.951 ± 0.011 | *below grid* (1.4 < 1.69 GeV²; the LHAPDF extrapolation reads 0.9469) | 0.9488 |
 | 0.0125 | 1.8 | 0.980 ± 0.010 | 0.9545 | 0.9616 |
 | 0.0175 | 2.3 | 0.992 ± 0.010 | 0.9679 | 0.9729 |
 | 0.025 | 2.8 | 0.994 ± 0.009 | 0.9804 | 0.9841 |
@@ -84,10 +84,10 @@ in the tree:
 
 * Over the four points with x ≥ 0.30, **χ² = 4.63 for 4 points with zero free
   parameters.** EPPS21's ⁶Li valence depletion is consistent with the only
-  measurement of it.
+  measurement of it. Over all 15 on-grid points χ² = 26.94/15 (p = 0.029), carried by the shadowing/anti-shadowing crossover (pulls +2.55, +2.34, +1.59, −2.23 at x = 0.0125 … 0.035); wired as `validation/benchmarks/t3_nmc_li6_over_d.py` 2026-09-23 (pass at p ≥ 0.01 on both sets; the x ≥ 0.30 χ² reproduced as 4.6269/4).
 * Weighted mean of those four NMC points: **0.9618 ± 0.0219**, i.e. a measured
   valence depletion **0.038 ± 0.022** against the library's **0.031052**. The
-  agreement is 0.3 σ — and the **±0.022 is the honest size of the external
+  agreement is 0.3 σ (against the library's window mean at Q² = 5 on CT18ANLO; like for like — the tree at the same four points, Q² and weights, 0.9795 — the distance is −0.81 σ) — and the **±0.022 is the honest size of the external
   constraint**: the data pin ⟨1 − R⟩ to about ±70 % of its own value, so this
   benchmark bounds a gross error and cannot refine the constant.
 * Recomputing the library's own definition here with the *shipped* CT18NLO
@@ -109,7 +109,7 @@ in the tree:
 not the bound proton: measured here, R_u = 0.578 and R_d = 2.829 at x = 0.65,
 Q² = 5, which are exactly (1 + d/u)/2 and (1 + u/d)/2 — the n/p isospin average,
 not a nuclear effect. Dividing `f2_per_nucleon` by the **free proton** F₂
-therefore gives 0.692 at x = 0.65 and an apparent ⟨1 − R⟩ of **0.268** over the
+therefore gives 0.6880 at x = 0.65, Q² = 5 (0.6924 at NMC's Q² = 39) and an apparent ⟨1 − R⟩ of **0.268** over the
 valence window — nine times the real number, and entirely an artefact. The
 denominator must be the isoscalar ½(F₂ᵖ + F₂ⁿ). This is written down because the
 mistake is silent, reproduces a plausible-looking EMC curve, and would corrupt
@@ -225,7 +225,7 @@ pages.
    measured minimum is in |F_L|² = F_C0² + F_C2² folded with the nucleon form
    factor, while q₀ is the zero of the *point* C0 — but the gap must be
    resolved before the [2.9, 3.3] window is defended, and the resolution is
-   arithmetic the tree can do today.
+   arithmetic the tree can do today. Done 2026-09-23: in `HoSpin1FF` the C2 shares the C0 monopole, so the model's own \|F_L\|² minimum IS q₀ (to 1.7e−11 fm⁻¹) — the C2 fill-in cannot reconcile it with 2.83; only Coulomb distortion, not computed, remains between the two (`../open_items/run_2026-09-23/phase_B2_nuclear.md` §3.2).
 
 ### What none of this validates
 
@@ -262,7 +262,7 @@ therefore the FSI-sensitive region (p_spec ≳ 300 MeV).
 
 **What they do NOT validate.** (a) The **D-wave**. These are unpolarized
 cross sections; they constrain |φ₀|² + |φ₂|² summed, not the S–D interference
-that b₁ is built from. The 1.93× η discrepancy of C-1 is untouched. (b) The
+that b₁ is built from. The 1.93× distance of the undialled tables from George–Knutson's phase-shift-analysis η (C-1, a consistency band on the quadrupole dial) is untouched. (b) The
 **absolute normalisation** — spectroscopic factors from cluster knockout carry
 the reaction-mechanism systematic item 6 exhibits. (c) **⁷Li → α + t**: item 6 is
 ⁶Li's ³H/³He decomposition, not ⁷Li's, and the tree's ⁷Li triton remnant model
@@ -325,7 +325,7 @@ nucleus, and `qe_tensor_scale` remains a borrowed magnitude.
 | Q(⁶Li) | `LI6_QUADRUPOLE_FM2` = −0.0818 | Stone (read) gives **−0.00083(8) b = −0.083(8) fm²** (molecular beam, ratio to ⁷Li, CPL 112 1 (1984)); TUNL A = 6 gives −0.0818(17) fm²; Pyykkö gives −0.0806(6) fm² | The three compilations span **−0.0806 … −0.083**, i.e. **± ~2 %** — negligible beside the model's 7.52× discrepancy (C-2). The choice of compilation is **not** a live systematic and the tree can stop worrying about it. |
 | μ(⁷Li), Q(⁷Li) | ⁷Li moments block | Stone (read): **μ = +3.256427(2)** μ_N; **Q = −0.0400(3) b = −4.00(3) fm²** (CER, Voelk *et al.*, NPA 530 (1991) 475), with seven independent determinations listed spanning −0.037 to −0.059 b | The modern CER values (−0.0400(3), −0.0400(6)) are 6 σ from the old optical −0.059(8). Also independently determined from **electron scattering**: van Niftrik *et al.*, NPA 174 (1971) 173. **2026-09-06 (task B3): ⁷Li's Q is now IN the tree** as `LI7_QUADRUPOLE_FM2` = **−4.06 fm²**, and it is *not* the CER value of this row — it is TUNL's, `Q = −40.6 ± 0.8 mb` from the A = 7 half of the same Tilley *et al.* NPA 708 (2002) 3 evaluation that supplies `LI6_QUADRUPOLE_FM2`, chosen so both lithium quadrupoles share one document and one convention. The two differ by 1.5 % and move the A = 7 α–t gate ratio 0.858389 ↔ 0.871265; both are recorded in `rc.hpp` and pinned in `run_2026-09-06/phase_B_numbers.md` §B3. |
 | r_ch(⁶Li) | behind `LI6_R2_POINT_FM2` | **I. Angeli, K. Marinova, ADNDT 99 (2013) 69–95** (verified); **de Vries ADNDT 36 (1987) 495** Table I (read) | 2.589(39) fm (Angeli) vs **2.54(5) / 2.56(5) / 2.57(10)** fm (three electron-scattering analyses). Angeli is ~1 % higher than the scattering analyses; the tree uses Angeli. |
-| η(⁶Li → α+d) | `LI6_ETA_DS_GK` | **E. A. George, L. D. Knutson, Phys. Rev. C 59 (1999) 598** — verified; "Determination of the asymptotic D- to S-state ratio by a restricted phase shift analysis", **η = −0.025 ± 0.006 ± 0.010** | Already C-1. Verified independently here; no better determination found. |
+| η(⁶Li → α+d) | `LI6_ETA_DS_GK` | **E. A. George, L. D. Knutson, Phys. Rev. C 59 (1999) 598** — verified; "Determination of the asymptotic D- to S-state ratio by a restricted phase shift analysis", **η = −0.025 ± 0.006 ± 0.010** | Already C-1 — a consistency band on the quadrupole dial, not a D-wave benchmark. Verified independently here; no better determination found. |
 | ⁴He charge form factor (the α core) | `AlphaCoreSource::VmcHe4Density`, `he4.density` | **de Vries Table V has a full sum-of-Gaussians for ⁴He**: rms **1.676(8)** fm, 12 (R_i, Q_i) pairs (read for this survey, from Si82). Underlying data: Frosch *et al.*, PR 160 (1967) 874; **Ottermann *et al.*, NPA 436 (1985) 688**; high-Q²: Camsonne *et al.* (`1309.5297`) | **This is the cleanest, most immediately actionable item in the whole survey.** A published closed-form ⁴He charge form factor exists, in the standard SOG parameterisation, valid over the whole measured q range. It can be transcribed in an hour and used as an **external check on the α core** that today is validated only against ANL VMC. |
 
 ### Polarized ³He — the honest scope
@@ -372,9 +372,9 @@ exactly the kind of transfer this survey exists to prevent.
 
 | rank | action | effort | what it buys |
 |---|---|---|---|
-| 1 | Wire **HEPData `ins394050` Table 1** as a gate on `Epps21Ratio`, with the isoscalar denominator of §1.3 and the deuteron caveat of §1.4 stated in the test | ~half a day (24 points, CC0, one JSON download) | Converts the tree's **only** ⁶Li-specific unpolarized-DIS input from "an nPDF fit" to "an nPDF fit that reproduces the one measurement of this nucleus, χ² = 4.63/4". Also puts the ±0.022 external uncertainty on the record, which is currently missing everywhere. |
+| 1 | *(Done 2026-09-23: `validation/benchmarks/t3_nmc_li6_over_d.py`, pass.)* Wire **HEPData `ins394050` Table 1** as a gate on `Epps21Ratio`, with the isoscalar denominator of §1.3 and the deuteron caveat of §1.4 stated in the test | ~half a day (24 points, CC0, one JSON download) | Converts the tree's **only** ⁶Li-specific unpolarized-DIS input from "an nPDF fit" to "an nPDF fit that reproduces the one measurement of this nucleus, χ² = 4.63/4". Also puts the ±0.022 external uncertainty on the record, which is currently missing everywhere. |
 | 2 | Transcribe **de Vries Table V's ⁴He sum-of-Gaussians** and gate the ⁴He core against it | ~1 hour | The α core's only current validation is ANL VMC (i.e. theory checking theory). This makes it data. |
-| 3 | Resolve **q₀ = 3.0998 vs the measured ⁶Li diffraction minimum at q ≈ 2.83 fm⁻¹** (§2.4) | ~1 day of arithmetic, no new data | Either the [2.9, 3.3] window is defended with the folding argument, or it moves. Right now the assertion window excludes the one measured number. |
+| 3 | *(Partly done 2026-09-23: the C2 fill-in is excluded inside the model, and the UVa FB zero 2.694 fm⁻¹ is a second number below the window — `validation/benchmarks/t3_li6_charge_ff_fb.py`, recorded FAIL; Coulomb distortion not computed; the window was not moved.)* Resolve **q₀ = 3.0998 vs the measured ⁶Li diffraction minimum at q ≈ 2.83 fm⁻¹** (§2.4) | ~1 day of arithmetic, no new data | Either the [2.9, 3.3] window is defended with the folding argument, or it moves. Right now the assertion window excludes the one measured number. |
 | 4 | Cite **Lapikás–Wesseling–Wiringa PRL 82 4404** in E-13's block | ~15 minutes | The VMC family LiPolGen reads has been compared with data by its own author; the tree does not say so. |
 | 5 | Add the **QES archive ⁶Li 133 points** as a quasi-elastic-tail benchmark | 1–2 days | Turns `RC_QE_KF_GEV` from an input into a fit residual, at three real ⁶Li kinematic points. |
 | 6 | Fit a **⁷Li `HoSpin1FF`** on Suelzle's published HO parameters (a = 1.77(2), α = 0.327) | ~1 day | ⁷Li is the isotope whose shape is published in exactly the shipped functional form. It also gives the ⁶Li starting values their only external comparison. |
@@ -393,5 +393,5 @@ exactly the kind of transfer this survey exists to prevent.
    printed tables exist.
 5. **Polarized quasi-elastic or elastic radiative tails for A = 6.** Unchanged.
 6. **The D-wave of the α–d overlap, from data.** Every measurement in §3 is
-   unpolarized. The 1.93× η discrepancy (C-1) has no better external anchor than
-   George–Knutson, and this survey found none.
+   unpolarized. The 1.93× distance of the undialled tables from George–Knutson's phase-shift-analysis η (C-1, a consistency band on the quadrupole dial)
+   has no better external anchor than that phase-shift analysis, and this survey found none.

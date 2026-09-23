@@ -51,6 +51,27 @@ N_X = 200
 X_LO, X_HI = 1.0e-3, 0.95
 Q2_GRID = [1.0, 2.5, 10.0]
 
+# The self-pin label (BENCHMARK_PLAN.md sec. 5.5).  Added to the JSON by hand
+# on 2026-09-23 as a metadata-only edit, and written by this script since the
+# same day so that a regeneration keeps it: the string is the one in the file,
+# character for character.
+PROVENANCE = (
+    'SELF-PIN, NOT A REFERENCE OF ANY KIND.  Every number in this file '
+    "was dumped from LiPolGen's OWN C++ "
+    '(default_inclusive_kernel(LI6()) through the pybind11 module) by '
+    'validation/dump_b1_default_li6.py (last committed 2026-09-03, '
+    'b1071b1); no external source, no polligen output and no '
+    'measurement enters it.  It is a REGRESSION GUARD: T9 '
+    '(tests/test_b1_nuclear.cpp) and python/tests/test_b1_model.py '
+    'check that the library still returns what it returned then, at '
+    "rtol 1e-12.  Agreement with it proves 'unchanged', never "
+    "'correct'.  Unlike every other file in this directory it does not "
+    'come from dump_polligen_reference.py.  Label added 2026-09-23 '
+    '(BENCHMARK_PLAN.md sec. 5.5) as a metadata-only edit: every '
+    'numeric block (x, q2, tables, kernel) is byte-identical to that '
+    'dump.'
+)
+
 
 def x_grid():
     lo, hi = math.log(X_LO), math.log(X_HI)
@@ -93,6 +114,7 @@ def build():
             "target_mass": kernel.target_mass,
             "tensor_gamma": kernel.tensor_gamma,
         },
+        "provenance": PROVENANCE,
         "x": x_grid(),
         "q2": Q2_GRID,
         "tables": blocks,

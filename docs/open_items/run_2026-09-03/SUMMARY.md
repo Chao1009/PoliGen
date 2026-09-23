@@ -23,11 +23,15 @@ the rtol-1e−12 gates did not move.
 > below; registry row 26 / `AUTHOR_DECISIONS.md` §B27). Re-measured
 > 2026-09-15 by sha256 against `a94fd6e`: `b1_default_li6`, `beams`,
 > `bookkeeping`, `coherent`, `spectator`, `spin` and `xsec` are **still
-> identical**; `tagged.json` differs in its two spin-1 `model` blocks and
-> `_manifest.json` in the one provenance line that names it. So the sentence
+> identical**; `tagged.json` differs in its two spin-1 `model` blocks and in two
+> provenance keys, added in `a7b3d18` (2026-09-06; their values rewritten 2026-09-23); `_manifest.json` differed in the one
+> line that names `tagged.json`'s generator from 2026-09-06 until
+> 2026-09-23, and is byte-identical again since. So the sentence
 > above holds **as the record of this run** (`a94fd6e..dffe94e`) and, read as
 > a statement about the tree today, must be read as *byte-identical except
-> those two files, by row 26*. The follow-on run's own start→end line is in
+> `tagged.json`, by row 26* (and, since 2026-09-23, `b1_default_li6.json`'s
+> added `provenance` label: whole-file sha256 `d7bd8ce6…` → `8373db8e…`,
+> every numeric block byte-identical — `../run_2026-09-23/phase_B3_chain_rc.md` §4). The follow-on run's own start→end line is in
 > `../run_2026-09-06/SUMMARY.md`.
 
 ## A — the b₁(⁶Li) publication ban (`ac22331`, `phase_A_*.md`)
@@ -56,8 +60,8 @@ the rtol-1e−12 gates did not move.
   x = 0.10, Q² = 5 is **+9.357e−04 on the `ho` edge** and **−2.442e−04 on
   `vmc-ft`** (`rc.hpp:1150`/`:1155`; six times §B3.1's `(1/6)σ^el_T/σ^el_U`
   column, +1.559536e−04 / −4.070157e−05, which is the form the phase record
-  tabulates) — a factor **68** resp. **≈ 260** below POLRAD's own deuteron
-  elastic-tail value +0.064 — so the published **sign** is withdrawn as a band
+  tabulates) — a factor **67** resp. **≈ 255** below POLRAD's own deuteron
+  elastic-tail value +0.062 (68 / ≈ 260 / +0.064 until POLRAD's row 2 was re-driven 2026-09-23, `../run_2026-09-23/phase_B3_chain_rc.md` §3.2) — so the published **sign** is withdrawn as a band
   edge, and so is the magnitude.
 * The polarised quasi-elastic tail gets a **price tag, not a calculation**:
   Δ(ΔA_zz) = **0.086 % / 0.0003 % / 0.25 %** of the band at x = 0.01 / 0.10 /
@@ -161,7 +165,7 @@ stated more strongly than it was measured: the `RouteReach` header stated a
 route-label reach **without its seed**, which made it unreproducible (it is
 phase D's seed-7 / seed-11 pair); and the C0-shape numbers **68** and
 **≈ 260** were read at four sites as the *value* of σ^el_T/σ^el_U at x = 0.10
-when they are its *suppression* against POLRAD's deuteron +0.064. It caught
+when they are its *suppression* against POLRAD's deuteron +0.064 (67 / ≈ 255 / +0.062 since the 2026-09-23 re-drive). It caught
 one stale claim of a different kind as well: `PHYSICS_CHANNELS.md` still said
 **no C++ path** opens `deuteron/fdeut.av18` or `li6.adr.fit`, and three paths
 and one do, since C5.4 (§10 and §8).

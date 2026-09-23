@@ -1669,5 +1669,5 @@ def test_every_as_of_anchor_passes_the_bar_at_its_commit(gate):
     # "clean fix, NOT made here" text was gone from the tree entirely (it is
     # the header adec442 carries, and the opposite of what that header says
     # today), so the anchor was annotated rather than re-pointed.
-    assert checked == 108, checked
+    assert checked == 110, checked  # 108 until 2026-09-23: +2 = run_2026-09-23/phase_B3_chain_rc.md's README.md:177 / DEVELOPMENT_PLAN.md:213 (as of d735abc)
     assert by_hand == 9, by_hand      # the six of D2.5 + three in this record

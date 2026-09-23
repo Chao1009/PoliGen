@@ -322,7 +322,7 @@ at all — where its own error bar overtakes it. Even a fully correlated ±1σ s
 of every density bin moves F(3.0999) only to [8.94e−04, 1.26e−03]. (iii) The
 argument that sentence exists to make is unaffected either way:
 `COHERENT_T_MAX_DEFAULT` = 0.2 GeV² sits below the **whole** gated window
-(0.2 < 0.328), which T11 now asserts.
+(0.2 < 0.328), which T11 now asserts. *Note 2026-09-23: reason (i) is superseded — 0.31 GeV² ⇔ q = 2.82 fm⁻¹ is Li, Sick, Whitney, Yearian, NPA 162 (1971) 583's q² = 8 fm⁻² minimum (`../../benchmarking/03_data_nuclear.md` §2), and the UVa FB density puts the C0 zero at 2.694 fm⁻¹; see `../run_2026-09-23/phase_B2_nuclear.md` §3. Reasons (ii) and (iii) and the withdrawal as a record of its date stand.*
 
 **Both sites now carry one provenance** — `rc.hpp`'s `LI6_FF_HO_A_FM` /
 `LI6_FF_HO_ALPHA` block and T11 — and both now say the same thing, including
@@ -1034,8 +1034,8 @@ so in those words. What it is, and where it breaks:
    | Q² = 5 GeV² | x = 0.01 | x = 0.10 | x = 0.30 |
    |---|---|---|---|
    | ⁶Li `σ^el_T/σ^el_U` (this tree, `ho` edge) | **−3.0566e−03** | **+9.3572e−04** | **+7.9721e−02** |
-   | deuteron `σ_q/σ_u` (POLRAD's own, transcription check §8) | +0.106 | +0.064 | −0.117 |
-   | ratio | **35×** | **68×** | 1.5× |
+   | deuteron `σ_q/σ_u` (POLRAD's own, transcription check §8; x = 0.10 column re-driven 2026-09-23, was +0.064) | +0.106 | +0.062 | −0.117 |
+   | ratio | **35×** | **67×** (68× until 2026-09-23) | 1.5× |
 
    Design §2.1 says why the ⁶Li number is small: what sets it is Q_A/Z, and
    Q(⁶Li)/Q(d) = 0.29 against Z = 3. But that near-vanishing quadrupole is a

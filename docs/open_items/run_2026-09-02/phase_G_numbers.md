@@ -77,7 +77,7 @@ D wave by s₂ = 0.8984 and its S wave by s₀ = 1.0128, so every R₂/R₀ rati
 and therefore η — is smaller by s₂/s₀ = 0.8870. Measured: −0.0544 × 0.8870 =
 −0.0483, which is the `FitRescaled` value to 4 digits. The design's `FitRaw`
 column is the only §8 entry that does not survive; the physics conclusion
-(η ≈ −0.05, ≈ 2× the measured −0.025 ± 0.006 ± 0.010, not 5–15×) is unchanged
+(η ≈ −0.05, ≈ 2× the measured −0.025 ± 0.006 ± 0.010, not 5–15×) [*Note 2026-09-23 (`../run_2026-09-23/phase_B2_nuclear.md` §5): George–Knutson's η is a restricted phase-shift analysis — a consistency band on the quadrupole dial, not a measurement of the D wave; wording left as written on its date.*] is unchanged
 for the default source.
 
 ### 2.1 The Whittaker division, term by term

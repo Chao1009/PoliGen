@@ -83,7 +83,16 @@ target_compile_definitions(lipolgen_core PRIVATE
 if(LIPOLGEN_WITH_LHAPDF)
   find_program(LHAPDF_CONFIG lhapdf-config HINTS ${LIPOLGEN_DEPS_PREFIX}/bin)
   if(LHAPDF_CONFIG)
-    execute_process(COMMAND ${LHAPDF_CONFIG} --incdir OUTPUT_VARIABLE LHAPDF_INCDIR OUTPUT_STRIP_TRAILING_WHITESPACE)
+    # LHAPDF 6.5.6 renamed `--incdir` to `--includedir` (its --help still
+    # lists `--incdir`, which now exits 1 after printing the help text to
+    # stdout -- captured, that help text became the include path and broke
+    # the generated Makefile).  Ask for the old name, fall back to the new.
+    execute_process(COMMAND ${LHAPDF_CONFIG} --incdir OUTPUT_VARIABLE LHAPDF_INCDIR
+                    RESULT_VARIABLE LHAPDF_INCDIR_RC OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+    if(NOT LHAPDF_INCDIR_RC EQUAL 0)
+      execute_process(COMMAND ${LHAPDF_CONFIG} --includedir OUTPUT_VARIABLE LHAPDF_INCDIR
+                      OUTPUT_STRIP_TRAILING_WHITESPACE)
+    endif()
     execute_process(COMMAND ${LHAPDF_CONFIG} --libdir OUTPUT_VARIABLE LHAPDF_LIBDIR OUTPUT_STRIP_TRAILING_WHITESPACE)
     file(GLOB LIPOLGEN_LHAPDF_SOURCES CONFIGURE_DEPENDS src/lhapdf/*.cpp)
     if(LIPOLGEN_LHAPDF_SOURCES)

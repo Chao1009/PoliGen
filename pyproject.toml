@@ -1,5 +1,9 @@
 [build-system]
-requires = ["scikit-build-core>=0.9", "pybind11>=2.10"]
+# Floors are measured, not guessed: scikit-build-core < 0.11 rejects either
+# `minimum-version = "build-system.requires"` (0.9.x) or the SPDX-string
+# `license` below (0.10.x); pybind11 < 2.12 has no NumPy 2 support and hands
+# back stride-0 arrays (every event column its first element repeated).
+requires = ["scikit-build-core>=0.11", "pybind11>=2.12"]
 build-backend = "scikit_build_core.build"
 
 [project]

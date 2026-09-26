@@ -28,6 +28,11 @@
 // inside the rtol 1e-3 the task asked for; see the CHECK_CLOSE calls for
 // the actual number (most are rtol 1e-4 to 1e-6, see comments).
 
+// Compiled only with the LHAPDF tier: this whole file exercises it, and
+// without the guard a -DLIPOLGEN_WITH_LHAPDF=OFF (or LHAPDF-less) build of
+// lipolgen_tests failed to compile (same pattern as test_pythia.cpp).
+#ifdef LIPOLGEN_HAVE_LHAPDF
+
 #include <cmath>
 #include <memory>
 
@@ -286,3 +291,5 @@ TEST_CASE("LHAPDF Epps21Ratio::f2_per_nucleon matches the direct EPPS21 evaluati
   CHECK(r.f2_per_nucleon(0.0, 10.0) == 0.0);
   CHECK(r.f2_per_nucleon(1.0, 10.0) == 0.0);
 }
+
+#endif  // LIPOLGEN_HAVE_LHAPDF

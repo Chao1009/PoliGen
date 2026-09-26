@@ -452,7 +452,7 @@ def test_cdbonn_fdeut_table_is_the_av18_grid_in_the_av18_units():
         assert t["u"][i] == pytest.approx(w.psi_s(p) * scale, rel=1e-12)
         assert t["w"][i] == pytest.approx(w.psi_d(p) * scale, rel=1e-12)
     k = np.asarray(t["k_gev"])
-    n = np.trapz(k ** 2 * (np.asarray(t["u"]) ** 2 + np.asarray(t["w"]) ** 2), k)
+    n = (getattr(np, "trapezoid", None) or np.trapz)(k ** 2 * (np.asarray(t["u"]) ** 2 + np.asarray(t["w"]) ** 2), k)
     assert n == pytest.approx(0.999977985, rel=1e-7)
     # The D wave vanishes at p = 0 -- that IS the sum_j D_j/m_j^2 = 0
     # constraint, seen from momentum space.

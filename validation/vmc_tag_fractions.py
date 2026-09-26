@@ -28,6 +28,10 @@ from pathlib import Path
 
 import numpy as np
 
+# numpy < 2.0 spells it np.trapz; >= 2.0 spells it np.trapezoid (and 2.4
+# removed np.trapz), as in vmc_reconcile.py.
+_trapz = getattr(np, "trapezoid", None) or np.trapz
+
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 MARKER = "<!-- APPEND: validation/vmc_tag_fractions.py -->"
@@ -266,15 +270,15 @@ def main():
                 dens = dens + k ** 2 * r ** 2
                 if w.l == 2:
                     d2 = d2 + k ** 2 * r ** 2
-            tot = np.trapz(dens, k)
+            tot = _trapz(dens, k)
             dens = dens / tot
-            mk = np.trapz(k * dens, k)
+            mk = _trapz(k * dens, k)
 
             def tail(k0):
                 msk = k >= k0
-                return float(np.trapz(dens[msk], k[msk]))
+                return float(_trapz(dens[msk], k[msk]))
 
-            pd = float(np.trapz(d2, k) / tot) if d2.any() else float("nan")
+            pd = float(_trapz(d2, k) / tot) if d2.any() else float("nan")
             moments[(iso, wave)] = (mk, tail(0.2), tail(0.3), tail(0.45), pd)
             pd_s = "     --" if np.isnan(pd) else f"{pd:10.5f}"
             print(f"{iso + ' ' + wave:<30}{mk:10.4f}{tail(0.2):11.4f}"

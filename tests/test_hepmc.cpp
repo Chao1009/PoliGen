@@ -3,6 +3,12 @@
 // by hand: e + 6Li beams (10 GeV x 99.5 GeV/u), scattered e', an alpha
 // spectator, and a status-3 hadronic-system pseudo-particle X. See
 // docs/HEPMC3_CONVENTION.md for the attribute/layout convention this checks.
+//
+// Compiled only with the HepMC3 tier: without the guard a
+// -DLIPOLGEN_WITH_HEPMC3=OFF (or HepMC3-less) build of lipolgen_tests failed
+// to compile (same pattern as test_pythia.cpp).
+#ifdef LIPOLGEN_HAVE_HEPMC3
+
 #include "doctest.h"
 #include "lipolgen/event.hpp"
 #include "lipolgen/hepmc_writer.hpp"
@@ -523,3 +529,5 @@ TEST_CASE("T15b: --rc off writes exactly today's weight names") {
         1 + ev.spin_weights.size());
   CHECK(read_ev.weights().size() == 1 + ev.spin_weights.size());
 }
+
+#endif  // LIPOLGEN_HAVE_HEPMC3

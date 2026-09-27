@@ -114,6 +114,13 @@ to 1.0e-13 and conserve charge exactly.  The fix belongs to the document's
 owner (scope the identity, or write the remnant); nothing here moves.  4.3 s
 wall for the whole row.
 
+RE-MEASURED 2026-09-27 after decision D1 (docs/open_items/run_2026-09-27/
+DECISIONS.md: the document now scopes the identity -- an inclusive record
+balances per nucleon, e + struck nucleon, lines 140-147; no file changed):
+PASS, 23 of 23 clauses on all 800 events, worst four-momentum residual
+4.2e-13 of the beam energy.  C13/C14 were rescoped to the amended text, not
+loosened: tagged and coherent files are still held to the full beams.
+
 Run:  source env.sh && python3 validation/benchmarks/t6_hepmc3_convention.py
 
 Exit status (validation/benchmarks/README.md): 0 when the harness ran and
@@ -139,10 +146,12 @@ import traceback
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 DOC = os.path.join(ROOT, "docs", "HEPMC3_CONVENTION.md")
-# The document these clauses were written against (2026-09-26).  A different
-# sha256 is REPORTED on the row; the clause anchors say whether it matters.
+# The document these clauses were written against (2026-09-26; re-read
+# 2026-09-27 after decision D1 added the per-nucleon inclusive balance,
+# lines 140-147, and C13/C14 were rescoped to it).  A different sha256 is
+# REPORTED on the row; the clause anchors say whether it matters.
 DOC_SHA256_AT_AUTHORING = (
-    "5c6b55dcd9345542e904044eed2ccbf4ae6e9cd2928ba7647a70c6725011f41c")
+    "56d3a91a9bdf789b3628f9f1bc52c723887466aea3021e58ae511eb306ba4cd4")
 
 NAME = "t6_hepmc3_convention"
 N_EVENTS = 100
@@ -153,7 +162,7 @@ PRIMARY_STATUS = {1, 2, 3, 4}
 
 # One file per channel the CLI supports (docs/T2_CHAIN.md, lipolgen.CHANNELS).
 # `ion` is the beam's 10LZZZAAAI code, `enum` the `channel` attribute the
-# writer must spell (hepmc_writer.cpp channel_name, doc line 159).
+# writer must spell (hepmc_writer.cpp channel_name, doc line 168).
 RUNS = [
     dict(label="inclusive-6Li-T2", ion=1000030060, enum="Inclusive",
          kind="inclusive", t2=True, rc=False,
@@ -184,7 +193,7 @@ RUNS = [
                "--rc", "tensor-band", "--hadronize"]),
 ]
 
-# Event attributes of doc lines 147-170: name -> HepMC3 type.
+# Event attributes of doc lines 156-179: name -> HepMC3 type.
 ATTRIBUTES = [
     ("spin_J", "Double"), ("spin_M", "Double"), ("struck_cluster_m", "Double"),
     ("lam_e", "Int"), ("P_e", "Double"), ("P_z", "Double"), ("P_zz", "Double"),
@@ -234,37 +243,39 @@ CLAUSES = [
     ("C12", "111-121", (111, "is a genuine final-state fragment, status 1"),
      "alpha tags: the struck cluster's end vertex emits >= 1 status-1 partner "
      "(p, n or ion) and exactly one status-3 struck nucleon"),
-    ("C13", "123-138", (130, "sum(status == 1 particles) + X.momentum  ==  sum(beam momenta)"),
+    ("C13", "123-147", (130, "sum(status == 1 particles) + X.momentum  ==  sum(beam momenta)"),
      "four-momentum from the file: sum(status 1) == sum(beams) on a "
      "hadronized record, + X when X alone carries the HFS; never + gamma* "
-     "(1e-9 of the beam energy, per component)"),
-    ("C14", "123-138 (charge)", (123, "## 4-momentum conservation bookkeeping"),
+     "(1e-9 of the beam energy, per component); on inclusive files the ion "
+     "beam is replaced by the struck nucleon (lines 140-147, D1 2026-09-27)"),
+    ("C14", "123-147 (charge)", (140, "**Inclusive channels balance per nucleon**"),
      "charge from the file's PDG codes (Z of an ion code, PYTHIA ParticleData "
-     "otherwise): sum(status 1) == sum(beams) wherever X is documentation"),
-    ("C15", "142-170", (142, "are `GenEvent`-level attributes (id 0), named exactly"),
+     "otherwise): sum(status 1) == sum(beams) wherever X is documentation; "
+     "== q_e + q_N on inclusive files"),
+    ("C15", "151-179", (151, "are `GenEvent`-level attributes (id 0), named exactly"),
      "all 24 named attributes on every event, each parsing as its listed "
      "HepMC3 type"),
-    ("C16", "147-159", (147, "ion spin (1 or 1.5)"),
+    ("C16", "156-168", (156, "ion spin (1 or 1.5)"),
      "spin_J in {1, 1.5}; lam_e in {-1, 0, +1}; struck_cluster_m NaN on "
      "inclusive files and finite on tagged ones; channel = the run's "
      "enumerator name"),
-    ("C17", "172-180", (179, "so a reader should only ever trust index 0"),
+    ("C17", "181-189", (188, "so a reader should only ever trust index 0"),
      "a GenCrossSection on every event, index 0 finite and > 0, its error "
      "finite and >= 0"),
-    ("C18", "182-184", (184, "sentinel `9.0`."),
+    ("C18", "191-193", (193, "sentinel `9.0`."),
      "a particle 'pol' attribute is a double and never the sentinel 9.0"),
-    ("C19", "188-190", (188, "is built once, from the first event written, and reused"),
+    ("C19", "197-199", (197, "is built once, from the first event written, and reused"),
      "ONE GenRunInfo block in the file (one tool line, one weight-name line, "
      "both before the first event); every event reports the same names"),
-    ("C20", "192-193", (192, "one `GenRunInfo::ToolInfo` entry, `{name, version}`"),
+    ("C20", "201-202", (201, "one `GenRunInfo::ToolInfo` entry, `{name, version}`"),
      "exactly one ToolInfo, name LiPolGen, version = lipolgen.__version__"),
-    ("C21", "194-201", (194, "at index 0, plus one"),
+    ("C21", "203-210", (203, "at index 0, plus one"),
      "weight names: 'nominal' at 0, then spin_weight_1..N consecutive; the "
      "first event carries exactly that many values"),
-    ("C22", "202-219", (208, "nominal | spin_weight_1..N | rc_tensor_lo rc_tensor_hi rc_tail"),
+    ("C22", "211-228", (217, "nominal | spin_weight_1..N | rc_tensor_lo rc_tensor_hi rc_tail"),
      "--rc tensor-band: the rc names APPENDED after the spin block, exactly "
      "rc_tensor_lo rc_tensor_hi rc_tail then the _k triples, 3 (1 + N) of them"),
-    ("C23", "221-223", (221, "is EMPTY when the run has `--rc off`"),
+    ("C23", "230-232", (230, "is EMPTY when the run has `--rc off`"),
      "--rc off: no rc_* name, and 1 + N weight values"),
 ]
 
@@ -609,9 +620,11 @@ def c12(spec, raw, events, ctx):
     return len(events), bad
 
 
-def _balance(e):
-    """(residual with status 1 alone, residual with status 1 + X)."""
-    beams = [p["p4"] for p in e["parts"] if p["status"] == 4]
+def _balance(e, spec=None):
+    """(residual with status 1 alone, residual with status 1 + X).  On an
+    inclusive file the ion beam is replaced by the struck nucleon (doc
+    lines 140-147, decision D1 of 2026-09-27)."""
+    beams = _initial_state(e, spec)
     fin = [p["p4"] for p in e["parts"] if p["status"] == 1]
     xs = [p["p4"] for p in e["parts"] if p["pid"] == 92]
     tin = _sum(beams)
@@ -621,13 +634,24 @@ def _balance(e):
     return r1, rx
 
 
+def _initial_state(e, spec):
+    """The four-vectors the record must balance against: both beams, or on
+    an inclusive file the beam electron and the struck nucleon."""
+    beams = [p for p in e["parts"] if p["status"] == 4]
+    if spec is not None and spec["kind"] == "inclusive":
+        pn = _struck_nucleon(e)
+        if pn is not None:
+            return [p["p4"] for p in beams if p["pid"] == 11] + [pn["p4"]]
+    return [p["p4"] for p in beams]
+
+
 def _x_carries_hfs(spec, e):
     """True when X is the ONLY representation of the hadronic system: a T0
     file, or a T2 event PYTHIA vetoed (the status-1 + X form balances and the
     status-1 form does not).  Otherwise X is documentation (lines 72-78)."""
     if not spec["t2"]:
         return True
-    r1, rx = _balance(e)
+    r1, rx = _balance(e, spec)
     return rx <= TOL < r1
 
 
@@ -667,7 +691,7 @@ def c13(spec, raw, events, ctx):
     st = ctx.setdefault("c13", dict(worst=0.0, n_final=0, n_x=0))
     diag = ctx.setdefault("remnant", {})
     for e in events:
-        r1, rx = _balance(e)
+        r1, rx = _balance(e, spec)
         if spec["t2"] and r1 <= TOL:
             st["n_final"] += 1
             st["worst"] = max(st["worst"], r1)
@@ -703,6 +727,9 @@ def c14(spec, raw, events, ctx):
             st["n_x_form"] += 1           # X carries the HFS: no charge on file
             continue
         qs_in = [charge(p["pid"]) for p in e["parts"] if p["status"] == 4]
+        pn_in = _struck_nucleon(e) if spec["kind"] == "inclusive" else None
+        if pn_in is not None:            # per-nucleon balance (doc lines 140-147)
+            qs_in = [charge(11), charge(pn_in["pid"])]
         qs_out = [charge(p["pid"]) for p in e["parts"] if p["status"] == 1]
         if None in qs_in or None in qs_out:
             st["n_unknown"] += 1

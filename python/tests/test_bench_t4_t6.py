@@ -360,21 +360,12 @@ def test_t6_row_and_verdict_follow_from_the_clauses(t6, t6_rep):
     assert rep["doc_sha256"][:16] in rep["reference"]
 
 
-def _analytic_remnant_fraction(isotope, e_e=10.0):
-    """(E_ion - E_N) / (E_ion + E_e): the (A-1) remnant's share of the beam
-    energy, the struck nucleon on shell at M_NUCLEON (docs/CONVENTIONS.md)."""
-    b = lg.default_configs(isotope)[1]
-    p_u = b.ion_momentum_per_nucleon
-    a = b.ion.A
-    e_ion = math.sqrt((a * p_u) ** 2 + b.ion.mass() ** 2)
-    e_n = math.sqrt(p_u ** 2 + 0.9383 ** 2)
-    return (e_ion - e_n) / (e_ion + e_e)
-
-
 def test_t6_measured_row_is_pinned(t6, t6_rep):
-    """Measured 2026-09-26, 100 events per file: 21 of 23 clauses hold; C13
-    (four-momentum) and C14 (charge) fail on the INCLUSIVE files only, and the
-    whole deficit is the (A-1) remnant USAGE.md sec. 2 says is not written."""
+    """Measured 2026-09-27, 100 events per file: all 23 clauses hold.  Until
+    decision D1 (docs/open_items/run_2026-09-27/DECISIONS.md) C13 and C14
+    failed on the four INCLUSIVE files, whose whole deficit was the (A-1)
+    remnant USAGE.md sec. 2 says is not written; the document now states the
+    inclusive balance per nucleon (docs/HEPMC3_CONVENTION.md lines 140-147)."""
     if not getattr(lg, "HAVE_PYTHIA8", False):
         pytest.skip("environment: lipolgen built without PYTHIA 8 "
                     "(HAVE_PYTHIA8 false); six of T6's eight files are T2")
@@ -382,33 +373,35 @@ def test_t6_measured_row_is_pinned(t6, t6_rep):
         pytest.skip("environment: pythia8 Python module not importable; T6 "
                     "clause C14 reads PYTHIA's PDG charge table")
     rep = t6_rep
-    assert rep["status"] == "fail"
+    assert rep["status"] == "pass"
     by = {s["clause"]: s for s in rep["subrows"]}
-    assert sorted(c for c, s in by.items() if s["status"] == "fail") == ["C13", "C14"]
-    assert all(s["status"] == "pass" for c, s in by.items() if c not in ("C13", "C14"))
-    inclusive = {r["label"] for r in t6.RUNS if r["kind"] == "inclusive"}
-    assert set(by["C13"]["failing_files"]) == inclusive
-    assert set(by["C14"]["failing_files"]) == inclusive - {"inclusive-6Li-T0"}
-    assert (by["C13"]["n_violations"], by["C14"]["n_violations"]) == (400, 300)
+    assert all(s["status"] == "pass" for s in by.values()), \
+        {c: s["status"] for c, s in by.items()}
     assert by["C12"]["n_checked"] == 200 and by["C22"]["files"] == 1
     assert by["C23"]["files"] == 7
-    # the files that SHOULD balance do, to far inside the doc's 1e-9
+    # every record balances to far inside the doc's 1e-9: 700 on status 1
+    # alone, the 100 T0 inclusive events with X; no remnant-shaped deficit left
     c13 = rep["conservation"]
-    assert c13["n_final"] == 400 and c13["n_x"] == 0 and c13["worst"] < 1e-12
+    assert c13["n_final"] == 700 and c13["n_x"] == 100 and c13["worst"] < 1e-12
     assert rep["charge"]["n_checked"] == 700 and rep["charge"]["n_unknown"] == 0
-    # the deficit IS the unwritten (A-1) remnant, event by event
-    for label, d in rep["remnant_diagnostic"].items():
-        assert label in inclusive and d["n"] == 100 and d["n_matched"] == 100
-        iso = "7Li" if "7Li" in label else "6Li"
-        want = _analytic_remnant_fraction(iso)
-        assert d["deficit_min"] == pytest.approx(want, rel=1e-9)
-        assert d["deficit_max"] == pytest.approx(want, rel=1e-9)
-    assert round(_analytic_remnant_fraction("6Li"), 4) == 0.8196
-    assert round(_analytic_remnant_fraction("7Li"), 4) == 0.8450
-    for label, d in rep["remnant_charge_diagnostic"].items():
-        assert d["n"] == 100 and d["n_matched"] == 100
+    assert not rep["remnant_diagnostic"] and not rep["remnant_charge_diagnostic"]
     assert rep["n_spin_weights_seen"] == [0]
     assert rep["runtime_s"] < 30.0
+
+
+def test_t6_inclusive_balance_is_per_nucleon(t6):
+    """D1: an inclusive record balances against e + the struck nucleon, a
+    tagged / coherent one against the full beams."""
+    e_ = {"parts": [dict(id=1, pid=11, status=4, p4=(10.0, 0.0, 0.0, -10.0)),
+                    dict(id=2, pid=1000030060, status=4, p4=(600.0, 0, 0, 599.0)),
+                    dict(id=3, pid=2212, status=3, p4=(100.0, 0, 0, 99.9)),
+                    dict(id=4, pid=92, status=3, p4=(1.0, 0, 0, 0), prod=-2)],
+          "verts": {-2: dict(ins=[3], outs=[4])}}
+    inc = dict(kind="inclusive")
+    got = t6._initial_state(e_, inc)
+    assert got == [(10.0, 0.0, 0.0, -10.0), (100.0, 0, 0, 99.9)]
+    assert t6._initial_state(e_, dict(kind="alpha-tag")) == [
+        (10.0, 0.0, 0.0, -10.0), (600.0, 0, 0, 599.0)]
 
 
 _TAGGED_T0 = dict(label="tagged-6Li-alpha-T0", ion=1000030060,

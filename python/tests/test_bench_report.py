@@ -354,15 +354,16 @@ def test_plan_rows_and_u_rows_are_read_not_invented(mr, fake):
     assert u["U-2"]["distance"] == "3.5x" and "unescaped" in u["U-2"]["parse_note"]
 
 
-def test_the_real_plan_maps_the_first_ten(mr):
+def test_the_real_plan_maps_the_section_4_rows(mr):
     plan = mr.read_plan(_PLAN)
     assert plan is not None
-    assert [r["row"] for r in plan["rows4"]] == list(range(1, 11))
+    assert [r["row"] for r in plan["rows4"]] == list(range(1, 12))  # row 11 added 2026-09-27 (D3)
     assert mr.plan_row_map(plan) == {
         "t5_epios_source_modes": 1, "t2_hermes_b1_table2": 3,
         "t3_nmc_li6_over_d": 4, "t3_li6_charge_ff_fb": 5,
         "t3_li_magnetization_rfy": 6, "t4_djangoh_rad_noRad": 7,
-        "t5_est_identity": 9, "t2_bonus_spectator_shape": 10}
+        "t5_est_identity": 9, "t2_bonus_spectator_shape": 10,
+        "t2_deeps_spectator_tail": 11}
     assert [r["row"] for r in plan["rows4"] if not r["harnesses"]] == [2, 8]
     assert [u["id"] for u in plan["u_rows"]] == ["U-%d" % i for i in range(1, 13)]
 

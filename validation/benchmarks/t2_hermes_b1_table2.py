@@ -62,6 +62,11 @@ Born level: HERMES's A_zz is RC-unfolded (RADGEN); the comparison is to a
 Born structure function.  Q^2 = 0.51 at bin 1 is below MSTW2008's 1 GeV^2
 grid floor (PYTHIA's reader extrapolates) and below R1990's SLAC x range.
 
+INTEGRITY (since 2026-09-26).  The sha256 of every byte of each vendored
+file is recorded below (`DATA_SHA256`, `R1990_SHA256`, taken from the files
+as committed at f0a8f1e) and re-checked on EVERY read: an altered table is
+refused with a RuntimeError, so `__main__` exits 2, never 0 on moved numbers.
+
 Run:  source env.sh && python3 validation/benchmarks/t2_hermes_b1_table2.py
 
 Exit status (validation/benchmarks/README.md): 0 when the harness ran and
@@ -71,6 +76,7 @@ altered vendored file, a missing dependency, any exception).  A harness is
 a measurement, not a CI gate: the pytests are the gate.
 """
 
+import hashlib
 import json
 import math
 import os
@@ -80,6 +86,10 @@ import traceback
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(HERE, "data", "hermes2005_b1d_table2.json")
 R1990_DATA = os.path.join(HERE, "data", "whitlow1990_r1990.json")
+#: sha256 of every byte of each vendored file (recorded 2026-09-26 from the
+#: files as committed at f0a8f1e); re-checked on every read.
+DATA_SHA256 = "20b9104edf52414822e88305f7144566568ee2979bd531f77dd79f3a92006fc5"
+R1990_SHA256 = "ce330eeef6305315a78d66422ff81fe8307bf71fdca4b8ef6e781e71698591d9"
 
 NAME = "t2_hermes_b1_table2"
 M_NUCLEON = 0.938272   # GeV; gamma^2 = 4 M^2 x^2 / Q^2 = Q^2/nu^2
@@ -87,9 +97,20 @@ CONFIGS = ("cdks_conv_mstw", "cdks_conv_default", "miller_shipped",
            "miller_x1", "cdks_digitized", "null_b1_zero")
 
 
+def read_vendored(path, sha256):
+    """The bytes of a vendored file -- RuntimeError unless their sha256 is
+    the recorded one, so a moved number is refused, never silently read."""
+    with open(path, "rb") as f:
+        raw = f.read()
+    got = hashlib.sha256(raw).hexdigest()
+    if got != sha256:
+        raise RuntimeError("%s: vendored file sha256 %s != recorded %s"
+                           % (path, got, sha256))
+    return raw
+
+
 def load_table(path=DATA):
-    with open(path) as f:
-        d = json.load(f)
+    d = json.loads(read_vendored(path, DATA_SHA256).decode("utf-8"))
     s = d["scale"]
     out = []
     for r in d["rows"]:
@@ -101,8 +122,7 @@ def load_table(path=DATA):
 
 
 def r1990_factory(path=R1990_DATA):
-    with open(path) as f:
-        p = json.load(f)
+    p = json.loads(read_vendored(path, R1990_SHA256).decode("utf-8"))
 
     def r1990(x, q2):
         th = 1.0 + 12.0 * (q2 / (q2 + 1.0)) * (0.125 ** 2 / (0.125 ** 2 + x * x))

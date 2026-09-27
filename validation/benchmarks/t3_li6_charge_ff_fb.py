@@ -35,9 +35,13 @@ C0 zero / |F_L|^2 minimum is:
           03_data_nuclear.md sec. 2 -- the paper is NOT held; its precision
           is not known here)
 The row PASSES if the tree's zero lies inside [q_FB, q_Li]; otherwise it is
-a recorded FAIL carrying its distance from the band's upper edge.  A FAIL
-here tunes nothing: the HO refit is open item Q1, and this harness only
-prices it (docs/open_items/run_2026-09-23/phase_B2_nuclear.md).
+a recorded FAIL carrying its distance from the band's upper edge.  A tree C0
+with NO zero below the scan limit (`Q_SCAN_MAX` = 5 fm^-1; rc.hpp's VmcFt
+shape is one) contradicts the band too: it is a recorded FAIL with that
+reason and no distance, never a crash.  (An FB side with no zero there is
+the reference broken, a RuntimeError.)  A FAIL here tunes nothing: the HO
+refit is open item Q1, and this harness only prices it
+(docs/open_items/run_2026-09-23/phase_B2_nuclear.md).
 
 CAVEATS, stated so the band is not over-read:
   (i)  q_Li is a minimum of a MEASURED cross section: Coulomb distortion
@@ -65,6 +69,13 @@ THE THREE NORMALISATION RULES (BENCHMARK_PLAN.md sec. 8), for THIS row:
      Both are compared as F_C(q)/F_C(0), so the normalisation cancels in the
      zero and the rms.
 
+INTEGRITY.  The sha256 of every byte of the vendored file (`FILE_SHA256`,
+taken from the file as committed at f0a8f1e) and, as before, of the 6Li
+row's bytes (`ROW_SHA256`, also printed in the file's header) are
+re-checked on EVERY read: an altered file -- header or row -- is refused
+with a RuntimeError, so `__main__` exits 2.  (Until 2026-09-27 only the row
+was hashed: a changed licence line or A/Z note was read without complaint.)
+
 Run:  source env.sh && python3 validation/benchmarks/t3_li6_charge_ff_fb.py
 
 Exit status (validation/benchmarks/README.md): 0 when the harness ran and
@@ -84,8 +95,13 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(HERE, "data", "uva_ncd_fb_data_li6.dat")
 MARKER = "# ---- BEGIN VERBATIM FB_data.dat LINES ----"
 ROW_SHA256 = "b9655bdc97151a58614cd949c5d5a03c54abfee8ae4609c2053c65e482b24a00"
+#: sha256 of every byte of the vendored file -- the provenance header (source,
+#: licence, the A/Z note, the SPDX line) as well as the row (recorded
+#: 2026-09-27 from the file as committed at f0a8f1e); re-checked on every read
+FILE_SHA256 = "6d5174b80f1a0da2197354feb244307ede17d38a1a9169e546abc18e78da7160"
 
 NAME = "t3_li6_charge_ff_fb"
+Q_SCAN_MAX = 5.0                 # fm^-1, `first_zero`'s scan limit
 Q_LI71 = math.sqrt(8.0)          # fm^-1, Li et al. 1971 |F_L|^2 minimum
 T11_WINDOW = (2.9, 3.3)          # tests/test_rc.cpp T11 -- NOT moved
 DE_VRIES_RMS = (2.54, 2.57)      # ADNDT 36 (1987) Table I, 6Li, three analyses
@@ -94,6 +110,10 @@ ANGELI_RMS = 2.589               # Angeli & Marinova ADNDT 99 (2013), rc.hpp
 
 def load_row(path=DATA):
     raw = open(path, "rb").read()
+    got = hashlib.sha256(raw).hexdigest()
+    if got != FILE_SHA256:
+        raise RuntimeError("%s: vendored file sha256 %s != recorded %s"
+                           % (path, got, FILE_SHA256))
     _, sep, body = raw.partition((MARKER + "\n").encode())
     if not sep:
         raise RuntimeError("%s: provenance marker missing" % path)
@@ -178,7 +198,8 @@ def bisect(f, lo, hi, tol=1e-12):
     return 0.5 * (lo + hi)
 
 
-def first_zero(f, q_max=5.0, step=0.01):
+def first_zero(f, q_max=Q_SCAN_MAX, step=0.01):
+    """The first sign change of f on (0, q_max], bisected; None if none."""
     q = step
     fq = f(q)
     while q < q_max:
@@ -218,49 +239,64 @@ def tree_side():
         c2 = 2.0 * math.sqrt(2.0) / 3.0 * eta * ff.fq(t)
         return ff.fc(t) ** 2 + c2 ** 2
 
-    q_min_fl2 = golden_min(fl2, q0 - 0.3, q0 + 0.3)
     eps = 1e-3
     rms_folded = math.sqrt(-6.0 * (fc(eps) / fc(0.0) - 1.0) / eps ** 2)
+    if q0 is None:   # no C0 zero to locate: recorded by measure(), not a crash
+        return dict(q0=None, q_min_fl2=None, fl2_at_min=None,
+                    rms_folded=rms_folded, fc0=fc(0.0),
+                    provenance=ff.provenance(),
+                    no_zero="the tree's C0 has no zero below %g fm^-1"
+                            % Q_SCAN_MAX)
+    q_min_fl2 = golden_min(fl2, q0 - 0.3, q0 + 0.3)
     return dict(q0=q0, q_min_fl2=q_min_fl2, fl2_at_min=fl2(q_min_fl2),
                 rms_folded=rms_folded, fc0=fc(0.0),
-                provenance=ff.provenance())
+                provenance=ff.provenance(), no_zero=None)
 
 
 def measure(path=DATA):
     row = load_row(path)
     fb = FourierBessel(row["a"], row["R"])
     q_fb = first_zero(fb.ff_norm)
+    if q_fb is None:   # the REFERENCE side is broken: no band without it
+        raise RuntimeError("%s: the FB F_C has no zero below %g fm^-1"
+                           % (path, Q_SCAN_MAX))
     tree = tree_side()
     band = (q_fb, Q_LI71)
-    inside = band[0] <= tree["q0"] <= band[1]
-    dist_upper = tree["q0"] - band[1]
+    q0 = tree["q0"]
+    inside = q0 is not None and band[0] <= q0 <= band[1]
+    dist_upper = None if q0 is None else q0 - band[1]
     return dict(
         row=row, fb_charge=fb.charge(), fb_rms=fb.rms(), q_fb=q_fb,
-        fb_at_tree_q0=row["Z"] * fb.ff_norm(tree["q0"]),
+        fb_at_tree_q0=None if q0 is None else row["Z"] * fb.ff_norm(q0),
         band=band, inside=inside, distance_above_band=dist_upper,
-        rel_above_q_li=dist_upper / band[1],
-        rel_above_q_fb=(tree["q0"] - band[0]) / band[0],
+        rel_above_q_li=None if q0 is None else dist_upper / band[1],
+        rel_above_q_fb=None if q0 is None else (q0 - band[0]) / band[0],
         t11_window=T11_WINDOW,
         band_meets_t11=not (band[1] < T11_WINDOW[0] or band[0] > T11_WINDOW[1]),
         gap_band_to_t11=T11_WINDOW[0] - band[1],
         de_vries_rms=DE_VRIES_RMS, angeli_rms=ANGELI_RMS,
         tree=tree,
         fb_table=[(q, row["Z"] * fb.ff_norm(q)) for q in
-                  (0.5, 1.0, 1.5, 2.0, 2.5, q_fb, Q_LI71, tree["q0"], 3.5)],
+                  (0.5, 1.0, 1.5, 2.0, 2.5, q_fb, Q_LI71, q0, 3.5)
+                  if q is not None],
     )
 
 
 def run(path=DATA, verbose=True):
     m = measure(path)
     status = "pass" if m["inside"] else "fail"
+    no_zero = m["tree"]["no_zero"]
     report = dict(
         name=NAME,
-        generator="HoSpin1FF first C0 zero q0 = %.4f fm^-1 (shipped; T11 window "
-                  "[%.1f, %.1f] not moved)" % (m["tree"]["q0"], *T11_WINDOW),
+        generator=("HoSpin1FF first C0 zero q0 = %.4f fm^-1 (shipped; T11 window "
+                   "[%.1f, %.1f] not moved)" % (m["tree"]["q0"], *T11_WINDOW)
+                   if no_zero is None else
+                   "HoSpin1FF C0: NO zero below %g fm^-1 (T11 window [%.1f, "
+                   "%.1f] not moved)" % (Q_SCAN_MAX, *T11_WINDOW)),
         reference="band [%.4f (UVa FB zero), %.4f (Li71 minimum)] fm^-1"
                   % m["band"],
         tolerance="q0 inside the band (must not contradict)",
-        status=status,
+        status=status, reason=no_zero,
         **{k: v for k, v in m.items()},
     )
     if verbose:
@@ -275,6 +311,13 @@ def run(path=DATA, verbose=True):
         print("FB: first zero %.6f fm^-1, <r^2>^1/2 = %.4f fm "
               "(de Vries 2.54-2.57; Angeli %.3f)" % (m["q_fb"], m["fb_rms"],
                                                       ANGELI_RMS))
+    if verbose and no_zero is not None:
+        print("tree HoSpin1FF: %s; folded charge rms %.4f fm" % (
+            no_zero, t["rms_folded"]))
+        print("REPORT | %s | %s | %s | %s | FAIL (recorded, %s; nothing "
+              "moved)" % (NAME, report["generator"], report["reference"],
+                          report["tolerance"], no_zero))
+    elif verbose:
         print("tree HoSpin1FF: C0 zero %.6f fm^-1; |F_L|^2 minimum at %.6f "
               "(value %.2e: C2 shares the zero); folded charge rms %.4f fm"
               % (t["q0"], t["q_min_fl2"], t["fl2_at_min"], t["rms_folded"]))

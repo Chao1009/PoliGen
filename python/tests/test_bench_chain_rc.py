@@ -9,9 +9,13 @@ The row is BLOCKED, and these tests pin WHY as well as WHAT: the ePIC DJANGOH
 samples ran with the elastic radiative tail switched off (IEL2 = IEL31 =
 IEL32 = IEL33 = 0), and the elastic tail is the only O(alpha) term LiPolGen's
 `rc_tail` computes -- so the two share no term and no tolerance exists.  The
+samples' hadronic W_h >= 3 GeV cut excludes that tail as well (W_h = M_p in
+ep -> e p gamma) whatever the IEL flags are, so the row unblocks only with a
+DJANGOH run at IEL31..33 != 0 AND WMIN <= M_p.  The
 measured numbers are pinned so that a move in the proton tail (or in the
 vendored table) fails a test instead of silently rotting the record
-docs/open_items/run_2026-09-23/phase_B3_chain_rc.md.
+docs/open_items/run_2026-09-23/phase_B3_chain_rc.md.  The vendored table's
+sha256 is re-checked on every read (one flipped byte is refused).
 
 The full row (both tail models, 17.3-19.6 s measured 2026-09-23) runs always: it is under the 30 s
 threshold of BENCHMARK_PLAN.md sec. 3 / the run's ground rules.
@@ -21,6 +25,8 @@ import importlib.util
 import json
 import math
 import os
+import subprocess
+import sys
 
 import pytest
 
@@ -47,7 +53,18 @@ def dj_row(dj):
     return dj.run(verbose=False)
 
 
-def test_djangoh_reference_is_vendored_with_provenance(dj):
+def test_djangoh_reference_is_vendored_with_provenance(dj, tmp_path):
+    # a byte-identical copy loads; ONE flipped byte is refused (sha256), so
+    # the harness exits 2 instead of printing moved numbers
+    raw = open(dj.DATA, "rb").read()
+    assert raw.count(b"0.6733778912") == 1
+    good = tmp_path / "good.json"
+    good.write_bytes(raw)
+    dj.load_reference(good)
+    bad = tmp_path / "bad.json"
+    bad.write_bytes(raw.replace(b"0.6733778912", b"0.6733778913"))
+    with pytest.raises(RuntimeError, match="sha256"):
+        dj.load_reference(bad)
     doc, rows = dj.load_reference()
     prov = doc["provenance"]
     for key in ("source_table", "date_fetched", "licence", "papers",
@@ -78,9 +95,12 @@ def test_djangoh_reference_is_vendored_with_provenance(dj):
                                                           rel=1e-12), f
         n += 1
     assert n == 7
-    # The fact the row turns on is IN the vendored file, not only in prose.
+    # The fact the row turns on is IN the vendored file, not only in prose --
+    # and so is the hadronic cut that excludes the elastic tail whatever IEL is.
     assert "IEL2 = IEL31 = IEL32 = IEL33 = 0" in \
         doc["run_settings"]["IMPORTANT_elastic_tail_off"]
+    assert "W_h >= 3.0 GeV" in doc["run_settings"]["kinem_cuts"]
+    assert "hadronic final-state mass" in doc["run_settings"]["kinem_cuts"]
 
 
 def test_djangoh_row_is_blocked_and_prints_both_sides(dj, dj_row, capsys):
@@ -88,12 +108,17 @@ def test_djangoh_row_is_blocked_and_prints_both_sides(dj, dj_row, capsys):
     assert row["name"] == "t4_djangoh_rad_noRad"
     assert row["status"] == "blocked"
     assert "IEL2=IEL31=IEL32=IEL33=0" in row["reason"]
+    # the unblock recipe names the W_h cut, not the IEL flags alone
+    assert "W_h >= 3 GeV cut also excludes the elastic tail" in row["reason"]
+    assert "IEL31..33 != 0 AND WMIN <= M_p" in row["reason"]
     assert "none definable" in row["tolerance"]
     assert set(row["generator_value"]) == {"t-peak", "polrad-full"}
     for tm, vals in row["generator_value"].items():
         assert len(vals) == 4
         # the one thing that CAN fail: a tail is non-negative and finite
         assert all(math.isfinite(v) and v >= 1.0 for v in vals), tm
+        # plain floats, so the ROW line prints numbers, not np.float64(...)
+        assert all(type(v) is float for v in vals), tm
     # A tail can never exceed... nothing: the two share no term.  What IS a
     # measured fact (2026-09-23) is that on this window the proton elastic
     # tail is 9-37 % of DJANGOH's inelastic excess -- never more.
@@ -103,6 +128,25 @@ def test_djangoh_row_is_blocked_and_prints_both_sides(dj, dj_row, capsys):
     dj.print_row(row, dj.TAIL_MODELS)
     out = capsys.readouterr().out
     assert "ROW | t4_djangoh_rad_noRad" in out and "BLOCKED" in out
+    assert "np.float64" not in out
+    assert "'t-peak': [1.01616918, 1.01317215, 1.01497026, 1.0206861]" in out
+
+
+def test_djangoh_harness_exits_2_without_numpy(tmp_path):
+    """A missing dependency is a broken harness (exit 2), numpy included --
+    its import is the first thing the module does."""
+    fake = tmp_path / "numpy"
+    fake.mkdir()
+    (fake / "__init__.py").write_text(
+        'raise ImportError("simulated: numpy not installed")\n')
+    env = dict(os.environ)
+    env["PYTHONPATH"] = os.pathsep.join(
+        [str(tmp_path)] + [p for p in [env.get("PYTHONPATH")] if p])
+    p = subprocess.run([sys.executable, os.path.join(
+        _BENCH, "t4_djangoh_rad_noRad.py")], env=env, capture_output=True,
+        text=True)
+    assert p.returncode == 2, p.stderr
+    assert "simulated: numpy not installed" in p.stderr
 
 
 def test_djangoh_row_numbers_are_the_recorded_ones(dj_row):

@@ -1,0 +1,101 @@
+{
+  "_provenance": {
+    "what": "The 6Li charge rms radius from the three electron-scattering analyses of de Vries et al. 1987, Table I, and from the Angeli-Marinova 2013 compilation -- the reference side of validation/benchmarks/t3_li6_rms_devries.py (BENCHMARK_PLAN.md tier T3; 03_data_nuclear.md sec. 2, 'What that means for Q1', item 2).",
+    "transcription": "SECOND-HAND: a SURVEY TRANSCRIPTION.  The three de Vries rows are copied from docs/benchmarking/03_data_nuclear.md lines 182-188 at git revision f0a8f1e (the survey's table 'Table I (charge-distribution parameters), 6Li rows', which the survey says it read from the article: 'Fetched and read for this survey (a scan is mirrored at discovery.phys.virginia.edu/research/groups/ncd/dldata/1987_source.pdf)', line 176).  The Angeli-Marinova value is copied from 03_data_nuclear.md line 207 and include/lipolgen/rc.hpp line 543 (r_ch(6Li) = 2.589(39) fm, the anchor LI6_R2_POINT_FM2 is built on).  THE ADNDT PAGES WERE NOT RE-READ for this file: the UVa mirror and the publisher were unreachable from the environment that wrote it.",
+    "source_url": {
+      "de_vries_1987": "https://doi.org/10.1016/0092-640X(87)90013-1 (docs/references/REFERENCES.md sec. 1 #19; not fetched); the survey's scan mirror: discovery.phys.virginia.edu/research/groups/ncd/dldata/1987_source.pdf (not fetched)",
+      "angeli_marinova_2013": "https://doi.org/10.1016/j.adt.2011.12.006 (REFERENCES.md sec. 1 #40; not fetched)"
+    },
+    "transcribed_from": [
+      {
+        "rows": "de Vries Table I, 6Li",
+        "file": "docs/benchmarking/03_data_nuclear.md",
+        "lines": "182-188",
+        "git_rev": "f0a8f1e"
+      },
+      {
+        "rows": "Angeli-Marinova 6Li",
+        "file": "docs/benchmarking/03_data_nuclear.md",
+        "lines": "207",
+        "git_rev": "f0a8f1e"
+      },
+      {
+        "rows": "Angeli-Marinova 6Li (the same number, the tree's anchor)",
+        "file": "include/lipolgen/rc.hpp",
+        "lines": "543",
+        "git_rev": "f0a8f1e"
+      }
+    ],
+    "fetched": "2026-09-26 (the transcription date; nothing was downloaded)",
+    "licence": "The radii are measured physical quantities (facts).  The in-tree prose they were copied from is GPL-3.0-or-later, as is this file.  The articles' own terms were not consulted: the articles were not obtained for this file.",
+    "papers": {
+      "de_vries_1987": "H. de Vries, C. W. de Jager, C. de Vries, 'Nuclear charge-density-distribution parameters from elastic electron scattering', At. Data Nucl. Data Tables 36 (1987) 495, Table I (charge-distribution parameters), the 6Li rows.",
+      "angeli_marinova_2013": "I. Angeli, K. P. Marinova, 'Table of experimental nuclear ground state charge radii: An update', At. Data Nucl. Data Tables 99 (2013) 69."
+    },
+    "publishing_convention": {
+      "quantity": "<r^2>^1/2 of the nuclear CHARGE distribution in fm -- nucleon finite size INCLUDED (it is what the slope of the measured elastic charge form factor gives: F_C(q)/Z = 1 - q^2 <r^2>/6 + ...).  PER NUCLEUS (the distribution is normalised to the charge Z = 3); no per-nucleon quantity enters.",
+      "errors": "The parenthesised digits as the survey prints them, read here as one standard deviation on the last digits: 2.54(5) -> 0.05 fm, 2.56(5) -> 0.05, 2.57(10) -> 0.10, 2.589(39) -> 0.039.  Whether each analysis quotes 1 sigma, and whether statistical or total, was not checked.",
+      "columns": "'model' is the survey's label (MI30, MI) printed verbatim and not interpreted here; 'q_range_fm-1' is the momentum-transfer range of the analysed data as the survey prints it; 'source_key' is de Vries's reference key as the survey prints it, with the survey's own expansion where it gave one (it gave none for Bu72).",
+      "independence": "NOT VERIFIED: whether the three analyses share data, and which data Angeli-Marinova's 2.589(39) rests on, are not stated anywhere in the tree."
+    },
+    "vendored_by": "hand-written 2026-09-26 for t3_li6_rms_devries.py; the harness re-checks the sha256 of every byte of this file and of the canonical body (json.dumps(body, sort_keys=True, separators=(',', ':'), ensure_ascii=True)) recorded as _body_sha256 on every read."
+  },
+  "_body_sha256": "c125dd346bfd9ea6e39f65b7b8ac8dccaae8ba20eb9bf1ad6a2052318b7238cf",
+  "body": {
+    "points": [
+      {
+        "compilation": "de Vries, de Jager, de Vries, ADNDT 36 (1987) 495, Table I",
+        "model": "MI30",
+        "rms_fm": 2.54,
+        "sigma_fm": 0.05,
+        "as_printed": "2.54(5)",
+        "q_range_fm-1": [
+          0.69,
+          2.52
+        ],
+        "source_key": "Su67",
+        "source_key_survey_expansion": "Suelzle 1967",
+        "transcribed_from": "docs/benchmarking/03_data_nuclear.md:186"
+      },
+      {
+        "compilation": "de Vries, de Jager, de Vries, ADNDT 36 (1987) 495, Table I",
+        "model": "MI30",
+        "rms_fm": 2.56,
+        "sigma_fm": 0.05,
+        "as_printed": "2.56(5)",
+        "q_range_fm-1": [
+          0.56,
+          3.66
+        ],
+        "source_key": "Li71a",
+        "source_key_survey_expansion": "Li-Sick-Whitney-Yearian",
+        "transcribed_from": "docs/benchmarking/03_data_nuclear.md:187"
+      },
+      {
+        "compilation": "de Vries, de Jager, de Vries, ADNDT 36 (1987) 495, Table I",
+        "model": "MI",
+        "rms_fm": 2.57,
+        "sigma_fm": 0.1,
+        "as_printed": "2.57(10)",
+        "q_range_fm-1": [
+          0.09,
+          0.9
+        ],
+        "source_key": "Bu72",
+        "source_key_survey_expansion": null,
+        "transcribed_from": "docs/benchmarking/03_data_nuclear.md:188"
+      },
+      {
+        "compilation": "Angeli, Marinova, ADNDT 99 (2013) 69",
+        "model": null,
+        "rms_fm": 2.589,
+        "sigma_fm": 0.039,
+        "as_printed": "2.589(39)",
+        "q_range_fm-1": null,
+        "source_key": null,
+        "source_key_survey_expansion": null,
+        "transcribed_from": "docs/benchmarking/03_data_nuclear.md:207; include/lipolgen/rc.hpp:543"
+      }
+    ]
+  }
+}

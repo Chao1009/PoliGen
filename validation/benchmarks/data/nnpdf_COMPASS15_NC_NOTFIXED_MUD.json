@@ -1,0 +1,102 @@
+{
+  "_provenance": {
+    "what": "g1 of the deuteron (g1d), per nucleon, 6LiD target, copied VERBATIM from the nnpdf-data wheel by validation/benchmarks/vendor_nnpdf_commondata.py; nothing is transformed",
+    "source": {
+      "package": "nnpdf-data 4.1.5 (PyPI, NNPDF Collaboration)",
+      "pypi": "https://pypi.org/project/nnpdf-data/4.1.5/",
+      "wheel_url": "https://files.pythonhosted.org/packages/1e/86/e8ac2b9ac3abab3e121fd4630e166e0892009e76032547b967d9e47c1e6e/nnpdf_data-4.1.5-py3-none-any.whl",
+      "wheel_sha256": "6ed209add4d162e3b9e4801c7b538a28867e479b6ffd4781e774526a3490269a",
+      "wheel_uploaded": "2026-07-02T10:40:37Z",
+      "fetched": "2026-09-26",
+      "files_read_note": "every wheel member this script read (path inside the wheel -> sha256 hex), each checked against the wheel's RECORD; the ones not vendored are named in 'not_vendored'",
+      "files_read": {
+        "nnpdf_data/commondata/COMPASS15_NC_NOTFIXED_MUD/metadata.yaml": "62fbbebe5b910915ac292ad1c85c985f532cab553a4e010b55fcaf99f2dec24e",
+        "nnpdf_data/commondata/COMPASS15_NC_NOTFIXED_MUD/data.yaml": "3bcedc8b1f188605219572b748e85a6cb1268e456c1c56e380f92843bc61a479",
+        "nnpdf_data/commondata/COMPASS15_NC_NOTFIXED_MUD/kinematics.yaml": "b8bd1f109ba072257ce49037e70a709e26628ddd5023695d1ee8465560b67332",
+        "nnpdf_data/commondata/COMPASS15_NC_NOTFIXED_MUD/uncertainties.yaml": "6edf5d9fde9884c38bfde60721faa7b5309027fabdfa3e6843c31531b4063347"
+      },
+      "not_vendored": {}
+    },
+    "record": {
+      "hepdata": "https://www.hepdata.net/record/ins1501480",
+      "hepdata_version": 1,
+      "hepdata_tables": [1],
+      "inspire": "https://inspirehep.net/literature/1501480",
+      "arxiv": null,
+      "journal": null,
+      "nnpdf_version": 1,
+      "nnpdf_version_comment": "Initial implementation",
+      "nnpdf_y_label": "$g_{1,N}(x, Q^2)$"
+    },
+    "paper": "COMPASS final g1d, Phys. Lett. B 769 (2017) 34, arXiv:1612.00620 (as survey row D-2 cites it; metadata.yaml gives only INSPIRE 1501480 / HEPData ins1501480, and the link between the two was not re-resolved offline)",
+    "survey_row": "docs/benchmarking/02_data_nucleon_deuteron.md sec. 2 row D-2 (HEPData 10.17182/hepdata.78374)",
+    "licence": {
+      "data": "CC0-1.0: HEPData records are released under CC0, and these numbers are NNPDF's copy of the HEPData record named in 'record'",
+      "package": "GPL-3.0-or-later (the wheel's METADATA 'License' field), the same licence as LiPolGen"
+    },
+    "publishing_convention": {
+      "normalisation": "PER NUCLEON: NNPDF's y_label for the set is 'g_{1,N}(x, Q^2)' (metadata.yaml), and 06_critic.md sec. 5.1 lists g1d as per nucleon for HERMES, COMPASS and E143.  The paper's own statement is UNVERIFIED offline.",
+      "d_state": "UNVERIFIED.  metadata.yaml does not say whether the published g1d is corrected for the deuteron D state.  06_critic.md sec. 5.1 (the g1d row, line 524): 'published g1d is conventionally NOT corrected for the D state; the (1 - 1.5 omega_D) factor is applied when extracting g1n. Applying it twice, or not at all, is a 7 % error on the isoscalar combination. Verify per paper.'  The paper could not be read here, so the harness reports the tree's convention (g1_nucleus(deuteron)/2, which carries 1 - 1.5 P_D) AND the no-D-state variant (g1p + g1n)/2.",
+      "q2": "Each point is at its own <Q^2> (the kinematics 'mid' value); no evolution to a common Q^2 is stated in the source (UNVERIFIED).",
+      "target": "6LiD (survey 02 sec. 2 'a pointed aside'): the dilution model is the experiment's, not the tree's.",
+      "uncertainty_labels": "ADD/MULT and CORR/UNCORR are NNPDF's treatment labels in the commondata files, copied verbatim; they are NNPDF's reading of the HEPData record, not the collaboration's words.  Uncertainties are ABSOLUTE (same units as the central value), as given; a MULT component is the relative error already multiplied by the central value."
+    },
+    "body_sha256_rule": "sha256 of json.dumps(body, sort_keys=True, separators=(',', ':'), ensure_ascii=True, allow_nan=False).encode('ascii')"
+  },
+  "_body_sha256": "d961b0a9f6708d9f2e074c92047517793ffba0bcfd964ab1e2275d016caf05bd",
+  "body": {
+    "setname": "COMPASS15_NC_NOTFIXED_MUD",
+    "observable": "g1 of the deuteron (g1d), per nucleon, 6LiD target",
+    "nnpdf_observable_name": "G1",
+    "nnpdf_description": "COMPASS15 DIS scattering experiment polarized structure function",
+    "npoints": 15,
+    "kinematics_variables": {
+      "x": {
+        "description": "momentum fraction",
+        "label": "$x$",
+        "units": ""
+      },
+      "Q2": {
+        "description": "virtuality",
+        "label": "$Q^2$",
+        "units": "$GeV^2$"
+      }
+    },
+    "kinematics_note": "each point's kinematics are the source's 'mid' values; '<var>_min'/'<var>_max' are carried only where the source gives them (it has null elsewhere)",
+    "primary_uncertainty_variant": "default",
+    "uncertainty_variants": {
+      "default": {
+        "file": "uncertainties.yaml",
+        "definitions": {
+          "stat": {
+            "description": "statistical uncertainty",
+            "treatment": "ADD",
+            "type": "UNCORR"
+          },
+          "sys": {
+            "description": "systematic uncertainty",
+            "treatment": "ADD",
+            "type": "UNCORR"
+          }
+        }
+      }
+    },
+    "points": [
+      {"x_min": 0.004, "x": 0.0046, "x_max": 0.005, "Q2": 1.1, "value": -0.13, "unc": {"default": {"stat": 0.17, "sys": 0.11}}},
+      {"x_min": 0.005, "x": 0.0055, "x_max": 0.006, "Q2": 1.22, "value": 0.0, "unc": {"default": {"stat": 0.12, "sys": 0.09}}},
+      {"x_min": 0.006, "x": 0.00699, "x_max": 0.008, "Q2": 1.39, "value": -0.016, "unc": {"default": {"stat": 0.071, "sys": 0.04}}},
+      {"x_min": 0.008, "x": 0.00899, "x_max": 0.01, "Q2": 1.62, "value": -0.121, "unc": {"default": {"stat": 0.064, "sys": 0.038}}},
+      {"x_min": 0.01, "x": 0.0141, "x_max": 0.02, "Q2": 2.19, "value": -0.01, "unc": {"default": {"stat": 0.027, "sys": 0.019}}},
+      {"x_min": 0.02, "x": 0.0244, "x_max": 0.03, "Q2": 3.29, "value": 0.043, "unc": {"default": {"stat": 0.028, "sys": 0.018}}},
+      {"x_min": 0.03, "x": 0.0346, "x_max": 0.04, "Q2": 4.43, "value": 0.043, "unc": {"default": {"stat": 0.028, "sys": 0.018}}},
+      {"x_min": 0.04, "x": 0.0487, "x_max": 0.06, "Q2": 6.06, "value": 0.051, "unc": {"default": {"stat": 0.021, "sys": 0.014}}},
+      {"x_min": 0.06, "x": 0.0766, "x_max": 0.1, "Q2": 9.0, "value": 0.111, "unc": {"default": {"stat": 0.015, "sys": 0.015}}},
+      {"x_min": 0.1, "x": 0.121, "x_max": 0.15, "Q2": 13.5, "value": 0.123, "unc": {"default": {"stat": 0.013, "sys": 0.014}}},
+      {"x_min": 0.15, "x": 0.171, "x_max": 0.2, "Q2": 18.6, "value": 0.101, "unc": {"default": {"stat": 0.013, "sys": 0.014}}},
+      {"x_min": 0.2, "x": 0.222, "x_max": 0.25, "Q2": 23.8, "value": 0.093, "unc": {"default": {"stat": 0.012, "sys": 0.012}}},
+      {"x_min": 0.25, "x": 0.29, "x_max": 0.35, "Q2": 31.1, "value": 0.0675, "unc": {"default": {"stat": 0.0083, "sys": 0.0082}}},
+      {"x_min": 0.35, "x": 0.405, "x_max": 0.5, "Q2": 43.9, "value": 0.05, "unc": {"default": {"stat": 0.0059, "sys": 0.0056}}},
+      {"x_min": 0.5, "x": 0.567, "x_max": 0.7, "Q2": 60.8, "value": 0.0203, "unc": {"default": {"stat": 0.0035, "sys": 0.0035}}}
+    ]
+  }
+}

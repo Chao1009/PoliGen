@@ -196,7 +196,10 @@ Regenerate with `python3 validation/dump_polligen_reference.py` (it
 rewrites every polligen table and this README).
 `python3 validation/repin_tagged_from_lipolgen.py` is now a CHECK-ONLY
 cross-check of the three `model` blocks against the installed `lipolgen`
-module at rtol 1e-12; it writes nothing.
+module at `tests/test_tagged.cpp`'s own tolerances (rtol 1e-9 on the two
+quadratures `norm` and `p2_moment_mixture_uniform`, 1e-12 on every other
+entry; a NaN, an infinity or a missing or extra entry fails); it writes
+nothing.
 
 History (2026-09-06 to 2026-09-23).  On 2026-09-06 the tagged sector's
 S-D interference sign was found inverted -- the partial-wave sum had no
@@ -207,13 +210,20 @@ fixed that day; polligen was not yet, so `channels.li6_alpha.model` and
 `validation/repin_tagged_from_lipolgen.py` (provenance `"LiPolGen
 post-fix, formerly polligen"`) and this script carried them through
 unchanged (`TAGGED_MODEL_NOT_FROM_POLLIGEN`).  What that re-pin moved,
-measured 2026-09-06 against the pre-fix polligen dump: `n_of_kc` (up to
-+725% on 6Li, +19215% on the deuteron control), `struck_populations` (up
-to 0.86 absolute), `p2_moment` (sign flip, x1.28 to x2.03),
+re-measured 2026-09-26 on the two committed files -- the pre-fix polligen
+dump (LiPolGen `a7b3d18^`) against the re-pin (`a7b3d18`); same `grid`,
+`k_pts` and `c_pts`, every channel block outside `model` identical:
+`n_of_kc` (up to +729% on 6Li, +714% on the deuteron control),
+`struck_populations` (up to 0.83 absolute on 6Li, 0.87 on the deuteron),
+`p2_moment` (sign flip, x1.38 to x1.39 on 6Li, x1.28 on the deuteron),
 `p2_moment_mixture_uniform` (1.9e-2 rel on 6Li, 6.7e-3 on the deuteron),
 `norm` (up to 5.8e-5 rel), `population_integrated` (up to 3.0e-6 abs)
-and the dilutions (<=4.3e-6 rel); `li7_alpha` (one L=1 wave, a global
-phase) moved by exactly zero.  polligen took the same phase in
+and the dilutions (up to 4.3e-6 rel); `li7_alpha` (one L=1 wave, a global
+phase) moved by exactly zero.  Every channel of this file is Hulthen
+(beta=0.30); the +19215% and x2.03 quoted here until 2026-09-26 are the
+deuteron-AV18 and 6Li-VMC rows of
+`docs/benchmarking/07_cw_sign_investigation.md` sec. 6.2, wave functions
+this file does not contain.  polligen took the same phase in
 PolarizedLithiumSim 1066555 (2026-09-15), and on 2026-09-23 the carry-
 through was removed and the whole file re-dumped from polligen at
 PolarizedLithiumSim c0f86a8 (= HEAD 4726812 for polligen's code).
@@ -416,20 +426,26 @@ from LiPolGen's OWN C++ -- `InclusiveKernel::tables(x, q2)` of
 `default_inclusive_kernel(LI6())` (b1 backend `Li6B1(MillerB1)`, delta
 `toy_delta_gluon(scale = 1e-2)`), f1 / b1 / b2 / delta on 200 x in
 [1e-3, 0.95] at Q^2 = 1, 2.5, 10 GeV^2 -- through the pybind11 module
-(last committed 2026-09-03, `b1071b1`). No external source, no polligen
-output and no measurement enters it. It is a REGRESSION GUARD: T9 in
-`tests/test_b1_nuclear.cpp` and `python/tests/test_b1_model.py` check at
-rtol 1e-12 that the library still returns what it returned then, so
-agreement with it proves "unchanged", never "correct". The file's own
-`provenance` field says the same (a metadata-only label added 2026-09-23,
-BENCHMARK_PLAN.md sec. 5.5; every numeric block byte-identical to the
-committed dump). Regenerate with `python3 validation/dump_b1_default_li6.py`
-only when a default is deliberately changed; since 2026-09-23 that script
-writes the `provenance` field itself, so a regeneration keeps the label.
+(numbers committed 2026-09-03 in `b1071b1`, unchanged since). No external
+source, no polligen output and no measurement enters it. It is a
+REGRESSION GUARD: T9 in `tests/test_b1_nuclear.cpp` and
+`python/tests/test_b1_model.py` check at rtol 1e-12 that the library still
+returns what it returned then, so agreement with it proves "unchanged",
+never "correct". The file's own `provenance` field says the same (a
+metadata-only label added 2026-09-23, BENCHMARK_PLAN.md sec. 5.5; every
+numeric block byte-identical to the committed dump). Regenerate with
+`python3 validation/dump_b1_default_li6.py` only when a default is
+deliberately changed (`--check` compares without writing). Since 2026-09-26
+that script keeps the file's `provenance` label only while every numeric
+block (x, q2, tables, kernel) stays byte-identical to the file; numbers
+that moved are written only with `--accept-changed-numbers`, under a label
+it derives at that moment (dump date and `git describe --dirty` of the
+tree), so a regeneration cannot leave a label that describes other
+numbers. Every write is atomic (a temporary file, then `os.replace`).
 
 ## Functions this script could not call
 
-- `TaggedModel.tensor_dilution channel=7Li alpha-tag (quasi-free t)`: s_channel=0.5 != 1: tensor_dilution raises ValueError by design (tagged.py:299-302)
+- `TaggedModel.tensor_dilution channel=7Li alpha-tag (quasi-free t)`: s_channel=0.5 != 1: tensor_dilution raises ValueError by design (tagged.py:849-852)
 - `SpinCategory.moments() name=apar+ (j=0.5)`: spin.moments_along_axis raises ValueError for j not in {1, 1.5} (spin.py:177); vector moment computed directly instead, tensor/octupole n/a
 - `SpinCategory.moments() name=apar- (j=0.5)`: spin.moments_along_axis raises ValueError for j not in {1, 1.5} (spin.py:177); vector moment computed directly instead, tensor/octupole n/a
 

@@ -67,7 +67,7 @@ The two are disjoint, additive pieces of one O(α) correction. That is why the r
 must-not-contradict bound between them holds whatever the numbers are.
 
 It unblocks only with a DJANGOH run at `IEL31..IEL33 ≠ 0`, at these cuts. That needs the source (not public,
-`01_generators.md` §5.6) or a new ePIC production.
+`01_generators.md` §5.6) or a new ePIC production. *(2026-09-26: not at these cuts — their W_h ≥ 3 GeV removes the elastic tail whatever IEL is, and DJANGOH's `HSPRLG` zeroes IEL2, IEL31..33 when WMIN > M_p; it needs IEL31..33 ≠ 0 AND WMIN ≤ M_p. A public source exists: `../run_2026-09-26/SUMMARY.md`.)*
 
 The two survey sentences that motivated the row are therefore overstated, and §6.1 lists them:
 
@@ -264,7 +264,7 @@ write the `provenance` key. Either regeneration drops the label; §6.4 lists bot
   "turns the RC "must-not-contradict" bound into a Q²-trend comparison; zero dependencies" with:
   "**wired 2026-09-23 as `t4_djangoh_rad_noRad` and BLOCKED**: the ePIC samples ran with the elastic radiative tail OFF
   (IEL2=IEL31=IEL32=IEL33=0), the only O(α) term `rc_tail` computes. The two share no term, so no tolerance exists
-  (`../open_items/run_2026-09-23/phase_B3_chain_rc.md` §1). It unblocks with a DJANGOH run at IEL31..33 ≠ 0."
+  (`../open_items/run_2026-09-23/phase_B3_chain_rc.md` §1). It unblocks with a DJANGOH run at IEL31..33 ≠ 0." *(2026-09-26: and WMIN ≤ M_p; the plan's row now says so.)*
 - `docs/benchmarking/01_generators.md`: §2.4 item 2, last sentence ("This is an **obtainable-today table** … without
   running anything."). Replace with: "This table **excludes the elastic radiative tail**: every run has IEL2 = IEL31 =
   IEL32 = IEL33 = 0 (logs at `9869d9a`). Its ratio is the inelastic O(α) correction only, so it constrains nothing
@@ -392,7 +392,7 @@ eSTARlight's rate (J/ψ 85.2 %, φ 95.4 %, ρ 97.2 %) is at Q² < 0.1 GeV², whe
    rather than whole-file hashes.
 2. **Row 7 is a benchmark that cannot be run as planned.** BENCHMARK_PLAN.md's "zero dependencies" is true of the table
    and false of the comparison. Unblocking needs DJANGOH with the elastic tail on (source not public), or an ePIC
-   production request. No LiPolGen-side change could unblock it without being a new physics model.
+   production request. *(2026-09-26: and WMIN ≤ M_p, and a public source exists — `../run_2026-09-26/SUMMARY.md`.)* No LiPolGen-side change could unblock it without being a new physics model.
 3. **The DJANGOH window differs from LiPolGen's in two places.** The y ceiling is 1 against 0.985 (LiPolGen's tail table
    refuses more). The Born SF is CTEQ6.1M LO against the shipped Toy SF, and it differs by 5–41 % per bin (§1.3). Neither
    affects the verdict, because no term is shared.

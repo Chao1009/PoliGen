@@ -11,6 +11,7 @@ test here moves, or asserts a new value for, any tree default.
   row 5  t3_li6_charge_ff_fb.py    UVa FB charge density vs HoSpin1FF C0
   row 6  t3_li_magnetization_rfy.py  BLOCKED until RFY66 / ADNDT 14 lands
 """
+import hashlib
 import importlib.util
 import math
 import os
@@ -34,23 +35,56 @@ def _load(name):
 # ------------------------------------------------------------------ row 4
 
 @pytest.fixture(scope="module")
-def nmc():
-    mod = _load("t3_nmc_li6_over_d")
-    try:
-        tree = mod.Tree()
-    except Exception as exc:                      # pragma: no cover
-        pytest.skip("LHAPDF sets %s / %s not installed: %s"
-                    % (mod.NUCLEAR_SET, mod.PROTON_SET, exc))
+def nmc_mod():
+    """The row-4 harness module alone: its vendored-table check needs neither
+    LHAPDF nor the sets, so it runs everywhere."""
+    return _load("t3_nmc_li6_over_d")
+
+
+def _missing_lhapdf_sets(mod):
+    """The row's sets LHAPDF reports as not installed ("Info file not found
+    for PDF set ..."), probed one by one.  Any OTHER error propagates."""
+    missing = []
+    for name in (mod.NUCLEAR_SET, mod.PROTON_SET):
+        try:
+            lg.LhapdfSF(name)
+        except RuntimeError as exc:
+            if "Info file not found for PDF set" not in str(exc):
+                raise
+            missing.append(name)
+    return missing
+
+
+@pytest.fixture(scope="module")
+def nmc(nmc_mod):
+    """Row 4 needs LHAPDF with EPPS21nlo_CT18Anlo_Li6 and CT18NLO.  It skips,
+    naming them, ONLY when the LHAPDF tier is not built or LHAPDF reports a
+    set not installed; any other error in `Tree()` or `run()` (a renamed or
+    re-signatured binding, a harness bug) FAILS instead of hiding as a skip."""
+    mod = nmc_mod
+    if not getattr(lg, "HAVE_LHAPDF", False):
+        pytest.skip("environment: lipolgen built without the LHAPDF tier "
+                    "(HAVE_LHAPDF false); row 4 needs LHAPDF sets %s and %s"
+                    % (mod.NUCLEAR_SET, mod.PROTON_SET))
+    missing = _missing_lhapdf_sets(mod)
+    if missing:
+        pytest.skip("; ".join("environment: LHAPDF set %s not installed" % n
+                              for n in missing)
+                    + " (row 4 needs %s and %s)" % (mod.NUCLEAR_SET,
+                                                    mod.PROTON_SET))
+    tree = mod.Tree()
     return mod, tree, mod.run(verbose=False)
 
 
-def test_nmc_vendored_table_is_the_download(nmc, tmp_path):
-    mod, _, _ = nmc
+def test_nmc_vendored_table_is_the_download(nmc_mod, tmp_path):
+    mod = nmc_mod
     pts = mod.load_table()
     assert len(pts) == 24
     assert pts[0]["x"] == 0.00014 and pts[-1]["x"] == 0.65
     # one flipped byte in the body is refused, not silently read
-    raw = open(mod.DATA, "rb").read().replace(b"0.801,", b"0.802,")
+    raw = open(mod.DATA, "rb").read()
+    assert raw.count(b"0.801,") == 1
+    raw = raw.replace(b"0.801,", b"0.802,")
     bad = tmp_path / "t1.csv"
     bad.write_bytes(raw)
     with pytest.raises(RuntimeError, match="sha256"):
@@ -116,6 +150,18 @@ def test_fb_row_is_the_vendored_row(fb, tmp_path):
     bad.write_bytes(raw)
     with pytest.raises(RuntimeError, match="sha256"):
         mod.load_row(str(bad))
+    # since 2026-09-27 every byte is pinned, the provenance header included:
+    # one digit of the A/Z note, or the licence tag, is refused too
+    orig = open(mod.DATA, "rb").read()
+    assert hashlib.sha256(orig).hexdigest() == mod.FILE_SHA256
+    for old, new in ((b"The harness reads A = 6, Z = 3.",
+                      b"The harness reads A = 7, Z = 3."),
+                     (b"SPDX-License-Identifier: GPL-3.0-or-later",
+                      b"SPDX-License-Identifier: LicenseRef-NoneStated")):
+        assert orig.count(old) == 1, old
+        bad.write_bytes(orig.replace(old, new))
+        with pytest.raises(RuntimeError, match="vendored file sha256"):
+            mod.load_row(str(bad))
 
 
 def test_fb_density_numbers(fb):
@@ -149,6 +195,34 @@ def test_fb_tree_side_and_verdict(fb):
     assert rep["inside"] == (lo <= t["q0"] <= hi)
     assert rep["status"] == ("pass" if rep["inside"] else "fail")
     assert rep["distance_above_band"] == pytest.approx(t["q0"] - hi, abs=1e-15)
+    assert rep["reason"] is None and t["no_zero"] is None
+
+
+def test_fb_tree_c0_without_a_zero_is_a_recorded_fail(monkeypatch, capsys):
+    """A tree C0 with no zero below the scan limit (rc.hpp's VmcFt shape has
+    none) contradicts the band: a recorded FAIL carrying that reason, with
+    its REPORT row printed -- not a crash, which would read as a broken
+    harness (exit 2).  The reference side does not move."""
+    mod = _load("t3_li6_charge_ff_fb")
+    orig, opt = lg.HoSpin1FF, lg.HoSpin1FFOptions()
+    opt.c0_shape = lg.C0Shape.VmcFt
+
+    class _VmcFtEdge:
+        @staticmethod
+        def for_ion(ion):
+            return orig.for_ion(ion, opt)
+
+    monkeypatch.setattr(lg, "HoSpin1FF", _VmcFtEdge)
+    rep = mod.run(verbose=True)
+    out = capsys.readouterr().out
+    assert rep["status"] == "fail" and rep["inside"] is False
+    assert rep["tree"]["q0"] is None and rep["distance_above_band"] is None
+    assert rep["reason"] == "the tree's C0 has no zero below 5 fm^-1"
+    assert rep["q_fb"] == pytest.approx(2.694413, abs=2e-6)
+    assert ("REPORT | t3_li6_charge_ff_fb | HoSpin1FF C0: NO zero below 5 "
+            "fm^-1" in out)
+    assert out.rstrip().endswith("| FAIL (recorded, the tree's C0 has no zero "
+                                 "below 5 fm^-1; nothing moved)")
 
 
 # ------------------------------------------------------------------ row 6

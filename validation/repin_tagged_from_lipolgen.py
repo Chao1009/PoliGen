@@ -11,8 +11,27 @@ the i^L partial-wave phase (PolarizedLithiumSim commit 1066555, 2026-09-15).
 This script no longer writes anything.  It re-computes the three channels'
 `model` blocks from the installed pybind11 module (`import lipolgen`, the same
 C++ the tests call) on the file's own grid and sample points and checks them
-against the file at rtol 1e-12 -- the same comparison tests/test_tagged.cpp
-makes, from the Python side.  Exit status 1 on any disagreement.
+against the file with the tolerances tests/test_tagged.cpp applies to the
+same entries (fixed 2026-09-26; until then one rtol 1e-12 was applied to
+every entry, which left li7_alpha's `p2_moment_mixture_uniform` 4 % inside
+its limit, about a quarter of one ULP of its summands):
+
+  * rtol 1e-9 (`kQuadRtol`) on `norm[*].value` and
+    `p2_moment_mixture_uniform`, which are themselves finite-grid
+    quadratures (the README asks for ~1e-6 on them);
+  * rtol 1e-12 (`kRtol`) on every other entry, with the absolute floor
+    1e-300 the C++ gives `population_integrated` (`CHECK_CLOSE_AT`);
+  * the C++ criterion itself, |fresh - file| <= atol + rtol * |file|, so a
+    file value of exactly 0 must be matched exactly (to 1e-300 in
+    `population_integrated`).
+
+It also FAILS -- which the C++ comparison does too, and this script did not
+until 2026-09-26 -- on a NaN or an infinity on either side, on an entry of
+the file LiPolGen does not produce, on an entry LiPolGen produces that the
+file does not have (a key, or a longer list), and on a type mismatch.  For
+each channel it prints the worst ratio |fresh - file| / allowed (<= 1
+passes) and, for continuity with the numbers the run records quote, the
+worst plain relative difference.  Exit status 1 on any failure, 0 otherwise.
 
 HISTORY (2026-09-06 to 2026-09-23)
 ----------------------------------
@@ -38,7 +57,9 @@ Run:
 """
 
 import json
+import math
 import pathlib
+import re
 
 import numpy as np
 
@@ -54,7 +75,20 @@ CHANNELS = {
     "li7_alpha": lambda: lg.li7_alpha_channel(),
     "deuteron": lambda: lg.deuteron_channel(),
 }
-RTOL = 1e-12
+# tests/test_tagged.cpp's tolerances, entry by entry (see the docstring).
+RTOL = 1e-12        # kRtol: every entry but the two quadratures below
+QUAD_RTOL = 1e-9    # kQuadRtol: TaggedModel::norm and p2_moment_mixture
+POP_ATOL = 1e-300   # CHECK_CLOSE_AT(..., kRtol, 1e-300): population_integrated
+_QUADRATURE_PATH = re.compile(r"/norm\[\d+\]/value|/p2_moment_mixture_uniform")
+
+
+def tolerance(path):
+    """(rtol, atol) tests/test_tagged.cpp applies to the model entry `path`."""
+    if _QUADRATURE_PATH.fullmatch(path):
+        return QUAD_RTOL, 0.0
+    if path.startswith("/population_integrated["):
+        return RTOL, POP_ATOL
+    return RTOL, 0.0
 
 
 def nearest_cell_indices(axis, points):
@@ -117,21 +151,90 @@ def model_dump(channel, old_model):
     return out
 
 
+def _new_acc():
+    return {"ratio": 0.0, "ratio_path": "", "ratio_rtol": RTOL,
+            "rel": 0.0, "rel_path": "", "entries": 0, "failures": []}
+
+
+def _fail(acc, path, why, uncomparable=True):
+    """Record a failure.  One that has no finite |diff| (a NaN or infinity,
+    a missing or extra entry, a type mismatch) also sets the worst ratio to
+    inf, so the per-channel line cannot show a finite worst on a failure."""
+    acc["failures"].append((path or "/", why))
+    if uncomparable and acc["ratio"] != math.inf:
+        acc["ratio"], acc["ratio_path"] = math.inf, path or "/"
+        acc["ratio_rtol"] = tolerance(path)[0]
+
+
 def worst_rel(a, b, path="", acc=None):
-    """Worst |a-b|/|b| over two identically-shaped JSON trees."""
+    """Compare LiPolGen's tree `a` with the stored tree `b`, entry by entry.
+
+    Returns a dict: `ratio` = the worst |a - b| / (rtol |b| + atol) with
+    each entry's own (rtol, atol) from tolerance() (<= 1 passes), at
+    `ratio_path` with rtol `ratio_rtol`; `rel` = the worst plain |a - b| / |b|
+    (|a - b| where b == 0), at `rel_path`; `entries` = numbers compared; and
+    `failures` = [(path, reason)] for every entry over its tolerance,
+    every NaN or infinity on either side, every missing or extra key or
+    list entry and every type mismatch.  The comparison passes iff
+    `failures` is empty.
+    """
     if acc is None:
-        acc = [0.0, ""]
+        acc = _new_acc()
     if isinstance(b, dict):
+        if not isinstance(a, dict):
+            _fail(acc, path, "LiPolGen gives %s, the file an object"
+                  % type(a).__name__)
+            return acc
         for k in b:
-            worst_rel(a[k], b[k], path + "/" + str(k), acc)
+            if k in a:
+                worst_rel(a[k], b[k], path + "/" + str(k), acc)
+            else:
+                _fail(acc, path + "/" + str(k),
+                      "in the file, missing from LiPolGen's block")
+        for k in a:
+            if k not in b:
+                _fail(acc, path + "/" + str(k),
+                      "in LiPolGen's block, missing from the file")
     elif isinstance(b, list):
-        for i, v in enumerate(b):
-            worst_rel(a[i], v, path + "[%d]" % i, acc)
+        if not isinstance(a, list):
+            _fail(acc, path, "LiPolGen gives %s, the file a list"
+                  % type(a).__name__)
+            return acc
+        if len(a) != len(b):
+            _fail(acc, path, "%d entries from LiPolGen, %d in the file"
+                  % (len(a), len(b)))
+        for i in range(min(len(a), len(b))):
+            worst_rel(a[i], b[i], path + "[%d]" % i, acc)
     elif isinstance(b, (int, float)) and not isinstance(b, bool):
-        d = abs(float(a) - float(b))
-        r = d / abs(float(b)) if b else d
-        if r > acc[0]:
-            acc[0], acc[1] = r, path
+        if isinstance(a, bool) or not isinstance(a, (int, float)):
+            _fail(acc, path, "LiPolGen gives %r, the file the number %r"
+                  % (a, b))
+            return acc
+        acc["entries"] += 1
+        fa, fb = float(a), float(b)
+        if not (math.isfinite(fa) and math.isfinite(fb)):
+            _fail(acc, path, "non-finite: %r from LiPolGen, %r in the file"
+                  % (fa, fb))
+            return acc
+        rtol, atol = tolerance(path)
+        d = abs(fa - fb)
+        allowed = rtol * abs(fb) + atol
+        if allowed > 0.0:
+            ratio = d / allowed
+        else:
+            ratio = 0.0 if d == 0.0 else math.inf
+        rel = d / abs(fb) if fb else d
+        if ratio > 1.0:
+            _fail(acc, path, "|diff| %.3e > allowed %.3e (rtol %g, atol %g)"
+                  % (d, allowed, rtol, atol), uncomparable=False)
+        if ratio > acc["ratio"]:
+            acc["ratio"], acc["ratio_path"], acc["ratio_rtol"] = \
+                ratio, path, rtol
+        if rel > acc["rel"]:
+            acc["rel"], acc["rel_path"] = rel, path
+    elif a != b or type(a) is not type(b):
+        # strings, booleans, null: equal or a failure.
+        _fail(acc, path, "%r from LiPolGen, %r in the file" % (a, b))
     return acc
 
 
@@ -143,16 +246,26 @@ def main():
     for key, make in CHANNELS.items():
         stored = doc["channels"][key]["model"]
         fresh = model_dump(make(), stored)
-        r, where = worst_rel(fresh, stored)
-        print("%s: LiPolGen vs the file, worst relative difference %.3e "
-              "(at %s)" % (key, r, where))
-        if r > RTOL:
+        acc = worst_rel(fresh, stored)
+        print("%s: LiPolGen vs the file, %d entries: worst |diff|/allowed "
+              "%.3e (at %s, rtol %g); worst relative difference %.3e (at %s); "
+              "%d failure(s)"
+              % (key, acc["entries"], acc["ratio"], acc["ratio_path"],
+                 acc["ratio_rtol"], acc["rel"], acc["rel_path"],
+                 len(acc["failures"])))
+        for where, why in acc["failures"][:10]:
+            print("    FAIL %s: %s" % (where, why))
+        if len(acc["failures"]) > 10:
+            print("    ... and %d more" % (len(acc["failures"]) - 10))
+        if acc["failures"]:
             bad.append(key)
     if bad:
-        raise SystemExit("LiPolGen disagrees with %s at rtol %g on: %s"
-                         % (NAME, RTOL, ", ".join(bad)))
-    print("all %d model blocks agree at rtol %g; nothing written."
-          % (len(CHANNELS), RTOL))
+        raise SystemExit("LiPolGen disagrees with %s (rtol %g on norm and "
+                         "p2_moment_mixture_uniform, %g elsewhere) on: %s"
+                         % (NAME, QUAD_RTOL, RTOL, ", ".join(bad)))
+    print("all %d model blocks agree within tests/test_tagged.cpp's "
+          "tolerances (rtol %g on norm and p2_moment_mixture_uniform, %g "
+          "elsewhere); nothing written." % (len(CHANNELS), QUAD_RTOL, RTOL))
 
 
 if __name__ == "__main__":

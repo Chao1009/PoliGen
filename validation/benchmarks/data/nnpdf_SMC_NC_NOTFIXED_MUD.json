@@ -1,0 +1,99 @@
+{
+  "_provenance": {
+    "what": "g1 of the deuteron (g1d), per nucleon, copied VERBATIM from the nnpdf-data wheel by validation/benchmarks/vendor_nnpdf_commondata.py; nothing is transformed",
+    "source": {
+      "package": "nnpdf-data 4.1.5 (PyPI, NNPDF Collaboration)",
+      "pypi": "https://pypi.org/project/nnpdf-data/4.1.5/",
+      "wheel_url": "https://files.pythonhosted.org/packages/1e/86/e8ac2b9ac3abab3e121fd4630e166e0892009e76032547b967d9e47c1e6e/nnpdf_data-4.1.5-py3-none-any.whl",
+      "wheel_sha256": "6ed209add4d162e3b9e4801c7b538a28867e479b6ffd4781e774526a3490269a",
+      "wheel_uploaded": "2026-07-02T10:40:37Z",
+      "fetched": "2026-09-26",
+      "files_read_note": "every wheel member this script read (path inside the wheel -> sha256 hex), each checked against the wheel's RECORD; the ones not vendored are named in 'not_vendored'",
+      "files_read": {
+        "nnpdf_data/commondata/SMC_NC_NOTFIXED_MUD/metadata.yaml": "a967397c37d31b595024dd39a4404228276a010c0471208f454a8f2b1a724a11",
+        "nnpdf_data/commondata/SMC_NC_NOTFIXED_MUD/data.yaml": "28a109b854746ea59e96c339d153ab62a0ab7cadb307cf36b4c666ff65261680",
+        "nnpdf_data/commondata/SMC_NC_NOTFIXED_MUD/kinematics.yaml": "59c2b5cd758d2241dce0e9aef281262533a30990560241bbbf5fc4518b0632d9",
+        "nnpdf_data/commondata/SMC_NC_NOTFIXED_MUD/uncertainties.yaml": "815ef0d1e56ee9a7b21ecdcbff2c336c4c39fdd5f503887edfb9d458343b9378"
+      },
+      "not_vendored": {}
+    },
+    "record": {
+      "hepdata": "https://www.hepdata.net/record/ins471981",
+      "hepdata_version": 1,
+      "hepdata_tables": [7],
+      "inspire": "https://inspirehep.net/literature/471981",
+      "arxiv": null,
+      "journal": null,
+      "nnpdf_version": 1,
+      "nnpdf_version_comment": "Initial implementation",
+      "nnpdf_y_label": "$g_{1,N}(x, Q^2)$"
+    },
+    "paper": "NOT IDENTIFIED offline: metadata.yaml gives only INSPIRE 471981 / HEPData ins471981 (13 points, table 7); no journal or arXiv field.",
+    "survey_row": "NONE: the survey (02_data_nucleon_deuteron.md) has no SMC row; vendored as an optional, RECORDED-ONLY set",
+    "licence": {
+      "data": "CC0-1.0: HEPData records are released under CC0, and these numbers are NNPDF's copy of the HEPData record named in 'record'",
+      "package": "GPL-3.0-or-later (the wheel's METADATA 'License' field), the same licence as LiPolGen"
+    },
+    "publishing_convention": {
+      "normalisation": "PER NUCLEON on NNPDF's y_label 'g_{1,N}(x, Q^2)' (metadata.yaml) ALONE: 06_critic.md sec. 5.1 does not list SMC, and the paper is not identified (UNVERIFIED).",
+      "d_state": "UNVERIFIED.  metadata.yaml does not say whether the published g1d is corrected for the deuteron D state.  06_critic.md sec. 5.1 (the g1d row, line 524): 'published g1d is conventionally NOT corrected for the D state; the (1 - 1.5 omega_D) factor is applied when extracting g1n. Applying it twice, or not at all, is a 7 % error on the isoscalar combination. Verify per paper.'  The paper could not be read here, so the harness reports the tree's convention (g1_nucleus(deuteron)/2, which carries 1 - 1.5 P_D) AND the no-D-state variant (g1p + g1n)/2.",
+      "q2": "Each point is at its own <Q^2> (the kinematics 'mid' value); no evolution to a common Q^2 is stated in the source (UNVERIFIED).",
+      "uncertainty_labels": "ADD/MULT and CORR/UNCORR are NNPDF's treatment labels in the commondata files, copied verbatim; they are NNPDF's reading of the HEPData record, not the collaboration's words.  Uncertainties are ABSOLUTE (same units as the central value), as given; a MULT component is the relative error already multiplied by the central value."
+    },
+    "body_sha256_rule": "sha256 of json.dumps(body, sort_keys=True, separators=(',', ':'), ensure_ascii=True, allow_nan=False).encode('ascii')"
+  },
+  "_body_sha256": "78683115a9c868fc424e2074c918a79a0369a3622b8fa2800c4adbe5391d4673",
+  "body": {
+    "setname": "SMC_NC_NOTFIXED_MUD",
+    "observable": "g1 of the deuteron (g1d), per nucleon",
+    "nnpdf_observable_name": "G1",
+    "nnpdf_description": "SMC DIS scattering experiment polarized structure function",
+    "npoints": 13,
+    "kinematics_variables": {
+      "x": {
+        "description": "momentum fraction",
+        "label": "$x$",
+        "units": ""
+      },
+      "Q2": {
+        "description": "virtuality",
+        "label": "$Q^2$",
+        "units": "$GeV^2$"
+      }
+    },
+    "kinematics_note": "each point's kinematics are the source's 'mid' values; '<var>_min'/'<var>_max' are carried only where the source gives them (it has null elsewhere)",
+    "primary_uncertainty_variant": "default",
+    "uncertainty_variants": {
+      "default": {
+        "file": "uncertainties.yaml",
+        "definitions": {
+          "stat": {
+            "description": "statistical uncertainty",
+            "treatment": "ADD",
+            "type": "UNCORR"
+          },
+          "sys": {
+            "description": "systematic uncertainty",
+            "treatment": "ADD",
+            "type": "UNCORR"
+          }
+        }
+      }
+    },
+    "points": [
+      {"x_min": 0.0008, "x": 0.002, "x_max": 0.003, "Q2": 0.5, "value": -0.3, "unc": {"default": {"stat": 0.48, "sys": 0.12}}},
+      {"x_min": 0.003, "x": 0.005, "x_max": 0.006, "Q2": 1.3, "value": -0.47, "unc": {"default": {"stat": 0.42, "sys": 0.06}}},
+      {"x_min": 0.006, "x": 0.008, "x_max": 0.01, "Q2": 2.1, "value": -0.37, "unc": {"default": {"stat": 0.3, "sys": 0.04}}},
+      {"x_min": 0.01, "x": 0.014, "x_max": 0.02, "Q2": 3.5, "value": -0.3, "unc": {"default": {"stat": 0.17, "sys": 0.03}}},
+      {"x_min": 0.02, "x": 0.025, "x_max": 0.03, "Q2": 5.5, "value": -0.06, "unc": {"default": {"stat": 0.14, "sys": 0.02}}},
+      {"x_min": 0.03, "x": 0.035, "x_max": 0.04, "Q2": 7.5, "value": -0.07, "unc": {"default": {"stat": 0.12, "sys": 0.01}}},
+      {"x_min": 0.04, "x": 0.049, "x_max": 0.06, "Q2": 10.0, "value": 0.27, "unc": {"default": {"stat": 0.08, "sys": 0.02}}},
+      {"x_min": 0.06, "x": 0.077, "x_max": 0.1, "Q2": 14.4, "value": 0.04, "unc": {"default": {"stat": 0.05, "sys": 0.01}}},
+      {"x_min": 0.1, "x": 0.121, "x_max": 0.15, "Q2": 20.6, "value": 0.09, "unc": {"default": {"stat": 0.04, "sys": 0.01}}},
+      {"x_min": 0.15, "x": 0.172, "x_max": 0.2, "Q2": 26.8, "value": 0.15, "unc": {"default": {"stat": 0.03, "sys": 0.01}}},
+      {"x_min": 0.2, "x": 0.241, "x_max": 0.3, "Q2": 34.3, "value": 0.12, "unc": {"default": {"stat": 0.02, "sys": 0.01}}},
+      {"x_min": 0.3, "x": 0.342, "x_max": 0.4, "Q2": 43.9, "value": 0.05, "unc": {"default": {"stat": 0.02, "sys": 0.0}}},
+      {"x_min": 0.4, "x": 0.479, "x_max": 0.7, "Q2": 54.8, "value": 0.03, "unc": {"default": {"stat": 0.01, "sys": 0.0}}}
+    ]
+  }
+}

@@ -21,7 +21,17 @@ behind the plan's "the ladder fill is the wrong model for an EIC ion beam".
 The EST fill has P_zz >= 0 for every P_z, so it cannot represent the three
 modes with P_zz < 0 at any P_z; it is ALSO undefined in the tree at |P_z| = 1
 (`populations_maxent` throws "maxent populations need |pz| < 1"), where the
-closed form's limit is P_zz = 1 = the table's value.
+closed form's limit is P_zz = 1 = the table's value.  So the match count is
+reported in two parts (since 2026-09-26): `est_modes_matched` = the modes
+where the tree's ladder COMPUTES and reproduces the ideal P_zz -- mode 0
+only, 1 of the 6 modes it can compute -- and `est_modes_tree_throws` = the
+modes where it throws (5 and 6, |P_z| = 1), of which
+`est_modes_closed_form_limit_matches` lists those whose closed-form LIMIT
+equals the table (both).  Until 2026-09-26 this harness returned
+`est_modes_matched` = [0, 5, 6] and was quoted as "the EST (`ladder`) fill
+matches 3 of 8 modes": that count took the closed-form limit at the two
+modes where the tree's ladder refuses to run, so read it as "1 of 8 by the
+tree, plus 2 pure states only the closed form reaches".
 
 THE THREE NORMALISATION RULES (BENCHMARK_PLAN.md sec. 8), for THIS row:
   1. b1 normalisations -- NOT APPLICABLE: no b1 on either side.
@@ -34,6 +44,13 @@ THE THREE NORMALISATION RULES (BENCHMARK_PLAN.md sec. 8), for THIS row:
      column is IDEAL (the RF-transition scheme's value), not measured; only
      P_z^LEP is measured.
 
+INTEGRITY (since 2026-09-26).  The sha256 of every byte of the vendored
+table is recorded below (`DATA_SHA256`, taken from the file as committed at
+f0a8f1e) and re-checked on EVERY read.  This matters here more than anywhere:
+the ASSERTED round trip holds for ANY physical (P_z, P_zz), so an altered
+table would still PASS it -- instead it is refused with a RuntimeError and
+`__main__` exits 2.
+
 Run:  source env.sh && python3 validation/benchmarks/t5_epios_source_modes.py
 
 Exit status (validation/benchmarks/README.md): 0 when the harness ran and
@@ -43,6 +60,7 @@ altered vendored file, a missing dependency, any exception).  A harness is
 a measurement, not a CI gate: the pytests are the gate.
 """
 
+import hashlib
 import json
 import math
 import os
@@ -52,6 +70,9 @@ from fractions import Fraction
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(HERE, "data", "epios2026_table2_deuteron_source_modes.json")
+#: sha256 of every byte of the vendored table (recorded 2026-09-26 from the
+#: file as committed at f0a8f1e); re-checked on every read.
+DATA_SHA256 = "8492859b8fe98a61af5a00333da6ef151e98883d934fecaf023c7009dbd1320a"
 
 NAME = "t5_epios_source_modes"
 TOL_ROUNDTRIP = 1e-12
@@ -62,9 +83,20 @@ def _lib():
     return _l
 
 
+def read_vendored(path, sha256=DATA_SHA256):
+    """The bytes of the vendored table -- RuntimeError unless their sha256 is
+    the recorded one, so a moved number is refused, never silently read."""
+    with open(path, "rb") as f:
+        raw = f.read()
+    got = hashlib.sha256(raw).hexdigest()
+    if got != sha256:
+        raise RuntimeError("%s: vendored file sha256 %s != recorded %s"
+                           % (path, got, sha256))
+    return raw
+
+
 def load_table(path=DATA):
-    with open(path) as f:
-        doc = json.load(f)
+    doc = json.loads(read_vendored(path).decode("utf-8"))
     rows = []
     for r in doc["rows"]:
         rows.append(dict(r, pz=Fraction(r["pz_ideal"]),
@@ -126,7 +158,13 @@ def run(path=DATA, verbose=True):
     worst = max(max(x["res_axis"], x["res_rho"], x["sum_err"]) for x in rows)
     positive = all(x["min_pop"] >= 0.0 for x in rows)
     status = "pass" if (worst <= TOL_ROUNDTRIP and positive) else "fail"
-    on_est = [x["mode"] for x in rows if abs(x["est_minus_ideal"]) < 1e-9]
+    # Matched only where the tree's ladder COMPUTES; the |P_z| = 1 modes,
+    # where it throws, are reported apart (module docstring).
+    on_est = [x["mode"] for x in rows
+              if x["est_from_tree"] and abs(x["est_minus_ideal"]) < 1e-9]
+    throws = [x["mode"] for x in rows if not x["est_from_tree"]]
+    limit_ok = [x["mode"] for x in rows
+                if not x["est_from_tree"] and abs(x["est_minus_ideal"]) < 1e-9]
     report = dict(
         name=NAME,
         generator="max moment round-trip residual %.3e over 8 modes "
@@ -137,6 +175,9 @@ def run(path=DATA, verbose=True):
         worst_residual=worst,
         rows=rows,
         est_modes_matched=on_est,
+        est_modes_computable=[x["mode"] for x in rows if x["est_from_tree"]],
+        est_modes_tree_throws=throws,
+        est_modes_closed_form_limit_matches=limit_ok,
     )
     if verbose:
         print("mode  Pz      Pzz    (p+, p0, p-) exact      round-trip  "
@@ -150,7 +191,12 @@ def run(path=DATA, verbose=True):
                 "n/a" if x["realisation"] is None else "%.3f" % x["realisation"]))
         print("  * |P_z| = 1: the tree's spin_temperature_pzz throws "
               "(populations_maxent needs |pz| < 1); the closed-form limit is shown.")
-        print("  EST reproduces the ideal P_zz (to 1e-9) at modes %s only." % on_est)
+        print("  The tree's EST ladder reproduces the ideal P_zz (to 1e-9) at "
+              "modes %s only (%d of the %d modes it computes); it throws at "
+              "modes %s, where the closed-form limit matches at %s (counted "
+              "as matches, '3 of 8', before 2026-09-26)." % (
+                  on_est, len(on_est), len(report["est_modes_computable"]),
+                  throws, limit_ok))
         print("REPORT | %s | %s | %s | tol %.0e | %s" % (
             NAME, report["generator"], report["reference"], TOL_ROUNDTRIP,
             status.upper()))

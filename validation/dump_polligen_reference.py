@@ -31,7 +31,7 @@ HERE = pathlib.Path(__file__).resolve().parent
 EVGEN = HERE.parents[1] / "PolarizedLithiumSim" / "evgen"
 FASTSIM = HERE.parents[1] / "PolarizedLithiumSim" / "fastsim"
 OUT = HERE / "reference"
-OUT.mkdir(parents=True, exist_ok=True)
+# (reference/ is created by write_all_atomically(), after every builder ran.)
 
 if not EVGEN.is_dir():
     raise SystemExit("evgen package not found at %s" % EVGEN)
@@ -92,12 +92,12 @@ def cplx_matrix(m):
     return {"re": j(m.real), "im": j(m.imag)}
 
 
-def write_json(name, obj):
-    path = OUT / name
-    with open(path, "w") as fh:
-        json.dump(j(obj), fh, indent=1, sort_keys=True)
-        fh.write("\n")
-    return path
+def render_json(obj):
+    """The exact text a reference file gets: the bytes json.dump with these
+    arguments, plus a final newline, always wrote.  j() runs here, in memory,
+    so a value it cannot convert raises before main() opens any file
+    (write_all_atomically, further down, writes them all or none)."""
+    return json.dumps(j(obj), indent=1, sort_keys=True) + "\n"
 
 
 README_SECTIONS = []
@@ -742,7 +742,7 @@ def tagged_model_dump(channel):
         MISSING.append(("TaggedModel.tensor_dilution channel=%s" %
                         channel.label,
                         "s_channel=%g != 1: tensor_dilution raises "
-                        "ValueError by design (tagged.py:299-302)" %
+                        "ValueError by design (tagged.py:849-852)" %
                         channel.s_channel))
     return out
 
@@ -878,7 +878,10 @@ doc("tagged.json",
     "rewrites every polligen table and this README).\n"
     "`python3 validation/repin_tagged_from_lipolgen.py` is now a CHECK-ONLY\n"
     "cross-check of the three `model` blocks against the installed `lipolgen`\n"
-    "module at rtol 1e-12; it writes nothing.\n\n"
+    "module at `tests/test_tagged.cpp`'s own tolerances (rtol 1e-9 on the two\n"
+    "quadratures `norm` and `p2_moment_mixture_uniform`, 1e-12 on every other\n"
+    "entry; a NaN, an infinity or a missing or extra entry fails); it writes\n"
+    "nothing.\n\n"
     "History (2026-09-06 to 2026-09-23).  On 2026-09-06 the tagged sector's\n"
     "S-D interference sign was found inverted -- the partial-wave sum had no\n"
     "`i^L` -- against Cosyn-Weiss II Eq. (6.12), LiPolGen's own deuteron\n"
@@ -888,13 +891,20 @@ doc("tagged.json",
     "`validation/repin_tagged_from_lipolgen.py` (provenance `\"LiPolGen\n"
     "post-fix, formerly polligen\"`) and this script carried them through\n"
     "unchanged (`TAGGED_MODEL_NOT_FROM_POLLIGEN`).  What that re-pin moved,\n"
-    "measured 2026-09-06 against the pre-fix polligen dump: `n_of_kc` (up to\n"
-    "+725% on 6Li, +19215% on the deuteron control), `struck_populations` (up\n"
-    "to 0.86 absolute), `p2_moment` (sign flip, x1.28 to x2.03),\n"
+    "re-measured 2026-09-26 on the two committed files -- the pre-fix polligen\n"
+    "dump (LiPolGen `a7b3d18^`) against the re-pin (`a7b3d18`); same `grid`,\n"
+    "`k_pts` and `c_pts`, every channel block outside `model` identical:\n"
+    "`n_of_kc` (up to +729% on 6Li, +714% on the deuteron control),\n"
+    "`struck_populations` (up to 0.83 absolute on 6Li, 0.87 on the deuteron),\n"
+    "`p2_moment` (sign flip, x1.38 to x1.39 on 6Li, x1.28 on the deuteron),\n"
     "`p2_moment_mixture_uniform` (1.9e-2 rel on 6Li, 6.7e-3 on the deuteron),\n"
     "`norm` (up to 5.8e-5 rel), `population_integrated` (up to 3.0e-6 abs)\n"
-    "and the dilutions (<=4.3e-6 rel); `li7_alpha` (one L=1 wave, a global\n"
-    "phase) moved by exactly zero.  polligen took the same phase in\n"
+    "and the dilutions (up to 4.3e-6 rel); `li7_alpha` (one L=1 wave, a global\n"
+    "phase) moved by exactly zero.  Every channel of this file is Hulthen\n"
+    "(beta=0.30); the +19215% and x2.03 quoted here until 2026-09-26 are the\n"
+    "deuteron-AV18 and 6Li-VMC rows of\n"
+    "`docs/benchmarking/07_cw_sign_investigation.md` sec. 6.2, wave functions\n"
+    "this file does not contain.  polligen took the same phase in\n"
     "PolarizedLithiumSim 1066555 (2026-09-15), and on 2026-09-23 the carry-\n"
     "through was removed and the whole file re-dumped from polligen at\n"
     "PolarizedLithiumSim c0f86a8 (= HEAD 4726812 for polligen's code).\n"
@@ -1336,16 +1346,22 @@ B1_DEFAULT_LI6_README = (
     "`default_inclusive_kernel(LI6())` (b1 backend `Li6B1(MillerB1)`, delta\n"
     "`toy_delta_gluon(scale = 1e-2)`), f1 / b1 / b2 / delta on 200 x in\n"
     "[1e-3, 0.95] at Q^2 = 1, 2.5, 10 GeV^2 -- through the pybind11 module\n"
-    "(last committed 2026-09-03, `b1071b1`). No external source, no polligen\n"
-    "output and no measurement enters it. It is a REGRESSION GUARD: T9 in\n"
-    "`tests/test_b1_nuclear.cpp` and `python/tests/test_b1_model.py` check at\n"
-    "rtol 1e-12 that the library still returns what it returned then, so\n"
-    "agreement with it proves \"unchanged\", never \"correct\". The file's own\n"
-    "`provenance` field says the same (a metadata-only label added 2026-09-23,\n"
-    "BENCHMARK_PLAN.md sec. 5.5; every numeric block byte-identical to the\n"
-    "committed dump). Regenerate with `python3 validation/dump_b1_default_li6.py`\n"
-    "only when a default is deliberately changed; since 2026-09-23 that script\n"
-    "writes the `provenance` field itself, so a regeneration keeps the label."
+    "(numbers committed 2026-09-03 in `b1071b1`, unchanged since). No external\n"
+    "source, no polligen output and no measurement enters it. It is a\n"
+    "REGRESSION GUARD: T9 in `tests/test_b1_nuclear.cpp` and\n"
+    "`python/tests/test_b1_model.py` check at rtol 1e-12 that the library still\n"
+    "returns what it returned then, so agreement with it proves \"unchanged\",\n"
+    "never \"correct\". The file's own `provenance` field says the same (a\n"
+    "metadata-only label added 2026-09-23, BENCHMARK_PLAN.md sec. 5.5; every\n"
+    "numeric block byte-identical to the committed dump). Regenerate with\n"
+    "`python3 validation/dump_b1_default_li6.py` only when a default is\n"
+    "deliberately changed (`--check` compares without writing). Since 2026-09-26\n"
+    "that script keeps the file's `provenance` label only while every numeric\n"
+    "block (x, q2, tables, kernel) stays byte-identical to the file; numbers\n"
+    "that moved are written only with `--accept-changed-numbers`, under a label\n"
+    "it derives at that moment (dump date and `git describe --dirty` of the\n"
+    "tree), so a regeneration cannot leave a label that describes other\n"
+    "numbers. Every write is atomic (a temporary file, then `os.replace`)."
 )
 
 
@@ -1361,17 +1377,133 @@ def _preflight_sd_phase():
             {"M": 0.0, "p2_moment": model.p2_moment(0.0)}]})
 
 
+def _new_file_mode(path):
+    """Keep an existing file's permission bits; a new file gets what
+    open(path, "w") would give it (0o666 minus the umask)."""
+    import os
+    try:
+        return path.stat().st_mode & 0o7777
+    except FileNotFoundError:
+        umask = os.umask(0)
+        os.umask(umask)
+        return 0o666 & ~umask
+
+
+def write_all_atomically(texts):
+    """Write {path: text} as one all-or-nothing set, as far as POSIX allows.
+
+    Review 2026-09-26: until then main() wrote each table as soon as its
+    builder returned (open(path, "w") before j() ran), so a later builder
+    that raised left a mixed set -- new tables before it, old ones after it,
+    a stale `_manifest.json` and README.md -- and a value j() could not
+    convert left that file at 0 bytes.  Now main() renders EVERY document
+    to its final text first and hands them all to this function.
+
+    Phase 1 stages every text in a temporary file in its target's own
+    directory (written, fsync'ed, given the target's mode); if any of that
+    fails, every staged file is removed and the error re-raised with no
+    target touched.  Phase 2 renames each staged file onto its target with
+    os.replace, which is atomic per file on one filesystem.  Only an error
+    inside phase 2 -- after every byte is already on disk -- could leave a
+    mixed set.  `reference/` is created here, i.e. only once the pre-flight
+    sign guard and every builder have passed.  Returns the target paths in
+    the order given.
+    """
+    import os
+    import tempfile
+    staged = []
+    try:
+        for path, text in texts.items():
+            path.parent.mkdir(parents=True, exist_ok=True)
+            fd, tmp = tempfile.mkstemp(dir=path.parent,
+                                       prefix="." + path.name + ".",
+                                       suffix=".tmp")
+            staged.append((tmp, path))
+            with os.fdopen(fd, "w", encoding="utf-8") as fh:
+                fh.write(text)
+                fh.flush()
+                os.fsync(fh.fileno())
+            os.chmod(tmp, _new_file_mode(path))
+    except BaseException:
+        for tmp, _ in staged:
+            try:
+                os.unlink(tmp)
+            except FileNotFoundError:
+                pass
+        raise
+    for tmp, path in staged:
+        os.replace(tmp, path)
+    return [path for _, path in staged]
+
+
+def render_readme():
+    """README.md's full text, rendered in memory (after the builders ran,
+    so MISSING is complete) and written by main() with everything else."""
+    parts = []
+    parts.append("# polligen reference tables\n\n")
+    parts.append(
+        "Numeric reference tables dumped from the Python event "
+        "generator `polligen`\n"
+        "(`PolarizedLithiumSim/evgen/polligen`) by "
+        "`dump_polligen_reference.py` -- except\n"
+        "`b1_default_li6.json`, a self-pin of LiPolGen's own C++ "
+        "(see its section) -- for a\n"
+        "C++ reimplementation (LiPolGen) to be checked against at "
+        "`rtol=1e-12`\n"
+        "unless a table's description says otherwise (a few "
+        "quantities in polligen\n"
+        "are themselves iterative/quadrature results, e.g. "
+        "`spin.populations_maxent`,\n"
+        "`TaggedModel.norm`, `p2_moment_mixture` -- those are called "
+        "out below).\n\n"
+        "Every JSON file has an `\"inputs\"`-shaped section (grids, "
+        "axes, kernel /\n"
+        "scenario configuration, constants) and an outputs section "
+        "with the actual\n"
+        "computed numbers, organized per table below. Floats are "
+        "written with Python's\n"
+        "`repr()`-precision JSON serialization, i.e. full IEEE-754 "
+        "double precision\n"
+        "round-trips exactly.\n\n"
+        "Regenerate with (the TREE's `env.sh` must be sourced first: it sets "
+        "`PYTHONPATH` and `LIPOLGEN_DEPS` relative to itself, and a scratch "
+        "copy's own `env.sh` resolves elsewhere and reproduces the floats "
+        "only to about one ULP -- measured 2026-09-23):\n\n"
+        "```\n"
+        "source LiPolGen/env.sh && python3 LiPolGen/validation/dump_polligen_reference.py\n"
+        "```\n\n"
+        "This script only *imports* `polligen`/`polli_fastsim` from "
+        "`PolarizedLithiumSim`;\n"
+        "it does not modify anything there.\n\n"
+    )
+    for title, text in README_SECTIONS:
+        parts.append("## %s\n\n%s\n\n" % (title, text))
+    parts.append("## b1_default_li6.json\n\n%s\n\n" % B1_DEFAULT_LI6_README)
+    if MISSING:
+        parts.append("## Functions this script could not call\n\n")
+        for w, r in MISSING:
+            parts.append("- `%s`: %s\n" % (w, r))
+        parts.append("\n")
+    return "".join(parts)
+
+
 def main():
     _preflight_sd_phase()
-    written = []
 
-    written.append(write_json("spin.json", build_spin()))
-    written.append(write_json("xsec.json", build_xsec()))
-    written.append(write_json("beams.json", build_beams()))
-    written.append(write_json("tagged.json", build_tagged()))
-    written.append(write_json("spectator.json", build_spectator()))
-    written.append(write_json("coherent.json", build_coherent()))
-    written.append(write_json("bookkeeping.json", build_bookkeeping()))
+    # Build and render EVERY document before anything is written, then write
+    # them all or none (write_all_atomically; review 2026-09-26).
+    tables = [
+        ("spin.json", build_spin),
+        ("xsec.json", build_xsec),
+        ("beams.json", build_beams),
+        ("tagged.json", build_tagged),
+        ("spectator.json", build_spectator),
+        ("coherent.json", build_coherent),
+        ("bookkeeping.json", build_bookkeeping),
+    ]
+    texts = {}
+    for name, build in tables:
+        texts[OUT / name] = render_json(build())
 
     # write the "could not call" list into every file that had one, plus
     # print a summary; also emit it as its own small manifest.
@@ -1379,15 +1511,15 @@ def main():
     # MERGE, do not overwrite: `validation/reference/` also holds files this
     # script does not make -- `b1_default_li6.json` comes from
     # `dump_b1_default_li6.py` -- and rewriting the manifest wholesale from
-    # `written` silently dropped them (and the `generators` map that says
-    # which script owns which file).  Only this script's own entries are
-    # refreshed; foreign ones are carried through.
+    # the tables written here silently dropped them (and the `generators` map
+    # that says which script owns which file).  Only this script's own
+    # entries are refreshed; foreign ones are carried through.
     manifest_path = OUT / "_manifest.json"
     doc_ = {}
     if manifest_path.is_file():
         with open(manifest_path) as fh:
             doc_ = json.load(fh)
-    mine = [p.name for p in written]
+    mine = [name for name, _ in tables]
     files = mine + [f for f in doc_.get("files", []) if f not in mine]
     gens = dict(doc_.get("generators", {}))
     for f in mine:
@@ -1395,7 +1527,7 @@ def main():
         # again since 2026-09-23 (from 2026-09-06 its owner was
         # repin_tagged_from_lipolgen.py; see the tagged.json section).
         gens[f] = "LiPolGen/validation/dump_polligen_reference.py"
-    write_json("_manifest.json", {
+    texts[manifest_path] = render_json({
         "generator": "LiPolGen/validation/dump_polligen_reference.py",
         "polligen_version": polligen.__version__,
         "could_not_call": [{"what": w, "reason": r} for w, r in MISSING],
@@ -1404,53 +1536,12 @@ def main():
     })
 
     readme_path = HERE / "README.md"
-    with open(readme_path, "w") as fh:
-        fh.write("# polligen reference tables\n\n")
-        fh.write(
-            "Numeric reference tables dumped from the Python event "
-            "generator `polligen`\n"
-            "(`PolarizedLithiumSim/evgen/polligen`) by "
-            "`dump_polligen_reference.py` -- except\n"
-            "`b1_default_li6.json`, a self-pin of LiPolGen's own C++ "
-            "(see its section) -- for a\n"
-            "C++ reimplementation (LiPolGen) to be checked against at "
-            "`rtol=1e-12`\n"
-            "unless a table's description says otherwise (a few "
-            "quantities in polligen\n"
-            "are themselves iterative/quadrature results, e.g. "
-            "`spin.populations_maxent`,\n"
-            "`TaggedModel.norm`, `p2_moment_mixture` -- those are called "
-            "out below).\n\n"
-            "Every JSON file has an `\"inputs\"`-shaped section (grids, "
-            "axes, kernel /\n"
-            "scenario configuration, constants) and an outputs section "
-            "with the actual\n"
-            "computed numbers, organized per table below. Floats are "
-            "written with Python's\n"
-            "`repr()`-precision JSON serialization, i.e. full IEEE-754 "
-            "double precision\n"
-            "round-trips exactly.\n\n"
-            "Regenerate with (the TREE's `env.sh` must be sourced first: it sets "
-            "`PYTHONPATH` and `LIPOLGEN_DEPS` relative to itself, and a scratch "
-            "copy's own `env.sh` resolves elsewhere and reproduces the floats "
-            "only to about one ULP -- measured 2026-09-23):\n\n"
-            "```\n"
-            "source LiPolGen/env.sh && python3 LiPolGen/validation/dump_polligen_reference.py\n"
-            "```\n\n"
-            "This script only *imports* `polligen`/`polli_fastsim` from "
-            "`PolarizedLithiumSim`;\n"
-            "it does not modify anything there.\n\n"
-        )
-        for title, text in README_SECTIONS:
-            fh.write("## %s\n\n%s\n\n" % (title, text))
-        fh.write("## b1_default_li6.json\n\n%s\n\n" % B1_DEFAULT_LI6_README)
-        if MISSING:
-            fh.write("## Functions this script could not call\n\n")
-            for w, r in MISSING:
-                fh.write("- `%s`: %s\n" % (w, r))
-            fh.write("\n")
+    texts[readme_path] = render_readme()
 
-    sizes = [(p.name, p.stat().st_size) for p in sorted(written)]
+    write_all_atomically(texts)
+
+    written = [OUT / name for name in mine]
+    sizes = [(p.name, len(texts[p].encode("utf-8"))) for p in sorted(written)]
     print("Wrote %d JSON files to %s:" % (len(written), OUT))
     for name, size in sizes:
         print("  %-20s %8d bytes" % (name, size))

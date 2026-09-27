@@ -48,14 +48,14 @@ the TEST_CASE names themselves.
 | per-event 4-momentum + charge conservation, every channel, T0/T1/T2 | **yes** | `tests/test_pipeline.cpp`, `tests/test_breakup.cpp`, `tests/test_t2.cpp` (9 cases), `tests/test_rc_pipeline.cpp` |
 | seed / thread / order determinism, incl. byte-identical HepMC3 | **yes** | `tests/test_rng.cpp` (5), `tests/test_pipeline.cpp` "threaded generation is bit-identical", `tests/test_t2.cpp` determinism case, `tests/test_cluster_config.cpp` T13/T14 |
 | estimator closure vs the analytic error formulas | **yes** | `tests/test_sampler.cpp`, 6 `closure:` cases — pulls unbiased, spread within 15 % of 1/(P_e P_z √N) and √(2/N)/P_zz, rel-luminosity biases reproduced *and removed* |
-| weighted vs unweighted agreement | **partial** | `tests/test_sampler.cpp` "Mode-W weights reproduce the polarized rate ratio"; `tests/test_rc.cpp` T17 (weighted RC slots); `tests/test_fsi.cpp` "weight_normalised … averages to 1". **There is no single test that generates the same physics point unweighted and weighted and compares the two σ estimates with their MC errors** |
+| weighted vs unweighted agreement | **partial** | `tests/test_sampler.cpp` "Mode-W weights reproduce the polarized rate ratio"; `tests/test_rc.cpp` T17 (weighted RC slots); `tests/test_fsi.cpp` "weight_normalised … averages to 1". **There is no single test that generates the same physics point unweighted and weighted and compares the two σ estimates with their MC errors** *(2026-09-26: there is — `validation/benchmarks/t5_weighted_unweighted.py`, ⁶Li config 1, x ≥ 0.1, y ≥ 0.5, `apar+`: pull +0.359 against \|pull\| ≤ 3, PASS)* |
 | spin-density-matrix trace / positivity | **yes** | `src/core/spin.cpp` `trace()`; `tests/test_spin.cpp` "multipole operators are orthonormal under the trace product", "unphysical populations are rejected"; `tests/test_bookkeeping.cpp` "pzz_true … through the operator trace"; cross-section positivity in `tests/test_xsec.cpp` "density_min is the exact minimum over phi" / "production scenarios keep a healthy positivity margin", coherent-sector positivity in `test_pipeline.cpp` / `coherent.cpp` |
 | HFS identities Σ(E − p_z), Σp_T | **yes** | `python/tests/test_hfs.py` (through the `.npz` export), `docs/PYTHIA_BRIDGE.md` §8, `docs/T2_CHAIN.md` §1a — exact form holds at 1.5e-13 GeV, the closed-form collinear `hfs_sigma_empz_truth` is approximate at the 1.4 % level at T1 and that is documented as the formula's assumption failing |
 | Close–Kumano ∫b₁ dx = 0 | **reported, not enforced** | `close_kumano_integral` in `sf.hpp` / `b1_nuclear.hpp`; `00_in_tree_checks.md` E-4. The digitized tables stop before x → 2, so the integral cannot close on the data that exists |
 | ∫Δ_T f dy = 0 (the convolution's own rank-2 sum rule) | **yes, enforced** | `tests/test_b1_nuclear.cpp` "gate layer 0: int delta_T f dy = 0 (G0e)" — this is the one sum rule the tree *asserts* |
-| **Burkhardt–Cottingham ∫g₂ dx = 0** | **absent** | see §1.2 |
-| **Bjorken sum rule** | **absent** | see §1.2 |
-| unitarity of the FSI operator (∫dΓ S[FSI+FSI²] = 0, Strikman–Weiss) | **absent** | `fsi.hpp` checks the σ→0 limit and ⟨w⟩ = 1, not the unitarity integral |
+| **Burkhardt–Cottingham ∫g₂ dx = 0** | **absent** | see §1.2 *(2026-09-26: `validation/benchmarks/t5_sum_rules.py` `bc_ww` — the implementation closure ∫_{x_min}^1 g₂^WW dx = −x_min ∫_{x_min}^1 g₁/u du holds in 45/45 cells, PASS; the full ∫₀¹ does not exist for ToyG1's neutron and deuteron)* |
+| **Bjorken sum rule** | **absent** | see §1.2 *(2026-09-26: `t5_sum_rules.py` — ToyG1 FAIL, recorded: g₁ⁿ ~ x^−1.22 is not integrable, 0.6430 at x_min = 1e-6, Q² = 5, against 0.1854; NNPDFpol11 blocked (environment))* |
+| unitarity of the FSI operator (∫dΓ S[FSI+FSI²] = 0, Strikman–Weiss) | **absent** | `fsi.hpp` checks the σ→0 limit and ⟨w⟩ = 1, not the unitarity integral *(2026-09-26: `t5_sum_rules.py` records it BLOCKED — not definable in the tree as built: the default FSI is absorptive by design)* |
 
 ### 1.2 The two sum rules that are missing, and what they are worth
 
@@ -503,7 +503,7 @@ the physics.
 | CH-22 | RADGEN 1.0 (POLRAD-based RC event generator) | generator | code on request; paper public | no | weeks | medium |
 | CH-23 | `eic-smear` (generator-text ↔ ROOT ↔ HepMC3) | chain | public repository | no | days | low |
 | CH-24 | MC4EIC 2025 Rivet hackathon (ep **and ed** analyses) | chain | public agenda; analyses' status unverified | no | — | medium |
-| CH-25 | Burkhardt–Cottingham ∫g₂ dx = 0 on `g2_ww` | theory | analytic | **no** | hours | medium |
+| CH-25 | Burkhardt–Cottingham ∫g₂ dx = 0 on `g2_ww` (wired 2026-09-26, `validation/benchmarks/t5_sum_rules.py`) | theory | analytic | **no** | hours | medium |
 | CH-26 | `epic-analysis` / `detector_benchmarks` / `physics_benchmarks` | chain | public | no | — | low — **none of them is a generator benchmark** |
 
 ---

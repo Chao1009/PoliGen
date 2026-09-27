@@ -179,7 +179,7 @@ validate.**
 * **Activity.** ePIC's 2026 production release tag is `DJANGOH4.6.10-2.0`
   (charged-current 9×275); the inclusive NC samples were produced with
   **4.6.21** (`InclusiveDjangohSamples/README.md`). So the code is alive and in
-  routine EIC production, even though the source is not publicly posted.
+  routine EIC production, even though the source is not publicly posted (superseded 2026-09-26: §5.6).
 * **License.** Not stated on any page reachable from here. **UNVERIFIED.**
 * **Pedigree.** EIC Yellow Report §8.1.6 "Generator verification"
   (arXiv:2103.05419, read locally from `PolarizedLithiumSim/refs/`): PYTHIA6 and
@@ -520,7 +520,7 @@ buildable/runnable today with no new licensed dependency. Sartre needs `cuba`
 plus a way past hepforge's anti-bot page. BeAGLE needs one licensed FLUKA
 tarball and then the `eic/beagle-container` recipe does everything else.
 PEPSI needs CERNLIB (free, buildable — the BeAGLE container already does it).
-DJANGOH needs the source, which is not publicly posted. STEG needs nothing
+DJANGOH needs the source (a public copy was found 2026-09-26, §5.6). STEG needs nothing
 obvious but is ten years stale and unverified against a modern toolchain.
 
 ### 3.1 Live check run for this survey
@@ -628,7 +628,7 @@ The author's distribution page is 403 from here, there is no mirror on GitHub,
 and it is not an `eic-spack` package nor in the `eic-shell` environment — even
 though ePIC produces with it routinely (4.6.10 and 4.6.21). The **manuals** and
 the **steering cards** and one **cross-section table** are public (§2.4); the
-code is obtained by contacting the author or the ePIC production team.
+code is obtained by contacting the author or the ePIC production team. *(Superseded 2026-09-26: the review of that day read a public source, `github.com/spiesber/DJANGOH` at `e356b84`, `djangoh_h-4.6.21.f` — not vendored, licence not checked. Its `SUBROUTINE HSPRLG` sets IEL2 and IEL31..33 to 0 whenever WMIN > M_p, so the ePIC samples' W_h ≥ 3 GeV cut excludes the elastic tail whatever IEL is; `validation/benchmarks/t4_djangoh_rad_noRad.py`.)*
 
 ---
 
@@ -637,7 +637,7 @@ code is obtained by contacting the author or the ePIC production team.
 1. **DJANGOH's published Rad=1 / Rad=0 table** (§2.4). Wired 2026-09-23
    (`validation/benchmarks/t4_djangoh_rad_noRad.py`) and BLOCKED: the table is
    the inelastic RC with the elastic tail off, and shares no term with
-   `rc_tail`. Payoff after a DJANGOH run with IEL31..33 on: a check of the
+   `rc_tail`. Payoff after a DJANGOH run with IEL31..33 on and WMIN ≤ M_p (2026-09-26: the samples' W_h cut removes the elastic tail whatever IEL is, §5.6): a check of the
    elastic-tail magnitude on a proton.
 2. **PEPSI's `radgen.f`, linked standalone** (§2.5). Needs CERNLIB only for the
    full PEPSI; the RC kernel can be exercised on its own. Payoff: the only

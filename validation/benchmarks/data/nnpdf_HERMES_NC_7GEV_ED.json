@@ -1,0 +1,187 @@
+{
+  "_provenance": {
+    "what": "g1 of the deuteron (g1d), per nucleon, copied VERBATIM from the nnpdf-data wheel by validation/benchmarks/vendor_nnpdf_commondata.py; nothing is transformed",
+    "source": {
+      "package": "nnpdf-data 4.1.5 (PyPI, NNPDF Collaboration)",
+      "pypi": "https://pypi.org/project/nnpdf-data/4.1.5/",
+      "wheel_url": "https://files.pythonhosted.org/packages/1e/86/e8ac2b9ac3abab3e121fd4630e166e0892009e76032547b967d9e47c1e6e/nnpdf_data-4.1.5-py3-none-any.whl",
+      "wheel_sha256": "6ed209add4d162e3b9e4801c7b538a28867e479b6ffd4781e774526a3490269a",
+      "wheel_uploaded": "2026-07-02T10:40:37Z",
+      "fetched": "2026-09-26",
+      "files_read_note": "every wheel member this script read (path inside the wheel -> sha256 hex), each checked against the wheel's RECORD; the ones not vendored are named in 'not_vendored'",
+      "files_read": {
+        "nnpdf_data/commondata/HERMES_NC_7GEV_ED/metadata.yaml": "1f57eb819523fca2e2d573774635907d99bd0d7d7c646e542636da7e0bb0104f",
+        "nnpdf_data/commondata/HERMES_NC_7GEV_ED/data.yaml": "336f3fa7e715bcd439548d7ff47baccf1840784b2a62560d8bf617992ce3cc4f",
+        "nnpdf_data/commondata/HERMES_NC_7GEV_ED/kinematics.yaml": "ff84f996b8a9c8b1bfd1e80717c338f98c3155a816c768fbf443329d6d67a528",
+        "nnpdf_data/commondata/HERMES_NC_7GEV_ED/uncertainties.yaml": "73892218dbff8f218ba0649176b8c721069b933338d0a4bcea9798e8fccef0c3"
+      },
+      "not_vendored": {}
+    },
+    "record": {
+      "hepdata": "https://www.hepdata.net/record/ins726689",
+      "hepdata_version": 1,
+      "hepdata_tables": [13],
+      "inspire": "https://inspirehep.net/literature/726689",
+      "arxiv": null,
+      "journal": null,
+      "nnpdf_version": 1,
+      "nnpdf_version_comment": "Initial implementation",
+      "nnpdf_y_label": "$g_{1,N}(x, Q^2)$"
+    },
+    "paper": "A. Airapetian et al. (HERMES), 'Precise determination of the spin structure function g1 of the proton, deuteron and neutron', Phys. Rev. D 75 (2007) 012007, hep-ex/0609039 (as survey row D-1 cites it; metadata.yaml gives only INSPIRE 726689 / HEPData ins726689, not re-resolved offline)",
+    "survey_row": "docs/benchmarking/02_data_nucleon_deuteron.md sec. 2 row D-1 (HEPData 10.17182/hepdata.11211)",
+    "licence": {
+      "data": "CC0-1.0: HEPData records are released under CC0, and these numbers are NNPDF's copy of the HEPData record named in 'record'",
+      "package": "GPL-3.0-or-later (the wheel's METADATA 'License' field), the same licence as LiPolGen"
+    },
+    "publishing_convention": {
+      "normalisation": "PER NUCLEON: NNPDF's y_label for the set is 'g_{1,N}(x, Q^2)' (metadata.yaml), and 06_critic.md sec. 5.1 lists g1d as per nucleon for HERMES, COMPASS and E143.  The paper's own statement is UNVERIFIED offline.",
+      "d_state": "UNVERIFIED.  metadata.yaml does not say whether the published g1d is corrected for the deuteron D state.  06_critic.md sec. 5.1 (the g1d row, line 524): 'published g1d is conventionally NOT corrected for the D state; the (1 - 1.5 omega_D) factor is applied when extracting g1n. Applying it twice, or not at all, is a 7 % error on the isoscalar combination. Verify per paper.'  The paper could not be read here, so the harness reports the tree's convention (g1_nucleus(deuteron)/2, which carries 1 - 1.5 P_D) AND the no-D-state variant (g1p + g1n)/2.",
+      "q2": "Each point is at its own <Q^2> (the kinematics 'mid' value); no evolution to a common Q^2 is stated in the source (UNVERIFIED).  The file carries an 'evol' component ('evolution systematic uncertainty'), whose meaning for values quoted at their own <Q^2> is UNVERIFIED.",
+      "statistics": "stat is 0 in every bin: the statistical covariance is carried by sys_0 .. sys_14, labelled by NNPDF 'artificial correlated statistical uncertainty' (ADD, CORR) -- a decomposition of a correlated statistical covariance into 15 vectors.  The per-point statistical error is sqrt(sum_k sys_k^2); adding the vectors in quadrature per point DROPS the bin-to-bin correlation.",
+      "uncertainty_labels": "ADD/MULT and CORR/UNCORR are NNPDF's treatment labels in the commondata files, copied verbatim; they are NNPDF's reading of the HEPData record, not the collaboration's words.  Uncertainties are ABSOLUTE (same units as the central value), as given; a MULT component is the relative error already multiplied by the central value."
+    },
+    "body_sha256_rule": "sha256 of json.dumps(body, sort_keys=True, separators=(',', ':'), ensure_ascii=True, allow_nan=False).encode('ascii')"
+  },
+  "_body_sha256": "1f6cb0d83fb513cf93dfd756f473d9575b0cd431789f359c2b120008f9d62970",
+  "body": {
+    "setname": "HERMES_NC_7GEV_ED",
+    "observable": "g1 of the deuteron (g1d), per nucleon",
+    "nnpdf_observable_name": "G1",
+    "nnpdf_description": "HERMES DIS scattering experiment polarized structure function on Deuterium",
+    "npoints": 15,
+    "kinematics_variables": {
+      "x": {
+        "description": "momentum fraction",
+        "label": "$x$",
+        "units": ""
+      },
+      "Q2": {
+        "description": "virtuality",
+        "label": "$Q^2$",
+        "units": "$GeV^2$"
+      }
+    },
+    "kinematics_note": "each point's kinematics are the source's 'mid' values; '<var>_min'/'<var>_max' are carried only where the source gives them (it has null elsewhere)",
+    "primary_uncertainty_variant": "default",
+    "uncertainty_variants": {
+      "default": {
+        "file": "uncertainties.yaml",
+        "definitions": {
+          "sys_0": {
+            "description": "0 artificial correlated statistical uncertainty",
+            "treatment": "ADD",
+            "type": "CORR"
+          },
+          "sys_1": {
+            "description": "1 artificial correlated statistical uncertainty",
+            "treatment": "ADD",
+            "type": "CORR"
+          },
+          "sys_2": {
+            "description": "2 artificial correlated statistical uncertainty",
+            "treatment": "ADD",
+            "type": "CORR"
+          },
+          "sys_3": {
+            "description": "3 artificial correlated statistical uncertainty",
+            "treatment": "ADD",
+            "type": "CORR"
+          },
+          "sys_4": {
+            "description": "4 artificial correlated statistical uncertainty",
+            "treatment": "ADD",
+            "type": "CORR"
+          },
+          "sys_5": {
+            "description": "5 artificial correlated statistical uncertainty",
+            "treatment": "ADD",
+            "type": "CORR"
+          },
+          "sys_6": {
+            "description": "6 artificial correlated statistical uncertainty",
+            "treatment": "ADD",
+            "type": "CORR"
+          },
+          "sys_7": {
+            "description": "7 artificial correlated statistical uncertainty",
+            "treatment": "ADD",
+            "type": "CORR"
+          },
+          "sys_8": {
+            "description": "8 artificial correlated statistical uncertainty",
+            "treatment": "ADD",
+            "type": "CORR"
+          },
+          "sys_9": {
+            "description": "9 artificial correlated statistical uncertainty",
+            "treatment": "ADD",
+            "type": "CORR"
+          },
+          "sys_10": {
+            "description": "10 artificial correlated statistical uncertainty",
+            "treatment": "ADD",
+            "type": "CORR"
+          },
+          "sys_11": {
+            "description": "11 artificial correlated statistical uncertainty",
+            "treatment": "ADD",
+            "type": "CORR"
+          },
+          "sys_12": {
+            "description": "12 artificial correlated statistical uncertainty",
+            "treatment": "ADD",
+            "type": "CORR"
+          },
+          "sys_13": {
+            "description": "13 artificial correlated statistical uncertainty",
+            "treatment": "ADD",
+            "type": "CORR"
+          },
+          "sys_14": {
+            "description": "14 artificial correlated statistical uncertainty",
+            "treatment": "ADD",
+            "type": "CORR"
+          },
+          "stat": {
+            "description": "statistical uncertainty",
+            "treatment": "ADD",
+            "type": "UNCORR"
+          },
+          "exp": {
+            "description": "experimental systematic uncertainty",
+            "treatment": "ADD",
+            "type": "UNCORR"
+          },
+          "param": {
+            "description": "parametrization systematic uncertainty",
+            "treatment": "ADD",
+            "type": "CORR"
+          },
+          "evol": {
+            "description": "evolution systematic uncertainty",
+            "treatment": "ADD",
+            "type": "CORR"
+          }
+        }
+      }
+    },
+    "points": [
+      {"x": 0.0264, "Q2": 1.12, "value": 0.114, "unc": {"default": {"sys_0": 0.0682809208, "sys_1": 0.0091036086, "sys_2": 0.00142392594, "sys_3": 0.000142152874, "sys_4": 4.13650984e-05, "sys_5": 1.88654501e-05, "sys_6": 1.40229311e-05, "sys_7": 8.67872113e-06, "sys_8": 5.88679915e-06, "sys_9": 3.4734166e-06, "sys_10": 1.53460144e-06, "sys_11": 2.79133316e-07, "sys_12": 1.58542492e-07, "sys_13": 6.04377376e-08, "sys_14": 6.09757942e-09, "stat": 0, "exp": 0.0074, "param": 0.0045, "evol": 0.0}}},
+      {"x": 0.0329, "Q2": 1.25, "value": -0.0405, "unc": {"default": {"sys_0": -0.013980013, "sys_1": 0.0420002663, "sys_2": 0.0116571034, "sys_3": 0.0014669545, "sys_4": 0.00034279028, "sys_5": 0.000121095741, "sys_6": 5.90586713e-05, "sys_7": 3.00917339e-05, "sys_8": 1.40512403e-05, "sys_9": 8.18758192e-06, "sys_10": 4.64241094e-06, "sys_11": 8.26622467e-07, "sys_12": 8.42020267e-07, "sys_13": 4.39918037e-07, "sys_14": 5.46810269e-08, "stat": 0, "exp": 0.0018, "param": 0.0012, "evol": 0.0}}},
+      {"x": 0.0403, "Q2": 1.38, "value": 0.0125, "unc": {"default": {"sys_0": 0.00211474637, "sys_1": -0.0159045828, "sys_2": 0.0295584155, "sys_3": 0.00784579108, "sys_4": 0.00201238859, "sys_5": 0.000604215535, "sys_6": 0.000225484802, "sys_7": 9.09691682e-05, "sys_8": 3.78835195e-05, "sys_9": 1.72913053e-05, "sys_10": 9.33108695e-06, "sys_11": 8.671364e-07, "sys_12": 2.44650722e-06, "sys_13": 8.67982191e-07, "sys_14": 2.91069634e-09, "stat": 0, "exp": 0.003, "param": 0.0004, "evol": 0.0}}},
+      {"x": 0.0506, "Q2": 1.54, "value": 0.051, "unc": {"default": {"sys_0": -0.000287925007, "sys_1": 0.00279933581, "sys_2": -0.0111836151, "sys_3": 0.0199104773, "sys_4": 0.00866493269, "sys_5": 0.00303554319, "sys_6": 0.00107492306, "sys_7": 0.000379886413, "sys_8": 0.000146658229, "sys_9": 5.46632925e-05, "sys_10": 2.39026919e-05, "sys_11": 3.86716435e-06, "sys_12": 5.13506922e-06, "sys_13": 1.40060448e-06, "sys_14": -2.19495182e-08, "stat": 0, "exp": 0.0043, "param": 0.0014, "evol": 0.0}}},
+      {"x": 0.0648, "Q2": 2.01, "value": 0.0489, "unc": {"default": {"sys_0": -1.88130541e-06, "sys_1": -0.000526483005, "sys_2": 0.00215097374, "sys_3": -0.0114756925, "sys_4": 0.0126268217, "sys_5": 0.00879299446, "sys_6": 0.00400477853, "sys_7": 0.00153419103, "sys_8": 0.000517495766, "sys_9": 0.000165548181, "sys_10": 6.16593537e-05, "sys_11": 1.04277866e-05, "sys_12": 1.05616997e-05, "sys_13": 2.54598604e-06, "sys_14": -2.24743695e-08, "stat": 0, "exp": 0.0036, "param": 0.0012, "evol": 0.0019}}},
+      {"x": 0.0829, "Q2": 2.45, "value": 0.0998, "unc": {"default": {"sys_0": -2.98336875e-05, "sys_1": 1.84635971e-05, "sys_2": -0.000526605113, "sys_3": 0.00343214853, "sys_4": -0.0112990109, "sys_5": 0.00693870413, "sys_6": 0.00825523421, "sys_7": 0.00445101549, "sys_8": 0.00167281881, "sys_9": 0.000486401568, "sys_10": 0.000150491735, "sys_11": 9.99269661e-06, "sys_12": 2.01090417e-05, "sys_13": 7.67158156e-06, "sys_14": 1.01305223e-07, "stat": 0, "exp": 0.0049, "param": 0.0024, "evol": 0.0016}}},
+      {"x": 0.1059, "Q2": 2.97, "value": 0.0637, "unc": {"default": {"sys_0": -2.52530034e-05, "sys_1": -3.83546693e-05, "sys_2": 4.43016507e-05, "sys_3": -0.000989251164, "sys_4": 0.0047687218, "sys_5": -0.0103912451, "sys_6": 0.00323500949, "sys_7": 0.00711291793, "sys_8": 0.0042454275, "sys_9": 0.00147872641, "sys_10": 0.000431517189, "sys_11": 3.91916147e-05, "sys_12": 3.92682371e-05, "sys_13": 1.30247858e-05, "sys_14": -4.96225649e-08, "stat": 0, "exp": 0.0033, "param": 0.0015, "evol": 0.001}}},
+      {"x": 0.1354, "Q2": 3.59, "value": 0.0907, "unc": {"default": {"sys_0": -1.09120744e-05, "sys_1": -1.18738596e-05, "sys_2": -2.74460788e-05, "sys_3": 0.000223353733, "sys_4": -0.00170446597, "sys_5": 0.00557612794, "sys_6": -0.00857247727, "sys_7": 0.00144597267, "sys_8": 0.00625509406, "sys_9": 0.00366855709, "sys_10": 0.00125889539, "sys_11": 0.000192643438, "sys_12": 7.64045788e-05, "sys_13": 1.44607809e-05, "sys_14": -6.86864021e-07, "stat": 0, "exp": 0.0041, "param": 0.0021, "evol": 0.0007}}},
+      {"x": 0.173, "Q2": 4.31, "value": 0.1017, "unc": {"default": {"sys_0": -9.75474492e-06, "sys_1": -1.22712256e-05, "sys_2": -6.89458635e-06, "sys_3": -8.40950291e-05, "sys_4": 0.000451569597, "sys_5": -0.00226899803, "sys_6": 0.00555540722, "sys_7": -0.0071683966, "sys_8": 0.000967353544, "sys_9": 0.00542615418, "sys_10": 0.00302484587, "sys_11": 0.000725020193, "sys_12": 0.000166077403, "sys_13": 7.55709036e-06, "sys_14": -8.22693889e-07, "stat": 0, "exp": 0.0044, "param": 0.0022, "evol": 0.0006}}},
+      {"x": 0.2209, "Q2": 5.13, "value": 0.0949, "unc": {"default": {"sys_0": 1.24554864e-06, "sys_1": -6.39771629e-06, "sys_2": -1.60306055e-05, "sys_3": 1.88671633e-05, "sys_4": -0.00014432793, "sys_5": 0.000698799583, "sys_6": -0.00243639367, "sys_7": 0.00502676117, "sys_8": -0.00610202437, "sys_9": 0.00132746391, "sys_10": 0.00477776781, "sys_11": 0.00207101951, "sys_12": 0.000427058717, "sys_13": -2.02939876e-05, "sys_14": -3.36841447e-06, "stat": 0, "exp": 0.0041, "param": 0.0016, "evol": 0.0004}}},
+      {"x": 0.282, "Q2": 6.11, "value": 0.0723, "unc": {"default": {"sys_0": 2.85825189e-10, "sys_1": -1.85329443e-07, "sys_2": 2.33877963e-06, "sys_3": -7.95461139e-06, "sys_4": 2.24669261e-05, "sys_5": -0.000208888941, "sys_6": 0.000791265697, "sys_7": -0.00214570408, "sys_8": 0.00407757843, "sys_9": -0.00531651033, "sys_10": 0.00205421392, "sys_11": 0.00404543653, "sys_12": 0.00121919428, "sys_13": -0.000109072243, "sys_14": -5.78959031e-06, "stat": 0, "exp": 0.0031, "param": 0.001, "evol": 0.0002}}},
+      {"x": 0.3598, "Q2": 7.24, "value": 0.0805, "unc": {"default": {"sys_0": 1.1985811e-09, "sys_1": 2.21888084e-08, "sys_2": -3.68161576e-07, "sys_3": 4.44239121e-06, "sys_4": -1.43501741e-05, "sys_5": 4.68836876e-05, "sys_6": -0.00022456061, "sys_7": 0.000698214622, "sys_8": -0.00157158979, "sys_9": 0.00324862066, "sys_10": -0.00446568301, "sys_11": 0.00288042982, "sys_12": 0.00288328939, "sys_13": -0.000541077173, "sys_14": -2.98576525e-05, "stat": 0, "exp": 0.0034, "param": 0.0014, "evol": 0.0001}}},
+      {"x": 0.4583, "Q2": 8.53, "value": 0.05, "unc": {"default": {"sys_0": -7.05658918e-08, "sys_1": 1.33118215e-06, "sys_2": -3.86881986e-06, "sys_3": -6.75729684e-06, "sys_4": -1.28314121e-06, "sys_5": -1.6769175e-05, "sys_6": 4.52436432e-05, "sys_7": -0.00021206729, "sys_8": 0.00040639432, "sys_9": -0.00121560767, "sys_10": 0.00205190851, "sys_11": -0.00347369775, "sys_12": 0.00318433421, "sys_13": -0.00180062681, "sys_14": -0.00010310677, "stat": 0, "exp": 0.0021, "param": 0.0014, "evol": 0.0001}}},
+      {"x": 0.5819, "Q2": 10.16, "value": 0.023, "unc": {"default": {"sys_0": -4.3861198e-07, "sys_1": 1.82395267e-06, "sys_2": 7.50026617e-06, "sys_3": 9.97172388e-06, "sys_4": 3.30486443e-06, "sys_5": 6.41664811e-06, "sys_6": 1.28721597e-05, "sys_7": 7.13790573e-05, "sys_8": -1.10806963e-05, "sys_9": 0.000342004281, "sys_10": -0.000488104728, "sys_11": 0.00131960638, "sys_12": -0.00232291655, "sys_13": -0.00299275103, "sys_14": -0.000596096534, "stat": 0, "exp": 0.001, "param": 0.001, "evol": 0.0001}}},
+      {"x": 0.7248, "Q2": 12.21, "value": 0.0116, "unc": {"default": {"sys_0": -2.87537038e-08, "sys_1": 5.39547343e-07, "sys_2": -1.56606335e-06, "sys_3": -2.58822087e-06, "sys_4": -1.04545788e-06, "sys_5": -2.82927552e-06, "sys_6": -6.1982715e-08, "sys_7": -2.06039967e-05, "sys_8": 1.71860573e-06, "sys_9": -7.83612301e-05, "sys_10": 9.09755643e-05, "sys_11": -0.000273650959, "sys_12": 0.00048230691, "sys_13": 0.000996364454, "sys_14": -0.00199371262, "stat": 0, "exp": 0.0005, "param": 0.0009, "evol": 0.0001}}}
+    ]
+  }
+}

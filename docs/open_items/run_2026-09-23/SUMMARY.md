@@ -32,7 +32,7 @@ decision was taken.** Nothing was pushed, published or sent.
 
 | row | result | the number, with its window |
 |---|---|---|
-| 1 EPIOS source modes | **PASS** | round-trip residual 0 over 8 modes, tol 1e-12; the EST fill matches the ideal P_zz at 3 of 8 modes |
+| 1 EPIOS source modes | **PASS** | round-trip residual 0 over 8 modes, tol 1e-12; the EST fill matches the ideal P_zz at 3 of 8 modes *(2026-09-26: at 1 of the 6 it computes; the other two are \|P_z\| = 1, where the tree throws)* |
 | 3 HERMES b₁ᵈ | **FAIL, recorded** | χ²(b₁ᵈ)/6 over 6 bins: 22.26 (A = 2 convolution + MSTW) vs 21.80 for b₁ = 0; 5.26 Miller ×0.5, 5.30 Miller ×1 |
 | 4 NMC F₂(⁶Li)/F₂(D) | **PASS** | 4.6269/4 on x ≥ 0.30 (p = 0.328); 26.941/15 on the 15 on-grid points (p = 0.029); tol p ≥ 0.01 |
 | 5 UVa FB ⁶Li C0 | **FAIL, recorded** | shipped q₀ = 3.0998 fm⁻¹, +0.2713 above the band [2.6944, 2.8284] fm⁻¹ |
@@ -112,7 +112,7 @@ box), and the C0-zero price (§B15 box).
 **Run or request:** a DJANGOH production with `IEL31..IEL33 ≠ 0` (elastic
 radiative tail on) at the cuts of `eic/InclusiveDjangohSamples` — the only
 thing that turns row 7 into a benchmark. It needs the DJANGOH source (not
-public) or an ePIC production request.
+public) or an ePIC production request. *(2026-09-26: not at those cuts — it needs WMIN ≤ M_p as well, and a public source exists; `../run_2026-09-26/SUMMARY.md`.)*
 
 ## Tallies
 

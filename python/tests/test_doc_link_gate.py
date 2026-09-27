@@ -735,7 +735,12 @@ def test_real_document_external_citations(gate):
     rc, out = _capture(gate.main, [])
     assert rc == 0, out
     assert ", 7 external," in out, out
-    assert out.count("  skipped ") in (0, 7), out
+    # All or none: with no PYTHIA source tree every external citation is
+    # skipped by name -- the primary document's 7 AND docs/PYTHIA_BRIDGE.md's
+    # 8 (an EXTRA_DOCS entry since 2026-09-05, which prints its own skip
+    # lines).  `(0, 7)` failed on every machine without the source tree
+    # (measured 2026-09-27: 15 skip lines); corrected, not loosened.
+    assert out.count("  skipped ") in (0, 7 + 8), out
 
 
 def test_external_citation_accepts_either_name_for_the_deps_prefix(gate, tmp_path,
@@ -1484,19 +1489,57 @@ def _require_git_checkout(gate):
         pytest.skip("not a git checkout")
 
 
+def _as_of_commits(gate):
+    """Every commit an `(as of <commit>)` annotation in the records names,
+    inline or as a marked section -- the commits both as-of tests read."""
+    seen = set()
+    for doc in gate.record_files():
+        text = doc.read_text()
+        for m in gate.ASOF_INLINE.finditer(text):
+            seen.add(m.group(1))
+        for _lo, _hi, sha in gate.marked_sections(text, gate.ASOF_SECTION):
+            seen.add(sha)
+    return seen
+
+
+def _require_as_of_history(gate):
+    """`_require_git_checkout`, and skip -- naming the missing commits --
+    when this is a SHALLOW clone that lacks commits the anchors name.
+
+    A shallow clone (`git rev-parse --is-shallow-repository` prints `true`:
+    `git clone --depth N`, or actions/checkout's default fetch-depth of 1)
+    has a `.git`, so the plain guard lets it through, and the two as-of
+    tests then FAILED on git's "invalid object name" (exit 128) for commits
+    older than the fetched history: an environment fact, not a stale anchor
+    (review of 2026-09-26).  In a FULL clone this never skips, so a commit
+    that is genuinely not in the repository still fails; in a shallow clone
+    deep enough to hold every named commit the tests still run."""
+    _require_git_checkout(gate)
+    root = str(gate.ROOT)
+    shallow = subprocess.run(
+        ["git", "-C", root, "rev-parse", "--is-shallow-repository"],
+        capture_output=True, text=True)
+    if shallow.returncode != 0 or shallow.stdout.strip() != "true":
+        return
+    missing = sorted(
+        sha for sha in _as_of_commits(gate)
+        if subprocess.run(["git", "-C", root, "cat-file", "-e",
+                           sha + "^{commit}"], capture_output=True).returncode)
+    if missing:
+        pytest.skip("shallow clone (git rev-parse --is-shallow-repository = "
+                    "true): %d commit(s) named by (as of <commit>) anchors are "
+                    "outside its history (%s); run in a full clone (git fetch "
+                    "--unshallow) to check them" % (len(missing),
+                                                    ", ".join(missing)))
+
+
 def test_every_as_of_commit_in_the_records_resolves(gate):
     """`(as of <commit>)` is a claim about a commit; a commit that is not in
     this repository makes it unverifiable, which is worse than no annotation."""
     import subprocess
-    _require_git_checkout(gate)
+    _require_as_of_history(gate)
     root = str(gate.ROOT)
-    seen = set()
-    for doc in gate.record_files():
-        for m in gate.ASOF_INLINE.finditer(doc.read_text()):
-            seen.add(m.group(1))
-        for _lo, _hi, sha in gate.marked_sections(doc.read_text(),
-                                                  gate.ASOF_SECTION):
-            seen.add(sha)
+    seen = _as_of_commits(gate)
     assert seen, "no historical annotation in any record"
     for sha in sorted(seen):
         r = subprocess.run(["git", "-C", root, "cat-file", "-e", sha + "^{commit}"],
@@ -1626,7 +1669,7 @@ def test_every_as_of_anchor_passes_the_bar_at_its_commit(gate):
     of the 107 that is machine-derived: the gate's own rule -- two shared tokens
     or one of six characters -- passes there.  The other nine are named above,
     with what each target reads at that commit, in D2.5."""
-    _require_git_checkout(gate)
+    _require_as_of_history(gate)
     checked = by_hand = 0
     for rec in gate.record_files():
         rel = str(rec.relative_to(gate.ROOT)).replace("docs/open_items/", "")

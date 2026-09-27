@@ -38,6 +38,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 import numpy as np
+
+# numpy < 2.0 spells it np.trapz; >= 2.0 spells it np.trapezoid (and 2.4
+# removed np.trapz), as in vmc_reconcile.py.
+_trapz = getattr(np, "trapezoid", None) or np.trapz
 from scipy.special import spherical_jn
 
 HBARC_GEV_FM = 0.1973269804  # GeV * fm (CODATA hbar*c)
@@ -138,7 +142,7 @@ def fourier_bessel(r: np.ndarray, R_r: np.ndarray, k_grid: np.ndarray, l: int) -
     out = np.empty(len(k_grid))
     for i, k in enumerate(k_grid):
         jl = spherical_jn(l, k * r)
-        out[i] = np.sqrt(2.0 / np.pi) * np.trapz(base * jl, r)
+        out[i] = np.sqrt(2.0 / np.pi) * _trapz(base * jl, r)
     return out
 
 
@@ -162,7 +166,7 @@ def fourier_bessel_cluster(r: np.ndarray, A_r: np.ndarray, k_grid: np.ndarray, l
     out = np.empty(len(k_grid))
     for i, k in enumerate(k_grid):
         jl = spherical_jn(l, k * r)
-        out[i] = 4.0 * np.pi * np.trapz(base * jl, r)
+        out[i] = 4.0 * np.pi * _trapz(base * jl, r)
     return out
 
 
@@ -202,14 +206,14 @@ def density_from_amplitudes(k: np.ndarray, amps: list[np.ndarray]) -> np.ndarray
 
 
 def normalize(k: np.ndarray, dens: np.ndarray) -> np.ndarray:
-    return dens / np.trapz(dens, k)
+    return dens / _trapz(dens, k)
 
 
 def tail_fraction(k: np.ndarray, dens_norm: np.ndarray, k0: float) -> float:
     mask = k >= k0
     if mask.sum() < 2:
         return 0.0
-    return float(np.trapz(dens_norm[mask], k[mask]))
+    return float(_trapz(dens_norm[mask], k[mask]))
 
 
 def sample_pt_tail_fractions(k: np.ndarray, dens_norm: np.ndarray, thresholds,
@@ -321,8 +325,8 @@ def main():
     print("3. 6Li alpha+d D-STATE PROBABILITY")
     print("=" * 78)
     k6, A6_00, A6_22 = li6.k_fm, li6.k_amp[0], li6.k_amp[1]
-    I0 = np.trapz(k6 ** 2 * A6_00 ** 2, k6)
-    I2 = np.trapz(k6 ** 2 * A6_22 ** 2, k6)
+    I0 = _trapz(k6 ** 2 * A6_00 ** 2, k6)
+    I2 = _trapz(k6 ** 2 * A6_22 ** 2, k6)
     P_D_vmc = I2 / (I0 + I2)
     print(f"VMC (AV18+UIX, this table): P_D = Integral k^2 Aad22^2 dk / "
           f"Integral k^2(Aad00^2+Aad22^2) dk = {P_D_vmc:.4f}")
@@ -349,7 +353,7 @@ def main():
         for l, prob in waves:
             shape = hulthen_radial(k_gev, kappa, beta, l)
             dens = k_gev ** 2 * shape ** 2
-            dens = dens / np.trapz(dens, k_gev)
+            dens = dens / _trapz(dens, k_gev)
             tot += prob * dens
         return tot
 

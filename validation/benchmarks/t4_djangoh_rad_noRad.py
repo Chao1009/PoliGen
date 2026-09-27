@@ -25,16 +25,21 @@ WHAT IS COMPARED, AND WHY THE ROW IS **BLOCKED** (measured 2026-09-23)
 ---------------------------------------------------------------------
 Reference: sigma(Rad=1)/sigma(Rad=0) of DJANGOH 4.6.21 (HERACLES), e- 18 GeV x
 p 275 GeV, per Q^2 bin [1,10], [10,100], [100,1000], [1000,10000] GeV^2,
-x_l in [1e-5, 1], y_l in [1e-4, 1], W_h > 3 GeV.  Vendored in
+x_l in [1e-5, 1], y_l in [1e-4, 1], W_h >= 3 GeV (ICUT = 3: the x, y, Q^2
+cuts on the LEPTONIC variables, the W cut on the HADRONIC final-state mass
+W_h -- the vendored file's `run_settings.kinem_cuts`).  Vendored in
 `data/djangoh_rad_norad_ep18x275.json` with provenance.
 
 Generator: the bin-integrated sigma_RC/sigma_Born = int Born (1 + r) / int
 Born, with r = `RcModel.tail_ratio_at(x, Q2, q_n = 0)` = sigma_tail/sigma_Born,
 on LiPolGen's proton at the SAME beams (config 2 = 18 x 275 GeV), the same x
-floor, W^2 >= 9 GeV^2, and y in [1e-4, 0.985] (0.985 = the shipped
-`Scenario.y_max`, which is the top of the tail table's y support -- `RcModel`
-refuses to extrapolate past it; DJANGOH's y runs to 1).  Two tail models:
-`t-peak` (the shipped default) and `polrad-full` (opt-in).
+floor, W^2 >= 9 GeV^2 on the LEPTONIC W (from x_l, Q^2_l -- the same number
+as DJANGOH's W_h cut but NOT the same cut: the two agree for non-radiative
+events only; for a radiative event W_l >= W_h), and y in [1e-4, 0.985]
+(0.985 = the shipped `Scenario.y_max`, which is the top of the tail table's
+y support -- `RcModel` refuses to extrapolate past it; DJANGOH's y runs to
+1).  Two tail models: `t-peak` (the shipped default) and `polrad-full`
+(opt-in).
 
 WHAT THE TWO RC MODELS SHARE AND DO NOT -- the tolerance comes from here.
   DJANGOH Rad=1 carries: the non-radiative O(alpha) piece (virtual + soft,
@@ -60,10 +65,22 @@ WHAT THE TWO RC MODELS SHARE AND DO NOT -- the tolerance comes from here.
     "must-not-contradict" bound holds vacuously and no tolerance is
     definable.  A comparison that cannot fail is not a benchmark, so the row
     reports BLOCKED, prints both sides and their distance, and tunes nothing.
-  It unblocks with a DJANGOH run at IEL31..IEL33 != 0 (the elastic tail ON)
-  at these cuts -- which needs the DJANGOH source (not public, 01_generators.md
-  sec. 5.6) or a new ePIC production.  A LiPolGen-side inelastic RC shift
-  would not unblock it: none exists and adding one is a physics change.
+  THE CUTS EXCLUDE THE ELASTIC TAIL TOO, whatever IEL is.  In ep -> e p gamma
+  the hadronic final state IS the proton, W_h = M_p = 0.938 GeV < 3 GeV, so
+  the samples' W_h >= 3 GeV cut removes the elastic radiative tail even with
+  IEL31..IEL33 on -- and DJANGOH enforces it: SUBROUTINE HSPRLG sets INT2(3),
+  INT3(10..12) (= IEL2, IEL31..IEL33) to 0 whenever WMIN > M_p, printing
+  "VALUE OF WMIN DOES NOT ALLOW ELASTIC AND QUASI-ELASTIC EP SCATTERING"
+  (djangoh_h-4.6.21.f of the PUBLIC source, github.com/spiesber/DJANGOH at
+  e356b84, read 2026-09-26 by the review of this row, not vendored;
+  01_generators.md sec. 5.6's "not public" is superseded).  So a DJANGOH run
+  at IEL31..IEL33 != 0 "at these cuts" would reproduce this very table.  The
+  row unblocks only with a DJANGOH run at IEL31..IEL33 != 0 AND WMIN <= M_p
+  (a new ePIC production or a private run).  Lowering WMIN also moves
+  DJANGOH's inelastic and Born sides, so that run's window has to be stated
+  anew for both sides; the table vendored here cannot be reused for it.  A
+  LiPolGen-side inelastic RC shift would not unblock it: none exists and
+  adding one is a physics change.
 
 Run:  source env.sh && python3 validation/benchmarks/t4_djangoh_rad_noRad.py
 (17.3-19.6 s measured 2026-09-23; the polrad-full tail table is ~16 s of it).
@@ -72,9 +89,13 @@ Exit status (validation/benchmarks/README.md): 0 when the harness ran and
 printed its REPORT row -- pass, recorded fail and blocked alike, since the
 row carries the verdict; 2 when the harness itself is broken (a missing or
 altered vendored file, a missing dependency, any exception).  A harness is
-a measurement, not a CI gate: the pytests are the gate.
+a measurement, not a CI gate: the pytests are the gate.  The vendored file's
+sha256 (every byte; `DATA_SHA256`, taken from the file as committed at
+f0a8f1e) is re-checked on EVERY read since 2026-09-26, and a missing numpy
+exits 2 like any other missing dependency.
 """
 
+import hashlib
 import json
 import math
 import pathlib
@@ -82,16 +103,27 @@ import sys
 import traceback
 import time
 
-import numpy as np
+try:
+    import numpy as np
+except ImportError:  # a missing dependency is a broken harness: exit 2
+    if __name__ == "__main__":
+        traceback.print_exc()
+        sys.exit(2)
+    raise
 
 HERE = pathlib.Path(__file__).resolve().parent
 DATA = HERE / "data" / "djangoh_rad_norad_ep18x275.json"
+#: sha256 of every byte of the vendored file (recorded 2026-09-26 from the
+#: file as committed at f0a8f1e); re-checked on every read.
+DATA_SHA256 = "2fd4b9b6bb2c0de7c7a9b338ad58cc3cbc221c768d0ce2f257ac6f57139be8fa"
 
 NAME = "t4_djangoh_rad_noRad"
 #: LiPolGen beam configuration index for e 18 GeV x p 275 GeV/u.
 CONFIG = 2
 #: The DJANGOH run's leptonic cuts (runcards KINEM-CUTS), and LiPolGen's own
 #: y ceiling -- the RC tail tables refuse y above `RC_TAIL_Y_CEILING`.
+#: W2_MIN is DJANGOH's WMIN = 3 GeV squared, but DJANGOH cuts the HADRONIC
+#: W_h with it and this harness the LEPTONIC W (module docstring).
 X_MIN = 1.0e-5
 Y_MIN = 1.0e-4
 W2_MIN = 9.0
@@ -105,9 +137,20 @@ Y_SPLIT = 0.5
 TAIL_MODELS = ("t-peak", "polrad-full")
 
 
+def read_vendored(path, sha256=DATA_SHA256):
+    """The bytes of the vendored file -- RuntimeError unless their sha256 is
+    the recorded one, so a moved number is refused, never silently read."""
+    raw = pathlib.Path(path).read_bytes()
+    got = hashlib.sha256(raw).hexdigest()
+    if got != sha256:
+        raise RuntimeError("%s: vendored file sha256 %s != recorded %s"
+                           % (path, got, sha256))
+    return raw
+
+
 def load_reference(path=DATA):
     """The four vendored rows -> list of dicts, with the ratio computed."""
-    doc = json.loads(pathlib.Path(path).read_text())
+    doc = json.loads(read_vendored(path).decode("utf-8"))
     rows = []
     for lo, hi, rad1, rad0 in doc["rows"]:
         rows.append({"q2_lo": lo, "q2_hi": hi, "sigma_rad1_ub": rad1,
@@ -207,8 +250,9 @@ def integrate_bin(p, q2_lo, q2_hi, y_max):
     """int Born and int Born * r over one Q^2 bin, in (ln Q^2, y).
 
     Born = d2sigma/(dx dQ2) [pb/GeV^2], so dx dQ2 = (Q^2/(s y^2)) dy Q^2 dlnQ^2.
-    The cuts are DJANGOH's (x >= X_MIN, y >= Y_MIN, W^2 >= W2_MIN, x <= 1)
-    with LiPolGen's y ceiling `y_max`."""
+    The cuts are DJANGOH's numbers (x >= X_MIN, y >= Y_MIN, W^2 >= W2_MIN,
+    x <= 1) with LiPolGen's y ceiling `y_max`, all on the LEPTONIC variables:
+    W^2 here is the leptonic W, DJANGOH's is the hadronic W_h."""
     import lipolgen as lg
     ds = p.dis_sampler
     k, m, s = ds.kernel, p.rc_model, ds.s
@@ -264,12 +308,14 @@ def lipolgen_side(tail_models=TAIL_MODELS, rows=None, y_max=None):
         per_bin = []
         for r in rows:
             born, born_r, unc = integrate_bin(p, r["q2_lo"], r["q2_hi"], ym)
+            # float(): the sums are numpy scalars, whose numpy >= 2 repr
+            # (`np.float64(...)`) would otherwise leak into the ROW line.
             per_bin.append({
-                "ratio": 1.0 + born_r / (born - unc),
+                "ratio": float(1.0 + born_r / (born - unc)),
                 # dsigma_unpol is d2sigma/(dx dQ2) in pb/GeV^2 (rc.hpp:
                 # born_pb_at = x s dsigma_unpol [pb]); pb -> microbarn.
-                "born_ub": born * 1e-6,
-                "uncovered_born_fraction": unc / born,
+                "born_ub": float(born * 1e-6),
+                "uncovered_born_fraction": float(unc / born),
             })
         out[tm] = {"bins": per_bin, "build_s": build_s, "y_max": ym,
                    "clipped_node_fraction": p.rc_model.clipped_cell_fraction,
@@ -317,14 +363,17 @@ def run(tail_models=TAIL_MODELS, verbose=True):
         "IEL33=0 (elastic radiative tail OFF; all eight ePIC logs), LiPolGen's "
         "rc_tail is the elastic(+QE) tail ONLY and applies no inelastic/vertex "
         "shift -- disjoint additive pieces, so must-not-contradict holds "
-        "vacuously; unblocks with a DJANGOH run at IEL31..33 != 0"
+        "vacuously; the samples' W_h >= 3 GeV cut also excludes the elastic "
+        "tail (W_h = M_p) whatever IEL is (DJANGOH zeroes IEL2/IEL31..33 when "
+        "WMIN > M_p), so it unblocks only with a DJANGOH run at IEL31..33 != 0 "
+        "AND WMIN <= M_p"
         if sane else "a LiPolGen tail ratio below 1 or non-finite")
     row = {
         "name": NAME,
-        "generator_value": {tm: [round(gen[tm]["bins"][i]["ratio"], 8)
+        "generator_value": {tm: [round(float(gen[tm]["bins"][i]["ratio"]), 8)
                                  for i in range(len(rows))]
                             for tm in tail_models},
-        "reference_value": [round(r["ratio"], 8) for r in rows],
+        "reference_value": [round(float(r["ratio"]), 8) for r in rows],
         "tolerance": "none definable (the two RC models share no term)",
         "status": status,
         "reason": reason,

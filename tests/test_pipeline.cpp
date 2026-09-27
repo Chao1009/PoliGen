@@ -25,7 +25,7 @@
 #include "lipolgen/asymmetries.hpp"
 #include "lipolgen/pipeline.hpp"
 
-#if __has_include(<HepMC3/ReaderAscii.h>)
+#ifdef LIPOLGEN_HAVE_HEPMC3  // the tier's macro: headers present != writer built
 #define LIPOLGEN_TEST_HEPMC 1
 #include <HepMC3/GenEvent.h>
 #include <HepMC3/GenParticle.h>

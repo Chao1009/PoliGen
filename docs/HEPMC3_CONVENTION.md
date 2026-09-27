@@ -137,6 +137,15 @@ by the electron beam and the scattered electron both being present — adding
 it again would double count). `tests/test_hepmc.cpp` checks exactly this
 identity to `1e-9`.
 
+**Inclusive channels balance per nucleon** (decision 2026-09-27,
+`docs/open_items/run_2026-09-27/DECISIONS.md` D1). An inclusive record does
+not write the (A−1) remnant (`docs/USAGE.md` §2): the generator models the
+struck nucleon, not the residual nucleus. On an inclusive file both
+identities hold with the ion beam replaced by the struck nucleon (the
+status-3 nucleon feeding X's vertex): four-momentum `sum(status == 1)`
+(`+ X` where X alone carries the hadronic system) `== k_e + p_N`, and charge
+`== q_e + q_N`. Tagged and coherent records balance against the full beams.
+
 ## Event attributes (spin / run labels)
 
 All of the following are `GenEvent`-level attributes (id 0), named exactly

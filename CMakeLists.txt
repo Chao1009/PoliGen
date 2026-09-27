@@ -83,7 +83,16 @@ target_compile_definitions(lipolgen_core PRIVATE
 if(LIPOLGEN_WITH_LHAPDF)
   find_program(LHAPDF_CONFIG lhapdf-config HINTS ${LIPOLGEN_DEPS_PREFIX}/bin)
   if(LHAPDF_CONFIG)
-    execute_process(COMMAND ${LHAPDF_CONFIG} --incdir OUTPUT_VARIABLE LHAPDF_INCDIR OUTPUT_STRIP_TRAILING_WHITESPACE)
+    # LHAPDF 6.5.6 renamed `--incdir` to `--includedir` (its --help still
+    # lists `--incdir`, which now exits 1 after printing the help text to
+    # stdout -- captured, that help text became the include path and broke
+    # the generated Makefile).  Ask for the old name, fall back to the new.
+    execute_process(COMMAND ${LHAPDF_CONFIG} --incdir OUTPUT_VARIABLE LHAPDF_INCDIR
+                    RESULT_VARIABLE LHAPDF_INCDIR_RC OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+    if(NOT LHAPDF_INCDIR_RC EQUAL 0)
+      execute_process(COMMAND ${LHAPDF_CONFIG} --includedir OUTPUT_VARIABLE LHAPDF_INCDIR
+                      OUTPUT_STRIP_TRAILING_WHITESPACE)
+    endif()
     execute_process(COMMAND ${LHAPDF_CONFIG} --libdir OUTPUT_VARIABLE LHAPDF_LIBDIR OUTPUT_STRIP_TRAILING_WHITESPACE)
     file(GLOB LIPOLGEN_LHAPDF_SOURCES CONFIGURE_DEPENDS src/lhapdf/*.cpp)
     if(LIPOLGEN_LHAPDF_SOURCES)
@@ -223,7 +232,13 @@ if(LIPOLGEN_WITH_PYTHON)
   find_package(Python3 COMPONENTS Interpreter Development.Module QUIET)
   execute_process(COMMAND ${Python3_EXECUTABLE} -m pybind11 --cmakedir
                   OUTPUT_VARIABLE PYBIND11_CMAKEDIR OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
-  find_package(pybind11 CONFIG QUIET HINTS ${PYBIND11_CMAKEDIR})
+  # 2.12 is the first pybind11 with NumPy 2 support: 2.10/2.11 built against
+  # NumPy 2 hand back stride-0 views, so every 1-D event column read as its
+  # first element repeated -- silently.  An older pybind11 is refused, loudly.
+  find_package(pybind11 2.12 CONFIG QUIET HINTS ${PYBIND11_CMAKEDIR})
+  if(NOT pybind11_FOUND)
+    message(WARNING "pybind11 >= 2.12 not found; the Python module is not built")
+  endif()
   if(pybind11_FOUND AND EXISTS ${CMAKE_SOURCE_DIR}/python/bindings.cpp)
     pybind11_add_module(_lipolgen python/bindings.cpp)
     target_link_libraries(_lipolgen PRIVATE lipolgen_core)

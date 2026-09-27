@@ -66,6 +66,11 @@ THE THREE NORMALISATION RULES (BENCHMARK_PLAN.md sec. 8), for THIS row:
      the moments of one spin-J nucleus, Cartesian P_zz = <3 Jz^2 - 2> at
      J = 1, P_zz in [-2, 1].
 
+INTEGRITY (since 2026-09-26).  The sha256 of every byte of the vendored
+sources file is recorded below (`DATA_SHA256`, taken from the file as
+committed at f0a8f1e) and re-checked on EVERY read: an altered file is
+refused with a RuntimeError, so `__main__` exits 2.
+
 Run:  source env.sh && python3 validation/benchmarks/t5_est_identity.py
 
 Exit status (validation/benchmarks/README.md): 0 when the harness ran and
@@ -75,6 +80,7 @@ altered vendored file, a missing dependency, any exception).  A harness is
 a measurement, not a CI gate: the pytests are the gate.
 """
 
+import hashlib
 import math
 import os
 import sys
@@ -141,6 +147,26 @@ def ladder_j32(pzs=(-0.9, -0.5, -0.1, 0.1, 0.3, 0.5, 0.7, 0.9)):
 
 DATA = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data",
                     "est_identity_sources.json")
+#: sha256 of every byte of the vendored file (recorded 2026-09-26 from the
+#: file as committed at f0a8f1e); re-checked on every read.
+DATA_SHA256 = "32d6f70d57a3b5bc816229ded9d9f6dbc3412598e70b4978c28c61c12ef8ac6b"
+
+
+def read_vendored(path, sha256=DATA_SHA256):
+    """The bytes of the vendored file -- RuntimeError unless their sha256 is
+    the recorded one, so a moved number is refused, never silently read."""
+    with open(path, "rb") as f:
+        raw = f.read()
+    got = hashlib.sha256(raw).hexdigest()
+    if got != sha256:
+        raise RuntimeError("%s: vendored file sha256 %s != recorded %s"
+                           % (path, got, sha256))
+    return raw
+
+
+def load_sources(path=DATA):
+    import json
+    return json.loads(read_vendored(path).decode("utf-8"))
 
 
 def _pz_at_ratio(_l, j, t_target):
@@ -157,10 +183,8 @@ def _pz_at_ratio(_l, j, t_target):
 
 
 def compass_crosscheck(path=DATA):
-    import json
     import lipolgen._lipolgen as _l
-    with open(path) as f:
-        d = json.load(f)
+    d = load_sources(path)
     k = d["koivuniemi2004"]
     mu = d["magnetic_moments_muN"]
     c = d["physical_constants"]

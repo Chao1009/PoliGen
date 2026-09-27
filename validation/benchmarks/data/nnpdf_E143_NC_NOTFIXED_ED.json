@@ -1,0 +1,121 @@
+{
+  "_provenance": {
+    "what": "g1 of the deuteron (g1d), per nucleon, copied VERBATIM from the nnpdf-data wheel by validation/benchmarks/vendor_nnpdf_commondata.py; nothing is transformed",
+    "source": {
+      "package": "nnpdf-data 4.1.5 (PyPI, NNPDF Collaboration)",
+      "pypi": "https://pypi.org/project/nnpdf-data/4.1.5/",
+      "wheel_url": "https://files.pythonhosted.org/packages/1e/86/e8ac2b9ac3abab3e121fd4630e166e0892009e76032547b967d9e47c1e6e/nnpdf_data-4.1.5-py3-none-any.whl",
+      "wheel_sha256": "6ed209add4d162e3b9e4801c7b538a28867e479b6ffd4781e774526a3490269a",
+      "wheel_uploaded": "2026-07-02T10:40:37Z",
+      "fetched": "2026-09-26",
+      "files_read_note": "every wheel member this script read (path inside the wheel -> sha256 hex), each checked against the wheel's RECORD; the ones not vendored are named in 'not_vendored'",
+      "files_read": {
+        "nnpdf_data/commondata/E143_NC_NOTFIXED_ED/metadata.yaml": "11407fa56f9b271a56019ce3468636b4f6989bfc4e3bda52bdaeaead373f92f5",
+        "nnpdf_data/commondata/E143_NC_NOTFIXED_ED/data.yaml": "b25f6f562f5dbff8255359e4d50508a8bcc38b42fddb8991cc4fdefc0875a545",
+        "nnpdf_data/commondata/E143_NC_NOTFIXED_ED/kinematics.yaml": "b8279e168366bacea528c715581495c6ddc89ea5ad2f228dd46dff362658c7d8",
+        "nnpdf_data/commondata/E143_NC_NOTFIXED_ED/uncertainties.yaml": "d20465b33dfc9b77664d5c1a1466d7219b33f93a829e004503e9ee5559b3249e"
+      },
+      "not_vendored": {}
+    },
+    "record": {
+      "hepdata": "https://www.hepdata.net/record/ins467140",
+      "hepdata_version": 1,
+      "hepdata_tables": [18],
+      "inspire": "https://inspirehep.net/literature/467140",
+      "arxiv": "http://arxiv.org/abs/hep-ex/9705012",
+      "journal": null,
+      "nnpdf_version": 1,
+      "nnpdf_version_comment": "Initial implementation",
+      "nnpdf_y_label": "$g_{1,N}(x, Q^2)$"
+    },
+    "paper": "K. Abe et al. (E143), Phys. Rev. D 58 (1998) 112003, hep-ph/9802357 (as survey row D-6 cites it).  CONFLICT, UNRESOLVED OFFLINE: metadata.yaml's arXiv field is hep-ex/9705012, not hep-ph/9802357, beside INSPIRE 467140 / HEPData ins467140; which paper table 18 belongs to could not be checked.",
+    "survey_row": "docs/benchmarking/02_data_nucleon_deuteron.md sec. 2 row D-6 (HEPData 10.17182/hepdata.22265)",
+    "licence": {
+      "data": "CC0-1.0: HEPData records are released under CC0, and these numbers are NNPDF's copy of the HEPData record named in 'record'",
+      "package": "GPL-3.0-or-later (the wheel's METADATA 'License' field), the same licence as LiPolGen"
+    },
+    "publishing_convention": {
+      "normalisation": "PER NUCLEON: NNPDF's y_label for the set is 'g_{1,N}(x, Q^2)' (metadata.yaml), and 06_critic.md sec. 5.1 lists g1d as per nucleon for HERMES, COMPASS and E143.  The paper's own statement is UNVERIFIED offline.",
+      "d_state": "UNVERIFIED.  metadata.yaml does not say whether the published g1d is corrected for the deuteron D state.  06_critic.md sec. 5.1 (the g1d row, line 524): 'published g1d is conventionally NOT corrected for the D state; the (1 - 1.5 omega_D) factor is applied when extracting g1n. Applying it twice, or not at all, is a 7 % error on the isoscalar combination. Verify per paper.'  The paper could not be read here, so the harness reports the tree's convention (g1_nucleus(deuteron)/2, which carries 1 - 1.5 P_D) AND the no-D-state variant (g1p + g1n)/2.",
+      "q2": "Each point is at its own <Q^2> (the kinematics 'mid' value); no evolution to a common Q^2 is stated in the source (UNVERIFIED).",
+      "beam": "28 points at Q^2 = 1.27-9.52 GeV^2; which E143 beam energy (29.1 / 16.2 / 9.7 GeV) they are from is not stated (UNVERIFIED).",
+      "sys_beam": "'systematic uncertainty due to beam Normalization' (MULT, CORR): 4.9 % of the central value, signed with it, in every bin.",
+      "uncertainty_labels": "ADD/MULT and CORR/UNCORR are NNPDF's treatment labels in the commondata files, copied verbatim; they are NNPDF's reading of the HEPData record, not the collaboration's words.  Uncertainties are ABSOLUTE (same units as the central value), as given; a MULT component is the relative error already multiplied by the central value."
+    },
+    "body_sha256_rule": "sha256 of json.dumps(body, sort_keys=True, separators=(',', ':'), ensure_ascii=True, allow_nan=False).encode('ascii')"
+  },
+  "_body_sha256": "6509786def09ecb318d45cb750e27763ba19c9a3968dd48811806f9cceb5861d",
+  "body": {
+    "setname": "E143_NC_NOTFIXED_ED",
+    "observable": "g1 of the deuteron (g1d), per nucleon",
+    "nnpdf_observable_name": "G1",
+    "nnpdf_description": "E143 DIS scattering experiment polarized structure function",
+    "npoints": 28,
+    "kinematics_variables": {
+      "x": {
+        "description": "momentum fraction",
+        "label": "$x$",
+        "units": ""
+      },
+      "Q2": {
+        "description": "virtuality",
+        "label": "$Q^2$",
+        "units": "$GeV^2$"
+      }
+    },
+    "kinematics_note": "each point's kinematics are the source's 'mid' values; '<var>_min'/'<var>_max' are carried only where the source gives them (it has null elsewhere)",
+    "primary_uncertainty_variant": "default",
+    "uncertainty_variants": {
+      "default": {
+        "file": "uncertainties.yaml",
+        "definitions": {
+          "stat": {
+            "description": "statistical uncertainty",
+            "treatment": "ADD",
+            "type": "UNCORR"
+          },
+          "sys": {
+            "description": "systematic uncertainty",
+            "treatment": "ADD",
+            "type": "UNCORR"
+          },
+          "sys_beam": {
+            "description": "systematic uncertainty due to beam Normalization",
+            "treatment": "MULT",
+            "type": "CORR"
+          }
+        }
+      }
+    },
+    "points": [
+      {"x_min": 0.029, "x": 0.031, "x_max": 0.033, "Q2": 1.27, "value": 0.15, "unc": {"default": {"stat": 0.147, "sys": 0.03, "sys_beam": 0.00735}}},
+      {"x_min": 0.033, "x": 0.035, "x_max": 0.037, "Q2": 1.4, "value": 0.027, "unc": {"default": {"stat": 0.097, "sys": 0.025, "sys_beam": 0.001323}}},
+      {"x_min": 0.037, "x": 0.039, "x_max": 0.042, "Q2": 1.52, "value": 0.191, "unc": {"default": {"stat": 0.08, "sys": 0.021, "sys_beam": 0.009359}}},
+      {"x_min": 0.042, "x": 0.044, "x_max": 0.047, "Q2": 1.65, "value": -0.036, "unc": {"default": {"stat": 0.068, "sys": 0.017, "sys_beam": -0.001764}}},
+      {"x_min": 0.047, "x": 0.049, "x_max": 0.053, "Q2": 1.78, "value": -0.034, "unc": {"default": {"stat": 0.059, "sys": 0.013, "sys_beam": -0.001666}}},
+      {"x_min": 0.053, "x": 0.056, "x_max": 0.059, "Q2": 1.91, "value": 0.039, "unc": {"default": {"stat": 0.052, "sys": 0.01, "sys_beam": 0.001911}}},
+      {"x_min": 0.059, "x": 0.063, "x_max": 0.067, "Q2": 2.04, "value": 0.027, "unc": {"default": {"stat": 0.045, "sys": 0.008, "sys_beam": 0.001323}}},
+      {"x_min": 0.067, "x": 0.071, "x_max": 0.075, "Q2": 2.19, "value": 0.053, "unc": {"default": {"stat": 0.041, "sys": 0.006, "sys_beam": 0.002597}}},
+      {"x_min": 0.075, "x": 0.079, "x_max": 0.084, "Q2": 2.41, "value": 0.039, "unc": {"default": {"stat": 0.037, "sys": 0.005, "sys_beam": 0.001911}}},
+      {"x_min": 0.084, "x": 0.09, "x_max": 0.095, "Q2": 2.55, "value": 0.123, "unc": {"default": {"stat": 0.031, "sys": 0.005, "sys_beam": 0.006027}}},
+      {"x_min": 0.095, "x": 0.101, "x_max": 0.107, "Q2": 2.85, "value": 0.082, "unc": {"default": {"stat": 0.029, "sys": 0.004, "sys_beam": 0.004018}}},
+      {"x_min": 0.107, "x": 0.113, "x_max": 0.12, "Q2": 3.13, "value": 0.067, "unc": {"default": {"stat": 0.026, "sys": 0.003, "sys_beam": 0.003283}}},
+      {"x_min": 0.12, "x": 0.128, "x_max": 0.136, "Q2": 3.41, "value": 0.135, "unc": {"default": {"stat": 0.024, "sys": 0.004, "sys_beam": 0.006615}}},
+      {"x_min": 0.136, "x": 0.144, "x_max": 0.153, "Q2": 3.71, "value": 0.138, "unc": {"default": {"stat": 0.022, "sys": 0.004, "sys_beam": 0.006762}}},
+      {"x_min": 0.153, "x": 0.162, "x_max": 0.172, "Q2": 4.03, "value": 0.075, "unc": {"default": {"stat": 0.021, "sys": 0.003, "sys_beam": 0.003675}}},
+      {"x_min": 0.172, "x": 0.182, "x_max": 0.193, "Q2": 4.34, "value": 0.147, "unc": {"default": {"stat": 0.02, "sys": 0.005, "sys_beam": 0.007203}}},
+      {"x_min": 0.193, "x": 0.205, "x_max": 0.218, "Q2": 4.15, "value": 0.07, "unc": {"default": {"stat": 0.017, "sys": 0.005, "sys_beam": 0.00343}}},
+      {"x_min": 0.218, "x": 0.23, "x_max": 0.245, "Q2": 4.37, "value": 0.072, "unc": {"default": {"stat": 0.016, "sys": 0.005, "sys_beam": 0.003528}}},
+      {"x_min": 0.245, "x": 0.259, "x_max": 0.276, "Q2": 5.26, "value": 0.049, "unc": {"default": {"stat": 0.017, "sys": 0.004, "sys_beam": 0.002401}}},
+      {"x_min": 0.276, "x": 0.292, "x_max": 0.31, "Q2": 5.53, "value": 0.089, "unc": {"default": {"stat": 0.016, "sys": 0.004, "sys_beam": 0.004361}}},
+      {"x_min": 0.31, "x": 0.329, "x_max": 0.349, "Q2": 6.01, "value": 0.091, "unc": {"default": {"stat": 0.015, "sys": 0.004, "sys_beam": 0.004459}}},
+      {"x_min": 0.349, "x": 0.37, "x_max": 0.393, "Q2": 6.29, "value": 0.076, "unc": {"default": {"stat": 0.014, "sys": 0.004, "sys_beam": 0.003724}}},
+      {"x_min": 0.393, "x": 0.416, "x_max": 0.442, "Q2": 6.56, "value": 0.045, "unc": {"default": {"stat": 0.013, "sys": 0.003, "sys_beam": 0.002205}}},
+      {"x_min": 0.442, "x": 0.468, "x_max": 0.497, "Q2": 6.79, "value": 0.045, "unc": {"default": {"stat": 0.012, "sys": 0.002, "sys_beam": 0.002205}}},
+      {"x_min": 0.497, "x": 0.526, "x_max": 0.559, "Q2": 7.72, "value": 0.043, "unc": {"default": {"stat": 0.011, "sys": 0.002, "sys_beam": 0.002107}}},
+      {"x_min": 0.559, "x": 0.592, "x_max": 0.629, "Q2": 7.97, "value": 0.019, "unc": {"default": {"stat": 0.009, "sys": 0.001, "sys_beam": 0.000931}}},
+      {"x_min": 0.629, "x": 0.666, "x_max": 0.708, "Q2": 9.26, "value": 0.008, "unc": {"default": {"stat": 0.007, "sys": 0.001, "sys_beam": 0.000392}}},
+      {"x_min": 0.708, "x": 0.749, "x_max": 0.791, "Q2": 9.52, "value": 0.009, "unc": {"default": {"stat": 0.005, "sys": 0.001, "sys_beam": 0.000441}}}
+    ]
+  }
+}

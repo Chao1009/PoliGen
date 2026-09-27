@@ -1,0 +1,59 @@
+{
+  "_provenance": {
+    "what": "Two measured static properties of the deuteron -- the asymptotic D/S ratio eta_d and the electric quadrupole moment Q_d -- the reference side of validation/benchmarks/t2_deuteron_static.py (BENCHMARK_PLAN.md tier T2; 02_data_nucleon_deuteron.md sec. 5.2).",
+    "transcription": "SECOND-HAND.  Both numbers are copied from THIS REPOSITORY'S OWN PROSE at git revision f0a8f1e, NOT from the papers: eta_d = 0.0256(4) from docs/benchmarking/02_data_nucleon_deuteron.md sec. 5.2 (line 285, the 'value' row; the reference row is line 284; sec. 10 line 451 repeats the attribution), Q_d = +0.2859(3) fm^2 from include/lipolgen/b1_nuclear.hpp lines 121-128 (the 'THE 100 % BAND IS MANDATORY' block, which cites 'Bishop and Cheung, Phys. Rev. A 20 (1979) 381').  NEITHER SOURCE PAPER WAS RE-READ for this file: both are paywalled and the publishers' hosts were unreachable from the environment that wrote it.  The survey marks the Rodning-Knutson REFERENCE as VERIFIED (its bibliographic record, INSPIRE 312974); it prints the VALUE as a single quoted number.",
+    "source_url": {
+      "eta_d": "https://doi.org/10.1103/PhysRevC.41.898 (as docs/references/REFERENCES.md sec. 1 #30 gives it; not fetched)",
+      "Q_d": "https://doi.org/10.1103/PhysRevA.20.381 (constructed from the citation's journal, volume and page; not fetched, not checked)"
+    },
+    "transcribed_from": [
+      {
+        "quantity": "eta_d",
+        "file": "docs/benchmarking/02_data_nucleon_deuteron.md",
+        "lines": "284-285",
+        "git_rev": "f0a8f1e"
+      },
+      {
+        "quantity": "Q_d",
+        "file": "include/lipolgen/b1_nuclear.hpp",
+        "lines": "121-128",
+        "git_rev": "f0a8f1e"
+      }
+    ],
+    "fetched": "2026-09-26 (the transcription date; nothing was downloaded)",
+    "licence": "The two numbers are measured physical quantities (facts).  The in-tree prose they were copied from is GPL-3.0-or-later, as is this file.  The papers' own terms were not consulted: the papers were not obtained.",
+    "papers": {
+      "eta_d": "N. L. Rodning, L. D. Knutson, 'Asymptotic D-state to S-state ratio of the deuteron', Phys. Rev. C 41 (1990) 898 (INSPIRE 312974); the earlier Phys. Rev. Lett. 57 (1986) 2248 (INSPIRE 1476759) -- as 02_data_nucleon_deuteron.md sec. 5.2 cites them.  Method, per that survey: d + 4He sub-Coulomb tensor analysing powers.  One determination; the survey quotes no world average and none was consulted here.",
+      "Q_d": "D. M. Bishop, L. M. Cheung, Phys. Rev. A 20 (1979) 381 -- as include/lipolgen/b1_nuclear.hpp:127-128 cites it (docs/open_items/run_2026-09-02/design_D_b1_li6.md sec. 4.3 adds 'as used by Ericson & Rosa-Clot').  Title and method are not stated anywhere in the tree; the paper was not re-read."
+    },
+    "publishing_convention": {
+      "eta_d": "Dimensionless: A_D/A_S, the ratio of the asymptotic normalisations of the deuteron's radial S and D waves, u(r) -> A_S exp(-kappa r) and w(r) -> A_D exp(-kappa r) [1 + 3/(kappa r) + 3/(kappa r)^2] as r -> infinity.  Independent of the wave function's overall normalisation.  PER DEUTERON (a property of the bound n-p state).  Positive for the physical deuteron (the relative S-D sign that gives Q_d > 0).",
+      "Q_d": "The electric (spectroscopic, M = J = 1) quadrupole moment of the deuteron in fm^2 (e fm^2 with e = 1), PER DEUTERON.  A MEASURED value, so it contains everything nature puts in it (two-body currents, relativistic corrections), which an impulse-approximation model Q_d omits.",
+      "errors": "The parenthesised digits as the tree prints them, read here as one standard deviation on the last digits: 0.0256(4) -> sigma 0.0004; 0.2859(3) -> sigma 0.0003 fm^2.  Whether the papers quote 1 sigma, and whether statistical or total, was not checked."
+    },
+    "vendored_by": "hand-written 2026-09-26 for t2_deuteron_static.py; the harness re-checks the sha256 of every byte of this file and of the canonical body (json.dumps(body, sort_keys=True, separators=(',', ':'), ensure_ascii=True)) recorded as _body_sha256 on every read."
+  },
+  "_body_sha256": "18f805e529544681f4b793771f0b2011ba540f1333c30a77f8c0979ad6ede849",
+  "body": {
+    "points": [
+      {
+        "quantity": "eta_d",
+        "value": 0.0256,
+        "sigma": 0.0004,
+        "unit": "1",
+        "as_printed": "0.0256(4)",
+        "reference": "Rodning & Knutson, Phys. Rev. C 41 (1990) 898",
+        "transcribed_from": "docs/benchmarking/02_data_nucleon_deuteron.md:285"
+      },
+      {
+        "quantity": "Q_d",
+        "value": 0.2859,
+        "sigma": 0.0003,
+        "unit": "fm^2",
+        "as_printed": "+0.2859(3) fm^2",
+        "reference": "Bishop & Cheung, Phys. Rev. A 20 (1979) 381",
+        "transcribed_from": "include/lipolgen/b1_nuclear.hpp:121-128"
+      }
+    ]
+  }
+}

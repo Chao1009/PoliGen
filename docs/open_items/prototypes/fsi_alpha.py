@@ -36,6 +36,10 @@ Reference numbers this file prints are in the report.
 
 import numpy as np
 
+# numpy < 2.0 spells it np.trapz; >= 2.0 spells it np.trapezoid (and 2.4
+# removed np.trapz), as in vmc_reconcile.py.
+_trapz = getattr(np, "trapezoid", None) or np.trapz
+
 # ----------------------------------------------------------------- units
 GEV_FM = 0.1973269804          # hbar c [GeV fm]
 MB_GEV2 = 1.0 / 0.3893793      # 1 mb = 2.5682 GeV^-2
@@ -101,7 +105,7 @@ def gtilde_alpha(q_gev, sigma_XN_mb, eps=-0.5, B_N_gev2=6.0, nb=2000,
     q = np.atleast_1d(q_gev)
     # b [fm] * q [GeV] -> dimensionless needs q b / GEV_FM
     arg = np.outer(q / GEV_FM, b)
-    integ = 2.0 * np.pi * np.trapz(b[None, :] * j0(arg) * g[None, :], b, axis=1)
+    integ = 2.0 * np.pi * _trapz(b[None, :] * j0(arg) * g[None, :], b, axis=1)
     return integ / GEV_FM**2         # fm^2 -> GeV^-2
 
 

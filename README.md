@@ -219,7 +219,7 @@ its options and their measured cost, in `AUTHOR_DECISIONS.md` (§B12, §B7,
 Dependencies (built from source into `../deps/install` on the development
 machine; any prefix works): HepMC3 ≥ 3.2, LHAPDF ≥ 6.5 with `CT18NLO`,
 `NNPDFpol11_100`, `EPPS21nlo_CT18Anlo_Li6`, PYTHIA ≥ 8.310 (with `--with-python`
-if you want `import pythia8` too), pybind11 ≥ 2.10, Python ≥ 3.10 with numpy.
+if you want `import pythia8` too), pybind11 ≥ 2.12, Python ≥ 3.10 with numpy.
 
 ```bash
 source env.sh                          # sets PATH/LD_LIBRARY_PATH/PYTHIA8DATA/LHAPDF_DATA_PATH/PYTHONPATH

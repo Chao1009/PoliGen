@@ -161,9 +161,13 @@ def test_report_row_shape(rep):
 
 
 def test_verdict_follows_from_the_numbers(rep):
-    from scipy.stats import chi2 as chi2_dist
+    try:
+        from scipy.stats import chi2 as chi2_dist
+        sf = chi2_dist.sf
+    except ImportError:                  # CI: the harness's scipy-free path
+        sf = deeps.chi2_sf
     head = rep["measured"]["waves"]["hulthen"]["lc"]
-    assert head["p"] == pytest.approx(chi2_dist.sf(head["chi2"], head["ndf"]))
+    assert head["p"] == pytest.approx(sf(head["chi2"], head["ndf"]))
     assert rep["status"] == ("pass" if head["p"] >= deeps.P_MIN else "fail")
     for name, s in rep["subrows"].items():
         if "p" in s:

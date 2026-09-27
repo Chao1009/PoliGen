@@ -46,8 +46,12 @@ def _load(name):
 
 
 def _sf(chi2, n):
-    """p(chi2, n), computed HERE (not by the harness)."""
-    from scipy.stats import chi2 as c
+    """p(chi2, n), computed HERE (not by the harness's chi2_sf) -- scipy, or
+    without it (CI) the fallback, itself checked against scipy where present."""
+    try:
+        from scipy.stats import chi2 as c
+    except ImportError:
+        return _load("t1_nmc_f2d").chi2_sf_fallback(chi2, n)
     return float(c.sf(chi2, n))
 
 

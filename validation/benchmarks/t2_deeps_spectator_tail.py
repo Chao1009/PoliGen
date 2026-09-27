@@ -290,10 +290,19 @@ class Tree:
 # ------------------------------------------------------------------ stats
 
 def chi2_sf(chi2, ndf):
-    """Upper-tail probability of chi2 with ndf dof."""
+    """Upper-tail probability of chi2 with ndf dof: scipy if present, else
+    the T1 harnesses' scipy-free `chi2_sf_fallback` (CI has no scipy)."""
     if ndf <= 0:
         return float("nan")
-    from scipy.stats import chi2 as _c
+    try:
+        from scipy.stats import chi2 as _c
+    except ImportError:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "_t1_nmc_f2d", os.path.join(HERE, "t1_nmc_f2d.py"))
+        t1 = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(t1)
+        return t1.chi2_sf_fallback(chi2, ndf)
     return float(_c.sf(chi2, ndf))
 
 

@@ -27,7 +27,7 @@ True PYTHIA True`).
 | gate | measured 18:04–18:12 UTC | the 2026-09-27 machine (no LHAPDF set, PYTHIA 8.312) |
 |---|---|---|
 | `build/lipolgen_tests` | **416 cases / 416 passed / 0 failed / 0 skipped; 17 242 712 assertions, 0 failed** (7 min 28 s) | 416 / 403 / 13 failed — all 13 "Info file not found for PDF set" |
-| `python3 -m pytest python/tests -q` | see `phase_A_baseline.md` (the first run of the supervising chain called `python`, which this machine does not have; re-run with `python3`) | 39 failed / 1209 passed / 163 skipped — all 39 the same cause |
+| `python3 -m pytest python/tests -q` | **1269 passed / 158 skipped / 0 failed** (7 min 47 s; the first run of the supervising chain called `python`, which this machine does not have, and was re-run with `python3`; the `import_pythia8` edit below landed while it ran, so the T4/T6 tests may have seen either state — both pass) | 39 failed / 1209 passed / 163 skipped — all 39 the same cause |
 | `make_report.py --all --compare docs/benchmarking/REPORT.json` | **5 pass / 8 fail / 5 blocked / 0 blocked (environment) / 0 error**, 38 changes — the LHAPDF sub-rows measured for the first time (below); T4 and T6-C14 BLOCKED by the PYTHIA python module (below, fixed) | 6 / 8 / 3 / 1 / 0 |
 
 So the 13 + 39 LHAPDF failures the previous report carried are gone, as

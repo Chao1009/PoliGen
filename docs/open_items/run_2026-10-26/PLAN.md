@@ -58,6 +58,25 @@ nothing is pushed, published or sent.** Three rules of this run's own:
    refused) and the exit-code tests, a `REPORT |` line, `tiers.py` coverage,
    and a header that states the three normalisation rules for that row.
 
+## Figures — one per row, so the report grows a plot at each step
+
+The author asked (2026-10-26) for a benchmarking plot at the end of each
+step where one applies, concise, so that the report is built up
+incrementally. The rule: **every harness whose comparison can be drawn
+implements `plot(report, out_dir)` through `validation/benchmarks/_plots.py`
+(one style: the reference as ink points with errors, each generator
+configuration in its fixed palette slot, a pull or ratio panel where the
+tolerance is a χ², the status in the title) and writes
+`docs/benchmarking/figures/<harness>.png`; `make_report.py --plots` calls it
+after `run()` and links the figure in the row's Detail.** Figures are a view
+of REPORT.json, never a record (PNG bytes are not in `--check`). Applies to:
+every data comparison (T1–T4), the price table (A3: σ ratios per channel and
+backend), the positivity saturation (C2), the Deeps/BONuS shapes, the η/Q_d
+and r_ch comparisons (a dot-and-band plot), the DJANGOH per-bin ratios, the
+PYTHIA closure ratios. Does not apply to: EPIOS/EST (identities at 1e−14),
+weighted/unweighted (one pull), T6 (a clause table). A new worker **P**
+retrofits the figures of the 18 existing harnesses and wires `--plots`.
+
 ## Phase A — the baseline the plan has been asking for since 2026-09-26
 
 - **A0** (done by the supervising session before the workers started;

@@ -398,6 +398,7 @@ by "the radiative correction". Sourced from `01_generators-chain.md`
   The code map — POLRAD, RADGEN, HAPRAD, DIFFRAD, MASCARAD — and the covariant formulae in one place; the document that says which of these codes does what.
 
 > **Not fetched, deliberately:** the **DJANGOH** manual (v4.6.x) is free on the Mainz web page and `01_generators-chain.md` records that ≥ 4.6.10 does polarized NC/CC; the **POLRAD 2.0** FORTRAN source is the CPC Program Library entry `ADGH_v1_0` (a catalogue id, not a paper) and the in-tree source is what `polrad_transcription_check.md` checks against.
+> *(2026-10-26: the DJANGOH 4.6.21 program source and manual — `github.com/spiesber/DJANGOH` at `e356b84`, `djangoh_m-4.6.21.pdf`, sha256 `14804a4d118a7a1b33c0ca9e407c7bfb7a0047aea9e92eb398f1cd73f81df50b`, no licence stated — were cloned, read and built for row 7 (`../open_items/run_2026-10-26/phase_B3_djangoh.md`) and kept outside the repository; the manual's Ref. [38], R. D. Bucoveanu and H. Spiesberger, Eur. Phys. J. A 55 (2019) 57, arXiv:1811.04970, is the elastic radiative tail it codes; not fetched.)*
 
 ---
 

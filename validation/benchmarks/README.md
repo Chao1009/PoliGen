@@ -43,7 +43,7 @@ inputs, `t4_` generator-vs-generator, `t5_` MC closures, `t6_` chain), and each:
    Sub-rows print either as `REPORT | name[config] | …` (`t5_sum_rules`,
    which then prints the row's own line; row 3 prints only its six
    configuration lines) or as `SUBROW | …` (T1, `t2_deuteron_static`); the
-   DJANGOH harness prints its row on a `ROW |` line. **`docs/benchmarking/REPORT.md` and
+   DJANGOH harness (row 7) prints `SUBROW | …` lines and its `REPORT |` line since 2026-10-26 (a `ROW |` line before). **`docs/benchmarking/REPORT.md` and
    `REPORT.json` exist since 2026-09-26** and are generated from the dicts
    `run()` returns, never from the printed lines and never by hand:
 
@@ -91,7 +91,7 @@ preview in `t5_sum_rules`), the header says so.
 `BLOCKED`: its harness exists, and its test skips with a message naming the
 exact document to download (citation and link as in
 `docs/references/REFERENCES.md` §1). A row can also be blocked because the
-comparison it was planned as does not exist (row 7), or because the tree as
+comparison it was planned as does not exist (row 7, until 2026-10-26), or because the tree as
 built cannot define it (`t5_sum_rules[fsi_unitarity]`).
 
 **The opt-in variable.** An expensive row — one that costs more than 30 s, or
@@ -112,7 +112,7 @@ today: `t4_pythia_ep_closure` — its full sample (`test_bench_t4_t6.py::test_t4
 takes 9.2–10.2 s, under the 30 s line, and is opt-in because the plan counts a
 generator-vs-generator sample as expensive, not by its cost — and
 `test_bench_report.py`'s `--check` of the committed report (≈ 45 s). Row 7
-(16.2–16.5 s) is not opt-in, so every other row runs in the ordinary
+(22–26 s, measured 2026-10-26 on a shared 4-core machine; its `--diagnostics` table-vs-quadrature check, ~110 s, is opt-in as `test_bench_djangoh_eltail.py::test_diagnostics_table_vs_quadrature`) is not opt-in, so every other row runs in the ordinary
 `python -m pytest python/tests -q`.
 
 **Environment.**
@@ -157,7 +157,7 @@ column is the row's own verdict; `REPORT.md` has every sub-row.
 | 4 | `t3_nmc_li6_over_d.py` | `hepdata_ins394050_table1.csv` — NMC F₂(⁶Li)/F₂(D), HEPData ins394050 Table 1, CC0 | **PASS** (2026-09-23; blocked (environment) where the sets are missing) | p(χ², ndf) ≥ 0.01 on both sets: **4.6269/4** on x ≥ 0.30 (p = 0.328), **26.941/15** on the 15 on-grid points (p = 0.029); 9 points below the EPPS21 grid reported, not compared | 1.3–1.4 s (2026-09-23) | `test_bench_nuclear.py::test_nmc_*` (4; the table guard runs without the sets) | `phase_B2_nuclear.md` §2 |
 | 5 | `t3_li6_charge_ff_fb.py` | `uva_ncd_fb_data_li6.dat` — the ⁶Li row of the UVa NCD archive's `FB_data.dat` (no licence stated; provenance of the row UNVERIFIED) | **FAIL, recorded** | the C0 zero must lie in [2.6944 (FB zero), 2.8284 (Li *et al.* 1971 minimum)] fm⁻¹: `HoSpin1FF`'s is **3.0998**, **+0.2713 fm⁻¹** above; T11's [2.9, 3.3] not moved (open item Q1). A C0 with no zero below 5 fm⁻¹ is a recorded FAIL, not a crash | 0.11–0.14 s | `test_bench_nuclear.py::test_fb_*` (4) | `phase_B2_nuclear.md` §3 |
 | 6 | `t3_li_magnetization_rfy.py` | *none on disk* — awaits `rfy1966_li_magnetization.csv` (format in the header) | **BLOCKED** | needs Rand–Frosch–Yearian, Phys. Rev. 144 (1966) 859, or de Jager *et al.*, ADNDT 14 (1974) 479 Table V — REFERENCES.md §1 #8, #9. Tree side measured, uncompared: r_mag(⁶Li) = 2.9469 fm | 0.10–0.11 s | `test_bench_nuclear.py::test_rfy_*` (2; one skips naming both) | `phase_B2_nuclear.md` §4 |
-| 7 | `t4_djangoh_rad_noRad.py` | `djangoh_rad_norad_ep18x275.json` — `eic/InclusiveDjangohSamples` at `9869d9a`, four Q² bins, e 18 × p 275 GeV | **BLOCKED — not a benchmark as planned** | none definable: all eight DJANGOH logs have IEL2 = IEL31 = IEL32 = IEL33 = 0 (elastic radiative tail OFF), and `rc_tail` is the elastic (+ nuclear QE) tail only, so the two share no O(α) term. Both sides printed: DJANGOH 1.0725 / 1.0894 / 1.1606 / 1.2280, LiPolGen proton t-peak 1.0162 / 1.0132 / 1.0150 / 1.0207. The samples' W_h ≥ 3 GeV cut also excludes the elastic tail (W_h = M_p) whatever IEL is — DJANGOH's `HSPRLG` zeroes IEL2, IEL31..33 when WMIN > M_p (public source, `github.com/spiesber/DJANGOH` at `e356b84`) — so it unblocks only with a DJANGOH run at IEL31..33 ≠ 0 **and** WMIN ≤ M_p. LiPolGen's W² ≥ 9 cut is on the leptonic W, not on W_h | 16.2–16.5 s | `test_bench_chain_rc.py` (4) | `phase_B3_chain_rc.md` §1 |
+| 7 | `t4_djangoh_rad_noRad.py` | `djangoh_eltail_ep18x275.json` — private DJANGOH 4.6.21 runs (`spiesber/DJANGOH` at `e356b84`; 40 runs, every card verbatim, each log's sha256) of the isolated elastic tail and its Born, e 18 × p 275, four Q² bins; `djangoh_rad_norad_ep18x275.json` — the ePIC table, recorded history | **PASS** | R = σ_tail(LiPolGen)/σ_tail(DJANGOH): `polrad-full` 1.0199 / 1.0261 / 1.0219 / 1.0098 within \|R − 1\| ≤ 0.03 + 2δ_b; shipped `t-peak` 0.6118 / 0.8968 / 1.0112 / 1.0067 within R ≤ 1.03 + 2δ_b (a lower bound); δ_b 3.7–4.8 × 10⁻⁴; control 8/8 ePIC numbers reproduced; the tail table's +1.9 … +2.5 % recorded | 22–26 s | `test_bench_djangoh_eltail.py` (17, one opt-in), `test_bench_chain_rc.py` (4) | `run_2026-10-26/phase_B3_djangoh.md` |
 | 9 | `t5_est_identity.py` | `est_identity_sources.json` — the EST closed form; COMPASS ⁶LiD (Koivuniemi *et al.*, SPIN 2004) | **PASS** | max \|`spin_temperature_pzz(1, P_z)` − (2 − √(4 − 3P_z²))\| = **1.138e-14** over 19 999 interior points, tolerance **2.31e-14** (bisection bound 2.13e-14; the planned 1e-14 does not hold); COMPASS numbers at the printed digit | 0.14–0.16 s | `test_bench_spin_deuteron.py::test_est_*` (6); doctest *"bench row 9: …"* | `phase_B1_spin_deuteron.md` §2 |
 | 10 | `t2_bonus_spectator_shape.py` | `clas_db_deuteron_query_2026-09-23.json` (the CLAS Physics Database catalogue); `clas_deeps_klimenko2006_f2P.json` (Deeps, 115 blocks, vendored, not wired: 60 at the paper's Q² 1.8 / 2.8, 55 with unverified labels, one empty; 60 rows value = stat = 0 are missing, not zeros) | **BLOCKED** | needs Tkachenko *et al.*, PRC 89 (2014) 045206, Supplemental Material (HTTP 401 without an APS login) — REFERENCES.md §1 #59 | 0.03 s | `test_bench_spin_deuteron.py::test_bonus_*` (4; `test_bonus_row_is_blocked_by_name` skips naming it) | `phase_B1_spin_deuteron.md` §4 |
 

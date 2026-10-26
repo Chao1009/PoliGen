@@ -143,6 +143,9 @@ import tempfile
 import time
 import traceback
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from _report import import_pythia8  # noqa: E402  (PYTHIA 8.317 imports only from a cwd without `python/`; see _report.py)
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 DOC = os.path.join(ROOT, "docs", "HEPMC3_CONVENTION.md")
@@ -321,7 +324,7 @@ class ChargeTable:
     the rest.  `None` for a code neither knows (pdg 92, the string)."""
 
     def __init__(self):
-        import pythia8                                   # noqa: WPS433
+        pythia8 = import_pythia8()
         with contextlib.redirect_stdout(io.StringIO()):
             self._py = pythia8.Pythia("", False)
         self._pd = self._py.particleData
@@ -954,7 +957,7 @@ def environment():
     if not getattr(lg, "HAVE_PYTHIA8", False):
         out["t2"] = "environment: lipolgen built without PYTHIA 8 (HAVE_PYTHIA8 false)"
     try:
-        import pythia8                                     # noqa: F401,WPS433
+        import_pythia8()
     except Exception:
         out["charge"] = ("environment: pythia8 Python module (the PDG charge "
                          "table) not importable")

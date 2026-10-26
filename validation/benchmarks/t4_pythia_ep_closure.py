@@ -136,6 +136,10 @@ import math
 import sys
 import time
 import traceback
+import os
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from _report import import_pythia8  # noqa: E402  (PYTHIA 8.317 imports only from a cwd without `python/`; see _report.py)
 
 NAME = "t4_pythia_ep_closure"
 EXPENSIVE = True            # full N costs a generator-vs-generator sample
@@ -202,7 +206,7 @@ def environment():
     if not getattr(lg, "HAVE_PYTHIA8", False):
         return "environment: lipolgen built without PYTHIA 8 (HAVE_PYTHIA8 false)"
     try:
-        import pythia8                                     # noqa: F401,WPS433
+        import_pythia8()
     except Exception:
         return "environment: pythia8 Python module not importable (stock side)"
     return None
@@ -305,7 +309,7 @@ def stock_settings(window, seed, e_a, e_b):
 
 def stock_sample(window, n_events, seed, cuts, beams):
     """Stock PYTHIA e p, selected after the fact into the window."""
-    import pythia8                                         # noqa: WPS433
+    pythia8 = import_pythia8()
     with contextlib.redirect_stdout(io.StringIO()):
         py = pythia8.Pythia("", False)
     p_u, e_e = beams["p_u"], beams["e_e"]

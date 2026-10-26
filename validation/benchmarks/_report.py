@@ -348,3 +348,41 @@ def normalise_row(raw, name):
         subrows=extract_subrows(raw),
         notes=notes,
     )
+
+
+# ------------------------------------------------ PYTHIA 8's Python module
+
+def import_pythia8():
+    """Import PYTHIA 8's own Python module (`pythia8`) from a working
+    directory that has no entry named `python`, and hand it back.
+
+    WHY (measured 2026-10-26, PYTHIA 8.317 built from source with
+    `--with-python-config`): the module's initialiser calls
+    `Pythia8::loadExtraPython` (plugins/python/src/PythiaPython.cpp), which
+    opens the directory literally named "python" RELATIVE TO THE CURRENT
+    WORKING DIRECTORY and `pybind11::exec`s every file it finds there as
+    Python source.  From a LiPolGen checkout that directory is `python/`
+    (bindings.cpp, README.md, the package), so `import pythia8` from the
+    repository root dies in `python/bindings.cpp` with a SyntaxError
+    surfacing as `ImportError: initialization failed` -- and that is where
+    `make_report.py` runs every harness and where pytest runs.  From any
+    other directory the same module imports.  The 2026-09-26 run's
+    conda-forge 8.312 did not show this, so the T4 row and T6's charge
+    clause (C14) read BLOCKED (environment) on this machine until this
+    helper existed.  A PYTHIA bug (the path should be anchored on the
+    module, not the cwd), worked around here and nowhere else: the chdir is
+    a one-time window around the import, restored on every exit path, and a
+    second call returns the already-imported module without any chdir."""
+    import importlib
+    import os
+    import sys
+    import tempfile
+    if "pythia8" in sys.modules:
+        return sys.modules["pythia8"]
+    cwd = os.getcwd()
+    with tempfile.TemporaryDirectory(prefix="lipolgen-pythia8-import-") as d:
+        os.chdir(d)
+        try:
+            return importlib.import_module("pythia8")
+        finally:
+            os.chdir(cwd)

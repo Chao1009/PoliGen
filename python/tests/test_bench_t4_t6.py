@@ -32,6 +32,9 @@ lg = pytest.importorskip("lipolgen")
 
 _ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 _BENCH = os.path.join(_ROOT, "validation", "benchmarks")
+if _BENCH not in sys.path:
+    sys.path.insert(0, _BENCH)
+from _report import import_pythia8  # noqa: E402  (PYTHIA 8.317 imports only from a cwd without `python/`; see _report.py)
 
 
 def _load(name):
@@ -44,7 +47,7 @@ def _load(name):
 
 def _have_pythia8_module():
     try:
-        import pythia8                                     # noqa: F401
+        import_pythia8()
     except ImportError:
         return False
     return True
@@ -182,7 +185,7 @@ def test_t4_smoke_small_n(t4):
     is well formed, follows from its numbers, and ran the configuration its
     header claims (one PYTHIA library, PYTHIA's own PDF, protons only)."""
     _skip_without_pythia_tier("the T4 smoke run")
-    import pythia8
+    pythia8 = import_pythia8()
     rep = t4.run(verbose=False, n_events=200)
     for k in ("name", "generator", "reference", "tolerance", "status"):
         assert k in rep
@@ -267,7 +270,9 @@ def test_t4_full_row_passes_and_is_pinned(t4):
         assert by[key]["ratio"] == pytest.approx(bridge / stock, abs=0.03), key
     assert sum(1 for s in rep["subrows"] if s["compared"]) == 15
     assert not by[("W2", "n_ch_eta[-inf,-2)")]["compared"]
-    assert rep["worst"]["distance"] == pytest.approx(0.023, abs=0.03)
+    # 0.076 measured 2026-10-26 on the PINNED PYTHIA 8.317 (W2 n_ch_eta[-2,0),
+    # a low-count bin); the 2026-09-26 pin was 0.023 on the unpinned 8.312.
+    assert rep["worst"]["distance"] == pytest.approx(0.076, abs=0.03)
     for w in rep["windows"]:
         assert w["match"]["n_sub_kept"] == 16 and w["match"]["n_stock_dropped"] == 0
         assert w["stock"]["n_accepted"] == t4.N_EVENTS

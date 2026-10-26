@@ -252,6 +252,21 @@ def test_row_passes_by_the_declared_rule(dj, row):
     assert len(ver) == 8 and all(s["status"] == "pass" for s in ver)
 
 
+def test_tolerance_constants_match_the_hashed_block(dj, row):
+    """Verification of 2026-10-26: TOL_NUMERICAL and N_DELTA sat outside the
+    hashed block.  Now the block's two "PASS(...) iff" sentences are parsed
+    on every run and must equal the constants; the allowances are pinned."""
+    src = open(os.path.join(_BENCH, _NAME + ".py"), encoding="utf-8").read()
+    i0 = src.index(dj.DESIGN_BEGIN)
+    i1 = src.index(dj.DESIGN_END) + len(dj.DESIGN_END)
+    assert dj.tolerance_from_design_block(src[i0:i1]) == (0.03, 2.0)
+    assert (dj.TOL_NUMERICAL, dj.N_DELTA) == (0.03, 2.0)
+    assert [d["allowance"] for d in row["detail"]] == pytest.approx(
+        [0.0307467, 0.0309598, 0.0308831, 0.0307745], abs=5e-8)
+    assert "0.03 + 2 delta_b" in row["tolerance"]
+    assert "one-sided" in row["tolerance"] and "CEILING" in row["reason"]
+
+
 def test_row_numbers_are_the_measured_ones(row):
     got = row["generator_value"]
     for g, w in zip(got["polrad-full"], R_POLRAD_FULL):
@@ -346,6 +361,19 @@ def test_exit_2_on_an_edited_design_block(tmp_path):
                  encoding="utf-8")
     p = _run_harness(str(h))
     assert p.returncode == 2 and "design block" in p.stderr
+
+
+def test_exit_2_on_an_edited_tolerance_constant(tmp_path):
+    """The constants the verdict uses are read back from the hashed block on
+    every run (they sat outside it until the verification of 2026-10-26)."""
+    d = _copy_bench(tmp_path)
+    h = d / (_NAME + ".py")
+    src = h.read_text(encoding="utf-8")
+    old = "\nTOL_NUMERICAL = 0.03\n"
+    assert src.count(old) == 1
+    h.write_text(src.replace(old, "\nTOL_NUMERICAL = 0.05\n"), encoding="utf-8")
+    p = _run_harness(str(h))
+    assert p.returncode == 2 and "tolerance constants" in p.stderr
 
 
 def test_exit_2_without_numpy(tmp_path):

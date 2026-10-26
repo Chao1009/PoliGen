@@ -565,11 +565,20 @@ def test_a_diff_maps_to_tiers_and_harnesses(tiers):
     assert p["data_changes"] == {} and p["tiers"] == []
     assert any(n.startswith("validation/benchmarks/make_report.py changed")
                for n in p["notes"])
-    # _report.py alone maps to no harness, and still asks for the report to
-    # be regenerated (make_report.py imports it: it shapes every row)
+    # _report.py alone maps to exactly the harnesses that name it (since
+    # 82b3237 `import_pythia8` lives there, so the T4 PYTHIA closure and the
+    # T6 HepMC3 row import it), sets no tier, and still asks for the report
+    # to be regenerated (make_report.py imports it: it shapes every row)
+    bench_dir = os.path.dirname(os.path.abspath(tiers.__file__))
+    importers = sorted(
+        h for h in tiers.harness_files()
+        if "_report" in open(os.path.join(bench_dir, h + ".py"),
+                             encoding="utf-8").read())
+    assert "t4_pythia_ep_closure" in importers
+    assert "t6_hepmc3_convention" in importers
     p = tiers.plan_for(["validation/benchmarks/_report.py"])
-    assert p["helper_changes"] == {"validation/benchmarks/_report.py": []}
-    assert p["harnesses"] == [] and p["tiers"] == []
+    assert p["helper_changes"] == {"validation/benchmarks/_report.py": importers}
+    assert p["harnesses"] == importers and p["tiers"] == []
     assert any(n.startswith("validation/benchmarks/_report.py changed")
                and "regenerate the report" in n for n in p["notes"])
     p = tiers.plan_for(["include/lipolgen/coherent.hpp"])

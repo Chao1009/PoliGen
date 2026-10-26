@@ -19,7 +19,7 @@ vendored.
 | item | verdict |
 |---|---|
 | row 7 | **BLOCKED → PASS.** DJANGOH 4.6.21 was built from the public source and run with its elastic radiative tail isolated (IEL31 + IEL32 + IEL33 on, everything else off, WMIN ≤ M_p) in a window matched to LiPolGen's W_l² ≥ 9 GeV². Against it, LiPolGen's proton tail per Q² bin is R = **1.0199 / 1.0261 / 1.0219 / 1.0098** (`polrad-full`) and **0.6118 / 0.8968 / 1.0112 / 1.0067** (`t-peak`, the shipped default). The tolerance, fixed in the harness header before any run: `polrad-full` \|R − 1\| ≤ 0.03 + 2δ_b, `t-peak` (a lower bound) R ≤ 1.03 + 2δ_b, δ_b = DJANGOH's integration error 3.7 / 4.8 / 4.4 / 3.9 × 10⁻⁴. Both hold in all four bins. |
-| control | **8 / 8 reproduced.** The eight ePIC cards, run on this build, give the ePIC README cross sections to −2.6 × 10⁻⁴ … +4.0 × 10⁻⁴ (\|pull\| ≤ 1.74 against the declared 3σ rule). This DJANGOH is the ePIC DJANGOH. |
+| control | **8 / 8 reproduced.** The eight ePIC cards, run on this build, give the ePIC README cross sections to −2.6 × 10⁻⁴ … +4.0 × 10⁻⁴ (\|pull\| ≤ 1.74 against the declared 3σ rule). So this build reproduces the eight ePIC integrated cross sections (Born and inelastic channels) to ≤ 4 × 10⁻⁴; the elastic-tail channels IEL31–33, which carry the verdict, have no external control (every ePIC card runs them off). |
 | recorded, not in the verdict | Straight from the quadrature (no table) LiPolGen's exact tail is **1.0004 / 1.0010 / 0.9995 / 0.9866** of DJANGOH's. The shipped (x, y) tail table adds **+1.9 … +2.5 %**, all of it from interpolating the tail column. DJANGOH's running α raises its tail by ×1.013 … 1.021. |
 
 ## 1. What was compared, and the design fixed before the runs
@@ -215,10 +215,15 @@ was rerun.
 Observations, all recorded in the file:
 
 - **IEL32 (the elastic FSR mapping) integrates to exactly 0 at Q2MIN ≥ 100
-  GeV².** VEGAS stops after one iteration. The p-peak's elastic vertex sits
-  at Q̃² > Q²_l ≥ 100 GeV², where the dipole is dead. The direct LiPolGen
-  quadrature, which carries the p-peak, agrees with DJANGOH there to 0.05 %
-  and 1.3 % (§5), so no measurable piece is missing.
+  GeV².** VEGAS stops after one iteration. The cause, found by the
+  verification of 2026-10-26 in the source: `HSELK2`
+  (`djangoh_h-4.6.21.f` lines 17470–17474) returns 0 at every point whose
+  hadronic-t range exceeds GS00 = 20 GeV² (`IF(|TSMIN|>GS00 .OR.
+  |TSMAX|>GS00) HSELK2=0`), an undocumented gate — not "the dipole is
+  dead", as this record first said. A rebuild with GS00 = 10⁵ changes IEL32
+  by +0.0146 / +3.0 × 10⁻⁴ / +2.8 × 10⁻⁶ / +2.6 × 10⁻⁸ nb, i.e.
+  +6.2 × 10⁻⁴ / +2.7 × 10⁻⁴ / +5 × 10⁻⁵ / +1.7 × 10⁻⁵ of the bin tail: below
+  every allowance, so the vendored numbers and the verdict stand.
 - **Q2MAX.** A tail run at Q2MAX = Q²_hi returns the Q2MAX = 10⁸ integral
   to every digit, in all four bins. That confirms the source reading behind
   the subtraction. A Born run at Q2MAX = Q²_hi agrees with the subtraction
@@ -270,10 +275,18 @@ then 109.2 s) recomputes the same window integral two more ways:
 | 10³–10⁴ | 1.02349 | 1.03652 | 0.98743 | **0.98661** | 1.02244 | 0.98465 |
 
 Doubling the panels moves the table-route window integrals by at most
-9.2 × 10⁻⁵ (t-peak) and 1.8 × 10⁻⁴ (polrad-full). What the diagnostic shows:
+9.2 × 10⁻⁵ (t-peak) and 1.8 × 10⁻⁴ (polrad-full); the direct route moves
+by 7 × 10⁻¹⁵. What the diagnostic shows:
 
-1. **The two exact calculations agree.** LiPolGen's POLRAD Eq. (18) proton
-   tail is −1.3 … +0.1 % from DJANGOH's HERACLES tail.
+1. **The two exact calculations agree in bins 1–3, to ≤ 0.1 %; bin 4 is
+   −1.34 %.** LiPolGen's POLRAD Eq. (18) proton tail is 1.0004 / 1.0010 /
+   0.9995 / 0.9866 of DJANGOH's HERACLES tail. The bin-4 residual is about
+   34 of DJANGOH's δ and is not numerical on either side as far as tested
+   (verification of 2026-10-26): LiPolGen's η quadrature at n_η 128 → 256
+   gives 0.986608 → 0.986608 and the direct window quadrature with its
+   panels doubled moves by 7 × 10⁻¹⁵; DJANGOH at INT-POINTS 200 000 moves
+   bin 4 by −2 × 10⁻⁴; `HSELK2`'s gate accounts for 1.7 × 10⁻⁵. Its cause
+   is unknown; it is recorded, not explained.
 2. **The whole +2 % is LiPolGen's tail table.** The tail column's
    log-bilinear interpolation between nodes gives ×1.020 … ×1.037. The
    proton table has 101 x edges and 77 y rows: about 18 log rows per decade
@@ -283,9 +296,11 @@ Doubling the panels moves the table-route window integrals by at most
    back 1.3 % of polrad-full's tail.
 4. **t-peak's R > 1 in bins 3–4 is the table's.** Read directly, t-peak is
    0.989 and 0.985 of the exact tail, below it as a lower bound should be.
-5. **The 2 % table allowance was nearly all used.** It was declared before
-   this was known. The measured table shift is 1.9–2.5 %, and bin 2 sits at
-   1.0261 against an allowance of 1.0310.
+5. **The table's shift exceeds the declared 2 % table term in bins 2–4.**
+   The 2 % was declared before this was known; the measured table/direct
+   ratio is +1.95 / +2.51 / +2.24 / +2.35 %, so bins 2–4 pass through the
+   rounding up to 3 %, and bin 2 (1.0261 against 1.0310) nearly used all of
+   it. The declared 3 % held; the 2 % sub-term did not.
 
 **The window.** The strip of the W_l² ≥ 9 window that the rectangle leaves
 out carries 4.7 % / 0.28 % / 4 × 10⁻⁶ / 5 × 10⁻⁶ of LiPolGen's Born. It
@@ -317,19 +332,27 @@ The ranking's ingredient-F row (`08_channel_priority.md` §4) called row 7
 only POLRAD-internal: "within 0.25×–4× of POLRAD's … the polarized QE tail
 is unpriced".
 
-**Now validated.** The physics of the unpolarised proton elastic tail is
-validated externally, for the first time.
+**Checked externally for the first time, with one open residual.** The
+unpolarised proton elastic tail of `PolradFull` now has an external exact
+O(α) comparison — at one beam setting, with one shared dipole form factor.
 
-- **The exact formula is right.** `polrad_full_sigma_qe_u`, POLRAD Eq. (18)
-  in the Eq. (44) slot, agrees with an independent exact O(α) calculation to
-  ≤ 1.3 % over Q² = 1–10⁴ GeV² at 18 × 275.
+- **The exact formula agrees in bins 1–3 to ≤ 0.1 %, and is 1.34 % low in
+  bin 4.** `polrad_full_sigma_qe_u`, POLRAD Eq. (18) in the Eq. (44) slot,
+  straight from the quadrature, is 1.0004 / 1.0010 / 0.9995 / 0.9866 of
+  DJANGOH's IEL31–33 over Q² = 1–10⁴ GeV² at 18 × 275. The bin-4 residual
+  is not numerical on either side as far as tested (§5); its cause is
+  unknown.
 - **This is the core of ⁶Li's quasi-elastic tail.** That tail is the same
   formula, Z × proton + N × neutron, with the Pauli factor. It is 22 % /
   73 % / 99.9 % of the ⁶Li tail at x = 0.01 / 0.10 / 0.30, per
   `include/lipolgen/rc.hpp`'s header.
-- **What a reader can now say:** `PolradFull`'s normalisation has been
-  checked against an external exact tail on the proton. Until now
-  `rc.hpp`'s `RcTailModel::PolradFull` comment, point (3), said it had not.
+- **What a reader can now say:** `PolradFull`'s proton-slot normalisation
+  has been compared with an external exact tail: within 0.1 % at
+  Q² < 10³ GeV², 1.3 % low at 10³–10⁴ GeV². Until now `rc.hpp`'s
+  `RcTailModel::PolradFull` comment, point (3), said no such check existed
+  (the comment is now partly stale, §10). It does not say the formula is
+  right everywhere: one beam, one form factor, no coherent or polarised
+  term, and the shipped table adds +2 % on top.
 
 **Two things this prices without moving anything.** Both are filed as
 candidates below.
@@ -511,12 +534,9 @@ gate cites lines of that file. The licence question below.
 - The four control Born numbers sit +0.2 … +2.5 × 10⁻⁴ above ePIC's,
   attributed to the LHAPDF 5.9.1 → 6.5.5 interpolation of `cteq61` but not
   proven (no LHAPDF 5 here); within the declared 3σ rule.
-- DJANGOH's elastic final-state-radiation channel IEL32 integrates to
-  exactly 0 whenever Q2MIN ≥ 100 GeV² (VEGAS stops after one iteration),
-  consistent with the dipole being dead at the p-peak vertex; LiPolGen's
-  direct quadrature, which includes the p-peak, agrees with DJANGOH there
-  (0.9995, 0.9866). The zero was not traced in the source (`HSELK2`'s
-  phase-space flags).
+- *(closed by the verification, §11)* IEL32 = 0 at Q2MIN ≥ 100 GeV² is
+  `HSELK2`'s GS00 = 20 GeV² gate on the hadronic-t range (§4); its effect
+  on the bin tails is ≤ 6.2 × 10⁻⁴.
 - **Licence:** neither `spiesber/DJANGOH` nor `eic/InclusiveDjangohSamples`
   states one. The vendored file carries numbers plus all 40 input cards
   verbatim, derived from the ePIC runcards, reproduced as facts with
@@ -527,3 +547,37 @@ gate cites lines of that file. The licence question below.
 - Observation, no action: the tail table has two y nodes 1 × 10⁻⁹ apart at
   0.985 (y_max·(1 + 10⁻⁹) and the 0.985 refinement row); `std::unique`'s
   10⁻¹² tolerance does not merge them, leaving a harmless zero-width cell.
+
+## 11. Independent verification (2026-10-26) and what it changed
+
+An adversarial reader (Opus, four lenses: physics, pre-registration
+honesty, code, regression) was run on the row after the worker returned,
+before the B3 commit `372b915` and this record's fixes. Its verdict: **the
+PASS stands as a measurement under its declared tolerance**, with caveats.
+What it confirmed by reading the DJANGOH source and by running: IEL31–33
+together are the full lepton-line matrix element (ISR + FSR + interference +
+Compton) with m_e kept and F₁, F₂ at −t_s; IEL2 is `HSEL22` at x = 1; the
+IEL integrands ignore Q2MAX; WMIN is raised to M_p and the elastic channels
+are zeroed only above it; LPARIN(3) = 2 fixes α; the windows are the same
+rectangle on both sides; the generator applies `1 + tail_ratio_at/(1 +
+w_avg)` so ∫ Born · r is its absolute tail; the design block hashes to the
+pinned digest in the harness, the data file and the design-time copy
+(ctime = mtime, 19:11:53Z), no DJANGOH output exists between the build and
+the first run, no draft carries another tolerance, and every number of §0
+and of the REPORT line reproduces to every digit. Findings and
+dispositions:
+
+| # | finding | disposition |
+|---|---|---|
+| 1 | the executable tolerance (`TOL_NUMERICAL`, `N_DELTA`, `verdict()`, the tolerance string) sat outside the hashed block: a copy with 0.05 ran, passed the hash check and still printed "0.03 + 2 delta_b"; no sign of tuning (every draft 0.03 / 2.0; the first harness run at 19:27:45Z printed the final R) | **fixed:** `design_block_sha256()` now parses the block's two "PASS(…) iff" sentences and exits 2 if the constants differ; the tolerance text is built from the constants; the four allowances 0.0307467 / 0.0309598 / 0.0308831 / 0.0307745 and the edited-constant refusal are pinned in tests |
+| 2 | the cause given for IEL32 = 0 ("the dipole is dead") was wrong: `HSELK2` has an undocumented GS00 = 20 GeV² gate on the hadronic-t range; a patched rebuild sizes its effect at ≤ 6.2 × 10⁻⁴ of a bin tail | **fixed** in §4, §10.2 and the harness addenda; the verdict unchanged |
+| 3 | bin 4's −1.34 % direct residual is real (34 δ) and unexplained; "now validated", "the exact formula is right", "the two exact calculations agree" were overstated | **fixed:** §5 item 1 and §6 now state 0.1 % in bins 1–3, −1.34 % in bin 4, cause unknown, one beam, one form factor |
+| 4 | "the 2 % table allowance was nearly all used" was wrong: the table's shift (+1.95 / +2.51 / +2.24 / +2.35 %) exceeds the 2 % term in bins 2–4; bin 2 passes through the rounding to 3 % | **fixed** in §5 item 5 and the harness header |
+| 5 | "this DJANGOH is the ePIC DJANGOH" overstated: every control card runs IEL2–IEL33 off, so the elastic-tail code has no external control; LHAPDF 5.9.1 → 6.5.5 differs | **fixed** in §0 and the harness header |
+| 6 | the t-peak half of the PASS cannot fail low (pre-registered as a one-sided ceiling, so no rule broken), and through the table t-peak sits above the exact tail in bins 3–4 | **wording fixed** in the REPORT reason, the plan row, the README row and STATUS: PASS = polrad-full two-sided; t-peak ceiling only, 39 % / 10 % low at Q² < 100 GeV² |
+| 7 | design block (b)'s "three phase-space mappings of ONE squared matrix element" is loose (1/A1, 1/A2, 1/t_s partial fractions, interference through 1/(A1 + A2)) | addendum under the block (the block is hashed); the conclusion stands |
+| 8 | the pre-declared fallback "rerun at INT-POINTS 400000" cannot run on this build (VEGAS's grid array is dimensioned 50; 200 000 runs); never triggered | noted in the harness addenda |
+| 9 | unrelated: `test_bench_report.py::test_a_diff_maps_to_tiers_and_harnesses` fails since `82b3237` (`_report.py` now maps to the harnesses that import `import_pythia8`) | **fixed:** the test now expects exactly the harnesses that name `_report` |
+
+The verifier's scripts, reruns and the GS00-patched build are in the
+session scratchpad (`verify_b3/`), outside the repository.

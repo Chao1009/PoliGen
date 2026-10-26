@@ -186,6 +186,31 @@ numbers are, with every input card verbatim.
     the verdict.
 ==== DESIGN BLOCK END ====
 
+ADDENDA (2026-10-26, after an independent adversarial verification of the
+row; the block above is hashed and stays as written):
+  * (b)'s "three phase-space mappings of ONE squared matrix element" is
+    loose.  In the source IEL31, IEL32 and IEL33 are the 1/A1, 1/A2 and
+    1/t_s partial-fraction pieces of that one squared matrix element
+    (HSELK1, HSELK2, HSELCO), each integrated with its own mapping, the
+    interference split through the 1/(A1 + A2) terms.  "Only their sum is
+    physical" stands.
+  * HSELK2 (djangoh_h-4.6.21.f, lines 17470-17474) zeroes the FSR piece at
+    every point whose hadronic-t range exceeds GS00 = 20 GeV^2 -- an
+    undocumented gate, and the cause of IEL32 = 0 at Q2MIN >= 100 GeV^2
+    (not "the dipole is dead").  A rebuild with GS00 = 1e5 changes IEL32 by
+    +0.0146 / +3.0e-4 / +2.8e-6 / +2.6e-8 nb, i.e. +6.2e-4 / +2.7e-4 / +5e-5
+    / +1.7e-5 of the bin tail: below every allowance; not vendored; the
+    verdict unchanged.
+  * (d)'s fallback "rerun at INT-POINTS 400000" cannot run on this build:
+    VEGAS's grid array is dimensioned 50 and the run aborts at 400000 points
+    (200000 runs).  It was never triggered (delta_b <= 4.8e-4).
+  * TOL_NUMERICAL and N_DELTA (the module constants the verdict uses) sat
+    outside the hashed block; since this addendum `design_block_sha256()`
+    also READS the tolerance back from the block's two "PASS(...) iff"
+    sentences (`tolerance_from_design_block`) and refuses to run (exit 2)
+    if the constants differ from it.  The REPORT line's tolerance text is
+    built from the constants.
+
 WHAT WAS MEASURED (2026-10-26; docs/open_items/run_2026-10-26/
 phase_B3_djangoh.md has every command and runtime)
 -----------------------------------------------------------------------------
@@ -205,7 +230,12 @@ RECORDED BESIDE IT, never in the verdict:
   * WHERE THE 2 % COMES FROM (`--diagnostics`, ~110 s).  Straight from the
     quadrature (`RcModel.tail_sigma_at`, no table, no clip) the polrad-full
     proton tail is R = 1.0004 / 1.0010 / 0.9995 / 0.9866 of DJANGOH's: the
-    two exact calculations agree to <= 1.3 %.  The shipped (x, y) TABLE --
+    two exact calculations agree to <= 0.1 % in bins 1-3, and bin 4's
+    -1.34 % (34 DJANGOH sigma) is NOT numerical on either side as far as
+    tested (verification 2026-10-26: LiPolGen's eta quadrature at n_eta 256
+    and the direct route with its panels doubled move it < 1e-6; DJANGOH at
+    200000 points moves it 2e-4; HSELK2's gate 1.7e-5) -- cause unknown,
+    recorded.  The shipped (x, y) TABLE --
     what the generator weights events with -- lifts the window integral by
     +1.9 / +2.5 / +2.2 / +2.3 % (polrad-full) and +2.1 / +2.2 / +2.2 /
     +2.2 % (t-peak), so the verdict's polrad-full margin is mostly the table
@@ -215,8 +245,9 @@ RECORDED BESIDE IT, never in the verdict:
     x1.037), not the Born's (<= 0.1 %); in bin 4 the `tail_max` = 10 clip
     takes 1.3 % of polrad-full's back.  The 2 % allowance for the table was
     chosen before this was known; the table's measured shift is 1.9-2.5 %,
-    so the declared 3 % was nearly all needed (bin 2: 1.0261 against
-    1.0310).  The table route's quadrature moves <= 1.8e-4 when its panels
+    which EXCEEDS that 2 % term in bins 2-4: those bins pass through the
+    rounding up to 3 %, and bin 2 (1.0261 against 1.0310) nearly used all
+    of it.  The table route's quadrature moves <= 1.8e-4 when its panels
     are doubled.
   * DJANGOH with running alpha (LPARIN(3) = 3, the ePIC value): the tail
     rises by x1.0152 / 1.0133 / 1.0151 / 1.0206 -- vacuum polarisation at
@@ -231,7 +262,10 @@ RECORDED BESIDE IT, never in the verdict:
   * The control: all eight ePIC numbers reproduce within the declared
     3-sigma rule (ratio - 1 from -2.6e-4 to +4.0e-4, |pull| <= 1.74; the
     four Born numbers sit +0.2e-4 ... +2.5e-4 high, the LHAPDF 5 -> 6
-    interpolation's size).  This build is the ePIC DJANGOH.
+    interpolation's size).  So this build reproduces the eight ePIC
+    integrated cross sections (Born and inelastic channels) to <= 4e-4;
+    the elastic-tail channels IEL31..33, which carry the verdict, have no
+    external control (every ePIC card runs them off).
   * LiPolGen's OWN Born in the matched window is x1.469 / 1.116 / 1.155 /
     1.065 DJANGOH's (Toy SF vs CTEQ6.1M), so its own-Born fraction differs
     from the compared one by that factor; the 2026-09-23 history numbers
@@ -300,6 +334,7 @@ import hashlib
 import json
 import math
 import pathlib
+import re
 import sys
 import traceback
 import time
@@ -391,9 +426,28 @@ def load_reference(path=DATA):
     return doc, rows
 
 
+_TOL_FULL_RE = re.compile(
+    r"PASS\(polrad-full\)\s+iff\s+\|R_b - 1\| <= ([0-9.]+) \+ ([0-9.]+) delta_b")
+_TOL_TPK_RE = re.compile(
+    r"PASS\(t-peak\)\s+iff\s+R_b <= 1 \+ ([0-9.]+) \+ ([0-9.]+) delta_b")
+
+
+def tolerance_from_design_block(block):
+    """(tol_numerical, n_delta) as the hashed DESIGN BLOCK states them in its
+    two "PASS(...) iff" sentences, which must agree -- RuntimeError
+    otherwise.  The verdict's constants are checked against this on every
+    run (verification of 2026-10-26: they sat outside the hashed text)."""
+    m_full, m_tpk = _TOL_FULL_RE.search(block), _TOL_TPK_RE.search(block)
+    if m_full is None or m_tpk is None or m_full.groups() != m_tpk.groups():
+        raise RuntimeError("the design block's two PASS(...) iff sentences "
+                           "do not state one tolerance")
+    return float(m_full.group(1)), float(m_full.group(2))
+
+
 def design_block_sha256(source=None):
     """sha256 of the DESIGN BLOCK of this file's header (both marker lines
-    included) -- RuntimeError unless it is `DESIGN_BLOCK_SHA256`."""
+    included) -- RuntimeError unless it is `DESIGN_BLOCK_SHA256` AND the
+    block's stated tolerance equals (TOL_NUMERICAL, N_DELTA)."""
     text = (pathlib.Path(__file__).read_text(encoding="utf-8")
             if source is None else source)
     i0 = text.index(DESIGN_BEGIN)
@@ -403,6 +457,12 @@ def design_block_sha256(source=None):
         raise RuntimeError("the header's design block sha256 %s != recorded "
                            "%s: the design or the tolerance was edited"
                            % (got, DESIGN_BLOCK_SHA256))
+    stated = tolerance_from_design_block(text[i0:i1])
+    if stated != (TOL_NUMERICAL, N_DELTA):
+        raise RuntimeError("the tolerance constants (TOL_NUMERICAL, N_DELTA) "
+                           "= %r differ from the hashed design block's %r: "
+                           "the tolerance constants were edited"
+                           % ((TOL_NUMERICAL, N_DELTA), stated))
     return got
 
 
@@ -902,19 +962,24 @@ def run(tail_models=TAIL_MODELS, verbose=True):
                  "window: %s; control reproduces the 8 ePIC numbers: %d/8" % (
                      " / ".join("%.5f" % d["djangoh_fraction"] for d in detail),
                      sum(1 for c in control if c["reproduced"])))
-    tolerance = ("polrad-full: abs(R - 1) <= 0.03 + 2 delta_b each bin; "
-                 "t-peak (a lower bound): R <= 1.03 + 2 delta_b each bin; "
-                 "delta_b = DJANGOH's relative integration error (%s)" %
-                 " / ".join("%.1e" % b["delta"] for b in bins))
+    tolerance = ("polrad-full: abs(R - 1) <= %g + %g delta_b each bin; "
+                 "t-peak (a one-sided ceiling; the tree calls it a lower "
+                 "bound): R <= %g + %g delta_b each bin; delta_b = DJANGOH's "
+                 "relative integration error (%s)" % (
+                     TOL_NUMERICAL, N_DELTA, 1.0 + TOL_NUMERICAL, N_DELTA,
+                     " / ".join("%.1e" % b["delta"] for b in bins)))
     fails = [v for v in ver if not v["pass"]]
     if status == "pass":
-        reason = ("the exact O(alpha) lepton-line elastic tail on a proton: "
-                  "LiPolGen polrad-full within 3 %% + 2 delta of DJANGOH in "
-                  "all four bins (R %s); the shipped t-peak inside its "
-                  "lower-bound test (R %s; the R > 1 is the tail table's "
-                  "+2 %%, --diagnostics)" % (
+        reason = ("polrad-full (two-sided) within %g %% + %g delta of "
+                  "DJANGOH's exact O(alpha) proton elastic tail in all four "
+                  "bins (R %s); the shipped t-peak passes its one-sided "
+                  "CEILING only (R %s): it is %.0f %% / %.0f %% below the "
+                  "exact tail at Q2 = 1-10 / 10-100 GeV2, and its R > 1 in "
+                  "bins 3-4 is the tail table's +2 %% (--diagnostics)" % (
+                      100.0 * TOL_NUMERICAL, N_DELTA,
                       " / ".join("%.4f" % r for r in r_full),
-                      " / ".join("%.4f" % r for r in r_tpk)))
+                      " / ".join("%.4f" % r for r in r_tpk),
+                      100.0 * (1.0 - r_tpk[0]), 100.0 * (1.0 - r_tpk[1])))
     else:
         reason = "; ".join(
             "%s %s: R = %.4f outside %s" % (v["model"], _bin_label(bins[v["bin"]]),

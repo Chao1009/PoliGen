@@ -67,7 +67,7 @@ file is recorded below (`DATA_SHA256`, `R1990_SHA256`, taken from the files
 as committed at f0a8f1e) and re-checked on EVERY read: an altered table is
 refused with a RuntimeError, so `__main__` exits 2, never 0 on moved numbers.
 
-Run:  source env.sh && python3 validation/benchmarks/t2_hermes_b1_table2.py
+Run:  source env.sh && python3 validation/benchmarks/t2_hermes_b1_table2.py [--plot]
 
 Exit status (validation/benchmarks/README.md): 0 when the harness ran and
 printed its REPORT row -- pass, recorded fail and blocked alike, since the
@@ -265,11 +265,78 @@ def run(verbose=True):
     return report
 
 
+# ------------------------------------------------------------------ figure
+
+#: the figure's palette slot, marker and legend name of each configuration
+#: (the null baseline b1 = 0 is drawn as the zero line, not as a series)
+PLOT_SLOTS = {
+    "miller_shipped": ("default", "D", "Miller x 0.5 (shipped)"),
+    "miller_x1": ("alt3", "o", "Miller x 1 (row 2's option)"),
+    "cdks_conv_mstw": ("mstw", "s", "CDKS conv., MSTW (A = 2 gate)"),
+    "cdks_conv_default": ("alt", "^", "CDKS conv., ToyF2"),
+    "cdks_digitized": ("alt2", "v", "CDKS Fig. 4, digitized"),
+}
+
+
+def plot(report, out_dir=None):
+    """x b1^d per nucleon in HERMES's six bins (ink, stat (+) syst), each
+    configuration's b1 at the bin's own (<x>, <Q2>) as a marker in its slot
+    colour (side by side), the null baseline b1 = 0 as the zero line, over
+    the per-bin pulls (model - data)/sigma with the tolerance |pull| <= 1
+    shaded.  x b1 rather than b1 so that all six bins are readable; x is
+    the bin's, so each pull is b1's.  A_zz is in the row, not drawn."""
+    if HERE not in sys.path:
+        sys.path.insert(0, HERE)
+    from _plots import BAND, MUTED, new_figure, save, status_title, style_series
+    bins, configs = report["per_bin"], report["configs"]
+    xs = [p["x"] for p in bins]
+    fig, (ax, axp) = new_figure(two_panel=True)
+    axp.axhspan(-1.0, 1.0, color=BAND, alpha=0.8, linewidth=0, zorder=1)
+    ax.axhline(0.0, color=MUTED, linewidth=1.0, linestyle="--", zorder=2,
+               label="b1 = 0 (null baseline): %.2f/%d"
+               % (configs["null_b1_zero"]["chi2_b1"], configs["null_b1_zero"]["ndf"]))
+    ax.errorbar(xs, [p["x"] * p["data"]["b1"] for p in bins],
+                yerr=[p["x"] * p["data"]["b1_err"] for p in bins],
+                **style_series("reference", label="HERMES 2005 Table II (stat (+) syst)"))
+    for k, (n, (slot, mk, label)) in enumerate(PLOT_SLOTS.items()):
+        c = configs[n]
+        if c["status"] == "blocked":
+            continue
+        dodge = 10 ** (0.03 * (k - 2))        # side by side at each bin
+        ax.plot([x * dodge for x in xs], [p["x"] * p["b1"][n] for p in bins],
+                **style_series(slot, label="%s: %.2f/%d, %d/%d in"
+                               % (label, c["chi2_b1"], c["ndf"], c["within_b1"],
+                                  c["ndf"]), marker=mk))
+        pk = style_series(slot, marker=mk)
+        pk.update(label="_nolegend_", markersize=5)
+        axp.plot([x * dodge for x in xs],
+                 [(p["b1"][n] - p["data"]["b1"]) / p["data"]["b1_err"] for p in bins],
+                 **pk)
+    ax.set_xscale("log")
+    ax.set_ylabel("x b1^d (per nucleon)")
+    lo, hi = ax.get_ylim()
+    ax.set_ylim(lo - 0.75 * (hi - lo), hi)  # room for the legend below the data
+    ax.legend(loc="lower center", ncol=2, fontsize=7,
+              title="chi2(b1)/ndf, bins within tolerance", title_fontsize=7)
+    axp.set_xlabel("<x> of the HERMES bin (each at its own <Q2>, 0.51-4.69 GeV^2)")
+    axp.set_ylabel("(model - data)/sigma")
+    h = configs[report["headline"]]
+    status_title(fig, NAME, report["status"],
+                 "tolerance: every bin within stat (+) syst (grey band); headline "
+                 "%s %.2f/%d, %d/%d bins within" % (
+                     report["headline"], h["chi2_b1"], h["ndf"], h["within_b1"],
+                     h["ndf"]))
+    return save(fig, NAME, out_dir)
+
+
 if __name__ == "__main__":
     # Exit convention (module docstring, validation/benchmarks/README.md):
     # 0 = ran and printed its REPORT row, whatever the verdict; 2 = broken.
+    # `--plot` also writes the row's figure (plot()); the same rule holds.
     try:
-        run()
+        rep = run()
+        if "--plot" in sys.argv[1:]:
+            print("figure: %s" % plot(rep))
     except Exception:  # any exception means the harness itself is broken
         traceback.print_exc()
         sys.exit(2)

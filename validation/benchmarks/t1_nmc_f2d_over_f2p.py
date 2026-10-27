@@ -10,7 +10,16 @@ Phys. B 487 (1997) 3, hep-ex/9611022; HEPData ins426595 tables 2-21 (CC0),
 from the nnpdf-data 4.1.5 wheel (set NMC_NC_NOTFIXED) by
 `vendor_nnpdf_commondata.py` into `data/nnpdf_NMC_NC_NOTFIXED.json` (its
 `_provenance` block: wheel URL and sha256, paths inside the wheel, HEPData /
-INSPIRE record, licences).  Against it, at each point's OWN (x, Q2):
+INSPIRE record, licences).  [READ 2026-10-26 (the arXiv copy,
+refs/hep-ex_9611022.pdf of the sibling corpus): 260 of 260 points equal the
+paper's Table 3 (arXiv PDF pp. 15-20) in x, Q2, ratio, stat and syst;
+"structure functions are always given per nucleon" (PDF p. 4).  WHICH R:
+none enters the ratio -- "As Delta R is compatible with zero we have taken
+the structure function ratio, F2d/F2p, to be equal to the cross section
+ratio" (Sect. 6, PDF p. 11), i.e. Rd = Rp; an absolute R (R1990, its ref.
+[11]) enters only the radiative corrections, beside NMC's F2p
+parametrisation PLB 364 (1995) 107 (Sect. 3.1, PDF p. 6).]  Against it, at
+each point's OWN (x, Q2):
 
     R_tree(x, Q2) = [(F2p + F2n)/2] / F2p = (1 + F2n/F2p)/2     (THE VERDICT)
 
@@ -44,7 +53,21 @@ variants, both vendored as given:
   'legacy':  the same stat + five ADD/CORR components sys_corr_1..5, NNPDF's
       port of its pre-HEPData commondata; their quadrature sum matches the
       hepdata 'sys' to <= 6.3e-4 absolute.  The five sources are not named
-      in the file (UNVERIFIED).
+      in the file (2026-09-26: UNVERIFIED) -- IDENTIFIED 2026-10-26: they
+      are the paper's Table 3 columns 6-10 in order (arXiv PDF p. 15), each
+      a percentage times the central value, signs kept, at all 260 points:
+      VX (vertex-resolution correction), SM (kinematic resolution), RC
+      (radiative corrections and the functional form of the ratio), E and E'
+      (incident and scattered muon momenta).  The paper calls the radiative,
+      vertex, smearing and functional-form errors fully correlated between
+      its eleven data sets (Sect. 3.3, PDF p. 8); NNPDF's CORR across all
+      points is NNPDF's extension of that, as before.
+  NORMALISATION (2026-10-26, read): the ratio's own normalisation error is
+      < 0.1 % (target densities and lengths, Sect. 3.3, PDF p. 8), with no
+      additional normalisation at the 0.15 % level (Sect. 5, PDF p. 10); it
+      is not in 'sys' (Table 3's syst is the quadrature of VX, SM, RC, E,
+      E') and is negligible against the 0.4 % average systematic (PDF
+      p. 11).
 THE VERDICT is the DIAGONAL chi2 on the 'hepdata' variant, stat (+) sys in
 quadrature per point (the systematic treated as uncorrelated).  RECORDED,
 never in the verdict: the full-covariance chi2, C = diag(UNCORR^2) +
@@ -60,7 +83,11 @@ errors, ndf = number of points.  The row's STATUS is the shipped default's
 AFTER the plan scout's previews had been seen (scout, 2026-09-26, all 260
 points, diagonal: ToyF2 chi2 = 2252, MSTW 298 Q2-dependent and 310 with the
 frozen hook); stated here so that it can be argued with, not tuned.  A FAIL
-of the toy is RECORDED with its distance and moves nothing.
+of the toy is RECORDED with its distance and moves nothing.  PREVIEWED
+2026-10-26 (phase 0, the first run with the LHAPDF sets installed), before
+this header was revised: the ct18nlo sub-row PASSES, 215.5/189 (p = 0.090)
+on its own floor Q2 >= 1.677; the tolerance is the 2026-09-26 one,
+unchanged.
 
 THE THREE NORMALISATION RULES (BENCHMARK_PLAN.md sec. 8), for THIS row:
   1. b1 normalisations / A-scaling -- NOT APPLICABLE: no b1; no A-scaling
@@ -73,10 +100,13 @@ THE THREE NORMALISATION RULES (BENCHMARK_PLAN.md sec. 8), for THIS row:
      denominator is the free proton, because that is what NMC divided by.
   3. per nucleus / per nucleon -- a RATIO of PER-NUCLEON structure functions
      on both sides: ~1 at small x (0.98 at x = 0.0015), which a per-deuteron
-     numerator would put near 2.  Not like for like in one respect, stated
-     rather than corrected: NMC's numerator is the DEUTERON's F2 (nuclear
-     effects included; not corrected -- UNVERIFIED offline), the tree's the
-     free isoscalar nucleon.
+     numerator would put near 2 (the paper: "always given per nucleon", PDF
+     p. 4).  Not like for like in one respect, stated rather than
+     corrected: NMC's numerator is the DEUTERON's F2 (nuclear effects
+     included; not corrected -- READ 2026-10-26: F2n/F2p = 2 F2d/F2p - 1 is
+     formed "neglecting nuclear effects in the deuteron", and shadowing and
+     the EMC effect are discussed as possible deviations, Sect. 6, PDF
+     pp. 11-12), the tree's the free isoscalar nucleon.
 
 WHAT THIS DOES NOT VALIDATE.  F2n/F2p itself at x -> 1 (the deuteron's
 nuclear effects are not unfolded, and the data stop at x = 0.675), Rd - Rp
@@ -87,7 +117,7 @@ and of its canonical body (`BODY_SHA256`, also recorded inside the file)
 are re-checked on EVERY read: an altered table is refused with a
 RuntimeError, so `__main__` exits 2, never 0 on moved numbers.
 
-Run:  source env.sh && python3 validation/benchmarks/t1_nmc_f2d_over_f2p.py
+Run:  source env.sh && python3 validation/benchmarks/t1_nmc_f2d_over_f2p.py [--plot]
 
 Exit status (validation/benchmarks/README.md): 0 when the harness ran and
 printed its REPORT row -- pass, recorded fail and blocked alike, since the
@@ -469,11 +499,77 @@ def run(path=None, verbose=True):
     return report
 
 
+# ------------------------------------------------------------------ figure
+
+#: the figure's palette slot and legend name of each configuration
+PLOT_SLOTS = {"toy": ("default", "ToyF2 (shipped)"),
+              "mstw": ("mstw", "MSTW2008 LO"),
+              "ct18nlo": ("ct18nlo", "CT18NLO (LO formula)")}
+
+
+def plot(report, out_dir=None):
+    """F2d/F2p vs x: the DIS-cut points (ink, 'hepdata' stat (+) sys; the
+    points outside the cut hollow and grey), each evaluated backend's
+    verdict ratio (1 + F2n/F2p)/2 at the point's own (x, Q2) as a tick in
+    its slot colour, over the verdict chi2's pulls (theory - data)/sigma.
+    The Q2-frozen hook's ratios are recorded in the row, not drawn.  A view
+    of the row; a blocked configuration is left out (its reason is in it)."""
+    if HERE not in sys.path:
+        sys.path.insert(0, HERE)
+    from _plots import MUTED, new_figure, save, status_title, style_series
+    pts, configs = report["points"], report["configs"]
+    fig, (ax, axp) = new_figure(two_panel=True)
+    cut = [p for p in pts if dis_cut(p)]
+    out = [p for p in pts if not dis_cut(p)]
+    ax.errorbar([p["x"] for p in cut], [p["value"] for p in cut],
+                yerr=[p["err"] for p in cut], **style_series(
+                    "reference", label="NMC F2d/F2p (stat (+) sys)"))
+    if out:
+        kw = style_series("reference", label="outside the DIS cut (not compared)")
+        kw.update(color=MUTED, markerfacecolor="none", zorder=4)
+        ax.errorbar([p["x"] for p in out], [p["value"] for p in out],
+                    yerr=[p["err"] for p in out], **kw)
+    for k, n in enumerate(CONFIGS):
+        c = configs[n]
+        if c["status"] == "blocked":
+            continue
+        slot, label = PLOT_SLOTS[n]
+        sel = [j for j, p in enumerate(pts) if dis_cut(p, c["q2_floor"])]
+        kw = style_series(slot, label="%s: %.1f/%d" % (label, c["dis"]["chi2"],
+                                                      c["dis"]["n"]))
+        kw.update(marker="_", linestyle="none", markersize=8, markeredgewidth=1.6)
+        ax.plot([pts[j]["x"] for j in sel], [c["theory"][j] for j in sel], **kw)
+        dodge = 10 ** (0.025 * (k - 1))       # side by side in the pull panel
+        pk = style_series(slot, marker="o")
+        pk.update(markersize=2.5, label="_nolegend_")
+        axp.plot([pts[j]["x"] * dodge for j in sel],
+                 [(c["theory"][j] - pts[j]["value"]) / pts[j]["err"] for j in sel],
+                 **pk)
+    q2s = [p["q2"] for p in cut]
+    ax.set_xscale("log")
+    ax.set_ylabel("F2d / F2p (per nucleon)")
+    ax.legend(loc="lower left", ncol=1, fontsize=7)
+    axp.set_xlabel("x (each point at its own Q2, %g <= Q2 <= %g GeV^2)"
+                   % (min(q2s), max(q2s)))
+    axp.set_ylabel("(th - data)/sigma")
+    h = configs[HEADLINE]
+    status_title(fig, NAME, report["status"],
+                 "ToyF2: %.1f/%d (p = %.2g); tolerance p >= %g on Q2 >= %g, "
+                 "W2 >= %g GeV^2, stat (+) sys diagonal"
+                 % (h["dis"]["chi2"], h["dis"]["n"], h["dis"]["p"], P_MIN, Q2_CUT,
+                    W2_CUT))
+    return save(fig, NAME, out_dir)
+
+
 def main(argv=None):
     # Exit convention (module docstring, validation/benchmarks/README.md):
     # 0 = ran and printed its REPORT row, whatever the verdict; 2 = broken.
+    # `--plot` also writes the row's figure (plot()); the same rule holds.
+    argv = sys.argv[1:] if argv is None else argv
     try:
-        run()
+        rep = run()
+        if "--plot" in argv:
+            print("figure: %s" % plot(rep))
     except Exception:  # any exception means the harness itself is broken
         traceback.print_exc()
         return 2

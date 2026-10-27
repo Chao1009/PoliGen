@@ -220,3 +220,14 @@ def test_harness_exit_zero_and_report_line():
     assert len(lines) == 1
     assert lines[0].startswith("REPORT | t2_deeps_spectator_tail | ")
     assert lines[0].endswith("| FAIL")
+
+
+def test_t2_deeps_spectator_tail_plot_writes_png(rep, tmp_path):
+    """plot() draws the row's figure -- a view of the report, never the
+    record -- as a non-empty PNG where it is told to (here a tmp dir)."""
+    pytest.importorskip("matplotlib", reason="matplotlib (the figure only)")
+    path = deeps.plot(rep, out_dir=str(tmp_path))
+    assert path == os.path.join(str(tmp_path), "t2_deeps_spectator_tail.png")
+    with open(path, "rb") as f:
+        assert f.read(8) == b"\x89PNG\r\n\x1a\n"
+    assert os.path.getsize(path) > 0

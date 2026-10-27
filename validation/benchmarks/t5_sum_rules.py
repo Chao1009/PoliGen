@@ -96,15 +96,15 @@ isovector flavour plumbing.
     https://files.pythonhosted.org via https://pypi.org/project/pdg/, wheel
     sha256 681e11f8c9a5accb1cb41ccb87bf7efd398adec8ea39ddb894630b17b45c8e8a;
     data licence CC BY 4.0 per its pdginfo table, package Modified BSD;
-    pdg.lbl.gov itself answers 403 through this machine's proxy):
+    pdg.lbl.gov answered 403 to the 2026-09-26 machine's proxy):
       S017AV  lambda = g_A/g_V = -1.2753 +- 0.0013 (S = 2.7; sign dropped
               here, Gamma_1^{p-n} > 0 is g_A/6 with g_A = |lambda|);
       S044M   M_Z = 91.1879 +- 0.0020 GeV;
       Q005M   m_b(m_b) = 4.186 +- 0.006 GeV;  Q004M  m_c(m_c) = 1.2729 +-
               0.0045 GeV (MS-bar; summary-table values).
-    alpha_s(M_Z) = 0.1180 +- 0.0009 is NOT in that database (it lives in the
-    QCD review): it is the PDG 2024 world average as the author knows it,
-    NOT re-read, and is the least verified input of the row.
+    alpha_s(M_Z) = 0.1180 +- 0.0009, not in that database, VERIFIED 2026-10-26
+    in PDG 2026 itself: Table 1.1 "0.1180(9)" and the QCD review, Eq. (9.25),
+    p. 42 (sources, digests: run_2026-10-26/phase_D_inputs.md sec. 3).
 
     LhapdfG1 NOTE, for when the set is installed (never run here): LhapdfG1
     is LO g1 (no coefficient functions), so its first moment is a3/6 WITHOUT
@@ -177,7 +177,7 @@ evaluated sub-row fails, pass if all evaluated pass, blocked if none was
 evaluated", and the failing sub-row is the shipped toy's Bjorken integral,
 not the WW implementation.
 
-Run:  source env.sh && python3 validation/benchmarks/t5_sum_rules.py
+Run:  source env.sh && python3 validation/benchmarks/t5_sum_rules.py [--plot]
 
 Exit status (validation/benchmarks/README.md): 0 when the harness ran and
 printed its REPORT rows -- pass, recorded fail and blocked alike, since the
@@ -658,11 +658,84 @@ def run(verbose=True):
     return report
 
 
+# ---------------------------------------------------------------------- figure
+
+#: the figure's palette slot and legend name of each Bjorken sub-row, and the
+#: marker of each Q2
+PLOT_SLOTS = {"bjorken[toyg1]": ("default", "ToyG1 (shipped)"),
+              "bjorken[nnpdfpol11]": ("nnpdfpol", "NNPDFpol1.1 (LhapdfG1)")}
+PLOT_Q2_MARKERS = {2.0: "o", 5.0: "s", 10.0: "^"}
+
+
+def plot(report, out_dir=None):
+    """The Bjorken running integral int_{x_min}^1 (g1p - g1n) dx over the
+    x_min scan, divided by the reference g_A/6 C_Bj at each Q2 (so the
+    reference is the line at 1, the 10 % tolerance the grey band), for
+    ToyG1 and NNPDFpol1.1 (a blocked sub-row is left out; its reason is in
+    the row).  The BC / g2^WW closure is a one-line note in the title.  A
+    view of the row: every number drawn is in the report."""
+    import os
+    here = os.path.dirname(os.path.abspath(__file__))
+    if here not in sys.path:
+        sys.path.insert(0, here)
+    from matplotlib.lines import Line2D
+    from matplotlib.ticker import FormatStrFormatter, NullFormatter
+    from _plots import (INK, INK_SECONDARY, band, new_figure, save, status_title,
+                        style_series)
+    subs = report["subrows"]
+    fig, ax = new_figure()
+    x_all = sorted(set(X_MIN_SCAN) | set(X_MIN_SCAN_LHAPDF))
+    band(ax, [x_all[0] / 2, x_all[-1] * 2], [1 - BJ_TOL_REL] * 2,
+         [1 + BJ_TOL_REL] * 2)
+    ax.axhline(1.0, color=INK, linewidth=1.0, zorder=2)
+    handles = [Line2D([], [], color=INK, linewidth=1.0),
+               ax.collections[0]]
+    labels = ["g_A/6 C_Bj(alpha_s), leading twist",
+              "tolerance: within %g %% (and converged)" % (100 * BJ_TOL_REL)]
+    for key, (slot, label) in PLOT_SLOTS.items():
+        sr = subs[key]
+        if sr["status"] == "blocked":
+            continue
+        for q2, v in sr["per_q2"].items():
+            g = v["reference"]["gamma"]
+            ax.plot([r["x_min"] for r in v["rows"]],
+                    [r["gamma_pn"] / g for r in v["rows"]],
+                    **style_series(slot, label="_nolegend_",
+                                   marker=PLOT_Q2_MARKERS.get(q2, "D")))
+            ax.lines[-1].set_linestyle("-")
+            ax.lines[-1].set_linewidth(1.2)
+        handles.append(Line2D([], [], **style_series(slot, label=None)))
+        labels.append("%s: %s" % (label, sr["status"].upper()))
+    for q2, mk in PLOT_Q2_MARKERS.items():
+        handles.append(Line2D([], [], color=INK_SECONDARY, marker=mk,
+                              linestyle="none"))
+        labels.append("Q2 = %g GeV^2" % q2)
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.set_yticks([0.8, 1.0, 1.25, 1.5, 2.0, 3.0, 4.0])
+    ax.yaxis.set_major_formatter(FormatStrFormatter("%g"))
+    ax.yaxis.set_minor_formatter(NullFormatter())
+    ax.set_xlim(x_all[0] / 2, x_all[-1] * 2)
+    ax.set_xlabel("x_min of the running integral int_{x_min}^1 (g1p - g1n) dx")
+    ax.set_ylabel("running integral / (g_A/6) C_Bj")
+    ax.legend(handles, labels, loc="upper right", fontsize=7)
+    bc = subs["bc_ww"]
+    status_title(fig, NAME, report["status"],
+                 "Bjorken, each Q2: converged (last decade <= %g %%) and within %g %%; "
+                 "BC/g2^WW closure %s %d/%d"
+                 % (100 * BJ_CONV_REL, 100 * BJ_TOL_REL, bc["status"].upper(),
+                    bc["n_within"], bc["n_cells"]))
+    return save(fig, NAME, out_dir)
+
+
 if __name__ == "__main__":
     # Exit convention (module docstring, validation/benchmarks/README.md):
     # 0 = ran and printed its REPORT row, whatever the verdict; 2 = broken.
+    # `--plot` also writes the row's figure (plot()); the same rule holds.
     try:
-        run()
+        rep = run()
+        if "--plot" in sys.argv[1:]:
+            print("figure: %s" % plot(rep))
     except Exception:  # any exception means the harness itself is broken
         traceback.print_exc()
         sys.exit(2)

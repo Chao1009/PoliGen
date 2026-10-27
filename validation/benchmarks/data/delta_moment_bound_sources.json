@@ -1,0 +1,222 @@
+{
+  "_provenance": {
+    "what": "The sources, equations, PDF-set identities and evaluation grid of validation/benchmarks/t5_delta_moment_bound.py -- the n = 2 moment of the gluonic Soffer-type bound applied to LiPolGen's double-helicity-flip structure function Delta(x, Q2) on 6Li (run 2026-10-26 phase C2; docs/benchmarking/08_channel_priority.md sec. 4 ingredient C; docs/benchmarking/04_theory.md sec. 4, T-18).",
+    "compiled": "2026-10-26, by the phase-C2 worker of run 2026-10-26 (first pass); extended the same day by the second pass of phase C2 (KS20 added; DS16 (3)-(5), LOI18 (6) and the SS90 target state added), after the first pass's numbers had been computed and seen",
+    "transcription": "Each equation under body.sources[*].equations was read where its pages_read says: the bound, the relation and every number this harness uses (DS16 (3)-(5), (9)-(14), (32), (36); SS90 (2.5), (2.11), (2.12), (3.5); LOI18 (6)-(9); CvDM17 (34)-(36); CRSZ25 (2); KS20 (67), (68)) off the page IMAGE (pdftoppm, 130-150 dpi; SS90 (2.11) also at 300 dpi), the rest from the pdftotext layout text; each is transcribed in ASCII with the paper's own symbols and equation numbers.  Where a printed equation carries an evident typesetting slip the slip is quoted, not corrected (LOI18 Eqs. (5) and (7)).  The letter's model configuration (body.letter_models) is copied from the sibling repository's plans/07 at the commit named; the sibling's code was read, never run.",
+    "documents_outside_repository": "The PDFs are NOT vendored.  Four are in the author's corpus PolarizedLithiumSim/refs/ (read-only for this run); Sather-Schmidt 1990 was fetched on 2026-10-26 by the supervising session from APS through the institution's licence into the session scratch directory (phase_0_environment.md).  Each file's sha256 is recorded so the reading can be repeated on the same bytes.  Only identifiers, equations and numbers are recorded here.",
+    "licence": "Facts quoted with attribution: equation statements, set identifiers and published numbers.  No figure, table or passage of prose is reproduced.  This file is GPL-3.0-or-later like the repository.",
+    "publishing_convention": "Every structure function and parton density in the bound is PER NUCLEON as a function of the per-nucleon Bjorken x (the tree's kernel convention, include/lipolgen/xsec.hpp SFTables: 'Per-nucleon structure functions at one (x, Q2)').  The sources state the relation and the bound for a hadron in its own variables; the harness header shows that both are homogeneous of degree one under the per-nucleon rescaling, so the convention is the same on both sides."
+  },
+  "_body_sha256": "d355287d1cbb0fd06269ed4ee5af58e5b1d8790b8aa314bce112cdf109364594",
+  "body": {
+    "sources": [
+      {
+        "key": "DS16",
+        "citation": "W. Detmold and P. E. Shanahan, 'Gluonic transversity from lattice QCD', Phys. Rev. D 94 (2016) 014507; Erratum Phys. Rev. D 95 (2017) 079902",
+        "doi": "10.1103/PhysRevD.94.014507",
+        "arxiv": "1606.04505v3 (23 Mar 2017; the erratum itself was not read separately)",
+        "file": "PolarizedLithiumSim/refs/1606.04505.pdf",
+        "file_sha256": "6cea59159f28c5b4e18bd7adb02f364cd0b2d8a222a983bedcf334ee175b50a7",
+        "pages_read": "2, 3, 6, 7 (page images)",
+        "role": "the DEFINITION of Delta (Eqs. 3-5: Delta = A_{+-,-+}, the projection operators, the double-helicity-flip tensor), the bound (Eq. 32) and its n = 2 moment form (Eq. 36); the Jaffe-Manohar parton-model relation between Delta and deltaG restated (Eq. 13) with the moment relations (Eqs. 9, 11, 12)",
+        "equations": {
+          "(3)": "W_{mu nu, alpha beta}(p, q) = sum_{hH, h'H'} P(hH, h'H')_{mu nu, alpha beta} A_{hH,h'H'}(p, q),  with  P(hH, h'H')_{mu nu, alpha beta} = eps*_mu(h') E*_alpha(H') E_beta(H) eps_nu(h)  [W_{mu nu}(p, q, E, E') = E'*^alpha E^beta W_{mu nu, alpha beta}, Eq. (2)]",
+          "(4)": "W^{Delta=2}_{mu nu, alpha beta} = [P(+-, -+)_{mu nu, alpha beta} + P(-+, +-)_{mu nu, alpha beta}] Delta(x, Q^2),  the double-helicity-flip amplitude A_{+-,-+} = A_{-+,+-} written as Delta(x, Q^2)",
+          "(5)": "W^{Delta=2}_{mu nu} = (1/2) { [ (E'*_mu - (q.E'*/(kappa nu)) (p_mu - (M^2/nu) q_mu)) (E_nu - (q.E/(kappa nu)) (p_nu - (M^2/nu) q_nu)) + (mu <-> nu) ] - [ g_{mu nu} - q_mu q_nu/q^2 + (q^2/(kappa nu^2)) (p_mu - (nu/q^2) q_mu) (p_nu - (nu/q^2) q_nu) ] [ E'*.E + (M^2/(kappa nu^2)) q.E'* q.E ] } Delta(x, Q^2)",
+          "(9)": "C_n(Q^2, mu^2) = -(alpha_s(Q^2)/(2 pi)) Tr Q^2 * 2/(n+2)",
+          "(11)": "M_n(Q^2) = C_n(Q^2, Q^2) A_n(Q^2)/2,  n = 2, 4, 6, ...",
+          "(12)": "M_n(Q^2) = int_0^1 dx x^(n-1) Delta(x, Q^2)",
+          "(13)": "Delta(x, Q^2) = -(alpha_s(Q^2)/(2 pi)) Tr Q^2 x^2 int_x^1 (dy/y^3) deltaG(y, Q^2)  [target in the infinite-momentum frame polarized along xhat, perpendicular to its momentum]",
+          "(14)": "deltaG(x, mu^2) = g_xhat(x, mu^2) - g_yhat(x, mu^2)",
+          "(32)": "|deltaG(x)| <= (1/2) (f1(x) + (1/2) f1LL(x) + g1(x))",
+          "(36)": "|A_2| <= (1/24) (5 B_{2,1} - 6 B_{2,2})"
+        },
+        "notes": "Footnote 1: Eq. (9) differs by a sign from Jaffe-Manohar PLB 223 (their Ref. [7]).  Footnote 2: their A_n differs from Ref. [7]'s by a factor of two.  P. 7: deltaG 'is named h1TT' in their Refs. [28, 29]; the bound (32) is cited to Refs. [26-29].  Eq. (36) is written for the phi meson, whose g1 term vanishes by operator symmetry, in lattice reduced matrix elements; B_{2,1}, B_{2,2} are 'linear combinations of the moments of the structure functions f1 and f1LL' (the map is not printed).  Eqs. (9)+(11)+(12) and (13) agree: at n = 2, M_2 = -(alpha_s/(8 pi)) Tr Q^2 int_0^1 x deltaG dx.  Tr Q^2 is not given a value in DS16.  SECOND PASS: Eqs. (3)-(5) are self-consistent -- the projection operators of (3) contracted with E = E' = xhat give the transverse block (1/2) diag(+1, -1) Delta of (5), and the same operators give W_ij = delta_ij (1/3) sum_H A_{+H,+H} for an unpolarized target, i.e. W contains -F1 g_{mu nu} with F1 = (1/3) sum_H A_{+H,+H} -- and (5) contracted with the unpolarized lepton tensor gives, for a pure m = +-1 state along an axis perpendicular to q, a cos(2 phi) term -(1/2) ((1-y)/y^2) Delta relative to F1 + (1-y) F2/(x y^2): LOI18 Eq. (6), and HALF of LOI18 Eq. (9) / LiPolGen's kernel term per unit Delta (variation V6 of the harness)."
+      },
+      {
+        "key": "SS90",
+        "citation": "E. Sather and C. Schmidt, 'Size and scaling of the double-helicity-flip hadronic structure function', Phys. Rev. D 42 (1990) 1424",
+        "doi": "10.1103/PhysRevD.42.1424",
+        "arxiv": null,
+        "file": "session scratch refs/sather_schmidt1990_PhysRevD.42.1424.pdf (APS, fetched 2026-10-26, institutional licence; outside the repository)",
+        "file_sha256": "63378c240082f23141662a4d4f69a476ee08659fa70982bbcaa85a1c439dc37a",
+        "pages_read": "1424-1426 (page images)",
+        "role": "the source of C_BAG = -0.012 (include/lipolgen/constants.hpp), the normalisation of the letter's moment_A / moment_B; Tr Q^2 for three flavours; the parton-model relation again, written for the circularly polarized target (the same relation as DS16 (13), second pass; V4 records the misreading that takes it as a second normalisation)",
+        "equations": {
+          "(2.5)": "<pE'|O_{mu nu mu1 mu2 ... mun}|pE> = (1/2) S{ [ (p_mu E'*_mu1 - p_mu1 E'*_mu) (p_nu E_mu2 - p_mu2 E_nu) + (mu <-> nu) ] p_mu3 ... p_mun } A_n(Q^2),  the operators of (2.4) carrying Tr over colours",
+          "(2.11)": "Delta(x, Q^2) = (alpha_s(Q^2)/(2 pi)) Tr Q^2 x^2 int_x^1 (dy/y^3) a(y, Q^2),  with  a(x, Q^2) = -2 [g_xhat(x, Q^2) - g_yhat(x, Q^2)]",
+          "(2.12)": "M_n^Delta(Q^2) = (alpha_s(Q^2)/(2 pi)) Tr Q^2 M_n^a(Q^2)/(n+2)",
+          "(3.5)": "int_0^1 dx x Delta(x, Q^2) = -0.012 alpha_s(Q^2)  [the Delta++ in the MIT bag model, 'for three flavors of quarks Q = diag(2/3, -1/3, -1/3)']"
+        },
+        "notes": "For the same symbols g_xhat - g_yhat, Eq. (2.11) is TWICE DS16 Eq. (13) in magnitude -- but the target STATES differ (second pass): SS90 write (2.11) for a spin-1 target circularly polarized (aligned) along x in the infinite-momentum frame (p. 1425, the paragraph above (2.11)), DS16's deltaG is defined in the LINEARLY polarized hadron (KS20 Eq. (68) lists DS16's deltaG [its ref. 28] and SS90 [its ref. 48] on the line of h1TT, -g_xhat/xhat + g_yhat/xhat).  For a spin-1 target the transverse tensor polarization T_xx - T_yy is +1/2 in the circular (m_x = +-1) state and -1 in the linear (E_x, m_x = 0) state, so (g_xhat - g_yhat)_circular = -(1/2) (g_xhat - g_yhat)_linear, a = -2 (g_xhat - g_yhat)_circular = (g_xhat - g_yhat)_linear, and (2.11) is DS16 (13) -- the factor 2 is the state convention, not a second normalisation (the harness's V4 records the misreading only).  The bag value (3.5) is for a single spin-3/2 baryon in the Jaffe-Manohar definition of Delta (Sec. II summarizes their Ref. 4); applying it per nucleon of 6Li is the sibling's scenario choice, stated in its delta_models.py docstring (2026-08-10 audit)."
+      },
+      {
+        "key": "LOI18",
+        "citation": "J. Maxwell, D. Crabb, D. Day et al., 'Search for exotic gluonic states in the nucleus', Letter of Intent to Jefferson Lab PAC 44 (dated 6 June 2016), arXiv:1803.11206",
+        "doi": null,
+        "arxiv": "1803.11206",
+        "file": "PolarizedLithiumSim/refs/1803.11206.pdf",
+        "file_sha256": "30d2bd488aeb1fc265393ea307aa382ece9be964d425ca7162872dff284d236d",
+        "pages_read": "3, 4 and 5 (page images: Eqs. (1)-(9))",
+        "role": "Tr Q^2 = 2/3 (three flavours) for the parton-model relation; the per-helicity-state cross section (9), identical in form to LiPolGen's kernel term; and the Bjorken-limit cross section (6), which carries HALF of (9)'s Delta term for the same pure state",
+        "equations": {
+          "(6)": "lim_{Q^2 -> inf} dsigma/(dx dy dphi) = (e^4 M E/(4 pi^2 Q^4)) [ x y^2 F1(x, Q^2) + (1-y) F2(x, Q^2) - (x (1-y)/2) Delta(x, Q^2) cos(2 phi) ]  [phi: between the scattering plane and the target spin orientation; the same cross section for the opposite polarization]",
+          "(7)": "Delta(x, Q^2) = (alpha_S(Q^2)/(2 pi)) TrQ x^2 int_x^1 (dy/y^3) [g_xhat(x, Q^2) - g_yhat(x, Q^2)] 'for quark charge matrix Q = diag(2/3, -1/3, -1/3)' -- printed so (no square on Q, no minus sign, x for y inside the integral); in magnitude the same coefficient as DS16 Eq. (13)",
+          "(8)": "int_0^1 dx x Delta(x, Q^2) = -0.012 alpha_s(Q^2)  [quoting SS90 for the Delta++]",
+          "(9)": "dsigma/(dx dy dphi)(lambda_m) = (2 y alpha^2/Q^2) [F1 + (2/3) a_m b1 + ((1-y)/(x y^2)) (F2 + (2/3) a_m b2) - ((1-y)/y^2) b_m sin^2(theta_m) Delta cos(2 phi)],  a_m = (1/4) b_m (3 cos^2(theta_m) - 1),  b_m = 3|lambda_m| - 2"
+        },
+        "notes": "Eq. (9) is LiPolGen's kernel term a2 = -((1-y)/y^2) c_eff sin^2(theta_S) Delta/D_phi with c_eff = 3 Q_NN = 3m^2 - 2 (docs/PHYSICS_CHANNELS.md sec. 2).  For a pure m = +-1 state along an axis perpendicular to the beam (theta_m = 90 deg, b_m = 1): with e^4 M E/(4 pi^2 Q^4) = (2 y alpha^2/Q^2)/(x y^2) (Q^2 = 2 M E x y), (6) reads (2 y alpha^2/Q^2) [F1 + ((1-y)/(x y^2)) F2 - ((1-y)/(2 y^2)) Delta cos(2 phi)], while (9) reads (2 y alpha^2/Q^2) [F1 - (1/6) b1 + ((1-y)/(x y^2)) (F2 - (1/6) b2) - ((1-y)/y^2) Delta cos(2 phi)]: the Delta terms differ by a factor 2 for the same state.  (6) is what Eq. (5) (= DS16 Eq. (5)) gives with W containing -F1 g_{mu nu} (second pass, checked numerically by the pytest); (9) is the tree's kernel term.  The first pass read (9) as the definition of the tree's Delta and took it equal to DS16's (assumption A7); the harness carries the other reading as V6.  Eq. (5) is printed with a stray 'v' after its 1/2 (DS16 Eq. (5) has none)."
+      },
+      {
+        "key": "CvDM17",
+        "citation": "S. Cotogno, T. van Daal and P. J. Mulders, 'Positivity bounds on gluon TMDs for hadrons of spin <= 1', JHEP 11 (2017) 185, arXiv:1709.07827",
+        "doi": "10.1007/JHEP11(2017)185",
+        "arxiv": "1709.07827",
+        "file": "PolarizedLithiumSim/refs/1709.07827.pdf",
+        "file_sha256": "7ff97995b87afde7dec98b85f88ea8706fab415aa8d14eabccdedef2bcb25eb2",
+        "pages_read": "4 (text layer: Eq. (17)); 5 (page image: the TMD bounds (20)-(28)); 6 (page image: the collinear bounds (34)-(36))",
+        "role": "the x-space bound published as a positivity bound on the collinear gluon PDFs of a spin-1 hadron (DS16 Eq. (32) with deltaG = h1TT); the f1LL^g band edges",
+        "equations": {
+          "(17)": "Gamma^{ij}(x) = (x/2) [ -g_T^{ij} f1(x) + i eps_T^{ij} S_L g1(x) - g_T^{ij} S_LL f1LL(x) + S_TT^{ij} h1TT(x) ]",
+          "(34)": "|g1| <= f1 + f1LL/2",
+          "(35)": "f1LL <= f1",
+          "(36)": "|h1TT| <= (1/2) (f1 + f1LL/2 + g1)"
+        },
+        "notes": "(34)-(36) hold together with f1 >= 0.  (34) and (35) confine f1LL to [-2 (f1 - |g1|), f1]: at the lower edge the right side of (36) collapses to (|g1| + g1)/2, so positivity alone does not bound f1LL usefully for this purpose.  The largest band symmetric about zero that (34)-(35) allow is |f1LL| <= f1 (it needs |g1| <= f1/2, checked pointwise by the harness)."
+      },
+      {
+        "key": "CRSZ25",
+        "citation": "W. Cosyn, B. Roldan Tomei, A. Sosa and A. Zec, 'Polarization options in inclusive DIS off tensor polarized deuteron', Eur. Phys. J. A 61 (2025) 83, arXiv:2410.12764",
+        "doi": null,
+        "arxiv": "2410.12764v1",
+        "file": "PolarizedLithiumSim/refs/2410.12764v1.pdf",
+        "file_sha256": "f05fc42be29cdf6979b437afedaf36f0adb797a20b38efc96803bdfa1c90d205",
+        "pages_read": "1 (page image: Eq. (2) and its range); 3 (text layer: Eq. (10))",
+        "role": "the helicity-state positivity of the spin-1 cross sections -- the second, sourced sub-row",
+        "equations": {
+          "(2)": "A_T = [dsigma(Lambda_d = +1) + dsigma(Lambda_d = -1) - 2 dsigma(Lambda_d = 0)] / [dsigma(Lambda_d = +1) + dsigma(Lambda_d = 0) + dsigma(Lambda_d = -1)],  printed with its range [-2 <= A_T <= 1]",
+          "(10)": "the unpolarized-electron cross section with the tensor terms T_LL, T_LT cos(phi_TL), T_TT cos(2 phi_TT) -- the decomposition the range applies to for any polarization direction N"
+        },
+        "notes": "A_T in [-2, 1] is the statement that each helicity-state cross section is non-negative: with dsigma(+1) = dsigma(-1) (unpolarized electrons), A_T <= 1 iff dsigma(0) >= 0 and A_T >= -2 iff dsigma(+1) >= 0."
+      },
+      {
+        "key": "KS20",
+        "citation": "S. Kumano and Q.-T. Song, 'Gluon transversity in polarized proton-deuteron Drell-Yan process', Phys. Rev. D 101 (2020) 054011 (journal reference as the sibling's refs_dict.json and docs/benchmarking/04_theory.md T-19 give it)",
+        "doi": null,
+        "arxiv": "1910.12523v3 (12 Mar 2020)",
+        "file": "PolarizedLithiumSim/refs/1910.12523.pdf",
+        "file_sha256": "f13001aea8033484f5263d10f46fcdae974e359c4f9d2dff84cb1d011ae390c2",
+        "pages_read": "6 (page image: Eq. (22) and the definition of E_x); 11 (page image: Eqs. (66)-(68))",
+        "role": "the dictionary of the gluon-transversity notations: DS16's deltaG, SS90's function and h1TT are ONE function, defined in the LINEARLY polarized hadron -- which makes SS90 (2.11) and DS16 (13) the same relation and DS16's identification deltaG = h1TT (p. 7) the one the bound (32) needs (second pass)",
+        "equations": {
+          "(22)": "Delta_T g(x) = eps_TT,alpha beta int (dxi^-/(2 pi)) x p^+ e^{i x p^+ xi^-} <p E_x| A^alpha(0) A^beta(xi) |p E_x>_{xi^+ = xi_perp = 0},  eps_TT^{11} = +1, eps_TT^{22} = -1, E_x the linear polarization of the deuteron along +x",
+          "(67)": "Phi_g/B^{alpha beta}(x_b) = (1/2) [ -g_T^{alpha beta} f1,g/B(x_b) + i eps_T^{alpha beta} S_B,L g1,g/B(x_b) - g_T^{alpha beta} S_B,LL f1LL,g/B(x_b) + S_B,TT^{alpha beta} h1TT,g/B(x_b) ]  (h1TT,g/B = -Delta_T g_B in that article)",
+          "(68)": "Delta_2G(x) = g_xhat/xhat(x) - g_yhat/xhat(x) [13, 47];  a(x) = g_xhat/xhat(x) - g_yhat/xhat(x) [25, 27];  Delta_L g(x) = g_xhat/xhat(x) - g_yhat/xhat(x) [20];  deltaG(x) = -g_xhat/xhat(x) + g_yhat/xhat(x) [28, 48];  h1TT,g(x) = -g_xhat/xhat(x) + g_yhat/xhat(x) [39, 41, 49];  Delta_T g(x) = g_xhat/xhat(x) - g_yhat/xhat(x) [50], this work  [g_hhat/Hhat: the gluon distribution with the gluon polarization hhat and the hadron (deuteron) polarization Hhat]"
+        },
+        "notes": "Its references: [25] Jaffe-Manohar PLB 223 (1989) 218; [27] Nzar-Hoodbhoy PRD 45 (1992) 2264; [28] DS16; [48] SS90; [39] Bacchetta-Mulders PRD 62 (2000) 114004; [41] Boer et al. JHEP 10 (2016) 013; [49] Meissner-Metz-Goeke PRD 76 (2007) 034002.  The hadron polarization xhat of (68) is the linear polarization E_x of (22).  The magnitude statement this harness uses is that DS16's deltaG, SS90's function and h1TT coincide (no factor 2 among them); the signs among the notations differ and do not enter |M2|."
+      }
+    ],
+    "pdf_sets": [
+      {
+        "name": "CT18NLO",
+        "member": 0,
+        "lhapdf_set_index": 14400,
+        "data_version": 1,
+        "format": "lhagrid1",
+        "x_min": 1e-09,
+        "q_min_gev": 1.295,
+        "alphas_mz": 0.118,
+        "alphas_type": "ipol",
+        "reference": "T.-J. Hou et al. (CT18), arXiv:1908.11394 (the set's own Reference field)",
+        "info_sha256": "be60232d8e6c49982c82f5fa990fd5b0fd1050719944f31602bf27cdb16548b0",
+        "member_file": "CT18NLO_0000.dat",
+        "member_file_sha256": "375db856d2f8c7087a626c92ebf228d3f080e5de83175519778ffaf6e72e5410",
+        "role": "f1^g = the gluon (pid 21) per nucleon, free nucleon; alpha_s(Q^2) of the same set"
+      },
+      {
+        "name": "NNPDFpol11_100",
+        "member": 0,
+        "lhapdf_set_index": 251000,
+        "data_version": 1,
+        "format": "lhagrid1",
+        "x_min": 1e-05,
+        "q_min_gev": 1.0,
+        "alphas_mz": 0.119002,
+        "alphas_type": "ipol",
+        "reference": "NNPDF Collaboration (NNPDFpol1.1), arXiv:1406.5539 (the set's own Reference field)",
+        "info_sha256": "e8aaa2f59d7518be410516a320b4fc25470c4ea31892d0c7263f9c932a7af5b5",
+        "member_file": "NNPDFpol11_100_0000.dat",
+        "member_file_sha256": "c64ba5fe3067dc5101be44f7482923347ad56c07860ac59e539e878f45c45f96",
+        "role": "Delta g = the polarized gluon (pid 21) per nucleon; member 0 = the replica average"
+      }
+    ],
+    "reader": {
+      "lhapdf": "6.5.5 at the dependency prefix (.github/scripts/build_deps.sh)",
+      "route": "PYTHIA 8.317's LHAPDF6 plugin (Pythia8Plugins/LHAPDF6.h, libpythia8lhapdf6.so), called as PDF::xfUpdate + PDF::xfRaw so that PYTHIA's max(0, .) clip in PDF::xf never touches a negative Delta g; lipolgen's LhapdfSF / LhapdfG1 expose F2 and g1 only (sf.hpp), and the lhapdf Python module is not built"
+    },
+    "letter_models": {
+      "source": "PolarizedLithiumSim plans/07_plb_letter_gluonometry.md at commit 472681248b705a61c3132d784bea75fe2ecde09d: sec. 7.1 line 52 ('sweet-spot amplitudes (moment_A, P_zz = 0.6, dilution 1/3)') and the 2026-09-15 addendum table, lines 302-303 ('moment_A <Q2> [GeV2] 4.474 (toy) / 5.069 (grid)'; 'moment_A bag amplitude A -0.2924 (toy) / -0.2404 (grid)'); the model code fastsim/polli_fastsim/delta_models.py (sha256 c07297076988b4e278867fab32e5ef979f951d9b033a8fc29308356264fa93ee, last changed at 106655551a49e1efdf36c956d02425f984029d70) -- read, never run; LiPolGen's port is make_moment_a / make_moment_b (include/lipolgen/sf.hpp)",
+      "moment_A": {
+        "variant": "mid_x",
+        "q2_ref_gev2": 4.474,
+        "dilution_num": 1,
+        "dilution_den": 3,
+        "f1": "the shipped 6Li kernel's per-nucleon F1 (ToyF2): the letter's toy column",
+        "A_as_printed": -0.2924,
+        "alphas": "CT18NLO"
+      },
+      "moment_B": {
+        "variant": "mid_x",
+        "dilution_num": 1,
+        "dilution_den": 3,
+        "alphas": "CT18NLO"
+      }
+    },
+    "grid": {
+      "q2_gev2": [
+        2.0,
+        5.0,
+        10.0
+      ],
+      "x_integration": {
+        "x_lo": 1e-09,
+        "x_mid": 0.1,
+        "log_panels": 144,
+        "lin_panels": 72,
+        "nodes_per_panel": 8,
+        "rule": "Gauss-Legendre: 144 equal panels in ln x on [x_lo, x_mid] (x_lo = the set's own x_min for NNPDFpol11_100), 72 equal panels in x on [x_mid, 1]; every integral is repeated on twice the panels, the finer value is used and the difference is its numerical error"
+      },
+      "positivity": {
+        "x": [
+          0.001,
+          0.01,
+          0.05,
+          0.1,
+          0.3,
+          0.6,
+          0.9
+        ],
+        "q2_gev2": [
+          2.0,
+          5.0,
+          10.0
+        ],
+        "y": [
+          0.05,
+          0.5,
+          0.95
+        ],
+        "theta_s_deg": [
+          0.0,
+          45.0,
+          90.0
+        ],
+        "phi_prime_deg": [
+          0.0,
+          45.0,
+          90.0
+        ]
+      }
+    }
+  }
+}

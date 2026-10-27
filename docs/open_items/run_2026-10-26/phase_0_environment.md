@@ -54,11 +54,21 @@ From the `--compare` output (`phase_A_baseline.md` carries the full list):
   E143 51.0/28 (p = 0.005). A fitted polarised PDF failing the data it was
   fitted to at p ≥ 0.01 points at the harness's deuteron construction (the
   D-state factor the 2026-09-26 run left UNVERIFIED — PLAN.md phase D1) or at
-  the F₁ it divides by, before it points at the PDF.
+  the F₁ it divides by, before it points at the PDF. *(Measured 2026-10-26 in
+  phase A, `phase_A_baseline.md` §3: the harness's `dis_no_dstate` reading is
+  worse on all three sets — COMPASS 56.4/15, HERMES 67.5/15, E143 61.9/28 —
+  and `LhapdfG1` evaluates g₁ at leading order; phase D, `phase_D_inputs.md`
+  §1, found all four papers publish g₁ᵈ per nucleon and not D-state
+  corrected, so the verdict column stands.)*
 - `t5_sum_rules[bjorken[nnpdfpol11]]`: BLOCKED → **FAIL**: within 9.6 % /
   12.4 % / 19.3 % of g_A/6·C_Bj at Q² = 10 / 5 / 2 against the declared
-  "converged and within 10 %" — converged (last decade ≤ 0.4 %), outside 10 %
-  at the two lower Q².
+  "converged and within 10 %" — not converged at any Q² (the last decade, x
+  from 10⁻⁵ to 10⁻⁴, adds 2.25 / 2.20 / 2.16 % of Γ_ref at Q² = 10 / 5 / 2
+  against the declared ≤ 1 %), outside 10 % at the two lower Q². *(Corrected
+  2026-10-26 by `phase_A_baseline.md` §3 — this line first said "converged
+  (last decade ≤ 0.4 %)"; phase A also finds the integral at 98.0–98.2 % of
+  g_A/6 at every Q²: the distance is the C_Bj the leading-order `LhapdfG1`
+  formula does not carry.)*
 - `t3_nmc_li6_over_d`: blocked (environment) → **PASS** again (the 2026-09-23
   numbers).
 - `t2_deuteron_static`: the two `q_d_quad_error` sub-values moved in their

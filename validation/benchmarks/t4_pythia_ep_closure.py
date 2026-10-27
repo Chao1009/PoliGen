@@ -119,7 +119,7 @@ LIPOLGEN_BENCH=1; a small-N smoke run is always on.  (Measured, the full row
 takes ~10 s, under README.md's 30 s line: the flag is set by the row's KIND,
 and whether to keep it opt-in at this cost is the README owner's call.)
 
-Run:  source env.sh && python3 validation/benchmarks/t4_pythia_ep_closure.py
+Run:  source env.sh && python3 validation/benchmarks/t4_pythia_ep_closure.py [--plot]
 
 Exit status (validation/benchmarks/README.md): 0 when the harness ran and
 printed its REPORT row -- pass, recorded fail and blocked alike, since the
@@ -610,11 +610,77 @@ def run(verbose=True, n_events=N_EVENTS, seed=SEED, windows=WINDOWS):
     return report
 
 
+# ------------------------------------------------------------------- figure
+
+#: the marker of each window (one configuration, the bridge: one colour)
+PLOT_WINDOW_MARKERS = {"W1": "o", "W2": "s"}
+
+
+def plot(report, out_dir=None):
+    """bridge / stock per observable (the matched ratio, its statistical
+    error) in each window, the stock reference the line at 1 and D-1's
+    +-20 % tolerance the grey band; a sub-row not compared (too few stock
+    particles in its eta bin) hollow and grey.  The un-matched ratios are
+    in the row, not drawn.  Nothing to draw for a BLOCKED row (None).  A
+    view of the row: every number drawn is in the report."""
+    if not report.get("subrows"):
+        return None
+    here = os.path.dirname(os.path.abspath(__file__))
+    if here not in sys.path:
+        sys.path.insert(0, here)
+    from _plots import BAND, INK, MUTED, new_figure, save, status_title, style_series
+    subs = report["subrows"]
+    obs = list(OBSERVABLES)
+    fig, ax = new_figure()
+    ax.axhspan(1.0 - TOL, 1.0 + TOL, color=BAND, alpha=0.8, linewidth=0, zorder=1,
+               label="tolerance |bridge/stock - 1| <= %.2f (D-1)" % TOL)
+    ax.axhline(1.0, color=INK, linewidth=1.0, zorder=2,
+               label="stock PYTHIA 8 ff2ff(t:gmZ) (the reference)")
+    windows = {w["label"]: w for w in report["windows"]}
+    for k, (wl, mk) in enumerate(PLOT_WINDOW_MARKERS.items()):
+        if wl not in windows:
+            continue
+        w = windows[wl]
+        off = 0.14 * (2 * k - 1)              # the two windows side by side
+        comp = [s for s in subs if s["window"] == wl and s["compared"]]
+        kw = style_series("default", label="LiPolGen bridge, %s: x %g-%g, Q2 %g-%g "
+                          "GeV^2" % (wl, w["x"][0], w["x"][1], w["q2"][0], w["q2"][1]),
+                          marker=mk)
+        kw.update(markersize=6, capsize=2, elinewidth=1.0)
+        ax.errorbar([obs.index(s["observable"]) + off for s in comp],
+                    [s["ratio"] for s in comp], yerr=[s["ratio_err"] for s in comp],
+                    **kw)
+        nc = [s for s in subs if s["window"] == wl and not s["compared"]]
+        if nc:
+            kw = style_series("default", label="%s, not compared (< %d stock "
+                              "particles in the bin)" % (wl, MIN_STOCK_COUNTS),
+                              marker=mk)
+            kw.update(color=MUTED, markerfacecolor="none", markersize=6, capsize=2,
+                      elinewidth=1.0)
+            ax.errorbar([obs.index(s["observable"]) + off for s in nc],
+                        [s["ratio"] for s in nc], yerr=[s["ratio_err"] for s in nc],
+                        **kw)
+    ax.set_xticks(range(len(obs)))
+    ax.set_xticklabels(obs, rotation=25, ha="right", fontsize=7)
+    ax.set_xlim(-0.6, len(obs) - 0.4)
+    ax.set_ylim(1.0 - 2.0 * TOL, 1.0 + 1.5 * TOL)
+    ax.set_ylabel("bridge / stock, matched (x, Q2)")
+    ax.legend(loc="lower right", fontsize=7, ncol=1)
+    wst = report["worst"]
+    status_title(fig, NAME, report["status"],
+                 "e 10 x p 100 GeV; worst |ratio - 1| = %.3f (%s %s) of %.2f allowed"
+                 % (wst["distance"], wst["window"], wst["observable"], TOL))
+    return save(fig, NAME, out_dir)
+
+
 if __name__ == "__main__":
     # Exit convention (module docstring, validation/benchmarks/README.md):
     # 0 = ran and printed its REPORT row, whatever the verdict; 2 = broken.
+    # `--plot` also writes the row's figure (plot()); the same rule holds.
     try:
-        run()
+        rep = run()
+        if "--plot" in sys.argv[1:]:
+            print("figure: %s" % plot(rep))
     except Exception:  # any exception means the harness itself is broken
         traceback.print_exc()
         sys.exit(2)

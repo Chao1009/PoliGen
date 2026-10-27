@@ -83,23 +83,35 @@ def ds(dmod):
 
 
 def test_deuteron_static_vendored_file_is_the_transcription(dmod, tmp_path):
+    """Read from the papers on 2026-10-26 (phase D): eta_d confirmed as
+    Rodning & Knutson's Eq. (10); Q_d CORRECTED to what Bishop & Cheung
+    conclude, 0.2860 +- 0.0015 fm^2 -- the 2026-09-26 +0.2859(3), which the
+    paper does not print, kept with its source as a dated correction."""
     doc = dmod.read_vendored()
     pts = doc["body"]["points"]
     assert len(pts) == 2
     assert (pts[0]["quantity"], pts[0]["value"], pts[0]["sigma"]) == ("eta_d", 0.0256, 0.0004)
-    assert (pts[-1]["quantity"], pts[-1]["value"], pts[-1]["sigma"]) == ("Q_d", 0.2859, 0.0003)
+    assert (pts[-1]["quantity"], pts[-1]["value"], pts[-1]["sigma"]) == ("Q_d", 0.2860, 0.0015)
     prov = doc["_provenance"]
-    assert prov["transcription"].startswith("SECOND-HAND")
-    assert "NEITHER SOURCE PAPER WAS RE-READ" in prov["transcription"]
-    assert prov["fetched"].startswith("2026-09-26")
+    assert prov["transcription"].startswith("FIRST-HAND since 2026-10-26")
+    assert prov["transcription_2026_09_26"].startswith("SECOND-HAND")
+    assert "NEITHER SOURCE PAPER WAS RE-READ" in prov["transcription_2026_09_26"]
+    assert prov["fetched"].startswith("2026-10-26")
+    (corr,) = prov["corrections"]
+    assert (corr["date"], corr["quantity"]) == ("2026-10-26", "Q_d")
+    assert (corr["old_value"], corr["old_sigma"]) == (0.2859, 0.0003)
+    assert "b1_nuclear.hpp" in corr["old_source"]
+    assert (corr["new_value"], corr["new_sigma"]) == (0.2860, 0.0015)
+    assert [t["quantity"] for t in prov["transcribed_from_2026_09_26"]] == ["eta_d", "Q_d"]
     ref = dmod.load_reference()
-    assert ref["eta_d"]["as_printed"] == "0.0256(4)"
+    assert ref["eta_d"]["as_printed"] == "0.0256 +- 0.0004"
+    assert ref["Q_d"]["as_printed"] == "+0.2860 +- 0.0015 fm^2"
     # one flipped byte in the body is refused ...
     bad = _flip(dmod.DATA, b'"value": 0.0256,', b'"value": 0.0257,', tmp_path)
     with pytest.raises(RuntimeError, match="sha256"):
         dmod.load_reference(bad)
     # ... and so is one in the provenance (the whole file is digested)
-    bad = _flip(dmod.DATA, b"SECOND-HAND", b"SECOND-HANd", tmp_path)
+    bad = _flip(dmod.DATA, b"FIRST-HAND", b"FIRST-HANd", tmp_path)
     with pytest.raises(RuntimeError, match="sha256"):
         dmod.read_vendored(bad)
 
@@ -164,10 +176,12 @@ def test_deuteron_static_qd_values_and_in_tree_cross_checks(ds):
     assert h["cross_checks"]["q_tree_tables"] == pytest.approx(0.289791, abs=2e-6)
     assert abs(h["q_d"] / h["cross_checks"]["q_tree_tables"] - 1) < 3e-3
     assert max(x["q_d_quad_error"] for x in m.values()) < 1e-8
-    # the recorded distances (impulse approximation: about -5 %)
-    assert c["q_d_rel_distance"] == pytest.approx(-0.05389, abs=1e-4)
-    assert a["q_d_rel_distance"] == pytest.approx(-0.05677, abs=1e-4)
-    assert h["q_d_rel_distance"] == pytest.approx(+0.01556, abs=1e-4)
+    # the recorded distances (impulse approximation: about -5 %), against
+    # Bishop & Cheung's 0.2860 since 2026-10-26 (they were -0.05389,
+    # -0.05677 and +0.01556 against the old 0.2859; recorded, not asserted)
+    assert c["q_d_rel_distance"] == pytest.approx(-0.05422, abs=1e-4)
+    assert a["q_d_rel_distance"] == pytest.approx(-0.05710, abs=1e-4)
+    assert h["q_d_rel_distance"] == pytest.approx(+0.01521, abs=1e-4)
 
 
 def test_deuteron_static_verdict_follows_the_numbers(dmod, ds):
@@ -185,7 +199,7 @@ def test_deuteron_static_verdict_follows_the_numbers(dmod, ds):
     assert ds["models"]["hulthen"]["eta_pull"] == pytest.approx(17.196, abs=1e-3)
     assert ds["status"] == "fail" and ds["failing"] == ["hulthen"]
     # Q_d never enters the verdict: a reference Q_d 100x off changes nothing
-    fake = {"eta_d": dict(e), "Q_d": dict(ref["Q_d"], value=28.59)}
+    fake = {"eta_d": dict(e), "Q_d": dict(ref["Q_d"], value=100.0 * ref["Q_d"]["value"])}
     models = {k: dict(v) for k, v in ds["models"].items()}
     assert dmod.verdict(models, fake) == ds["status"]
     # and with every eta inside, the row would pass
@@ -284,7 +298,7 @@ def test_deuteron_static_exit_codes(tmp_path):
     assert "REPORT | t2_deuteron_static |" in ok.stdout
     bad = _exit_code_on_altered_data(tmp_path, "t2_deuteron_static",
                                      "deuteron_static_measured.json",
-                                     b'"value": 0.2859,', b'"value": 0.2869,')
+                                     b'"value": 0.286,', b'"value": 0.287,')
     assert bad.returncode == 2 and "sha256" in bad.stderr
     assert "REPORT |" not in bad.stdout
 
@@ -401,3 +415,25 @@ def test_devries_exit_codes(tmp_path):
                                      b'"rms_fm": 2.54,', b'"rms_fm": 2.64,')
     assert bad.returncode == 2 and "sha256" in bad.stderr
     assert "REPORT |" not in bad.stdout
+
+
+def test_t2_deuteron_static_plot_writes_png(dmod, ds, tmp_path):
+    """plot() draws the row's figure -- a view of the report, never the
+    record -- as a non-empty PNG where it is told to (here a tmp dir)."""
+    pytest.importorskip("matplotlib", reason="matplotlib (the figure only)")
+    path = dmod.plot(ds, out_dir=str(tmp_path))
+    assert path == os.path.join(str(tmp_path), "t2_deuteron_static.png")
+    with open(path, "rb") as f:
+        assert f.read(8) == b"\x89PNG\r\n\x1a\n"
+    assert os.path.getsize(path) > 0
+
+
+def test_t3_li6_rms_devries_plot_writes_png(rmod, rms, tmp_path):
+    """plot() draws the row's figure -- a view of the report, never the
+    record -- as a non-empty PNG where it is told to (here a tmp dir)."""
+    pytest.importorskip("matplotlib", reason="matplotlib (the figure only)")
+    path = rmod.plot(rms, out_dir=str(tmp_path))
+    assert path == os.path.join(str(tmp_path), "t3_li6_rms_devries.png")
+    with open(path, "rb") as f:
+        assert f.read(8) == b"\x89PNG\r\n\x1a\n"
+    assert os.path.getsize(path) > 0

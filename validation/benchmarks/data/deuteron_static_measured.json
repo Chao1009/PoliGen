@@ -1,12 +1,41 @@
 {
   "_provenance": {
     "what": "Two measured static properties of the deuteron -- the asymptotic D/S ratio eta_d and the electric quadrupole moment Q_d -- the reference side of validation/benchmarks/t2_deuteron_static.py (BENCHMARK_PLAN.md tier T2; 02_data_nucleon_deuteron.md sec. 5.2).",
-    "transcription": "SECOND-HAND.  Both numbers are copied from THIS REPOSITORY'S OWN PROSE at git revision f0a8f1e, NOT from the papers: eta_d = 0.0256(4) from docs/benchmarking/02_data_nucleon_deuteron.md sec. 5.2 (line 285, the 'value' row; the reference row is line 284; sec. 10 line 451 repeats the attribution), Q_d = +0.2859(3) fm^2 from include/lipolgen/b1_nuclear.hpp lines 121-128 (the 'THE 100 % BAND IS MANDATORY' block, which cites 'Bishop and Cheung, Phys. Rev. A 20 (1979) 381').  NEITHER SOURCE PAPER WAS RE-READ for this file: both are paywalled and the publishers' hosts were unreachable from the environment that wrote it.  The survey marks the Rodning-Knutson REFERENCE as VERIFIED (its bibliographic record, INSPIRE 312974); it prints the VALUE as a single quoted number.",
+    "transcription": "FIRST-HAND since 2026-10-26: both numbers are read from the papers themselves (pages below; the copies were fetched 2026-10-26 through the institution's APS licence with curl's own identity and are kept OUTSIDE the repository -- only the numbers are vendored).  eta_d is CONFIRMED as transcribed; Q_d is CORRECTED (see 'corrections'): the 2026-09-26 file carried +0.2859(3) fm^2 under Bishop & Cheung's name, but that paper concludes 0.2860 +- 0.0015 fm^2 and prints no 0.2859 anywhere.  The 2026-09-26 statement is kept verbatim in 'transcription_2026_09_26'.",
+    "transcription_2026_09_26": "SECOND-HAND.  Both numbers are copied from THIS REPOSITORY'S OWN PROSE at git revision f0a8f1e, NOT from the papers: eta_d = 0.0256(4) from docs/benchmarking/02_data_nucleon_deuteron.md sec. 5.2 (line 285, the 'value' row; the reference row is line 284; sec. 10 line 451 repeats the attribution), Q_d = +0.2859(3) fm^2 from include/lipolgen/b1_nuclear.hpp lines 121-128 (the 'THE 100 % BAND IS MANDATORY' block, which cites 'Bishop and Cheung, Phys. Rev. A 20 (1979) 381').  NEITHER SOURCE PAPER WAS RE-READ for this file: both are paywalled and the publishers' hosts were unreachable from the environment that wrote it.  The survey marks the Rodning-Knutson REFERENCE as VERIFIED (its bibliographic record, INSPIRE 312974); it prints the VALUE as a single quoted number.",
+    "corrections": [
+      {
+        "date": "2026-10-26",
+        "quantity": "Q_d",
+        "old_value": 0.2859,
+        "old_sigma": 0.0003,
+        "old_as_printed": "+0.2859(3) fm^2",
+        "old_source": "include/lipolgen/b1_nuclear.hpp lines 121-128 at git f0a8f1e (the 'THE 100 % BAND IS MANDATORY' block), which attributes +0.2859(3) fm^2 to Bishop & Cheung, PRA 20 (1979) 381; the paper was not read then",
+        "new_value": 0.286,
+        "new_sigma": 0.0015,
+        "new_as_printed": "+0.2860 +- 0.0015 fm^2",
+        "why": "Bishop & Cheung CONCLUDE Q = 0.2860 +- 0.0015 fm^2: abstract (p. 381, '...necessarily, therefore, the predicted quadrupole moment of the deuteron (i.e., Q = 0.2860+-0.0015 fm^2)') and Sec. III, pp. 382-383 ('Our principal conclusion is that Reid and Vaida's calculation of the electric field gradient ... is correct, as is their value (0.2860 +- 0.0015 fm^2) derived therefrom for the quadrupole moment of the deuteron.  If anything, their error limits on Q are on the conservative side.').  The number 0.2859(3) does not occur in the paper.  It is the value the NN-potential literature attributes to it: AV18 (Wiringa, Stoks, Schiavilla, PRC 51 (1995) 38, Table X: 'Qd 0.2859(3)', footnote f = Bishop & Cheung) and CD-Bonn (Machleidt, PRC 63 (2001) 024001, Table XV: 0.2859(3), refs. [76, 73] = Bishop & Cheung and Ericson & Rosa-Clot, NPA 405 (1983) 497) -- where the +-0.0003 comes from (Ericson & Rosa-Clot is not on disk) is not established here.  The value moves by +0.0001 fm^2 (+0.035 %), the error by x5; Q_d is RECORDED, not asserted, so no verdict moves."
+      }
+    ],
     "source_url": {
-      "eta_d": "https://doi.org/10.1103/PhysRevC.41.898 (as docs/references/REFERENCES.md sec. 1 #30 gives it; not fetched)",
-      "Q_d": "https://doi.org/10.1103/PhysRevA.20.381 (constructed from the citation's journal, volume and page; not fetched, not checked)"
+      "eta_d": "https://doi.org/10.1103/PhysRevC.41.898 (fetched 2026-10-26, APS, curl's own identity through the institution's licence; 706610 bytes, sha256 4dbfb75f5d67e437f9115a8427e6db0508b0f3984e59a2d1eebee79dee0ff161; kept outside the repository)",
+      "Q_d": "https://doi.org/10.1103/PhysRevA.20.381 (fetched 2026-10-26, APS, curl's own identity through the institution's licence; 227994 bytes, sha256 a28b358d7223447c83f13c6855a6eb551a0a1a5e79350f3c29e75669e4091950; kept outside the repository)"
     },
     "transcribed_from": [
+      {
+        "quantity": "eta_d",
+        "paper": "Rodning & Knutson, Phys. Rev. C 41 (1990) 898",
+        "where": "Eq. (10), p. 906; the abstract, p. 898; Sec. VII, p. 908",
+        "read": "2026-10-26"
+      },
+      {
+        "quantity": "Q_d",
+        "paper": "Bishop & Cheung, Phys. Rev. A 20 (1979) 381",
+        "where": "the abstract, p. 381; Sec. III (Conclusions), pp. 382-383",
+        "read": "2026-10-26"
+      }
+    ],
+    "transcribed_from_2026_09_26": [
       {
         "quantity": "eta_d",
         "file": "docs/benchmarking/02_data_nucleon_deuteron.md",
@@ -20,20 +49,20 @@
         "git_rev": "f0a8f1e"
       }
     ],
-    "fetched": "2026-09-26 (the transcription date; nothing was downloaded)",
-    "licence": "The two numbers are measured physical quantities (facts).  The in-tree prose they were copied from is GPL-3.0-or-later, as is this file.  The papers' own terms were not consulted: the papers were not obtained.",
+    "fetched": "2026-10-26 (both papers, read for this revision); 2026-09-26 (the first, second-hand transcription; nothing was downloaded then)",
+    "licence": "The two numbers are physical quantities (facts), quoted with attribution from the papers named in 'papers'; the APS articles themselves are not redistributed (kept outside the repository).  This file is GPL-3.0-or-later.",
     "papers": {
-      "eta_d": "N. L. Rodning, L. D. Knutson, 'Asymptotic D-state to S-state ratio of the deuteron', Phys. Rev. C 41 (1990) 898 (INSPIRE 312974); the earlier Phys. Rev. Lett. 57 (1986) 2248 (INSPIRE 1476759) -- as 02_data_nucleon_deuteron.md sec. 5.2 cites them.  Method, per that survey: d + 4He sub-Coulomb tensor analysing powers.  One determination; the survey quotes no world average and none was consulted here.",
-      "Q_d": "D. M. Bishop, L. M. Cheung, Phys. Rev. A 20 (1979) 381 -- as include/lipolgen/b1_nuclear.hpp:127-128 cites it (docs/open_items/run_2026-09-02/design_D_b1_li6.md sec. 4.3 adds 'as used by Ericson & Rosa-Clot').  Title and method are not stated anywhere in the tree; the paper was not re-read."
+      "eta_d": "N. L. Rodning, L. D. Knutson, 'Asymptotic D-state to S-state ratio of the deuteron', Phys. Rev. C 41 (1990) 898 (INSPIRE 312974); the earlier Phys. Rev. Lett. 57 (1986) 2248.  WHAT IT IS (read 2026-10-26): a MEASUREMENT -- an empirical determination through a reaction model: the tensor analysing power T20 of 208Pb(d,p)209Pb at 6.0 and 7.0 MeV, T21 of the same reaction at 7.0 MeV and T20 of 136Xe(d,p)137Xe at 4.5 and 5.5 MeV, two final states each, ten angular distributions (Sec. III.A, p. 900), compared with DWBA calculations; ten statistically independent values of eta, and their weighted average, Eq. (10), p. 906: eta = 0.0256 +- 0.0004, 'where the uncertainty includes the contributions from statistics, calculations, and normalization' (Sec. VII, p. 908).  The 2026-09-26 text ('Method, per that survey: d + 4He sub-Coulomb tensor analysing powers') was wrong about the targets: they are 208Pb and 136Xe.",
+      "Q_d": "D. M. Bishop, L. M. Cheung, 'Quadrupole moment of the deuteron from a precise calculation of the electric field gradient in D2', Phys. Rev. A 20 (1979) 381.  WHAT IT IS (read 2026-10-26): a THEORETICAL (quantum-chemistry) calculation of the electric field gradient q at the nucleus in D2 -- the Kolos-Wolniewicz 54-term Born-Oppenheimer wave function at R = 1.4 a.u. and a 540-term nonadiabatic one -- which CONFIRMS Reid and Vaida's q (PRA 7 (1973) 1841; PRL 34 (1975) 1064E) and hence their SEMI-EMPIRICAL Q = (eqQ/h, measured by Ramsey and co-workers in the molecular-beam magnetic-resonance experiments on HD and D2) / q (calculated): Q = 0.2860 +- 0.0015 fm^2.  'There is no purely experimental value' (p. 381)."
     },
     "publishing_convention": {
       "eta_d": "Dimensionless: A_D/A_S, the ratio of the asymptotic normalisations of the deuteron's radial S and D waves, u(r) -> A_S exp(-kappa r) and w(r) -> A_D exp(-kappa r) [1 + 3/(kappa r) + 3/(kappa r)^2] as r -> infinity.  Independent of the wave function's overall normalisation.  PER DEUTERON (a property of the bound n-p state).  Positive for the physical deuteron (the relative S-D sign that gives Q_d > 0).",
-      "Q_d": "The electric (spectroscopic, M = J = 1) quadrupole moment of the deuteron in fm^2 (e fm^2 with e = 1), PER DEUTERON.  A MEASURED value, so it contains everything nature puts in it (two-body currents, relativistic corrections), which an impulse-approximation model Q_d omits.",
-      "errors": "The parenthesised digits as the tree prints them, read here as one standard deviation on the last digits: 0.0256(4) -> sigma 0.0004; 0.2859(3) -> sigma 0.0003 fm^2.  Whether the papers quote 1 sigma, and whether statistical or total, was not checked."
+      "Q_d": "The electric (spectroscopic, M = J = 1) quadrupole moment of the deuteron in fm^2 (e fm^2 with e = 1), PER DEUTERON.  SEMI-EMPIRICAL (a measured quadrupole coupling over a calculated field gradient), so it contains everything nature puts in the quadrupole interaction (two-body currents, relativistic corrections), which an impulse-approximation model Q_d omits.",
+      "errors": "As the papers quote them, read as one standard deviation (neither paper states a confidence level): eta_d 0.0256 +- 0.0004 (statistics, calculations and normalization combined); Q_d 0.2860 +- 0.0015 fm^2 (Reid and Vaida's error, which Bishop and Cheung call conservative).  Until 2026-10-26 the parenthesised digits of the tree's prose were read the same way: 0.0256(4) and 0.2859(3)."
     },
-    "vendored_by": "hand-written 2026-09-26 for t2_deuteron_static.py; the harness re-checks the sha256 of every byte of this file and of the canonical body (json.dumps(body, sort_keys=True, separators=(',', ':'), ensure_ascii=True)) recorded as _body_sha256 on every read."
+    "vendored_by": "hand-written 2026-09-26 for t2_deuteron_static.py; revised 2026-10-26 (phase D: both papers read, Q_d corrected) by a script kept outside the repository; the harness re-checks the sha256 of every byte of this file and of the canonical body (json.dumps(body, sort_keys=True, separators=(',', ':'), ensure_ascii=True)) recorded as _body_sha256 on every read."
   },
-  "_body_sha256": "18f805e529544681f4b793771f0b2011ba540f1333c30a77f8c0979ad6ede849",
+  "_body_sha256": "51adce98ee6ebc80fa40278244cffe9d92d94f22ed8c3213b9e62eba75ea4acb",
   "body": {
     "points": [
       {
@@ -41,18 +70,18 @@
         "value": 0.0256,
         "sigma": 0.0004,
         "unit": "1",
-        "as_printed": "0.0256(4)",
-        "reference": "Rodning & Knutson, Phys. Rev. C 41 (1990) 898",
-        "transcribed_from": "docs/benchmarking/02_data_nucleon_deuteron.md:285"
+        "as_printed": "0.0256 +- 0.0004",
+        "reference": "Rodning & Knutson, Phys. Rev. C 41 (1990) 898, Eq. (10)",
+        "transcribed_from": "Rodning & Knutson, PRC 41 (1990) 898, Eq. (10), p. 906 (read 2026-10-26; the 2026-09-26 transcription from docs/benchmarking/02_data_nucleon_deuteron.md:285 confirmed)"
       },
       {
         "quantity": "Q_d",
-        "value": 0.2859,
-        "sigma": 0.0003,
+        "value": 0.286,
+        "sigma": 0.0015,
         "unit": "fm^2",
-        "as_printed": "+0.2859(3) fm^2",
-        "reference": "Bishop & Cheung, Phys. Rev. A 20 (1979) 381",
-        "transcribed_from": "include/lipolgen/b1_nuclear.hpp:121-128"
+        "as_printed": "+0.2860 +- 0.0015 fm^2",
+        "reference": "Bishop & Cheung, Phys. Rev. A 20 (1979) 381 (confirming Reid & Vaida's semi-empirical value)",
+        "transcribed_from": "Bishop & Cheung, PRA 20 (1979) 381, abstract p. 381 and Sec. III pp. 382-383 (read 2026-10-26; CORRECTED from the 2026-09-26 +0.2859(3), kept in _provenance.corrections)"
       }
     ]
   }

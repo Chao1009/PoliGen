@@ -9,7 +9,12 @@ points, 0.0045 <= x <= 0.5, 0.75 <= Q2 <= 65 GeV2 -- vendored VERBATIM from
 the nnpdf-data 4.1.5 wheel (set NMC_NC_NOTFIXED_D, observable EM-F2-HEPDATA)
 by `vendor_nnpdf_commondata.py` into `data/nnpdf_NMC_NC_NOTFIXED_D.json`,
 whose `_provenance` block carries the wheel URL and sha256, the path inside
-the wheel, the HEPData / INSPIRE record and the licences.  Against it: the
+the wheel, the HEPData / INSPIRE record and the licences.  [READ 2026-10-26
+(the arXiv copy, refs/hep-ph_9610231.pdf of the sibling corpus): the 158
+points are the paper's Table 6 (arXiv PDF pp. 35-36), F2d averaged over the
+four beam energies and both triggers with the normalisation shifts of its
+Table 2 applied, 158 of 158 equal to the file in x, Q2, F2d, stat and
+syst.]  Against it: the
 tree's per-nucleon F2 of the deuteron, (F2p + F2n)/2, at each point's OWN
 (x, Q2), for three unpolarized backends (the `--unpol-sf` choices):
 
@@ -43,8 +48,25 @@ the one 'sys' component is labelled MULT, CORR, so C makes it 100 %
 correlated over all 158 points -- NNPDF's label, not a statement NMC makes
 in the vendored file, which is why it is not the verdict.  Uncertainties are
 the ABSOLUTE values given (a MULT component already multiplied by the data
-central value; no t0 rescaling).  Whether NMC's overall normalisation
-uncertainty is inside 'sys' is not stated (UNVERIFIED).
+central value; no t0 rescaling).  The paper states its systematics' sources
+and their correlations per energy (the deuteron's Table 4 caption, arXiv PDF
+p. 29), not for the averaged column.
+  Whether NMC's overall normalisation uncertainty is inside 'sys'
+(2026-09-26: UNVERIFIED) -- RESOLVED 2026-10-26: it is NOT, and it is
+nowhere in the file.  The paper: "The total systematic uncertainties on F2,
+obtained by adding in quadrature all the above contributions apart from the
+normalisation uncertainty, range from 1% to 5%", the per-energy 2 % being
+"included in the 2.5% total normalisation uncertainty of the combined data"
+(Sect. 4.1, arXiv PDF p. 8; Figs. 5-6 captions, PDF pp. 18-19: "apart from
+the 2.5% normalisation uncertainty"); the file's 'sys' is Table 6's syst
+column, and the file defines only 'stat' (UNCORR, ADD) and 'sys' (CORR,
+MULT).  Neither chi2 here carries the 2.5 %: it is stated, not added (a new
+error model after the numbers were seen would be a re-tuned tolerance).
+For scale only: a common 2.5 % shift cannot absorb ct18nlo's mean excess of
+8.6 % (3.4 normalisation sigmas with every other residual zero) nor the
+toy's 6.0 %; for mstw (mean 1.025) it is one sigma -- what it would do to
+mstw's chi2, which its worst pull of +5.0 says is not a scale alone, is not
+computed here.
 
 TOLERANCE.  p(chi2, ndf) >= 0.01 on the DIS-cut set, diagonal errors,
 ndf = number of points (nothing is fitted).  The row's STATUS is the shipped
@@ -55,7 +77,12 @@ and MSTW 417 over 155 points, diagonal, Q2 >= 1); it is stated here so that
 it can be argued with, not tuned.  ToyF2 is labelled a TOY in sf.hpp
 ("anchored by eye ... factor-1.5 rate estimates ONLY"): its failure is a
 RECORDED FAIL with its distance, not a defect of this harness, and moves
-nothing.
+nothing.  PREVIEWED 2026-10-26 (phase 0, the first run with the LHAPDF sets
+installed), before this header was revised: the ct18nlo sub-row FAILS,
+3401.8/146 on its own floor Q2 >= 1.677, mean model/data 1.086
+(phase_0_environment.md); the tolerance above is the 2026-09-26 one,
+unchanged, and LhapdfSF's leading-order F2 of an NLO set is phase 0's
+reading of the excess, not tested here.
 
 THE THREE NORMALISATION RULES (BENCHMARK_PLAN.md sec. 8), for THIS row:
   1. b1 normalisations / A-scaling -- NOT APPLICABLE: no b1 on either side;
@@ -73,21 +100,31 @@ THE THREE NORMALISATION RULES (BENCHMARK_PLAN.md sec. 8), for THIS row:
      functions (NMC's values are the size of ONE nucleon's F2, 0.25-0.44 at
      small x, which excludes a per-deuteron reading).  NOT like for like in
      one respect, stated rather than corrected: NMC's F2d is the DEUTERON's
-     (Fermi motion, binding, shadowing included; not corrected -- UNVERIFIED
-     offline), the tree's is the free isoscalar nucleon; the tree has no
-     deuteron-structure correction for F2.
+     (Fermi motion, binding, shadowing included; not corrected -- READ
+     2026-10-26: the analysis, Sects. 3-4 (arXiv PDF pp. 6-8), applies no
+     nuclear correction to F2d, only the higher-order electroweak one, whose
+     deuteron quasi-elastic suppression concerns the radiative tail; the
+     companion NPB 487 (1997) 3 treats the deuteron's nuclear effects as
+     uncorrected, its Sect. 6), the tree's is the free isoscalar nucleon;
+     the tree has no deuteron-structure correction for F2.
 
 WHAT THIS DOES NOT VALIDATE.  R = sigma_L/sigma_T (NMC's R points are not in
-the package, and the R NMC extracted F2 with is not stated in the file),
-F2 of the proton or neutron separately (only their sum enters), anything
-nuclear beyond A = 2, and the polarized or tensor sector.
+the package -- phase C1's `t1_r_world.py` compares them; the R NMC
+extracted this F2 with (2026-09-26: not stated in the file) -- READ
+2026-10-26: NMC's OWN measured R, one Q2-averaged value per x bin, for
+x < 0.12 (Table 7, arXiv PDF p. 14: 0.537 at x = 0.0045 ... 0.043 at
+x = 0.11), and R1990 for x > 0.12 (Sect. 4, PDF p. 7; Table 6's R column
+equals its R1990 column at every x > 0.12 row); the tree's F2 is
+R-independent, so this row inherits NMC's R only through the data), F2 of
+the proton or neutron separately (only their sum enters), anything nuclear
+beyond A = 2, and the polarized or tensor sector.
 
 INTEGRITY.  The sha256 of every byte of the vendored file (`FILE_SHA256`)
 and of its canonical body (`BODY_SHA256`, also recorded inside the file)
 are re-checked on EVERY read: an altered table is refused with a
 RuntimeError, so `__main__` exits 2, never 0 on moved numbers.
 
-Run:  source env.sh && python3 validation/benchmarks/t1_nmc_f2d.py
+Run:  source env.sh && python3 validation/benchmarks/t1_nmc_f2d.py [--plot]
 
 Exit status (validation/benchmarks/README.md): 0 when the harness ran and
 printed its REPORT row -- pass, recorded fail and blocked alike, since the
@@ -434,11 +471,76 @@ def run(path=None, verbose=True):
     return report
 
 
+# ------------------------------------------------------------------ figure
+
+#: the figure's palette slot and legend name of each configuration
+PLOT_SLOTS = {"toy": ("default", "ToyF2 (shipped)"),
+              "mstw": ("mstw", "MSTW2008 LO"),
+              "ct18nlo": ("ct18nlo", "CT18NLO (LO formula)")}
+
+
+def plot(report, out_dir=None):
+    """F2d per nucleon vs x: the DIS-cut points (ink; the points outside the
+    cut hollow and grey), each evaluated backend's value at the point's own
+    (x, Q2) as a tick in its slot colour, over the verdict chi2's pulls
+    (theory - data)/sigma.  A view of the row: every number drawn is in the
+    report; a blocked configuration is left out (its reason is in the row)."""
+    if HERE not in sys.path:
+        sys.path.insert(0, HERE)
+    from _plots import MUTED, new_figure, save, status_title, style_series
+    pts, configs = report["points"], report["configs"]
+    fig, (ax, axp) = new_figure(two_panel=True)
+    cut = [p for p in pts if dis_cut(p)]
+    out = [p for p in pts if not dis_cut(p)]
+    ax.errorbar([p["x"] for p in cut], [p["value"] for p in cut],
+                yerr=[p["err"] for p in cut], **style_series(
+                    "reference", label="NMC F2d per nucleon (stat (+) sys)"))
+    if out:
+        kw = style_series("reference", label="outside the DIS cut (not compared)")
+        kw.update(color=MUTED, markerfacecolor="none", zorder=4)
+        ax.errorbar([p["x"] for p in out], [p["value"] for p in out],
+                    yerr=[p["err"] for p in out], **kw)
+    for k, n in enumerate(CONFIGS):
+        c = configs[n]
+        if c["status"] == "blocked":
+            continue
+        slot, label = PLOT_SLOTS[n]
+        sel = [j for j, p in enumerate(pts) if dis_cut(p, c["q2_floor"])]
+        kw = style_series(slot, label="%s: %.1f/%d" % (label, c["dis"]["chi2"],
+                                                      c["dis"]["n"]))
+        kw.update(marker="_", linestyle="none", markersize=8, markeredgewidth=1.6)
+        ax.plot([pts[j]["x"] for j in sel], [c["theory"][j] for j in sel], **kw)
+        dodge = 10 ** (0.025 * (k - 1))       # side by side in the pull panel
+        pk = style_series(slot, marker="o")
+        pk.update(markersize=2.5, label="_nolegend_")
+        axp.plot([pts[j]["x"] * dodge for j in sel],
+                 [(c["theory"][j] - pts[j]["value"]) / pts[j]["err"] for j in sel],
+                 **pk)
+    q2s = [p["q2"] for p in cut]
+    ax.set_xscale("log")
+    ax.set_ylabel("F2 per nucleon (deuteron)")
+    ax.legend(loc="lower left", ncol=1, fontsize=7)
+    axp.set_xlabel("x (each point at its own Q2, %g <= Q2 <= %g GeV^2)"
+                   % (min(q2s), max(q2s)))
+    axp.set_ylabel("(th - data)/sigma")
+    h = configs[HEADLINE]
+    status_title(fig, NAME, report["status"],
+                 "ToyF2: %.1f/%d (p = %.2g); tolerance p >= %g on Q2 >= %g, "
+                 "W2 >= %g GeV^2, stat (+) sys diagonal"
+                 % (h["dis"]["chi2"], h["dis"]["n"], h["dis"]["p"], P_MIN, Q2_CUT,
+                    W2_CUT))
+    return save(fig, NAME, out_dir)
+
+
 def main(argv=None):
     # Exit convention (module docstring, validation/benchmarks/README.md):
     # 0 = ran and printed its REPORT row, whatever the verdict; 2 = broken.
+    # `--plot` also writes the row's figure (plot()); the same rule holds.
+    argv = sys.argv[1:] if argv is None else argv
     try:
-        run()
+        rep = run()
+        if "--plot" in argv:
+            print("figure: %s" % plot(rep))
     except Exception:  # any exception means the harness itself is broken
         traceback.print_exc()
         return 2

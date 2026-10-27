@@ -5,7 +5,8 @@ the LIPOLGEN_BENCH opt-in (`conftest.py`) -- BENCHMARK_PLAN.md sec. 3:
 "writes one row of docs/benchmarking/REPORT.md ... The report is
 regenerated, never hand-edited."
 
-Everything except the last test runs always and needs neither lipolgen nor
+Everything except the last test and the `import_pythia8` test (which skips,
+naming the tier, without PYTHIA 8) runs always and needs neither lipolgen nor
 LHAPDF: the harnesses here are FAKE modules written into `tmp_path`, one per
 path through the generator (pass, fail, blocked, error, a missing LHAPDF
 set, an import error, a `sys.exit`, a crashed child process, an opt-in row,
@@ -357,13 +358,19 @@ def test_plan_rows_and_u_rows_are_read_not_invented(mr, fake):
 def test_the_real_plan_maps_the_section_4_rows(mr):
     plan = mr.read_plan(_PLAN)
     assert plan is not None
-    assert [r["row"] for r in plan["rows4"]] == list(range(1, 12))  # row 11 added 2026-09-27 (D3)
+    # row 11 added 2026-09-27 (D3); rows 12-16 added 2026-10-26 (run
+    # 2026-10-26, phases C1, C2, C1, C4, C5 -- one harness each)
+    assert [r["row"] for r in plan["rows4"]] == list(range(1, 17))
     assert mr.plan_row_map(plan) == {
         "t5_epios_source_modes": 1, "t2_hermes_b1_table2": 3,
         "t3_nmc_li6_over_d": 4, "t3_li6_charge_ff_fb": 5,
         "t3_li_magnetization_rfy": 6, "t4_djangoh_rad_noRad": 7,
         "t5_est_identity": 9, "t2_bonus_spectator_shape": 10,
-        "t2_deeps_spectator_tail": 11}
+        "t2_deeps_spectator_tail": 11, "t1_r_world": 12,
+        "t5_delta_moment_bound": 13, "t1_hermes_f2d": 14,
+        "t3_li6_ff_wiringa_schiavilla": 15, "t2_boeglin_nk": 16}
+    # each row names its own harness and no other one
+    assert all(len(r["harnesses"]) <= 1 for r in plan["rows4"])
     assert [r["row"] for r in plan["rows4"] if not r["harnesses"]] == [2, 8]
     assert [u["id"] for u in plan["u_rows"]] == ["U-%d" % i for i in range(1, 13)]
 
@@ -637,6 +644,190 @@ def test_the_opt_in_hook_skips_unless_the_variable_is_exactly_1(monkeypatch):
             mark = marked.added[0].mark
             assert mark.name == "skip"
             assert "LIPOLGEN_BENCH=1" in mark.kwargs["reason"]
+
+
+# ------------------------------------------------------- _report.import_pythia8
+
+def test_import_pythia8_works_from_the_repository_root(rp, monkeypatch):
+    """`_report.import_pythia8()` -- the one workaround for PYTHIA 8.317's
+    python loader, which execs every file of a `python/` directory in the
+    CURRENT WORKING DIRECTORY at import (docs/open_items/run_2026-10-26/
+    phase_0_environment.md), so a plain `import pythia8` fails from this
+    repository's root.  Called with the root as the working directory it
+    returns PYTHIA's module (it exposes `Pythia`), leaves the working
+    directory where it was, and a second call returns the same object.  The
+    first import runs in a fresh interpreter (cwd = the root, `pythia8` not
+    yet imported), so the chdir path itself is exercised; then once more in
+    this process.  Added 2026-10-26 (run 2026-10-26, phase E)."""
+    lg = pytest.importorskip("lipolgen")
+    if not getattr(lg, "HAVE_PYTHIA8", False):
+        pytest.skip("environment: lipolgen built without PYTHIA 8 "
+                    "(HAVE_PYTHIA8 false); import_pythia8 needs the PYTHIA "
+                    "tier")
+    import importlib.util
+    if importlib.util.find_spec("pythia8") is None:   # locates, never inits
+        pytest.skip("environment: the PYTHIA tier is on but no pythia8 "
+                    "Python module is on the path (PYTHIA's Python bindings)")
+    code = textwrap.dedent("""
+        import os, sys
+        sys.path.insert(0, %r)
+        from _report import import_pythia8
+        before = os.getcwd()
+        assert "pythia8" not in sys.modules
+        m = import_pythia8()
+        assert hasattr(m, "Pythia"), sorted(dir(m))[:20]
+        assert os.getcwd() == before, (os.getcwd(), before)
+        assert import_pythia8() is m
+        assert os.getcwd() == before
+        print("import_pythia8 OK", m.__name__, before)
+    """ % _BENCH)
+    p = subprocess.run([sys.executable, "-c", code], cwd=_ROOT,
+                       capture_output=True, text=True, timeout=300)
+    assert p.returncode == 0, (p.stdout, p.stderr)
+    assert "import_pythia8 OK pythia8" in p.stdout
+    assert os.path.isdir(os.path.join(_ROOT, "python"))   # the trap is there
+    monkeypatch.chdir(_ROOT)
+    before = os.getcwd()
+    m = rp.import_pythia8()
+    assert hasattr(m, "Pythia")
+    assert os.getcwd() == before
+    assert rp.import_pythia8() is m
+    assert os.getcwd() == before
+
+
+# ------------------------------------------------------------- --plots
+
+#: fakes for the figure paths: a harness whose plot() writes its file, one
+#: whose plot() raises, one whose plot() has nothing to draw (None); the
+#: plain t5_fake_pass of FAKES has no plot() at all.  No matplotlib needed:
+#: make_report only links what plot() wrote.
+PLOT_FAKES = {
+    "t2_fake_plot": """
+        import os
+        def run(verbose=True):
+            return dict(name="t2_fake_plot", generator="ratio 1.01",
+                        reference="r", tolerance="5 %", status="pass")
+        def plot(report, out_dir=None):
+            os.makedirs(out_dir, exist_ok=True)
+            path = os.path.join(out_dir, "t2_fake_plot.png")
+            with open(path, "wb") as f:
+                f.write(b"\\x89PNG\\r\\n\\x1a\\n" + report["generator"].encode())
+            return path
+    """,
+    "t3_fake_plot_raises": """
+        def run(verbose=True):
+            return dict(name="t3_fake_plot_raises", generator="chi2 9/3",
+                        reference="r", tolerance="t", status="fail")
+        def plot(report, out_dir=None):
+            raise ValueError("no axes today")
+    """,
+    "t4_fake_plot_none": """
+        def run(verbose=True):
+            return dict(name="t4_fake_plot_none", generator="not evaluated",
+                        reference="r", tolerance=None, status="blocked",
+                        reason="needs a document")
+        def plot(report, out_dir=None):
+            return None
+    """,
+}
+
+
+def _plot_bench(tmp_path):
+    bench = _write_fakes(tmp_path / "bench", names={"t5_fake_pass"})
+    for name, body in PLOT_FAKES.items():
+        (bench / (name + ".py")).write_text(textwrap.dedent(body))
+    plan = tmp_path / "PLAN.md"
+    plan.write_text(FAKE_PLAN)
+    return bench, plan
+
+
+def test_plots_link_the_figure_a_harness_draws_and_nothing_else(mr, tmp_path):
+    """--plots: plot() after run(), the PNG under <out>/figures, its path
+    RELATIVE to the report in row['figure'] and as an image link under the
+    row's heading; no plot() -> no figure, no complaint; a raising plot()
+    costs the figure only; plot() -> None draws nothing.  In process and
+    through the child process alike."""
+    bench, plan = _plot_bench(tmp_path)
+    out = tmp_path / "out"
+    assert mr.main(["--bench-dir", str(bench), "--plan", str(plan),
+                    "--in-process", "--plots", "--out-dir", str(out)]) == 0
+    rep = json.loads((out / "REPORT.json").read_text())
+    rows = _rows(rep)
+    png = out / "figures" / "t2_fake_plot.png"
+    assert png.is_file() and png.read_bytes().startswith(b"\x89PNG")
+    assert rows["t2_fake_plot"]["figure"] == "figures/t2_fake_plot.png"
+    assert not os.path.isabs(rows["t2_fake_plot"]["figure"])
+    for name in ("t5_fake_pass", "t4_fake_plot_none"):
+        assert "figure" not in rows[name] and "figure_error" not in rows[name]
+    bad = rows["t3_fake_plot_raises"]
+    assert "figure" not in bad and bad["figure_error"] == "ValueError: no axes today"
+    assert bad["status"] == "fail" and bad["generator"] == "chi2 9/3"
+    assert rows["t4_fake_plot_none"]["status"] == "blocked"
+    assert sorted(os.listdir(out / "figures")) == ["t2_fake_plot.png"]
+    assert rep["generated"]["figures_dir"] == "figures"
+    assert rep["generated"]["command"].endswith(" --plots")
+    md = (out / "REPORT.md").read_text()
+    lines = md.splitlines()
+    i = lines.index("### t2_fake_plot")
+    assert lines[i + 1:i + 4] == ["", "![t2_fake_plot](figures/t2_fake_plot.png)", ""]
+    assert str(tmp_path) not in "\n".join(l for l in lines if l.startswith("!["))
+    assert [l for l in lines if l.startswith("![")] == [lines[i + 2]]
+    assert ("- **figures:** 1 of 4 rows carry one, linked under the row's "
+            "heading in *Detail*") in md
+    assert "; 1 not drawn, the reason in the row" in md
+    assert "- **figure:** not drawn — ValueError: no axes today" in md
+    # the same through the per-harness child process (--child-report-dir)
+    iso = tmp_path / "iso"
+    rep = mr.generate(str(bench), isolate=True, plan_path=str(plan),
+                      now=FAKE_NOW, git=FAKE_GIT, env=FAKE_ENV, echo=False,
+                      timeout=120, report_dir=str(iso))
+    rows = _rows(rep)
+    assert rows["t2_fake_plot"]["figure"] == "figures/t2_fake_plot.png"
+    assert (iso / "figures" / "t2_fake_plot.png").is_file()
+    assert rows["t3_fake_plot_raises"]["figure_error"] == "ValueError: no axes today"
+    assert "figure" not in rows["t5_fake_pass"]
+    # without --plots: no figure field, no header line, nothing drawn
+    plain = tmp_path / "plain"
+    assert mr.main(["--bench-dir", str(bench), "--plan", str(plan),
+                    "--in-process", "--out-dir", str(plain)]) == 0
+    rep = json.loads((plain / "REPORT.json").read_text())
+    assert "figures_dir" not in rep["generated"]
+    assert all(k not in r for r in rep["rows"] for k in mr.FIGURE_KEYS)
+    md = (plain / "REPORT.md").read_text()
+    assert "![" not in md and "**figures:**" not in md and "**figure:**" not in md
+    assert not (plain / "figures").exists()
+
+
+def test_check_ignores_figures_with_and_without_plots(mr, tmp_path, monkeypatch):
+    """--check never draws and takes every figure field from the committed
+    report, as it takes the date and the runtimes: a report made with
+    --plots, and one made without, both check clean; a changed or deleted
+    PNG is no difference; a hand edit elsewhere still is."""
+    import tempfile
+    monkeypatch.setattr(tempfile, "tempdir", str(tmp_path))   # --check's scratch
+    bench, plan = _plot_bench(tmp_path)
+    common = ["--bench-dir", str(bench), "--plan", str(plan), "--in-process"]
+    for plots in (True, False):
+        out = tmp_path / ("with_plots" if plots else "without_plots")
+        assert mr.main(common + ["--all", "--out-dir", str(out)]
+                       + (["--plots"] if plots else [])) == 0
+        assert mr.main(common + ["--check", "--out-dir", str(out)]) == 0
+    out = tmp_path / "with_plots"
+    png = out / "figures" / "t2_fake_plot.png"
+    png.write_bytes(b"\x89PNG another matplotlib build")
+    assert mr.main(common + ["--check", "--out-dir", str(out)]) == 0
+    png.unlink()
+    assert mr.main(common + ["--check", "--out-dir", str(out)]) == 0
+    md = out / "REPORT.md"
+    md.write_text(md.read_text().replace("**PASS**", "**FAIL**", 1))
+    assert mr.main(common + ["--check", "--out-dir", str(out)]) == 1
+    # --check never draws; --compare draws only beside a written report
+    assert mr.main(common + ["--check", "--plots", "--out-dir", str(out)]) == 2
+    js = tmp_path / "without_plots" / "REPORT.json"
+    assert mr.main(common + ["--compare", str(js), "--plots"]) == 2
+    assert mr.main(common + ["--compare", str(js), "--plots", "--out-dir",
+                             str(tmp_path / "cmp")]) == 0
+    assert (tmp_path / "cmp" / "figures" / "t2_fake_plot.png").is_file()
 
 
 # ------------------------------------------------------------- the real report

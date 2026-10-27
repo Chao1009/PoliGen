@@ -242,13 +242,22 @@ def test_t4_t6_exit_2_when_lipolgen_is_not_importable(harness, tmp_path):
 
 # The full-size row: ~10 s measured, but a generator-vs-generator sample is an
 # EXPENSIVE row by kind (BENCHMARK_PLAN.md sec. 3).
-T4_PINNED = {  # measured 2026-09-26, PYTHIA 8.312, N = 20 000 per side/window
-    ("W1", "n_ch"): (8.0267, 8.0539),
-    ("W1", "sum_empz"): (2.7229, 2.7405),
-    ("W1", "sum_pt_ch"): (3.8271, 3.8492),
-    ("W2", "n_ch"): (7.2606, 7.2428),
-    ("W2", "sum_empz"): (2.0012, 2.0060),
-    ("W2", "sum_pt_ch"): (6.1278, 6.1313),
+# (stock, bridge) means, N = 20 000 per side/window, seed as in the harness.
+# Re-taken 2026-10-26 (run 2026-10-26, phase E) from this machine's run of the
+# harness on the PINNED PYTHIA 8.317 (LIPOLGEN_BENCH=1, 2026-10-27T01:08Z UTC;
+# the row PASSES, worst 0.076).  The previous pin was PYTHIA 8.312's
+# (2026-09-26, unpinned conda-forge): W1 (8.0267, 8.0539), (2.7229, 2.7405),
+# (3.8271, 3.8492); W2 (7.2606, 7.2428), (2.0012, 2.0060), (6.1278, 6.1313)
+# -- every one of them within the rel 3 % below of the 8.317 values (largest
+# move 2.0 %, W2 n_ch), so the old pin still passed; it is re-taken so that
+# the pin is the pinned version's.  Tolerance and verdict logic unchanged.
+T4_PINNED = {
+    ("W1", "n_ch"): (8.1441, 8.2035),
+    ("W1", "sum_empz"): (2.7353, 2.7449),
+    ("W1", "sum_pt_ch"): (3.8483, 3.8815),
+    ("W2", "n_ch"): (7.4037, 7.3826),
+    ("W2", "sum_empz"): (1.9954, 2.0016),
+    ("W2", "sum_pt_ch"): (6.1940, 6.1633),
 }
 
 
@@ -262,8 +271,8 @@ def test_t4_full_row_passes_and_is_pinned(t4):
     _t4_verdict_follows(rep, t4)
     assert rep["status"] == "pass"
     by = {(s["window"], s["observable"]): s for s in rep["subrows"]}
-    # rel 3 %: several times each mean's statistical error (<= 0.7 %), loose
-    # enough for the pinned PYTHIA 8.317 against the 8.312 that measured it.
+    # rel 3 %: several times each mean's statistical error (<= 0.7 %); until
+    # 2026-10-26 the pins were 8.312's and this held them against 8.317 too.
     for key, (stock, bridge) in T4_PINNED.items():
         assert by[key]["stock"] == pytest.approx(stock, rel=0.03), key
         assert by[key]["bridge"] == pytest.approx(bridge, rel=0.03), key
@@ -496,3 +505,20 @@ def test_t6_missing_charge_table_blocks_only_c14(t6, monkeypatch):
     assert by["C14"]["reason"] == env["charge"]
     assert rep["status"] == "blocked" and rep["reason"] == env["charge"]
     assert all(s["status"] in ("pass", "n/a") for c, s in by.items() if c != "C14")
+
+
+def test_t4_pythia_ep_closure_plot_writes_png(t4, tmp_path):
+    """plot() draws the row's figure -- a view of the report, never the
+    record -- as a non-empty PNG where it is told to (here a tmp dir), from
+    a 200-event smoke run (the full row is opt-in); a BLOCKED row, which
+    has no sub-row, has nothing to draw."""
+    pytest.importorskip("matplotlib", reason="matplotlib (the figure only)")
+    _skip_without_pythia_tier("the T4 figure")
+    rep = t4.run(verbose=False, n_events=200)
+    path = t4.plot(rep, out_dir=str(tmp_path))
+    assert path == os.path.join(str(tmp_path), "t4_pythia_ep_closure.png")
+    with open(path, "rb") as f:
+        assert f.read(8) == b"\x89PNG\r\n\x1a\n"
+    assert os.path.getsize(path) > 0
+    assert t4.plot(dict(rep, status="blocked", subrows=[]),
+                   out_dir=str(tmp_path / "blocked")) is None

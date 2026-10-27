@@ -88,7 +88,7 @@ buys the most. The order of the top four is unchanged with C3 weighted 1.
 
 | rank | channel / sector | C1 | C2 | C3 | C4 | C5 | score | the one-line reason |
 |---|---|---|---|---|---|---|---|---|
-| **1** | **Inclusive ⁶Li, cos 2φ — Δ(x, Q²)** (claim 1) | 3 | 3 | 3 | 1 | 3 | **28** | 18–28σ per sweet-spot bin in year 1 on the grid backend (21–43σ on the toy; `plans/07` §7.1); Δ is a scenario (`toy_delta_gluon` at the shipped scale 10⁻², no external calculation, U-5); R moves the amplitude −3 … −8 % generator-side (≤ 18 % in the sibling's chain) and F₂ cancels in it exactly; no anchor beyond a moment-level bound under assumptions |
+| **1** | **Inclusive ⁶Li, cos 2φ — Δ(x, Q²)** (claim 1) | 3 | 3 | 3 | 1 | 3 | **28** | 18–28σ per sweet-spot bin in year 1 on the grid backend (21–43σ on the toy; `plans/07` §7.1); Δ is a scenario (`toy_delta_gluon` at the shipped scale 10⁻², no external calculation, U-5); R moves the amplitude −15.6 / −15.1 / −7.1 / +4.6 % at the four sweet-spot cells x = 0.011 / 0.028 / 0.071 / 0.141 generator-side (`r1998` vs `r_sigma_lt`; −15.2 / −14.7 / −7.8 / +4.2 % over the generated super-bins; the sibling's whole chain 0.842 / 0.849 / 0.930 / 1.039 — *2026-10-26:* the "−3 … −8 %" written here until then were function-level points, not the sweet spots; `../open_items/run_2026-10-26/phase_C1_r_world.md` §4, `phase_A_baseline.md` §4) and F₂ cancels in it exactly; no anchor beyond a moment-level bound under assumptions |
 | **2** | **Coherent ⁶Li — a₂, cos 2(φ_t − φ_S)** with the recoil intact (claim 2) | 3 | 2 | 3 | 0 | 3 | **25** | N_tag ≈ 1.7 × 10⁷ per year at the 0.20 GeV envelope with best-bin δA 1.8 × 10⁻³ (1.2 × 10⁻³ two-fill): at the *measured* quadrupole the deformation a₂ (≈ 0.006 at the tag ⟨\|t\|⟩) is a 3–4σ-class signal and the gluon term 3 × 10⁻³–10⁻² a 2–6σ one; the shipped `eps_b0` implies a quadrupole **11.4×** the measured one (row 8), `f0` is anchored by nothing, no Good–Walker amplitude exists for A = 6 (U-3). *The coherent J/ψ a₂ reach (O5, 2.63σ, a MARGINAL band whose top is not established to cross 3σ) is another process, not generated here.* |
 | **3** | **Tagged ⁷Li α** — A_∥ on the quasi-free polarized triton; the polarimetry identity ⟨P₂⟩ = −T/5 (paper 2) | 2 | 3 | 3 | 1 | 3 | **25** | the best tagged figure of merit (ε = 0.97–0.99 at IP6, ε × D² = 0.72–0.74, `plans/05` §5.E); the isotope commissioned first; the triton breakup is a sequential model by default (Ciofi–Simula opt-in, S₀ untuned), the P_n gate is OPEN, and the incoherent-background purity is FLUKA-gated — no calculation |
 | **4** | **Inclusive ⁶Li, A_zz / b₁(⁶Li)** (paper 2's inclusive half) | 2 | 2 | 3 | 2 | 2 | **23** | the sibling's A_zz money plot exists but its per-bin significance was not read for this file (scored 2, UNSCORED from a tree number); toy → CT18NLO is ×1.2524 on the window-level A_zz (0.86–1.44 per x bin), Miller's normalisation is a factor 2 (row 2), the α–d transfer is validated by nothing (U-1) and the ±100 % band is mandatory; HERMES b₁ᵈ and the A = 2 calculations anchor the input |
@@ -120,20 +120,30 @@ for this file.
   default (`tensor-flip` is (+P_zz, −2P_zz); `tensor-thirds` carries the
   −2P_zz category) — whether a lithium source delivers P_zz = −1.2 at
   matched purity is an external input (`plans/07` §7.1; no EPIOS mode
-  reaches below −1).
+  reaches below −1). *2026-10-26:* at the four super-bins (x = 0.011 /
+  0.028 / 0.071 / 0.141) the shipped Δ gives A₂ = −1.06 / −1.30 / −1.43 /
+  −1.33 × 10⁻³ per unit P_zz — the opposite sign of the letter's `moment_A`
+  amplitudes (+4.35 / +7.42 / +9.49 / +9.52 × 10⁻³) and 4–7× smaller
+  (`../open_items/run_2026-10-26/phase_A_baseline.md` §4.3).
 - **Validated today.** Only the EPIOS round trip of `spin1_populations`
   touches the tensor plans' fill, and U-9 is a convention gate on a
-  relation. **No harness exercises the cos 2φ amplitude**; `t5_est_identity`
+  relation. **No harness exercises the cos 2φ amplitude** *(2026-10-26: two now
+  gate its inputs — `t1_r_world`, row 12, R against NMC's R, PASS; and
+  `t5_delta_moment_bound`, row 13, Δ's moment against the gluonic Soffer
+  bound, PASS for the shipped toy — and the first prices R's lever on it;
+  the amplitude itself still has no external anchor)*; `t5_est_identity`
   concerns the helicity-flip fill, `t5_weighted_unweighted` is a
   φ-integrated closure at θ_S = 0 where the Δ term vanishes, and g₁ does not
   enter this observable (unpolarized electrons).
-- **Missing.** Any gate on Δ: the only bound that exists is the gluonic
-  Soffer-type bound on the n = 2 moment (Detmold–Shanahan Eq. (36) with the
-  Jaffe–Manohar relation), which needs a gluon set, a ⁶Li gluon helicity
-  model and f₁LL^g — a bound under stated assumptions, not a closed form;
+- **Missing.** Any gate on Δ beyond the moment-level gluonic Soffer-type
+  bound, wired 2026-10-26 under stated assumptions (`t5_delta_moment_bound`:
+  PASS for the shipped toy; the letter's scenario at 0.67–0.74 or 1.35–1.48
+  of the bound depending on the factor-2 normalisation of Δ in the kernel's
+  cos 2φ term, open);
   a measured R at the sweet spots (NMC's R at 0.002 < x < 0.12, `02` §4
   R-3, is the one data set that covers them; H1 F_L is below them, the SLAC
-  sets above); a full O(α) polarized RC — the letter carries a leading-log
+  sets above — *2026-10-26:* compared, row 12; NMC fixes (1 + R) at the
+  sweet-spot x to ±7.5–9.3 %, and at higher Q² than the cells); a full O(α) polarized RC — the letter carries a leading-log
   ISR bound of ≤ 2.9 % on the amplitude (`plans/07` WP4) and
   `RcScope::TensorAll` prices the Δ cos 2φ omission generator-side, but no
   hadronic-side calculation exists (U-6).
@@ -229,7 +239,9 @@ for this file.
 - **Missing.** b₁(⁶Li) beyond the α–d picture (U-1: no calculation for any
   A > 2); any anchor on the transfer; a measured R.
 - **Development order.** (1) the default-input price table for A_zz
-  (phase A here); (2) row 2 by a theory input, since HERMES cannot decide
+  (phase A here) — done: ×1.2524 (CT18NLO) / ×1.2604 (MSTW), ×0.9555 under
+  `--r-source r1998` on the `li6-convolution` path
+  (`../open_items/run_2026-10-26/phase_A_baseline.md` §4); (2) row 2 by a theory input, since HERMES cannot decide
   it; (3) the opt-in `li6-convolution` with `--b1-unpol mstw` as the quotable
   configuration, as the lift already requires.
 
@@ -268,8 +280,14 @@ for this file.
   control (8.88e−16 over 26 880 cells); the port gate. **Against data:
   `t2_deuteron_static` FAIL for the shipped Hulthén (η +17.2σ; D2 keeps it
   and quotes physics on AV18); `t2_deeps_spectator_tail` FAIL for every
-  wave and both prescriptions; `t2_bonus_spectator_shape` BLOCKED on the
-  supplemental material, reachable this run.**
+  wave and both prescriptions; `t2_bonus_spectator_shape` FAIL recorded
+  2026-10-26: the 40 mb Glauber weight's backward-window variation exceeds
+  the data's 1σ flat band in 24 of 28 DIS blocks, while the data fall
+  toward 90° as the weight does (χ² 739.4 flat against 226.3 for the
+  weight's shape, 84 dof) — the rule's premise fails, not the weight's
+  direction; `t2_boeglin_nk` (row 16, 2026-10-26) PASS for all three waves
+  only inside the paper's 20 % FSI/off-shell allowance, Hulthén the worst
+  shape (21.98/21 against AV18 11.54, CD-Bonn 8.89).**
 - **Missing.** Anything with an α spectator (U-2); the (e,e′d) / (e,e′α)
   α–d momentum distributions (Ent, Mitchell — paywalled, digitizable); the
   D wave from data (U-8); an FSI with spin dependence.
@@ -299,21 +317,22 @@ for this file.
   of any generation path (§5.4).
 - **Development order.** (1) d(e,e′p)n momentum distributions (Boeglin),
   with the paper's own 10–20 % FSI allowance declared; (2) BONuS and Deeps
-  as above.
+  as above. *(2026-10-26: (1) wired as row 16, PASS under the 20 % allowance,
+  all three waves failing without it; BONuS wired as row 10, FAIL recorded.)*
 
 ## 4. Cross-cutting ingredients, ranked by leverage on ranks 1–3
 
 | rank | ingredient | moves | status | the development item |
 |---|---|---|---|---|
-| **A** | **unpolarized nucleon inputs F₂, R** (`--unpol-sf`, `--r-source`) | on the cos 2φ amplitude (rank 1) **F₂ cancels exactly** and R is the lever: −8.3 / −6.7 / −3.1 % at the sweet spots generator-side (`r1998` vs `r_sigma_lt`), 0.85–1.04 in the sibling's whole chain; F₂ enters only the rate (N_DIS ×0.766, δA ×0.95–1.16). On A_zz (rank 4): toy → CT18NLO ×1.2524 window-level (0.86–1.44 per x bin); `r1998` vs `r_sigma_lt` is +26.4 % on K/D_φ at x = 0.10, y = 0.5, Q² = 2.5 **on the opt-in `li6-convolution` path, the only one that accepts `--r-source`** (y-dependent) | phase 0: **no backend passes absolute F₂ᵈ** (toy 8307.9/155, MSTW 416.5/155, CT18NLO at LO 3401.8/146 — the 8.6 % excess is of the size of the missing NLO coefficient functions); the ratio passes for MSTW and CT18NLO; R has no data comparison anywhere | wire R data with NMC R at the sweet spots (phase C1); then a registry decision at M2 on the default backend, framed as "toy vs LO-evaluated grids: both fail absolute F₂ᵈ, the ratio passes, claim 1 sees only R and the rate" |
-| **C** | **the Δ sector** (`toy_delta_gluon` at 10⁻², the finite-γ kernel) | claim 1's extracted xΔ directly | **no gate at all**; the finite-γ leakage 0.14–0.16 γ²b₁ is a carried systematic | the moment-level Soffer-type bound under stated assumptions (phase C2) — a bound says the scenario is *allowed*, never that it is right |
+| **A** | **unpolarized nucleon inputs F₂, R** (`--unpol-sf`, `--r-source`) | on the cos 2φ amplitude (rank 1) **F₂ cancels exactly** and R is the lever: −15.6 / −15.1 / −7.1 / +4.6 % at the four sweet-spot cells x = 0.011 / 0.028 / 0.071 / 0.141 generator-side (`r1998` vs `r_sigma_lt`, `t1_r_world`'s kernel factor; −15.2 / −14.7 / −7.8 / +4.2 % over the generated super-bins on the `li6-convolution` path, `price_defaults.py`), the sibling's whole chain (0.842 / 0.849 / 0.930 / 1.039) to ≤ 0.9 %; the −8.3 / −6.7 / −3.1 % quoted until 2026-10-26 are `docs/USAGE.md`'s function-level points x = 0.05 / 0.10 / 0.30 at y = 0.5, Q² = 2.5, not the sweet spots (`../open_items/run_2026-10-26/phase_A_baseline.md` §4, `phase_C1_r_world.md` §4); F₂ enters only the rate (N_DIS ×0.766, δA ×0.95–1.16). On A_zz (rank 4): toy → CT18NLO ×1.2524 window-level (0.86–1.44 per x bin); `r1998` vs `r_sigma_lt` is +26.4 % on K/D_φ at x = 0.10, y = 0.5, Q² = 2.5 **on the opt-in `li6-convolution` path, the only one that accepts `--r-source`** (y-dependent) | phase 0: **no backend passes absolute F₂ᵈ** (toy 8307.9/155, MSTW 416.5/155, CT18NLO at LO 3401.8/146 — the 8.6 % excess is of the size of the missing NLO coefficient functions); the ratio passes for MSTW and CT18NLO; *2026-10-26:* NMC's 2.5 % normalisation is outside 'sys' (phase D) and cannot absorb CT18NLO's 8.6 % or the toy's 6.0 % excess; HERMES F₂ᵈ (row 14) fails for every backend too (ToyF2 5303.5/68, MSTW 318.9/68, CT18NLO-LO 1788.2/45); R: `t1_r_world` (row 12) PASS on NMC R (12.54/10) but `r_sigma_lt` fails the SLAC sets (209.76/68, 29.66/9) where `r1998` passes them (its own fit input); NMC fixes (1 + R) at the sweet-spot x to ±7.5–9.3 % | R data wired 2026-10-26 (row 12, phase C1); next, a registry decision at M2 on the default backend, framed as "toy vs LO-evaluated grids: both fail absolute F₂ᵈ, the ratio passes, claim 1 sees only R and the rate" |
+| **C** | **the Δ sector** (`toy_delta_gluon` at 10⁻², the finite-γ kernel) | claim 1's extracted xΔ directly | **one moment-level bound under stated assumptions** (`t5_delta_moment_bound`, row 13, PASS 2026-10-26): the shipped toy uses 6–9 % of the gluonic Soffer room (13–19 % under DS16's own normalisation of Δ, V6); the letter's `moment_A` / `moment_B` at dilution 1/3 use 0.67–0.74 under the first-pass normalisation and 1.35–1.48 (beyond the bound) under V6; the finite-γ leakage 0.14–0.16 γ²b₁ is a carried systematic | the factor-2 cross-section normalisation of Δ in the kernel's cos 2φ term (DS16 Eqs. (3)–(5) and LOI Eq. (6) against LOI Eq. (9) and the kernel; a registry candidate, `../open_items/run_2026-10-26/phase_C2_delta_bound.md` §9); f₁LL^g for ⁶Li (nothing calculates it). A bound says the scenario is *allowed*, never that it is right |
 | **E** | **coherent scenario** (`eps_b0`, `f0`, `amp`, `slope_b`) | the deformation a₂ by 11.4× and the generated c₂ by ≈ 6× at the tag ⟨\|t\|⟩; N_tag by `f0`'s factor-2 band | `slope_b` anchored; the rest not | row 8 at M2; row 21 |
-| **G** | **the deuteron wave function default** (Hulthén) | A_zz^tag ×2.3–4.8 at k = 0.2–0.3 GeV with a sign change by 0.5 GeV (rank 6); −2.03 % / −1.18 % on the d–p control's dilutions | `t2_deuteron_static` FAIL +17.2σ; D2 keeps the default until M2 | D2 at M2 — the largest measured lever on paper 2's tagged observable |
+| **G** | **the deuteron wave function default** (Hulthén) | A_zz^tag ×2.3–4.8 at k = 0.2–0.3 GeV with a sign change by 0.5 GeV (rank 6); −2.03 % / −1.18 % on the d–p control's dilutions | `t2_deuteron_static` FAIL +17.2σ against Rodning–Knutson's measured η_d (read, phase D); D2 keeps the default until M2; *2026-10-26:* Boeglin's d(e,e′p)n (row 16) passes all three waves only inside the paper's 20 % FSI allowance, Hulthén the worst shape (21.98/21; AV18 11.54, CD-Bonn 8.89; only CD-Bonn passes with the MS FSI factor) | D2 at M2 — the largest measured lever on paper 2's tagged observable |
 | **D** | **b₁(⁶Li) model** (`--b1-model`, row 2, the transfer) | A_zz(⁶Li) by ×2 (row 2) and by the ±100 % band | HERMES does not decide row 2; the α–d step is validated by nothing (U-1) | a theory input is the only way forward; keep the band mandatory |
-| **F** | **radiative corrections** (`--rc`, `--rc-tail-model`) | cos 2φ: the leading-log ISR bound ≤ 2.9 % (`plans/07` WP4), no full O(α) calculation (U-6), `RcScope::TensorAll` prices the omission; A_zz: the band's half-width (row 17, the low-x anchor errs wide by ×2.65); nothing on the coherent channel by design | LiPolGen's elastic tail is within 0.25×–4× of POLRAD's (0.88 / 0.95 / 0.39; HO form factor); POLRAD's own rows re-drive 2 of 3; the polarized QE tail is unpriced; row 7 (2026-10-26): against DJANGOH 4.6.21's exact O(α) proton elastic tail at 18 × 275, Q² 1–10⁴ GeV², `polrad-full` R = 1.020 / 1.026 / 1.022 / 1.010 (PASS at 3 % + 2δ) and 1.000 / 1.001 / 1.000 / 0.987 straight from the quadrature; the shipped `t-peak` R = 0.61 / 0.90 / 1.01 / 1.01 (0.60 / 0.88 / 0.99 / 0.98 direct); the (x, y) tail table adds +1.9 … +2.5 % | row 7 run and PASS 2026-10-26 (phase B3); the tail table's interpolation (+2 %) and the `TPeak` default (−39 % / −10 % of the exact proton tail at Q² 1–10 / 10–100 GeV²) are candidates for `DECISIONS_PRICED.md` (phase E) |
-| **H** | **polarized nucleon input g₁** (`--pol-sf`) | A_∥ on ranks 3 and 5; nothing on claim 1 | `t1_g1d_world` FAIL on every backend including NNPDFpol11 (phase 0) — the D-state / F₁ construction first (phase D) | phase D; a g₁ᵖ and a g₁ⁿ(³He) gate |
+| **F** | **radiative corrections** (`--rc`, `--rc-tail-model`) | cos 2φ: the leading-log ISR bound ≤ 2.9 % (`plans/07` WP4), no full O(α) calculation (U-6), `RcScope::TensorAll` prices the omission; A_zz: the band's half-width (row 17, the low-x anchor errs wide by ×2.65); nothing on the coherent channel by design | LiPolGen's elastic tail is within 0.25×–4× of POLRAD's (0.88 / 0.95 / 0.39; HO form factor); POLRAD's own rows re-drive 2 of 3; the polarized QE tail is unpriced; row 7 (2026-10-26): against DJANGOH 4.6.21's exact O(α) proton elastic tail at 18 × 275, Q² 1–10⁴ GeV², `polrad-full` R = 1.020 / 1.026 / 1.022 / 1.010 (PASS at 3 % + 2δ) and 1.000 / 1.001 / 1.000 / 0.987 straight from the quadrature; the shipped `t-peak` R = 0.61 / 0.90 / 1.01 / 1.01 (0.60 / 0.88 / 0.99 / 0.98 direct); the (x, y) tail table adds +1.9 … +2.5 %; *2026-10-26:* F_m's shape against RFY's ⁶Li F_M² (row 6): PASS at p = 0.038 with a free scale over q = 0.85–1.39 fm⁻¹ (0.0145 at s = 1); the C0 zero against Wiringa–Schiavilla (row 15): PASS one-sided (q₀ = 3.0998 ≥ 2.8143 fm⁻¹), while row 5's data band sits below it | row 7 run and PASS 2026-10-26 (phase B3); the tail table's interpolation (+2 %) and the `TPeak` default (−39 % / −10 % of the exact proton tail at Q² 1–10 / 10–100 GeV²) are candidates for `DECISIONS_PRICED.md` (phase E) |
+| **H** | **polarized nucleon input g₁** (`--pol-sf`) | A_∥ on ranks 3 and 5; nothing on claim 1 | `t1_g1d_world` FAIL on every backend including NNPDFpol11 (phase 0); phase D read the four papers: all publish g₁ᵈ per nucleon, NOT D-state corrected, so the verdict column stands and the D-state is cleared (the other reading is worse for NNPDFpol11 on all three sets); `LhapdfG1`'s leading-order evaluation of an NLO set is the open reading (the Bjorken integral sits at 98 % of g_A/6, without C_Bj) | phase D; a g₁ᵖ and a g₁ⁿ(³He) gate |
 | **B** | **beam and fill assumptions** | the two-fill pair (+0.6, −1.2) is built by default; whether a Li source delivers P_zz = −1.2 at matched purity is external (no source table, N-2; EPIOS modes reach −1); on ⁷Li the default ladder fill's R₃ ≠ 0 contaminates A_∥ with no structure function to price it | recorded, not asserted | state the assumed fill in the letter; price R₃ by ladder vs `--pzz-mode typed` |
-| **I** | **spectator FSI** (`--fsi`) | the tagged spectrum's shape, never A_zz (spin-blind) | unitarity not definable; the two variants differ on 99.5 % of events | the Deeps transverse window and BONuS (DIS blocks only) as direction checks |
+| **I** | **spectator FSI** (`--fsi`) | the tagged spectrum's shape, never A_zz (spin-blind) | unitarity not definable; the two variants differ on 99.5 % of events; BONuS (row 10, 2026-10-26): the weight's direction at p_s = 70–150 MeV/c is the data's, its 40 mb backward variation exceeds the flat band (4/12, 0/16 blocks); the forward excess is what its cos → −cos symmetry cannot carry | the Deeps transverse window and BONuS (DIS blocks only) as direction checks |
 | **J** | **T2 hadronization** | reco-level FOMs on the sibling side | `t4_pythia_ep_closure` PASS (worst 0.076 on the pinned 8.317; 0.023 on 8.312) | none for the letter |
 | **K** | **output and chain** | nothing physical | `t6_hepmc3_convention` 23/23; the ePIC legs unrun since 2026-09-02 | M3 |
 | **L** | **⁷Li rank-2 sector** | nothing: identically zero | pinned zero; deferred on row 20 | waits on theory input |
@@ -334,7 +353,11 @@ for this file.
    RFY (row 6), blocked on a document until today; the DJANGOH elastic-only
    run (row 7, run 2026-10-26: PASS); HERMES F₂ᵈ as a T1 extension; the
    Wiringa–Schiavilla ⁶Li form factors as a theory anchor for the C0 zero;
-   Boeglin's d(e,e′p)n with its FSI allowance.
+   Boeglin's d(e,e′p)n with its FSI allowance. *Recorded 2026-10-26 by the
+   integration stage: all wired — R row 12 PASS, the Δ bound row 13 PASS,
+   BONuS row 10 FAIL recorded, RFY row 6 PASS, DJANGOH row 7 PASS, HERMES
+   F₂ᵈ row 14 FAIL recorded, Wiringa–Schiavilla row 15 PASS (one-sided),
+   Boeglin row 16 PASS (under its allowance).*
 3. **Rows that stay FAIL by decision are read against this ranking.** The
    Hulthén η (D2) and the C0 zero (≤ 2.2e−7 on ΔA_zz) can stay recorded
    until M2. The toy F₂ / g₁ failures (A/H) and `eps_b0` (E) sit under ranks
@@ -372,3 +395,4 @@ for this file.
 |---|---|---|
 | 2026-10-26 | first version, from the 2026-09-27 report and the 2026-09-27 decisions | run `../open_items/run_2026-10-26/` |
 | 2026-10-26 | revised after two adversarial readers (49 findings, physics and honesty/feasibility lenses; `../open_items/run_2026-10-26/STATUS.md` phase 0r): the rubric's levels defined and applied literally with three stated override rules; rank 1 split into cos 2φ (claim 1) and A_zz/b₁ (paper 2); F₂ removed as a lever on the cos 2φ amplitude (it cancels; R is the lever); the fill model demoted (the two-fill pair is built by default); the deuteron wave function priced on A_zz^tag (×2.3–4.8); the Abbott t₂₀ item re-filed as development; the PASS list, the Deeps p-values, the triton polarizations, the Δ scale (10⁻²), the δA footings and the O5 qualifiers corrected; phase 0's CT18NLO / NNPDFpol11 numbers folded in | the supervising session |
+| 2026-10-26 | the run's measurements folded in (phases A, B1, B2, B3, C1, C2, C4, C5, D, P; `../open_items/run_2026-10-26/STATUS.md`): the R price at the sweet spots corrected from the function-level −8.3 / −6.7 / −3.1 % (USAGE.md's x = 0.05 / 0.10 / 0.30, y = 0.5, Q² = 2.5) to −15.6 / −15.1 / −7.1 / +4.6 % at the cells (−15.2 / −14.7 / −7.8 / +4.2 % over the generated super-bins) in §2 rank 1 and §4 A; the shipped Δ's amplitude recorded as the opposite sign of `moment_A` and 4–7× smaller (§3.1); row C wired (`t5_delta_moment_bound` PASS for the shipped toy at 6–9 % of the gluonic Soffer room; DS16's own definition of Δ makes the kernel's cos 2φ coefficient twice DS16's per unit Δ, so the letter's scenario uses 0.67–0.74 or 1.35–1.48 of the bound — a registry candidate); R (row 12) and HERMES F₂ᵈ (row 14) in §4 A; BONuS (row 10) FAIL, Boeglin (row 16) PASS under its allowance, in §3.6, §3.7, §4 G and I; RFY (row 6) and Wiringa–Schiavilla (row 15) in §4 F; the g₁ᵈ D-state convention cleared and η_d read in §4 G and H; §5 item 2 recorded. **No rank moved**: no worker's measurement changed a criterion score — rank 1 keeps C3 = 3 (Δ is still a scenario; a bound is not an external calculation) and C4 = 1 (R's new anchor is at A = 1, 2, another A; the Δ bound is a bound, not an anchor); ranks 3 and 5 keep C3 = 3 (`--pol-sf nnpdfpol` moves A_∥ ×0.51–0.53); rank 6 keeps C3 = 3 (A_zz^tag ×0.43 / ×0.21 under `--cluster-wave vmc`); the row-7 RC check (ingredient F) scores no channel | the integration stage (phase E) |

@@ -70,7 +70,10 @@ def test_sr_reference_constants_are_the_recorded_ones(sr_mod):
     ref = sr_mod.load_reference()
     keys = sorted(ref)
     assert len(ref) == 7
+    # alpha_s(M_Z) = 0.1180(9): PDG 2026 Table 1.1 and the QCD review's
+    # Eq. (9.25), read 2026-10-26 (phase D) -- the value typed, unchanged
     assert keys[0] == "alpha_s_mz" and ref[keys[0]] == 0.1180
+    assert ref["alpha_s_mz_err"] == 0.0009
     assert keys[-1] == "m_z_gev" and ref[keys[-1]] == 91.1879
     # PDG 2026 (pdg-2026.0 wheel): S017AV, Q005M, Q004M
     assert ref["g_A"] == 1.2753 and ref["g_A_err"] == 0.0013
@@ -390,3 +393,14 @@ def test_wu_fixed_seeds_reproduce_and_row_prints(wu_mod, capsys):
     assert rows[0].startswith("REPORT | t5_weighted_unweighted | ")
     assert rows[0].endswith("| " + b["status"].upper())
     assert "np.float64" not in out
+
+
+def test_t5_sum_rules_plot_writes_png(sr_mod, sr_rep, tmp_path):
+    """plot() draws the row's figure -- a view of the report, never the
+    record -- as a non-empty PNG where it is told to (here a tmp dir)."""
+    pytest.importorskip("matplotlib", reason="matplotlib (the figure only)")
+    path = sr_mod.plot(sr_rep, out_dir=str(tmp_path))
+    assert path == os.path.join(str(tmp_path), "t5_sum_rules.png")
+    with open(path, "rb") as f:
+        assert f.read(8) == b"\x89PNG\r\n\x1a\n"
+    assert os.path.getsize(path) > 0

@@ -1,0 +1,101 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# ============================================================================
+# VENDORED REFERENCE TABLE -- BENCHMARK_PLAN.md sec. 4 row 6 (tier T3)
+# The harmonic-well parameter a0 and the coupling parameters of every 6Li and
+# 7Li fit of Rand, Frosch, Yearian 1966, Tables VII, VIII and XIV, VERBATIM.
+# (Format of 2026-10-26.  It REPLACES the format the 2026-09-23 header asked
+# for -- nucleus,mu_nm,r_mag_fm,r_mag_err_fm,model_note,q_range_fm -- because
+# the paper prints NO magnetization radius: it prints a0, the length of the
+# harmonic well its Eq. (17) is evaluated in, and the coupling parameters.)
+# ----------------------------------------------------------------------------
+# Paper:     R. E. Rand, R. F. Frosch, M. R. Yearian, Phys. Rev. 144 (1966)
+#            859-873, doi:10.1103/PhysRev.144.859 -- the same document, the
+#            same fetch and the same sha256 as rfy1966_li_magnetic_ff.csv
+#            (7cbb2d21615d5e500a9c3235a026382e8529fc6c7828fa12a8fa6cfd31d5bbe2;
+#            kept OUTSIDE the repository; only numbers are vendored).
+# Tables:    TABLE VII (6Li, J = 1; journal p. 869), TABLE VIII (7Li, J = 3/2;
+#            p. 870), TABLE XIV (a0 from charge and from magnetic scattering;
+#            p. 873).
+# Transcribed: 2026-10-26, READ FROM THE PAGE IMAGE (pdftoppm at 150, 300 and
+#            450 dpi), not from the OCR.  NO digit is ambiguous.
+# Licence:   facts (fit parameters) quoted with attribution; APS copyright on
+#            the article.
+# THE MODEL the parameters belong to (p. 868): Eq. (17)
+#     F_M^2(q^2) = [(<j0> + R1 <j2>)^2 + R2^2 <j2>^2] F_N^2(q^2),
+#   harmonic well: <j0> = (1 - (2/3)x) e^-x (c.m.), <j2> = (2/3) x e^-x (c.m.),
+#   x = q^2 a0^2/4, (c.m.) = e^(x/A), A the mass number, F_N(q^2) = (1 +
+#   q^2/7.1)^-1 (q^2 in F^-2); "The rms radius is given by <r^2> = (5/2) a0^2"
+#   -- the rms radius of the 1p-shell orbital of the well, which the paper
+#   distinguishes from the slope of F_M at q^2 = 0 (p. 873: "the almost
+#   horizontal form factor curve at q^2 = 0 does not imply <r^2> = 0, as may
+#   be seen by inspection of (17)").  For 7Li the fitted form is Eq. (18),
+#     F_M^2(q^2) = [A <j0>^2 + B <j0><j2> + C <j2>^2] F_N^2(q^2),
+#   A = 1 + S0^2, B = 2(R1 + S0 S1), C = R1^2 + R2^2 + S1^2 + S2^2, the S_i
+#   those of the unresolved 0.478-MeV level (p. 870).  Fits are normalised
+#   to F_M^2(0) = 1 (p. 868) and include the other authors' points of Figs.
+#   5 and 6 (not vendored).
+# CONVENTION, column by column:
+#   nucleus      6Li or 7Li.
+#   fit          the table's model label: A = harmonic-well fit, a0 free; B =
+#                harmonic-well fit with a0 from charge scattering; C =
+#                harmonic-well fit with an arbitrary a0 in the reasonable-chi2
+#                region; D = square-well fit (U0 free, BE fixed);
+#                alpha+d(1s) = the cluster model; theory:L-S / theory:j-j /
+#                theory:I.P. = the coupling-scheme predictions printed at the
+#                head of Tables VII and VIII (Griffy and Yu, Ref. 30);
+#                XIV:charge / XIV:mag = Table XIV's two a0 columns.
+#   a0_fm        a0 in F (= fm) as printed; empty where the row has none;
+#                "1.6-2.2" for 6Li's XIV:mag, printed as the RANGE "1.6 -2.2"
+#                (p. 869: "any value in the range 1.6 <= a0 <= 2.2 is
+#                possible").
+#   a0_err_fm    the printed +- on a0, empty where none is printed.  Table
+#                XIV's errors are "the regions over which the respective
+#                chi-squared's are within 1 standard deviation of the expected
+#                values. (The smaller errors in Tables VII-XII are for fixed
+#                R1, R2.)" (p. 873): the 6Li (A) +-0.04 and the 7Li (A)
+#                +-0.01 are CONDITIONAL on the fitted R1 (R2, ...).
+#   coupling_note  machine part, then " | ", then the paper's words for the
+#                row.  The machine part is "KEY=VALUE" pairs separated by
+#                "; ", each VALUE exactly as printed, "x" or "x+-y".  KEYS:
+#                R1, R2, A, B, C (dimensionless); Omega0/mu0 (F^2, the
+#                octupole-to-dipole moment ratio); chi2, dof (the paper's
+#                chi-squared and degrees of freedom, over ALL the points of
+#                its figure, other authors' included); q0 (F^-1); BE, U0
+#                (MeV); r0 (F).
+#   q_range_fm   DERIVED, not printed: sqrt of the smallest and largest
+#                printed q^2 of the paper's own table the fit used (Table I:
+#                0.72-1.92 F^-2; Table II: 0.49-3.87 F^-2), to 2 decimals;
+#                the fits also include other authors' lower-q points.  Empty
+#                for theory and charge-scattering rows.
+#   table, page  the paper's table and journal page.
+#   PER NUCLEUS: a0 is a length of the nuclear well; R1, R2, A, B, C are
+#                ratios; nothing here is per nucleon.
+# Integrity: validation/benchmarks/t3_li_magnetization_rfy.py records the
+#   sha256 of EVERY byte of this file and re-checks it on every read; an
+#   altered file raises RuntimeError and the harness exits 2.
+# ============================================================================
+nucleus,fit,a0_fm,a0_err_fm,coupling_note,q_range_fm,table,page
+6Li,theory:L-S,,,"R1=0 | Theoretical prediction (Griffy and Yu, Ref. 30), L-S coupling",,VII,869
+6Li,theory:j-j,,,"R1=0.438 | Theoretical prediction (Griffy and Yu, Ref. 30), j-j coupling",,VII,869
+6Li,A,2.16,0.04,"R1=0.53+-0.03; chi2=1.7; dof=6 | (A) Harmonic-well fit, a0 free parameter",0.85-1.39,VII,869
+6Li,C,1.70,,"R1=-0.02+-0.03; chi2=8.4; dof=7 | (C) harmonic-well fit, using arbitrary a0 in reasonable chi2 region",0.85-1.39,VII,869
+6Li,B,1.78,,"R1=0.10+-0.03; chi2=6.0; dof=7 | (B) harmonic-well fit, using a0 from charge scattering; footnote b: Ref. 28 (M. Bernheim, Ph.D. thesis, Orsay, 1965)",0.85-1.39,VII,869
+6Li,C,1.90,,"R1=0.25+-0.03; chi2=3.4; dof=7 | (C) harmonic-well fit, using arbitrary a0 in reasonable chi2 region",0.85-1.39,VII,869
+6Li,C,2.00,,"R1=0.36+-0.03; chi2=2.3; dof=7 | (C) harmonic-well fit, using arbitrary a0 in reasonable chi2 region",0.85-1.39,VII,869
+6Li,B,2.10,,"R1=0.47+-0.03; chi2=1.8; dof=7 | (B) harmonic-well fit, using a0 from charge scattering; footnote c: Ref. 26 (G. R. Burleson and R. Hofstadter, Phys. Rev. 112 (1958) 1282)",0.85-1.39,VII,869
+6Li,C,2.20,,"R1=0.57+-0.03; chi2=1.7; dof=7 | (C) harmonic-well fit, using arbitrary a0 in reasonable chi2 region",0.85-1.39,VII,869
+6Li,D,,,"BE=5.15; U0=20; r0=4.51; R1=0.55+-0.04; chi2=1.7; dof=6 | (D) square-well fit, U0 free parameter, BE fixed",0.85-1.39,VII,869
+6Li,alpha+d(1s),,,"q0=0.39+-0.01; chi2=2.8; dof=7 | 'alpha+d' (1s): F_M(q^2)_1s = F_d(q^2) exp[(-q^2/4q0^2)(1-2/A)], F_d a Gaussian deuteron form factor with rms radius 1.8 F (p. 869)",0.85-1.39,VII,869
+6Li,XIV:charge,1.78,," | Charge scattering; footnote a: Bernheim (see Ref. 28)",,XIV,873
+6Li,XIV:mag,1.6-2.2,," | Mag. scattering, printed as the range 1.6 -2.2",0.85-1.39,XIV,873
+7Li,theory:L-S,,,"A=1.57; B=-1.33; C=2.73; R1=-0.719; R2=1.35 | Theoretical predictions, L-S coupling",,VIII,870
+7Li,theory:j-j,,,"A=1.29; B=0.77; C=1.41; R1=0.361; R2=1.05 | Theoretical predictions, j-j coupling; A, B and C carry footnote a: Using independent-particle inelastic form factor",,VIII,870
+7Li,theory:I.P.,,,"A=1.29; B=0.28; C=1.35; R1=0.116; R2=1.08 | Theoretical predictions, Ind. particle",,VIII,870
+7Li,A,1.70,0.01,"A=1.24+-0.05; B=0.23+-0.07; C=1.18+-0.02; R1=0.09+-0.04; R2=0.96+-0.05; Omega0/mu0=2.83+-0.15; chi2=23.3; dof=22 | (A) harmonic-well fit, a0 free parameter",0.70-1.97,VIII,870
+7Li,C,1.62,,"A=1.12+-0.05; B=0.26+-0.07; C=1.06+-0.02; R1=0.11+-0.04; R2=0.89+-0.06; Omega0/mu0=2.38+-0.15; chi2=30.8; dof=23 | (C) harmonic-well fit, arbitrary a0",0.70-1.97,VIII,870
+7Li,C,1.66,,"A=1.15+-0.05; B=0.25+-0.07; C=1.09+-0.02; R1=0.10+-0.04; R2=0.91+-0.05; Omega0/mu0=2.56+-0.15; chi2=25.6; dof=23 | (C) harmonic-well fit, arbitrary a0",0.70-1.97,VIII,870
+7Li,B,1.72,,"A=1.27+-0.05; B=0.22+-0.08; C=1.21+-0.02; R1=0.08+-0.04; R2=0.97+-0.05; Omega0/mu0=2.93+-0.15; chi2=23.5; dof=23 | (B) harmonic-well fit, a0 from charge scattering; footnote b: Ref. 28 (Bernheim)",0.70-1.97,VIII,870
+7Li,C,1.78,,"A=1.36+-0.06; B=0.17+-0.08; C=1.30+-0.02; R1=0.05+-0.04; R2=1.02+-0.05; Omega0/mu0=3.30+-0.16; chi2=30.0; dof=23 | (C) harmonic-well fit, arbitrary a0",0.70-1.97,VIII,870
+7Li,D,,,"BE=10.01; U0=34; r0=3.53; A=1.28+-0.05; B=0.00+-0.09; C=1.62+-0.03; R1=-0.02+-0.04; R2=1.17+-0.04; Omega0/mu0=3.21+-0.12; chi2=23.9; dof=22 | (D) square-well fit",0.70-1.97,VIII,870
+7Li,XIV:charge,1.72,," | Charge scattering; footnote a: Bernheim (see Ref. 28)",,XIV,873
+7Li,XIV:mag,1.70,0.08,"Omega0/mu0(L-S)=4.0; Omega0/mu0(j-j)=3.1; Omega0/mu0(I.P.)=3.2; Omega0/mu0(experiment)=2.8+-0.5 | Mag. scattering; the octupole-to-dipole ratios (F^2) of the same Table XIV row",0.70-1.97,XIV,873

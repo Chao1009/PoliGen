@@ -809,7 +809,7 @@ exactly the same order for any thread count.
   against [MT69] was replaced by that construction rather than written against a
   formula transcribed from memory, and **[MT69] is still not in this tree**:
   the exact tail below is checked POLRAD-internally and against the leading log,
-  never against an external exact tail.
+  never against an external exact tail. *Since 2026-10-26 (`docs/benchmarking/BENCHMARK_PLAN.md` §4 row 7) `PolradFull`'s proton (quasi-elastic) slot is checked against an external exact O(α) tail, DJANGOH 4.6.21's IEL31–33: −1.3 … +0.1 % straight from the quadrature, +1.0 … +2.6 % through the shipped (x, y) table; `TPeak` is 0.60 / 0.88 / 0.99 / 0.98 of it at Q² = 1–10 / 10–100 / 100–10³ / 10³–10⁴ GeV² (e 18 × p 275; one beam, one shared dipole form factor, no coherent or polarised term — `docs/open_items/run_2026-10-26/phase_B3_djangoh.md`).*
 - `RcTailModel::PolradFull` — POLRAD Eq. (18) + Appendix B + Eq. (A.4), the
   full non-peaking τ_A integration — **threw from 2026-09-02 to 2026-09-06 and
   is implemented now**, opt-in as `--rc-tail-model polrad-full`. It carries all

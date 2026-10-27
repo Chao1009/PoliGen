@@ -1,0 +1,943 @@
+{
+  "_provenance": {
+    "what": "The global SLAC extraction of R = sigma_L/sigma_T (Whitlow et al. 1990, the data behind R1990): 89 (x, Q2) bins, 0.1 <= x <= 0.86 -- the reference side of the 'r1990' (CLOSURE) sub-row of validation/benchmarks/t1_r_world.py (02_data_nucleon_deuteron.md sec. 4 R-1).",
+    "record": {
+      "inspire": "ins296980",
+      "hepdata_doi": "10.17182/hepdata.29555.v1",
+      "hepdata_version": 1,
+      "record_url": "https://www.hepdata.net/record/ins296980",
+      "catalogue_url": "https://www.hepdata.net/record/ins296980?format=json",
+      "catalogue_sha256": "6f38a10ea4edec1919fe9e7d332a40fe665718024645bc49f1dcc3a7e5f25341",
+      "catalogue_bytes": 13498,
+      "title": "A Precise extraction of R = sigma-L / sigma-T from a global analysis of the SLAC deep inelastic e p and e d scattering cross-sections",
+      "journal": "Phys.Lett.B 250 (1990) 193-198",
+      "paper_doi": "10.1016/0370-2693(90)91176-C",
+      "arxiv": null,
+      "n_tables_in_record": 13
+    },
+    "tables_used": [
+      {
+        "name": "Table 1",
+        "doi": "10.17182/hepdata.29555.v1/t1",
+        "location": "Data from P 195",
+        "description": "No description provided.",
+        "yaml_url": "https://www.hepdata.net/download/table/ins296980/Table 1/yaml",
+        "yaml_sha256": "fd5b553792e92d79b4dba019a11cca1eb36aa6dce38518b3d45218da57bb1a51",
+        "yaml_bytes": 416,
+        "yaml_fetched_utc": "2026-10-26T18:57:35.718661Z",
+        "json_url": "https://www.hepdata.net/download/table/ins296980/Table 1/json",
+        "json_sha256": "112801273b215817d2b52d83f100a401218f956f81acc649f234c0e70fefb842",
+        "json_bytes": 1301,
+        "json_fetched_utc": "2026-10-26T18:57:37.413553Z",
+        "table_license": "CC0 (https://creativecommons.org/publicdomain/zero/1.0/)"
+      },
+      {
+        "name": "Table 3",
+        "doi": "10.17182/hepdata.29555.v1/t3",
+        "location": "Data from F 2",
+        "description": "Global extracting of R from all the experiments.",
+        "yaml_url": "https://www.hepdata.net/download/table/ins296980/Table 3/yaml",
+        "yaml_sha256": "796e74f979dad8e5861c266ebf1cae928352c7a0bbdc945133c8c4e9c36da13c",
+        "yaml_bytes": 1257,
+        "yaml_fetched_utc": "2026-10-26T18:57:40.734618Z",
+        "json_url": "https://www.hepdata.net/download/table/ins296980/Table 3/json",
+        "json_sha256": "ebfd0e614d0853d7bb19ff8cf53eb9e27dbf1e5023c363daa67586b05c200fe5",
+        "json_bytes": 2325,
+        "json_fetched_utc": "2026-10-26T18:57:42.277873Z",
+        "table_license": "CC0 (https://creativecommons.org/publicdomain/zero/1.0/)"
+      },
+      {
+        "name": "Table 4",
+        "doi": "10.17182/hepdata.29555.v1/t4",
+        "location": "Data from F 2",
+        "description": "Global extracting of R from all the experiments.",
+        "yaml_url": "https://www.hepdata.net/download/table/ins296980/Table 4/yaml",
+        "yaml_sha256": "c235831df0fd3c158278f5309bb39041a9d5a6dbc11bfc602c26c3f492f92c50",
+        "yaml_bytes": 1378,
+        "yaml_fetched_utc": "2026-10-26T18:57:42.989136Z",
+        "json_url": "https://www.hepdata.net/download/table/ins296980/Table 4/json",
+        "json_sha256": "6e7ad87db6a71e8e6d8fb9c705a42bdee0af295b071875f0121a4c61e758e67b",
+        "json_bytes": 2467,
+        "json_fetched_utc": "2026-10-26T18:57:44.552750Z",
+        "table_license": "CC0 (https://creativecommons.org/publicdomain/zero/1.0/)"
+      },
+      {
+        "name": "Table 5",
+        "doi": "10.17182/hepdata.29555.v1/t5",
+        "location": "Data from F 2",
+        "description": "Global extracting of R from all the experiments.",
+        "yaml_url": "https://www.hepdata.net/download/table/ins296980/Table 5/yaml",
+        "yaml_sha256": "3f03d47e480f44c5c26377f5d88b75bab1373f985f71c0a23fa71c84d851de65",
+        "yaml_bytes": 1496,
+        "yaml_fetched_utc": "2026-10-26T18:57:45.548073Z",
+        "json_url": "https://www.hepdata.net/download/table/ins296980/Table 5/json",
+        "json_sha256": "e1c8d0dfc6fd273ad107b1d7ed3a06dd228517e528e3f12b20bb6d0a0e90a0ee",
+        "json_bytes": 2606,
+        "json_fetched_utc": "2026-10-26T18:57:46.918883Z",
+        "table_license": "CC0 (https://creativecommons.org/publicdomain/zero/1.0/)"
+      },
+      {
+        "name": "Table 6",
+        "doi": "10.17182/hepdata.29555.v1/t6",
+        "location": "Data from F 2",
+        "description": "Global extracting of R from all the experiments.",
+        "yaml_url": "https://www.hepdata.net/download/table/ins296980/Table 6/yaml",
+        "yaml_sha256": "5e95801b5eff92d499f53e564d66b751e8e82394642dff58ecf9527fee12c088",
+        "yaml_bytes": 1614,
+        "yaml_fetched_utc": "2026-10-26T18:57:47.644128Z",
+        "json_url": "https://www.hepdata.net/download/table/ins296980/Table 6/json",
+        "json_sha256": "efb710e4e8b67990f821d93f0582c0da10df4b767922cda81dd56e5e3bce99e3",
+        "json_bytes": 2745,
+        "json_fetched_utc": "2026-10-26T18:57:49.213977Z",
+        "table_license": "CC0 (https://creativecommons.org/publicdomain/zero/1.0/)"
+      },
+      {
+        "name": "Table 7",
+        "doi": "10.17182/hepdata.29555.v1/t7",
+        "location": "Data from F 2",
+        "description": "Global extracting of R from all the experiments.",
+        "yaml_url": "https://www.hepdata.net/download/table/ins296980/Table 7/yaml",
+        "yaml_sha256": "02f8c32e5a14e511a6fabf30e1a05ec1472d096038f7af14ef6b37165e820feb",
+        "yaml_bytes": 1377,
+        "yaml_fetched_utc": "2026-10-26T18:57:49.937198Z",
+        "json_url": "https://www.hepdata.net/download/table/ins296980/Table 7/json",
+        "json_sha256": "0cc61ca0638992f447720679c96ce31e14027558111ae7eae665e18569f32b62",
+        "json_bytes": 2466,
+        "json_fetched_utc": "2026-10-26T18:57:51.246900Z",
+        "table_license": "CC0 (https://creativecommons.org/publicdomain/zero/1.0/)"
+      },
+      {
+        "name": "Table 8",
+        "doi": "10.17182/hepdata.29555.v1/t8",
+        "location": "Data from F 2",
+        "description": "Global extracting of R from all the experiments.",
+        "yaml_url": "https://www.hepdata.net/download/table/ins296980/Table 8/yaml",
+        "yaml_sha256": "0d2f5c4770336dae1d00680adc121fa75a2d2dc5588845e198bb51636e759752",
+        "yaml_bytes": 1377,
+        "yaml_fetched_utc": "2026-10-26T18:57:52.206681Z",
+        "json_url": "https://www.hepdata.net/download/table/ins296980/Table 8/json",
+        "json_sha256": "c2a27b34d21f718ccbfaa1ebdd92384a201312956d8d99d60703a145d8e46c5c",
+        "json_bytes": 2466,
+        "json_fetched_utc": "2026-10-26T18:57:53.553458Z",
+        "table_license": "CC0 (https://creativecommons.org/publicdomain/zero/1.0/)"
+      },
+      {
+        "name": "Table 9",
+        "doi": "10.17182/hepdata.29555.v1/t9",
+        "location": "Data from F 2",
+        "description": "Global extracting of R from all the experiments.",
+        "yaml_url": "https://www.hepdata.net/download/table/ins296980/Table 9/yaml",
+        "yaml_sha256": "98d496504a71bcf7156a71b0d6aeb5f4210daf5eeb3b08e02b48963fbc61d5ce",
+        "yaml_bytes": 1258,
+        "yaml_fetched_utc": "2026-10-26T18:57:54.245826Z",
+        "json_url": "https://www.hepdata.net/download/table/ins296980/Table 9/json",
+        "json_sha256": "2e74901b91a2df231e7eab4259c5e4c118b2ee47d7a59277d4bba29a2679ddb8",
+        "json_bytes": 2326,
+        "json_fetched_utc": "2026-10-26T18:57:55.577493Z",
+        "table_license": "CC0 (https://creativecommons.org/publicdomain/zero/1.0/)"
+      },
+      {
+        "name": "Table 10",
+        "doi": "10.17182/hepdata.29555.v1/t10",
+        "location": "Data from F 2",
+        "description": "Global extracting of R from all the experiments.",
+        "yaml_url": "https://www.hepdata.net/download/table/ins296980/Table 10/yaml",
+        "yaml_sha256": "d9eb67399b6cf7079b293a7c182682a302bfe105b8eeb847b4790af7ac355d1b",
+        "yaml_bytes": 1144,
+        "yaml_fetched_utc": "2026-10-26T18:57:56.295958Z",
+        "json_url": "https://www.hepdata.net/download/table/ins296980/Table 10/json",
+        "json_sha256": "b89250eeddcc46720b153970eb8203ad063225d482c11d4c8ce4649b293f7043",
+        "json_bytes": 2193,
+        "json_fetched_utc": "2026-10-26T18:57:57.594515Z",
+        "table_license": "CC0 (https://creativecommons.org/publicdomain/zero/1.0/)"
+      },
+      {
+        "name": "Table 11",
+        "doi": "10.17182/hepdata.29555.v1/t11",
+        "location": "Data from F 2",
+        "description": "Global extracting of R from all the experiments.",
+        "yaml_url": "https://www.hepdata.net/download/table/ins296980/Table 11/yaml",
+        "yaml_sha256": "eda17ecb5608ab59a3d94d8642b88f0218b5b524b3d6cb39f923eb28108cac11",
+        "yaml_bytes": 1261,
+        "yaml_fetched_utc": "2026-10-26T18:57:58.332254Z",
+        "json_url": "https://www.hepdata.net/download/table/ins296980/Table 11/json",
+        "json_sha256": "b4f5710f4d70129f76edf3a0600b9aa9ca679570d9c94ba586d146f76b381e2f",
+        "json_bytes": 2331,
+        "json_fetched_utc": "2026-10-26T18:57:59.657655Z",
+        "table_license": "CC0 (https://creativecommons.org/publicdomain/zero/1.0/)"
+      },
+      {
+        "name": "Table 12",
+        "doi": "10.17182/hepdata.29555.v1/t12",
+        "location": "Data from F 2",
+        "description": "Global extracting of R from all the experiments.",
+        "yaml_url": "https://www.hepdata.net/download/table/ins296980/Table 12/yaml",
+        "yaml_sha256": "9f4d02115cace136fe500ecd00c02c55f5c8f2acf49afdbbd9bfa4e9774a5c5c",
+        "yaml_bytes": 1022,
+        "yaml_fetched_utc": "2026-10-26T18:58:00.421266Z",
+        "json_url": "https://www.hepdata.net/download/table/ins296980/Table 12/json",
+        "json_sha256": "c3cebc9240f2d5e65860ffa865d4987f6092fbaf330c1d070273ef602e0abbea",
+        "json_bytes": 2050,
+        "json_fetched_utc": "2026-10-26T18:58:01.876848Z",
+        "table_license": "CC0 (https://creativecommons.org/publicdomain/zero/1.0/)"
+      },
+      {
+        "name": "Table 13",
+        "doi": "10.17182/hepdata.29555.v1/t13",
+        "location": "Data from F 2",
+        "description": "Global extracting of R from all the experiments.",
+        "yaml_url": "https://www.hepdata.net/download/table/ins296980/Table 13/yaml",
+        "yaml_sha256": "6c3408ea1b40555e5ed97c39b58c8a86dbbb29377840919afb0aade71a99b507",
+        "yaml_bytes": 785,
+        "yaml_fetched_utc": "2026-10-26T18:58:02.678525Z",
+        "json_url": "https://www.hepdata.net/download/table/ins296980/Table 13/json",
+        "json_sha256": "1123cef9c791bd667aca1adf4c1796b989dd5dfe67963be07127d1eba8209fb7",
+        "json_bytes": 1770,
+        "json_fetched_utc": "2026-10-26T18:58:04.031048Z",
+        "table_license": "CC0 (https://creativecommons.org/publicdomain/zero/1.0/)"
+      }
+    ],
+    "tables_not_used": "Table 2 ('Data from experiment E-140': R at x = 0.2, 0.35, 0.5, the average of R_d and R_Fe) -- E140's own measurement, compared in the 'e140' sub-row from its own record (ins360765); the paper (p. 6) states E140's deuterium cross sections were NOT included in the global extractions, so Tables 3-13 are independent of it.",
+    "fetched": "2026-10-26 (UTC); the standard Python `requests` 2.25.1 client with its default identity (no header changed); curl's default identity receives HTTP 403 from www.hepdata.net and was not used",
+    "licence": "CC0-1.0: HEPData 'table_license' CC0 (https://creativecommons.org/publicdomain/zero/1.0/), read from each table's json download; measured quantities, vendored with attribution",
+    "paper": "L. W. Whitlow, S. Rock, A. Bodek, E. M. Riordan, S. Dasu, 'A precise extraction of R = sigma_L/sigma_T from a global analysis of the SLAC deep inelastic e-p and e-d scattering cross sections', Phys. Lett. B 250 (1990) 193, doi:10.1016/0370-2693(90)91176-C (read: PolarizedLithiumSim/refs/whitlow1990_R.pdf, the SLAC-PUB-5284 preprint)",
+    "publishing_convention": "R is a RATIO (convention-free). Tables 3-13 are 'R' for e-p and e-d combined: the paper (p. 6) averaged the extracted R_p and R_d in each (x, Q2) bin into a single R after finding R_d - R_p = -0.001 +- 0.009 (stat) +- 0.009 (sys) (its Eq. (5); this record's Table 1, kept under body.rd_minus_rp). R is extracted at the bin centre after a bin-centring correction (p. 5). The letter does not print the numerical table ('given in ref. 11', a thesis), so the record cannot be cross-checked against the letter.",
+    "errors": "stat and sys separately, symmetric, absolute; the paper's systematic includes a radiative-correction uncertainty correlated with epsilon (+-0.025 in R, p. 4) and normalisation factors N_i that are 'strongly correlated' (p. 5); no covariance is given.",
+    "in_r1998_fit": "YES: Abe et al., PLB 452 (1999) 194: 'a new fit using the present data [3,11-14]' with [3] = 'L. W. Whitlow et al., Phys. Lett. B250, 193 (1990)'.",
+    "vendored_by": "Written once on 2026-10-26 by a dev-time script kept outside the repository (the C1 worker's scratch directory): every number of `body` is copied from the table's YAML download (HEPData's submission format), whose sha256 is recorded per table under `tables_used`; nothing is rescaled, rounded or re-ordered beyond what `body` states.  The harness that reads this file re-checks the sha256 of every byte of it, and of the canonical body (json.dumps(body, sort_keys=True, separators=(',', ':'), ensure_ascii=True)) recorded as `_body_sha256`, on every read."
+  },
+  "_body_sha256": "86c0cffc28d017a2a0845378ab4ca59a4b33a0266116de768eed04fe801cdd29",
+  "body": {
+    "quantity": "R = sigma_L/sigma_T",
+    "target": "proton and deuteron combined (R_p = R_d found)",
+    "columns": {
+      "x": "Bjorken x (bin centre)",
+      "q2": "Q2 (bin centre) [GeV2]",
+      "value": "R",
+      "stat": "statistical error",
+      "sys": "systematic error",
+      "table": "HEPData table number"
+    },
+    "points": [
+      {
+        "table": 3,
+        "x": 0.1,
+        "q2": 0.63,
+        "value": 0.256,
+        "stat": 0.059,
+        "sys": 0.044
+      },
+      {
+        "table": 3,
+        "x": 0.1,
+        "q2": 0.8,
+        "value": 0.21,
+        "stat": 0.123,
+        "sys": 0.081
+      },
+      {
+        "table": 3,
+        "x": 0.1,
+        "q2": 1.0,
+        "value": 0.326,
+        "stat": 0.047,
+        "sys": 0.03
+      },
+      {
+        "table": 3,
+        "x": 0.1,
+        "q2": 1.25,
+        "value": 0.313,
+        "stat": 0.058,
+        "sys": 0.022
+      },
+      {
+        "table": 3,
+        "x": 0.1,
+        "q2": 1.6,
+        "value": 0.351,
+        "stat": 0.041,
+        "sys": 0.022
+      },
+      {
+        "table": 3,
+        "x": 0.1,
+        "q2": 2.0,
+        "value": 0.285,
+        "stat": 0.034,
+        "sys": 0.018
+      },
+      {
+        "table": 3,
+        "x": 0.1,
+        "q2": 2.5,
+        "value": 0.447,
+        "stat": 0.101,
+        "sys": 0.072
+      },
+      {
+        "table": 3,
+        "x": 0.1,
+        "q2": 3.2,
+        "value": 0.434,
+        "stat": 0.108,
+        "sys": 0.058
+      },
+      {
+        "table": 4,
+        "x": 0.175,
+        "q2": 0.8,
+        "value": 0.291,
+        "stat": 0.094,
+        "sys": 0.045
+      },
+      {
+        "table": 4,
+        "x": 0.175,
+        "q2": 1.0,
+        "value": 0.24,
+        "stat": 0.041,
+        "sys": 0.031
+      },
+      {
+        "table": 4,
+        "x": 0.175,
+        "q2": 1.25,
+        "value": 0.463,
+        "stat": 0.064,
+        "sys": 0.031
+      },
+      {
+        "table": 4,
+        "x": 0.175,
+        "q2": 1.6,
+        "value": 0.364,
+        "stat": 0.054,
+        "sys": 0.028
+      },
+      {
+        "table": 4,
+        "x": 0.175,
+        "q2": 2.0,
+        "value": 0.275,
+        "stat": 0.038,
+        "sys": 0.023
+      },
+      {
+        "table": 4,
+        "x": 0.175,
+        "q2": 2.5,
+        "value": 0.235,
+        "stat": 0.034,
+        "sys": 0.019
+      },
+      {
+        "table": 4,
+        "x": 0.175,
+        "q2": 3.2,
+        "value": 0.374,
+        "stat": 0.077,
+        "sys": 0.043
+      },
+      {
+        "table": 4,
+        "x": 0.175,
+        "q2": 4.0,
+        "value": 0.297,
+        "stat": 0.055,
+        "sys": 0.029
+      },
+      {
+        "table": 4,
+        "x": 0.175,
+        "q2": 5.0,
+        "value": 0.432,
+        "stat": 0.157,
+        "sys": 0.057
+      },
+      {
+        "table": 5,
+        "x": 0.25,
+        "q2": 1.0,
+        "value": 0.196,
+        "stat": 0.091,
+        "sys": 0.054
+      },
+      {
+        "table": 5,
+        "x": 0.25,
+        "q2": 1.25,
+        "value": 0.308,
+        "stat": 0.062,
+        "sys": 0.036
+      },
+      {
+        "table": 5,
+        "x": 0.25,
+        "q2": 1.6,
+        "value": 0.246,
+        "stat": 0.039,
+        "sys": 0.026
+      },
+      {
+        "table": 5,
+        "x": 0.25,
+        "q2": 2.0,
+        "value": 0.281,
+        "stat": 0.049,
+        "sys": 0.025
+      },
+      {
+        "table": 5,
+        "x": 0.25,
+        "q2": 2.5,
+        "value": 0.213,
+        "stat": 0.046,
+        "sys": 0.024
+      },
+      {
+        "table": 5,
+        "x": 0.25,
+        "q2": 3.2,
+        "value": 0.215,
+        "stat": 0.035,
+        "sys": 0.02
+      },
+      {
+        "table": 5,
+        "x": 0.25,
+        "q2": 4.0,
+        "value": 0.085,
+        "stat": 0.063,
+        "sys": 0.023
+      },
+      {
+        "table": 5,
+        "x": 0.25,
+        "q2": 5.0,
+        "value": 0.115,
+        "stat": 0.041,
+        "sys": 0.036
+      },
+      {
+        "table": 5,
+        "x": 0.25,
+        "q2": 6.4,
+        "value": 0.441,
+        "stat": 0.177,
+        "sys": 0.058
+      },
+      {
+        "table": 5,
+        "x": 0.25,
+        "q2": 8.0,
+        "value": 0.337,
+        "stat": 0.235,
+        "sys": 0.057
+      },
+      {
+        "table": 6,
+        "x": 0.325,
+        "q2": 1.0,
+        "value": 0.285,
+        "stat": 0.133,
+        "sys": 0.067
+      },
+      {
+        "table": 6,
+        "x": 0.325,
+        "q2": 1.25,
+        "value": 0.569,
+        "stat": 0.218,
+        "sys": 0.108
+      },
+      {
+        "table": 6,
+        "x": 0.325,
+        "q2": 1.6,
+        "value": 0.3,
+        "stat": 0.072,
+        "sys": 0.036
+      },
+      {
+        "table": 6,
+        "x": 0.325,
+        "q2": 2.0,
+        "value": 0.205,
+        "stat": 0.049,
+        "sys": 0.028
+      },
+      {
+        "table": 6,
+        "x": 0.325,
+        "q2": 2.5,
+        "value": 0.214,
+        "stat": 0.048,
+        "sys": 0.024
+      },
+      {
+        "table": 6,
+        "x": 0.325,
+        "q2": 3.2,
+        "value": 0.193,
+        "stat": 0.058,
+        "sys": 0.029
+      },
+      {
+        "table": 6,
+        "x": 0.325,
+        "q2": 4.0,
+        "value": 0.148,
+        "stat": 0.042,
+        "sys": 0.037
+      },
+      {
+        "table": 6,
+        "x": 0.325,
+        "q2": 5.0,
+        "value": 0.121,
+        "stat": 0.04,
+        "sys": 0.02
+      },
+      {
+        "table": 6,
+        "x": 0.325,
+        "q2": 6.4,
+        "value": 0.026,
+        "stat": 0.043,
+        "sys": 0.016
+      },
+      {
+        "table": 6,
+        "x": 0.325,
+        "q2": 8.0,
+        "value": 0.162,
+        "stat": 0.073,
+        "sys": 0.035
+      },
+      {
+        "table": 6,
+        "x": 0.325,
+        "q2": 10.0,
+        "value": 0.348,
+        "stat": 0.128,
+        "sys": 0.031
+      },
+      {
+        "table": 7,
+        "x": 0.4,
+        "q2": 2.0,
+        "value": 0.276,
+        "stat": 0.08,
+        "sys": 0.041
+      },
+      {
+        "table": 7,
+        "x": 0.4,
+        "q2": 2.5,
+        "value": 0.383,
+        "stat": 0.141,
+        "sys": 0.081
+      },
+      {
+        "table": 7,
+        "x": 0.4,
+        "q2": 3.2,
+        "value": 0.212,
+        "stat": 0.041,
+        "sys": 0.029
+      },
+      {
+        "table": 7,
+        "x": 0.4,
+        "q2": 4.0,
+        "value": 0.093,
+        "stat": 0.047,
+        "sys": 0.038
+      },
+      {
+        "table": 7,
+        "x": 0.4,
+        "q2": 5.0,
+        "value": 0.036,
+        "stat": 0.032,
+        "sys": 0.041
+      },
+      {
+        "table": 7,
+        "x": 0.4,
+        "q2": 6.4,
+        "value": 0.024,
+        "stat": 0.038,
+        "sys": 0.013
+      },
+      {
+        "table": 7,
+        "x": 0.4,
+        "q2": 8.0,
+        "value": 0.098,
+        "stat": 0.043,
+        "sys": 0.028
+      },
+      {
+        "table": 7,
+        "x": 0.4,
+        "q2": 10.0,
+        "value": 0.109,
+        "stat": 0.048,
+        "sys": 0.031
+      },
+      {
+        "table": 7,
+        "x": 0.4,
+        "q2": 12.5,
+        "value": -0.119,
+        "stat": 0.096,
+        "sys": 0.14
+      },
+      {
+        "table": 8,
+        "x": 0.475,
+        "q2": 2.0,
+        "value": 0.239,
+        "stat": 0.168,
+        "sys": 0.069
+      },
+      {
+        "table": 8,
+        "x": 0.475,
+        "q2": 2.5,
+        "value": 0.149,
+        "stat": 0.059,
+        "sys": 0.028
+      },
+      {
+        "table": 8,
+        "x": 0.475,
+        "q2": 3.2,
+        "value": 0.147,
+        "stat": 0.046,
+        "sys": 0.028
+      },
+      {
+        "table": 8,
+        "x": 0.475,
+        "q2": 4.0,
+        "value": 0.114,
+        "stat": 0.102,
+        "sys": 0.028
+      },
+      {
+        "table": 8,
+        "x": 0.475,
+        "q2": 5.0,
+        "value": 0.096,
+        "stat": 0.033,
+        "sys": 0.041
+      },
+      {
+        "table": 8,
+        "x": 0.475,
+        "q2": 6.4,
+        "value": 0.12,
+        "stat": 0.06,
+        "sys": 0.018
+      },
+      {
+        "table": 8,
+        "x": 0.475,
+        "q2": 8.0,
+        "value": 0.005,
+        "stat": 0.067,
+        "sys": 0.027
+      },
+      {
+        "table": 8,
+        "x": 0.475,
+        "q2": 10.0,
+        "value": 0.05,
+        "stat": 0.041,
+        "sys": 0.029
+      },
+      {
+        "table": 8,
+        "x": 0.475,
+        "q2": 12.5,
+        "value": 0.132,
+        "stat": 0.066,
+        "sys": 0.067
+      },
+      {
+        "table": 9,
+        "x": 0.55,
+        "q2": 2.5,
+        "value": 0.192,
+        "stat": 0.17,
+        "sys": 0.031
+      },
+      {
+        "table": 9,
+        "x": 0.55,
+        "q2": 4.0,
+        "value": 0.094,
+        "stat": 0.061,
+        "sys": 0.032
+      },
+      {
+        "table": 9,
+        "x": 0.55,
+        "q2": 5.0,
+        "value": 0.039,
+        "stat": 0.09,
+        "sys": 0.044
+      },
+      {
+        "table": 9,
+        "x": 0.55,
+        "q2": 6.4,
+        "value": 0.036,
+        "stat": 0.03,
+        "sys": 0.042
+      },
+      {
+        "table": 9,
+        "x": 0.55,
+        "q2": 8.0,
+        "value": 0.096,
+        "stat": 0.037,
+        "sys": 0.015
+      },
+      {
+        "table": 9,
+        "x": 0.55,
+        "q2": 10.0,
+        "value": 0.053,
+        "stat": 0.037,
+        "sys": 0.038
+      },
+      {
+        "table": 9,
+        "x": 0.55,
+        "q2": 12.5,
+        "value": 0.004,
+        "stat": 0.044,
+        "sys": 0.058
+      },
+      {
+        "table": 9,
+        "x": 0.55,
+        "q2": 16.0,
+        "value": 0.205,
+        "stat": 0.091,
+        "sys": 0.086
+      },
+      {
+        "table": 10,
+        "x": 0.625,
+        "q2": 4.0,
+        "value": 0.643,
+        "stat": 0.646,
+        "sys": 0.256
+      },
+      {
+        "table": 10,
+        "x": 0.625,
+        "q2": 5.0,
+        "value": 0.161,
+        "stat": 0.254,
+        "sys": 0.102
+      },
+      {
+        "table": 10,
+        "x": 0.625,
+        "q2": 6.4,
+        "value": 0.093,
+        "stat": 0.027,
+        "sys": 0.049
+      },
+      {
+        "table": 10,
+        "x": 0.625,
+        "q2": 8.0,
+        "value": 0.058,
+        "stat": 0.046,
+        "sys": 0.017
+      },
+      {
+        "table": 10,
+        "x": 0.625,
+        "q2": 10.0,
+        "value": 0.068,
+        "stat": 0.039,
+        "sys": 0.044
+      },
+      {
+        "table": 10,
+        "x": 0.625,
+        "q2": 12.5,
+        "value": 0.008,
+        "stat": 0.034,
+        "sys": 0.029
+      },
+      {
+        "table": 10,
+        "x": 0.625,
+        "q2": 16.0,
+        "value": -0.044,
+        "stat": 0.042,
+        "sys": 0.065
+      },
+      {
+        "table": 11,
+        "x": 0.7,
+        "q2": 4.0,
+        "value": 0.161,
+        "stat": 0.147,
+        "sys": 0.047
+      },
+      {
+        "table": 11,
+        "x": 0.7,
+        "q2": 5.0,
+        "value": 0.178,
+        "stat": 0.171,
+        "sys": 0.009
+      },
+      {
+        "table": 11,
+        "x": 0.7,
+        "q2": 6.4,
+        "value": 0.078,
+        "stat": 0.031,
+        "sys": 0.045
+      },
+      {
+        "table": 11,
+        "x": 0.7,
+        "q2": 8.0,
+        "value": 0.123,
+        "stat": 0.041,
+        "sys": 0.048
+      },
+      {
+        "table": 11,
+        "x": 0.7,
+        "q2": 10.0,
+        "value": 0.087,
+        "stat": 0.061,
+        "sys": 0.027
+      },
+      {
+        "table": 11,
+        "x": 0.7,
+        "q2": 12.5,
+        "value": 0.072,
+        "stat": 0.038,
+        "sys": 0.033
+      },
+      {
+        "table": 11,
+        "x": 0.7,
+        "q2": 16.0,
+        "value": 0.054,
+        "stat": 0.043,
+        "sys": 0.046
+      },
+      {
+        "table": 11,
+        "x": 0.7,
+        "q2": 20.0,
+        "value": 0.175,
+        "stat": 0.118,
+        "sys": 0.133
+      },
+      {
+        "table": 12,
+        "x": 0.775,
+        "q2": 6.4,
+        "value": 0.018,
+        "stat": 0.14,
+        "sys": 0.034
+      },
+      {
+        "table": 12,
+        "x": 0.775,
+        "q2": 8.0,
+        "value": 0.077,
+        "stat": 0.036,
+        "sys": 0.047
+      },
+      {
+        "table": 12,
+        "x": 0.775,
+        "q2": 10.0,
+        "value": 0.109,
+        "stat": 0.072,
+        "sys": 0.018
+      },
+      {
+        "table": 12,
+        "x": 0.775,
+        "q2": 12.5,
+        "value": 0.037,
+        "stat": 0.044,
+        "sys": 0.04
+      },
+      {
+        "table": 12,
+        "x": 0.775,
+        "q2": 16.0,
+        "value": 0.153,
+        "stat": 0.055,
+        "sys": 0.047
+      },
+      {
+        "table": 12,
+        "x": 0.775,
+        "q2": 20.0,
+        "value": 0.047,
+        "stat": 0.061,
+        "sys": 0.08
+      },
+      {
+        "table": 13,
+        "x": 0.86,
+        "q2": 10.0,
+        "value": 0.476,
+        "stat": 0.406,
+        "sys": 0.074
+      },
+      {
+        "table": 13,
+        "x": 0.86,
+        "q2": 12.5,
+        "value": 0.262,
+        "stat": 0.117,
+        "sys": 0.052
+      },
+      {
+        "table": 13,
+        "x": 0.86,
+        "q2": 16.0,
+        "value": 0.041,
+        "stat": 0.09,
+        "sys": 0.051
+      },
+      {
+        "table": 13,
+        "x": 0.86,
+        "q2": 20.0,
+        "value": 0.082,
+        "stat": 0.064,
+        "sys": 0.057
+      }
+    ],
+    "rd_minus_rp": {
+      "value": -0.001,
+      "stat": 0.009,
+      "sys": 0.009,
+      "q2_low": 0.6,
+      "q2_high": 20.0
+    }
+  }
+}

@@ -78,7 +78,7 @@ nuclear model: the point radius is an INPUT of `HoSpin1FF`, derived from
 Angeli.  A PASS says that input, folded as the tree folds it, sits inside
 the independent electron-scattering determinations -- no more.
 
-Run:  source env.sh && python3 validation/benchmarks/t3_li6_rms_devries.py
+Run:  source env.sh && python3 validation/benchmarks/t3_li6_rms_devries.py [--plot]
 
 Exit status (validation/benchmarks/README.md): 0 when the harness ran and
 printed its REPORT row -- pass, recorded fail and blocked alike, since the
@@ -323,11 +323,53 @@ def run(path=DATA, verbose=True):
     return report
 
 
+# ---------------------------------------------------------------- figure
+
+def plot(report, out_dir=None):
+    """A dot-and-band chart: the three de Vries Table I radii and Angeli-
+    Marinova (ink, +- 1 sigma; Angeli, the closure not in the verdict,
+    hollow and grey) against the tree's folded r_ch (a vertical line in the
+    shipped default's colour), the PASS window -- the intersection of the
+    three 2 sigma windows -- shaded.  A view of the row: every number drawn
+    is in the report."""
+    if HERE not in sys.path:
+        sys.path.insert(0, HERE)
+    from _plots import BAND, MUTED, new_figure, save, status_title, style_series
+    t, dv, am = report["tree"], report["de_vries"], report["angeli"]
+    fig, ax = new_figure()
+    lo, hi = report["window"]
+    ax.axvspan(lo, hi, color=BAND, alpha=0.8, linewidth=0, zorder=1,
+               label="PASS window: every de Vries row within %g sigma" % MAX_PULL)
+    rows = ["de Vries %s (%s)" % (p["source_key"], p["model"]) for p in dv]
+    ax.errorbar([p["rms_fm"] for p in dv], list(range(len(dv))),
+                xerr=[p["sigma_fm"] for p in dv],
+                **style_series("reference", label="de Vries et al. 1987, Table I"))
+    kw = style_series("reference", label="Angeli-Marinova 2013 (closure, recorded)")
+    kw.update(color=MUTED, markerfacecolor="none", zorder=4)
+    ax.errorbar([am["rms_fm"]], [len(dv)], xerr=[am["sigma_fm"]], **kw)
+    ax.axvline(t["r"], **style_series(
+        "default", label="HoSpin1FF, folded: r_ch = %.4f fm" % t["r"]))
+    ax.set_yticks(list(range(len(dv) + 1)))
+    ax.set_yticklabels(rows + ["Angeli-Marinova"])
+    ax.set_ylim(-1.9, len(dv) + 0.6)       # room for the legend below
+    ax.set_xlabel("6Li charge rms radius r_ch [fm]")
+    ax.legend(loc="lower center", ncol=2, fontsize=7)
+    status_title(fig, NAME, report["status"],
+                 "de Vries pulls %s sigma (tolerance |pull| <= %g each); Angeli "
+                 "%+.2f sigma (the tree's input)"
+                 % (" / ".join("%+.2f" % p["pull"] for p in dv), MAX_PULL,
+                    report["closure"]["pull"]))
+    return save(fig, NAME, out_dir)
+
+
 if __name__ == "__main__":
     # Exit convention (module docstring, validation/benchmarks/README.md):
     # 0 = ran and printed its REPORT row, whatever the verdict; 2 = broken.
+    # `--plot` also writes the row's figure (plot()); the same rule holds.
     try:
-        run()
+        rep = run()
+        if "--plot" in sys.argv[1:]:
+            print("figure: %s" % plot(rep))
     except Exception:  # any exception means the harness itself is broken
         traceback.print_exc()
         sys.exit(2)

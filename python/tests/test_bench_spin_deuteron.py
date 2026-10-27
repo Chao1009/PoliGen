@@ -8,7 +8,7 @@ path, never retyped:
   row 1   t5_epios_source_modes.py      EPIOS Table II vs spin1_populations
   row 3   t2_hermes_b1_table2.py        HERMES b1^d Table II, chi2 with no tuning
   row 9   t5_est_identity.py            spin_temperature_pzz == EST closed form
-  row 10  t2_bonus_spectator_shape.py   CLAS DB query -- BLOCKED, skips by name
+  row 10  t2_bonus_spectator_shape.py   the 2026-09-23 history files only; the row's own tests are test_bench_bonus.py (since 2026-10-26)
 
 Every row is cheap (the HERMES row, the slowest, is ~5 s), so none sits
 behind the `LIPOLGEN_BENCH=1` opt-in.
@@ -378,12 +378,20 @@ def test_bonus_harness_prints_its_row_on_a_non_utf8_stdout():
         assert b"\\u03b7" in p.stdout, enc      # eta, escaped
 
 
-def test_bonus_row_is_blocked_by_name():
-    rep = bonus.run(verbose=False)
-    _report_row(rep)
-    assert rep["status"] == "blocked"
-    f = rep["findings"]
-    assert f["bonus"]["quantities"] == ["F2n/F2p"]
-    assert f["bonus"]["n_measurements"] == 1
-    assert f["deeps_blocks"] == 115
-    pytest.skip(bonus.BLOCKED_REASON)
+# test_bonus_row_is_blocked_by_name (2026-09-23 .. 2026-10-26) is retired: row
+# 10 was re-wired on the BONuS Supplemental Material on 2026-10-26 and is a
+# measurement (FAIL, recorded), no longer BLOCKED; its verdict, headline
+# numbers and file guards are pinned in test_bench_bonus.py
+# (docs/open_items/run_2026-10-26/phase_B1_bonus.md).  The three history
+# guards above stay: the harness still reads the 2026-09-23 files.
+
+
+def test_t2_hermes_b1_table2_plot_writes_png(hermes_rep, tmp_path):
+    """plot() draws the row's figure -- a view of the report, never the
+    record -- as a non-empty PNG where it is told to (here a tmp dir)."""
+    pytest.importorskip("matplotlib", reason="matplotlib (the figure only)")
+    path = hermes.plot(hermes_rep, out_dir=str(tmp_path))
+    assert path == os.path.join(str(tmp_path), "t2_hermes_b1_table2.png")
+    with open(path, "rb") as f:
+        assert f.read(8) == b"\x89PNG\r\n\x1a\n"
+    assert os.path.getsize(path) > 0

@@ -12,18 +12,53 @@ GPL-3.0-or-later):
 
   compass  COMPASS final, PLB 769 (2017) 34 (survey D-2), HEPData ins1501480
            table 1, 15 points, 0.0046 <= x <= 0.567, 1.1 <= Q2 <= 60.8;
-           `data/nnpdf_COMPASS15_NC_NOTFIXED_MUD.json`.
+           `data/nnpdf_COMPASS15_NC_NOTFIXED_MUD.json`.  [READ 2026-10-26:
+           g1d of the paper's Table A.1 at the measured Q2 (PLB p. 40;
+           arXiv v1 PDF p. 14), from A1d by Eq. (7) (PLB p. 38) with SMC's
+           F2d [its ref. 2] and E143's R1998 [its ref. 20].  The vendored
+           (HEPData) values equal the printed table at the 11 points
+           x <= 0.171 and DIFFER at the four x >= 0.222: printed 0.0744 /
+           0.076 / 0.0576 / 0.0254, vendored 0.0930 / 0.0675 / 0.0500 /
+           0.0203 (errors scaled alike); Eq. (7) on the paper's own A1d with
+           SMC's F2d (PRD 58 (1998) 112001 Eq. (A1), Table XIII) and r1998
+           gives the vendored values to <= 1 % and misses the printed ones
+           by -20 / +11 / +15 / +24 % (the arithmetic is in
+           docs/open_items/run_2026-10-26/phase_D_inputs.md sec. 1.3), so the
+           HEPData record is the self-consistent one and is kept: recorded,
+           not re-vendored, nothing re-chosen.]
   hermes   HERMES, PRD 75 (2007) 012007 (survey D-1), HEPData ins726689
            table 13, 15 points, 0.0264 <= x <= 0.7248, 1.12 <= Q2 <= 12.21;
-           `data/nnpdf_HERMES_NC_7GEV_ED.json`.
-  e143     E143 (survey D-6: PRD 58 (1998) 112003; the metadata's arXiv
-           field says hep-ex/9705012 -- a conflict not resolvable offline),
-           HEPData ins467140 table 18, 28 points, 0.031 <= x <= 0.749,
-           1.27 <= Q2 <= 9.52; `data/nnpdf_E143_NC_NOTFIXED_ED.json`.
-  smc      SMC, HEPData ins471981 table 7, 13 points -- its paper is NOT
-           identified offline and the survey has no SMC row, so it is
-           RECORDED ONLY and never enters the verdict;
-           `data/nnpdf_SMC_NC_NOTFIXED_MUD.json`.
+           `data/nnpdf_HERMES_NC_7GEV_ED.json`.  [READ 2026-10-26: the
+           paper's Table XXI g1d column (arXiv PDF p. 45: 15 x-bins after a
+           Q2 > 1 GeV2 cut, each the average of its Q2 bins evolved to its
+           <Q2>, PDF p. 14), 15 of 15 points equal to the file: 'exp' is the
+           paper's 'syst', which includes the 5 % deuteron normalisation
+           (caption); 'param' is 'par'; 'evol' is 'evol'; the 15 artificial
+           vectors give the paper's 'stat' in quadrature to 1e-10.]
+  e143     E143, K. Abe et al., PRD 58 (1998) 112003, arXiv hep-ph/9802357,
+           SLAC-PUB-7753 (survey D-6), INSPIRE 467140 = HEPData ins467140
+           table 18, 28 points, 0.031 <= x <= 0.749, 1.27 <= Q2 <= 9.52;
+           `data/nnpdf_E143_NC_NOTFIXED_ED.json`.  [RESOLVED 2026-10-26: the
+           metadata's arXiv field hep-ex/9705012 is WRONG -- that identifier
+           is E154's g1n letter, PRL 79 (1997) 26 (INSPIRE 443170); INSPIRE
+           467140 carries hep-ph/9802357, the copy read.  The 28 points are
+           the paper's Table XIV (arXiv PDF p. 75), 28 of 28 equal to the
+           file: g1 at the averaged measured Q2 from g1/F1 averaged over the
+           beam energies 29.13, 16.18 and 9.71 GeV (PDF p. 14) and both
+           spectrometers at Q2 >= 1 (PDF p. 38), F2 from NMC PLB 364 (1995)
+           107 and R from R1990 (PDF p. 37).  The 4.9 % deuteron
+           normalisation (Table XV, PDF p. 75: beam 2.4, target 4.0,
+           dilution 1.4 %) is outside the table's 'syst' and is the file's
+           'sys_beam' (4.9 % x value; NNPDF's label "beam Normalization"
+           names one of its three parts).]
+  smc      SMC, B. Adeva et al., PRD 58 (1998) 112001 (no arXiv eprint;
+           CERN-EP-98-085), INSPIRE 471981 = HEPData ins471981 table 7, 13
+           points; `data/nnpdf_SMC_NC_NOTFIXED_MUD.json`.  [IDENTIFIED
+           2026-10-26 (INSPIRE; the APS copy read): the 13 points are the
+           paper's Table IX, g1d at the measured Q2 (p. 112001-13), 13 of 13
+           equal to the file.]  The survey has no SMC row, so it stays
+           RECORDED ONLY and never enters the verdict: adding it now would
+           change a declared rule after its chi2 was seen (toy 16.7/12).
 
 The tree side is the generator's OWN per-nucleon deuteron g1,
 
@@ -52,15 +87,52 @@ NO-D-STATE variant (g1p + g1n)/2, i.e. the same nucleons without the
 A blocked configuration is reported with its reason, never dropped, never
 faked.  ZERO free parameters, NO tuning.
 
-THE D-STATE CONVENTION OF THE DATA IS UNVERIFIED.  The metadata of none of
-the four sets says whether the published g1d is corrected for the D state,
-and the papers cannot be read here.  06_critic.md sec. 5.1: "published g1d
-is conventionally NOT corrected for the D state; the (1 - 1.5 omega_D)
-factor is applied when extracting g1n."  IF that holds, g1d_tree (with the
-factor) is the like-for-like comparison, which is why it carries the
-verdict; the no-D-state variant prices the other reading.  The tree's
-P_D = 0.045 is not necessarily the omega_D each experiment used (not read
-offline).
+THE D-STATE CONVENTION OF THE DATA (2026-09-26: UNVERIFIED; RESOLVED
+2026-10-26 FROM THE PAPERS -- THE VERDICT COLUMN STANDS).  The metadata of
+none of the four sets says whether the published g1d is corrected for the
+D state.  06_critic.md sec. 5.1: "published g1d is conventionally NOT
+corrected for the D state; the (1 - 1.5 omega_D) factor is applied when
+extracting g1n."  IF that holds, g1d_tree (with the factor) is the
+like-for-like comparison, which is why it carries the verdict; the
+no-D-state variant prices the other reading.
+  THE RULE, declared before any paper was read (PLAN.md phase D1, committed
+  at 87787dd; written into this header by the phase D worker after the
+  reading -- the order of the edit, not of the decision): THE VERDICT
+  FOLLOWS THE CONVENTION THE PAPERS STATE -- g1d_tree if the published g1d
+  is the uncorrected deuteron g1 per nucleon, the no-D-state column if the
+  papers divide the factor out (then swapped with a dated note, no new
+  sub-row).
+  WHAT THE PAPERS STATE (the copies read and their sha256 are listed in
+  docs/open_items/run_2026-10-26/phase_D_inputs.md sec. 1):
+    COMPASS  g1d = F2d A1d / (2x(1 + R)), Eq. (7) (PLB p. 38); the factor
+             enters only the nucleon moment Gamma_1^N = INT g1d /
+             (1 - 1.5 omega_D) dx, omega_D = 0.05 +- 0.02 (PLB 769, p. 39;
+             the arXiv v1 copy, PDF p. 10, prints -0.05 +- 0.01, a misprint
+             the journal corrects).
+    HERMES   g1d = (1/2)(g1p + g1n)(1 - 1.5 omega_D), omega_D = 0.05 +- 0.01,
+             Eq. (23), "In this paper the neutron structure function g1n is
+             evaluated according to Eq. (23)" (arXiv PDF p. 6); omega_D
+             enters the systematics of g1n and g1NS only (PDF p. 15).
+    E143     g1n = 2 g1d / (1 - 1.5 omega_D) - g1p, omega_D = 0.05 +- 0.01,
+             Eq. (56) (arXiv PDF p. 37).
+    SMC      g1NS = 2 [g1p - g1d / (1 - 1.5 omega_D)], omega_D = 0.05 +- 0.01,
+             Eq. (13) (p. 112001-12).
+  All four publish g1d PER NUCLEON and NOT corrected for the D state, and
+  apply the factor only when extracting the neutron or the nucleon: the
+  convention HOLDS, g1d_tree is the like-for-like comparison and keeps the
+  verdict; NO column is swapped; dis_no_dstate stays recorded beside it.
+  Not like for like in one number, stated rather than corrected: the
+  papers' omega_D = 0.05 against the tree's P_D = 0.045 (factors 0.925 and
+  0.9325, 0.8 % of g1d) -- a property of the tree's deuteron model on the
+  theory side; the experiments' omega_D does not enter the published g1d.
+  PREVIEWED before this resolution (phase 0, 2026-10-26, the first run with
+  the LHAPDF sets installed): NNPDFpol1.1 FAILS on this column -- COMPASS
+  45.0/15, HERMES 52.6/15, E143 51.0/28 -- and the no-D-state reading is
+  worse for all three (56.4, 67.5, 61.9; phase_A_baseline.md sec. 3), so the
+  D-state convention is not what that FAIL measures.  LhapdfG1 is the
+  leading-order g1 of an NLO set (sf.hpp: no coefficient functions, no
+  gluon term) -- a reading, not tested here.  Nothing was re-chosen after
+  these numbers.
 
 WHICH POINTS.  ALL points, and THE DIS CUT, declared here before any chi2
 of this harness was computed: Q2 >= 1 GeV2 and W2 = M^2 + Q2 (1 - x)/x >=
@@ -76,8 +148,9 @@ FULL-COVARIANCE chi2, C = diag(sum of UNCORR^2) + sum_k s_k s_k^T over the
 components NNPDF labels CORR -- for HERMES the 15 'artificial correlated
 statistical' vectors sys_0..sys_14 (the statistical covariance; stat = 0 in
 every bin, so the per-point statistical error is sqrt(sum_k sys_k^2)) plus
-'param' and 'evol'; for E143 the 4.9 % beam-normalisation 'sys_beam' (MULT,
-CORR).  COMPASS and SMC carry no CORR component: their full-covariance chi2
+'param' and 'evol'; for E143 the 4.9 % normalisation 'sys_beam' (MULT,
+CORR; the paper's Table XV total of beam and target polarisation and
+dilution, outside its 'syst' -- above).  COMPASS and SMC carry no CORR component: their full-covariance chi2
 IS the diagonal one (reported as n/a).  For HERMES the full covariance is
 the more faithful number -- the harness flags whenever the two treatments
 disagree on the verdict (`verdict_differs_under_full_cov`) rather than pick
@@ -87,7 +160,8 @@ rescaling of MULT components).
 TOLERANCE.  p(chi2, ndf) >= 0.01 on the DIS-cut set, diagonal errors,
 ndf = number of points (nothing fitted), for EACH of compass, hermes and
 e143; the row passes only if all three do.  SMC is recorded, never in the
-verdict (its paper is not identified).  The combined three-experiment chi2
+verdict (the survey has no SMC row; identifying its paper on 2026-10-26
+changes nothing here).  The combined three-experiment chi2
 is recorded, not asserted.  The row's STATUS is the shipped default's
 (toy); the other configurations are sub-rows with their own status.  The
 threshold follows row 4 (`t3_nmc_li6_over_d.py`) and was chosen AFTER the
@@ -101,7 +175,9 @@ nothing.
 THE THREE NORMALISATION RULES (BENCHMARK_PLAN.md sec. 8), for THIS row:
   1. normalisations and A-scaling, both sides named (the rule is written for
      b1; g1d has the same trap, 06_critic.md sec. 5.1).  Data: PER NUCLEON
-     (NNPDF's y_label g_{1,N}; 06 sec. 5.1; the papers not re-read).  Tree:
+     (NNPDF's y_label g_{1,N}; 06 sec. 5.1; and, read 2026-10-26, the papers
+     themselves: HERMES Eq. (23), E143 Eq. (56), SMC Eq. (13) relate g1d to
+     (g1p + g1n)/2, COMPASS Eq. (7) builds it on a per-nucleon F2d).  Tree:
      PER NUCLEON, g1_nucleus(deuteron)/A with A = 2 -- a per-DEUTERON g1
      would be twice it.  No A-scaling assumption: no 2/6 (the 6Li inert-alpha
      assumption is NOT applied), no 0.5 beyond the explicit 1/A.  The D-state
@@ -115,8 +191,10 @@ THE THREE NORMALISATION RULES (BENCHMARK_PLAN.md sec. 8), for THIS row:
   3. per nucleus / per nucleon -- structure functions PER NUCLEON on both
      sides.  Not like for like, stated rather than corrected: beyond the
      D-state depolarisation the tree has no deuteron-structure correction
-     for g1 (Fermi motion, shadowing), and COMPASS and SMC measured on 6LiD
-     with their own dilution models (survey 02 sec. 2).
+     for g1 (Fermi motion, shadowing), and COMPASS measured on 6LiD (PLB
+     p. 36), SMC on deuterated butanol C4D9OD (PRD 58 112001 Table I,
+     p. 112001-3; corrected 2026-10-26 -- this text said 6LiD for both),
+     each with its own dilution model (survey 02 sec. 2).
 
 WHAT THIS DOES NOT VALIDATE.  The tensor sector (g1d is blind to b1), the
 effective polarisations of 6Li / 7Li (`eff_pol_p` / `eff_pol_n` of LI6(),
@@ -128,7 +206,7 @@ canonical body (also recorded inside the file) are re-checked on EVERY
 read: an altered table is refused with a RuntimeError, so `__main__` exits
 2, never 0 on moved numbers.
 
-Run:  source env.sh && python3 validation/benchmarks/t1_g1d_world.py
+Run:  source env.sh && python3 validation/benchmarks/t1_g1d_world.py [--plot]
 
 Exit status (validation/benchmarks/README.md): 0 when the harness ran and
 printed its REPORT row -- pass, recorded fail and blocked alike, since the
@@ -173,13 +251,13 @@ EXPERIMENTS = {
     "e143": ("nnpdf_E143_NC_NOTFIXED_ED.json",
              "5b5d7faefef49e3b8c3c17cdac3f277921799c2b3d42c721eb7366eccb623915",
              "6509786def09ecb318d45cb750e27763ba19c9a3968dd48811806f9cceb5861d",
-             True, "E143 (PRD 58 (1998) 112003 per survey D-6), HEPData "
-                   "ins467140 t18"),
+             True, "E143 PRD 58 (1998) 112003 (hep-ph/9802357) Table XIV, "
+                   "HEPData ins467140 t18"),
     "smc": ("nnpdf_SMC_NC_NOTFIXED_MUD.json",
             "8543a2919d8d9b6be0d31b77bf701679498499e054b876149655e01a0911c4fb",
             "78683115a9c868fc424e2074c918a79a0369a3622b8fa2800c4adbe5391d4673",
-            False, "SMC, HEPData ins471981 t7 (paper not identified; "
-                   "recorded only)"),
+            False, "SMC PRD 58 (1998) 112001 Table IX, HEPData ins471981 t7 "
+                   "(recorded only)"),
 }
 VERDICT_EXPERIMENTS = tuple(k for k, v in EXPERIMENTS.items() if v[3])
 REFERENCE = ("g1d per nucleon: COMPASS (D-2), HERMES (D-1), E143 (D-6) via "
@@ -574,11 +652,88 @@ def run(paths=None, verbose=True):
     return report
 
 
+# ------------------------------------------------------------------ figure
+
+#: the figure's palette slot and legend name of each configuration, and the
+#: ink marker and legend name of each data set
+PLOT_SLOTS = {"toy": ("default", "ToyG1 on ToyF2 (shipped)"),
+              "mstw": ("mstw", "ToyG1 on MSTW2008 LO"),
+              "ct18nlo": ("ct18nlo", "ToyG1 on CT18NLO"),
+              "nnpdfpol": ("nnpdfpol", "NNPDFpol1.1 (LhapdfG1)")}
+PLOT_MARKERS = {"compass": ("o", "COMPASS (D-2)"), "hermes": ("s", "HERMES (D-1)"),
+                "e143": ("^", "E143 (D-6)"), "smc": ("v", "SMC (recorded only)")}
+
+
+def plot(report, out_dir=None):
+    """g1d per nucleon vs x: each data set's DIS-cut points (ink, one marker
+    per set; SMC, recorded only, hollow and grey), each evaluated backend's
+    g1_nucleus(d)/2 at the point's own (x, Q2) as a tick in its slot colour,
+    over the verdict chi2's pulls (theory - data)/sigma on the three verdict
+    sets.  The no-D-state variant is recorded in the row, not drawn.  A view
+    of the row; a blocked configuration is left out (its reason is in it)."""
+    if HERE not in sys.path:
+        sys.path.insert(0, HERE)
+    from _plots import MUTED, new_figure, save, status_title, style_series
+    tables, configs = report["tables"], report["configs"]
+    fig, (ax, axp) = new_figure(two_panel=True)
+    q2s = []
+    for e, pts in tables.items():
+        cut = [p for p in pts if dis_cut(p)]
+        q2s += [p["q2"] for p in cut]
+        mk, label = PLOT_MARKERS[e]
+        kw = style_series("reference", label=label, marker=mk)
+        if not EXPERIMENTS[e][3]:
+            kw.update(color=MUTED, markerfacecolor="none", zorder=4)
+        ax.errorbar([p["x"] for p in cut], [p["value"] for p in cut],
+                    yerr=[p["err"] for p in cut], **kw)
+    for k, n in enumerate(CONFIGS):
+        c = configs[n]
+        if c["status"] == "blocked":
+            continue
+        slot, label = PLOT_SLOTS[n]
+        first = True
+        for e, pts in tables.items():
+            s = c["experiments"][e]
+            sel = [j for j, p in enumerate(pts) if dis_cut(p, c["q2_floor"])]
+            kw = style_series(slot, label=label if first else "_nolegend_")
+            kw.update(marker="_", linestyle="none", markersize=8,
+                      markeredgewidth=1.6)
+            ax.plot([pts[j]["x"] for j in sel], [s["theory"][j] for j in sel], **kw)
+            first = False
+            if not s["in_verdict"]:
+                continue
+            dodge = 10 ** (0.02 * (k - 1.5))  # side by side in the pull panel
+            pk = style_series(slot, marker=PLOT_MARKERS[e][0])
+            pk.update(markersize=3, label="_nolegend_")
+            axp.plot([pts[j]["x"] * dodge for j in sel],
+                     [(s["theory"][j] - pts[j]["value"]) / pts[j]["err"]
+                      for j in sel], **pk)
+    ax.axhline(0.0, color=MUTED, linewidth=0.8, zorder=0)
+    ax.set_xscale("log")
+    ax.set_ylabel("g1 per nucleon (deuteron)")
+    ax.legend(loc="lower right", ncol=2, fontsize=7)
+    axp.set_xlabel("x (each point at its own Q2, %g <= Q2 <= %g GeV^2)"
+                   % (min(q2s), max(q2s)))
+    axp.set_ylabel("(th - data)/sigma")
+    h = configs[HEADLINE]
+    status_title(fig, NAME, report["status"],
+                 "ToyG1: %s; p >= %g each on Q2 >= %g, W2 >= %g GeV^2"
+                 % (", ".join("%s %.1f/%d" % (
+                     PLOT_MARKERS[e][1].split()[0], h["experiments"][e]["dis"]["chi2"],
+                     h["experiments"][e]["dis"]["n"]) for e in VERDICT_EXPERIMENTS),
+                    P_MIN, Q2_CUT, W2_CUT))
+    return save(fig, NAME, out_dir)
+
+
 def main(argv=None):
     # Exit convention (module docstring, validation/benchmarks/README.md):
     # 0 = ran and printed its REPORT row, whatever the verdict; 2 = broken.
+    # `--plot` also writes the row's figure (plot()); the same rule holds.
+    argv = sys.argv[1:] if argv is None else argv
     try:
-        run()
+        rep = run()
+        if "--plot" in argv:
+            print("figure: %s" % plot(rep))
     except Exception:  # any exception means the harness itself is broken
         traceback.print_exc()
         return 2

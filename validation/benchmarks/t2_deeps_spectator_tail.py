@@ -111,7 +111,7 @@ frame caveat of t2_bonus_spectator_shape.py applies: Deeps tags backward in
 the target rest frame), p_s < 0.28 GeV/c (BONuS's window, still blocked),
 or the absolute rate.
 
-Run:  source env.sh && python3 validation/benchmarks/t2_deeps_spectator_tail.py
+Run:  source env.sh && python3 validation/benchmarks/t2_deeps_spectator_tail.py [--plot]
 
 Exit status (validation/benchmarks/README.md): 0 when the harness ran and
 printed its REPORT row -- pass, recorded fail and blocked alike, since the
@@ -526,11 +526,73 @@ def run(path=DEEPS, verbose=True):
     return report
 
 
+# ------------------------------------------------------------------ figure
+
+#: the figure's palette slot and legend name of each wave, and the line
+#: style and legend name of each prescription (the recorded sub-rows)
+PLOT_WAVES = {"hulthen": ("default", "Hulthen (shipped default)"),
+              "av18": ("alt", "AV18"), "cdbonn": ("alt2", "CD-Bonn")}
+PLOT_FORMS = {"lc": ("-", "o", "LC n(k) E_k/(2 - alpha) (the verdict's)"),
+              "instant-form": ("--", "s", "instant form n(k = p_s) (recorded)"),
+              "lc x GlauberFsiWeight": (":", "^", "LC x GlauberFsiWeight (recorded)")}
+
+
+def plot(report, out_dir=None):
+    """The backward (PWIA) window's data / fitted model per p_s bin -- the
+    weighted mean over every (Q2, W*, cos) group, each group with its own
+    free scale, exactly the sub-rows' `data_over_model_by_ps` -- for each
+    wave (colour) and prescription (line style); 1 is a perfect shape.  The
+    weighted means' errors are not in the row and are not drawn; the
+    transverse window is recorded in the row, not drawn."""
+    if HERE not in sys.path:
+        sys.path.insert(0, HERE)
+    from matplotlib.lines import Line2D
+    from _plots import INK, INK_SECONDARY, new_figure, save, status_title, style_series
+    subs = report["subrows"]
+    ps = sorted(set(PS_PAPER_GEV.values()))
+    fig, ax = new_figure()
+    ax.axhline(1.0, color=INK, linewidth=1.0, zorder=2)
+    for key, s in subs.items():
+        if "data_over_model_by_ps" not in s:
+            continue
+        wave, form = key.split("/", 1)
+        slot = PLOT_WAVES[wave][0]
+        ls, mk, _ = PLOT_FORMS[form]
+        kw = style_series(slot, label="_nolegend_", marker=mk)
+        kw.update(linestyle=ls, linewidth=2.0 if form == "lc" else 1.2,
+                  markersize=6 if form == "lc" else 4.5)
+        ax.plot(ps, s["data_over_model_by_ps"], **kw)
+    handles = [Line2D([], [], color=INK, linewidth=1.0)]
+    labels = ["data = fitted model (a perfect shape)"]
+    for wave, (slot, label) in PLOT_WAVES.items():
+        handles.append(Line2D([], [], **style_series(slot, label=None)))
+        labels.append("%s: LC chi2 %.2f/%d" % (label, subs["%s/lc" % wave]["chi2"],
+                                               subs["%s/lc" % wave]["ndf"]))
+    for form, (ls, mk, label) in PLOT_FORMS.items():
+        handles.append(Line2D([], [], color=INK_SECONDARY, linestyle=ls, marker=mk,
+                              linewidth=1.2, markersize=4.5))
+        labels.append(label)
+    ax.set_xlabel("spectator momentum p_s, the paper's bin average [GeV/c]")
+    ax.set_ylabel("data / fitted model (backward window)")
+    lo, hi = ax.get_ylim()
+    ax.set_ylim(lo, hi + 0.45 * (hi - lo))  # room for the legend above the data
+    ax.legend(handles, labels, loc="upper left", fontsize=7, ncol=2)
+    h = subs["%s/lc" % DEFAULT_WAVE]
+    status_title(fig, NAME, report["status"],
+                 "backward window cos_pq <= %g: Hulthen LC %.2f/%d (p = %.2g); "
+                 "tolerance p >= %g" % (PWIA_COS_MAX, h["chi2"], h["ndf"], h["p"],
+                                        P_MIN))
+    return save(fig, NAME, out_dir)
+
+
 if __name__ == "__main__":
     # Exit convention (module docstring, validation/benchmarks/README.md):
     # 0 = ran and printed its REPORT row, whatever the verdict; 2 = broken.
+    # `--plot` also writes the row's figure (plot()); the same rule holds.
     try:
-        run()
+        rep = run()
+        if "--plot" in sys.argv[1:]:
+            print("figure: %s" % plot(rep))
     except Exception:  # any exception means the harness itself is broken
         traceback.print_exc()
         sys.exit(2)

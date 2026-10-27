@@ -41,9 +41,31 @@ row per harness, the sub-row detail, and a "planned, not wired" section
 built from the blocked rows of this run and, verbatim, BENCHMARK_PLAN.md
 sec. 6 (the U-rows) and the sec. 4 rows that have no harness.
 
+FIGURES (--plots, since 2026-10-26).  With --plots each child, after
+`run()`, calls the harness's own `plot(report, out_dir=<report dir>/figures)`
+when the module defines one (validation/benchmarks/_plots.py, one style for
+every row) and puts the written file's path, RELATIVE to the report
+directory, into the row as `figure` ("figures/<harness>.png"); REPORT.md
+links it as an image under the row's heading in Detail, and its header says
+how many rows carry one.  A harness without `plot()` gets no figure and no
+complaint; `plot()` returning None means nothing to draw for that run (a
+BLOCKED row).  A `plot()` that raises, or names no non-empty file, costs the
+figure only -- the row gets `figure_error` with the reason, its status and
+numbers are untouched.  A figure is a VIEW of REPORT.json, never the record:
+`--check` never draws and ignores every figure field -- a row's `figure` /
+`figure_error`, the header's `figures_dir` and the ` --plots` token of the
+recorded command line are taken from the committed report exactly as the
+date and the runtimes are (`overlay_volatile`), because PNG bytes depend on
+the matplotlib build; so a report made with --plots checks clean against a
+regeneration made without, and a changed or missing PNG is not a
+difference.  `--compare` reads no figure field.  Without --plots nothing of
+this appears: the report is byte for byte what it was before --plots
+existed.
+
 Run (the committed report is made with --all, i.e. every row run):
     cd LiPolGen && source env.sh
     python3 validation/benchmarks/make_report.py --all        # regenerate
+    python3 validation/benchmarks/make_report.py --all --plots  # ... + figures
     python3 validation/benchmarks/make_report.py --check      # still true?
     python3 validation/benchmarks/make_report.py --all \\
         --compare docs/benchmarking/REPORT.json               # M2 rule
@@ -55,6 +77,11 @@ Options:
     --since REV     run only what tiers.py says a diff against REV re-runs
                     (BENCHMARK_PLAN.md sec. 7)
     --all           also run the opt-in (expensive) rows; = LIPOLGEN_BENCH=1
+    --plots         draw each row's figure with its harness's plot() after
+                    run(), into <out-dir>/figures/, and link it in REPORT.md
+                    (FIGURES above); not with --check, and with --compare
+                    only when --out-dir is given (the figures go beside a
+                    written report)
     --compare OLD   the M2 rule: print every row (and sub-row) whose status
                     changed or whose headline numbers moved against OLD
                     (a REPORT.json); exit 1 if any.  Writes nothing unless
@@ -66,9 +93,10 @@ Options:
     --check         regenerate into a temporary directory -- in the mode the
                     committed REPORT.json records (its `opt_in`) -- and diff
                     against the committed REPORT.md / REPORT.json, ignoring
-                    the date, the git revision, the runtimes and the
-                    environment header; exit 1 on any other difference
-                    (a hand edit, a moved number, a new or vanished row).
+                    the date, the git revision, the runtimes, the
+                    environment header and every figure field (FIGURES
+                    above); exit 1 on any other difference (a hand edit, a
+                    moved number, a new or vanished row).  Never draws.
     --in-process    run the harnesses in this process (no isolation)
     --timeout S     per-harness child timeout (default 1800 s)
 
@@ -139,6 +167,13 @@ CMD_PREFIX = "cd LiPolGen && source env.sh && "
 
 #: the header fields --check and --compare ignore
 VOLATILE_GENERATED = ("date", "git_rev", "git_dirty", "environment")
+#: --plots: the figures' directory, relative to the report's (REPORT.md
+#: links "figures/<harness>.png"); the row fields --plots may add; the token
+#: it adds to the recorded command line.  --check takes all of them from the
+#: committed report (`overlay_volatile`): a figure is a view, not the record.
+FIGURES_DIR = "figures"
+FIGURE_KEYS = ("figure", "figure_error")
+PLOTS_FLAG = " --plots"
 
 
 # ================================================================ discovery
@@ -235,9 +270,41 @@ def _fail_row(row, exc):
     return row
 
 
-def run_harness(path, opt_in, bench_dir=HERE):
+def draw_figure(mod, raw, row, report_dir, buf=None):
+    """--plots: the harness's own `plot(report, out_dir)` after `run()`,
+    into <report_dir>/figures; the written file's path relative to
+    report_dir goes into row['figure'].  A module without plot() gets
+    nothing and no complaint, and plot() returning None means it had
+    nothing to draw for this run.  A plot() that raises, or names no
+    non-empty file, costs the figure only: row['figure_error'] says why;
+    the row's status and numbers are untouched."""
+    plot = getattr(mod, "plot", None)
+    if not callable(plot):
+        return row
+    out_dir = os.path.join(report_dir, FIGURES_DIR)
+    try:
+        with contextlib.redirect_stdout(buf if buf is not None else io.StringIO()):
+            path = plot(raw, out_dir=out_dir)
+    except (Exception, SystemExit) as exc:
+        row["figure_error"] = R.classify_exception(exc)[1]
+        traceback.print_exception(type(exc), exc, exc.__traceback__,
+                                  file=sys.stderr)
+        return row
+    if path is None:
+        return row
+    path = os.path.abspath(os.fspath(path))
+    if not (os.path.isfile(path) and os.path.getsize(path) > 0):
+        row["figure_error"] = "plot() returned %s, not a non-empty file" % path
+        return row
+    row["figure"] = os.path.relpath(
+        path, os.path.abspath(report_dir)).replace(os.sep, "/")
+    return row
+
+
+def run_harness(path, opt_in, bench_dir=HERE, report_dir=None):
     """The normalised row of one harness, run in THIS process.  Never
-    raises for anything the harness does (KeyboardInterrupt excepted)."""
+    raises for anything the harness does (KeyboardInterrupt excepted).
+    With `report_dir` (--plots) the harness's plot() runs after run()."""
     stem = stem_of(path)
     row = _base_row(stem)
     buf = io.StringIO()
@@ -274,6 +341,8 @@ def run_harness(path, opt_in, bench_dir=HERE):
         return row
     row["notes"].extend(norm.pop("notes"))
     row.update(norm)
+    if report_dir is not None and row["status"] in R.HARNESS_STATUSES:
+        draw_figure(mod, raw, row, report_dir, buf)
     return row
 
 
@@ -284,7 +353,8 @@ def _signal_name(num):
         return "signal %d" % num
 
 
-def run_harness_isolated(path, opt_in, bench_dir=HERE, timeout=DEFAULT_TIMEOUT):
+def run_harness_isolated(path, opt_in, bench_dir=HERE, timeout=DEFAULT_TIMEOUT,
+                         report_dir=None):
     """`run_harness` in a child process: a harness that segfaults, exits or
     hangs costs its own row only."""
     stem = stem_of(path)
@@ -292,6 +362,8 @@ def run_harness_isolated(path, opt_in, bench_dir=HERE, timeout=DEFAULT_TIMEOUT):
     env[SYS_PATH_ENV] = json.dumps([p for p in sys.path if p])
     cmd = [sys.executable, os.path.abspath(__file__), "--child", path,
            "--bench-dir", bench_dir, "--child-opt-in", "1" if opt_in else "0"]
+    if report_dir is not None:
+        cmd += ["--child-report-dir", report_dir]
     try:
         p = subprocess.run(cmd, capture_output=True, text=True, env=env,
                            timeout=timeout)
@@ -324,7 +396,7 @@ def run_harness_isolated(path, opt_in, bench_dir=HERE, timeout=DEFAULT_TIMEOUT):
     return row
 
 
-def child_main(path, opt_in, bench_dir):
+def child_main(path, opt_in, bench_dir, report_dir=None):
     """The --child entry: everything the harness prints (Python or C++) is
     sent to stderr; the one row goes to the ORIGINAL stdout, tagged."""
     extra = json.loads(os.environ.get(SYS_PATH_ENV, "[]"))
@@ -333,7 +405,7 @@ def child_main(path, opt_in, bench_dir):
     saved = os.dup(1)
     os.dup2(2, 1)
     try:
-        row = run_harness(path, opt_in, bench_dir)
+        row = run_harness(path, opt_in, bench_dir, report_dir)
         text = json.dumps(R.jsonable(row), sort_keys=False)
     finally:
         sys.stdout.flush()
@@ -550,8 +622,8 @@ def blocked_list(rows):
     return out
 
 
-def command_line(opt_in, only):
-    c = CMD + (" --all" if opt_in else "")
+def command_line(opt_in, only, plots=False):
+    c = CMD + (" --all" if opt_in else "") + (PLOTS_FLAG if plots else "")
     if only:
         c += " --only " + ",".join(sorted(set(only)))
     return c
@@ -559,9 +631,11 @@ def command_line(opt_in, only):
 
 def generate(bench_dir=HERE, opt_in=False, only=None, isolate=True,
              timeout=DEFAULT_TIMEOUT, plan_path=PLAN, now=None, git=None,
-             env=None, echo=True):
+             env=None, echo=True, report_dir=None):
     """The whole report as a dict (REPORT.json's content).  `now`, `git`
-    ((rev, dirty)) and `env` may be injected (tests, --check)."""
+    ((rev, dirty)) and `env` may be injected (tests, --check).  With
+    `report_dir` (--plots) each harness's plot() draws into
+    <report_dir>/figures and the rows carry `figure` (FIGURES above)."""
     paths = discover(bench_dir)
     if only:
         by = {stem_of(p): p for p in paths}
@@ -574,11 +648,14 @@ def generate(bench_dir=HERE, opt_in=False, only=None, isolate=True,
     prow = plan_row_map(plan)
     rows = []
     for p in paths:
-        row = (run_harness_isolated(p, opt_in, bench_dir, timeout) if isolate
-               else run_harness(p, opt_in, bench_dir))
+        row = (run_harness_isolated(p, opt_in, bench_dir, timeout, report_dir)
+               if isolate else run_harness(p, opt_in, bench_dir, report_dir))
         row = R.jsonable(row)
         row["plan_row"] = prow.get(row["name"])
         rows.append(row)
+        if row.get("figure_error"):
+            sys.stderr.write("FIGURE   %s: not drawn -- %s\n" % (
+                row["name"], row["figure_error"]))
         if echo:
             print(R.report_line(row["name"], row["generator"] or "-",
                                 row["reference"] or "-",
@@ -596,11 +673,14 @@ def generate(bench_dir=HERE, opt_in=False, only=None, isolate=True,
                 "edit; regenerate (BENCHMARK_PLAN.md sec. 3)"),
         spdx_license_identifier=SPDX,
         date=now, git_rev=rev, git_dirty=dirty,
-        command=command_line(opt_in, only), opt_in=bool(opt_in),
+        command=command_line(opt_in, only, report_dir is not None),
+        opt_in=bool(opt_in),
         only=sorted(set(only)) if only else None,
         plan=None if plan is None else "docs/benchmarking/BENCHMARK_PLAN.md",
         environment=env if env is not None else environment(),
     )
+    if report_dir is not None:
+        generated["figures_dir"] = FIGURES_DIR
     pnw = dict(
         blocked=blocked_list(rows),
         plan_rows_without_harness=[
@@ -696,6 +776,16 @@ def render_md(rep):
         "**not run** — listed as skipped (opt-in); `--all` or `%s=1` runs "
         "them" % OPT_IN_ENV))
     w("- **this file was made by:** `%s%s`" % (CMD_PREFIX, g["command"]))
+    if "figures_dir" in g:
+        drawn = sum(1 for r in rep["rows"] if r.get("figure"))
+        failed = sum(1 for r in rep["rows"] if r.get("figure_error"))
+        w("- **figures:** %d of %d row%s carry one, linked under the row's "
+          "heading in *Detail* (`--plots`: each harness's own `plot()` after "
+          "`run()`, PNGs in `%s/`; a view of REPORT.json, never compared by "
+          "`--check`)%s" % (
+              drawn, len(rep["rows"]), "" if len(rep["rows"]) == 1 else "s",
+              g["figures_dir"],
+              "; %d not drawn, the reason in the row" % failed if failed else ""))
     w("- **check it:** `%s%s --check`; **M2 compare:** `%s%s --all --compare "
       "docs/benchmarking/REPORT.json`" % (CMD_PREFIX, CMD, CMD_PREFIX, CMD))
     w("")
@@ -732,6 +822,9 @@ def render_md(rep):
         w("")
         w("### %s" % r["name"])
         w("")
+        if r.get("figure"):
+            w("![%s](%s)" % (r["name"], r["figure"]))
+            w("")
         w("- **status:** %s%s" % (md_status(r["status"]),
                                   "; expensive (opt-in)" if r.get("expensive")
                                   else ""))
@@ -739,6 +832,8 @@ def render_md(rep):
             w("- **reason:** %s" % md_text(r["reason"]))
         for n in r.get("notes") or []:
             w("- **note:** %s" % md_text(n))
+        if r.get("figure_error"):
+            w("- **figure:** not drawn — %s" % md_text(r["figure_error"]))
         data = r.get("data_sha256") or {}
         if data:
             w("- **vendored data (sha256 of every byte):** %s" % "; ".join(
@@ -930,7 +1025,11 @@ def compare(old, new, out=None):
 
 def overlay_volatile(new, old):
     """`new` with the fields --check ignores (the date, the revision, the
-    environment, every runtime) taken from `old`."""
+    environment, every runtime, and every figure field) taken from `old`.
+    The figure fields (--plots; FIGURES above) are taken as `old` has them
+    or lacks them -- `figures_dir` in the header, a row's `figure` /
+    `figure_error`, the ` --plots` token of the command line -- since
+    --check never draws and PNG bytes depend on the matplotlib build."""
     ov = copy.deepcopy(new)
     for k in VOLATILE_GENERATED:
         if k in old.get("generated", {}):
@@ -939,6 +1038,22 @@ def overlay_volatile(new, old):
     for r in ov["rows"]:
         if r["name"] in oldrt:
             r["runtime_s"] = oldrt[r["name"]]
+    og, ng = old.get("generated", {}), ov["generated"]
+    ng.pop("figures_dir", None)
+    if "figures_dir" in og:
+        ng["figures_dir"] = copy.deepcopy(og["figures_dir"])
+    oc, nc = og.get("command"), ng.get("command")
+    if (isinstance(oc, str) and isinstance(nc, str)
+            and oc.replace(PLOTS_FLAG, "") == nc.replace(PLOTS_FLAG, "")):
+        ng["command"] = oc
+    oldrows = {r["name"]: r for r in old.get("rows", [])}
+    for r in ov["rows"]:
+        for k in FIGURE_KEYS:
+            r.pop(k, None)
+        o = oldrows.get(r["name"], {})
+        for k in FIGURE_KEYS:
+            if k in o:
+                r[k] = copy.deepcopy(o[k])
     return ov
 
 
@@ -991,8 +1106,8 @@ def check(out_dir=DEFAULT_OUT, bench_dir=HERE, isolate=True,
         return 1
     shutil.rmtree(tmp, ignore_errors=True)
     print("check: OK -- the committed REPORT.md / REPORT.json are what "
-          "regeneration gives (date, revision, runtimes, environment ignored)",
-          file=out)
+          "regeneration gives (date, revision, runtimes, environment, figures "
+          "ignored)", file=out)
     return 0
 
 
@@ -1017,6 +1132,7 @@ def main(argv=None):
     ap.add_argument("--only", action="append", metavar="NAMES")
     ap.add_argument("--since", metavar="REV")
     ap.add_argument("--all", action="store_true")
+    ap.add_argument("--plots", action="store_true")
     ap.add_argument("--compare", metavar="OLD_JSON")
     ap.add_argument("--check", action="store_true")
     ap.add_argument("--in-process", action="store_true")
@@ -1025,18 +1141,20 @@ def main(argv=None):
     ap.add_argument("--plan", default=PLAN, help=argparse.SUPPRESS)
     ap.add_argument("--child", metavar="PATH", help=argparse.SUPPRESS)
     ap.add_argument("--child-opt-in", default="0", help=argparse.SUPPRESS)
+    ap.add_argument("--child-report-dir", default=None, help=argparse.SUPPRESS)
     try:
         a = ap.parse_args(argv)
     except SystemExit as exc:
         return 0 if exc.code == 0 else 2
     if a.child:
-        return child_main(a.child, a.child_opt_in == "1", a.bench_dir)
+        return child_main(a.child, a.child_opt_in == "1", a.bench_dir,
+                          a.child_report_dir)
     opt_in = a.all or os.environ.get(OPT_IN_ENV) == "1"
     isolate = not a.in_process
     if a.check:
-        if a.only or a.since or a.compare:
-            print("make_report: --check takes no --only/--since/--compare",
-                  file=sys.stderr)
+        if a.only or a.since or a.compare or a.plots:
+            print("make_report: --check takes no --only/--since/--compare/"
+                  "--plots (it never draws)", file=sys.stderr)
             return 2
         return check(a.out_dir or DEFAULT_OUT, a.bench_dir, isolate,
                      a.timeout, a.plan)
@@ -1058,6 +1176,10 @@ def main(argv=None):
               "written over docs/benchmarking/REPORT.*; pass --out-dir",
               file=sys.stderr)
         return 2
+    if a.plots and a.compare and a.out_dir is None:
+        print("make_report: --plots draws beside a written report; with "
+              "--compare pass --out-dir", file=sys.stderr)
+        return 2
     old = None
     if a.compare:
         try:
@@ -1068,7 +1190,9 @@ def main(argv=None):
             return 2
     try:
         rep = generate(a.bench_dir, opt_in=opt_in, only=only or None,
-                       isolate=isolate, timeout=a.timeout, plan_path=a.plan)
+                       isolate=isolate, timeout=a.timeout, plan_path=a.plan,
+                       report_dir=(a.out_dir or DEFAULT_OUT) if a.plots
+                       else None)
     except ValueError as exc:
         print("make_report: %s" % exc, file=sys.stderr)
         return 2

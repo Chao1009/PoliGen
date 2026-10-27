@@ -1,0 +1,174 @@
+{
+  "_provenance": {
+    "what": "NMC's measured R = sigma_L/sigma_T at 0.0045 <= x <= 0.11 (ten x bins, one Q2-averaged value each) -- the reference side of the PRIMARY sub-row of validation/benchmarks/t1_r_world.py (run 2026-10-26 phase C1; docs/benchmarking/02_data_nucleon_deuteron.md sec. 4 R-3).",
+    "record": {
+      "inspire": "ins424154",
+      "hepdata_doi": "10.17182/hepdata.32752.v1",
+      "hepdata_version": 1,
+      "record_url": "https://www.hepdata.net/record/ins424154",
+      "catalogue_url": "https://www.hepdata.net/record/ins424154?format=json",
+      "catalogue_sha256": "b155d61231421cedbadbbc265bd12926296e8ae8e921b6b56f799b56d3c5067c",
+      "catalogue_bytes": 31817,
+      "title": "Measurement of the proton and deuteron structure functions, F2(p) and F2(d), and of the ratio sigma(L)/sigma(T).",
+      "journal": "Nucl.Phys.B 483 (1997) 3-43",
+      "paper_doi": "10.1016/S0550-3213(96)00538-X",
+      "arxiv": "arXiv:hep-ph/9610231",
+      "n_tables_in_record": 33
+    },
+    "tables_used": [
+      {
+        "name": "Table 33",
+        "doi": "10.17182/hepdata.32752.v1/t33",
+        "location": "Data from T7",
+        "description": "Measurement of R=(SIG(L)/SIG(T)).",
+        "yaml_url": "https://www.hepdata.net/download/table/ins424154/Table 33/yaml",
+        "yaml_sha256": "03363d30f698342dbcabf4183b0a51f77bc76dd93adfd01a30595f6994ee21ac",
+        "yaml_bytes": 2003,
+        "yaml_fetched_utc": "2026-10-26T18:55:15.105225Z",
+        "json_url": "https://www.hepdata.net/download/table/ins424154/Table 33/json",
+        "json_sha256": "ed7ed64bce7bd8a535ff4e8e3fb27de3fbd36faa1b8bcfbd72a1f3f65f77b39d",
+        "json_bytes": 3052,
+        "json_fetched_utc": "2026-10-26T18:55:16.785931Z",
+        "table_license": "CC0 (https://creativecommons.org/publicdomain/zero/1.0/)"
+      }
+    ],
+    "tables_not_used": "Tables 1-32 (F2p, F2d averaged over the four energies): not R, not used. A fact recorded for the F2d row (t1_nmc_f2d.py reads Tables 17-32 through nnpdf-data): their independent variable SIG(L)/SIG(T) is the R NMC extracted F2 with -- in Tables 17-26 (x = 0.0045 ... 0.11) one value per table, equal to this table's R at the same x in all ten; in Tables 27-32 (x = 0.14 ... 0.5) Q2-dependent values (the paper's sec. 4: above x = 0.12 the R parametrisation of its ref. [2], R1990). Checked 2026-10-26 against the yaml downloads whose sha256 are in f2d_tables_checked.",
+    "f2d_tables_checked": {
+      "Table 17": "714574aefd351ff952ef605c2a33af9c5d061422d5ab727f402de47016cf9e7f",
+      "Table 18": "98510380d1fdbcdbf02d09be866f310597dd47619dec91d07c0490ec8d9df85d",
+      "Table 19": "f3d21efda16a47f2996c380ca73c01e0ee47270df1b603932cb71e9f2215610e",
+      "Table 20": "234d0020858599689424ae6c79cc2f0edae85434bf601d93881b69ec5edf0d38",
+      "Table 21": "9f57dceafc9d41bdd4f9fa0ecc1a573b956fc3f3db0aa05caeeb5b5f00affb57",
+      "Table 22": "6285ef94b8d5ba0cca2864c33e26c2e0307ff40b64ab2d80199178949e324dfe",
+      "Table 23": "da294553d11c495b919a1e63d554361af50d54d3596e681306a07a5b999e1036",
+      "Table 24": "21326a7042012c9571d9abe34e46f9da91e2de1c9eaddf5575183fd3b5d2d35d",
+      "Table 25": "9e30c4336ffd557b576aff9a0c7c6aceba94af363efd311e2b372171b18d9119",
+      "Table 26": "a165e479ec1086e27084a9a36ece28b783f3b9f17aba429666f5717a4cdc3db5",
+      "Table 27": "59d26ec41aa8f555c1373168f333e183a7c64e879614d7ced1ef0d6c8f99f63e",
+      "Table 28": "2b58987c14b9a1f132ae7930da286a26e3d9e7bbb448973c4e719ca3223a5ce8",
+      "Table 29": "350f42631c5320c6f247aa991be2b62e7144a1bf7af0f788b0673785c76c01cd",
+      "Table 30": "9c8889c71117db772747c1270dcb754a0b7310eb58a1961752cd2a7b11b2189a",
+      "Table 31": "6ade2dc25127ce2dcf76c8d83c5d7c83adfae8f8bc9e4fa93abdd5bd9881d356",
+      "Table 32": "3e3c60b0460d551a4eb1982953e888261e669c43440260cb59e03ac96b28b29b"
+    },
+    "fetched": "2026-10-26 (UTC); the standard Python `requests` 2.25.1 client with its default identity (no header changed); curl's default identity receives HTTP 403 from www.hepdata.net and was not used",
+    "licence": "CC0-1.0: HEPData 'table_license' CC0 (https://creativecommons.org/publicdomain/zero/1.0/), read from the table's json download; the numbers are measured quantities, vendored with attribution",
+    "paper": "M. Arneodo et al. (New Muon Collaboration), 'Measurement of the proton and deuteron structure functions, F2p and F2d, and of the ratio sigma_L/sigma_T', Nucl. Phys. B 483 (1997) 3, doi:10.1016/S0550-3213(96)00538-X, arXiv:hep-ph/9610231 (read: PolarizedLithiumSim/refs/hep-ph_9610231.pdf)",
+    "record_qualifiers": {
+      "PLAB": "90 + 120 + 200 + 280",
+      "RE": "MUON NUCLEON --> MUON X",
+      "SQRT(S)": "21.677"
+    },
+    "publishing_convention": "R = sigma_L/sigma_T is a RATIO: no per-nucleon / per-nucleus normalisation enters. It is 'the average R for the proton and the deuteron' (paper sec. 4: extracted from the combined proton and deuteron data, justified by NMC's R_d - R_p = 0 within 0.02 over 0.002 < x < 0.40); the record's reaction is 'MUON NUCLEON --> MUON X'. For x < 0.12 'one Q2 averaged value of R' per x bin (sec. 4), quoted at the mean Q2 of the bin (Table 7: '<Q2> is the mean value of Q2 at which R was determined'); the data 'do not allow a measurement of both its x and Q2 dependence' (sec. 4). At x = 0.0045 'the determination of R relies on the extrapolation of F2p and F2d from neighbouring bins at larger x' (sec. 4).",
+    "errors": "stat and sys given separately, symmetric, absolute. The systematic errors 'are 1.5 to 3 times larger than the statistical ones; they are dominated by the normalisation uncertainty and are thus largely correlated' (sec. 6); 'the uncertainties are largely correlated' (sec. 4.2); the statistical errors of neighbouring x bins are correlated by the F2 parametrisation (sec. 4.3). No covariance matrix is given in the paper or the record.",
+    "cross_check": "all ten rows (x, <Q2>, y range, R, stat, sys) equal the paper's Table 7 as printed (hep-ph/9610231 p. 14), checked number by number when this file was written",
+    "in_r1998_fit": "YES: Abe et al., PLB 452 (1999) 194 (hep-ex/9808028 p. 3): 'We have performed a new fit using the present data [3,11-14]' with [12] = 'NMC, M. Arneodo et al., Nucl. Phys. B483, 3 (1997)' -- this table is an input of the R1998 fit that lipolgen.r1998 transcribes.",
+    "vendored_by": "Written once on 2026-10-26 by a dev-time script kept outside the repository (the C1 worker's scratch directory): every number of `body` is copied from the table's YAML download (HEPData's submission format), whose sha256 is recorded per table under `tables_used`; nothing is rescaled, rounded or re-ordered beyond what `body` states.  The harness that reads this file re-checks the sha256 of every byte of it, and of the canonical body (json.dumps(body, sort_keys=True, separators=(',', ':'), ensure_ascii=True)) recorded as `_body_sha256`, on every read."
+  },
+  "_body_sha256": "4fac8c13fd6d65336b28fd5968714f56df126809809fe4287a4b914b2f6e32a0",
+  "body": {
+    "quantity": "R = sigma_L/sigma_T",
+    "target": "proton and deuteron combined (R_p = R_d assumed)",
+    "columns": {
+      "x": "Bjorken x (bin centre)",
+      "q2": "mean Q2 of the bin [GeV2]",
+      "y_low": "lowest y of the data",
+      "y_high": "highest y of the data",
+      "value": "R",
+      "stat": "statistical error (absolute)",
+      "sys": "systematic error (absolute)"
+    },
+    "points": [
+      {
+        "x": 0.0045,
+        "q2": 1.38,
+        "y_low": 0.63,
+        "y_high": 0.74,
+        "value": 0.537,
+        "stat": 0.067,
+        "sys": 0.11
+      },
+      {
+        "x": 0.008,
+        "q2": 1.31,
+        "y_low": 0.49,
+        "y_high": 0.77,
+        "value": 0.337,
+        "stat": 0.044,
+        "sys": 0.112
+      },
+      {
+        "x": 0.0125,
+        "q2": 2.2,
+        "y_low": 0.4,
+        "y_high": 0.75,
+        "value": 0.246,
+        "stat": 0.037,
+        "sys": 0.11
+      },
+      {
+        "x": 0.0175,
+        "q2": 3.12,
+        "y_low": 0.28,
+        "y_high": 0.73,
+        "value": 0.19,
+        "stat": 0.036,
+        "sys": 0.109
+      },
+      {
+        "x": 0.025,
+        "q2": 4.5,
+        "y_low": 0.2,
+        "y_high": 0.74,
+        "value": 0.099,
+        "stat": 0.032,
+        "sys": 0.09
+      },
+      {
+        "x": 0.035,
+        "q2": 7.0,
+        "y_low": 0.2,
+        "y_high": 0.73,
+        "value": 0.108,
+        "stat": 0.03,
+        "sys": 0.08
+      },
+      {
+        "x": 0.05,
+        "q2": 10.2,
+        "y_low": 0.17,
+        "y_high": 0.69,
+        "value": 0.117,
+        "stat": 0.03,
+        "sys": 0.079
+      },
+      {
+        "x": 0.07,
+        "q2": 14.1,
+        "y_low": 0.12,
+        "y_high": 0.69,
+        "value": 0.113,
+        "stat": 0.049,
+        "sys": 0.076
+      },
+      {
+        "x": 0.09,
+        "q2": 16.9,
+        "y_low": 0.1,
+        "y_high": 0.57,
+        "value": 0.096,
+        "stat": 0.036,
+        "sys": 0.079
+      },
+      {
+        "x": 0.11,
+        "q2": 20.6,
+        "y_low": 0.1,
+        "y_high": 0.6,
+        "value": 0.043,
+        "stat": 0.041,
+        "sys": 0.067
+      }
+    ]
+  }
+}

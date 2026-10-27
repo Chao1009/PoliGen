@@ -422,6 +422,8 @@ HTTP 200, 2.0 MB) and read. Its lithium rows, verbatim:
 | ⁷Li | | 2.72 | 1.72 | 0.08(4) | 0.117 | 0.70–1.97 | Ra66, a₀ fixed |
 | ⁷Li | | **3.00(5)** | 1.90(3) | 0 | 0.117 | 0.25–0.90 | Ni71 |
 
+*2026-10-26 (run 2026-10-26 phase B2, the paper read):* the four Ra66 rows are √(5/2)·a₀ of Rand–Frosch–Yearian's harmonic-well fits to the printed digit — RFY p. 868's ⟨r²⟩ = (5/2)a₀², the rms radius of the 1p-shell orbital of the fitted well, which RFY keep distinct from the slope of F_M (p. 873) — not magnetization slope radii. Over RFY's ⁶Li range a₀ = 1.6–2.2 F (Table XIV) they span 2.53–3.48 fm, bracketing the charge rms, so "the magnetism of ⁶Li lives further out than its charge" does not follow from them; and RFY say there is "no way to choose between" the α + d (1s) model and the L-S shell model with these data (p. 869) (`../open_items/run_2026-10-26/phase_B2_rfy.md` §5).
+
 `Ra66` and `Ni71` were resolved from the compilation's own reference list:
 
 **`N-6` = R. E. Rand, R. F. Frosch, M. R. Yearian, Phys. Rev. 144 (1966)

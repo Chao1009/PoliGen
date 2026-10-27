@@ -43,7 +43,7 @@ is measured, and no number here stands without the window it was measured in.**
 
 | selector | default | what the other value adds | measured, with its window |
 |---|---|---|---|
-| `--cluster-wave {hulthen,vmc}` | `hulthen`, bit for bit | ANL VMC AV18 α+d / α+t tables, and the AV18 deuteron everywhere the run reads one | ⁶Li α-tag fraction **0.0264 → 0.0348** at 10 × 99.5 on the YR high-acceptance envelope (40 k events, seed 20260829, regenerated 2026-09-06 on the fixed S–D sign — the Hulthén sample read 0.0249 before, a re-drawn `tensor-thirds` category average whose expectation is unmoved to 15 digits); on the α-tag channel the opt-in path moves every polarized observable by **−2.027 %**; refused on `inclusive`/`coherent`, where it is never read |
+| `--cluster-wave {hulthen,vmc}` | `hulthen`, bit for bit | ANL VMC AV18 α+d / α+t tables, and the AV18 deuteron everywhere the run reads one | ⁶Li α-tag fraction **0.0264 → 0.0348** at 10 × 99.5 on the YR high-acceptance envelope (40 k events, seed 20260829, regenerated 2026-09-06 on the fixed S–D sign — the Hulthén sample read 0.0249 before, a re-drawn `tensor-thirds` category average whose expectation is unmoved to 15 digits); on the ⁶Li α-tag channel the 2026-09-04 embedded-deuteron fix moved every polarized observable of the opt-in path by **−2.027 %**; the hulthen → vmc price itself is ×1.116 / ×1.066 on the integrated vector / tensor dilutions and ×0.430 / ×0.209 on A_zz^tag at k = 0.20 / 0.30 GeV (`docs/open_items/run_2026-10-26/phase_A_baseline.md` §4); refused on `inclusive`/`coherent`, where it is never read |
 | `--pzz-mode {ladder,typed}` | `ladder`, bit for bit (it is the branch that was already there) | `--plan helicity-flip` honours the typed `--pzz` instead of the max-entropy ladder at `--pz`, and REFUSES a value outside the plan's domain with the edge named rather than clamping | inclusive config 1, 100 000 events, seed 20260713, `--pz 0.7 --pe 0.7`, `--pzz 0.5` against the ladder: **on ⁷Li no observable moves** (rank-2 identically zero; σ agrees to 1 ulp, A_∥ to 6 × 10⁻¹⁴ of its own error) while **0.1060 %** of events re-cell on last-bit arithmetic; on **⁶Li** σ **−0.0023527 %** and A_∥ **−4.27 × 10⁻⁶ σ_stat** on the shipped `miller` (22–36× less on the opt-in b₁ models). The **recorded alignment** moves 0.4 → 0.5 (⁷Li) / 0.409403 → 0.5 (⁶Li), i.e. **−20 % / −18.12 %** on δ(A_zz) and δ(cos 2φ) at fixed N |
 | `--triton-sf {hulthen,ciofi-simula}` | `hulthen`, bit for bit | the Ciofi–Simula three-channel A = 3 spectral function | S₀ = **0.6525, untuned** |
 | `--fsi {off,glauber-cluster,glauber-nucleon}` | `off` | a Glauber survival **weight** on `Event::weight` — never a momentum shift | the two variants are **not** one: **99.50 %** of events differ by more than **1 %** (\|w_nucleon/w_cluster − 1\| > 0.01), ratio to **68.5**, on `tagged-6Li-alpha`, 20 000 events, seed 1234, `tensor-thirds`, **σ_XN = 40 mb** — one end of the mandatory 20–40 mb band |
@@ -334,9 +334,14 @@ row's status. The harnesses live in `validation/benchmarks/` (one file per row,
 reference tables vendored under `data/` with their provenance; conventions and
 the full list with verdicts and runtimes in `validation/benchmarks/README.md`)
 and run under pytest as `python/tests/test_bench_*.py`. Every row costs
-under 30 s today, so all of them run by default; a row that costs more is to
-run only with `LIPOLGEN_BENCH=1` — a convention only: no row needs it yet and no test reads the variable. A harness that disagrees with the tree is
-recorded, never tuned. As of 2026-09-23: 3 pass, 2 fail (recorded), 3 blocked.
+under 30 s today; a row that costs more, or a generator-vs-generator sample
+(T4's PYTHIA closure), runs only with `LIPOLGEN_BENCH=1`, which
+`python/tests/conftest.py` and `make_report.py` read;
+`make_report.py --all --plots` regenerates `docs/benchmarking/REPORT.md` /
+`REPORT.json` (the M2 baseline) and one figure per row that draws one. A
+harness that disagrees with the tree is recorded, never tuned. As of
+2026-10-26 (23 harnesses, every row run, the three LHAPDF sets installed):
+13 pass, 10 fail (recorded), 0 blocked.
 
 ## Citing
 

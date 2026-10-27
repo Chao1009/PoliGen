@@ -797,7 +797,7 @@ def render_md(rep):
     w("## The rows")
     w("")
     w("One row per harness. *plan row* is the `BENCHMARK_PLAN.md` §4 row "
-      "number when the harness is one of the first ten. The generator column "
+      "number when the harness wires a §4 row. The generator column "
       "is the harness's own value text; the sub-rows and the configuration "
       "are under *Detail*.")
     w("")

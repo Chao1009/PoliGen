@@ -82,7 +82,17 @@ installed), before this header was revised: the ct18nlo sub-row FAILS,
 3401.8/146 on its own floor Q2 >= 1.677, mean model/data 1.086
 (phase_0_environment.md); the tolerance above is the 2026-09-26 one,
 unchanged, and LhapdfSF's leading-order F2 of an NLO set is phase 0's
-reading of the excess, not tested here.
+reading of the excess, not tested here.  RECORDED 2026-10-26 (phase F of
+run 2026-10-26, outside the verdict; no number or tolerance moves):
+LhapdfSF builds F2 with five MASSLESS flavours, charm at e^2 = 4/9 and
+bottom included, no threshold (src/lhapdf/lhapdf_sf.cpp, kF2ProtonE2).
+On the 146 points c + b are 3.56 % of the model F2d on average (7.0 % at
+x < 0.02, 7.6 % at 0.02-0.05, 12.7 % at most); without them the mean
+model/data falls from 1.0862 to 1.0459 and the excess is x-dependent
+(1.064 / 1.084 / 1.084 / 1.072 in x < 0.02 / 0.02-0.05 / 0.05-0.1 /
+0.1-0.2, 0.977 above).  About half of the excess (0.040 of 0.086) is the
+tree's heavy-flavour treatment; the rest is unexplained, the NLO
+coefficient functions being one candidate.
 
 THE THREE NORMALISATION RULES (BENCHMARK_PLAN.md sec. 8), for THIS row:
   1. b1 normalisations / A-scaling -- NOT APPLICABLE: no b1 on either side;

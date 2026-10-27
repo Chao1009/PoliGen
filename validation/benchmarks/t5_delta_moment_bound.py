@@ -277,12 +277,17 @@ Run:  source env.sh && python3 validation/benchmarks/t5_delta_moment_bound.py [-
 
 Exit status (validation/benchmarks/README.md): 0 when the harness ran and
 printed its REPORT row -- pass, recorded fail and blocked alike (BLOCKED,
-with an `environment:` reason, when PYTHIA's python module, its LHAPDF6
-plugin or one of the two sets is missing, or a set file is not the vendored
-version); 2 when the harness itself is broken (a missing or altered vendored
-file, lipolgen missing, a failed same-grid guard, an unconverged integral,
-any exception).  A harness is a measurement, not a CI gate: the pytests are
-the gate.
+with an `environment:` reason, when PYTHIA's python module or its LHAPDF6
+plugin is missing or cannot load a set, or a set's member file is missing
+or a set file is not the vendored version); 2 when the harness itself is
+broken (a missing or altered vendored file, lipolgen missing, a failed
+same-grid guard, an unconverged integral, any exception) -- and when one of
+the two sets is not installed where LHAPDF searches: the row's only
+configuration needs both, so it raises LHAPDF's own "Info file not found for
+PDF set" message and the report records it as blocked (environment), as row
+4 (README convention 6; a BLOCKED row with exit 0 until phase F of run
+2026-10-26).  A harness is a measurement, not a CI gate: the pytests are the
+gate.
 """
 
 import hashlib
@@ -343,8 +348,10 @@ P_EFF_NAIVE = 1.0 / 3.0
 
 
 class EnvironmentBlocked(Exception):
-    """The environment cannot run this row (a missing module, plugin or set,
-    or a set that is not the vendored version) -- a BLOCKED row, exit 0."""
+    """The environment cannot run this row (a missing module or plugin, a
+    set's missing member file, or a set that is not the vendored version) --
+    a BLOCKED row, exit 0.  A set that is not installed at all is not this:
+    check_set raises LHAPDF's own message (exit 2, blocked (environment))."""
 
 
 # ---------------------------------------------------------------- reference
@@ -396,21 +403,31 @@ def sha256_file(path):
 # ---------------------------------------------------------------- LHAPDF sets
 
 def lhapdf_dirs():
-    """LHAPDF's search order: $LHAPDF_DATA_PATH, then the install's datadir."""
-    dirs = [d for d in os.environ.get("LHAPDF_DATA_PATH", "").split(os.pathsep) if d]
-    try:
-        p = subprocess.run(["lhapdf-config", "--datadir"], capture_output=True,
-                           text=True, timeout=10)
-        if p.returncode == 0 and p.stdout.strip():
-            dirs.append(p.stdout.strip())
-    except (OSError, subprocess.SubprocessError):
-        pass
+    """LHAPDF's own search order (LHAPDF::paths()): $LHAPDF_DATA_PATH -- or
+    $LHAPATH when that is unset -- split on ':', then the install's datadir
+    UNLESS the variable ends in '::'.  (Until phase F of run 2026-10-26 the
+    datadir was appended always, so check_set could certify a copy LHAPDF
+    never loads.)"""
+    var = os.environ.get("LHAPDF_DATA_PATH")
+    if var is None:
+        var = os.environ.get("LHAPATH", "")
+    dirs = [d for d in var.split(":") if d]
+    if not var.endswith("::"):
+        try:
+            p = subprocess.run(["lhapdf-config", "--datadir"], capture_output=True,
+                               text=True, timeout=10)
+            if p.returncode == 0 and p.stdout.strip():
+                dirs.append(p.stdout.strip())
+        except (OSError, subprocess.SubprocessError):
+            pass
     return dirs
 
 
 def check_set(entry):
     """The set's .info and member file as LHAPDF would find them, each sha256
-    against the vendored record -- EnvironmentBlocked if absent or different."""
+    against the vendored record -- EnvironmentBlocked (a BLOCKED row) if the
+    member file is absent or either file differs; RuntimeError with LHAPDF's
+    own message if the set is not installed (exit 2, blocked (environment))."""
     dirs = lhapdf_dirs()
     for d in dirs:
         info = os.path.join(d, entry["name"], entry["name"] + ".info")
@@ -428,8 +445,12 @@ def check_set(entry):
                     % (entry["name"], d, got[0][:12], got[1][:12], want[0][:12],
                        want[1][:12]))
             return dict(dir=d, info_sha256=got[0], member_sha256=got[1])
-    raise EnvironmentBlocked("environment: LHAPDF set %s not installed (searched %s)"
-                             % (entry["name"], ", ".join(dirs) or "nothing"))
+    # A set that is not installed is the environment, not a measurement: the
+    # row's only configuration needs it, so LHAPDF's own message, uncaught --
+    # main() exits 2 and make_report records 'blocked (environment)' (README
+    # convention 6, as row 4; phase F of run 2026-10-26).
+    raise RuntimeError("Info file not found for PDF set '%s' (searched %s)"
+                       % (entry["name"], ", ".join(dirs) or "nothing"))
 
 
 class PluginPdf:
@@ -460,7 +481,8 @@ class PluginPdf:
 
 def load_sets(body):
     """{'ct18': PluginPdf, 'nnpdf': PluginPdf}, the set records, the PYTHIA
-    version -- or EnvironmentBlocked."""
+    version -- or EnvironmentBlocked (a BLOCKED row), or check_set's
+    RuntimeError for a set that is not installed."""
     import lipolgen as lg  # noqa: WPS433 (env.sh puts it on the path)
     if not getattr(lg, "HAVE_LHAPDF", False):
         raise EnvironmentBlocked("environment: lipolgen built without the LHAPDF tier "

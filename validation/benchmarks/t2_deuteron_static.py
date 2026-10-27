@@ -105,7 +105,16 @@ TOLERANCE, DECLARED BEFORE THE VERDICT.
     tolerance was touched.  In units of the corrected error the impulse-
     approximation shortfall is about -10 sigma for CD-Bonn and AV18 (it was
     about -50 on the old 0.0003) -- recorded, the size of the two-body and
-    relativistic terms an IA Q_d omits.
+    relativistic terms an IA Q_d omits.  RECORDED 2026-10-26 by phase F of
+    run 2026-10-26 (no number, tolerance or verdict moves; the reference
+    file is not re-vendored -- that is the author's call): the 1979 value,
+    and the literature's 0.2859(3) with it, is superseded by Puchalski,
+    Komasa, Pachucki, PRL 125 (2020) 253001 (INSPIRE 1822750; its abstract
+    read, the paper not), Q_d = 0.285699(15)(18) fm^2 from the D2/HD
+    hyperfine structure and Ramsey's measurement.  Against it the recorded
+    IA distances move by about +0.1 percentage point (CD-Bonn -5.32, AV18
+    -5.61, Hulthen +1.63 %), and a sigma count is meaningless at its
+    2 x 10^-5 error.
 
 THE THREE NORMALISATION RULES (BENCHMARK_PLAN.md sec. 8), for THIS row:
   1. b1 normalisations -- NOT APPLICABLE: no b1 on either side, and no

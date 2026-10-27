@@ -353,3 +353,12 @@ sha256 `a3ada6b0…4e593aa8`), the sibling's tool and the PDF.
 `EXPENSIVE = False` (0.40–0.49 s). Not yet in `tiers.py`, the README table or
 `BENCHMARK_PLAN.md` §4 — the integrator's (the exact rows are in this phase's
 return).
+
+*Phase F (2026-10-26, the verification's fix stage), recorded, nothing
+changed:* the vendored CSV's Licence line says "no figure, text or table of
+the paper is reproduced", while its own header quotes WS98's whole Fig. 1 caption with attribution —
+short attributed quotations, not a document body, but the sentence as written
+is false. It is to be reworded ("no figure or table is reproduced; the figure
+caption and short sentences are quoted with attribution") at the file's next
+revision, which re-pins `DATA_SHA256` in `t3_li6_ff_wiringa_schiavilla.py` and the tests; the digests were
+not churned for it now.

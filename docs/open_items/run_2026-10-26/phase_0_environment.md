@@ -27,7 +27,7 @@ True PYTHIA True`).
 | gate | measured 18:04–18:12 UTC | the 2026-09-27 machine (no LHAPDF set, PYTHIA 8.312) |
 |---|---|---|
 | `build/lipolgen_tests` | **416 cases / 416 passed / 0 failed / 0 skipped; 17 242 712 assertions, 0 failed** (7 min 28 s) | 416 / 403 / 13 failed — all 13 "Info file not found for PDF set" |
-| `python3 -m pytest python/tests -q` | **1269 passed / 158 skipped / 0 failed** (7 min 47 s; the first run of the supervising chain called `python`, which this machine does not have, and was re-run with `python3`; the `import_pythia8` edit below landed while it ran, so the T4/T6 tests may have seen either state — both pass) | 39 failed / 1209 passed / 163 skipped — all 39 the same cause |
+| `python3 -m pytest python/tests -q` | **1269 passed / 158 skipped / 0 failed** (7 min 47 s; the first run of the supervising chain called `python`, which this machine does not have, and was re-run with `python3`; the `import_pythia8` edit below landed while it ran, so the T4/T6 tests may have seen either state — both pass; *corrected in phase F: before the edit the two tests that import pythia8, `test_t4_smoke_small_n` and `test_t6_measured_row_is_pinned`, SKIP from the repository root, as at master (re-run in phase F on master's tree: 15 passed, 3 skipped); the 158 skips include them — 158 − 2 retired − 2 now passing + 1 DJANGOH opt-in = phase E's 155*) | 39 failed / 1209 passed / 163 skipped — all 39 the same cause |
 | `make_report.py --all --compare docs/benchmarking/REPORT.json` | **5 pass / 8 fail / 5 blocked / 0 blocked (environment) / 0 error**, 38 changes — the LHAPDF sub-rows measured for the first time (below); T4 and T6-C14 BLOCKED by the PYTHIA python module (below, fixed) | 6 / 8 / 3 / 1 / 0 |
 
 So the 13 + 39 LHAPDF failures the previous report carried are gone, as
@@ -95,7 +95,7 @@ it); worked around in ONE place, `validation/benchmarks/_report.py`
 import, restored on every exit path — and used at the four import sites
 (`t4_pythia_ep_closure.py` ×2, `t6_hepmc3_convention.py` ×2) and in
 `python/tests/test_bench_t4_t6.py`. No number, tolerance or verdict text
-changed; the measurement after the fix is in `phase_A_baseline.md`. Worth
+changed *(phase F: the same commit, `82b3237`, re-took `test_bench_t4_t6.py`'s worst-distance pin 0.023 → 0.076 on the pinned 8.317)*; the measurement after the fix is in `phase_A_baseline.md`. Worth
 reporting upstream to the PYTHIA authors.
 
 ## Reachability that the previous runs did not have

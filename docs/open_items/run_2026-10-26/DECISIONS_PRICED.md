@@ -6,8 +6,8 @@ row is cited here by its number there. This file lists what run 2026-10-26
 **priced** — every registry row a worker measured a cost for, the asks of
 `../../benchmarking/08_channel_priority.md` §5, and the candidates this run
 files — as options with their measured cost and the window the cost was
-measured in. **No option was taken, no default, constant, tolerance, registry
-label or reference number moved.** Each number is copied from the phase
+measured in. **No option was taken; no default, constant, tolerance or registry
+label moved, and no file under `validation/reference/`; one benchmark reference number moved, by the plan-authorised (PLAN.md D2), dated transcription correction of Q_d in `validation/benchmarks/data/deuteron_static_measured.json`, 0.2859(3) → 0.2860(15) fm², the old value kept, recorded only, no verdict moved** (worded so in phase F). Each number is copied from the phase
 record named with it; where two phases measured the same quantity in
 different windows, both are given. Written by the integration stage (phase E).
 
@@ -51,7 +51,10 @@ table calls them S2 / S1 / S3 / S4.
   1.0762 / 0.9563) and **×0.8485 / 0.8534 / 0.9221 / 1.0420** over the
   generated super-bins (phase A, on the `li6-convolution` path — `--r-source`
   is refused on the shipped `miller` b₁ and accepted only there); the bias
-  spans 0.921–1.192 over the window (C1).
+  spans 0.921–1.192 over the window (C1). *Phase F:* these are prices at fixed
+  Δ/F₁ — the shipped toy's convention, whose Δ ∝ F₁ moves with R; per unit Δ
+  (the letter's extraction, `moment_B`, any calculation) R moves a₂ by
+  ≤ 4.4 × 10⁻⁵ at the four cells and F₂ moves it 1:1.
 - **On paper 2's observable** (phase A, `li6-convolution`, x_max 0.95):
   run-level A_zz ×0.95554 (bands 1 and 2; zero at band 0 either way),
   ×0.962683 with `--b1-unpol mstw`; σ ×0.993153. The README's function-level
@@ -90,7 +93,8 @@ table calls them S2 / S1 / S3 / S4.
   \|pull\| ≤ 2), AV18 −1.39σ, CD-Bonn −0.07σ; the impulse-approximation Q_d
   against the corrected 0.2860(15) fm²: +1.52 / −5.71 / −5.42 % (recorded).
   Boeglin's d(e,e′p)n at 35–45° (phase C5, 22 points, p_m 0.055–0.538 GeV/c,
-  one free scale): under the paper's 20 % allowance Hulthén 21.98/21
+  one free scale): under A = 0.20, the upper end of the paper's 10–20 % FSI
+  estimate (standing for FSI and the CC1 off-shell prescription together), Hulthén 21.98/21
   (p = 0.40), AV18 11.54 (0.95), CD-Bonn 8.89 (0.99); with the MS FSI factor
   instead 95.6 / 76.7 / 24.4 (only CD-Bonn passes, p = 0.27); with no
   allowance 185.9 / 66.5 / 60.3 (all fail). BONuS (phase B1, σ_XN = 40 mb):
@@ -99,7 +103,16 @@ table calls them S2 / S1 / S3 / S4.
   0.093 / 0.11 / 0.135 GeV/c; blocks in the band 4/12 + 0/16 vs 3/12 + 0/16;
   χ² against the weight's shape 226.3 vs 221.6 on 84 dof — the wave barely
   moves that row. The Deeps row (unchanged) reads 627.85 / 579.12 / 278.81
-  on 187 dof.
+  on 187 dof. *Recorded 2026-10-26 (phase F, post hoc, outside the hashed
+  block, not a verdict):* at A = 0.10, the paper's lower end, Hulthén
+  51.57/21 (p = 2.2 × 10⁻⁴), AV18 27.81 (p = 0.146), CD-Bonn 19.95
+  (p = 0.525); at A = 0.15, 32.31 (p = 0.054) / 17.32 / 12.86 — the shipped
+  default passes only in the upper half of the paper's band, AV18 and CD-Bonn
+  across it; read smoothly the three n(k) integrate to 1.000 and the free
+  scale absorbs the Hulthén's ×1.34 (AV18 ×1.14) magnitude over CD-Bonn in
+  the window. The tagged A_zz^tag lever above is mostly the α–d D state
+  (`--cluster-wave vmc` swaps the VMC AV18+UX α–d wave, P_D 0.0867 → 0.0194,
+  and the embedded AV18 deuteron); none of these p–n anchors tests it (U-2).
 - **Options:** Hulthén (shipped) / AV18 (`--cluster-wave vmc`) / CD-Bonn.
   The switch's own release-wide cost (every reference pin, the port gate, the
   knob tables) was not re-measured here. **None taken.**
@@ -124,10 +137,15 @@ table calls them S2 / S1 / S3 / S4.
   passes absolute F₂ᵈ; the ratio passes for both grids. NMC's 2.5 %
   normalisation is outside 'sys' (phase D) and cannot absorb CT18NLO's 8.6 %
   or the toy's 6.0 % excess (MSTW's 2.5 % is 1.0 normalisation σ: open).
+  About half of CT18NLO's excess (8.6 → 4.6 %) is `LhapdfSF`'s massless
+  leading-order charm and bottom, 3.6 % of F₂ᵈ on average (phase F,
+  recorded in `t1_nmc_f2d.py`'s header).
 - **On the observables** (phase A, ratio to toy, mstw / ct18nlo): inclusive
   ⁶Li σ ×0.79338 / ×0.79847, run-level A_zz ×1.26044 / ×1.25239; the cos 2φ
   amplitude identical per cell (8.9e−16 over 3051 cells) and ≤ 0.23 % at the
-  super-bins; inclusive ⁷Li A_∥ ×1.0262 / ×1.0602 (σ ×0.7913 / ×0.7959);
+  super-bins — at fixed Δ/F₁, the shipped toy's convention; per unit Δ F₂
+  moves it 1:1 (toy → CT18NLO ×1.36 / 1.19 / 0.96 / 0.90 at the four cells)
+  and R by ≤ 4.4 × 10⁻⁵ (phase F); inclusive ⁷Li A_∥ ×1.0262 / ×1.0602 (σ ×0.7913 / ×0.7959);
   tagged ⁷Li α A_∥ ×1.0248 / ×1.0552; σ_coh ×0.7439 / ×0.7058; A_zz^tag and
   c₂ unchanged. **None taken.**
 
@@ -179,7 +197,12 @@ table calls them S2 / S1 / S3 / S4.
   smoothly read table; Boeglin's verdict χ² 21.98 → 23.42 with the smooth
   reading; at the Deeps momenta k = 0.30 / 0.373 / 0.46 / 0.60 / 0.95 GeV the
   lookup reads n(k) +5.7 / +4.8 / +5.6 / +2.4 / +3.0 % high (Hulthén), its
-  effect on the Deeps row's 627.85/187 unmeasured. Listed, not priced as a
+  effect on the Deeps row's 627.85/187 unmeasured. (These five are computed
+  for this file, not a harness output: `validation/benchmarks/t2_boeglin_nk.py`'s
+  `Tree`, n(w, k)/n_smooth(w, k) − 1 at those k in GeV; re-computed in phase
+  F: `hulthen` +5.71 / +4.78 / +5.58 / +2.39 / +2.97 %, `av18` +5.22 / +3.71
+  / +3.30 / +1.62 / +3.76 %, from the repository root by
+  `source env.sh && python3 -c "import sys; sys.path.insert(0, 'validation/benchmarks'); import t2_boeglin_nk as B; t = B.Tree(); print([round(100 * (t.n('hulthen', k) / t.n_smooth('hulthen', k) - 1), 2) for k in (0.30, 0.373, 0.46, 0.60, 0.95)])"`.) Listed, not priced as a
   decision. None taken.
 
 ## 3. Candidates this run files (priced options only)
@@ -259,14 +282,23 @@ table calls them S2 / S1 / S3 / S4.
    PLB 769 (2017) 34, the journal's SCOAP3 copy (`de96c817…dd8d0751`); PDG 2026
    Table 1.1 (`f54f2e23…a9ac23c1`) and the QCD review (`c04c628d…2baa386f`);
    the DJANGOH 4.6.21 source and manual (`phase_B3_djangoh.md` §2, §8) and the
-   `cteq61` set. Options: file them / leave them. **None taken** (no file was
-   written into the sibling repository).
-8. **The licence question.** The vendored numbers of three documents come
+   `cteq61` set. Options: file them / leave them. **None taken** (no tracked
+   file of the sibling repository was written; the pytest gate's `polligen`
+   fixture, `python/tests/conftest.py:90-100`, imports the sibling packages
+   with bytecode writing on and leaves gitignored `__pycache__/*.pyc` there —
+   22 files stamped 2026-10-26 13:16 CDT, found in phase F).
+8. **The licence question.** The vendored numbers of two documents come
    from APS-copyrighted pages read through the institution's licence — the
    BONuS Supplemental Material's tables (`bonus2014_tkachenko_supplemental.json`)
    and Rand–Frosch–Yearian's Tables I, II, VII, VIII, XIV
    (`rfy1966_li_magnetic_ff.csv`, `rfy1966_li_magnetization.csv`) — vendored as
-   facts with attribution; and the DJANGOH input cards vendored verbatim in
+   facts with attribution, and two single values, η_d = 0.0256(4) (PRC 41 898)
+   and Q_d = 0.2860(15) fm² (PRA 20 381), in `deuteron_static_measured.json`,
+   read through the same licence (phase F); the Licence lines of
+   `ws1998_li6_formfactors.csv` and `boeglin2011_deuteron_pmiss.csv` say no
+   figure, text or table is reproduced while their headers quote a figure
+   caption and short sentences with attribution — to be reworded at their next
+   revision, which re-pins their digests (phase F); and the DJANGOH input cards vendored verbatim in
    `djangoh_eltail_ep18x275.json` come from repositories that state no licence
    (`spiesber/DJANGOH`, `eic/InclusiveDjangohSamples`). Options: keep them
    vendored / replace them by a pointer and a hash. **None taken.**

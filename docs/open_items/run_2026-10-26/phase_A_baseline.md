@@ -31,7 +31,7 @@ N = 200 000, seed 20261026) says: claim 1's cos 2φ amplitude does not see F₂
 (the same double in every cell, to 8.9e−16; the super-bin averages move
 ≤ 0.23 %) but sees R by **−14.7 / −15.2 / −7.8 / +4.2 %** at the four
 sweet-spot super-bins — about twice the "−3 … −8 %" `08_channel_priority.md`
-carried, which was a function-level point and not the sweet spots; A_zz moves
+carried, which was a function-level point and not the sweet spots (both at fixed Δ/F₁, §4.3's phase F correction); A_zz moves
 ×1.2524 / ×1.2604 and σ ×0.7985 / ×0.7934 under CT18NLO / MSTW (README.md's
 costs, reproduced); A_∥ moves ×0.532 (inclusive ⁷Li) and ×0.514 (tagged ⁷Li α)
 under NNPDFpol1.1; the tagged ⁶Li α A_zz^tag moves ×0.430 / ×0.209 at
@@ -154,7 +154,7 @@ amplitude is the same double (max relative difference 8.9e−16 over the 3051
 accepted cells) and the four super-bin averages move by ≤ 0.23 %, through the
 cell weights only — while R moves it by −14.7 / −15.2 / −7.8 / +4.2 %. So the
 CT18NLO verdicts bear on claim 1 through the rate alone (σ ×0.7985) and on
-paper 2's A_zz through ×1.2524; for rank 1, ingredient A's lever is R, and R
+paper 2's A_zz through ×1.2524; for rank 1, ingredient A's lever is R (on the shipped toy's Δ ∝ F₁; per unit Δ it is F₂ — §4.3's phase F correction), and R
 still has no data comparison anywhere in the tree as committed (phase C1's
 job).
 
@@ -185,8 +185,8 @@ outside 10 % at the two lower Q²". The row's own `REPORT.json` says
 `converged = false` at all three Q²: the last decade (x from 10⁻⁵ to 10⁻⁴)
 adds 0.003784 / 0.004085 / 0.004277 to the integral, i.e. **2.16 / 2.20 /
 2.25 % of Γ_ref, against the declared ≤ 1 %**
-(`validation/benchmarks/t5_sum_rules.py:207` `BJ_CONV_REL`, applied in
-`bjorken_verdict`, `validation/benchmarks/t5_sum_rules.py:462-472`). The
+(`validation/benchmarks/t5_sum_rules.py:214` `BJ_CONV_REL`, applied in
+`bjorken_verdict`, `validation/benchmarks/t5_sum_rules.py:469-479`; 207 and 462-472 until phase F added header lines above them). The
 "0.4 %" reads like the absolute step 0.0043 taken as a percentage. The
 sub-row's FAIL does not move; its reason is both criteria at Q² = 2 and 5 and
 the convergence criterion alone at Q² = 10 (within 10 % there, at +9.6 %).
@@ -407,7 +407,7 @@ environment cells are the table's, never a point.*
 
 ### 4.3 Reading it, channel by channel, in `08_channel_priority.md`'s rank order
 
-**Rank 1 — inclusive ⁶Li, the cos 2φ amplitude (claim 1).**
+**Rank 1 — inclusive ⁶Li, the cos 2φ amplitude (claim 1).** *(Marked correction, phase F, 2026-10-26: this holds at fixed Δ/F₁ — the shipped toy's Δ = 10⁻² F₁ x^0.3 (1−x)^4, which moves with R through F₁. Per unit Δ — the letter's extraction, xΔ = −a₂F₂[1 + y²/(2(1−y)(1+R))], `moment_B`, any calculation — R moves a₂ by ≤ 4.4 × 10⁻⁵ at the four cells and F₂ moves it 1:1: toy → CT18NLO ×1.36 / 1.19 / 0.96 / 0.90 at fixed Δ; the letter's `moment_A` moves ×0.83 under F₂ alone, `plans/07` WP1 addendum. `STATUS.md` "Verification".)*
 - *F₂ is no lever*: per cell the amplitude is the same double on every
   `--unpol-sf` backend (8.9e−16); the super-bin averages move ×1.00063 /
   ×1.00024 / ×0.99997 / ×0.99771 (MSTW) and ×1.00113 / ×1.00104 / ×0.99999 /

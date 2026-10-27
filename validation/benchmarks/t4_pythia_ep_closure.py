@@ -94,8 +94,9 @@ flavour draw, LHA record) against PYTHIA's own DIS, not PYTHIA against HERA
 nucleon, no neutron instance, no tagged or coherent (Pomeron) record, no
 nuclear effect on the final state (none is modelled -- PYTHIA_BRIDGE.md
 sec. 9).  No cross section, no spin, no QED radiation (off on both sides).
-PYTHIA version: this row ran PYTHIA 8.312 (conda-forge); the project pins
-8.317 -- the version actually used is recorded in `config`.
+PYTHIA version: measured first on 8.312 (conda-forge, 2026-09-26); since
+2026-10-26 the row runs on the pinned 8.317 -- the version actually used is
+recorded in `config`.
 
 MEASURED 2026-09-26 (PYTHIA 8.312, after the tolerance, windows, bins,
 threshold and matching above were fixed; nothing was changed after the first
@@ -112,6 +113,15 @@ full run ONE harness detail was corrected: the stock side's (x, Q^2) now use
 PYTHIA's own massive beam electron (event entry 2), not a massless
 (10, 0, 0, -10); it moved the stock means in the fourth digit (n_ch W1
 8.0261 -> 8.0267) and changed no tolerance, window, bin or threshold.
+
+MEASURED 2026-10-26 on the pinned PYTHIA 8.317 (run 2026-10-26 phase 0,
+after `_report.import_pythia8`; the tolerance, windows, bins, threshold and
+matching unchanged -- all fixed on 2026-09-26, before either run): PASS,
+max |bridge/stock - 1| = 0.076 over 15 compared sub-rows (W2
+n_ch_eta[-2,0), 0.924 +- 0.062 statistical, 776 stock particles -- a
+low-count bin); <n_ch> matched ratio 1.007 (W1) / 0.997 (W2)
+(docs/open_items/run_2026-10-26/phase_A_baseline.md sec. 2.3).  Written
+into this header by that run's phase F: it said 8.312 until then.
 
 EXPENSIVE = True: a generator-vs-generator sample is an expensive row by
 kind (BENCHMARK_PLAN.md sec. 3), so its full-size pytest runs only with

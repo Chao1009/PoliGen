@@ -17,9 +17,11 @@ the numbers; none moves or asserts a new value for any tree default.  The
 letter's models exceed the bound under V6 (and at dilution 1 under every
 reading but the loose edge); that is RECORDED and pinned as recorded, never
 "fixed".  Nothing here needs the network.  The numbers need PYTHIA's python
-module, its LHAPDF6 plugin and the two LHAPDF sets: without them the row is
-BLOCKED (environment) and the tests that read numbers skip, naming the
-reason.
+module, its LHAPDF6 plugin and the two LHAPDF sets: without the module or the
+plugin the row is BLOCKED; without a set the harness raises LHAPDF's own
+"Info file not found for PDF set" message, exits 2 and the report records
+blocked (environment), as row 4 (README convention 6; since phase F of run
+2026-10-26).  Either way the tests that read numbers skip, naming the reason.
 """
 import importlib.util
 import math
@@ -71,12 +73,26 @@ def mod():
     return _load()
 
 
-@pytest.fixture(scope="module")
-def rep(mod):
-    r = mod.run(verbose=False)
+_MISSING_SET = "Info file not found for PDF set"
+
+
+def _run_or_skip(mod, verbose=False):
+    """run(), skipping -- naming the reason -- on a BLOCKED row or on a set
+    that is not installed (the harness's exit-2 path); any other error fails."""
+    try:
+        r = mod.run(verbose=verbose)
+    except RuntimeError as exc:
+        if _MISSING_SET not in str(exc):
+            raise
+        pytest.skip("environment: %s" % str(exc).splitlines()[0])
     if r["status"] == "blocked":
         pytest.skip(r["reason"])
     return r
+
+
+@pytest.fixture(scope="module")
+def rep(mod):
+    return _run_or_skip(mod)
 
 
 def _sub(rep, name):
@@ -517,11 +533,15 @@ def test_verdict_follows_the_numbers(mod, rep):
             2.0 * abs(m), rel=1e-12)
 
 
-def test_environment_blocked_row(mod, monkeypatch, capsys):
-    def no_set(entry):
-        raise mod.EnvironmentBlocked("environment: LHAPDF set %s not installed "
-                                     "(test)" % entry["name"])
-    monkeypatch.setattr(mod, "check_set", no_set)
+def test_a_set_of_another_version_is_a_blocked_row(mod, monkeypatch, capsys):
+    """A set present in another version (or without its member file) is a
+    BLOCKED row with an environment: reason, exit 0 -- the row ran and says
+    why it cannot measure."""
+    def other_version(entry):
+        raise mod.EnvironmentBlocked("environment: LHAPDF set %s at /x is not the "
+                                     "version this row was measured with (test)"
+                                     % entry["name"])
+    monkeypatch.setattr(mod, "check_set", other_version)
     r = mod.run(verbose=True)
     assert r["status"] == "blocked" and r["reason"].startswith("environment: LHAPDF set "
                                                                 "CT18NLO")
@@ -529,10 +549,45 @@ def test_environment_blocked_row(mod, monkeypatch, capsys):
     assert [l for l in out if l.startswith("REPORT |")][0].endswith("| BLOCKED")
 
 
+def test_a_missing_set_is_blocked_by_the_environment(mod, monkeypatch, tmp_path):
+    """A set that is not installed where LHAPDF searches: the row's only
+    configuration needs it, so run() raises LHAPDF's own message, main()
+    exits 2 and make_report's classifier records 'blocked (environment)' with
+    the convention's reason -- README convention 6, as row 4 (phase F of run
+    2026-10-26; a BLOCKED row with exit 0 before).  A trailing '::' keeps
+    LHAPDF out of its install datadir, as LHAPDF::paths() does."""
+    if not getattr(lg, "HAVE_LHAPDF", False):
+        pytest.skip("environment: lipolgen built without the LHAPDF tier")
+    monkeypatch.setenv("LHAPDF_DATA_PATH", str(tmp_path) + "::")
+    monkeypatch.delenv("LHAPATH", raising=False)
+    assert mod.lhapdf_dirs() == [str(tmp_path)]
+    with pytest.raises(RuntimeError, match=r"Info file not found for PDF set 'CT18NLO'"
+                       ) as exc:
+        mod.run(verbose=False)
+    rp = _load("_report")
+    assert rp.classify_exception(exc.value) == (
+        rp.ENV_BLOCKED, "environment: LHAPDF set CT18NLO not installed")
+    assert mod.main([]) == 2
+
+
+def test_lhapdf_dirs_follow_lhapdf_search_order(mod, monkeypatch, tmp_path):
+    """LHAPDF::paths(): $LHAPDF_DATA_PATH (else $LHAPATH) split on ':', empty
+    entries dropped, then the install datadir unless the variable ends in
+    '::'.  Until phase F the datadir was appended always."""
+    a, b = str(tmp_path / "a"), str(tmp_path / "b")
+    monkeypatch.delenv("LHAPATH", raising=False)
+    monkeypatch.setenv("LHAPDF_DATA_PATH", "%s:%s::" % (a, b))
+    assert mod.lhapdf_dirs() == [a, b]
+    monkeypatch.setenv("LHAPDF_DATA_PATH", "%s:%s" % (a, b))
+    d = mod.lhapdf_dirs()
+    assert d[:2] == [a, b] and len(d) <= 3          # + lhapdf-config's datadir, if any
+    monkeypatch.delenv("LHAPDF_DATA_PATH")
+    monkeypatch.setenv("LHAPATH", a + "::")
+    assert mod.lhapdf_dirs() == [a]
+
+
 def test_report_line(mod, capsys):
-    r = mod.run(verbose=True)
-    if r["status"] == "blocked":
-        pytest.skip(r["reason"])
+    r = _run_or_skip(mod, verbose=True)
     out = capsys.readouterr().out.splitlines()
     rows = [l for l in out if l.startswith("REPORT |")]
     subs = [l for l in out if l.startswith("SUBROW |")]
@@ -552,8 +607,11 @@ def test_report_line(mod, capsys):
 
 def test_exit_codes(tmp_path):
     ok = _run_harness(os.path.join(_BENCH, _NAME + ".py"))
-    assert ok.returncode == 0, ok.stderr
-    assert "REPORT | t5_delta_moment_bound |" in ok.stdout
+    if _MISSING_SET in ok.stderr:      # a set not installed: exit 2, no row
+        assert ok.returncode == 2 and "REPORT |" not in ok.stdout
+    else:
+        assert ok.returncode == 0, ok.stderr
+        assert "REPORT | t5_delta_moment_bound |" in ok.stdout
     d = tmp_path / "bench"
     (d / "data").mkdir(parents=True)
     shutil.copy(os.path.join(_BENCH, _NAME + ".py"), d / (_NAME + ".py"))

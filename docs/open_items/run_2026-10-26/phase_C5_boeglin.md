@@ -151,8 +151,14 @@ are the task's, fixed before the data were read.
 | `av18` | 11.54 / 21 | 0.951 | 0.567 ± 0.028 | 1.54 | PASS |
 | `cdbonn` | 8.89 / 21 | 0.990 | 0.671 ± 0.033 | 1.52 | PASS |
 
-The scales are not comparable across waves (the `TaggedModel` densities are
-the generator's piecewise-constant tables, §4.4; CD-Bonn is normalised to 1).
+*Corrected in phase F (2026-10-26):* this paragraph first said "The scales
+are not comparable across waves (the `TaggedModel` densities are the
+generator's piecewise-constant tables, §4.4; CD-Bonn is normalised to 1)".
+The cell-step scales above are not directly comparable (the tables
+integrate to 1.085 / 1.088, the design block's numbers); read smoothly
+(§4.4) all three densities integrate to 1.000, so the smooth-reading scales
+0.5015 / 0.5866 / 0.6714 are, and the one free scale absorbs a ×1.34
+(Hulthén) / ×1.14 (AV18) excess of n(k) over CD-Bonn in the window — §4.5.
 d/(s·n) per point, `hulthen`: 35° 1.06 1.11 0.87 0.89 0.89 0.83 0.87 1.08 1.25
 1.41; 45° 1.52 1.57 1.10 0.90 0.88 0.68 0.83 1.01 1.11 1.30 1.87 2.10 —
 `cdbonn`: 35° 0.93 1.08 0.91 1.02 0.99 0.88 0.87 1.01 1.07 1.08; 45° 1.19
@@ -208,6 +214,32 @@ the smooth reading is 23.42 / 14.61 / 8.89 (p = 0.32 / 0.84 / 0.99) — the
 verdict does not turn on the grid. Beyond this row: the tagged generator's own
 spectator density carries the same steps (16–18 % across one cell at
 k ≈ 0.05 GeV/c).
+
+### 4.5 Post hoc, phase F (2026-10-26; recorded, not a verdict, outside the hashed block)
+
+Computed by the verification's fix stage with the harness's own `Tree` and
+`scaled_chi2` over the same 22 points; the verdict, its allowance and its
+tolerance are unchanged.
+
+- **The allowance is the upper end of the paper's estimate.** The paper says
+  the models "all predict small FSI contributions (10 - 20%) for
+  35° ≤ θnq ≤ 45°" (p. 1); the block's A = 0.20 is its upper end, standing
+  for FSI and the CC1 off-shell prescription together. At A = 0.10, the
+  paper's lower end: Hulthén 51.57/21 (p = 2.2 × 10⁻⁴, would FAIL), AV18
+  27.81 (p = 0.146), CD-Bonn 19.95 (p = 0.525); at A = 0.15: 32.31
+  (p = 0.054) / 17.32 / 12.86; at A = 0.20 the recorded 21.98 / 11.54 / 8.89.
+  The shipped default passes only in the upper half of the paper's band;
+  AV18 and CD-Bonn pass across it.
+- **The magnitude the free scale absorbs.** Read smoothly, the three n(k)
+  integrate (4πk² n dk over 0–1.19 GeV) to 0.99992 / 0.99983 / 0.99998, so
+  the smooth-reading scales 0.5015 / 0.5866 / 0.6714 compare: the free
+  scale absorbs a ×1.34 (Hulthén) and ×1.14 (AV18) excess of n(k) over
+  CD-Bonn in the window (Hulthén/CD-Bonn 1.24 / 1.50 / 1.40 at k = 0.2 /
+  0.3 / 0.4 GeV). With (r1)'s absolute closure (0.876–0.934, mean 0.902)
+  and the MS FSI factor (r5, mean 0.855) a right n(k) would need s ≈ 0.77:
+  CD-Bonn sits 13 % below that, AV18 24 % and Hulthén 35 %. That would make
+  the row an absolute test; it is recorded here, not a verdict — the free
+  scale, as declared, discards the magnitude a D2 decision needs.
 
 ## 5. What it means for the channels
 
@@ -274,3 +306,12 @@ sibling's tool and the PDF.
 `EXPENSIVE = False` (0.42 s). Not yet in `tiers.py`, the README table or
 `BENCHMARK_PLAN.md` §4 — the integrator's (the exact rows are in this phase's
 return).
+
+*Phase F (2026-10-26, the verification's fix stage), recorded, nothing
+changed:* the vendored CSV's Licence line says "no figure, text or table of
+the paper is reproduced", while its own header quotes the Fig. 2 caption and two sentences of p. 4 with attribution —
+short attributed quotations, not a document body, but the sentence as written
+is false. It is to be reworded ("no figure or table is reproduced; the figure
+caption and short sentences are quoted with attribution") at the file's next
+revision, which re-pins `DATA_SHA256` in `t2_boeglin_nk.py` and the tests; the digests were
+not churned for it now.

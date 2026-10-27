@@ -15,7 +15,10 @@ numpy scalars, sub-rows), plus a fake BENCHMARK_PLAN.md.  The last test
 report and requires the committed docs/benchmarking/REPORT.md / REPORT.json
 to be what it gives (`make_report.py --check`), skipping -- and naming the
 difference -- when the environment is not the one the committed report was
-made in (an LHAPDF set installed since, another PYTHIA).
+made in (an LHAPDF set installed since, another PYTHIA).  One more test,
+not opt-in, reads the COMMITTED report's figure links and checks that each
+PNG is there (presence and signature only, never its bytes: `--check` takes
+the figure fields from the committed report and opens no PNG).
 
 The generator judges nothing: no test here asserts a physics number; the
 numbers below are the fake harnesses' own.
@@ -24,6 +27,7 @@ import importlib.util
 import io
 import json
 import os
+import re
 import subprocess
 import sys
 import textwrap
@@ -546,11 +550,17 @@ def test_section7_as_data_matches_the_plan(tiers):
 
 def test_a_diff_maps_to_tiers_and_harnesses(tiers):
     t2 = [h for h in tiers.harness_files() if h.startswith("t2_")]
+    t3 = [h for h in tiers.harness_files() if h.startswith("t3_")]
     t4 = [h for h in tiers.harness_files() if h.startswith("t4_")]
     p = tiers.plan_for(["src/core/rc.cpp"])
-    assert p["tiers"] == ["T2", "T4-RC"]
-    assert p["harnesses"] == sorted(t2 + t4)
-    assert p["matches"] == [("src/core/rc.cpp", "rc.*", ("T4-RC", "T2"))]
+    assert p["tiers"] == ["T2", "T3", "T4-RC"]          # T3 since 2026-10-26
+    assert p["harnesses"] == sorted(t2 + t3 + t4)
+    assert p["matches"] == [("src/core/rc.cpp", "rc.*", ("T4-RC", "T2", "T3"))]
+    # fsi.* re-runs the deuteron-control T2 rows too (2026-10-26)
+    p = tiers.plan_for(["include/lipolgen/fsi.hpp"])
+    assert p["tiers"] == ["T2", "T3-cluster", "T4-tagged"]
+    assert "t2_bonus_spectator_shape" in p["harnesses"]
+    assert "t2_deeps_spectator_tail" in p["harnesses"]
     p = tiers.plan_for(["include/lipolgen/spin.hpp"])
     assert p["tiers"] == ["T5"] and any("T1 #1" in n for n in p["notes"])
     assert tiers.plan_for(["data/vmc/deuteron/fdeut.av18"])["tiers"] == ["T2", "T3"]
@@ -595,9 +605,10 @@ def test_a_diff_maps_to_tiers_and_harnesses(tiers):
 def test_tiers_cli(tiers, capsys):
     assert tiers.main(["--files", "src/core/rc.cpp", "--names"]) == 0
     names = capsys.readouterr().out.strip().split(",")
-    assert names and all(n[:3] in ("t2_", "t4_") for n in names)
+    assert names and all(n[:3] in ("t2_", "t3_", "t4_") for n in names)
+    assert any(n.startswith("t3_") for n in names)       # T3 since 2026-10-26
     assert tiers.main(["--map"]) == 0
-    assert "rc.* -> T4-RC, T2" in capsys.readouterr().out
+    assert "rc.* -> T4-RC, T2, T3" in capsys.readouterr().out
     assert tiers.main([]) == 2
 
 
@@ -834,6 +845,32 @@ def test_check_ignores_figures_with_and_without_plots(mr, tmp_path, monkeypatch)
 
 _ENV_KEYS = ("python", "numpy", "scipy", "pyhepmc", "pythia", "lhapdf",
              "hepmc3", "lhapdf_sets_present")
+
+
+def test_the_committed_report_links_only_figures_that_exist():
+    """--check copies every figure field from the committed REPORT.json and
+    never opens a PNG (by design: PNG bytes depend on the matplotlib build),
+    so a deleted or renamed figure, or a stale link, passes it.  This is the
+    gate: every committed row carrying 'figure' names figures/<harness>.png,
+    the file exists under docs/benchmarking/, is non-empty and starts with
+    the PNG signature; every image link in REPORT.md is such a row's, once.
+    PNG bytes are not compared.  (Run 2026-10-26, phase F.)"""
+    js = os.path.join(_REPORT_DIR, "REPORT.json")
+    md = os.path.join(_REPORT_DIR, "REPORT.md")
+    assert os.path.isfile(js) and os.path.isfile(md), "the report is not committed"
+    with open(js, encoding="utf-8") as f:
+        rows = [r for r in json.load(f)["rows"] if "figure" in r]
+    for r in rows:
+        assert r["figure"] == "figures/%s.png" % r["name"], r["name"]
+        path = os.path.join(_REPORT_DIR, r["figure"])
+        assert os.path.isfile(path), "%s links %s, which is not there" % (
+            r["name"], r["figure"])
+        with open(path, "rb") as f:
+            head = f.read(8)
+        assert os.path.getsize(path) > 0 and head == b"\x89PNG\r\n\x1a\n", path
+    with open(md, encoding="utf-8") as f:
+        links = re.findall(r"!\[[^\]]*\]\((figures/[^)]+)\)", f.read())
+    assert sorted(links) == sorted(r["figure"] for r in rows)
 
 
 @pytest.mark.bench_expensive

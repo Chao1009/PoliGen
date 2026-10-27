@@ -108,8 +108,8 @@ the figures of the existing rows and wires `--plots`.
   `_report.py` `import_pythia8()` is the one workaround, used by T4, T6 and
   their test. The T4 full-row pin was re-taken on the pinned 8.317 (worst
   distance 0.076, W2 n_ch_eta[−2,0), a low-count bin; 0.023 on the unpinned
-  8.312 of 2026-09-26; the row passes at 0.20) — recorded in
-  `phase_0_environment.md` with the T4 sub-rows copied from the harness.
+  8.312 of 2026-09-26; the row passes at 0.20) — the worst-distance pin
+  re-taken in `82b3237` (0.023 → 0.076; the means re-pinned in phase E); the sub-rows are in `phase_A_baseline.md` §2.3 (corrected in phase F: this read "recorded in `phase_0_environment.md` with the T4 sub-rows copied from the harness").
 - **A1** The tallies and the `--compare` lines, written up by worker A as
   `phase_A_baseline.md`, with what the CT18NLO / NNPDFpol11 verdicts mean for
   ingredients A and H.

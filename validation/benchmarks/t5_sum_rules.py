@@ -106,11 +106,17 @@ isovector flavour plumbing.
     in PDG 2026 itself: Table 1.1 "0.1180(9)" and the QCD review, Eq. (9.25),
     p. 42 (sources, digests: run_2026-10-26/phase_D_inputs.md sec. 3).
 
-    LhapdfG1 NOTE, for when the set is installed (never run here): LhapdfG1
+    LhapdfG1 NOTE, written 2026-09-26 before the set was installed: LhapdfG1
     is LO g1 (no coefficient functions), so its first moment is a3/6 WITHOUT
     C_Bj; if NNPDFpol1.1 carries a3 ~ g_A it will sit ~ (1/C_Bj - 1), i.e.
     ~ +14 % at Q2 = 5, above Gamma_ref -- a convention of the LO g1, not a
-    flavour bug.  Not verified here.
+    flavour bug.  Not verified then.  MEASURED 2026-10-26 (run 2026-10-26
+    phase 0, the set installed; the rule unchanged): bjorken[nnpdfpol11]
+    FAIL -- 0.2087 / 0.2084 / 0.2083 at Q2 = 2 / 5 / 10, +19.3 / +12.4 /
+    +9.6 % from g_A/6 C_Bj, and not converged (the last decade adds 2.16 /
+    2.20 / 2.25 % of Gamma_ref against <= 1 %); 98.0-98.2 % of g_A/6, i.e.
+    the C_Bj the LO formula does not carry
+    (run_2026-10-26/phase_A_baseline.md sec. 3).
 
 (c) fsi_unitarity -- BLOCKED: "not definable in the tree as built".
 Strikman-Weiss's sum rule (04_theory.md T-29) says the FSI terms integrate
@@ -145,7 +151,7 @@ WHAT THIS DOES NOT VALIDATE: the physics of g2 (twist-3 is zero by
 construction; measured g2 -- E155x, RSS, SANE -- would test the WW
 approximation, a structure-function-model question, 05 sec. 1.2); the tensor
 sector (neither sum rule touches b1..b4); any nucleus beyond A = 2; the
-LhapdfG1 flavour plumbing (blocked here); FSI unitarity (not definable).
+LhapdfG1 flavour plumbing (blocked here until 2026-10-26); FSI unitarity (not definable).
 
 HONESTY NOTE.  Before these tolerances were fixed the author had seen: the
 scout's preview "BC on ToyG1 proton at Q2 = 5: int g2^WW = -6.3e-4 against
@@ -170,7 +176,8 @@ FAIL (recorded): int_{x_min}^1 (g1p - g1n) = 0.139 / 0.203 / 0.289 / 0.423 /
 0.643 at x_min = 1e-2 ... 1e-6, Q2 = 5, against Gamma_ref = 0.18538 +- 0.00233
 (alpha_s = 0.2850, nf = 4, C_Bj = 0.8722) -- the last decade alone adds
 0.220 (119 % of the reference); Gamma^p converges to 0.128 (the scout's
-number), Gamma^n does not.  bjorken[nnpdfpol11] BLOCKED (environment);
+number), Gamma^n does not.  bjorken[nnpdfpol11] BLOCKED (environment) on
+that machine (measured 2026-10-26: the LhapdfG1 NOTE above);
 fsi_unitarity BLOCKED (not definable); survival recorded 0.520239.  The row
 as a whole is therefore FAIL, recorded: the status rule is "fail if any
 evaluated sub-row fails, pass if all evaluated pass, blocked if none was

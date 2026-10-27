@@ -113,11 +113,11 @@ Facts found while vendoring, recorded in the files:
 ### 3.1 Design (the header, written before any comparison)
 
 The tree's R backends at each data point's own (x, Q²): `r_sigma_lt` =
-0.18/(1 + Q²/50) (declared at include/lipolgen/sf.hpp:46, defined at
-src/core/sf.cpp:52; the null `RFunc` hook resolves to it — the default R of
+0.18/(1 + Q²/50) (declared at `include/lipolgen/sf.hpp:46`, defined at
+`src/core/sf.cpp:52`; the null `RFunc` hook resolves to it — the default R of
 the whole program), `r1998` with `clip = True` as shipped (its support
 0.005 ≤ x ≤ 0.86, 0.5 ≤ Q² ≤ 130 GeV², from `R1998_X_MIN` at
-include/lipolgen/sf.hpp:53 and the three constants after it; the harness
+`include/lipolgen/sf.hpp:53` and the three constants after it; the harness
 copies the four numbers and checks them against the clip at run time), and
 `r1998` unclipped (recorded). Sub-rows in this order: **nmc PRIMARY**, **h1
 EXTRAPOLATION**, **r1990 CLOSURE**, **e140 CLOSURE**.
@@ -184,8 +184,8 @@ drift table, e 10 × ⁶Li 99.5 GeV/u): spot 1 (x 0.0282, Q² 1.14), spot 2 (x
 a₂ = −(1−y)/y² c_eff sin²θ_S Δ/D_φ with D_φ = F₁ + (1−y)/(x y²) F₂
 (include/lipolgen/xsec.hpp:16 and include/lipolgen/xsec.hpp:21; the term
 itself at src/core/xsec.cpp:281), and the shipped Δ is `toy_delta_gluon` at
-scale 10⁻² (src/core/pipeline.cpp:1265), = scale · F₁ · x^0.3 (1−x)^4
-(src/core/sf.cpp:377). With F₂ = 2x(1 + R)F₁ this is a₂ ∝ F₁/D_φ =
+scale 10⁻² (`src/core/pipeline.cpp:1265`), = scale · F₁ · x^0.3 (1−x)^4
+(`src/core/sf.cpp:377`). With F₂ = 2x(1 + R)F₁ this is a₂ ∝ F₁/D_φ =
 1/[1 + 2(1−y)(1+R)/y²]: **F₂ cancels exactly, and at the sweet spots' y
 (0.010–0.026) the amplitude moves as 1/(1 + R)** — because the toy Δ is
 pinned to F₁, not through D_φ's own R dependence, which is suppressed there
@@ -219,10 +219,10 @@ ratios sit at Q² ≈ 1–2 and the smallest at x ≥ 0.2, Q² ≈ 10–20.
 
 - **The R lever is about twice what `08_channel_priority.md` quotes for the
   two low-x sweet spots.** Its rank-1 row
-  (docs/benchmarking/08_channel_priority.md:91) and ingredient A
-  (docs/benchmarking/08_channel_priority.md:308) give "−8.3 / −6.7 / −3.1 %
+  (docs/benchmarking/08_channel_priority.md:91 as of 2d89a64; phase E corrected its numbers) and ingredient A
+  (docs/benchmarking/08_channel_priority.md:308 as of 2d89a64, line 327 since phase E corrected its numbers) give "−8.3 / −6.7 / −3.1 %
   at the sweet spots generator-side"; those three numbers are
-  docs/USAGE.md:345's, at x =
+  `docs/USAGE.md:345`'s, at x =
   0.05 / 0.10 / 0.30, y = 0.5, Q² = 2.5 — not the sweet spots. At the four
   cells the generator's own factor is **−15.6 / −15.1 / −7.1 / +4.6 %**
   (r1998 against the shipped r_sigma_lt), in line with the sibling's ≤ 18 %.
@@ -343,16 +343,16 @@ CT18NLO variants bracket it: 6.96 … 8.82 for r_sigma_lt).
 ## 8. Findings for files this worker does not own (exact text in the return)
 
 1. docs/benchmarking/08_channel_priority.md:91 and
-   docs/benchmarking/08_channel_priority.md:308 quote "−8.3 / −6.7 / −3.1 %
+   docs/benchmarking/08_channel_priority.md:308 (both as of 2d89a64: phase E corrected the numbers and row A is at line 327 since) quoted "−8.3 / −6.7 / −3.1 %
    at the sweet spots generator-side"; those are docs/USAGE.md:345's x =
    0.05 / 0.10 / 0.30 at y = 0.5, Q² = 2.5. At the sweet spots: −15.6 /
-   −15.1 / −7.1 / +4.6 %. docs/benchmarking/08_channel_priority.md:117's "R
+   −15.1 / −7.1 / +4.6 %. docs/benchmarking/08_channel_priority.md:117's (as of 2d89a64; reworded in phase F) "R
    through D_φ" is right only with Δ/F₁ held fixed (the shipped toy); §4.
-2. docs/references/REFERENCES.md:136 says R1998 "is LiPolGen's default R
+2. docs/references/REFERENCES.md:136 (as of 2d89a64; line 137 since phase E corrected the wording) said R1998 "is LiPolGen's default R
    … *Serves:* `f1_from_f2` everywhere"; the default is `r_sigma_lt`
-   (include/lipolgen/sf.hpp:46), and r1998 is reached only through
+   (`include/lipolgen/sf.hpp:46`), and r1998 is reached only through
    `--r-source r1998` on the `li6-convolution` path and the CDKS gate.
-3. docs/references/REFERENCES.md:140 and `02_data_nucleon_deuteron.md` §4
+3. docs/references/REFERENCES.md:140 (as of 2d89a64; line 141 since phase E corrected the wording) and `02_data_nucleon_deuteron.md` §4
    R-2 call E140
    "the dominant input" / "the largest single R data set" of R1998. Abe *et
    al.* fit 237 points from [3, 11–14] and their own; E140 enters through

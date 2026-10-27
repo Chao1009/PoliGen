@@ -245,7 +245,7 @@ data**: the D-state construction is cleared, so the A_∥ price phase A measured
 toy → NNPDFpol1.1 (×0.514 tagged ⁷Li α, ×0.532 inclusive ⁷Li) remains a price
 between two backends that both fail it, and nothing here decides which side
 is right. The NMC rows sit under ingredient **A**: claim 1's cos 2φ amplitude
-does not see F₂ (R is the lever, phase C1), A_zz (rank 4) moves ×1.25 from
+does not see F₂ (R is the lever, phase C1) *(marked correction, phase F: on the shipped toy's Δ ∝ F₁ only; per unit Δ — the letter's extraction — F₂ moves the amplitude 1:1 and R by ≤ 4.4 × 10⁻⁵; `STATUS.md` "Verification")*, A_zz (rank 4) moves ×1.25 from
 toy to CT18NLO (window level, `08` row A). The normalisation reading makes "no shipped unpolarised
 backend passes absolute F₂ᵈ" robust for toy and CT18NLO (6.0 % and 8.6 %
 excesses are 2.4 and 3.4 normalisation σ); for MSTW it is open. The F₂ᵈ data at

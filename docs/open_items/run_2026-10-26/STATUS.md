@@ -14,7 +14,7 @@ correction PLAN.md D2 allows (Q_d in
 Work is on branch `claude/run-2026-10-26`, committed and pushed: phases 0,
 0r and B3 one by one, A–E together as `6b1b63e` (worded so in phase F; the
 board said "phase by phase" and "uncommitted (phase E tree)" until then);
-phase F's fixes are uncommitted until the supervising session commits them.
+phase F's fixes, with the §7 map extension, as `1c5cf68` (pushed).
 
 ## Phase board
 
@@ -33,7 +33,7 @@ phase F's fixes are uncommitted until the supervising session commits them.
 | D — the least-verified inputs read | DONE | `6b1b63e` | D-state convention held (COMPASS PLB p. 39, HERMES Eq. (23), E143 Eq. (56), SMC Eq. (13)): verdict column stands, nothing swapped; E143 = hep-ph/9802357, SMC = PRD 58 112001 Table IX; every vendored T1 point equals its paper's table except 4 high-x COMPASS points (HEPData self-consistent, kept); NMC 2.5 % normalisation outside 'sys'; η_d confirmed; Q_d corrected 0.2859(3) → 0.2860(15) (recorded only: −5.42 / −5.71 / +1.52 %); α_s 0.1180(9) = PDG 2026; Suelzle ⁷Li a₀ = 1.755(20) F, ⁶Li no HO fit; Moniz k_F = 169 ± 5 MeV/c | `phase_D_inputs.md` |
 | P — figures for the 18 existing rows; `make_report.py --plots` | DONE | `6b1b63e` | 11 figures (t1_g1d_world, t1_nmc_f2d, t1_nmc_f2d_over_f2p, t2_deeps_spectator_tail, t2_deuteron_static, t2_hermes_b1_table2, t3_li6_charge_ff_fb, t3_li6_rms_devries, t3_nmc_li6_over_d, t4_pythia_ep_closure, t5_sum_rules); none by design for EPIOS, EST, weighted/unweighted, T6; B1/B2/B3's and the new rows' drawn by their owners; `make_report.py --plots` (relative image links under each row's Detail heading; `--check` ignores every figure field; without `--plots` byte-identical to before); no `run()`, printed line or number moved (A/B 11/11); 19 of 23 harnesses define `plot()` after phase E | `phase_P_figures.md` |
 | E — documents, report, priced decisions | DONE | `6b1b63e` | the report regenerated with figures (23 harnesses: **13 pass, 10 fail, 0 blocked**; 41 changes against 2026-09-27; `--check` OK); the shared files integrated from the ten phase records (below); the gates run once each (below) | this file, `SUMMARY.md`, `DECISIONS_PRICED.md`, `phase_E_report_compare.md` |
-| F — verification and fix stage | DONE (the fixes uncommitted) | — | four adversarial lenses over `6b1b63e`: 38 findings (physics 8, one major; honesty 14; code 9; regression 7), each re-checked against the tree before anything was touched — none refuted, 33 applied, 4 in part, 1 not (outside this run's files); no default, constant, tolerance, registry label, verdict or reference number moved, no vendored data file edited; the report regenerated (23 harnesses, 13 / 10 / 0, **0 changes** against `6b1b63e`'s, `--check` OK); pytest 1456 / 155 / 0, the bench subset 351 / 1 / 0, the three citation gates and SPDX exit 0 | this file (Verification) |
+| F — verification and fix stage | DONE | `1c5cf68` | four adversarial lenses over `6b1b63e`: 38 findings (physics 8, one major; honesty 14; code 9; regression 7), each re-checked against the tree before anything was touched — none refuted, 33 applied, 4 in part, 1 not (outside this run's files); no default, constant, tolerance, registry label, verdict or reference number moved, no vendored data file edited; the report regenerated (23 harnesses, 13 / 10 / 0, **0 changes** against `6b1b63e`'s, `--check` OK); pytest 1456 / 155 / 0, the bench subset 351 / 1 / 0, the three citation gates and SPDX exit 0 | this file (Verification) |
 
 States: TODO / IN PROGRESS / DONE (with commit hash).
 

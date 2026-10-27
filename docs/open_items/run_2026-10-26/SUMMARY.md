@@ -17,9 +17,9 @@ PLAN.md D2 allowed (Q_d 0.2859(3) → 0.2860(15) fm² in
 `validation/benchmarks/data/deuteron_static_measured.json`, a dated
 transcription correction, the old value kept, recorded only, no verdict
 moved). No decision was taken, nothing was sent. Phases 0, 0r and B3 were
-committed one by one, A–E together as `6b1b63e` (pushed); phase F — four
+committed one by one, A–E together as `6b1b63e`, and phase F — four
 adversarial lenses and the fixes their findings needed (`STATUS.md`
-"Verification") — follows, uncommitted.**
+"Verification"), plus the §7 map extension — as `1c5cf68`; all pushed.**
 
 ## What it measured
 

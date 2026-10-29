@@ -37,10 +37,14 @@ SCRIPT = os.path.join(_ROOT, "validation", "price_defaults.py")
 # measured by the script, 2026-10-26: 6Li config 1, the shipped window
 SIGMA_TOY_PB = 591846.1688784091          # tensor-thirds, meta["sigma_pb"]
 AZZ_TOY = -5.193230890419342e-04          # thirds estimator on meta's per-category sigma
-A2_TOY = (-1.302913804135417e-03,         # cos 2phi' amplitude per unit P_zz,
-          -1.0625622769273495e-03,        # super-bins S1..S4 (sibling fig1.json)
-          -1.4290788342523734e-03,
-          -1.3290877454563259e-03)
+# cos 2phi' amplitude per unit P_zz, super-bins S1..S4 (sibling fig1.json).
+# Re-taken at D4 (2026-10-27, the Jaffe-Manohar coefficient): exactly 1/2 of
+# the 2026-10-26 -1.302913804135417e-03 / -1.0625622769273495e-03 /
+# -1.4290788342523734e-03 / -1.3290877454563259e-03 (a sum of halved terms).
+A2_TOY = (-6.514569020677085e-04,
+          -5.312811384636748e-04,
+          -7.145394171261867e-04,
+          -6.645438727281629e-04)
 #: backend -> (sigma ratio, A_zz ratio); README.md quotes x0.7934 / x1.2604
 #: (mstw) and x0.7985 / x1.2524 (ct18nlo)
 RATIOS = {"mstw": (0.7933758399382593, 1.2604366677843946),

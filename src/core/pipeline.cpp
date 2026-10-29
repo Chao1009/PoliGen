@@ -1289,7 +1289,7 @@ std::string rank2_input_report(const PipelineConfig& cfg, const RunPlan& plan) {
   if (kernel_fills_rank2(ion)) {
     return std::string("b1_model = ") + b1_model_name(cfg.b1_model) +
            " (spin 1: b1_func filled, b2 = 2x*b1 by default, delta_func = "
-           "toy_delta_gluon at the 1e-2 discovery scale)";
+           "toy_delta_gluon at the 1e-2 discovery scale, Jaffe-Manohar Delta)";
   }
   if (!kernel_has_rank2_sector_unfilled(ion)) {
     return std::string("no rank-2 sector at spin ") + fmt_g(ion.spin) +

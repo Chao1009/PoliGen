@@ -79,8 +79,8 @@ knobs recorded nowhere at all
       A_zz(θ_S = 0) (1 + ε(y) R) = −(2/3) b₁/F₁   exactly, at every y,
 
   with P_zz = n₊ + n₋ − 2n₀, i.e. b₁ > 0 means the m = 0 state has the LARGER
-  cross section.  It was `+1` — the repository's own transcription of
-  Hoodbhoy–Jaffe–Manohar — until that date, and setting the constant back is
+  cross section.  It was `+1` — the sibling's slide of the JLab LOI's Eq. (9),
+  long called Hoodbhoy–Jaffe–Manohar's — until that date, and setting it back is
   the whole of the change: nothing else in the library knows the sign.  The
   guard test (`tests/test_xsec.cpp`, "Cosyn Eq. 27: A_zz(theta_S=0)(1 + eps R)
   = -(2/3) b1/F1") is written against the LITERATURE relation itself, with no
@@ -161,7 +161,7 @@ knobs recorded nowhere at all
   off by default because that leakage is carried as a SYSTEMATIC of the Δ
   extraction rather than as a correction the extraction subtracts, and
   because switching it on would silently move every published tensor number.
-  Its size is Δ_fake/(γ² b₁) = 0.14–0.16 — the twist-4 Eq. (17e) term almost
+  Its size is Δ_fake/(γ² b₁) = 0.28–0.32 in Jaffe–Manohar units (0.14–0.16 before D4, the Δ-normalisation bullet below) — the twist-4 Eq. (17e) term almost
   alone, the leading-twist T_LL and twist-3 T_LT channels standing 3 : −3 : 1
   and cancelling — which RETIRES the old bound "γ² b₁ × 1.15".
   `tests/test_tensor_gamma.cpp` is the port of
@@ -541,3 +541,92 @@ knobs recorded nowhere at all
   cross sections (`PipelineConfig::apply_optics_lumi_fraction`, default true) —
   the same share rule that keeps `Scenario::run_share` out of
   `sigma_per_category_pb()`.
+- **Δ normalisation — the cos 2φ coefficient.** `DELTA_COS2PHI_NORM = 0.5`
+  (`constants.hpp`) since 2026-10-27 (author decision D4,
+  `open_items/run_2026-10-27/DECISIONS.md`; the implementation record is
+  `open_items/run_2026-10-27/phase_I4_jm_convention.md`): Δ(x, Q²) is the
+  double-helicity-flip amplitude A₊₋,₋₊ normalised like F₁ = ⅓Σ_H A₊H,₊H —
+  Jaffe and Manohar's Δ — and the kernel's term is
+
+      a₂ = −½ · (1−y)/y² · c_eff(m) sin²θ_S · Δ/D_φ,   c_eff = 3Q_NN (= 3m² − 2 at J = 1),
+
+  so a pure m = ±1 state with its axis transverse to the beam carries
+  a₂ = −½(1−y)/y² Δ/D_φ, and a fill carries Σ_m p_m c_eff(m) = P_zz.  The
+  sources that derive the term print this coefficient: Jaffe–Manohar,
+  *Nuclear gluonometry*, PLB 223 (1989) 218, Eq. (16) (read as the MIT
+  preprint CTP#1712; the journal text was not seen); Sather–Schmidt, PRD 42
+  (1990) 1424, Eq. (A7) — "− ½xλΔ₄ cos 2φ" with Δ = Δ₄ in the Bjorken limit
+  (the same bracket's φ-independent tensor term is "+ ⅙(xy²Δ₁ + λΔ₂)");
+  Ma–Wang–Zhang, arXiv:1306.6693, Eq. (23) (their Ĝ_T is this Δ); and, by
+  contraction with the lepton tensor, Detmold–Shanahan's tensor, PRD 94
+  (2016) 014507, Eq. (5), which the JLab LOI arXiv:1803.11206 prints with its
+  Bjorken limit as Eq. (6).  In helicity-response language it is
+  F[U T_TT] = −Δ with T_TT cos 2φ_TT = ½ sin²θ cos 2φ (Pascalutsa–
+  Vanderhaeghen arXiv:2610.09862, Eqs. (26), (27b), (29b), (A8a) —
+  INFERRED, medium confidence: their Δ is identified with A₊₋,₋₊ through
+  HJM).  The coefficient without the ½ is the LOI's own Eq. (9), which the
+  LOI does not derive and which contradicts its Eq. (6), and a 2019
+  proceedings reprint of it; this tree carried it from its first port until
+  2026-10-27, transcribed from the sibling's `docs/Discussions.pptx` p. 5,
+  which it had called the Hoodbhoy–Jaffe–Manohar transcription.
+  Hoodbhoy–Jaffe–Manohar (NPB 312 (1989) 571) is the b-sector's source — the
+  b₁…b₄ decomposition and the c_m = 3m² − 2 pattern — and has no Δ term:
+  there the double-helicity-flip amplitude falls as 1/Q².
+  **The one-line rule: a Δ(x, Q²) or a moment quoted in Jaffe–Manohar,
+  Sather–Schmidt, Detmold–Shanahan or Ma–Wang–Zhang units enters LiPolGen as
+  printed; a cos 2φ amplitude computed with the pre-D4 kernel or with the
+  sibling's `a_cos2phi` is twice LiPolGen's for the same Δ.**  So `C_BAG` =
+  −0.012 (SS90's ∫x Δ dx = C_BAG α_s) and the gluonic Soffer bound of
+  `t5_delta_moment_bound` enter unconverted, and `make_moment_a/b` give
+  SS90's bag model at face value.  Never apply the factor twice: halving the
+  sibling's coefficient AND halving its Δ inputs would leave the bag
+  scenario at ¼ of its pre-D4 amplitude instead of ½.
+  **The parton-model side is NOT one normalisation in every source.**  The
+  JM preprint's Eq. (29) prints α_s/(8π) for ∫x Δ dx against the α_s/(16π)
+  of its own Eqs. (20), (21) and (25) and of SS90 Eq. (3.1) (on the printed
+  Eq. (29) the bag moment would be −0.023 α_s, not −0.012), and its Eq. (31)
+  has a = g_x̂ − g_ŷ where SS90 Eq. (2.11) has −2[g_x̂ − g_ŷ]; the sign of Δ
+  for a given gluon linear polarization also differs between sources (JM
+  Eq. (2) +, DS16 Eq. (13) −).  These are open (the R1 record's §6) and do
+  not touch the cross-section coefficient; `C_BAG` is SS90's, computed with
+  α_s/(16π).
+  **The b-sector beside a separate Δ.**  SS90 (A2) defines
+  Δ₁ = −½(A₊₊,₊₊ + A₊₋,₊₋ − 2A₊₀,₊₀), the helicity-diagonal b₁ that A_zz
+  measures (their (A8)), and the massless kernel — its b₁ slot read as that
+  b₁ (Miller's and HERMES's are A_zz-type), Δ as SS90's Δ₄ — reproduces
+  (A7)/(A8) term by term at leading power: on the default path nothing is
+  counted twice and nothing is to be subtracted.  (SS90's footnote 8,
+  b₁ = Δ₁ + ½Δ₄ in the Bjorken limit, relates their basis to HJM's covariant
+  b₁, which is not the slot.)  Only the opt-in `tensor_gamma` path, whose
+  cos 2φ harmonic reads b₁…b₄, carries an O(γ²Δ) basis question.
+  **What moved:** every Δ-induced cos 2φ amplitude halves per unit Δ (fills
+  with sin θ_S ≠ 0 — `transverse-tensor`, `tensor-flip`, a tilted
+  `helicity-flip` — on a spin-1 inclusive kernel); the shipped
+  `toy_delta_gluon(…, 1e−2)` keeps its scale, so its amplitude halves; the
+  Δ-equivalent of the finite-γ b-sector leakage doubles, Δ_fake/(γ²b₁)
+  0.14–0.16 → 0.28–0.32; a user Δ the sampler refused as driving W negative
+  may now be accepted (the refusal reads a₂).  In a generated file of a
+  tilted plan: φ, and with it the e′ and X four-vectors and every later draw
+  of the per-event stream (the target hook, the struck-nucleon species, the
+  bridge's draws), and `rc_tensor_lo/hi`.  **What did not:** Δ itself, the
+  b-sector and A_zz, every R or F₂ ratio of the cos 2φ amplitude, the
+  `tensor_gamma` harmonics, the coherent channel's c₂, and any run at
+  θ_S = 0 (the default `tensor-thirds` plan is bit for bit unchanged).
+  **Provenance:** the `meta` of `Pipeline.generate()` carries
+  `meta["delta_convention"]` = "jaffe-manohar-1989; cos2phi coefficient
+  -(1/2)(1-y)/y^2 (D4, 2026-10-27)" (`DELTA_CONVENTION`), and so does every
+  .npz the CLI writes (`--npz`, and `--hfs-npz`, which is handed that
+  `meta`); the CLI run banner prints the same string, and
+  `meta["rank2_input"]` names the Jaffe-Manohar Δ.  A HepMC3 file carries
+  no run-level record of the convention (`--hepmc`, `Pipeline.write_hepmc`,
+  the C++ `HepMC3Writer`, every example executable; adding one is a
+  follow-up, since `docs/HEPMC3_CONVENTION.md` is sha256-pinned by the
+  `t6_hepmc3_convention` row), and neither does an .npz written from an
+  event list without that `meta`.  So the key dates only a
+  `Pipeline.generate()` or CLI .npz: one without it was made before D4,
+  with twice the Δ-induced amplitude.  Setting the constant back to 1.0
+  together with `DELTA_CONVENTION` (a `static_assert` beside the two ties
+  them) restores the pre-D4 kernel, which is the whole of the reversal;
+  `tests/test_xsec.cpp` pins both the closed form and the value, and the
+  port gate reads polligen's coefficient off `xsec.json` (it carries the
+  LOI's Eq. (9) until the sibling changes).

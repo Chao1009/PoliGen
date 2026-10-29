@@ -5,9 +5,19 @@ suite (`tests/test_reference.cpp`, `build_kernel`): 6Li with the TOY b1 shape
 (`toy_b1(..., mode="toy")`) and the 1e-3 toy Delta, target_mass off.  The
 point of running it from Python too is that the BINDING does not silently
 reorder or truncate an argument on the way in.
+
+D4 (2026-10-27, docs/open_items/run_2026-10-27/DECISIONS.md): the tree's
+cos 2phi coefficient is Jaffe-Manohar's, -(1/2)(1-y)/y^2, while polligen --
+and so `xsec.json` -- carries the LOI's Eq. (9), -(1-y)/y^2, until the sibling
+changes.  The Delta-carrying numbers (a_cos2phi, every a2, the dsigma rows)
+are therefore compared through the coefficient `_reference_cos2phi_coefficient`
+READS OFF THE FILE, against the LITERAL 0.5 -- never through the library's
+DELTA_COS2PHI_NORM, so a regression of the tree fails here -- and every
+Delta-free number keeps the plain rtol 1e-12, exactly as the C++ gate.
 """
 
 import json
+import math
 import os
 
 import pytest
@@ -54,6 +64,50 @@ def _kernel_6li_tensor_gamma():
     return lg.InclusiveKernel(lg.li6(), opt)
 
 
+#: the tree's cos 2phi coefficient in units of -(1-y)/y^2: Jaffe-Manohar's,
+#: a LITERAL (D4, 2026-10-27), deliberately not lg.DELTA_COS2PHI_NORM
+JM_COEFFICIENT = 0.5
+
+
+def _reference_cos2phi_coefficient(block, pts):
+    """polligen's cos 2phi coefficient in units of -(1-y)/y^2, read off the
+    block's own numbers: c = a_cos2phi D_phi y^2 / (-(1-y) Delta) at every
+    point whose table carries Delta != 0.  One value per block, and it must
+    be 1 (the LOI's Eq. (9), today's file) or 1/2 (Jaffe-Manohar, a re-dump
+    after the sibling changes); anything else is an undeclared normalisation
+    and FAILS.  None for a Delta-free block."""
+    tab, asym = block["tables"], block["asymmetries"]
+    cs = []
+    for i, pt in enumerate(pts):
+        delta = tab["delta"][i]
+        if not delta:
+            continue
+        y = asym["y"][i]
+        dphi = tab["f1"][i] + (1.0 - y) / (pt["x"] * y * y) * tab["f2"][i]
+        cs.append(asym["a_cos2phi"][i] * dphi * y * y / (-(1.0 - y) * delta))
+    if not cs:
+        return None
+    assert all(c == pytest.approx(cs[0], rel=RTOL) for c in cs), cs
+    for known in (1.0, 0.5):
+        if cs[0] == pytest.approx(known, rel=RTOL):
+            return known
+    raise AssertionError("xsec.json carries an unknown Delta normalisation: "
+                         "c_ref = %r" % cs[0])
+
+
+def _jm_factor(block, pts):
+    """What the reference's Delta line is multiplied by to give the tree's:
+    the literal Jaffe-Manohar coefficient over the one read off the file."""
+    c_ref = _reference_cos2phi_coefficient(block, pts)
+    return 1.0 if c_ref is None else JM_COEFFICIENT / c_ref
+
+
+def _close(got, want, scale):
+    """rtol 1e-12 on `want`, with an absolute floor of 1e-12 x `scale` (the
+    size of the terms a rescaled Delta line was combined from)."""
+    return abs(got - want) <= RTOL * (abs(want) + abs(scale)) + 1e-300
+
+
 def test_constants_match_the_reference(xsec_ref):
     c = xsec_ref["constants"]
     assert lg.ALPHA_EM == c["ALPHA_EM"]
@@ -93,29 +147,39 @@ def test_structure_function_tables(xsec_ref):
                                         "kernel_default_target_mass",
                                         "kernel_tensor_gamma"])
 def test_amplitudes_every_state(xsec_ref, block_name):
-    """(w_avg, a1, a2) for every (lam_e, axis, m) row of the reference."""
+    """(w_avg, a1, a2) for every (lam_e, axis, m) row of the reference; a2
+    through the reference's own cos 2phi coefficient (D4, module docstring)."""
     kern = (_kernel_6li_tensor_gamma() if block_name == "kernel_tensor_gamma"
             else _kernel_6li(block_name.endswith("target_mass")))
     pts = xsec_ref["grid_points"]
     res = xsec_ref["results"]["6Li"]
     s = res["beam_config"]["s"]
     block = res[block_name]
+    jm = _jm_factor(block, pts)
+    assert jm in (0.5, 1.0)     # c_ref 1 (LOI Eq. (9), today) or 1/2 (JM)
+    a_c2p = block["asymmetries"]["a_cos2phi"]
     tabs = [kern.tables(p["x"], p["q2"], True) for p in pts]
     n_checked = 0
     for amp in block["amplitudes"]:
         st = lg.EventSpinState(lam_e=int(amp["lam_e"]), pe=amp["pe"], j=1.0,
                                m=amp["m"], theta_s=amp["theta_s"],
                                phi_s=amp["phi_s"])
+        geo = kern.tensor_moments(st.m)[1] * math.sin(st.theta_s) ** 2
         for i, pt in enumerate(pts):
             got = kern.amplitudes(tabs[i], pt["x"], pt["q2"], s, st, True)
-            for key, value in (("w_avg", got.w_avg), ("a1", got.a1),
-                               ("a2", got.a2)):
+            for key, value in (("w_avg", got.w_avg), ("a1", got.a1)):
                 want = amp[key][i]
                 if want == 0.0:
                     assert abs(value) < 1e-300, (key, amp["m"], i)
                 else:
                     assert value == pytest.approx(want, rel=RTOL), \
                         (key, amp["m"], amp["theta_s"], i)
+            # the reference's Delta line is geo * a_cos2phi; on the
+            # tensor_gamma block a2 carries h2 beside it, unrescaled
+            dline = geo * a_c2p[i]
+            want = amp["a2"][i] - (1.0 - jm) * dline
+            assert _close(got.a2, want, dline), \
+                ("a2", amp["m"], amp["theta_s"], i, got.a2, want)
             n_checked += 3
     assert n_checked == 3 * len(block["amplitudes"]) * len(pts)
     assert n_checked > 100          # the table really was walked
@@ -127,6 +191,8 @@ def test_dsigma_and_dsigma_unpol(xsec_ref):
     res = xsec_ref["results"]["6Li"]
     s = res["beam_config"]["s"]
     block = res["kernel_default"]
+    jm = _jm_factor(block, pts)
+    a_c2p = block["asymmetries"]["a_cos2phi"]
     for i, pt in enumerate(pts):
         assert kern.dsigma_unpol(pt["x"], pt["q2"], s) == pytest.approx(
             block["dsigma_unpol"][i], rel=RTOL)
@@ -134,11 +200,16 @@ def test_dsigma_and_dsigma_unpol(xsec_ref):
         st = lg.EventSpinState(lam_e=int(row["lam_e"]), pe=row["pe"], j=1.0,
                                m=row["m"], theta_s=row["theta_s"],
                                phi_s=row["phi_s"])
+        geo = kern.tensor_moments(st.m)[1] * math.sin(st.theta_s) ** 2
         for i, pt in enumerate(pts):
+            # W > 0 on every row, so the rescaled Delta line enters linearly
+            dline = (geo * a_c2p[i] * block["dsigma_unpol"][i]
+                     / (2.0 * math.pi))
             for jph, phi in enumerate(row["phi_grid"]):
                 got = kern.dsigma(pt["x"], pt["q2"], phi, s, st, True)
-                assert got == pytest.approx(
-                    row["dsigma_per_point"][i][jph], rel=RTOL)
+                want = (row["dsigma_per_point"][i][jph] - (1.0 - jm) * dline
+                        * math.cos(2.0 * (phi - st.phi_s)))
+                assert _close(got, want, 0.0), (i, jph, got, want)
 
 
 def test_asymmetry_helpers_match(xsec_ref):
@@ -147,6 +218,7 @@ def test_asymmetry_helpers_match(xsec_ref):
     s = res["beam_config"]["s"]
     ref = res["kernel_default"]["asymmetries"]
     pts = xsec_ref["grid_points"]
+    jm = _jm_factor(res["kernel_default"], pts)
     kern = _kernel_6li()
     for i, pt in enumerate(pts):
         x, q2 = pt["x"], pt["q2"]
@@ -163,7 +235,45 @@ def test_asymmetry_helpers_match(xsec_ref):
                 ref["azz"][i], rel=RTOL)
         if ref["a_cos2phi"][i] is not None:
             assert lg.a_cos2phi(t.delta, t.f1, t.f2, x, y) == pytest.approx(
-                ref["a_cos2phi"][i], rel=RTOL)
+                jm * ref["a_cos2phi"][i], rel=RTOL)
+
+
+def test_the_port_gate_reads_the_coefficient_off_the_file(xsec_ref):
+    """D4: the reference's coefficient is READ, never assumed.  Every
+    Delta-carrying block of both ions carries 1 (the LOI's Eq. (9), today's
+    file) or 1/2 (a re-dump after the sibling changes); a copy whose a_cos2phi
+    is scaled by 0.7 is refused; a copy rescaled to Jaffe-Manohar's 1/2 reads
+    factor 1 and the tree meets it unrescaled -- so either file passes this
+    module with no code change (F4, 2026-10-27)."""
+    import copy
+
+    pts = xsec_ref["grid_points"]
+    for ion in ("6Li", "7Li"):
+        for name, block in xsec_ref["results"][ion].items():
+            if not name.startswith("kernel"):
+                continue
+            c_ref = _reference_cos2phi_coefficient(block, pts)
+            known = (1.0, 0.5) if any(block["tables"]["delta"]) else (None,)
+            assert c_ref in known, (ion, name, c_ref)
+    block = xsec_ref["results"]["6Li"]["kernel_default"]
+    scaled = copy.deepcopy(block)
+    scaled["asymmetries"]["a_cos2phi"] = [
+        0.7 * v for v in scaled["asymmetries"]["a_cos2phi"]]
+    with pytest.raises(AssertionError, match="unknown Delta normalisation"):
+        _reference_cos2phi_coefficient(scaled, pts)
+    jm_copy, k = copy.deepcopy(block), _jm_factor(block, pts)   # 0.5/c_file
+    jm_copy["asymmetries"]["a_cos2phi"] = [
+        k * v for v in jm_copy["asymmetries"]["a_cos2phi"]]
+    assert _reference_cos2phi_coefficient(jm_copy, pts) == 0.5
+    assert _jm_factor(jm_copy, pts) == 1.0
+    # ... and the tree meets that copy with no rescaling at all
+    s = xsec_ref["results"]["6Li"]["beam_config"]["s"]
+    kern = _kernel_6li()
+    for i, pt in enumerate(pts):
+        x, q2 = pt["x"], pt["q2"]
+        t = kern.tables(x, q2, True)
+        assert lg.a_cos2phi(t.delta, t.f1, t.f2, x, q2 / (s * x)) == \
+            pytest.approx(jm_copy["asymmetries"]["a_cos2phi"][i], rel=RTOL)
 
 
 def test_tensor_gamma_block(xsec_ref):

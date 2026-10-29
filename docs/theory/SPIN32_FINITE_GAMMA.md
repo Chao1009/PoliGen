@@ -922,7 +922,7 @@ with, writing D_γ = F_[UU,T] + ε F_[UU,L] for the exact denominator ([2] Eq. (
 and (37); `cosyn_unpolarized_sfs`, `src/core/xsec.cpp:39-42`),
 
         w₀, a₁, a₂  ⊃  the rank-2 harmonics of (39)      [ unpolarized beam ]
-        a₂          ⊃  −(1−y)/y² · 3Q_NN · sin²θ_S · Δ / D_φ   [ gluon transversity ]
+        a₂          ⊃  −½(1−y)/y² · 3Q_NN · sin²θ_S · Δ / D_φ   [ gluon transversity; Jaffe–Manohar, D4 ]
         w₀, a₁      ⊃  λ_e P_e × the rank-1 (vector) sector, i.e. A_∥ and A_⊥   (47)
         w₀ … a₃     ⊃  λ_e P_e × [ R_LLL(φ') √(1−ε²) F_[L R_LLL,T′]
                                  + R_LLT cos φ_LLT(φ') √(2ε(1−ε)) F_[L R_LLT,LT′] ] / D_γ

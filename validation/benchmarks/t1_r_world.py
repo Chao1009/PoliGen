@@ -124,7 +124,7 @@ amplitude a_2 of `default_inclusive_kernel(li6())` (the shipped R) against
 path that accepts an R source; the Delta slot is the same for every b1
 model, which run() asserts bit for bit), at y = Q2/(s x) of the letter's mid
 configuration (`default_configs('6Li')[1]`, e 10 x 6Li 99.5 GeV/u).  In the
-kernel a_2 = -(1-y)/y^2 c_eff sin^2(theta_S) Delta/D_phi with D_phi = F1 +
+kernel a_2 = -(1/2)(1-y)/y^2 c_eff sin^2(theta_S) Delta/D_phi (Jaffe-Manohar since D4, 2026-10-27; no 1/2 before: a common factor, the ratio is bit for bit the same) with D_phi = F1 +
 (1-y)/(x y^2) F2 and the shipped Delta = 1e-2 F1 x^0.3 (1-x)^4
 (`toy_delta_gluon` in pipeline.cpp), so a_2 is proportional to F1/D_phi =
 1/[1 + 2 (1-y)(1+R)/y^2]: F2 cancels, and the ratio is

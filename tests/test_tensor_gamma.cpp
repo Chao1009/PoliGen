@@ -304,8 +304,8 @@ TEST_CASE("tensor_gamma: the two leading channels cancel to the 17e term") {
   // exactly and what survives is the twist-4 Eq. (17e) term alone.  That
   // cancellation is the whole size of the effect: plans/08 D2 had guessed a
   // factor 6.9 the other way, from the T_LT term ADDING.  It is what puts
-  // Delta_fake/(gamma^2 b1) at 0.14-0.16 -- the 1/6 of Eq. (17e) -- in place
-  // of the retired bound "gamma^2 b1 x 1.15"
+  // Delta_fake/(gamma^2 b1) at 0.28-0.32 in JM units (D4; 0.14-0.16, the 1/6
+  // of Eq. (17e), before) in place of the retired bound "gamma^2 b1 x 1.15"
   // (`evgen/scripts/tensor_gamma_leakage.py`).
   struct Channels { double r_ll, r_lt, r_tot; };
   const auto channels = [](double x, double q2, double y) {
@@ -336,30 +336,30 @@ TEST_CASE("tensor_gamma: the two leading channels cancel to the 17e term") {
 }
 
 TEST_CASE("tensor_gamma: the cos 2phi leakage coefficient replaces the 1.15 bound") {
-  // What `evgen/scripts/tensor_gamma_leakage.py` measures and prints: the
-  // equivalent fake Delta the tensor rate sector leaks into the cos 2phi
-  // amplitude of a TRANSVERSELY tensor-polarized fill,
+  // What `evgen/scripts/tensor_gamma_leakage.py` measures, in Jaffe-Manohar
+  // units since D4 (2026-10-27): the equivalent fake Delta the tensor rate
+  // sector leaks into the cos 2phi amplitude of a TRANSVERSE tensor fill,
   //
-  //   Delta_fake = -a2(tensor) y^2 D_phi / (1 - y),
+  //   Delta_fake = -2 a2(tensor) y^2 D_phi / (1 - y),
   //
-  // as a coefficient of gamma^2 b1.  Until 2026-08-29 that size was quoted as
-  // a BOUND, Delta_fake = 1.15 gamma^2 b1 -- the Eq. (17e) term alone,
-  // gamma^2 b1/6, times the 6.9 the full combination was guessed to be, with
-  // the T_LT term ADDING.  It does not add: it cancels the T_LL one (the
-  // 3 : -3 : 1 ratio above), so what survives is the twist-4 Eq. (17e) term
-  // almost alone and the coefficient sits at the 1/6 of that term.  The
-  // script quotes 0.14-0.16 over the twelve money-plot-5 sweet spots of the
-  // three 6Li configurations; the three points of this file, which are three
-  // of those spots' neighbourhood plus a deliberately large-gamma^2 one, give
-  // 0.1628 / 0.1601 / 0.1548 on the same toy table.
+  // as a coefficient of gamma^2 b1 (the 2 is 1/DELTA_COS2PHI_NORM; before D4
+  // it was -a2 y^2 D_phi/(1-y)).  Until 2026-08-29 the size was quoted as a
+  // BOUND, 1.15 gamma^2 b1 in those pre-D4 units -- the Eq. (17e) term alone,
+  // gamma^2 b1/6, times a guessed 6.9, with the T_LT term ADDING.  It does
+  // not add: it cancels the T_LL one (the 3 : -3 : 1 ratio above), so what
+  // survives is the twist-4 Eq. (17e) term almost alone: twice its 1/6 here.
+  // The script quotes 0.14-0.16, its pre-D4 units, over the twelve
+  // money-plot-5 sweet spots; the three points of this file, three of those
+  // spots' neighbourhood plus a deliberately large-gamma^2 one, give 0.3256 /
+  // 0.3201 / 0.3096 on the same toy table (0.1628 / 0.1601 / 0.1548 before).
   //
   // SIGN.  With the literature convention (TENSOR_LL_SIGN = -1) and a
   // positive b1 the leakage is NEGATIVE at every spot -- OPPOSITE in sign to
   // the cos 2phi amplitude of the moment-constrained (negative-Delta) models
   // -- so it cancels part of the measured amplitude instead of faking one.
   // Flipping the constant back flips it, which is why D2 was gated on D1.
-  const double want[3] = {0.1628248344088873, 0.16006748610799001,
-                          0.15477697871375315};
+  const double want[3] = {0.3256496688177746, 0.32013497221598003,
+                          0.3095539574275063};  // x2: D4, 2026-10-27
   const InclusiveKernel kern = gamma_kernel();
   const EventSpinState st{0, 0.0, 1.0, 1.0, 0.5 * kPi, 0.0};
   for (int i = 0; i < 3; ++i) {
@@ -368,11 +368,11 @@ TEST_CASE("tensor_gamma: the cos 2phi leakage coefficient replaces the 1.15 boun
     const TensorHarmonics h =
         kern.tensor_harmonics_gamma(t, p.x, p.q2, p.y, st);
     const double dphi = t.f1 + (1.0 - p.y) / (p.x * p.y * p.y) * t.f2;
-    const double d_fake = -h.h2 * p.y * p.y * dphi / (1.0 - p.y);
+    const double d_fake = -2.0 * h.h2 * p.y * p.y * dphi / (1.0 - p.y);
     const double coef = d_fake / (gamma_squared(p.x, p.q2) * t.b1);
     CHECK_CLOSE(coef, want[i], 1e-11);
-    CHECK(0.14 < coef);
-    CHECK(coef < 0.17);          // the band, not the retired 1.15
+    CHECK(0.28 < coef);
+    CHECK(coef < 0.34);          // the band (JM units), not the retired 1.15
     CHECK(h.h2 < 0.0);           // negative with b1 > 0 and the -1 convention
   }
 }

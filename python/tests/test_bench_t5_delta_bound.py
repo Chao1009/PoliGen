@@ -8,9 +8,9 @@ toy_delta_gluon at the pipeline's 1e-2 scale and to the letter's moment_A /
 moment_B, under assumptions its header declares, plus the spin-1
 helicity-state positivity -2 <= A_T <= 1 (Cosyn et al. EPJ A 61 (2025) 83
 Eq. (2)) on the shipped kernel's own per-state rates.  Its second pass adds
-the variation V6 (Delta in DS16's normalisation = 2 x the kernel's, at equal
+the variation V6 (Delta in DS16's normalisation = 2 x the pre-D4 kernel's, at equal
 cos 2phi amplitude), which the tests below re-derive from DS16's printed
-Eqs. (3)-(5) with numpy alone.
+Eqs. (3)-(5) with numpy alone; since D4 (2026-10-27) the kernel's is DS16's (DS16_OVER_TREE = 1, V6 = PRE_D4_OVER_JM = 2).
 
 These tests pin what the harness MEASURES and that its verdict follows from
 the numbers; none moves or asserts a new value for any tree default.  The
@@ -280,29 +280,29 @@ def _ds16_cos2phi_over_f1(x, y, q2, e, mass=0.938):
     return 2.0 * float(np.mean(np.array(d) * np.cos(2.0 * phis))) / float(np.mean(f))
 
 
-def test_s2_v6_factor_is_ds16_eq5_against_the_kernel_coefficient(mod):
-    """SECOND PASS S2: at equal cos 2phi amplitude Delta_DS16 = 2 Delta_tree.
-    DS16 Eq. (5) gives -(1/2)(1-y)/y^2 per unit Delta for a pure m = +-1 state
-    along an axis perpendicular to q (LOI18 Eq. (6)); the kernel's
-    coefficient is a_cos2phi = -(1-y)/y^2 (F2 = 0 isolates the F1 term).  The
-    Bjorken limit is approached as 1/Q^2; the m_x = 0 state carries -2 times
-    the m_x = +-1 one on both sides (c_eff = 3m^2 - 2)."""
+def test_s2_the_kernel_coefficient_is_ds16_eq5(mod):
+    """SECOND PASS S2, re-taken at D4 (2026-10-27): DS16 Eq. (5) gives -(1/2)(1-y)/y^2 per unit
+    Delta for a pure m = +-1 state along an axis perpendicular to q (LOI18 Eq. (6)), and since D4
+    so does the kernel, a_cos2phi = -(1/2)(1-y)/y^2 (F2 = 0 isolates the F1 term): DS16_OVER_TREE
+    = 1 (the pre-D4 kernel's -(1-y)/y^2 gave 1/2 and the constant 2, now PRE_D4_OVER_JM, V6's).
+    The Bjorken limit is approached as 1/Q^2; m_x = 0 carries -2 times m_x = +-1 on both sides."""
+    assert (mod.DS16_OVER_TREE, mod.PRE_D4_OVER_JM) == (1.0, 2.0)
     for x, y in ((0.1, 0.5), (0.3, 0.3), (0.01, 0.7)):
         tree = lg.a_cos2phi(1.0, 1.0, 0.0, x, y)
-        assert tree == pytest.approx(-(1.0 - y) / y ** 2, rel=1e-15)
+        assert tree == pytest.approx(-0.5 * (1.0 - y) / y ** 2, rel=1e-15)  # D4 (no 0.5 before)
         ratio = _ds16_cos2phi_over_f1(x, y, 1e5, _MX_PLUS) / tree
         assert ratio == pytest.approx(1.0 / mod.DS16_OVER_TREE, abs=2e-5)
         lin = _ds16_cos2phi_over_f1(x, y, 1e5, _XHAT)
         assert lin / _ds16_cos2phi_over_f1(x, y, 1e5, _MX_PLUS) == pytest.approx(-2.0,
                                                                                 rel=1e-9)
-    # at the row's own Q2 the finite-mass terms are a percent (not the factor 2)
+    # at the row's own Q2 the finite-mass terms are a percent: 0.99214 (0.4961 before D4)
     assert _ds16_cos2phi_over_f1(0.1, 0.5, 5.0, _MX_PLUS) / lg.a_cos2phi(
-        1.0, 1.0, 0.0, 0.1, 0.5) == pytest.approx(0.5, rel=0.02)
+        1.0, 1.0, 0.0, 0.1, 0.5) == pytest.approx(1.0, rel=0.02)
 
 
 def test_s2_the_kernel_carries_the_a_cos2phi_coefficient():
     """The shipped kernel's a2 at m = +1, theta_S = 90 deg is the standalone
-    a_cos2phi = -(1-y)/y^2 Delta/D_phi (PHYSICS_CHANNELS.md sec. 2)."""
+    a_cos2phi = -(1/2)(1-y)/y^2 Delta/D_phi since D4 (PHYSICS_CHANNELS.md sec. 2)."""
     k = lg.default_inclusive_kernel(lg.li6())
     for x, q2, y in ((0.1, 5.0, 0.5), (0.01, 2.0, 0.7), (0.3, 10.0, 0.3)):
         t = k.tables(x, q2)
@@ -432,7 +432,7 @@ def test_bound_side_subrow_carries_the_pieces(rep):
     s = _sub(rep, "bound_side[central]")
     assert s["status"] == "recorded" and s["in_verdict"] is False
     assert s["tr_q2"] == pytest.approx(2.0 / 3.0, rel=1e-15)
-    assert s["ds16_over_tree"] == 2.0
+    assert (s["ds16_over_tree"], s["pre_d4_over_jm"]) == (1.0, 2.0)  # D4, 2026-10-27 (2.0, -)
     for k in ("alpha_s", "xg", "xdg", "B", "B_tight", "B_loose", "B_peff_naive"):
         assert s[k] == [b[k] for b in rep["bound_detail"]]
     assert s["B"] == pytest.approx(_sub(rep, "toy_1e-2[shipped]")["bound"], rel=1e-15)
@@ -446,9 +446,9 @@ def test_the_plugin_reads_the_trees_grids(rep):
 
 def test_letter_models_recorded_with_their_own_status(rep):
     """moment_A / moment_B at the letter's dilution 1/3 use ~70 % of the room
-    under the central assumptions and ~140 % under V6 (Delta_DS16 = 2
-    Delta_tree); undiluted they exceed it under both -- recorded, not in the
-    verdict."""
+    under the central assumptions (A7, the kernel's own Delta since D4) and ~140 % under V6
+    (the pre-D4 kernel / the letter's printed amplitudes, x2); undiluted they exceed it under
+    both -- recorded, not in the verdict."""
     a = _sub(rep, "moment_A[letter]")
     b = _sub(rep, "moment_B[letter]")
     for s in (a, b):
@@ -497,9 +497,9 @@ def test_helicity_positivity_subrow(rep):
     p = _sub(rep, "helicity_positivity[shipped kernel]")
     assert p["status"] == "pass" and p["in_verdict"] is True
     assert (p["n_points"], p["n_rates"]) == (567, 1701)
-    assert p["w_min"] == pytest.approx(0.9493997515, rel=1e-9)
-    assert p["a_t_min"] == pytest.approx(-0.1012003069, rel=1e-8)
-    assert p["a_t_max"] == pytest.approx(0.05060024846, rel=1e-8)
+    assert p["w_min"] == pytest.approx(0.9493997990, rel=1e-9)  # D4, 2026-10-27 (0.9493997515)
+    assert p["a_t_min"] == pytest.approx(-0.1012003069, rel=1e-8)  # theta_S = 0: no Delta term
+    assert p["a_t_max"] == pytest.approx(0.05060020096, rel=1e-8)  # D4 (0.05060024846 before)
     assert p["w_min_at"] == "x=0.9 Q2=2 y=0.95 theta_S=90 phi'=90 m=+0"
     assert -2.0 <= p["a_t_min"] <= p["a_t_max"] <= 1.0
 
@@ -509,7 +509,7 @@ def test_verdict_follows_the_numbers(mod, rep):
     for s, s6, m, b in zip(toy["saturation"], toy["saturation_v6"], toy["m2"],
                            toy["bound"]):
         assert s == pytest.approx(abs(m) / b, rel=1e-15)
-        assert s6 == 2.0 * s
+        assert s6 == mod.PRE_D4_OVER_JM * s      # V6 since D4 (2026-10-27)
     bound = rep["bound_detail"]
     # synthetic models at and just beyond the bound: the -1e-12 margin rule
     at = [dict(m2=b["B"], err=0.0, tail=0.0) for b in bound]
@@ -523,7 +523,7 @@ def test_verdict_follows_the_numbers(mod, rep):
     assert mod.saturation_row("half", half, bound, False)["status_v6"] == "pass"
     assert mod.saturation_row("half", half, bound, False)["status"] == "recorded"
     # f1ll_critical is where the saturation reaches 1, f1ll_critical_v6 where
-    # twice it does
+    # twice it does (PRE_D4_OVER_JM, V6 since D4)
     for m, b, ll, ll6 in zip(toy["m2"], bound, toy["f1ll_critical"],
                              toy["f1ll_critical_v6"]):
         k = b["alpha_s"] / (8.0 * math.pi) * (2.0 / 3.0) * 0.5
@@ -594,12 +594,12 @@ def test_report_line(mod, capsys):
     assert len(rows) == 1 and len(subs) == 7
     assert subs[-1].startswith("SUBROW | t5_delta_moment_bound[bound_side[central]] | "
                                "B = 1.921563e-03 / 1.633121e-03 / 1.467658e-03")
-    assert "RECORDED: PASS centrally, FAIL under V6" in subs[2]
-    assert rows[0].startswith("REPORT | t5_delta_moment_bound | shipped toy_delta_gluon "
-                              "(scale 0.01) per nucleon, 6Li: M2 = int x Delta dx = "
-                              "1.2383e-04 / 1.3108e-04 / 1.3805e-04 at Q2 = 2 / 5 / 10 "
-                              "GeV2, |M2|/B = 0.0644 / 0.0803 / 0.0941 (V6, Delta_DS16 = "
-                              "2 Delta_tree: 0.1289 / 0.1605 / 0.1881);")
+    assert "PASS centrally (A7" in subs[2] and "FAIL under V6 (the pre-D4 kernel" in subs[2]  # D4
+    assert rows[0].startswith("REPORT | t5_delta_moment_bound | shipped toy_delta_gluon (scale 0.01) "
+                              "per nucleon, 6Li: M2 = int x Delta dx = 1.2383e-04 / 1.3108e-04 / "
+                              "1.3805e-04 at Q2 = 2 / 5 / 10 GeV2, |M2|/B = 0.0644 / 0.0803 / 0.0941 "
+                              "(Jaffe-Manohar Delta, the kernel's since D4; V6, the pre-D4 kernel / "
+                              "the letter as printed, x2: 0.1289 / 0.1605 / 0.1881);")
     assert rows[0].endswith("| PASS")
     assert "np.float64" not in "\n".join(out)
     assert r["runtime_s"] < 30.0

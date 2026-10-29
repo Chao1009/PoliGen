@@ -439,8 +439,8 @@ TEST_CASE("r_func = r_sigma_lt is bit-for-bit r_func = none") {
 }
 
 TEST_CASE("the cos 2phi amplitude carries R and NOT F2") {
-  // a_2 = -(eps/2) c_eff sin^2(theta_S) (Delta/F1)/(1 + eps R), written out by
-  // hand from eps and F1 = F2/(2x(1+R)) -- no F2 anywhere in it.
+  // a_2 = -(eps/4) c_eff sin^2(theta_S) (Delta/F1)/(1 + eps R) (Jaffe-Manohar,
+  // D4 2026-10-27; -(eps/2) before), from F1 = F2/(2x(1+R)) -- no F2 in it.
   const double s = s_mid_6li();
   const double d_over_f1 = 1.3e-3;
   const EventSpinState st{0, 0.0, 1.0, 1.0, kPi / 2.0, 0.0};  // c_eff = 1
@@ -454,7 +454,7 @@ TEST_CASE("the cos 2phi amplitude carries R and NOT F2") {
     for (const Point& p : analysis_grid(s)) {
       const SFTables t = kern.tables(p.x, p.q2);
       const double expected =
-          -(eps_of(p.y) / 2.0) * d_over_f1 / (1.0 + eps_of(p.y) * r_value);
+          -(eps_of(p.y) / 4.0) * d_over_f1 / (1.0 + eps_of(p.y) * r_value);
       CHECK_CLOSE(kern.amplitudes(t, p.x, p.q2, s, st).a2, expected, kRtol);
     }
   }
@@ -813,10 +813,10 @@ TEST_CASE("production scenarios keep a healthy positivity margin") {
     const Amplitudes a = kern.amplitudes(kern.tables(p.x, p.q2), p.x, p.q2, s, st);
     CHECK(InclusiveKernel::positivity_margin(a) > 0.9);
   }
-  // ... while an oversized Delta drives the density negative, which is what
-  // the sampler's guard exists to catch
+  // ... while an oversized Delta drives the density negative -- the sampler's
+  // guard (6 F1 since D4, 2026-10-27: exactly the a2 that 3 F1 gave before)
   InclusiveKernel::Options big_opt;
-  big_opt.delta_func = [](double, double, double f1) { return 3.0 * f1; };
+  big_opt.delta_func = [](double, double, double f1) { return 6.0 * f1; };
   const InclusiveKernel big(LI6(), big_opt);
   bool negative = false;
   for (const Point& p : analysis_grid(s)) {
@@ -874,5 +874,62 @@ TEST_CASE("phi_averaged_density is the kernel's own D_phi") {
     // ... and the tensor kernel K is the same combination on (b1, b2)
     CHECK(InclusiveKernel::tensor_kernel(t, p.x, p.y)
           == phi_averaged_density(t.b1, t.b2, p.x, p.y));
+  }
+}
+
+// --- D4 (2026-10-27): the cos 2phi coefficient is Jaffe-Manohar's ---------
+
+TEST_CASE("D4: the cos 2phi coefficient is Jaffe-Manohar's") {
+  // Author decision D4 (docs/open_items/run_2026-10-27/DECISIONS.md): the
+  // double-helicity-flip term is
+  //
+  //   a2 = -(1/2) (1-y)/y^2 c_eff(m) sin^2(theta_S) Delta/D_phi,
+  //
+  // Jaffe-Manohar PLB 223 (1989) 218 Eq. (16) (preprint CTP#1712 numbering),
+  // Sather-Schmidt PRD 42 (1990) 1424 Eq. (A7), Detmold-Shanahan PRD 94 (2016)
+  // 014507 Eq. (5) contracted.  Written out below with the 1/2 a LITERAL and
+  // c_eff = 3m^2 - J(J+1) from the spin algebra -- not from DELTA_COS2PHI_NORM
+  // and not from tensor_moments() -- so a regression of the constant or of
+  // either code site (xsec.cpp, asymmetries.cpp) fails HERE.  The other tests
+  // that read a2 compare the kernel with a_cos2phi; those two move together.
+  // Before D4 the coefficient was -(1-y)/y^2: the JLab LOI's Eq. (9).
+  CHECK(DELTA_COS2PHI_NORM == 0.5);
+  const double s = s_mid_6li();
+  const SFFunc3 delta = [](double x, double, double f1) {
+    return -1e-2 * f1 * std::pow(x, 0.3) * std::pow(1.0 - x, 4.0);
+  };
+  for (const bool li7 : {false, true}) {
+    // J = 1: m = +1, 0, -1; J = 3/2: m = +-3/2, +-1/2 (its own projections --
+    // amplitudes() checks only J against the ion, so the m list is ours).
+    const double j = li7 ? 1.5 : 1.0;
+    const std::vector<double> ms =
+        li7 ? std::vector<double>{1.5, 0.5, -0.5, -1.5}
+            : std::vector<double>{1.0, 0.0, -1.0};
+    InclusiveKernel::Options opt;
+    if (li7) {
+      opt.delta_32_func = delta;
+    } else {
+      opt.delta_func = delta;
+    }
+    const InclusiveKernel kern(li7 ? LI7() : LI6(), opt);
+    for (const Point& p : analysis_grid(s)) {
+      const SFTables t = kern.tables(p.x, p.q2);
+      REQUIRE(t.delta != 0.0);
+      const double dphi = t.f1 + (1.0 - p.y) / (p.x * p.y * p.y) * t.f2;
+      for (const double m : ms) {
+        const double c_eff = 3.0 * m * m - j * (j + 1.0);
+        for (const double th : {0.7, kPi / 2.0}) {
+          const double want = -0.5 * (1.0 - p.y) / (p.y * p.y) * c_eff
+                              * std::sin(th) * std::sin(th) * t.delta / dphi;
+          const EventSpinState st{0, 0.0, j, m, th, 0.0};
+          CHECK_CLOSE(kern.amplitudes(t, p.x, p.q2, s, st).a2, want, kRtol);
+        }
+      }
+    }
+  }
+  // the standalone identity, m = +-1 along an axis at 90 deg
+  for (const double y : {0.1, 0.5, 0.9}) {
+    CHECK_CLOSE(a_cos2phi(1.0, 1.0, 0.0, 0.1, y), -0.5 * (1.0 - y) / (y * y),
+                kRtol);
   }
 }

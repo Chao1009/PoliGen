@@ -83,7 +83,7 @@ open item the reference answers to.
 
 | key | reference | id | OA | local | serves | tier |
 |---|---|---|---|---|---|---|
-| hoodbhoy-jaffe-manohar1989 | Hoodbhoy, Jaffe, Manohar, *Novel effects in DIS from spin-1 hadrons*, NPB **312** (1989) 571 | DOI 10.1016/0550-3213(89)90572-5 | ✗ | — (in corpus, `file: null`) | b₁–b₄ and Δ definitions; the (1, −2, 1) helicity pattern; `TensorSF` geometry, E-7 | theory-input |
+| hoodbhoy-jaffe-manohar1989 | Hoodbhoy, Jaffe, Manohar, *Novel effects in DIS from spin-1 hadrons*, NPB **312** (1989) 571 | DOI 10.1016/0550-3213(89)90572-5 | ✗ | — (in corpus, `file: null`) | b₁–b₄ definitions (no Δ term — Δ is Jaffe–Manohar, *Nuclear gluonometry*, PLB 223 (1989) 218; run 2026-10-27, phase R1); the (1, −2, 1) helicity pattern; `TensorSF` geometry, E-7 | theory-input |
 | jaffe-manohar1989-arbitrary-spin | Jaffe, Manohar, *DIS from arbitrary spin targets*, NPB **321** (1989) 343 | DOI 10.1016/0550-3213(89)90347-7 | ✗ | — (in corpus, `file: null`) | the J = 3/2 basis for the ⁷Li rank-2 block | theory-input |
 | **jaffe-manohar1989-gluonometry** | **Jaffe, Manohar, *Nuclear gluonometry*, PLB 223 (1989) 218** | DOI 10.1016/0370-2693(89)90242-6 | ✗ | — **GAP** | **the definition of Δ as "exotic glue"; the concept behind `toy_delta_gluon`** | theory-input |
 | **close-kumano1990-sum-rule** | **Close, Kumano, *A sum rule for the spin-dependent structure function b₁(x) for spin-one hadrons*, PRD 42 (1990) 2377** | DOI 10.1103/PhysRevD.42.2377 | ✗ | — **GAP** | **`close_kumano_integral` — the ∫b₁ dx = 0 gate (E-4) cites a paper the corpus does not hold** | T5 |
@@ -197,7 +197,7 @@ target observable stops being a comment.**
 Both are in the corpus as one folded entry with `file: null`, and both are
 genuinely closed: no arXiv, no preprint scan on INSPIRE (verified this session —
 INSPIRE recids 262935 and 266865, 236 and 87 citations respectively, `arxiv:
-None` on both). NPB 312 defines b₁…b₄ and Δ and gives the (1, −2, 1) helicity
+None` on both). NPB 312 defines b₁…b₄ (not Δ: its double-helicity-flip amplitude falls as 1/Q² — 2026-10-27) and gives the (1, −2, 1) helicity
 pattern the tree's rank-2 geometry implements; NPB 321 generalises to arbitrary
 J and is the formal home of the ⁷Li J = 3/2 basis. Nothing found in this pass
 changes their status; §7 lists the DOI pages.
@@ -618,7 +618,7 @@ pre-arXiv, all verified to exist with the citation given:
 
 | reference | why the project wants it | DOI page to use |
 |---|---|---|
-| Hoodbhoy, Jaffe, Manohar, NPB **312** (1989) 571 | the b₁…b₄ and Δ definitions the tree transcribes | https://doi.org/10.1016/0550-3213(89)90572-5 |
+| Hoodbhoy, Jaffe, Manohar, NPB **312** (1989) 571 | the b₁…b₄ definitions the tree transcribes (Δ and its normalisation are Jaffe–Manohar PLB 223 (1989) 218's; HJM has no Δ term — 2026-10-27) | https://doi.org/10.1016/0550-3213(89)90572-5 |
 | Jaffe, Manohar, NPB **321** (1989) 343 | the arbitrary-J basis for the ⁷Li rank-2 block | https://doi.org/10.1016/0550-3213(89)90347-7 |
 | Jaffe, Manohar, PLB **223** (1989) 218, *Nuclear gluonometry* | the definition of Δ as exotic glue — **not in the corpus at all** | https://doi.org/10.1016/0370-2693(89)90242-6 |
 | Close, Kumano, PRD **42** (1990) 2377 | the ∫b₁ dx = 0 sum rule behind `close_kumano_integral` (E-4) | https://doi.org/10.1103/PhysRevD.42.2377 |

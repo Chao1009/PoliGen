@@ -203,8 +203,8 @@ TEST_CASE("xsec: amplitudes() == tensor_amplitudes() + the vector terms") {
                 k.tensor_amplitudes(t, x, q2, s, unpol, /*with_delta=*/false);
             CHECK(tr.w_avg == ta.w_avg);
             CHECK(tr.a1 == ta.a1);
-            const double delta_term =
-                -(1.0 - y) / (y * y) * k.tensor_moments(m).second *
+            const double delta_term =  // JM's 1/2: D4 2026-10-27 (1 before)
+                -0.5 * (1.0 - y) / (y * y) * k.tensor_moments(m).second *
                 std::sin(th) * std::sin(th) * t.delta /
                 std::max(InclusiveKernel::dphi(t, x, y), 1e-30);
             CHECK_CLOSE(ta.a2 - tr.a2, delta_term, 1e-12);

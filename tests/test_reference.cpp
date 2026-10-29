@@ -99,6 +99,41 @@ InclusiveKernel build_kernel(const std::string& ion_name,
   return InclusiveKernel(ion, opt);
 }
 
+/// D4 (2026-10-27): the cos 2phi coefficient a reference block was DUMPED
+/// with, in units of -(1-y)/y^2, read off the block's own numbers --
+/// c_ref = a_cos2phi D_phi y^2 / (-(1-y) Delta) at every point whose table
+/// carries Delta != 0 -- so that the gate compares the tree's Jaffe-Manohar
+/// coefficient (the LITERAL 0.5 at the call site, never DELTA_COS2PHI_NORM)
+/// with polligen's through a factor read from the file, not assumed.
+/// polligen carries the LOI's Eq. (9) (c_ref = 1) until the sibling changes;
+/// a re-dump after that reads c_ref = 1/2 and the gate is the plain
+/// comparison again with no code change.  Two values in one block, or a value
+/// that is neither, FAIL: the file then carries an undeclared normalisation.
+/// 0 for a Delta-free block (nothing to rescale).
+double reference_cos2phi_coefficient(const jsonmin::Value& b,
+                                     const std::vector<double>& xs) {
+  const jsonmin::Value& jt = b["tables"];
+  const jsonmin::Value& ja = b["asymmetries"];
+  double c_ref = 0.0;
+  for (std::size_t i = 0; i < xs.size(); ++i) {
+    const double delta = jt["delta"][i].num();
+    if (delta == 0.0) continue;
+    const double y = ja["y"][i].num();
+    const double dphi =
+        jt["f1"][i].num() + (1.0 - y) / (xs[i] * y * y) * jt["f2"][i].num();
+    const double c = ja["a_cos2phi"][i].num() * dphi * y * y
+                     / (-(1.0 - y) * delta);
+    if (c_ref == 0.0) c_ref = c;
+    CHECK_CLOSE(c, c_ref, kRtol);   // ONE coefficient per block
+  }
+  if (c_ref == 0.0) return 0.0;
+  const bool loi9 = std::fabs(c_ref - 1.0) <= kRtol;
+  const bool jm = std::fabs(c_ref - 0.5) <= 0.5 * kRtol;
+  CHECK_MESSAGE((loi9 || jm), "xsec.json carries an unknown Delta "
+                              "normalisation: c_ref = " << c_ref);
+  return loi9 ? 1.0 : jm ? 0.5 : c_ref;
+}
+
 }  // namespace
 
 TEST_CASE("reference tables: beams.json" *
@@ -343,6 +378,18 @@ TEST_CASE("reference tables: xsec.json" *
         CHECK_CLOSE_AT(tabs[i].delta, jt["delta"][i].num(), kRtol, 1e-300);
       }
 
+      // --- D4 (2026-10-27): polligen's cos 2phi coefficient, read off this
+      // block (1: the LOI's Eq. (9), which it carries today; 0: a Delta-free
+      // block), against the tree's LITERAL Jaffe-Manohar 0.5.  `jm` rescales
+      // the reference's Delta line in a_cos2phi, every a2 and the dsigma
+      // rows; every Delta-free number keeps the plain rtol 1e-12.
+      const double c_ref = reference_cos2phi_coefficient(b, xs);
+      const double jm = (c_ref == 0.0) ? 1.0 : 0.5 / c_ref;
+      MESSAGE("xsec.json " << ion_name << "/" << block << ": the reference's "
+              "cos 2phi coefficient is " << c_ref << " x -(1-y)/y^2 (1 = LOI "
+              "Eq. (9), 0.5 = Jaffe-Manohar, 0 = no Delta); the tree's is "
+              "compared with 0.5 through the factor " << jm);
+
       // --- the analytic asymmetries the master formula must reproduce
       const jsonmin::Value& ja = b["asymmetries"];
       for (std::size_t i = 0; i < np; ++i) {
@@ -357,7 +404,7 @@ TEST_CASE("reference tables: xsec.json" *
                            &tabs[i].b2),
                        ja["azz"][i].num(), kRtol, 1e-300);
         CHECK_CLOSE_AT(a_cos2phi(tabs[i].delta, tabs[i].f1, tabs[i].f2, xs[i], y),
-                       ja["a_cos2phi"][i].num(), kRtol, 1e-300);
+                       jm * ja["a_cos2phi"][i].num(), kRtol, 1e-300);
       }
 
       // --- the modulation amplitudes, every (lam_e, axis, m)
@@ -369,12 +416,19 @@ TEST_CASE("reference tables: xsec.json" *
         st.m = amp["m"].num();
         st.theta_s = amp["theta_s"].num();
         st.phi_s = amp["phi_s"].num();
+        const double geo = kern.tensor_moments(st.m).second
+                           * std::sin(st.theta_s) * std::sin(st.theta_s);
         for (std::size_t i = 0; i < np; ++i) {
           const Amplitudes a =
               kern.amplitudes(tabs[i], xs[i], q2s[i], s, st, true);
           CHECK_CLOSE_AT(a.w_avg, amp["w_avg"][i].num(), kRtol, 1e-300);
           CHECK_CLOSE_AT(a.a1, amp["a1"][i].num(), kRtol, 1e-300);
-          CHECK_CLOSE_AT(a.a2, amp["a2"][i].num(), kRtol, 1e-300);
+          // the reference's Delta line is geo * a_cos2phi_ref; on the
+          // tensor_gamma blocks a2_ref carries h2 beside it, unrescaled
+          const double a2_ref = amp["a2"][i].num();
+          const double dline = geo * ja["a_cos2phi"][i].num();
+          CHECK_CLOSE_AT(a.a2, a2_ref - (1.0 - jm) * dline, kRtol,
+                         1e-300);   // the pre-D4 tolerance, unchanged
         }
       }
 
@@ -387,11 +441,20 @@ TEST_CASE("reference tables: xsec.json" *
         st.m = ds["m"].num();
         st.theta_s = ds["theta_s"].num();
         st.phi_s = ds["phi_s"].num();
+        const double geo = kern.tensor_moments(st.m).second
+                           * std::sin(st.theta_s) * std::sin(st.theta_s);
         for (std::size_t i = 0; i < np; ++i) {
+          // W > 0 at every row (the modulation is O(1e-3)), so the rescaled
+          // Delta line enters dsigma linearly, times dsigma_unpol/(2 pi)
+          const double dline = geo * ja["a_cos2phi"][i].num()
+                               * b["dsigma_unpol"][i].num() / (2.0 * kPi);
           for (std::size_t k = 0; k < ds["phi_grid"].size(); ++k) {
             const double phi = ds["phi_grid"][k].num();
+            const double ds_ref = ds["dsigma_per_point"][i][k].num();
             CHECK_CLOSE_AT(kern.dsigma(xs[i], q2s[i], phi, s, st, true),
-                           ds["dsigma_per_point"][i][k].num(), kRtol, 1e-300);
+                           ds_ref - (1.0 - jm) * dline
+                                        * std::cos(2.0 * (phi - st.phi_s)),
+                           kRtol, 1e-300);   // the pre-D4 tolerance, unchanged
           }
         }
       }

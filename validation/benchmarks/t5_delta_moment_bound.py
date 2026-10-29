@@ -22,7 +22,7 @@ disagrees with DS16's own definition of Delta by a factor 2.  The second
 pass changes no central assumption, no central number, not the verdict rule
 and not its tolerance; it adds the source KS20, the variation V6 and the
 fields that carry it, moves V4 out of the LOOSE edge and V6 into the TIGHT
-one.
+one.  D4 (2026-10-27, the author's decision) then RELABELS, moving no rule, tolerance, edge or number of rule (a): the D4 note above main().
 
 WHAT IS COMPARED.  For each Delta model, at Q2 = 2, 5, 10 GeV2, the n = 2
 Mellin moment (Detmold-Shanahan [DS16] Eq. (12) at n = 2)
@@ -58,8 +58,8 @@ B follows from two equations of DS16, read off the page images:
     moments of f1 and f1LL is not printed), so it is quoted, not evaluated.
 
 THE MODELS (which Delta, in which normalisation -- read from the kernel).
-The kernel builds the cos 2phi term as a2 += -((1-y)/y^2) c_eff sin^2(theta_S)
-Delta/D_phi (src/core/xsec.cpp `tensor_amplitudes`, c_eff = 3 Q_NN), with
+The kernel builds the cos 2phi term as a2 += -(1/2) ((1-y)/y^2) c_eff sin^2(theta_S)
+Delta/D_phi since D4, 2026-10-27 (no 1/2 before: the D4 note) (src/core/xsec.cpp `tensor_amplitudes`, c_eff = 3 Q_NN), with
 Delta = delta_func(x, Q2, f1) evaluated on f1 = F1A/A, the PER-NUCLEON F1
 (`InclusiveKernel::tables`), and D_phi per nucleon.  This row therefore takes
 Delta PER NUCLEON exactly as the kernel carries it, in the per-nucleon x.
@@ -184,9 +184,9 @@ central number and not the verdict rule):
       along an axis perpendicular to q the cos 2phi term -(1/2) ((1-y)/y^2)
       Delta relative to F1 + (1-y) F2/(x y^2) -- exactly LOI18 Eq. (6), the
       Bjorken limit the LOI prints for a target with its spin along xhat --
-      while the kernel and LOI18 Eq. (9) (which A7 read) carry
+      while the pre-D4 kernel and LOI18 Eq. (9) (which A7 read) carry
       -((1-y)/y^2) Delta there (c_eff = 1).  Per unit cos 2phi amplitude,
-      Delta_DS16 = DS16_OVER_TREE x Delta_tree with DS16_OVER_TREE = 2.  The
+      Delta_DS16 = DS16_OVER_TREE x Delta_tree with DS16_OVER_TREE = 2 (the pre-D4 kernel's; 1 since D4).  The
       pytest re-derives the factor numerically from Eqs. (3)-(5).  Recorded
       as V6: every model's M2 in DS16's normalisation is 2 M2, so every
       saturation doubles.  The shipped toy passes under V6 too; which
@@ -202,7 +202,7 @@ VARIATIONS, RECORDED (never the verdict): V1 Delta g = 0; V2 f1LL^g = -f1^g
 and +f1^g; V3 Tr Q^2 = 10/9; V4 SS90's coefficient applied to DS16's deltaG
 (x2 room; a misreading, S1 -- in no edge); V5 f1^g = R_g^EPPS21(6Li) x
 CT18NLO gluon (lipolgen's Epps21Ratio, proton baseline CT18NLO); V6
-Delta_DS16 = 2 Delta_tree (S2: every saturation x2).  For the letter's models
+Delta_DS16 = 2 Delta_tree (S2: every saturation x2; since D4 the pre-D4 kernel's / the letter's printed reading).  For the letter's models
 the saturation with the library-default LO alpha_s (`alpha_s_lo`, Lambda
 0.22, n_f 4) on the model side is recorded too; and for every model the
 constant fraction f1LL^g/f1^g at which |M2| = B (all else central), with and
@@ -262,7 +262,7 @@ THE THREE NORMALISATION RULES (BENCHMARK_PLAN.md sec. 8), for THIS row:
 WHAT THIS DOES NOT VALIDATE.  It does not say Delta(6Li) has the toy's size,
 shape or sign (a bound, not a calculation; the lattice A_2 of DS16 is a phi
 meson's and is not compared: 04_theory.md sec. 4); it does not decide which
-of A7 and V6 the tree's Delta follows (S2 records both); it applies the
+of A7 and V6 the tree's Delta follows (the author did, D4: A7; S2 records both); it applies the
 MOMENT form only -- the x-space bound Eq. (32) itself is stronger, and a
 model can pass the moment and fail pointwise (any Delta falling slower than
 the gluon as x -> 1 does); it propagates no PDF uncertainty (CT18NLO's 58
@@ -323,10 +323,10 @@ TR_Q2_NF4 = 10.0 / 9.0
 #: V4: SS90 Eq. (2.11)'s coefficient over DS16 Eq. (13)'s for the same
 #: symbols g_xhat - g_yhat (a misreading, SECOND PASS S1: recorded only)
 SS90_FACTOR = 2.0
-#: V6: Delta in DS16's normalisation (Eqs. (3)-(5)) per unit Delta of the
-#: kernel, at equal cos 2phi amplitude (SECOND PASS S2) -- a DERIVED ratio,
-#: re-derived numerically by the pytest; never set from a result
-DS16_OVER_TREE = 2.0
+#: Delta in DS16's normalisation (Eqs. (3)-(5)) per unit Delta of the kernel, at equal cos 2phi
+#: amplitude -- a DERIVED ratio, re-derived numerically by the pytest; never set from a result.
+#: 2 until D4 (SECOND PASS S2); 1 since D4, 2026-10-27 (V6's factor is PRE_D4_OVER_JM: the D4 note)
+DS16_OVER_TREE = 1.0
 #: V2: f1LL^g = +- F1LL_BAND * f1^g
 F1LL_BAND = 1.0
 #: the pipeline's toy scale, CHECKED against the kernel, never set by it
@@ -617,7 +617,7 @@ def bound_side(body, sets, ion):
             B=b(), B_dg0=b(g1=0.0), B_ll_minus=b(ll=-F1LL_BAND), B_ll_plus=b(ll=F1LL_BAND),
             B_nf4=b(tr=TR_Q2_NF4), B_ss90=b(norm=SS90_FACTOR), B_epps21=b(xg_=xg_a),
             B_peff_naive=b(g1=P_EFF_NAIVE * xdg),
-            # the edges (SECOND PASS S3): V6 acts on the model side (x2 on M2)
+            # the edges (SECOND PASS S3): V6 acts on the model side (x2 on M2, PRE_D4_OVER_JM since D4)
             B_tight=b(xg_=xg_lo, ll=-F1LL_BAND, g1=0.0),
             B_loose=b(tr=TR_Q2_NF4, xg_=xg_hi, ll=F1LL_BAND, g1=max(g1m, 0.0))))
     return out
@@ -741,7 +741,7 @@ def helicity_positivity(body, kernel):
 
 def f1ll_critical(m2, b, with_g1=True, factor=1.0):
     """The constant fraction f1LL^g/f1^g at which factor x |M2| = B (central
-    Tr Q^2, alpha_s, f1^g; g1^g central or 0; factor = DS16_OVER_TREE for V6):
+    Tr Q^2, alpha_s, f1^g; g1^g central or 0; factor = PRE_D4_OVER_JM for V6):
     the scenario is allowed iff f1LL^g >= this fraction x f1^g.  Below
     -2 (1 - |g1|/f1) it is outside positivity; above +1 (CvDM17 (35)) no
     positive tensor polarization can reach it."""
@@ -759,21 +759,21 @@ def saturation_row(name, rows, bound, in_verdict, extra=None):
     """One model's sub-row: M2, B, S, margin per Q2 (central), V6, the TIGHT
     and LOOSE edges, every variation; the outcome of rule (a) under the
     central assumptions (`status` for the verdict model, `status_central`
-    beside a recorded one) and under V6 (`status_v6`)."""
+    beside a recorded one) and under V6 (`status_v6`; x PRE_D4_OVER_JM since D4)."""
     m2 = [r["m2"] for r in rows]
     sat = [abs(m) / b["B"] for m, b in zip(m2, bound)]
-    sat_v6 = [DS16_OVER_TREE * s for s in sat]
+    sat_v6 = [PRE_D4_OVER_JM * s for s in sat]
     central, v6 = rule_a(sat), rule_a(sat_v6)
     d = dict(name=name, status=central if in_verdict else "recorded",
              in_verdict=in_verdict, status_central=central, status_v6=v6,
              q2=[b["q2"] for b in bound], m2=m2, bound=[b["B"] for b in bound],
              saturation=sat, margin=[1.0 - s for s in sat], saturation_v6=sat_v6,
-             saturation_tight=[DS16_OVER_TREE * abs(m) / b["B_tight"]
+             saturation_tight=[PRE_D4_OVER_JM * abs(m) / b["B_tight"]
                                for m, b in zip(m2, bound)],
              saturation_loose=[abs(m) / b["B_loose"] for m, b in zip(m2, bound)],
              f1ll_critical=[f1ll_critical(m, b) for m, b in zip(m2, bound)],
              f1ll_critical_dg0=[f1ll_critical(m, b, False) for m, b in zip(m2, bound)],
-             f1ll_critical_v6=[f1ll_critical(m, b, True, DS16_OVER_TREE)
+             f1ll_critical_v6=[f1ll_critical(m, b, True, PRE_D4_OVER_JM)
                                for m, b in zip(m2, bound)],
              m2_numerical_error=[r["err"] for r in rows],
              m2_tail_x_lo=[r["tail"] for r in rows])
@@ -818,7 +818,7 @@ def measure(path=DATA):
             "B_loose", "x_g1_above_half_f1", "x_g1_above_f1", "xg_share_above_x_half")
     side = dict(name="bound_side[central]", status="recorded", in_verdict=False,
                 q2=[b["q2"] for b in bound], p_eff=bound[0]["p_eff"], tr_q2=TR_Q2,
-                ds16_over_tree=DS16_OVER_TREE)
+                ds16_over_tree=DS16_OVER_TREE, pre_d4_over_jm=PRE_D4_OVER_JM)
     side.update({k: [b[k] for b in bound] for k in keys})
     subrows.append(side)
     verdict = [s for s in subrows if s.get("in_verdict")]
@@ -848,7 +848,7 @@ def run(path=DATA, verbose=True):
     config = dict(lipolgen=getattr(lg, "__version__", None),
                   python=sys.version.split()[0], data_file_sha256=FILE_SHA256,
                   tr_q2=TR_Q2, f1ll_band=F1LL_BAND, ds16_over_tree=DS16_OVER_TREE,
-                  quad_rel_tol=QUAD_REL_TOL)
+                  pre_d4_over_jm=PRE_D4_OVER_JM, quad_rel_tol=QUAD_REL_TOL)
     try:
         m = measure(path)
     except EnvironmentBlocked as exc:
@@ -863,11 +863,11 @@ def run(path=DATA, verbose=True):
     toy = m["subrows"][0]
     pos = m["subrows"][1]
     generator = ("shipped toy_delta_gluon (scale %.3g) per nucleon, 6Li: M2 = int x "
-                 "Delta dx = %s at Q2 = 2 / 5 / 10 GeV2, |M2|/B = %s (V6, Delta_DS16 = "
-                 "2 Delta_tree: %s); helicity-state rates min W = %.6f (A_T in [%.3g, "
+                 "Delta dx = %s at Q2 = 2 / 5 / 10 GeV2, |M2|/B = %s (Jaffe-Manohar Delta, the "
+                 "kernel's since D4; V6, %s: %s); helicity-state rates min W = %.6f (A_T in [%.3g, "
                  "%.3g])" % (
                      toy["scale_measured"], _fmt3(toy["m2"], "%.4e"),
-                     _fmt3(toy["saturation"], "%.4f"), _fmt3(toy["saturation_v6"], "%.4f"),
+                     _fmt3(toy["saturation"], "%.4f"), V6_LABEL, _fmt3(toy["saturation_v6"], "%.4f"),
                      pos["w_min"], pos["a_t_min"], pos["a_t_max"]))
     config.update(pythia=m["pythia_version"], lhapdf_sets=[
         "%s member 0 (sha256 %s)" % (e["name"], e["member_file_sha256"][:12])
@@ -891,11 +891,11 @@ def _print(report, m):
                   r["q2"], r["alpha_s"], r["alpha_s_lo"], r["xg"], r["xg_err"],
                   r["xg_epps21"], r["xdg"], r["xdg_err"], r["g1_moment"]))
         print("            B = %.6e  [dg0 %.6e, f1LL -/+ %.6e / %.6e, nf4 %.6e, SS90 "
-              "(V4, a misreading) %.6e, EPPS21 %.6e, P_eff = 1/3 %.6e; tight %.6e (x2 on "
-              "M2, V6), loose %.6e]" % (
+              "(V4, a misreading) %.6e, EPPS21 %.6e, P_eff = 1/3 %.6e; tight %.6e (V6 on "
+              "M2: %s), loose %.6e]" % (
                   r["B"], r["B_dg0"], r["B_ll_minus"], r["B_ll_plus"], r["B_nf4"],
                   r["B_ss90"], r["B_epps21"], r["B_peff_naive"], r["B_tight"],
-                  r["B_loose"]))
+                  V6_LABEL, r["B_loose"]))
         print("            |g1^g| > f1^g/2 from x = %s, > f1^g from x = %s (share of "
               "<x>_g above: %.2e)" % (
                   "%.4f" % r["x_g1_above_half_f1"] if r["x_g1_above_half_f1"] else "never",
@@ -911,10 +911,10 @@ def _print(report, m):
     for s in report["subrows"]:
         if "saturation" in s:
             word = (s["status"].upper() if s["in_verdict"] else
-                    "RECORDED: %s centrally, %s under V6" % (
-                        s["status_central"].upper(), s["status_v6"].upper()))
+                    "RECORDED: %s centrally (A7, the kernel's own Delta since D4), %s under V6 (%s)" % (
+                        s["status_central"].upper(), s["status_v6"].upper(), V6_LABEL))
             if s["in_verdict"]:
-                word += " (%s under V6)" % s["status_v6"].upper()
+                word += " (%s under V6, %s)" % (s["status_v6"].upper(), V6_LABEL)
             print("SUBROW | %s[%s] | M2 = %s | B = %s | 1 - |M2|/B >= %g | %s "
                   "(|M2|/B = %s; V6 %s; tight %s; loose %s; saturates at f1LL^g/f1^g = "
                   "%s, V6 %s)" % (
@@ -942,8 +942,8 @@ def _print(report, m):
 
 def plot(report, out_dir=None):
     """|M2|/B per Q2 and model as grouped markers: filled = the central
-    assumptions (A7), open = V6 (Delta_DS16 = 2 Delta_tree); the whisker spans
-    the LOOSE to the TIGHT edge (SECOND PASS S3); the bound at 1."""
+    assumptions (A7, the kernel's own Delta since D4), open = V6 (the pre-D4 kernel / the letter as
+    printed, x2); the whisker spans the LOOSE to the TIGHT edge (SECOND PASS S3, V6 kept); the bound at 1."""
     sys.path.insert(0, HERE)
     from _plots import INK, MUTED, new_figure, save, status_title, style_series
     fig, ax = new_figure(height=3.9)
@@ -968,7 +968,7 @@ def plot(report, out_dir=None):
         open_kw = dict(kw, label=None, markerfacecolor="none", linestyle="none")
         ax.plot(xs, s["saturation_v6"], **open_kw)
     ax.plot([], [], linestyle="none", marker="o", markerfacecolor="none", color=MUTED,
-            label="open: V6, Delta_DS16 = 2 Delta_tree")
+            label="open: V6, %s" % V6_LABEL)
     ax.axhline(1.0, color=INK, linewidth=1.4, zorder=4, label="the bound (|M2| = B)")
     ax.set_yscale("log")
     ax.set_ylim(1.5e-3, 60.0)
@@ -979,13 +979,48 @@ def plot(report, out_dir=None):
     ax.set_xlim(-0.6, len(q2) - 0.4)
     ax.legend(loc="lower right", fontsize=6.2, ncol=2)
     ax.text(0.01, 0.985, "filled: central (f1^g CT18NLO; g1^g = P_eff NNPDFpol11 Delta g; "
-            "f1LL^g = 0; Tr Q^2 = 2/3)\nwhiskers: loose edge (f1LL^g = +f1^g, Tr Q^2 = 10/9) "
-            "to tight edge (Delta g = 0, f1LL^g = -f1^g, V6)",
+            "f1LL^g = 0; Tr Q^2 = 2/3; Jaffe-Manohar Delta, D4)\nwhiskers: loose edge (f1LL^g = +f1^g, "
+            "Tr Q^2 = 10/9) to tight edge (Delta g = 0, f1LL^g = -f1^g, V6: pre-D4 x2)",
             transform=ax.transAxes, fontsize=6.3, color=MUTED, va="top")
     status_title(fig, NAME, report["status"],
                  "a bound under assumptions: PASS iff |M2|/B <= 1 at each Q2 (shipped "
                  "toy) and all helicity-state rates >= 0")
     return save(fig, NAME, out_dir)
+
+
+# ------------------------------------------------------------------ D4
+#
+# D4 (2026-10-27, after both passes and after the author's decision D4,
+# docs/open_items/run_2026-10-27/DECISIONS.md; plan_D4_jm_convention.md and
+# its adversarial check).  Kept here, after every line the run's records cite,
+# so that none of them moves.  The kernel's cos 2phi coefficient is Jaffe-
+# Manohar's since this date, a2 = -(1/2) ((1-y)/y^2) c_eff sin^2(theta_S)
+# Delta/D_phi (include/lipolgen/constants.hpp, DELTA_COS2PHI_NORM = 1/2), which
+# is what DS16 Eqs. (3)-(5) contract to.  So the first-pass identification A7
+# is now the CONSISTENT one: DS16_OVER_TREE, re-derived by the pytest from
+# Eqs. (3)-(5) against the kernel, is 1, and the central column is the shipped
+# toy's GENERATED amplitude in DS16's units.  V6 is kept as declared,
+# numerically unchanged, and only RELABELLED: it is the reading of the PRE-D4
+# kernel and of the letter's printed amplitudes (the LOI's Eq. (9), twice
+# Jaffe-Manohar's coefficient: PRE_D4_OVER_JM = 2).  The TIGHT edge keeps V6
+# as S3 declared it: whether it should lose V6 now is the author's question
+# (plan_D4 sec. 12 item 3), and no declared edge is dropped before the answer.
+# Nothing else moves: not M2 (the toy keeps its 1e-2 scale and enters the
+# kernel unconverted), not B, not the rule or its tolerance, not the verdict;
+# sub-row (b)'s rates carry the halved Delta term (min W 0.9493997515 ->
+# 0.9493997990 at the same point; A_T max 0.0506002485 -> 0.0506002010; A_T
+# min, at theta_S = 0, unmoved).  The vendored file's LOI18 note ("(9) is the
+# tree's kernel term") is the second pass's reading of the pre-D4 kernel,
+# dated 2026-10-26, and is not re-hashed.
+#
+#: V6, relabelled by D4: the PRE-D4 kernel's coefficient (the LOI's Eq. (9),
+#: still the letter's printed Eqs. (1) and (3)) over Jaffe-Manohar's -- the
+#: reading V6 records, numerically unchanged, and the factor the TIGHT edge
+#: carries as S3 declared it (module-level, read by the functions above at
+#: call time)
+PRE_D4_OVER_JM = 2.0
+#: how the reports name V6 since D4
+V6_LABEL = "the pre-D4 kernel / the letter as printed, x2"
 
 
 def main(argv=None):

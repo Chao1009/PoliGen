@@ -18,18 +18,18 @@
 ///   w_avg = t_geo(m, theta_S) * K / D_phi                    [tensor, J>=1]
 ///         + lam_e P_e (m/J) cos(theta_S) * A_par(x,y)        [vector-L]
 ///   a_1   = lam_e P_e (m/J) sin(theta_S) * A_perp(x,y)       [vector-T, gT]
-///   a_2   = -(1-y)/y^2 * c_eff(m) sin^2(theta_S) * Delta/D_phi [gluonometry]
+///   a_2   = -(1/2)(1-y)/y^2 * c_eff(m) sin^2(theta_S) * Delta/D_phi [JM, D4]
 ///
 /// RANK-2 GEOMETRY.  Cosyn et al. (arXiv:2410.12764) Eq. (9) writes the
 /// alignment tensor of any spin-J state as t_ij = (Q_NN/2)(3 n_i n_j - d_ij)
 /// with the single scalar Q_NN(m) = [3 m^2 - J(J+1)]/3, so
 ///   t_geo = Q_NN P_2(cos theta_S)   and   c_eff = 3 Q_NN
 /// is ONE geometry for both spins.  For J = 1, Q_NN = c_m/3 with
-/// c_m = 3m^2 - 2, which reproduces the Hoodbhoy-Jaffe-Manohar transcription
-/// digit for digit.
+/// c_m = 3m^2 - 2, the (1, -2, 1) pattern of the spin-1 master formula
+/// (Hoodbhoy-Jaffe-Manohar's b-sector, asymmetries.hpp) digit for digit.
 ///
 /// The b1/b2 (tensor RATE) sign is the single constant `TENSOR_LL_SIGN`; the
-/// Delta sector does not depend on it.
+/// Delta sector does not depend on it (its normalisation: DELTA_COS2PHI_NORM).
 
 #include <memory>
 #include <utility>
@@ -210,10 +210,10 @@ class InclusiveKernel {
     /// It is off by default because the O(gamma^2) leakage of the rate sector
     /// into cos 2phi is carried as a SYSTEMATIC of the Delta extraction rather
     /// than as a correction the extraction subtracts (at most 0.109 % of the
-    /// published amplitude, and model-dependent through the unmeasured b3,
-    /// b4), and because switching it on would silently move every published
-    /// tensor number by O(gamma^2) with nothing on the analysis side to meet
-    /// it.
+    /// letter's printed amplitude, 0.22 % of the same Delta's since D4; model-
+    /// dependent through the unmeasured b3, b4), and because switching it on
+    /// would silently move every published tensor number by O(gamma^2) with
+    /// nothing on the analysis side to meet it.
     bool tensor_gamma = false;
     /// Spin-3/2 rank-2 slots.  They take the HJM/Cosyn-sign b1 (the same
     /// F1^(m) = F1 - Q_NN b1 relation `TENSOR_LL_SIGN` pins for spin 1), which

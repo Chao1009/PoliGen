@@ -146,6 +146,21 @@ matching `evgen/tests/test_tensor_convention.py`'s
 J=3/2 tensor geometry Q_NN=(3m^2-J(J+1))/3, t_geo=Q_NN*P2(cos theta_S),
 c_eff=3*Q_NN (xsec.py:311-341) is exercised numerically too.
 
+The cos 2phi coefficient (LiPolGen's decision D4, 2026-10-27,
+docs/open_items/run_2026-10-27/DECISIONS.md): `a_cos2phi`, every `a2`
+and the theta_S != 0 `dsigma` rows carry POLLIGEN's coefficient,
+-(1-y)/y^2 per unit Delta for m = +-1 at 90 deg (the JLab LOI's Eq. (9)),
+while LiPolGen's is Jaffe-Manohar's, -(1/2)(1-y)/y^2.  The gates
+(`tests/test_reference.cpp`, `python/tests/test_kernel_reference.py`)
+read the coefficient off this file's own numbers and compare LiPolGen's
+against the literal 1/2 through it; every Delta-free number keeps the
+plain rtol 1e-12.  `_preflight_delta_convention()` makes the dump refuse,
+before anything is written, a polligen whose coefficient is neither 1
+nor 1/2 of -(1-y)/y^2 (or differs between `a_cos2phi` and the kernel),
+and prints which it is.  There is no `--accept-changed-numbers` guard in
+this script (that is `dump_b1_default_li6.py`'s): a re-dump rewrites all
+seven tables with whatever moved, so read the diff.
+
 ## beams.json
 
 `polli_fastsim.beams` (PolarizedLithiumSim/fastsim/polli_fastsim/beams.py).

@@ -82,7 +82,7 @@ WHAT THIS DOES NOT VALIDATE: the per-cell amplitudes themselves (shared
 by both routes, above); the phi' part of Mode W (for this
 longitudinal category a1 = a2 = 0, so phi is uniform and `weights_for`'s
 cos phi', cos 2phi' terms are not exercised; the tensor a2 of the transverse
-plans is ~ 1e-3); the rest of the phase space (the window is 1.5e-4 of the
+plans is ~ 5e-4 since D4, 2026-10-27, ~ 1e-3 before); the rest of the phase space (the window is 1.5e-4 of the
 default window's cross section; there the polarized shift is below any
 affordable resolution); whether sigma_tot_pb is the true integral of the
 cross section (the cell-centre grid discretisation is common to both routes);

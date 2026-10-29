@@ -1477,7 +1477,7 @@ def render_readme():
         "it does not modify anything there.\n\n"
     )
     for title, text in README_SECTIONS:
-        parts.append("## %s\n\n%s\n\n" % (title, text))
+        parts.append("## %s\n\n%s%s\n\n" % (title, text, README_ADDENDA.get(title, "")))
     parts.append("## b1_default_li6.json\n\n%s\n\n" % B1_DEFAULT_LI6_README)
     if MISSING:
         parts.append("## Functions this script could not call\n\n")
@@ -1491,7 +1491,10 @@ def main():
     _preflight_sd_phase()
 
     # Build and render EVERY document before anything is written, then write
-    # them all or none (write_all_atomically; review 2026-09-26).
+    # them all or none (write_all_atomically; review 2026-09-26) -- after the
+    # D4 preflight, which refuses a cos 2phi coefficient the port gates cannot
+    # read (defined below main(), with the README's D4 addendum).
+    _preflight_delta_convention()
     tables = [
         ("spin.json", build_spin),
         ("xsec.json", build_xsec),
@@ -1552,6 +1555,67 @@ def main():
             print("  - %s: %s" % (w, r))
     else:
         print("\nEvery targeted function was called successfully.")
+
+
+def _preflight_delta_convention():
+    """LiPolGen's decision D4 (2026-10-27): its port gates compare LiPolGen's
+    cos 2phi coefficient -- Jaffe-Manohar's, -(1/2)(1-y)/y^2 per unit Delta --
+    with polligen's THROUGH the coefficient they read off xsec.json
+    (tests/test_reference.cpp, python/tests/test_kernel_reference.py), so the
+    file must carry one coefficient they know.  Run BEFORE any file is
+    written: measures polligen's `asymmetries.a_cos2phi` AND its kernel's a2
+    (m = +1, theta_S = 90 deg) in units of -(1-y)/y^2 Delta/D_phi at one
+    point, prints the value, and REFUSES unless both are 1 (the LOI's
+    Eq. (9), which polligen carries until the sibling changes) or both are 1/2
+    (Jaffe-Manohar).  It refuses nothing else: this script has no
+    --accept-changed-numbers guard (that is dump_b1_default_li6.py's), so a
+    re-dump rewrites all seven tables with whatever moved -- read the diff."""
+    x, q2, y = 0.1, 5.0, 0.5
+    kern = xsec.InclusiveKernel(beams.LI6,
+                                delta_func=lambda xx, qq, f1: 1e-2 * f1,
+                                target_mass=False)
+    t = kern.tables(np.array([x]), np.array([q2]), with_g2=True)
+    f1, f2, delta = (float(t[k][0]) for k in ("f1", "f2", "delta"))
+    unit = -(1.0 - y) / (y * y) * delta / (f1 + (1.0 - y) / (x * y * y) * f2)
+    c_asym = float(np.asarray(asym.a_cos2phi(delta, f1, f2, x, y))) / unit
+    state = xsec.EventSpinState(0, 0.0, beams.LI6.spin, 1.0,
+                                theta_s=math.pi / 2, phi_s=0.0)
+    a2 = kern.amplitudes(t, np.array([x]), np.array([q2]), q2 / (x * y), state,
+                         with_perp=True)[2]
+    c_kern = float(np.asarray(a2)[0]) / unit
+    for c0, label in ((1.0, "1 (the LOI's Eq. (9); LiPolGen's gates rescale "
+                            "it to Jaffe-Manohar's 1/2)"),
+                      (0.5, "1/2 (Jaffe-Manohar, LiPolGen's own since D4: "
+                            "its gates compare plainly)")):
+        if abs(c_asym - c0) <= 1e-12 and abs(c_kern - c0) <= 1e-12:
+            print("polligen's cos 2phi coefficient: %s x -(1-y)/y^2 per unit "
+                  "Delta" % label)
+            return
+    raise SystemExit(
+        "polligen's cos 2phi coefficient is %r (asymmetries.a_cos2phi) and %r "
+        "(the kernel's a2) x -(1-y)/y^2 per unit Delta: not both the LOI's "
+        "Eq. (9) (1) or both Jaffe-Manohar's (1/2), so LiPolGen's port gates "
+        "cannot read it (D4, 2026-10-27).  Nothing written." % (c_asym, c_kern))
+
+
+#: README.md text appended to a section after its README_SECTIONS text (kept
+#: here, below main(), so that no line the run records cite moves).
+README_ADDENDA = {"xsec.json": (
+    "\n\n"
+    "The cos 2phi coefficient (LiPolGen's decision D4, 2026-10-27,\n"
+    "docs/open_items/run_2026-10-27/DECISIONS.md): `a_cos2phi`, every `a2`\n"
+    "and the theta_S != 0 `dsigma` rows carry POLLIGEN's coefficient,\n"
+    "-(1-y)/y^2 per unit Delta for m = +-1 at 90 deg (the JLab LOI's Eq. (9)),\n"
+    "while LiPolGen's is Jaffe-Manohar's, -(1/2)(1-y)/y^2.  The gates\n"
+    "(`tests/test_reference.cpp`, `python/tests/test_kernel_reference.py`)\n"
+    "read the coefficient off this file's own numbers and compare LiPolGen's\n"
+    "against the literal 1/2 through it; every Delta-free number keeps the\n"
+    "plain rtol 1e-12.  `_preflight_delta_convention()` makes the dump refuse,\n"
+    "before anything is written, a polligen whose coefficient is neither 1\n"
+    "nor 1/2 of -(1-y)/y^2 (or differs between `a_cos2phi` and the kernel),\n"
+    "and prints which it is.  There is no `--accept-changed-numbers` guard in\n"
+    "this script (that is `dump_b1_default_li6.py`'s): a re-dump rewrites all\n"
+    "seven tables with whatever moved, so read the diff.")}
 
 
 if __name__ == "__main__":

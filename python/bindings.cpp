@@ -640,11 +640,11 @@ py::dict columns_to_dict(Columns& c, const Pipeline& p, std::uint64_t n,
   // the unset one.
   meta["r_source"] = knob("r_source").meta_value();
   // ... and the SENTENCE, on every run and every channel, from the one
-  // definition the CLI run banner also prints (`rank2_input_report`).  This
-  // is the key that makes a 7Li tensor run self-describing: before it, an npz
-  // whose whole tensor sector was exactly 0.0 was indistinguishable in `meta`
-  // from one whose b1 merely happened to be small.
+  // definition the CLI run banner also prints (`rank2_input_report`): before
+  // it a 7Li npz whose tensor sector was 0.0 could not be told from one whose
+  // b1 was small.  Then the Delta normalisation a2 carries (D4, constants.hpp).
   meta["rank2_input"] = rank2_input_report(p.config(), p.plan());
+  meta["delta_convention"] = DELTA_CONVENTION;
   // Which structure-function backend EVERY kernel of this run actually used
   // (`UnpolSfSource`, `PolSfSource`; CLI --unpol-sf / --pol-sf).  Same
   // provenance rule and the same UNCONDITIONAL write as the b1 keys above,
@@ -5154,4 +5154,10 @@ static void bind_io(py::module_& m) {
      "config.hadronizer = bridge.hadronize, as a pure C++ callable "
      "(no GIL per event; single-threaded generation only)");
 #endif
+
+  // D4 (2026-10-27): the normalisation of the cos 2phi (Delta) term and the
+  // provenance label `meta["delta_convention"]` carries (constants.hpp).
+  // Bound here, at the end of the module, after every line the documents cite.
+  m.attr("DELTA_COS2PHI_NORM") = DELTA_COS2PHI_NORM;
+  m.attr("DELTA_CONVENTION") = DELTA_CONVENTION;
 }

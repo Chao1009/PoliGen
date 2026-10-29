@@ -147,7 +147,7 @@ cfg.isotope  = "6Li";
 cfg.lumi_pb  = 2.0;                       // or cfg.n_events = 1'000'000;
 cfg.seed     = 20260713;
 // cfg.kernel = my_kernel;                // default: Miller b1 through the 6Li
-                                          // rank-2 transfer + 1e-2 toy Delta,
+                                          // rank-2 transfer + 1e-2 toy Delta (Jaffe-Manohar normalised since D4),
                                           // and target_mass ON (xsec.py's own
                                           // default since 2026-08-29)
 Pipeline p(cfg, tensor_thirds_plan(0.7, 0.6));
@@ -159,7 +159,7 @@ p.for_each([](const Event& ev) {
 });
 ```
 
-Record: beam e⁻, beam ion, e′, struck nucleon (status 3), γ\* (status 3),
+The cos 2φ term carries Jaffe–Manohar's normalisation of Δ since 2026-10-27 (decision D4; `docs/CONVENTIONS.md`, "Δ normalisation"): on a tilted fill its Δ-induced amplitude is half the pre-D4 one for the same Δ.  The `meta` of `Pipeline.generate()` names the convention in `meta["delta_convention"]`, and so does every .npz the CLI writes (whose run banner prints the same string); a HepMC3 file, which is what the C++ examples write, carries no record of it.  Record: beam e⁻, beam ion, e′, struck nucleon (status 3), γ\* (status 3),
 X (pdg 92). The balance is **per-nucleon**, `k + P_N = k' + X`, exactly as
 `generator.hpp` defines it — the (A−1) remnant is not written, so the
 whole-nucleus balance and the total charge are deliberately open here. This path

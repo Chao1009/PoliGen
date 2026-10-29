@@ -1769,6 +1769,12 @@ def main(argv=None):
                     "calibrate it against."
                     % (cfg.rc_options.a_transfer_frac,
                        (1.0 + cfg.rc_options.a_transfer_frac ** 2) ** 0.5))
+    # WHICH NORMALISATION THE cos 2phi (Delta) TERM CARRIES, on every run: since
+    # D4 (2026-10-27) the kernel's coefficient is Jaffe-Manohar's, half the one
+    # it carried before, so a Delta-induced cos 2phi amplitude on a tilted fill
+    # differs by a factor 2 between a file made before that date and one made
+    # after.  The same string is `meta["delta_convention"]` (constants.hpp).
+    say("  Delta (cos 2phi) convention: %s" % _l.DELTA_CONVENTION)
 
     # Events are only materialized when something needs the records: the HFS
     # exporter always, HepMC only when the T2 tier is on (regenerating a

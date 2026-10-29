@@ -23,7 +23,7 @@ added to any source file: the identifier carries no holder.
 
 | channel | final state | physics |
 |---|---|---|
-| `inclusive` | e′ + struck nucleon (p/n ∝ Z F₂ᵖ : N F₂ⁿ) + X | HJM spin-1 / spin-3/2 master formula: F₁, F₂, R, g₁, g₂^WW, b₁, b₂, Δ (cos 2φ gluonometry); E143 finite-γ A∥ (default); exact finite-γ tensor kernel (Cosyn 2025, `tensor_gamma`, off by default) |
+| `inclusive` | e′ + struck nucleon (p/n ∝ Z F₂ᵖ : N F₂ⁿ) + X | spin-1 / spin-3/2 master formula: F₁, F₂, R, g₁, g₂^WW, the Hoodbhoy–Jaffe–Manohar b-sector b₁, b₂, and Jaffe–Manohar's Δ (cos 2φ gluonometry, −½(1−y)/y² per unit Δ since 2026-10-27); E143 finite-γ A∥ (default); exact finite-γ tensor kernel (Cosyn 2025, `tensor_gamma`, off by default) |
 | `tagged-6Li-alpha`, `tagged-7Li-alpha`, `tagged-d-p` | + spectator fragment (α / α / p) with the **spin ⊗ cluster-wave-function** correlation; T1 breakup of the struck cluster (d → N + N, t → N + d/nn, or the three-channel **Ciofi–Simula** spectral function via `--triton-sf ciofi-simula`) | two-cluster light-front impulse approximation; radial forms: Hulthén S/P/D (default) or **ANL VMC AV18** α+d, α+t tables (`--cluster-wave vmc`); optional **Glauber spectator-FSI weight** (`--fsi`, a weight on `Event::weight`, never a momentum shift) |
 | `coherent` | e′ + intact ⁶Li recoil + X | scenario f_coh(x)·e^{−B|t|} with deformation + gluon-transversity cos 2φ; x_P sampled with a physical M_X ≥ 1.2 GeV; T2 hadronizes γ*–Pomeron on a PYTHIA Pomeron beam (id 990, `--coherent-t2`) |
 

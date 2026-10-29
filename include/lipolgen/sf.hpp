@@ -425,8 +425,8 @@ double b1_li6_from_deuteron(double b1_d,
                             double transfer = LI6_B1_RANK2_TRANSFER,
                             double per_nucleon = LI6_B1_PER_NUCLEON);
 
-/// TOY double-helicity-flip Delta = scale * F1 * x^0.3 (1-x)^4; `scale` is the
-/// peak Delta/F1.  Use 1e-3, 3e-3, 1e-2 as discovery scenarios.
+/// TOY double-helicity-flip Delta = scale * F1 * x^0.3 (1-x)^4, peak Delta/F1 =
+/// 0.337 scale at x = 0.07 (JM Delta, D4).  Discovery scales 1e-3, 3e-3, 1e-2.
 double toy_delta_gluon(double x, double q2, double f1, double scale = 1e-3);
 
 /// Camps as `TensorSF` objects, so a kernel can be handed one backend.
@@ -526,7 +526,7 @@ class DeltaModel : public TensorSF {
   std::string info_;
 };
 
-/// Legacy toy shape; `scale` is the peak Delta/F1.
+/// Legacy toy shape; `scale` is toy_delta_gluon's prefactor (peak 0.337 scale).
 DeltaModel make_delta_toy(double scale = 1e-3);
 
 // `dilution` below is the money_delta convention (`polli_fastsim.delta_models`):

@@ -45,14 +45,14 @@
   "last": "  with P_zz = n₊ + n₋ − 2n₀, i.e. b₁ > 0 means the m = 0 state has the LARGER"
  },
  "docs/CONVENTIONS.md:75-83": {
-  "sha256": "1b166ad4f0c88cddcba9ddc2ceb9837551053a507342efe3b0cfcec635c9ec0c",
+  "sha256": "1e2b3242439e6045b3c770b0b71a5ebd8edbbdab08fa9b3ee905e663e8025128",
   "first": "- **Tensor-sector sign.** `TENSOR_LL_SIGN = -1.0` since 2026-08-29 (author",
-  "last": "  Hoodbhoy–Jaffe–Manohar — until that date, and setting the constant back is"
+  "last": "  long called Hoodbhoy–Jaffe–Manohar's — until that date, and setting it back is"
  },
  "docs/CONVENTIONS.md:81-83": {
-  "sha256": "abd9e0def648ed6f82a92450db445ba4de1eb856735b8a61fc51f3a1f930f0ee",
+  "sha256": "5256263163ce257d9e40fdf5cd7c7837695f72fb76ea8921ee585a0fe4ec3faf",
   "first": "  with P_zz = n₊ + n₋ − 2n₀, i.e. b₁ > 0 means the m = 0 state has the LARGER",
-  "last": "  Hoodbhoy–Jaffe–Manohar — until that date, and setting the constant back is"
+  "last": "  long called Hoodbhoy–Jaffe–Manohar's — until that date, and setting it back is"
  },
  "docs/DEVELOPMENT_PLAN.md:61-65": {
   "sha256": "c243793dc9e98775b80cedbb46f12d5fbfafc754a9c24881a6e59a2a95bd4eaf",
@@ -265,7 +265,7 @@
   "last": "                        double q2, const RFunc& r_func = nullptr);"
  },
  "include/lipolgen/asymmetries.hpp:9-21": {
-  "sha256": "cb098ca1b4e5ce721cbd5e80302516ee481cbadb6b1c4e5609a034de25ad3978",
+  "sha256": "73d0773541a99df0a2476488f7b9fceeabdbe214ca57e987594fdd647b6a7c13",
   "first": "/// Spin-1 master formula (unpolarized e, target spin at angle theta_m,",
   "last": "/// opposite sign of b1 to the b1 every published number is quoted in."
  },
@@ -515,9 +515,9 @@
   "last": "};"
  },
  "include/lipolgen/xsec.hpp:13-21": {
-  "sha256": "299a10db3d7fc96530c7bc495ec0324685df4e32d46a49546e08e6f5c9403d54",
+  "sha256": "ddb2d79216026720289b5412786800bd5b7a88e5bf586ce4c85cb44361955765",
   "first": "///   dsigma/(dx dQ2 dphi) = sigma_unpol(x,Q2)/(2 pi) * W(phi')",
-  "last": "///   a_2   = -(1-y)/y^2 * c_eff(m) sin^2(theta_S) * Delta/D_phi [gluonometry]"
+  "last": "///   a_2   = -(1/2)(1-y)/y^2 * c_eff(m) sin^2(theta_S) * Delta/D_phi [JM, D4]"
  },
  "include/lipolgen/xsec.hpp:131-145": {
   "sha256": "826a3b872d845daa19ffdaaeeacf3c97b2a22179a3b18299ef827ac7014345db",
@@ -540,12 +540,12 @@
   "last": "/// bias is measured by re-running an extraction at g2_scale = 0 and 1.5"
  },
  "include/lipolgen/xsec.hpp:197-233": {
-  "sha256": "b796c962968617edb80b713bd43023226fcdcdf8977c70246a4fe815f488b547",
+  "sha256": "a14a993b2c23ff6d3f8625ea5f30df88814ae5f43eb9e6e5f0486d9af7b4bf33",
   "first": "  struct Options {",
   "last": "    int g2_npts = 96;"
  },
  "include/lipolgen/xsec.hpp:204-217": {
-  "sha256": "e076e7db3dcf2b0bea6178e7d01640c0dd4f250d85bd4e2d30c72d842aa2f61f",
+  "sha256": "69d916bc6709e43fe1ed3470ddcb36e5564019a0dc869e224631e08b0c519808",
   "first": "    /// `tensor_gamma` (DEFAULT FALSE) selects the tensor b-sector kernel:",
   "last": "    bool tensor_gamma = false;"
  },
@@ -560,9 +560,9 @@
   "last": "    double g2_scale = 1.0;"
  },
  "include/lipolgen/xsec.hpp:23-29": {
-  "sha256": "b830b8078aecd0e592fb014b3ef06565e79916774263925a50d35fa8eea325bc",
+  "sha256": "b7ad2e025dfd4764ccff06469962f73abf5e84b66ec111f7c4aa91dba3319bbd",
   "first": "/// RANK-2 GEOMETRY.  Cosyn et al. (arXiv:2410.12764) Eq. (9) writes the",
-  "last": "/// digit for digit."
+  "last": "/// (Hoodbhoy-Jaffe-Manohar's b-sector, asymmetries.hpp) digit for digit."
  },
  "include/lipolgen/xsec.hpp:24-26": {
   "sha256": "8f99a0d95ab968b28adc18a2b6147f0a98a5d4f9ad6ca6a6b07daf50de12c8bf",
@@ -929,7 +929,7 @@
   "last": "}"
  },
  "src/core/xsec.cpp:260-284": {
-  "sha256": "ce54a899f88f4dc93549d64c4890fcdcfec1a20323f6b0e45ea819eaabe729a4",
+  "sha256": "6728ef0bbda6df7bd12f044d9821afff8c3824f53904b65034af43fc56843a4f",
   "first": "  if (j >= 1.0 - 1e-9 && j_ion >= 1.0 - 1e-9) {",
   "last": "  }"
  },
@@ -937,11 +937,6 @@
   "sha256": "e97b5246b719dceed17aff7596918084016274d5279e80e4105ed8b68cc0d99b",
   "line": "    if (tensor_gamma_) {",
   "name": "tensor_gamma_"
- },
- "src/core/xsec.cpp:266": {
-  "sha256": "3f5c5443c61994b443e556c40510c021c51dfffa50f8736b2bc6eda02471236a",
-  "line": "      out.a2 = out.a2 + h.h2;",
-  "name": "a2"
  },
  "src/core/xsec.cpp:268-272": {
   "sha256": "0976fba3416ff6a704e04590e8e0c829ceffcff5b4f3c7e1c61ddf2001dc04d3",

@@ -274,12 +274,12 @@ Amplitudes InclusiveKernel::tensor_amplitudes(const SFTables& t, double x,
     // Delta (gluon transversity) is rank 2 as well but is NOT in POLRAD's
     // b1..b4 basis and nobody has computed RC for a phi-dependent tensor
     // observable, so `rc.hpp` leaves it out of the band by default
-    // (RcScope::TensorRate) and `with_delta` is what buys it back
-    // (RcScope::TensorAll, for pricing the omission).  `amplitudes()` always
-    // wants it -- it is part of W.
+    // (RcScope::TensorRate) and `with_delta` buys it back (TensorAll, for
+    // pricing the omission); `amplitudes()` always wants it.  The factor 1/2
+    // is Jaffe-Manohar's (DELTA_COS2PHI_NORM, D4 2026-10-27; 1 before).
     if (with_delta) {
       out.a2 = out.a2 + (-(1.0 - y) / (y * y) * qc.second * st * st * t.delta
-                         / std::max(den, 1e-30));
+                         * DELTA_COS2PHI_NORM / std::max(den, 1e-30));
     }
   }
   out.a1 = a1_tensor;

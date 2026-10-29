@@ -25,7 +25,7 @@ designed so those inputs are swappable tables behind interfaces.
  │ core/    no external deps                                  │
  │   spin        ρ(m,m′) J=1, 3/2 · Wigner-d · CG · moments   │
  │   sf          F1,F2,R,g1,g2(WW),b1,b2,Δ backends            │◄── LHAPDF6 (CT18, NNPDFpol, EPPS21) optional
- │   xsec        master formula dσ/dx dQ² dφ (HJM ⊕ CW)        │
+ │   xsec        master formula dσ/dx dQ² dφ (HJM b, JM Δ ⊕ CW)│
  │   beams       γ-matched EIC configs, physical masses        │
  │   sampler     grid inverse-CDF (x,Q²) · φ accept/reject     │
  │   cluster     wave functions S/P/D (Hulthén) · VMC tables   │
@@ -247,7 +247,7 @@ gated at rtol 1e-12 against regenerated `validation/reference/*.json`
   `tensor_harmonics_gamma`; `tests/test_tensor_gamma.cpp` is the full port of
   `evgen/tests/test_tensor_gamma.py`, including both finite-γ rows of Cosyn's
   Table 1 (1e-10), the γ → 0 identity for any b₂ with b₃/b₄ cancelling (1e-12),
-  and the leakage coefficient Δ_fake/(γ² b₁) = 0.14–0.16 that retires the
+  and the leakage coefficient Δ_fake/(γ² b₁) = 0.14–0.16 (0.28–0.32 in Jaffe–Manohar units since D4, 2026-10-27) that retires the
   "γ² b₁ × 1.15" bound.  `xsec.json` gained a `kernel_tensor_gamma` block.
 - **The finite-γ kinematics moved to `asymmetries.hpp`** (one implementation for
   both halves of the library), gaining `a_parallel_exact`, the

@@ -334,11 +334,11 @@ POL_SF = {
 #: two edges) and exponentially continued above q = 3 fm^-1, so it has NO C0
 #: zero at any q.
 #:
-#: MEASURED on `(1/6) sigma^el_T / sigma^el_U` at Q^2 = 5 GeV^2:
-#: ho/vmc-ft = -5.0943e-4 / -5.4705e-4 at x = 0.01, +1.5595e-4 / -4.0702e-5 at
-#: x = 0.10 and +1.3287e-2 / +1.5556e-2 at x = 0.30 -- i.e. the SIGN at
-#: x = 0.10 is a band edge, not a result (phase_B_numbers.md sec. B1).
-#: RUN BOTH.
+#: MEASURED on `(1/6) sigma^el_T / sigma^el_U` at Q^2 = 5 GeV^2, ho/vmc-ft, on the
+#: DEFAULT polrad-full tail (D5): -5.1540e-4 / -5.5461e-4 at x = 0.01, +4.4562e-5
+#: / -1.6369e-4 at x = 0.10, +1.0947e-2 / +1.1293e-2 at x = 0.30; on t-peak -5.0943e-4
+#: / -5.4705e-4, +1.5595e-4 / -4.0702e-5, +1.3287e-2 / +1.5556e-2 -- the SIGN at
+#: x = 0.10 is a band edge on both, not a result (phase_B_numbers.md B1).  RUN BOTH.
 RC_C0_SHAPES = {
     "ho": _lipolgen.C0Shape.Ho,
     "vmc-ft": _lipolgen.C0Shape.VmcFt,
@@ -348,10 +348,10 @@ RC_C0_SHAPES = {
 #: (`RcTailModel.PolradFull` was refused by `PipelineConfig.validate` and
 #: absent from this table until 2026-09-06; it is implemented now.)
 #:
-#: "t-peak" is the DEFAULT and is bit for bit every published number: POLRAD
-#: Eqs. (37)-(39), (43), the t-peak ALONE, and therefore a LOWER BOUND on the
-#: dilution.  "t-peak+ll" adds the leading-log s- and p-peaks of the same two
-#: unpolarised observables.
+#: "polrad-full" is the DEFAULT since 2026-10-27 (D5).  "t-peak", the default
+#: until then (every unlabelled RC-tail number published before it), is POLRAD
+#: Eqs. (37)-(39), (43), the t-peak ALONE: a LOWER BOUND.  "t-peak+ll" adds the
+#: leading-log s- and p-peaks of the same two unpolarised observables.
 #:
 #: IT IS A STATED MODEL, NOT A CONTROLLED EXPANSION.  The t-peak is an eta_A
 #: quadrature; the s-/p-peaks are a single-z collinear leading log.  Their sum
@@ -369,13 +369,13 @@ RC_C0_SHAPES = {
 #:
 #: "polrad-full" is POLRAD Eq. (18) + Appendix B + Eq. (A.4): ONE exact tau_A
 #: quadrature that contains all three peaks, with the s-/p-peaks' OWN tensor
-#: content -- the thing "t-peak+ll" has to bound and cannot compute.  It is
-#: NOT the default and NOT validated against any external exact tail (no
-#: Mo-Tsai number is in this tree): what is checked is its x_A -> 0 reduction
-#: to Eq. (38), unpolarised AND tensor, its Q_N = 0 Rosenbluth limit, and its
-#: agreement with the leading-log fallback where the s-/p-peaks are alive.
-#: It costs ~10 s of table build and needs n_eta >= 64 and a `long double`
-#: wider than `double`; both are refused, not degraded.
+#: content -- the thing "t-peak+ll" has to bound and cannot compute.  Its
+#: PROTON slot is checked against DJANGOH 4.6.21's exact O(alpha) tail (row 7,
+#: 2026-10-26); no Mo-Tsai number is in this tree, and the coherent slot is
+#: checked by its x_A -> 0 reduction to Eq. (38), its Q_N = 0 Rosenbluth limit
+#: and the leading-log fallback where the s-/p-peaks are alive.  It costs
+#: ~12 s of table build per run (uncached) and needs n_eta >= 64 and a `long
+#: double` wider than `double` (not MSVC / Apple arm64); refused, not degraded.
 RC_TAIL_MODELS = {
     "t-peak": _lipolgen.RcTailModel.TPeak,
     "t-peak+ll": _lipolgen.RcTailModel.TPeakPlusLL,

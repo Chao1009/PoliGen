@@ -244,7 +244,7 @@ TEST_CASE("T6c: PipelineConfig::validate refuses only a bad RC knob") {
     cfg.rc_options.m_lepton = 0.0;
     CHECK_THROWS_AS(cfg.validate(), std::runtime_error);
     cfg.rc_options.m_lepton = M_ELECTRON;
-    cfg.rc_options.tail_model = RcTailModel::TPeak;
+    cfg.rc_options.tail_model = RcOptions().tail_model;   // the default (D5)
   }
   SUBCASE("a POLARISED beam is refused -- by RcModel, one frame later") {
     // design sec. 3.2 puts this loop in `validate()`; `PipelineConfig` has no
@@ -272,4 +272,70 @@ TEST_CASE("T18b: threaded generation reproduces the RC weights bit for bit") {
     REQUIRE(one[i].size() == kRcWeightCount);
     REQUIRE(one[i] == many[i]);
   }
+}
+
+TEST_CASE("D5: validate() -- the default tail's preconditions, and m_lepton off the tail") {
+  // Decision D5 (2026-10-27; implemented 2026-10-29): PolradFull is the
+  // default.  (1) Its preconditions bind only where a tail is BUILT -- off the
+  // inclusive tail a non-default n_eta is refused by the tail sub-knob rule,
+  // with that rule's reason, not by the n_eta >= 64 precondition.  (2)
+  // `m_lepton` joins the tail sub-knobs refused where no tail runs: under the
+  // TPeak default the t-peak m_lepton rule refused it there; under PolradFull
+  // nothing did, and the knob row (Refused) would have contradicted an
+  // accepted run.
+  PipelineConfig cfg = base_cfg(PipelineChannel::TaggedLi6Alpha, 100);
+  cfg.rc = PipelineRc::TensorBand;
+  REQUIRE_NOTHROW(cfg.validate());
+  REQUIRE(cfg.rc_options.tail_model == RcTailModel::PolradFull);
+  cfg.rc_options.n_eta = 32;
+  CHECK_THROWS_WITH_AS(cfg.validate(), doctest::Contains("RADIATIVE TAIL"),
+                       std::runtime_error);
+  cfg.rc_options.n_eta = RcOptions().n_eta;
+  cfg.rc_options.m_lepton = 0.1056583755;
+  CHECK_THROWS_WITH_AS(cfg.validate(), doctest::Contains("m_lepton"),
+                       std::runtime_error);
+  cfg.rc_options.m_lepton = M_ELECTRON;
+  // ... and an explicit t-peak is a refused tail knob on a tagged channel.
+  cfg.rc_options.tail_model = RcTailModel::TPeak;
+  CHECK_THROWS_WITH_AS(cfg.validate(), doctest::Contains("--rc-tail-model"),
+                       std::runtime_error);
+
+  PipelineConfig coh = base_cfg(PipelineChannel::CoherentLi6, 100);
+  coh.rc = PipelineRc::TensorBand;
+  REQUIRE_NOTHROW(coh.validate());
+  coh.rc_options.m_lepton = 0.1056583755;
+  CHECK_THROWS_AS(coh.validate(), std::runtime_error);
+
+  PipelineConfig inc = base_cfg(PipelineChannel::Inclusive, 100);
+  inc.rc = PipelineRc::TensorBand;
+  inc.rc_options.m_lepton = 0.1056583755;         // READ by the default tail
+  CHECK_NOTHROW(inc.validate());
+  inc.rc_options.with_tail = false;               // ... and refused without it
+  CHECK_THROWS_WITH_AS(inc.validate(), doctest::Contains("RADIATIVE TAIL"),
+                       std::runtime_error);
+  inc.rc_options.m_lepton = M_ELECTRON;
+  inc.rc_options.n_eta = 32;                      // band only: the tail knob rule
+  CHECK_THROWS_WITH_AS(inc.validate(), doctest::Contains("RADIATIVE TAIL"),
+                       std::runtime_error);
+
+  // F5 (2026-10-29): `sp_tensor_scale` where no tail is built is refused by
+  // the tail sub-knob rule, with THAT cause -- the PolradFull refusal's
+  // "double-count a term that ran" is true only where the s-/p-peaks RAN
+  // (docs/CONVENTIONS.md: a refusal names its cause).
+  inc.rc_options.n_eta = RcOptions().n_eta;
+  inc.rc_options.sp_tensor_scale = 1.0;           // with_tail = false: no tail
+  CHECK_THROWS_WITH_AS(inc.validate(),
+                       doctest::Contains("--rc-sp-tensor-scale is a knob on the RADIATIVE TAIL"),
+                       std::runtime_error);
+  inc.rc_options.with_tail = true;                // the tail runs: a double count
+  CHECK_THROWS_WITH_AS(inc.validate(), doctest::Contains("double-count"),
+                       std::runtime_error);
+  coh.rc_options.m_lepton = M_ELECTRON;
+  coh.rc_options.sp_tensor_scale = 1.0;
+  CHECK_THROWS_WITH_AS(coh.validate(), doctest::Contains("RADIATIVE TAIL"),
+                       std::runtime_error);
+  cfg.rc_options.tail_model = RcOptions().tail_model;
+  cfg.rc_options.sp_tensor_scale = 1.0;
+  CHECK_THROWS_WITH_AS(cfg.validate(), doctest::Contains("RADIATIVE TAIL"),
+                       std::runtime_error);
 }

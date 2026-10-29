@@ -101,9 +101,9 @@ def test_make_config_round_trips_every_knob():
     # The DEFAULT is 0: the shipped quasi-elastic tail is tensor-blind, and a
     # borrowed magnitude may not become one by accident.
     assert _cfg("tensor-band").rc_options.qe_tensor_scale == 0.0
-    # ... and the s/p stand-in the same way.  It needs `t-peak+ll` above,
-    # because the shipped `t-peak` computes no s-/p-peaks and validate()
-    # refuses a price on a piece that did not run.
+    # ... and the s/p stand-in the same way.  It needs `t-peak+ll` above:
+    # `t-peak` computes no s-/p-peaks and the default polrad-full (D5) RAN
+    # them, and validate() refuses a price on either.
     assert o.sp_tensor_scale == 3.5
     assert _cfg("tensor-band").rc_options.sp_tensor_scale == 0.0
     assert o.c0_shape == _l.C0Shape.VmcFt
@@ -191,10 +191,10 @@ def test_c0_shape_reaches_the_tail_and_the_npz_meta():
     """The knob is plumbed end to end: it reaches `sigma^el_T` through the
     Pipeline (not only `HoSpin1FF`), it FLIPS ITS SIGN at x = 0.1, and the npz
     `meta` records which edge ran -- without that key the two files would be
-    indistinguishable."""
+    indistinguishable.  ON t-PEAK by name since D5 (2026-10-29): 1.1043 is Eq. (38)'s."""
     out = {}
     for name in ("ho", "vmc-ft"):
-        cfg = _cfg("tensor-band", rc_c0_shape=name)
+        cfg = _cfg("tensor-band", rc_c0_shape=name, rc_tail_model="t-peak")
         p = lg.Pipeline(cfg, lg.tensor_thirds_plan(0.0, 0.6))
         out[name] = p.rc_model.tail_sigma_at(0.10, 5.0)
         assert p.rc_model.options.c0_shape == lg.RC_C0_SHAPES[name]
@@ -231,7 +231,7 @@ def test_meta_records_every_rc_knob_that_moves_a_column(rc_run):
     `meta`.  The seven numeric knobs were recorded from the start; `scope`,
     `with_qe_tail`, `tail_model`, `n_eta` and `tail_max` were not, so a
     `RcScope.TensorAll` / `with_qe_tail = False` run -- both API-reachable,
-    and the QRT is 73-99.9 % of the tail at x >= 0.1 -- was byte-
+    and the QRT is 73-99.9 % of the t-peak tail at x >= 0.1, 99.8-100 % of the default -- was byte-
     indistinguishable in `meta` from the default one.  Same rule the Miller
     branch enforces for `b1_band_scale`."""
     _, cols = rc_run
@@ -260,7 +260,7 @@ def test_meta_records_every_rc_knob_that_moves_a_column(rc_run):
     assert meta["rc_scope"] == meta["knob_provenance"]["rc_scope"]["label"]
     assert meta["knob_provenance"]["rc_scope"]["value"] == "tensor-rate"
     assert meta["rc_with_qe_tail"] is True
-    assert meta["rc_tail_model"] == "t-peak"
+    assert meta["rc_tail_model"] == "polrad-full"   # re-taken 2026-10-29, D5: the shipped tail
     assert meta["rc_n_eta"] == defaults.n_eta
     assert meta["rc_tail_max"] == defaults.tail_max
 
@@ -283,7 +283,7 @@ def test_meta_distinguishes_a_tensor_all_no_qe_run(rc_run):
     """
     _, base = rc_run
     # (a) theta_S = 0: it did NOT run, and the file says so.
-    cfg = _cfg("tensor-band")
+    cfg = _cfg("tensor-band", rc_tail_model="t-peak")   # D5: t-peak for runtime, here and below
     cfg.rc_options.scope = _l.RcScope.TensorAll
     cfg.rc_options.with_qe_tail = False
     flat = lg.Pipeline(cfg, lg.tensor_thirds_plan(0.0, 0.6))
@@ -293,14 +293,14 @@ def test_meta_distinguishes_a_tensor_all_no_qe_run(rc_run):
     assert row["status"] == "not-read"
     assert meta["rc_scope"] == row["label"] != "tensor-all"
     # ... and the run really is bit for bit the tensor-rate one, which is why.
-    ref = _cfg("tensor-band")
+    ref = _cfg("tensor-band", rc_tail_model="t-peak")
     ref.rc_options.with_qe_tail = False
     flat0 = lg.Pipeline(ref, lg.tensor_thirds_plan(0.0, 0.6)).generate(0)
     for k in export.RC_KEYS:
         assert np.array_equal(flat.generate(0)[k], flat0[k]), k
 
     # (b) theta_S = pi/2: it DID run, and now the name goes in.
-    tilt = _cfg("tensor-band")
+    tilt = _cfg("tensor-band", rc_tail_model="t-peak")
     tilt.rc_options.scope = _l.RcScope.TensorAll
     tmeta = lg.Pipeline(tilt, lg.transverse_tensor_plan(0.6)).generate(0)["meta"]
     assert tmeta["rc_scope"] == "tensor-all"
@@ -339,8 +339,8 @@ def test_m_lepton_is_refused_on_the_t_peak_tails_and_READ_on_polrad_full():
 
 
 def test_qe_tensor_scale_prices_the_polarised_quasi_elastic_tail(rc_run):
-    """B3.  The polarised quasi-elastic tail is not computed anywhere; the
-    quasi-elastic piece is 73 % of `rc_tail` at x = 0.1 and 99.9 % at x = 0.3
+    """B3.  The polarised quasi-elastic tail is not computed anywhere; the QE
+    piece is 73 / 99.9 % of the t-peak `rc_tail` at x = 0.1 / 0.3 (99.8 / 100 % on the default)
     and was treated as exactly tensor-blind.  `qe_tensor_scale` lends it the
     ELASTIC tail's own tensor fraction -- a BORROWED magnitude, not a derived
     bound (see rc.hpp).  Gated here as a chain, because the default is 0 and
@@ -349,12 +349,12 @@ def test_qe_tensor_scale_prices_the_polarised_quasi_elastic_tail(rc_run):
     assert base["meta"]["rc_qe_tensor_scale"] == 0.0
     assert _l.RcOptions().qe_tensor_scale == 0.0
 
-    cfg = _cfg("tensor-band", rc_qe_tensor_scale=1.0)
+    cfg = _cfg("tensor-band", rc_qe_tensor_scale=1.0, rc_tail_model="t-peak")
     p = lg.Pipeline(cfg, lg.tensor_thirds_plan(0.0, 0.6))
     meta = p.generate(0)["meta"]
     assert meta["rc_qe_tensor_scale"] == 1.0
-
-    b = lg.Pipeline(_cfg("tensor-band"),
+    # D5 (2026-10-29): t-peak for RUNTIME in all three builds -- the subject is the algebra
+    b = lg.Pipeline(_cfg("tensor-band", rc_tail_model="t-peak"),
                     lg.tensor_thirds_plan(0.0, 0.6)).rc_model
     m = p.rc_model
     for x in (0.01, 0.10, 0.30):
@@ -368,7 +368,7 @@ def test_qe_tensor_scale_prices_the_polarised_quasi_elastic_tail(rc_run):
         assert d1 != d0
         assert abs(d1) > abs(d0)
     # EXACTLY LINEAR in the scale -- one run rescales, unlike fq_scale (T12).
-    m2 = lg.Pipeline(_cfg("tensor-band", rc_qe_tensor_scale=2.0),
+    m2 = lg.Pipeline(_cfg("tensor-band", rc_qe_tensor_scale=2.0, rc_tail_model="t-peak"),
                      lg.tensor_thirds_plan(0.0, 0.6)).rc_model
     for x in (0.01, 0.30):
         b1 = b.tail_ratio_at(x, 5.0, 1.0)
@@ -386,7 +386,7 @@ def test_qe_tensor_scale_is_refused_when_the_qe_tail_did_not_run():
     with pytest.raises(RuntimeError, match="qe_tensor_scale"):
         lg.Pipeline(cfg, lg.tensor_thirds_plan(0.0, 0.6))
     # ... zero with the tail off is fine.
-    ok = _cfg("tensor-band")
+    ok = _cfg("tensor-band", rc_tail_model="t-peak")   # D5: t-peak for runtime
     ok.rc_options.with_qe_tail = False
     lg.Pipeline(ok, lg.tensor_thirds_plan(0.0, 0.6))
     # ... and a negative scale is refused like every other >= 0 knob, by
@@ -475,13 +475,13 @@ def test_sp_tensor_scale_bounds_the_tensor_fraction_of_the_sp_peaks(rc_run):
 def test_sp_tensor_scale_is_refused_when_the_sp_peaks_did_not_run():
     """The `m_lepton` rule again, one level below `qe_tensor_scale`'s.
     `sp_tensor_scale` is a fraction OF the leading-log s-/p-peak column, and
-    only `tail_model = t-peak+ll` computes that column: under the shipped
-    `t-peak` the table is identically zero, so a price there would be recorded
-    in `meta` without a single floating-point operation behind it."""
-    with pytest.raises(RuntimeError, match="sp_tensor_scale"):
+    only `tail_model = t-peak+ll` computes that column: under `t-peak` (named,
+    since it is no longer the default -- D5) the table is identically zero, so a
+    price there would be recorded without a floating-point operation behind it."""
+    with pytest.raises(RuntimeError, match="t-peak-only tail does not compute"):
+        _cfg("tensor-band", rc_tail_model="t-peak", rc_sp_tensor_scale=1.0)
+    with pytest.raises(RuntimeError, match="double-count"):   # the DEFAULT: it RAN
         _cfg("tensor-band", rc_sp_tensor_scale=1.0)
-    # ... zero under the shipped tail is fine: nothing is recorded that did
-    # not run.
     assert _cfg("tensor-band").rc_options.sp_tensor_scale == 0.0
     # ... and a negative scale is refused like every other >= 0 knob.
     with pytest.raises(RuntimeError, match="sp_tensor_scale"):
@@ -513,7 +513,7 @@ def test_the_quasi_elastic_sp_column_is_bounded_by_NEITHER_scale():
     both = lg.Pipeline(_cfg("tensor-band", rc_tail_model="t-peak+ll",
                             rc_qe_tensor_scale=1.0,
                             rc_sp_tensor_scale=1.0), plan).rc_model
-    tpk = lg.Pipeline(_cfg("tensor-band"), plan).rc_model
+    tpk = lg.Pipeline(_cfg("tensor-band", rc_tail_model="t-peak"), plan).rc_model  # D5: by name
     for x in (0.01, 0.10, 0.30):
         # the s/p scale adds nothing here ...
         assert both.tail_ratio_at(x, 5.0, 1.0) == qe.tail_ratio_at(x, 5.0, 1.0)
@@ -542,7 +542,7 @@ def test_a_transfer_frac_prices_the_A2_to_A6_transfer_of_the_band(rc_run):
     assert base["meta"]["rc_a_transfer_frac"] == 0.0
     assert _l.RcOptions().a_transfer_frac == 0.0
 
-    b = lg.Pipeline(_cfg("tensor-band"),
+    b = lg.Pipeline(_cfg("tensor-band", rc_tail_model="t-peak"),   # D5: t-peak for runtime
                     lg.tensor_thirds_plan(0.0, 0.6)).rc_model
     xs = (1e-4, 0.005, 0.01, 0.02, 0.05, 0.063, 0.1, 0.16, 0.3, 0.9)
     # At the default the model's delta IS the published rc_delta, bit for bit.
@@ -550,7 +550,7 @@ def test_a_transfer_frac_prices_the_A2_to_A6_transfer_of_the_band(rc_run):
         assert b.delta(x) == _l.rc_delta(x)
 
     for f in (0.5, 1.0, 2.0):
-        cfg = _cfg("tensor-band", rc_a_transfer_frac=f)
+        cfg = _cfg("tensor-band", rc_a_transfer_frac=f, rc_tail_model="t-peak")
         p = lg.Pipeline(cfg, lg.tensor_thirds_plan(0.0, 0.6))
         assert p.generate(0)["meta"]["rc_a_transfer_frac"] == f
         m = p.rc_model
@@ -596,8 +596,8 @@ def test_tail_model_knob_is_a_seven_file_chain(rc_run):
     Gated end to end because the knob is a chain and any missing link makes an
     npz that is indistinguishable from a default run: the enum, `make_config`,
     the CLI's own choices tuple, the `meta` string, and the numbers actually
-    changing.  The DEFAULT is asserted unchanged in the same test, because
-    that is the whole point of making it opt-in."""
+    changing.  The DEFAULT is asserted here too: polrad-full since D5 (re-taken
+    2026-10-29); the t-peak+ll comparisons run against t-peak BY NAME."""
     assert set(lg.RC_TAIL_MODELS) == {"t-peak", "t-peak+ll", "polrad-full"}
     assert "RC_TAIL_MODELS" in lg.__all__
     assert lg.RC_TAIL_MODELS["t-peak"] == _l.RcTailModel.TPeak
@@ -608,8 +608,8 @@ def test_tail_model_knob_is_a_seven_file_chain(rc_run):
         assert _l.rc_tail_model_name(e) == name
     assert _l.rc_tail_model_name(_l.RcTailModel.PolradFull) == "polrad-full"
 
-    _, base = rc_run
-    assert base["meta"]["rc_tail_model"] == "t-peak"
+    assert rc_run[1]["meta"]["rc_tail_model"] == "polrad-full"   # re-taken 2026-10-29, D5
+    base = lg.Pipeline(_cfg("tensor-band", rc_tail_model="t-peak"), lg.tensor_thirds_plan(0.0, 0.6)).generate(0, True)
 
     cfg = _cfg("tensor-band", rc_tail_model="t-peak+ll")
     assert cfg.rc_options.tail_model == _l.RcTailModel.TPeakPlusLL
@@ -628,8 +628,8 @@ def test_tail_model_knob_is_a_seven_file_chain(rc_run):
     assert cols["rc_tail"].mean() > base["rc_tail"].mean()
 
     # The three t-peak tables are untouched and the two s+p tables are
-    # non-zero -- and identically zero on the default.
-    m0, m1 = lg.Pipeline(_cfg("tensor-band"),
+    # non-zero -- and identically zero on t-peak (named: D5).
+    m0, m1 = lg.Pipeline(_cfg("tensor-band", rc_tail_model="t-peak"),
                          lg.tensor_thirds_plan(0.0, 0.6)).rc_model, p.rc_model
     for k in ("sigma_tail_u", "sigma_tail_t", "sigma_tail_qe"):
         assert np.array_equal(getattr(m1, k), getattr(m0, k))
@@ -647,8 +647,8 @@ def test_tail_model_knob_is_a_seven_file_chain(rc_run):
     # name that is not a model.  Without this an npz written by `lipolgen-run`
     # could not reach the knob at all.
     from lipolgen import cli
-    assert cli.DEFAULTS["rc_tail_model"] == "t-peak"
-    assert cli.resolve(["--rc", "tensor-band"])["rc_tail_model"] == "t-peak"
+    assert cli.DEFAULTS["rc_tail_model"] == _l.rc_tail_model_name(_l.RcOptions().tail_model) == "polrad-full"
+    assert cli.resolve(["--rc", "tensor-band"])["rc_tail_model"] == "polrad-full"   # re-taken 2026-10-29, D5
     assert cli.resolve(["--rc", "tensor-band", "--rc-tail-model",
                         "t-peak+ll"])["rc_tail_model"] == "t-peak+ll"
     assert cli.resolve(["--rc", "tensor-band", "--rc-tail-model",
@@ -660,21 +660,21 @@ def test_tail_model_knob_is_a_seven_file_chain(rc_run):
 def test_polrad_full_is_the_exact_tail_and_does_not_bracket_the_t_peak_band(
         rc_run):
     """B2.  `RcTailModel::PolradFull` -- POLRAD Eq. (18) + Appendix B +
-    Eq. (A.4), the exact tau_A quadrature, opt-in since 2026-09-06.
-
+    Eq. (A.4), the exact tau_A quadrature, opt-in from 2026-09-06 and the
+    shipped DEFAULT since 2026-10-27 (D5; this test re-based 2026-10-29).
     THREE THINGS THIS ASSERTS THAT THE C++ SUITE CANNOT.  (i) the chain --
     enum, `RC_TAIL_MODELS`, `make_config`, the CLI choices tuple, the `meta`
     string -- because a missing link makes an npz indistinguishable from a
-    default run.  (ii) that the DEFAULT is untouched, event by event.
+    default run.  (ii) that the t-peak option's EVENTS are the same events.
     (iii) that the model does NOT lie inside the [t-peak, t-peak+ll] band on
     the production grid, which is the one thing a reader would assume from
     "the two are a band"."""
     plan = lg.tensor_thirds_plan(0.0, 0.6)
-    _, base = rc_run
+    p, cols = rc_run   # D5 (2026-10-29): the DEFAULT run IS the polrad-full one
     cfg = _cfg("tensor-band", rc_tail_model="polrad-full")
-    assert cfg.rc_options.tail_model == _l.RcTailModel.PolradFull
-    p = lg.Pipeline(cfg, plan)
-    cols = p.generate(0, True)
+    assert cfg.rc_options.tail_model == _l.RcTailModel.PolradFull == _l.RcOptions().tail_model
+    # ... and the t-peak it is compared with is an option now, asked for by name
+    base = lg.Pipeline(_cfg("tensor-band", rc_tail_model="t-peak"), plan).generate(0, True)
     assert cols["meta"]["rc_tail_model"] == "polrad-full"
     # The kinematics are IDENTICAL: `RcModel::fill` takes no Rng&, so no tail
     # model may move the random stream (T6's rule).
@@ -735,7 +735,7 @@ def test_polrad_full_is_the_exact_tail_and_does_not_bracket_the_t_peak_band(
     # OUTSIDE the [t-peak, t-peak+ll] interval on a large minority of them --
     # measured 1326 of 3051 (43.5 %) on the production grid -- so the two
     # t-peak models are a PRICE RANGE and not a confidence interval.
-    mt = lg.Pipeline(_cfg("tensor-band"), plan).rc_model
+    mt = lg.Pipeline(_cfg("tensor-band", rc_tail_model="t-peak"), plan).rc_model
     ml = lg.Pipeline(_cfg("tensor-band", rc_tail_model="t-peak+ll"),
                      plan).rc_model
     ds = p.dis_sampler
@@ -788,8 +788,8 @@ def test_optimistic_delta_never_widens_the_band():
     exactly 0 and the strict form would fail on those events.
     """
     plan = lg.tensor_thirds_plan(0.0, 0.6)
-    wide = lg.Pipeline(_cfg("tensor-band", rc_delta_low_x=0.30), plan)
-    tight = lg.Pipeline(_cfg("tensor-band", rc_delta_low_x=0.19), plan)
+    wide = lg.Pipeline(_cfg("tensor-band", rc_delta_low_x=0.30, rc_tail_model="t-peak"), plan)  # D5: runtime
+    tight = lg.Pipeline(_cfg("tensor-band", rc_delta_low_x=0.19, rc_tail_model="t-peak"), plan)
     a = wide.generate(0)
     b = tight.generate(0)
     assert np.all(a["x"] == b["x"])
@@ -955,7 +955,7 @@ def test_a_python_subclass_form_factor_survives_the_pipeline():
             return "test: a constant Python-subclass form factor"
 
     opt = _l.RcOptions()
-    opt.ff = ConstantFF()
+    opt.ff, opt.tail_model = ConstantFF(), _l.RcTailModel.TPeak   # D5: t-peak for runtime (~24 s on polrad-full)
     cfg = _cfg("tensor-band")
     cfg.rc_options = opt
     del opt                       # the ONLY strong reference left is the C++ one

@@ -31,8 +31,8 @@
 ///     it "carries tensor dependence", but because its own A_zz is not the
 ///     Born's.  A background with A_zz^tail != A_zz^Born under the DIS bin
 ///     DILUTES the measured asymmetry; the tail's own (small) tensor part then
-///     shifts it back a little.  Implemented as the additive weight `rc_tail`
-///     from POLRAD's t-peak closed forms, Eqs. (37)-(39) + (43).
+///     shifts it back a little.  Implemented as the additive weight `rc_tail`:
+///     POLRAD's exact Eq. (18) since D5 (the t-peak Eqs. (37)-(39), (43) opt).
 ///   sigma^q  the QUASI-ELASTIC tail.  Its UNPOLARISED part has
 ///     A_zz^tail ~ 0, so it does NOT cancel: it dilutes A_zz exactly as the
 ///     unpolarised elastic tail does.  HERMES (hep-ex/0506018) subtracted
@@ -45,25 +45,25 @@
 ///     `RcOptions::qe_tensor_scale`, which lends it the ELASTIC tail's own
 ///     tensor fraction.  That stand-in is a borrowed magnitude, not a derived
 ///     bound, and it defaults to 0: read the field before quoting it.  The
-///     omission it prices is the largest one left in `rc_tail`, because the
-///     quasi-elastic term is 22 % / 73 % / 99.9 % of the tail at
-///     x = 0.01 / 0.10 / 0.30.
+///     omission it prices is the largest one left in `rc_tail`: the quasi-
+///     elastic term is 38.7 / 99.81 / 100.00 % of the default tail (22.0 /
+///     73.3 / 99.90 % of the t-peak's) at x = 0.01 / 0.10 / 0.30, Q^2 = 5.
 ///
 /// So `rc_tail` is an UNPOLARISED DILUTION with a small tensor correction on
 /// top, not "a tensor background": for 6Li the tensor fraction of the elastic
 /// tail is ~ 10 % of the deuteron's, because what sets it is Q_A/Z, and
 /// Q(6Li)/Q(d) = 0.29 against Z = 3 (design_C_tensor_rc.md sec. 2.1).  It is
 /// also QUASI-ELASTIC-DOMINATED at every x >~ 0.03 (sigma^q_U/sigma^el_U =
-/// 0.28 / 2.7 / 1000 at x = 0.01 / 0.1 / 0.3), which is why `qe_kf_gev` and
-/// `qe_suppression` are the tail's dominant knobs.
+/// 0.63 / 533 / 3.7e6 at x = 0.01 / 0.1 / 0.3 on the default, 0.28 / 2.7 / 1000
+/// on t-peak; Q^2 = 5): `qe_kf_gev` and `qe_suppression` are its dominant knobs.
 ///
-/// AND THE DEFAULT IS A LOWER BOUND, WITH TWO OTHER EDGES NOW SHIPPED.
-/// `rc_tail` at the shipped `RcTailModel::TPeak` is the t-PEAK ALONE.  The
+/// SINCE D5 (2026-10-27) THE DEFAULT IS THE EXACT TAIL; THE t-PEAK IS A BOUND.
+/// `rc_tail` at `RcTailModel::TPeak` (default until D5) is the t-PEAK ALONE.  The
 /// leading-log s- and p-peaks of the same observable are `ll_peaks_spin1` /
 /// `ll_peaks_qe` (declared beside `polrad_sigma_qe_u`), and
 /// `RcTailModel::TPeakPlusLL` adds them.  `RcTailModel::PolradFull`
-/// (2026-09-06) computes ALL THREE PEAKS EXACTLY, from POLRAD Eq. (18) +
-/// Appendix B + Eq. (A.4).  NONE of the three is "the" radiative tail:
+/// (2026-09-06; the DEFAULT since D5) computes ALL THREE PEAKS EXACTLY, from
+/// POLRAD Eq. (18) + App. B + Eq. (A.4).  NONE is "the" radiative tail:
 ///
 ///   * `TPeak` is a LOWER BOUND.  It is one peak of a three-peak object.
 ///   * `TPeakPlusLL` is a STATED MODEL, not a controlled O(alpha) expansion:
@@ -71,12 +71,12 @@
 ///     it is accurate to the worse of the two (~5-10 %), and its radiator
 ///     carries an UNCANCELLED soft 1/(1-z) that overshoots as y -> 0.
 ///   * `PolradFull` is ONE exact tau_A quadrature, with the lepton mass in
-///     it, so it has no mixed-order problem and no uncancelled radiator --
-///     but its ABSOLUTE NORMALISATION IS STILL NOT CHECKED AGAINST MO-TSAI
-///     OR ANY EXTERNAL EXACT TAIL (no such number is in this tree).  It is
-///     checked POLRAD-INTERNALLY (the x_A -> 0 reduction to Eq. (38),
-///     unpolarised AND tensor) and against the leading-log fallback, and
-///     nothing more.
+///     it, so it has no mixed-order problem and no uncancelled radiator.  Its
+///     PROTON (quasi-elastic) slot is checked against DJANGOH 4.6.21's exact
+///     O(alpha) tail since 2026-10-26 (BENCHMARK_PLAN.md row 7: 1.0004 / 1.0010
+///     / 0.9995 / 0.9866 from the quadrature); the COHERENT 6Li slot and the
+///     tensor term only POLRAD-INTERNALLY (x_A -> 0 to Eq. (38)) and against
+///     the leading-log fallback.  Mo-Tsai is not in this tree.
 ///   * NEITHER t-peak MODEL carries a tensor s/p peak: Eqs. (37)-(39) have
 ///     none and a leading log cannot supply one, so `TPeakPlusLL` LOWERS the
 ///     tensor FRACTION of the tail -- x0.66139 / x0.0031829 / x6.6076e-05 at
@@ -240,8 +240,8 @@
 ///     `docs/open_items/run_2026-09-06/phase_A_numbers.md` sec. A2; on A_zz
 ///     at x = 0.01, Q^2 = 5 the half-width runs 1.358472e-04 / 1.204512e-04 /
 ///     5.116913e-05, and the band still leads the WHOLE radiative tail by
-///     x768 / x681 / x289 there, so the RC budget's ordering survives all
-///     three.  UNDECIDED: nothing here moves the default.
+///     x1152 / x1022 / x434 there on the default tail (x768 / x681 / x289 on
+///     t-peak, D5), so the ordering survives all three.  UNDECIDED here.
 ///   * No RC calculation exists for a TAGGED tensor asymmetry.  Applying
 ///     delta(x) to tau_tag is a defensible, conservative EXTRAPOLATION and
 ///     must never be quoted as a published result.
@@ -257,8 +257,8 @@
 ///     breaks down (the tensor part of the density cancels the unpolarised
 ///     part), and the clipped fraction is reported per run and per event
 ///     (`Event::rc_clipped`) rather than hidden.
-///   * `rc_tail` at the DEFAULT `RcTailModel::TPeak` is the t-PEAK ONLY and
-///     is therefore a LOWER BOUND on the dilution.  `TPeakPlusLL` is the
+///   * `rc_tail` at `RcTailModel::TPeak` (the DEFAULT until D5) is the t-PEAK
+///     ONLY and therefore a LOWER BOUND on the dilution.  `TPeakPlusLL` is the
 ///     other edge and is a STATED MODEL of mixed approximation orders with
 ///     no tensor s/p partner, so it lowers the tensor fraction -- run the
 ///     two as a band and quote neither alone.  THE BAND IS A FEW PER CENT
@@ -1020,8 +1020,8 @@ double polrad_sigma_qe_u(int z, int n, double x, double y, double s,
 //
 // FIVE THINGS THIS IS NOT.
 //
-//  * NOT validated against Mo-Tsai, or against any external exact tail.  The
-//    Mo-Tsai paper is not in this tree and no number from it is quoted.  What
+//  * NOT validated against Mo-Tsai (not in this tree), and against an external
+//    exact tail on the PROTON slot only (DJANGOH, row 7, 2026-10-26).  What else
 //    is checked is (a) POLRAD-INTERNAL -- the x_A -> 0 limit against Eq. (38),
 //    which is Eq. (18)'s own ultrarelativistic t-peak reduction, unpolarised
 //    AND tensor; (b) against the LEADING-LOG fallback `ll_peaks_spin1` where
@@ -1222,15 +1222,15 @@ enum class RcMode : int {
   TensorBand = 1,   ///< the band + the radiative tails
 };
 
-/// Which tail formulation.  All THREE are implemented since 2026-09-06;
-/// `TPeak` remains the DEFAULT and is bit for bit every published number.
-/// (`PolradFull` was the documented upgrade path of
-/// design_C_tensor_rc.md sec. 1.4.6 and threw until then.)
+/// Which tail formulation.  All THREE are implemented since 2026-09-06, and
+/// `PolradFull` is the DEFAULT since 2026-10-27 (D5); every RC-tail number
+/// published before that date without a model label is a `TPeak` number.
+/// (`PolradFull` was design_C_tensor_rc.md sec. 1.4.6's upgrade path.)
 enum class RcTailModel : int {
-  TPeak      = 0,   ///< DEFAULT: POLRAD Eqs. (37)-(39), (43) -- one eta_A
-                    ///< integral.  IT IS ONE PEAK OF THE ELASTIC TAIL AND ITS
-                    ///< ABSOLUTE NORMALISATION IS NOT VALIDATED AGAINST ANY
-                    ///< EXTERNAL EXACT TAIL.  POLRAD sec. 2.1.3 B asserts the
+  TPeak      = 0,   ///< OPTION since D5 (the DEFAULT until 2026-10-27): POLRAD
+                    ///< Eqs. (37)-(39), (43), one eta_A integral.  IT IS ONE
+                    ///< PEAK OF THE TAIL: 0.599 / 0.878 / 0.989 / 0.985 of
+                    ///< DJANGOH's exact proton tail (row 7).  POLRAD sec. 2.1.3 B asserts the
                     ///< s- and p-peaks are SUPPRESSED for a tail (the s-peak
                     ///< sits at t ~ (1-y)Q^2, where 6Li's charge form factor
                     ///< is long dead, while the t-peak reaches down to
@@ -1247,7 +1247,7 @@ enum class RcTailModel : int {
                     ///< lowest-x bin" radiative background.  Treat `rc_tail`
                     ///< as a LOWER BOUND on the dilution, band it, and never
                     ///< quote it as "the" radiative tail.
-  PolradFull = 1,   ///< OPT-IN: POLRAD Eq. (18) + Appendix B + Eq. (A.4) --
+  PolradFull = 1,   ///< DEFAULT since D5 (2026-10-27): POLRAD Eq. (18) + App. B + Eq. (A.4) --
                     ///< ONE exact tau_A quadrature that contains ALL THREE
                     ///< peaks.  Implemented 2026-09-06; it threw before that.
                     ///<
@@ -1266,16 +1266,16 @@ enum class RcTailModel : int {
                     ///< the gap `RcOptions::qe_tensor_scale` prices with a
                     ///< borrowed magnitude, and PolradFull does not close it.
                     ///<
-                    ///< (3) ITS NORMALISATION IS STILL NOT CHECKED AGAINST
-                    ///< MO-TSAI, or against any external exact tail: that
-                    ///< paper is not in this tree and no number from it is
-                    ///< quoted anywhere.  It is checked POLRAD-INTERNALLY --
+                    ///< (3) ITS NORMALISATION: MO-TSAI is not in this tree.
+                    ///< The PROTON slot is checked against DJANGOH's exact
+                    ///< O(alpha) tail (row 7, 2026-10-26: 1.0004 / 1.0010 / 0.9995 /
+                    ///< 0.9866); the coherent slot POLRAD-INTERNALLY only --
                     ///< with a form factor dead at the s-/p-peak vertex, so
                     ///< that only the t-peak survives, Eq. (18)/Eq. (38) is
                     ///< 1.00230 (unpolarised) and 1.00313 (tensor) — the F_m-only sector's ratios; the spin-0 unpolarised ratio at the same x_A is 1.00492 and the F_q tensor ratio 1.01872 (§B2.3) at
                     ///< x_A = 0.003 and tends to 1 as x_A -> 0 -- and against
                     ///< the leading-log fallback where the peaks are alive.
-                    ///< Nothing more.
+                    ///< Nothing more on the coherent slot or the tensor term.
                     ///<
                     ///< (4) IT IS NOT BRACKETED BY THE `TPeak`/`TPeakPlusLL`
                     ///< BAND.  MEASURED over the sampler's 3051 accepted
@@ -1329,16 +1329,16 @@ enum class RcTailModel : int {
                     ///<   disagreement.
                     ///<
                     ///< (5) IT COSTS, AND IT REFUSES RATHER THAN DEGRADES.
-                    ///< ~10 s of tail-table build against ~0.15 s.  It needs
-                    ///< `n_eta` >= 64 (there it is the tanh-sinh node count
-                    ///< PER PANEL of the tau integral) and a `long double`
-                    ///< wider than `double` (Eq. (B.3)'s a_ik cancel to ~5
-                    ///< decimal digits); both are REFUSED by `RcModel`'s
-                    ///< constructor, never silently degraded.
+                    ///< 12.0 s of tail-table build against 0.16 s (6Li config 1, 101 x 77
+                    ///< nodes, unloaded, 2026-10-29), per Pipeline, NO CACHE.  It needs
+                    ///< `n_eta` >= 64 (tanh-sinh nodes PER PANEL) and a `long double`
+                    ///< wider than `double` (Eq. (B.3)'s a_ik cancel to ~5 digits: NOT
+                    ///< MSVC or Apple arm64; aarch64 Linux's software quad, cost UNMEASURED);
+                    ///< both REFUSED, never degraded -- where a tail is BUILT (D5).
                     ///<
-                    ///< (6) NOT THE DEFAULT, for the same reason
-                    ///< `TPeakPlusLL` is not: `TPeak` keeps every published
-                    ///< number and every reference JSON bit for bit.
+                    ///< (6) THE DEFAULT since 2026-10-27 (D5, run_2026-10-27/
+                    ///< DECISIONS.md).  No reference JSON carries an rc field;
+                    ///< unlabelled RC-tail numbers from before D5 are TPeak's.
   TPeakPlusLL = 2,  ///< OPT-IN: `TPeak` PLUS the leading-log s- and p-peaks
                     ///< of `ll_peaks_spin1` / `ll_peaks_qe`, added to the
                     ///< UNPOLARISED numerator of `tail_ratio_at`.  Read the
@@ -1413,9 +1413,9 @@ enum class RcTailModel : int {
                     ///< this model at x = 0.01 and 0.30 and BELOW it at 0.10.
                     ///< The bound was not even one-sided.
                     ///<
-                    ///< (3) NOT THE DEFAULT.  `TPeak` stays the shipped
-                    ///< default so that every published number and every
-                    ///< reference JSON stays bit for bit reproducible.
+                    ///< (3) NOT THE DEFAULT: `PolradFull` is, since D5
+                    ///< (2026-10-27), and `TPeak` was until then.  No reference
+                    ///< JSON carries an rc field.
 };
 const char* rc_mode_name(RcMode m);          ///< "off", "tensor-band"
 
@@ -1500,7 +1500,7 @@ struct RcOptions {
                               ///< the unpolarised elastic tail does; HERMES
                               ///< subtracted both.  Turning it off prices the
                               ///< elastic tail alone and MUST be labelled so.
-  RcTailModel tail_model = RcTailModel::TPeak;
+  RcTailModel tail_model = RcTailModel::PolradFull;
   std::shared_ptr<const Spin1ElasticFF> ff;   ///< null => HoSpin1FF::for_ion
   /// The +-100 % quadrupole band, applied by `RcModel` when it builds the
   /// DEFAULT form factor.  Lives here (not only on `HoSpin1FFOptions`) so that
@@ -1540,10 +1540,10 @@ struct RcOptions {
   /// rescales to any other value and no second run is needed.
   ///
   /// WHY IT EXISTS.  The polarised quasi-elastic tail is the largest UNPRICED
-  /// piece of `rc_tail`: after the per-nucleon fix and POLRAD's own Pauli
-  /// factor the quasi-elastic term is 22 % / 73 % / 99.9 % of the tail at
-  /// x = 0.01 / 0.10 / 0.30, and every bit of its tensor dependence is set to
-  /// zero.  Zero is a claim, and it is not a defensible one at 99.9 %.
+  /// piece of `rc_tail`: the quasi-elastic term is 38.7 / 99.81 / 100.00 % of
+  /// the DEFAULT tail at x = 0.01 / 0.10 / 0.30, Q^2 = 5 (22.0 / 73.3 / 99.90 %
+  /// of the t-peak's), and every bit of its tensor dependence is set to zero.
+  /// Zero is a claim, and it is not a defensible one at 99.9 % (see (3)).
   ///
   /// AND IT IS NOT A DERIVED BOUND.  Say it plainly: no polarised
   /// quasi-elastic radiative-tail calculation exists for an A = 6 spin-1
@@ -1570,15 +1570,15 @@ struct RcOptions {
   ///       tensor fraction is ANOMALOUSLY SMALL, and for a reason the
   ///       quasi-elastic piece does not share.  MEASURED in this tree at
   ///       Q^2 = 5 GeV^2 ON THE `ho` C0-SHAPE EDGE (phase_B_numbers.md B3.1
-  ///       labels the same row "this tree, `ho` edge"),
-  ///       sigma^el_T/sigma^el_U = -3.057e-03 / +9.357e-04 /
-  ///       +7.972e-02 at x = 0.01 / 0.10 / 0.30, against POLRAD's own DEUTERON
-  ///       elastic-tail numbers +0.106 / +0.062 / -0.117 (transcription check
-  ///       sec. 8, row 2 re-driven 2026-09-23) -- a factor 35 / 67 at the first two and only 1.5 at the
-  ///       third.  THE MAGNITUDE IS A BAND EDGE TOO, not only the sign of
-  ///       point (4): the `vmc-ft` edge gives -3.282e-03 / -2.442e-04 /
-  ///       +9.333e-02 on the same three x, so the x = 0.10 factor is 67 on
-  ///       one edge and ~255 on the other.  Design sec. 2.1 says why: what sets the fraction is Q_A/Z,
+  ///       labels the same row "this tree, `ho` edge"), on the t-PEAK tail,
+  ///       sigma^el_T/sigma^el_U = -3.057e-03 / +9.357e-04 / +7.972e-02 at
+  ///       x = 0.01 / 0.10 / 0.30, against POLRAD's own DEUTERON elastic-tail
+  ///       numbers +0.106 / +0.062 / -0.117 (transcription check sec. 8, row 2
+  ///       re-driven 2026-09-23) -- a factor 35 / 67 at the first two and only 1.5 at the
+  ///       third (DEFAULT PolradFull, D5: -3.092e-03 / +2.674e-04 / +6.568e-02, 34 / 233 / 1.8).
+  ///       THE MAGNITUDE IS A BAND EDGE TOO, not only the sign of point (4): `vmc-ft` gives
+  ///       -3.282e-03 / -2.442e-04 / +9.333e-02 (default -3.328e-03 / -9.821e-04 / +6.776e-02), so the x = 0.10
+  ///       factor is 67 / ~255 on the two edges (233 / 63 on the default).  Design sec. 2.1 says why: what sets the fraction is Q_A/Z,
   ///       and Q(6Li)/Q(d) = 0.29 against Z = 3.  But that near-vanishing 6Li
   ///       quadrupole is a cancellation in the COHERENT charge distribution,
   ///       while the alignment of the NUCLEON MOMENTUM distribution -- what a
@@ -1614,16 +1614,16 @@ struct RcOptions {
   /// POLRAD Eq. (44)'s S_E/S_M, as `ffquas` codes them: the de Forest-Walecka
   /// Fermi-gas factor S(q) = (3/4)(q/k_F) - (q/k_F)^3/16 below q = 2 k_F.
   /// DEFAULT ON, at 6Li's measured k_F (`RC_QE_KF_GEV`, Moniz et al.).  This
-  /// is not a small choice: after the per-nucleon fix the QRT is the DOMINANT
-  /// piece of `rc_tail` at every x, and the t-peak reaches down to
-  /// t_min ~ (x M_N)^2, so at x <~ 0.1 most of its integral sits below 2 k_F.
+  /// is not a small choice: it cuts the QRT to 0.67 / 0.999 at x = 0.01 / 0.1
+  /// (Q^2 = 5) on the default tail, and to 0.47 / 0.87 on t-peak, whose reach to
+  /// t_min ~ (x M_N)^2 puts most of its integral below 2 k_F at x <~ 0.1.
   /// Set to 0 for the unsuppressed S = 1 edge (which v0 shipped as its
   /// default and which overstates the QRT there).
   double qe_kf_gev = RC_QE_KF_GEV;
   /// THE TENSOR FRACTION OF THE LEADING-LOG s-/p-PEAKS -- A BOUND WITH NO
   /// DERIVATION.  DEFAULT 0.0, which is exactly the tensor-blind s-/p-peaks
-  /// the shipped code has always carried, and which is unreachable under the
-  /// shipped `TPeak` anyway: with this at 0 not one floating-point operation
+  /// the shipped code has always carried; it is unreachable under `TPeak` and
+  /// refused on the default `PolradFull` (it RAN): at 0 not one floating-point operation
   /// of any run moved.
   ///
   /// WHAT IT DOES.  `tail_ratio_at` adds, to its numerator,
@@ -1819,9 +1819,9 @@ struct RcOptions {
   double m_lepton    = M_ELECTRON;
   /// Ceiling on the returned tail ratio, mirroring `GlauberFsiOptions::w_max`:
   /// a Monte-Carlo weight must be bounded, and the clipped fraction is
-  /// reported rather than hidden -- globally AND per y-band, because
-  /// Y_+ = [1 + (1-y)^2]/(1-y) ~ 1/(1-y) makes the y -> 1 edge the only place
-  /// it bites.
+  /// reported rather than hidden -- globally AND per y-band: on the t-peak
+  /// models Y_+ ~ 1/(1-y) makes y -> 1 the edge that bites; on the default
+  /// (D5) it is x -> 1 at y < 0.9 (0.386 % of nodes, config 1; 0 events).
   double tail_max    = 10.0;
   /// Ceiling on |tau| the BAND sees, the same discipline `tail_max` applies to
   /// the tail.  On the TAGGED channels tau_tag = 1 - nbar(k,c)/n_M(k,c) is
@@ -1952,8 +1952,8 @@ class RcModel {
   ///     and the tagged Born alike, and both select the 2-of-6 nucleons inside
   ///     the deuteron (a nucleon knocked out of the ALPHA destroys the alpha
   ///     and IS vetoed -- that is the other 4-of-6).  The omitted dilution is
-  ///     of the same ORDER as the inclusive quasi-elastic one, which is
-  ///     22 % / 73 % / 99.9 % of the inclusive tail at x = 0.01 / 0.10 / 0.30.
+  ///     of the same ORDER as the inclusive quasi-elastic one, which is 39 /
+  ///     99.8 / 100 % of the default tail (22 / 73 / 99.9 % of the t-peak's), Q^2 = 5.
   ///
   /// It is left UNIMPLEMENTED rather than guessed, because it needs a TAGGED
   /// Born denominator (`RcModel::born_pb_at` is the inclusive one) and the tag
@@ -2083,8 +2083,8 @@ class RcModel {
   };
   TailTriple tail_sigma_at(double x, double q2) const;
   /// Fraction of table nodes that hit `RcOptions::tail_max`, globally and per
-  /// y-band (y < 0.5, 0.5-0.9, > 0.9).  LOG ALL FOUR: the tail grows like
-  /// Y_+ ~ 1/(1-y), so a clipped edge hides inside a small global number.
+  /// y-band (y < 0.5, 0.5-0.9, > 0.9).  LOG ALL FOUR: a clipped edge hides in a
+  /// small global number (t-peak: y -> 1, Y_+ ~ 1/(1-y); the default: x -> 1).
   double clipped_cell_fraction() const { return clipped_; }
   std::array<double, 3> clipped_fraction_by_y() const { return clipped_by_y_; }
 

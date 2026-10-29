@@ -608,12 +608,12 @@ void PipelineConfig::validate() const {
             "leave the quasi-elastic tail on");
       }
     }
-    // `RcTailModel::PolradFull` -- POLRAD Eq. (18) + Appendix B + Eq. (A.4),
-    // implemented 2026-09-06 (phase_B_numbers.md sec. B2).  Its two
-    // preconditions are `RcModel`'s own and are repeated here for the same
-    // reason every other rc check is: `validate()` has to refuse BEFORE any
-    // model exists.
-    if (rc_options.tail_model == RcTailModel::PolradFull) {
+    // `RcTailModel::PolradFull` (POLRAD Eq. (18) + App. B + Eq. (A.4)), the
+    // DEFAULT since D5: its two preconditions are `RcModel`'s own, repeated so
+    // validate() refuses BEFORE a model exists -- and only where a TAIL is
+    // built (D5, 2026-10-29: a tagged run refuses --rc-tail-model t-peak).
+    if (rc_options.tail_model == RcTailModel::PolradFull &&
+        rc_tail_applies(event_channel_of(channel), rc_options.with_tail)) {
       if (std::numeric_limits<long double>::digits <=
           std::numeric_limits<double>::digits) {
         throw std::runtime_error(
@@ -633,12 +633,12 @@ void PipelineConfig::validate() const {
     // THE SAME RULE AGAIN, ONE LEVEL DOWN: `sp_tensor_scale` is a fraction OF
     // the leading-log s-/p-peak column `TailTriple::u_sp`, and only
     // `tail_model = TPeakPlusLL` computes that column -- under `TPeak` the
-    // table is identically zero, so the scale multiplies nothing and the run
-    // is bit-identical to the default while `meta` would carry
-    // `rc_sp_tensor_scale` as if the s/p tensor omission had been priced.
-    // `RcModel`'s constructor makes the identical check for the C++ API path.
-    if (rc_options.tail_model != RcTailModel::TPeakPlusLL &&
-        rc_options.sp_tensor_scale != 0.0) {
+    // table is identically zero, so the scale multiplies nothing and `meta`
+    // would carry `rc_sp_tensor_scale` as if the s/p omission had been priced.
+    // ONLY WHERE A TAIL IS BUILT (F5, 2026-10-29): off it the tail sub-knob rule
+    // below names THAT cause.  `RcModel`'s constructor checks the C++ API path.
+    if (rc_options.tail_model != RcTailModel::TPeakPlusLL && rc_options.sp_tensor_scale != 0.0 &&
+        rc_tail_applies(event_channel_of(channel), rc_options.with_tail)) {
       throw std::runtime_error(
           std::string("PipelineConfig: rc sp_tensor_scale != 0 needs "
                       "tail_model = TPeakPlusLL (--rc-tail-model t-peak+ll) "
@@ -677,8 +677,8 @@ void PipelineConfig::validate() const {
         rc_options.m_lepton != M_ELECTRON) {
       throw std::runtime_error(
           "PipelineConfig: rc_options.m_lepton is read ONLY by tail_model = "
-          "PolradFull (POLRAD's F_IR, C_{1,2} and lambda_s); the shipped "
-          "TPeak tail has no lepton-mass dependence and TPeakPlusLL's "
+          "PolradFull (POLRAD's F_IR, C_{1,2} and lambda_s; the default since "
+          "D5); the TPeak tail has no lepton-mass dependence and TPeakPlusLL's "
           "leading-log radiator reads constants.hpp's M_ELECTRON directly, "
           "so setting it here would record a variation that did not run -- "
           "leave it at M_ELECTRON or run --rc-tail-model polrad-full");
@@ -741,8 +741,8 @@ void PipelineConfig::validate() const {
            rc_options.sp_tensor_scale != od.sp_tensor_scale},
           {"rc_options.qe_kf_gev", rc_options.qe_kf_gev != od.qe_kf_gev},
           {"--rc-tail-model", rc_options.tail_model != od.tail_model},
-          {"rc_options.with_qe_tail",
-           rc_options.with_qe_tail != od.with_qe_tail},
+          {"rc_options.with_qe_tail", rc_options.with_qe_tail != od.with_qe_tail},
+          {"rc_options.m_lepton", rc_options.m_lepton != od.m_lepton},  // D5
           {"rc_options.n_eta", rc_options.n_eta != od.n_eta},
           {"rc_options.tail_max", rc_options.tail_max != od.tail_max},
       };
@@ -3120,13 +3120,13 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
            "6Li's measured Fermi momentum in the Pauli suppression S(q)",
            o.qe_kf_gev == od.qe_kf_gev);
     tail_row("rc_tail_model", "--rc-tail-model", rc_tail_model_name(o.tail_model),
-             "t-peak alone (a LOWER bound), t-peak plus the leading-log s- "
-             "and p-peaks, or POLRAD Eq. (18)'s exact tau_A quadrature",
+             "POLRAD Eq. (18)'s exact tau_A quadrature (the default since D5, "
+             "2026-10-27), the t-peak alone (a LOWER bound) or t-peak + the leading-log s-/p-peaks",
              o.tail_model == od.tail_model);
     // THE s-/p-PEAK SUB-FAMILY, the same shape as `qe_row` one branch over.
     // `sp_tensor_scale` additionally needs the LEADING-LOG s-/p-peaks to have
-    // run, and only `tail_model = TPeakPlusLL` computes them; under the
-    // shipped `TPeak` the `u_sp` table is identically zero, so the scale is a
+    // run, and only `tail_model = TPeakPlusLL` computes them; under `TPeak`
+    // (the default until D5) the `u_sp` table is identically zero, so the scale is a
     // multiplier on a term this run computes as exactly 0 -- REFUSED by
     // `validate()` and by `RcModel`'s constructor, not labelled, under the
     // criterion stated once at `KnobProvenance`.

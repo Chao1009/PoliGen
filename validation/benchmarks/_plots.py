@@ -53,7 +53,7 @@ PALETTE = {
     "alt": "#eda100",        # slot 4 yellow -- the alternative wave / model (AV18, instant form, ...)
     "r1998": "#e87ba4",      # slot 5 magenta
     "nnpdfpol": "#6250d6",   # slot 7 violet
-    "alt2": "#008300",       # slot 6 green  -- a third configuration (CD-Bonn, polrad-full, ...)
+    "alt2": "#008300",       # slot 6 green  -- a third configuration (CD-Bonn, t-peak since D5, ...)
     "alt3": "#e34948",       # slot 8 red    -- a fourth, last resort
 }
 INK = "#0b0b0b"

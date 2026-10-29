@@ -343,9 +343,9 @@ std::shared_ptr<const InclusiveSampler> rc_sampler_ptr() {
   return p;
 }
 
-/// The default 6Li inclusive model at the run's defaults.
-const RcModel& rc_model() {
-  static const RcModel m(RcMode::TensorBand, RcOptions(), rc_sampler_ptr(),
+RcOptions tpk() { RcOptions o; o.tail_model = RcTailModel::TPeak; return o; }  // D5
+const RcModel& rc_model() {  // 6Li inclusive on the t-PEAK, BY NAME since D5 (2026-10-29)
+  static const RcModel m(RcMode::TensorBand, tpk(), rc_sampler_ptr(),
                          tensor_thirds_plan(0.0, 0.6), Channel::Inclusive,
                          LI6());
   return m;
@@ -1311,9 +1311,9 @@ TEST_CASE("T8': the quasi-elastic tail, Eq. (44)") {
   }
 
   SUBCASE("qe_suppression = 0 reproduces the elastic-only tail BIT FOR BIT") {
-    RcOptions off_qe;
+    RcOptions off_qe = tpk();                 // t-peak by name (D5)
     off_qe.qe_suppression = 0.0;
-    RcOptions no_qe;
+    RcOptions no_qe = tpk();
     no_qe.with_qe_tail = false;
     const RunPlan plan = tensor_thirds_plan(0.0, 0.6);
     const RcModel a(RcMode::TensorBand, off_qe, rc_sampler_ptr(), plan,
@@ -1327,8 +1327,8 @@ TEST_CASE("T8': the quasi-elastic tail, Eq. (44)") {
         }
       }
     }
-    // ... and the QRT really is a large part of the default tail.
-    const RcModel full(RcMode::TensorBand, RcOptions(), rc_sampler_ptr(), plan,
+    // ... and the QRT really is a large part of the t-peak tail (and ~all of the default's).
+    const RcModel full(RcMode::TensorBand, tpk(), rc_sampler_ptr(), plan,
                        Channel::Inclusive, LI6());
     CHECK(full.tail_ratio_at(0.1, 5.0, 0.0) >
           1.2 * a.tail_ratio_at(0.1, 5.0, 0.0));
@@ -1352,9 +1352,9 @@ TEST_CASE("B3: the POLARISED quasi-elastic stand-in, RcOptions::qe_tensor_scale"
                     {0.1, 3.0},  {0.1, 5.0},  {0.1, 9.0},
                     {0.3, 5.0},  {0.3, 9.0}};
 
-  SUBCASE("the default is 0 and the shipped tail does not move") {
+  SUBCASE("the default is 0 and the t-peak tail does not move") {
     CHECK(RcOptions().qe_tensor_scale == 0.0);
-    RcOptions zero;
+    RcOptions zero = tpk();                   // B3 is t-peak physics (D5)
     zero.qe_tensor_scale = 0.0;
     const RcModel m(RcMode::TensorBand, zero, rc_sampler_ptr(), plan,
                     Channel::Inclusive, LI6());
@@ -1371,7 +1371,7 @@ TEST_CASE("B3: the POLARISED quasi-elastic stand-in, RcOptions::qe_tensor_scale"
     // therefore has to be RUN at each edge (T12), this term is one product.
     // One run rescales, and the tests say so rather than leaving a reader to
     // assume it.
-    RcOptions o1, o2, o4;
+    RcOptions o1 = tpk(), o2 = tpk(), o4 = tpk();
     o1.qe_tensor_scale = 1.0;
     o2.qe_tensor_scale = 2.0;
     o4.qe_tensor_scale = 4.0;
@@ -1405,7 +1405,7 @@ TEST_CASE("B3: the POLARISED quasi-elastic stand-in, RcOptions::qe_tensor_scale"
     // term divided by the ELASTIC tensor term must be kappa_qe sigma^q_U /
     // sigma^el_U -- both read from `tail_sigma_at`, i.e. from the quadrature
     // and not from the ratio under test.
-    RcOptions o;
+    RcOptions o = tpk();
     o.qe_tensor_scale = 1.0;
     const RcModel m(RcMode::TensorBand, o, rc_sampler_ptr(), plan,
                     Channel::Inclusive, LI6());
@@ -1444,10 +1444,10 @@ TEST_CASE("B3: the POLARISED quasi-elastic stand-in, RcOptions::qe_tensor_scale"
     // quasi-elastic tail.  A tensor stand-in that survived
     // `qe_suppression = 0` would be a tail with no unpolarised parent, which
     // is not a band edge but a contradiction.
-    RcOptions o;
+    RcOptions o = tpk();
     o.qe_suppression = 0.0;
     o.qe_tensor_scale = 5.0;
-    RcOptions ref;
+    RcOptions ref = tpk();
     ref.qe_suppression = 0.0;
     const RcModel m(RcMode::TensorBand, o, rc_sampler_ptr(), plan,
                     Channel::Inclusive, LI6());
@@ -1459,14 +1459,14 @@ TEST_CASE("B3: the POLARISED quasi-elastic stand-in, RcOptions::qe_tensor_scale"
       }
     }
     // ... and HALF the suppression is half the stand-in, exactly.
-    RcOptions h, f;
+    RcOptions h = tpk(), f = tpk();
     h.qe_suppression = 0.5; h.qe_tensor_scale = 1.0;
     f.qe_suppression = 1.0; f.qe_tensor_scale = 1.0;
     const RcModel mh(RcMode::TensorBand, h, rc_sampler_ptr(), plan,
                      Channel::Inclusive, LI6());
     const RcModel mf(RcMode::TensorBand, f, rc_sampler_ptr(), plan,
                      Channel::Inclusive, LI6());
-    RcOptions hb;
+    RcOptions hb = tpk();
     hb.qe_suppression = 0.5;
     const RcModel bh(RcMode::TensorBand, hb, rc_sampler_ptr(), plan,
                      Channel::Inclusive, LI6());
@@ -1481,7 +1481,7 @@ TEST_CASE("B3: the POLARISED quasi-elastic stand-in, RcOptions::qe_tensor_scale"
   }
 
   SUBCASE("a knob that did not run is REFUSED, and a negative one too") {
-    RcOptions bad;
+    RcOptions bad = tpk();
     bad.with_qe_tail = false;
     bad.qe_tensor_scale = 1.0;
     CHECK_THROWS_AS(RcModel(RcMode::TensorBand, bad, rc_sampler_ptr(), plan,
@@ -1489,11 +1489,11 @@ TEST_CASE("B3: the POLARISED quasi-elastic stand-in, RcOptions::qe_tensor_scale"
                     std::runtime_error);
     // ... but zero with the tail off is fine: nothing is recorded that did
     // not run.
-    RcOptions ok;
+    RcOptions ok = tpk();
     ok.with_qe_tail = false;
     CHECK_NOTHROW(RcModel(RcMode::TensorBand, ok, rc_sampler_ptr(), plan,
                           Channel::Inclusive, LI6()));
-    RcOptions neg;
+    RcOptions neg = tpk();
     neg.qe_tensor_scale = -1e-12;
     CHECK_THROWS_AS(RcModel(RcMode::TensorBand, neg, rc_sampler_ptr(), plan,
                             Channel::Inclusive, LI6()),
@@ -1505,8 +1505,8 @@ TEST_CASE("B3: the POLARISED quasi-elastic stand-in, RcOptions::qe_tensor_scale"
     // 99.9 % of `rc_tail`, so lending it the elastic tensor fraction changes
     // the tensor part of the tail by ~1e3, while at x = 0.01 -- where the
     // elastic tail still dominates -- it is a tens-of-percent effect.  These
-    // are the numbers phase_B_numbers.md sec. B3 publishes.
-    RcOptions o;
+    // are the numbers phase_B_numbers.md sec. B3 publishes -- t-PEAK numbers.
+    RcOptions o = tpk();
     o.qe_tensor_scale = 1.0;
     const RcModel m(RcMode::TensorBand, o, rc_sampler_ptr(), plan,
                     Channel::Inclusive, LI6());
@@ -1541,13 +1541,13 @@ TEST_CASE("B1: the s-/p-peak tensor stand-in, RcOptions::sp_tensor_scale") {
   // (rc.hpp, RcOptions::sp_tensor_scale); what is testable is the ALGEBRA and
   // the plumbing, and that is what this case gates.
   const RunPlan plan = tensor_thirds_plan(0.0, 0.6);
-  const RcModel& base = rc_model();          // the shipped TPeak default
+  const RcModel& base = rc_model();          // TPeak, the default until D5
   RcOptions ll_opt;
   ll_opt.tail_model = RcTailModel::TPeakPlusLL;
   const RcModel ll(RcMode::TensorBand, ll_opt, rc_sampler_ptr(), plan,
                    Channel::Inclusive, LI6());
 
-  SUBCASE("the default is 0 and the SHIPPED tail cannot see it") {
+  SUBCASE("the default is 0 and the t-peak tail cannot see it") {
     CHECK(RcOptions().sp_tensor_scale == 0.0);
     // Under `TPeak` the u_sp table is identically zero, which is why a
     // non-zero scale is REFUSED there rather than silently ignored.
@@ -1560,13 +1560,13 @@ TEST_CASE("B1: the s-/p-peak tensor stand-in, RcOptions::sp_tensor_scale") {
   }
 
   SUBCASE("a knob that did not run is REFUSED, and a negative one too") {
-    RcOptions bad;                            // tail_model = TPeak
+    RcOptions bad = tpk();                    // tail_model = TPeak, by name (D5)
     bad.sp_tensor_scale = 1.0;
     CHECK_THROWS_AS(RcModel(RcMode::TensorBand, bad, rc_sampler_ptr(), plan,
                             Channel::Inclusive, LI6()),
                     std::runtime_error);
     // ... zero under TPeak is fine: nothing is recorded that did not run.
-    CHECK_NOTHROW(RcModel(RcMode::TensorBand, RcOptions(), rc_sampler_ptr(),
+    CHECK_NOTHROW(RcModel(RcMode::TensorBand, tpk(), rc_sampler_ptr(),
                           plan, Channel::Inclusive, LI6()));
     // ... and under TPeakPlusLL it is accepted, because the peaks ran.
     RcOptions ok = ll_opt;
@@ -1821,9 +1821,9 @@ TEST_CASE("Q9: the QUASI-ELASTIC Pauli suppression S(q), POLRAD Eq. (44)") {
   SUBCASE("it is ON by default in RcModel, and qe_suppression is the BAND") {
     // `qe_kf_gev` is the physics; `qe_suppression` stays a flat multiplier on
     // top of it, so the two knobs compose rather than duplicate.
-    RcOptions on;                       // qe_kf_gev = RC_QE_KF_GEV
+    RcOptions on = tpk();               // qe_kf_gev = RC_QE_KF_GEV; 0.4721 is the t-peak's (D5)
     CHECK(on.qe_kf_gev == RC_QE_KF_GEV);
-    RcOptions off;
+    RcOptions off = tpk();
     off.qe_kf_gev = 0.0;
     const RcModel m_on(RcMode::TensorBand, on, rc_sampler_ptr(),
                        tensor_thirds_plan(0.0, 0.6), Channel::Inclusive, LI6());
@@ -1988,7 +1988,7 @@ TEST_CASE("B6: the A = 2 -> A = 6 transfer price, RcOptions::a_transfer_frac") {
 
   SUBCASE("delta widens by EXACTLY sqrt(1 + f^2), and rc_delta itself does not") {
     for (double f : {0.25, 0.5, 1.0, 2.0}) {
-      RcOptions o;
+      RcOptions o = tpk();   // the band is the subject: t-peak for runtime (D5)
       o.a_transfer_frac = f;
       const RcModel m(RcMode::TensorBand, o, rc_sampler_ptr(), plan,
                       Channel::Inclusive, LI6());
@@ -2004,7 +2004,7 @@ TEST_CASE("B6: the A = 2 -> A = 6 transfer price, RcOptions::a_transfer_frac") {
   }
 
   SUBCASE("it moves the BAND and NOTHING else -- not the tail, not tau") {
-    RcOptions o;
+    RcOptions o = tpk();   // compared with rc_model(), the t-peak by name (D5)
     o.a_transfer_frac = 1.0;
     const RcModel m(RcMode::TensorBand, o, rc_sampler_ptr(), plan,
                     Channel::Inclusive, LI6());
@@ -2442,7 +2442,7 @@ TEST_CASE("T5: the tail's y and t_min behaviour") {
 namespace {
 
 RcModel band_model(double fq_scale, double fm_scale = 1.0) {
-  RcOptions o;
+  RcOptions o = tpk();   // Eq. (38)'s sigma^el_T, the t-peak's, by name (D5)
   o.fq_scale = fq_scale;
   o.tail_tensor_scale = fm_scale;
   return RcModel(RcMode::TensorBand, o, rc_sampler_ptr(),
@@ -2713,18 +2713,18 @@ TEST_CASE("T18: RcModel is immutable and thread-safe after construction") {
 
 TEST_CASE("T8(d): RcTailModel::TPeakPlusLL -- what it adds, and what it does NOT") {
   // The promotion of the s-/p-peaks from a test-local construction to a
-  // shipped, OPT-IN tail model.  Four things are gated: that the default did
-  // not move, that the new columns are what `ll_peaks_*` returns, that they
+  // shipped, OPT-IN tail model.  Four things are gated: that TPeak (the default
+  // until D5) did not move, that the new columns are what `ll_peaks_*` returns, that they
   // enter the UNPOLARISED numerator only, and that the tensor FRACTION falls
   // as a consequence -- which is a physics change and is asserted, not hidden.
   RcOptions plus;
   plus.tail_model = RcTailModel::TPeakPlusLL;
   const RcModel mp(RcMode::TensorBand, plus, rc_sampler_ptr(),
                    tensor_thirds_plan(0.0, 0.6), Channel::Inclusive, LI6());
-  const RcModel& mt = rc_model();          // the shipped default, TPeak
+  const RcModel& mt = rc_model();          // TPeak, the default until D5
   const double s = rc_sampler().s();
 
-  SUBCASE("(a) the DEFAULT is untouched: the s+p columns are identically 0") {
+  SUBCASE("(a) TPeak is untouched: the s+p columns are identically 0") {
     const std::vector<double>& usp = mt.sigma_tail_u_sp();
     const std::vector<double>& qsp = mt.sigma_tail_qe_sp();
     REQUIRE(usp.size() == mt.sigma_tail_u().size());
@@ -2875,7 +2875,7 @@ TEST_CASE("T8(d): RcTailModel::TPeakPlusLL -- what it adds, and what it does NOT
   SUBCASE("(g) the node clip is REPORTED on the new model, not hidden") {
     // `build_tail_tables` counts a node clipped on the SAME sum the event
     // sees, s+p included, so switching model moves the statistic.  It is zero
-    // on the default and NOT zero on TPeakPlusLL, concentrated in y > 0.9 --
+    // on TPeak (NOT on the default since D5) and NOT zero on TPeakPlusLL, concentrated in y > 0.9 --
     // which is exactly (f)'s edge.
     CHECK(mt.clipped_cell_fraction() == 0.0);
     CHECK(mp.clipped_cell_fraction() > 0.0);
@@ -3512,4 +3512,90 @@ TEST_CASE("tail_ratio(cell, Q_N) is tail_ratio_at at that cell's centre") {
   CHECK_THROWS_AS(m.tail_ratio(-1, 0.0), std::runtime_error);
   CHECK_THROWS_AS(m.tail_ratio(static_cast<int>(s.n_cells()), 0.0),
                   std::runtime_error);
+}
+
+// ---------------------------------------------------------------------- D5
+
+TEST_CASE("D5: PolradFull is the shipped rc_tail default; TPeak stays an option") {
+  // Decision D5 (docs/open_items/run_2026-10-27/DECISIONS.md, taken
+  // 2026-10-27, implemented 2026-10-29): `RcOptions::tail_model` defaults to
+  // POLRAD Eq. (18) + Appendix B + Eq. (A.4).  The integer values the bindings
+  // and the npz carry do not move, and the t-peak cases above run on `tpk()`,
+  // the option, BY NAME.
+  CHECK(RcOptions().tail_model == RcTailModel::PolradFull);
+  CHECK(std::string(rc_tail_model_name(RcOptions().tail_model)) ==
+        "polrad-full");
+  CHECK(static_cast<int>(RcTailModel::TPeak) == 0);
+  CHECK(static_cast<int>(RcTailModel::PolradFull) == 1);
+  CHECK(static_cast<int>(RcTailModel::TPeakPlusLL) == 2);
+  CHECK(rc_model().options().tail_model == RcTailModel::TPeak);
+  CHECK(tpk().tail_model == RcTailModel::TPeak);
+
+  SUBCASE("a default-built model IS an explicit PolradFull model, node for node") {
+    const RunPlan plan = tensor_thirds_plan(0.0, 0.6);
+    const RcModel d(RcMode::TensorBand, RcOptions(), rc_sampler_ptr(), plan,
+                    Channel::Inclusive, LI6());
+    RcOptions pf;
+    pf.tail_model = RcTailModel::PolradFull;
+    const RcModel e(RcMode::TensorBand, pf, rc_sampler_ptr(), plan,
+                    Channel::Inclusive, LI6());
+    REQUIRE(d.sigma_tail_u().size() == e.sigma_tail_u().size());
+    CHECK(d.sigma_tail_u() == e.sigma_tail_u());
+    CHECK(d.sigma_tail_t() == e.sigma_tail_t());
+    CHECK(d.sigma_tail_qe() == e.sigma_tail_qe());
+    // ... and T19(i)'s pinned VALUE, read through the default-built model:
+    // sigma^el_U per nucleon at x = 0.01, Q^2 = 5, 6Li config 1.
+    CHECK_CLOSE(d.tail_sigma_at(0.01, 5.0).u, 2.2301252856028388e-05, 1e-9);
+    // The node clip at `tail_max` is RECORDED, not asserted: 0.386 % of the 101 x 77
+    // CLI grid's nodes on the default (0 events), 0.925 % of this 40 x 24 grid's.
+    MESSAGE("D5 clipped_cell_fraction on the 40 x 24 test grid: default "
+            << d.clipped_cell_fraction() << ", t-peak "
+            << rc_model().clipped_cell_fraction());
+  }
+
+  SUBCASE("the PolradFull preconditions bind only where a tail is BUILT") {
+    // Before D5 the n_eta >= 64 and long-double refusals fired whatever the
+    // channel; with PolradFull the default they would refuse a TAGGED or
+    // COHERENT band run -- which builds no tail -- on a platform whose
+    // `long double` is no wider than `double` (MSVC, Apple arm64), and the
+    // refusal's advice, `--rc-tail-model t-peak`, is itself refused there.
+    RcOptions o;                                  // the default: PolradFull
+    o.n_eta = 32;                                 // below its 64 floor
+    const RunPlan plan = tensor_thirds_plan(0.0, 0.6);
+    CHECK_THROWS_WITH_AS(RcModel(RcMode::TensorBand, o, rc_sampler_ptr(), plan,
+                                 Channel::Inclusive, LI6()),
+                         doctest::Contains("n_eta >= 64"), std::runtime_error);
+    CHECK_NOTHROW(RcModel(RcMode::TensorBand, o, rc_sampler_ptr(), plan,
+                          Channel::TaggedLi6Alpha, LI6(), tagged_model()));
+    CHECK_NOTHROW(RcModel(RcMode::TensorBand, o, rc_sampler_ptr(), plan,
+                          Channel::CoherentLi6, LI6()));
+    RcOptions band = o;
+    band.with_tail = false;                       // a band-only diagnostic run
+    const RcModel b(RcMode::TensorBand, band, rc_sampler_ptr(), plan,
+                    Channel::Inclusive, LI6());
+    CHECK(b.applies());
+    CHECK_FALSE(b.tail_applies());
+  }
+
+  SUBCASE("F5: sp_tensor_scale where no tail is built names THAT cause") {
+    // F5 (2026-10-29): PolradFull's "double-count a term that ran" is true
+    // only where a tail is BUILT; on a tagged, coherent or band-only run the
+    // s-/p-peaks never ran, and the refusal says so (docs/CONVENTIONS.md).
+    const RunPlan plan = tensor_thirds_plan(0.0, 0.6);
+    RcOptions o;                                  // the default: PolradFull
+    o.sp_tensor_scale = 1.0;
+    CHECK_THROWS_WITH_AS(RcModel(RcMode::TensorBand, o, rc_sampler_ptr(), plan,
+                                 Channel::Inclusive, LI6()),
+                         doctest::Contains("double-count"), std::runtime_error);
+    CHECK_THROWS_WITH_AS(RcModel(RcMode::TensorBand, o, rc_sampler_ptr(), plan,
+                                 Channel::TaggedLi6Alpha, LI6(), tagged_model()),
+                         doctest::Contains("no tail is BUILT"), std::runtime_error);
+    CHECK_THROWS_WITH_AS(RcModel(RcMode::TensorBand, o, rc_sampler_ptr(), plan,
+                                 Channel::CoherentLi6, LI6()),
+                         doctest::Contains("no tail is BUILT"), std::runtime_error);
+    o.with_tail = false;
+    CHECK_THROWS_WITH_AS(RcModel(RcMode::TensorBand, o, rc_sampler_ptr(), plan,
+                                 Channel::Inclusive, LI6()),
+                         doctest::Contains("no tail is BUILT"), std::runtime_error);
+  }
 }

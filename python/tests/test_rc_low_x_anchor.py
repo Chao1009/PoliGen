@@ -74,6 +74,12 @@ AZZ = (-4.528241648849e-04, -1.316774298646e-03,
 
 def _pipeline(anchor=None, channel="inclusive", events=2000, seed=99):
     kw = {} if anchor is None else {"rc_delta_low_x": anchor}
+    # D5 (2026-10-29): t-peak BY NAME on the inclusive builds, for RUNTIME --
+    # A1-A4 read the band, which no tail model touches, and a polrad-full
+    # table costs ~13 s a build.  Never on A5's tagged-alpha builds: an
+    # explicit t-peak is a non-default tail knob there, and refused.
+    if channel == "inclusive":
+        kw["rc_tail_model"] = "t-peak"
     cfg = lg.make_config(isotope="6Li", channel=channel, config=1,
                          events=events, seed=seed, rc="tensor-band", **kw)
     return lg.Pipeline(cfg, lg.tensor_thirds_plan(0.0, 0.6))

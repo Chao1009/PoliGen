@@ -187,7 +187,7 @@ numbers are, with every input card verbatim.
 ==== DESIGN BLOCK END ====
 
 ADDENDA (2026-10-26, after an independent adversarial verification of the
-row; the block above is hashed and stays as written):
+row; the block above is hashed and stays as written; D5's, 2026-10-29, sits above run()):
   * (b)'s "three phase-space mappings of ONE squared matrix element" is
     loose.  In the source IEL31, IEL32 and IEL33 are the 1/A1, 1/A2 and
     1/t_s partial-fraction pieces of that one squared matrix element
@@ -316,8 +316,8 @@ Run:  source env.sh && python3 validation/benchmarks/t4_djangoh_rad_noRad.py
       [--plot]          also writes docs/benchmarking/figures/<NAME>.png
       [--diagnostics]   the table-vs-quadrature record instead (~110 s)
 (22-26 s measured 2026-10-26 on a 4-core machine shared with another
-worker, the polrad-full tail table 21 s of it there -- rc.hpp says ~10 s
-unloaded; not opt-in: no event sample, under 30 s.)
+worker, the polrad-full tail table 21 s of it there -- rc.hpp says 12.0 s for
+6Li config 1 unloaded, 2026-10-29; not opt-in: no event sample, under 30 s.)
 
 Exit status (validation/benchmarks/README.md): 0 when the harness ran and
 printed its REPORT row -- pass, recorded fail and blocked alike, since the
@@ -862,6 +862,17 @@ def _bin_label(b):
     return "Q2 %g-%g" % (b["q2_lo"], b["q2_hi"])
 
 
+# ADDENDUM (2026-10-29: decision D5 of 2026-10-27, docs/open_items/run_2026-10-27/
+# DECISIONS.md).  `PolradFull` is the shipped `rc_tail` default and `TPeak` an
+# option.  The DESIGN BLOCK in the header is hashed and stays as written on
+# 2026-10-26, when t-peak was "the SHIPPED default" and polrad-full "opt-in".
+# Its two PASS rules name the MODELS, not the default, so the verdict is
+# computed exactly as before; "the price of the shipped default" (block (e))
+# now reads as the price of the t-peak option.  The REPORT generator string,
+# the reason and the figure legend say "polrad-full (shipped)" and "t-peak
+# (option)" since that date.  This harness names both models in every
+# Pipeline it builds (`build_pipeline(tail_model)`), so no number moved.  The
+# addendum sits here, below every line the run's records cite, so none moved.
 def run(tail_models=TAIL_MODELS, verbose=True):
     import lipolgen as lg
     if tuple(tail_models) != TAIL_MODELS:
@@ -954,7 +965,7 @@ def run(tail_models=TAIL_MODELS, verbose=True):
     r_full = [d["polrad-full"]["R"] for d in detail]
     r_tpk = [d["t-peak"]["R"] for d in detail]
     generator = ("R = sigma_tail(LiPolGen)/sigma_tail(DJANGOH) per Q2 bin: "
-                 "polrad-full %s; t-peak (shipped) %s" % (
+                 "polrad-full (shipped) %s; t-peak (option) %s" % (
                      " / ".join("%.4f" % r for r in r_full),
                      " / ".join("%.4f" % r for r in r_tpk)))
     reference = ("DJANGOH 4.6.21 elastic radiative tail IEL31+IEL32+IEL33 "
@@ -970,9 +981,9 @@ def run(tail_models=TAIL_MODELS, verbose=True):
                      " / ".join("%.1e" % b["delta"] for b in bins)))
     fails = [v for v in ver if not v["pass"]]
     if status == "pass":
-        reason = ("polrad-full (two-sided) within %g %% + %g delta of "
+        reason = ("polrad-full (the shipped default since D5; two-sided) within %g %% + %g delta of "
                   "DJANGOH's exact O(alpha) proton elastic tail in all four "
-                  "bins (R %s); the shipped t-peak passes its one-sided "
+                  "bins (R %s); the t-peak option (shipped until D5) passes its one-sided "
                   "CEILING only (R %s): it is %.0f %% / %.0f %% below the "
                   "exact tail at Q2 = 1-10 / 10-100 GeV2, and its R > 1 in "
                   "bins 3-4 is the tail table's +2 %% (--diagnostics)" % (
@@ -1085,12 +1096,12 @@ def plot(report, out_dir=None):
     from matplotlib.patches import Patch
     ax.errorbar(q, f_dj, yerr=e_dj, **style_series(
         "reference", label="DJANGOH 4.6.21 IEL31+32+33 (fixed alpha)"))
-    for tm, slot, mk, off in (("polrad-full", "alt2", "s", 10 ** 0.06),
-                              ("t-peak", "default", "D", 10 ** -0.06)):
+    for tm, slot, mk, off in (("polrad-full", "default", "s", 10 ** 0.06),
+                              ("t-peak", "alt2", "D", 10 ** -0.06)):
         fr = np.array([d[tm]["fraction_on_djangoh_born"] for d in det])
         rr = np.array([d[tm]["R"] for d in det])
-        lab = ("LiPolGen polrad-full (opt-in)" if tm == "polrad-full"
-               else "LiPolGen t-peak (shipped default)")
+        lab = ("LiPolGen polrad-full (shipped default)" if tm == "polrad-full"
+               else "LiPolGen t-peak (option; a lower bound)")
         ax.plot(q * off, fr, **style_series(slot, label=lab, marker=mk))
         axr.plot(q * off, rr, **style_series(slot, label=None, marker=mk))
     ep = np.array([d["epic_rad_over_norad"] - 1.0 for d in det])

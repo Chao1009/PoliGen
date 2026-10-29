@@ -289,11 +289,11 @@ def build_parser():
                         "Python, before a Pipeline exists), and an "
                         "explicit (P_z, T) J = 3/2 fill still needs the API "
                         "(USAGE sec. 7b).  At the DEFAULT --rc-tail-model "
-                        "t-peak, rc_tail is the t-PEAK ONLY: a LOWER BOUND "
-                        "on the dilution -- t-peak+ll and polrad-full change "
-                        "exactly that, and the banner says which one ran.  "
-                        "For 6Li at "
-                        "Q^2 >= 20 GeV^2, y <= 0.9 it carries the whole tail "
+                        "polrad-full (since D5, 2026-10-27) rc_tail is POLRAD "
+                        "Eq. (18)'s exact tail, all three peaks; --rc-tail-model "
+                        "t-peak (the default until then) is the t-PEAK ONLY, "
+                        "a LOWER BOUND; the banner says which one ran.  For 6Li at "
+                        "Q^2 >= 20 GeV^2, y <= 0.9 the t-peak carries the t-peak+ll tail "
                         "to +0.61 %% of the EVENT-WEIGHTED mean at --pz 0 "
                         "(+0.62 %% at this CLI's default P_z = 0.7), but PER "
                         "CELL 24.4 %% of that window is off by > 1 %% and the "
@@ -351,14 +351,14 @@ def build_parser():
                         "VMC point-proton density at the SAME measured "
                         "<r^2>_point.  A SHAPE, not a multiplier: RUN BOTH "
                         "EDGES.  The tensor fraction of the elastic tail at "
-                        "x = 0.1 is +1.6e-4 on one edge and -4.1e-5 on the "
-                        "other, i.e. its sign is a band edge and not a result")
+                        "x = 0.1, Q^2 = 5 is +4.5e-5 / -1.6e-4 on the two edges (default tail; "
+                        "+1.6e-4 / -4.1e-5 on t-peak): its sign is a band edge, not a result")
     p.add_argument("--rc-tail-model",
                    choices=("t-peak", "t-peak+ll", "polrad-full"),
                    default=None,
                    help="which radiative-tail formulation rc_tail carries: "
-                        "\"t-peak\" (default, bit for bit every published "
-                        "number -- POLRAD Eqs. (37)-(39), (43), the t-peak "
+                        "\"polrad-full\" (the DEFAULT since D5, 2026-10-27; below), "
+                        "\"t-peak\" (the default until then -- POLRAD Eqs. (37)-(39), (43), the t-peak "
                         "ALONE and therefore a LOWER BOUND) or "
                         "\"t-peak+ll\", which adds the leading-log s- and "
                         "p-peaks to the UNPOLARISED tail.  A STATED MODEL of "
@@ -375,14 +375,14 @@ def build_parser():
                         "high x and y ~ 0.009 where the soft 1/(1-z) radiator "
                         "D(z_s) reaches 11.5 and the model itself breaks "
                         "down.  A factor ~4 at fixed-target kinematics.  RUN "
-                        "BOTH.  \"polrad-full\" (2026-09-06) is POLRAD "
+                        "BOTH.  \"polrad-full\" (2026-09-06; the default since D5) is POLRAD "
                         "Eq. (18) + Appendix B + Eq. (A.4): ONE exact tau_A "
                         "quadrature carrying all THREE peaks WITH the "
                         "s-/p-peaks' own Eq. (A.4) tensor content, so it "
                         "needs no s/p tensor stand-in and --rc-sp-tensor-"
-                        "scale is refused on it.  ITS ABSOLUTE NORMALISATION "
-                        "IS STILL NOT CHECKED AGAINST MO-TSAI OR ANY "
-                        "EXTERNAL EXACT TAIL -- only POLRAD-internally (the "
+                        "scale is refused on it.  Its PROTON (quasi-elastic) "
+                        "slot is checked against DJANGOH 4.6.21's exact tail "
+                        "(BENCHMARK_PLAN row 7); the coherent slot only POLRAD-internally (the "
                         "x_A -> 0 reduction to Eq. (38), unpolarised AND "
                         "tensor) and against the leading-log fallback.  It "
                         "does NOT sit inside the t-peak band: measured over "
@@ -419,8 +419,8 @@ def build_parser():
                         "1.03021634 unclipped, the last becoming 1.03020526 "
                         "at tail_max = 10, and that estimator is P_z-free "
                         "(measured identical on both plans).  "
-                        "Costs ~10 s of tail-table build "
-                        "and needs rc_options.n_eta >= 64")
+                        "Costs ~12 s of tail-table build per run, uncached (0.16 s on t-peak), "
+                        "and needs rc_options.n_eta >= 64 and a long double wider than double")
     p.add_argument("--rc-tail-tensor-scale", type=float, default=None,
                    help="multiplier on the 6Li MAGNETIC form factor -- the "
                         "eta*F_m^2 tensor sector, which --rc-fq-scale does "
@@ -437,8 +437,8 @@ def build_parser():
     p.add_argument("--rc-qe-tensor-scale", type=float, default=None,
                    help="price the POLARISED quasi-elastic tail, which is "
                         "otherwise treated as exactly tensor-blind on the "
-                        "piece that is 73 %% of rc_tail at x = 0.1 and 99.9 "
-                        "%% at x = 0.3.  Default 0.0 = the shipped, "
+                        "piece that is 99.8 / 100 %% of the default rc_tail at x = 0.1 / 0.3 "
+                        "(73 / 99.9 %% on t-peak).  Default 0.0 = the shipped, "
                         "bit-for-bit tensor-blind tail.  At 1.0 the "
                         "quasi-elastic tail is given the ELASTIC tail's own "
                         "tensor fraction -- a BORROWED magnitude (a coherent "
@@ -456,8 +456,8 @@ def build_parser():
                         "by growing the denominator alone (r_T/r_U x0.66 / "
                         "x0.0032 / x6.6e-05 at x = 0.01 / 0.10 / 0.30, "
                         "Q^2 = 5).  NEEDS --rc-tail-model t-peak+ll (refused "
-                        "otherwise: the t-peak-only tail computes no s/p "
-                        "peaks at all).  Default 0.0.  At 1.0 the ELASTIC "
+                        "otherwise: t-peak computes no s/p peaks, and the default "
+                        "polrad-full computed them).  Default 0.0.  At 1.0 the ELASTIC "
                         "s-/p-peaks are given the elastic t-peak's own tensor "
                         "fraction.  IT IS A BOUND WITH NO DERIVATION: "
                         "POLRAD's Eq. (38) supplies no tensor s/p peak and "
@@ -814,7 +814,7 @@ DEFAULTS = dict(isotope="6Li", config=1, channel="inclusive",
                 rc_qe_suppression=1.0, rc_qe_tensor_scale=0.0,
                 rc_sp_tensor_scale=0.0,
                 rc_c0_shape="ho",
-                rc_tail_model="t-peak",
+                rc_tail_model=_l.rc_tail_model_name(_l.RcOptions().tail_model),  # D5: read, not retyped
                 coherent_t2="pomeron", pom_set=6, pom_rescale=1.0,
                 inclusive_b1=False,
                 b1_model="miller", b1_band_scale=1.0,
@@ -1649,7 +1649,7 @@ def main(argv=None):
         if r.tail_applies:
             say("     6Li FF: %s" % r.ff_provenance)
             say("     clipped %.3g%% of tail NODES (by y-band %.3g / %.3g / "
-                "%.3g%%; the y > 0.9 one is where Y+ ~ 1/(1-y) bites)"
+                "%.3g%%; t-peak+ll clips at y -> 1, Y+ ~ 1/(1-y); polrad-full at x -> 1)"
                 % ((100.0 * r.clipped_cell_fraction,)
                    + tuple(100.0 * f for f in r.clipped_fraction_by_y)))
             say("     tails: elastic + UNPOLARISED quasi-elastic (Eq. 44, "
@@ -1658,8 +1658,8 @@ def main(argv=None):
             if cfg.rc_options.qe_tensor_scale == 0.0:
                 say("     the POLARISED QE tail is NOT priced (Zhou et al., "
                     "PRL 82 (1999) 687): rc_tail treats as exactly "
-                    "tensor-blind the piece that is 73 % of it at x = 0.1 "
-                    "and 99.9 % at x = 0.3.  --rc-qe-tensor-scale prices "
+                    "tensor-blind the piece that is 99.8 / 100 % of it at x = 0.1 / 0.3 "
+                    "(polrad-full; 73 / 99.9 % on t-peak).  --rc-qe-tensor-scale prices "
                     "that omission with a borrowed magnitude.")
             else:
                 say("     the POLARISED QE tail is priced by a STAND-IN at "
@@ -1675,18 +1675,18 @@ def main(argv=None):
                     "Eq. (A.4) (--rc-tail-model polrad-full): ONE exact "
                     "tau_A quadrature carrying all THREE peaks, with the "
                     "s-/p-peaks' OWN Eq. (A.4) tensor content -- the term "
-                    "t-peak+ll can only bound.  ITS ABSOLUTE NORMALISATION "
-                    "IS STILL NOT CHECKED AGAINST MO-TSAI OR ANY EXTERNAL "
-                    "EXACT TAIL: no such number is in this tree.  What is "
-                    "checked is POLRAD-INTERNAL (the x_A -> 0 reduction to "
+                    "t-peak+ll can only bound; the DEFAULT since D5.  Its PROTON "
+                    "slot is checked against DJANGOH 4.6.21's exact O(alpha) "
+                    "tail (row 7, 2026-10-26); Mo-Tsai is not in this tree.  On the "
+                    "coherent slot it is checked POLRAD-INTERNALLY (the x_A -> 0 reduction to "
                     "Eq. (38), unpolarised AND tensor, and the Q_N = 0 "
                     "Rosenbluth limit) and the leading-log fallback.  The "
                     "QUASI-ELASTIC tail is a sum over SPIN-1/2 nucleons and "
                     "is tensor-blind at all three peaks here too.")
             elif r.options.tail_model == _l.RcTailModel.TPeak:
-                say("     the tail is the t-PEAK ONLY (POLRAD Eqs. 37-39): "
-                    "its absolute normalisation is NOT validated against an "
-                    "exact tail.  Measured (test_rc.cpp T8(c), T8(d)) against "
+                say("     the tail is the t-PEAK ONLY (POLRAD Eqs. 37-39), an option "
+                    "since D5: 0.60 / 0.88 / 0.99 / 0.98 of DJANGOH's exact proton tail "
+                    "(row 7).  Measured (test_rc.cpp T8(c), T8(d)) against "
                     "the leading-log s-/p-peaks, for 6Li at Q^2 >= 20 GeV^2 "
                     "and y <= 0.9: it carries the EVENT-WEIGHTED mean tail to "
                     "0.61 % at P_z = 0 (0.62 % at the CLI default P_z = 0.7), "

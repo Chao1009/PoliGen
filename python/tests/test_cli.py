@@ -277,9 +277,11 @@ def test_the_seven_untyped_flags_reach_the_run(tmp_path):
     """
     # (a) the five RC / bookkeeping knobs, on the channel the band applies to
     base, moved = tmp_path / "base.npz", tmp_path / "moved.npz"
+    # D5 (2026-10-29): --rc-tail-model t-peak for RUNTIME (typed, the same in
+    # both runs; a polrad-full table is ~13 s, ~21 s on --rc-c0-shape vmc-ft).
     common = ["--channel", "inclusive", "--isotope", "6Li",
               "--plan", "tensor-thirds", "--events", "2000", "--seed", "4",
-              "--rc", "tensor-band", "--quiet"]
+              "--rc", "tensor-band", "--rc-tail-model", "t-peak", "--quiet"]
     assert cli.main(common + ["--npz", str(base)]) == 0
     assert cli.main(common + [
         "--rc-c0-shape", "vmc-ft",

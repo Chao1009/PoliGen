@@ -71,8 +71,8 @@ inline constexpr double PROTON_MASS = 0.938272088;
 ///     what regulates the s- and p-peaks (`src/core/rc.cpp`,
 ///     `polrad_full_sigma_el` / `polrad_full_sigma_qe_u`).  The two t-peak
 ///     tails read no lepton mass, so `PipelineConfig::validate()` refuses a
-///     non-default `m_lepton` ON THOSE TWO ONLY.  `hepmc_writer` and
-///     `PolradFull` are this constant's two consumers.
+///     non-default `m_lepton` on those two, and (D5) on ANY model where no
+///     tail is built.  `hepmc_writer` and `PolradFull` are its two consumers.
 /// The literal is unchanged from the one it replaces (tests/test_hepmc.cpp
 /// and python/tests/test_hepmc.py pin the written value).
 inline constexpr double M_ELECTRON = 0.51099895e-3;

@@ -843,8 +843,8 @@ py::dict columns_to_dict(Columns& c, const Pipeline& p, std::uint64_t n,
     // that it was applied (rc.hpp, RcOptions::qe_tensor_scale).
     meta["rc_qe_tensor_scale"] = rc->options().qe_tensor_scale;
     // The s-/p-PEAK stand-in, recorded for the same reason and under the same
-    // warning: 0 by default (the leading-log peaks are tensor-blind, and
-    // under the shipped `t-peak` tail they do not exist at all), and a run
+    // warning: 0 by default (the leading-log peaks are tensor-blind; under
+    // `t-peak` they do not exist, under the default polrad-full they RAN), a run
     // that turned it on must be distinguishable in `meta` from one that did
     // not -- it is a BOUND WITH NO DERIVATION, not a computed tensor s/p peak
     // (rc.hpp, RcOptions::sp_tensor_scale).
@@ -854,7 +854,7 @@ py::dict columns_to_dict(Columns& c, const Pipeline& p, std::uint64_t n,
     // The NON-numeric knobs, recorded for the same provenance reason as
     // `b1_band_scale` above: `scope = TensorAll` and `with_qe_tail = false`
     // are API-reachable and change EVERY rc_tensor_*/rc_tail column (the QRT
-    // is 73-99.9 % of the tail at x >= 0.1, phase_C_numbers.md), so without
+    // is 73-99.9 % of the t-peak tail at x >= 0.1, 99.8-100 % of the default), so without
     // these keys such an npz is indistinguishable in `meta` from a default
     // run.  `rc_tail_applies` above covers `with_tail` only.
     // ... and `rc_scope` goes THROUGH THE TABLE, because it is the one rc
@@ -3423,9 +3423,9 @@ static void bind_rc(py::module_& m) {
       .value("TensorBand", RcMode::TensorBand);
 
   py::enum_<RcTailModel>(m, "RcTailModel",
-      "Which tail formulation.  TPeak is the DEFAULT and is bit for bit "
-      "every published number (POLRAD Eqs. (37)-(39), (43) -- the t-peak "
-      "alone, a LOWER BOUND on the dilution).  TPeakPlusLL adds the "
+      "Which tail formulation.  PolradFull is the DEFAULT since 2026-10-27 "
+      "(D5); TPeak, the default until then (POLRAD Eqs. (37)-(39), (43): the "
+      "t-peak alone, a LOWER BOUND on the dilution), is an option.  TPeakPlusLL adds the "
       "leading-log s- and p-peaks to the UNPOLARISED numerator and is a "
       "STATED MODEL of mixed approximation orders, not a controlled O(alpha) "
       "expansion: it has NO tensor s/p partner, so it LOWERS the tensor "
@@ -3433,12 +3433,12 @@ static void bind_rc(py::module_& m) {
       "systematic, never instead of it.  PolradFull (2026-09-06) is POLRAD "
       "Eq. (18) + Appendix B + Eq. (A.4): ONE exact tau_A quadrature "
       "containing all three peaks WITH the s-/p-peaks' own Eq. (A.4) tensor "
-      "content, so it needs no s/p tensor stand-in -- and it still is NOT "
-      "checked against Mo-Tsai or any external exact tail (no such number is "
-      "in this tree), only POLRAD-internally and against the leading-log "
-      "fallback.  It does NOT bracket inside the TPeak/TPeakPlusLL band: "
-      "measured, it sits between them on 56.5 % of the sampler's cells.  It "
-      "needs n_eta >= 64 and ~10 s of table build.")
+      "content, so it needs no s/p tensor stand-in.  Its PROTON (quasi-elastic) "
+      "slot is checked against DJANGOH 4.6.21's exact O(alpha) tail (row 7, "
+      "2026-10-26); the coherent 6Li slot and the tensor term only POLRAD-internally "
+      "and against the leading-log fallback.  It does NOT bracket inside the TPeak/TPeakPlusLL band: "
+      "measured, it sits between them on 56.5 % of the sampler's cells.  It needs "
+      "n_eta >= 64, a long double wider than double (not MSVC or Apple arm64) and ~12-15 s of table build, uncached.")
       .value("TPeak", RcTailModel::TPeak)
       .value("PolradFull", RcTailModel::PolradFull)
       .value("TPeakPlusLL", RcTailModel::TPeakPlusLL);
@@ -3531,12 +3531,12 @@ static void bind_rc(py::module_& m) {
                      "user-supplied.  A SHAPE, not a multiplier: run both "
                      "edges, never rescale one.")
       .def_readwrite("tail_model", &RcOptions::tail_model,
-                     "RcTailModel.TPeak (default, bit for bit every "
-                     "published number), RcTailModel.TPeakPlusLL (the "
+                     "RcTailModel.PolradFull (the DEFAULT since 2026-10-27, D5), RcTailModel.TPeak (the default until "
+                     "then: every unlabelled RC-tail number published before it), RcTailModel.TPeakPlusLL (the "
                      "leading-log s+p peaks added to the UNPOLARISED "
                      "numerator; a STATED MODEL with no tensor s/p partner, "
                      "so it LOWERS the tensor fraction of the tail) or "
-                     "RcTailModel.PolradFull (Eq. (18)'s exact tau_A "
+                     "PolradFull itself (Eq. (18)'s exact tau_A "
                      "quadrature, all three peaks with their tensor "
                      "content).  Run the t-peak pair as a PRICE RANGE -- "
                      "measured, PolradFull is outside it on 43 % of the "
@@ -3598,8 +3598,8 @@ static void bind_rc(py::module_& m) {
       .def_readwrite("sp_tensor_scale", &RcOptions::sp_tensor_scale,
                      "The TENSOR FRACTION OF THE LEADING-LOG s-/p-PEAKS, "
                      "priced by a STAND-IN and not computed.  DEFAULT 0.0 = "
-                     "the shipped tensor-blind s+p, bit for bit, and "
-                     "unreachable under the shipped t-peak tail anyway.  At "
+                     "the shipped tensor-blind s+p, bit for bit; it is "
+                     "unreachable under t-peak and refused on the default polrad-full (the term RAN).  At "
                      "1.0 the ELASTIC s-/p-peaks are given the elastic "
                      "t-peak's own sigma^el_T/sigma^el_U, i.e. `the s/p "
                      "tensor fraction equals the elastic t-peak's'.  IT IS A "
@@ -3635,9 +3635,9 @@ static void bind_rc(py::module_& m) {
                      "de Forest-Walecka Fermi-gas factor "
                      "S(q) = (3/4)(q/k_F) - (q/k_F)^3/16 below q = 2 k_F.  "
                      "DEFAULT ON at 6Li's measured k_F = 0.169 GeV (Moniz et "
-                     "al., PRL 26 (1971) 445).  It cuts the QRT to 0.47 at "
-                     "x = 0.01 and 0.87 at x = 0.1, and the QRT is the "
-                     "DOMINANT piece of rc_tail.  0 = the unsuppressed edge.")
+                     "al., PRL 26 (1971) 445).  At Q^2 = 5 it cuts the QRT to 0.67 at "
+                     "x = 0.01 and 0.999 at x = 0.1 on the default polrad-full tail (0.47 and 0.87 on t-peak), and the QRT is the "
+                     "DOMINANT piece of rc_tail above x ~ 0.03.  0 = the unsuppressed edge.")
       .def_readwrite("n_eta", &RcOptions::n_eta,
                      "The tail's one-dimensional quadrature resolution, and "
                      "it means two things: Gauss-Legendre nodes in ln(eta_A) "

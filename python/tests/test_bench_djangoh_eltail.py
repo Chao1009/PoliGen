@@ -9,9 +9,9 @@ recorded history; its own guards are in test_bench_chain_rc.py).
 
 These tests pin what the harness MEASURES and that its verdict follows from
 the numbers by the rule its header fixed BEFORE the DJANGOH runs (the design
-block's sha256 is pinned too).  No test asserts that a tree default should
-change: the shipped t-peak tail's 39 % / 10 % shortfall at Q^2 = 1-10 / 10-100
-is recorded as measured, and the tail table's +2 % is pinned as measured.
+block's sha256 is pinned too).  No test asserts a tree default: the t-peak
+option's (the shipped default until D5, 2026-10-27) 39 % / 10 % shortfall at
+Q^2 = 1-10 / 10-100 is recorded as measured; the table's +2 % is pinned.
 
 The full row costs 22-26 s (2026-10-26, a shared machine), under the 30 s line,
 so it runs always; the table-vs-quadrature diagnostic (~110 s) is opt-in
@@ -274,8 +274,8 @@ def test_row_numbers_are_the_measured_ones(row):
     for g, w in zip(got["t-peak"], R_T_PEAK):
         assert g == pytest.approx(w, rel=2e-7)
     assert row["reference_value"] == pytest.approx(list(DJ_FRACTION), rel=1e-7)
-    # the shipped t-peak's shortfall at low Q^2, recorded (not asserted as a
-    # defect): 39 % and 10 % of the exact tail missing in bins 1 and 2
+    # the t-peak option's (shipped until D5) shortfall at low Q^2, recorded
+    # (not asserted as a defect): 39 % and 10 % missing in bins 1 and 2
     det = row["detail"]
     assert 1.0 - det[0]["t-peak"]["R"] == pytest.approx(0.3882, abs=1e-4)
     assert 1.0 - det[1]["t-peak"]["R"] == pytest.approx(0.1032, abs=1e-4)
@@ -293,6 +293,10 @@ def test_row_numbers_are_the_measured_ones(row):
     assert cfg["xmax_b"] == [0.1096, 0.5518, 0.9249, 0.95]
     assert cfg["y_max"] == pytest.approx(0.985)
     assert cfg["x_min"] == 1e-5 and cfg["y_min"] == 1e-4
+    # D5 (2026-10-27): the LABELS follow the shipped default; the hashed
+    # rules name the models, so the numbers and the verdict did not move.
+    assert "polrad-full (shipped)" in row["generator"]
+    assert "t-peak (option)" in row["generator"]
 
 
 def test_history_reproduces_2026_09_23(row):

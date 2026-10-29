@@ -228,11 +228,11 @@ XM = _x_max(0.95)
 OPTICS_ALTS = ("yr-high-divergence", "tagging", "tagging-legacy")
 NSIGMA_ALTS = (1.0, 3.0, 30.0)
 POT_ALTS = ("5x41", "10x100", "18x275")
-#: `--rc tensor-band` with POLRAD Eq. (44)'s quasi-elastic tail switched off.
-NO_QE = _post(**{"rc_options.with_qe_tail": False})
-CDKS = dict(b1_model="cdks")
-CONV = dict(b1_model="li6-convolution")
+TPK = "t-peak on the inclusive specs only"   # D5 sentinel, resolved in `_run`
+NO_QE = _post(**{"rc_options.with_qe_tail": False})   # Eq. (44)'s QE tail off
+CDKS, CONV = dict(b1_model="cdks"), dict(b1_model="li6-convolution")
 RC = dict(rc="tensor-band")
+RC_TPK = dict(RC, rc_tail_model=TPK)   # D5 (2026-10-29): see the RC block below
 VMC = dict(cluster_wave="vmc")
 FSI_ON = dict(fsi="glauber-cluster")
 
@@ -348,30 +348,31 @@ VARIANTS = [
     V("fsi_sigma_mb", "40 -> 20 on glauber-cluster", base=FSI_ON,
       var=dict(FSI_ON, fsi_sigma_mb=20.0)),
     # --- RC: the mode, then the two families -----------------------------
+    # D5 (2026-10-29): RC_TPK = t-peak BY NAME on the inclusive specs, the default elsewhere -- for
+    # RUNTIME on the band / tail sub-knob cells, whose subject is model-free (~13 s per polrad-full table).
     V("rc", "off -> tensor-band", var=RC),
-    V("rc_delta_low_x", "0.30 -> 0.19", base=RC,
-      var=dict(RC, rc_delta_low_x=0.19)),
-    V("rc_delta_high_x", "0.015 -> 0.05", base=RC,
-      var=dict(RC, rc_delta_high_x=0.05)),
-    V("rc_x_low", "0.01 -> 0.02", base=RC, var=RC,
+    V("rc_delta_low_x", "0.30 -> 0.19", base=RC_TPK,
+      var=dict(RC_TPK, rc_delta_low_x=0.19)),
+    V("rc_delta_high_x", "0.015 -> 0.05", base=RC_TPK,
+      var=dict(RC_TPK, rc_delta_high_x=0.05)),
+    V("rc_x_low", "0.01 -> 0.02", base=RC_TPK, var=RC_TPK,
       post=_post(**{"rc_options.x_low": 0.02})),
-    V("rc_x_high", "0.16 -> 0.30", base=RC, var=RC,
+    V("rc_x_high", "0.16 -> 0.30", base=RC_TPK, var=RC_TPK,
       post=_post(**{"rc_options.x_high": 0.30})),
-    V("rc_a_transfer_frac", "0 -> 0.5", base=RC,
-      var=dict(RC, rc_a_transfer_frac=0.5)),
-    V("rc_band_tau_max", "1 -> 1e-3", base=RC, var=RC,
+    V("rc_a_transfer_frac", "0 -> 0.5", base=RC_TPK,
+      var=dict(RC_TPK, rc_a_transfer_frac=0.5)),
+    V("rc_band_tau_max", "1 -> 1e-3", base=RC_TPK, var=RC_TPK,
       post=_post(**{"rc_options.band_tau_max": 1e-3})),
-    V("rc_scope", "tensor-rate -> tensor-all", base=RC, var=RC,
+    V("rc_scope", "tensor-rate -> tensor-all", base=RC_TPK, var=RC_TPK,
       post=_post(**{"rc_options.scope": _l.RcScope.TensorAll})),
-    V("rc_fq_scale", "1 -> 2", base=RC, var=dict(RC, rc_fq_scale=2.0)),
-    V("rc_tail_tensor_scale", "1 -> 2", base=RC,
-      var=dict(RC, rc_tail_tensor_scale=2.0)),
-    V("rc_c0_shape", "ho -> vmc-ft", base=RC, var=dict(RC, rc_c0_shape="vmc-ft")),
-    V("rc_qe_suppression", "1 -> 0.5", base=RC,
-      var=dict(RC, rc_qe_suppression=0.5)),
-    V("rc_qe_tensor_scale", "0 -> 1", base=RC,
-      var=dict(RC, rc_qe_tensor_scale=1.0)),
-    V("rc_qe_kf_gev", "0.169 -> 0.25", base=RC, var=RC,
+    V("rc_fq_scale", "1 -> 2", base=RC_TPK, var=dict(RC_TPK, rc_fq_scale=2.0)),
+    V("rc_tail_tensor_scale", "1 -> 2", base=RC_TPK, var=dict(RC_TPK, rc_tail_tensor_scale=2.0)),
+    V("rc_c0_shape", "ho -> vmc-ft", base=RC_TPK, var=dict(RC_TPK, rc_c0_shape="vmc-ft")),
+    V("rc_qe_suppression", "1 -> 0.5", base=RC_TPK,
+      var=dict(RC_TPK, rc_qe_suppression=0.5)),
+    V("rc_qe_tensor_scale", "0 -> 1", base=RC_TPK,
+      var=dict(RC_TPK, rc_qe_tensor_scale=1.0)),
+    V("rc_qe_kf_gev", "0.169 -> 0.25", base=RC_TPK, var=RC_TPK,
       post=_post(**{"rc_options.qe_kf_gev": 0.25})),
     # THE QUASI-ELASTIC SUB-FAMILY UNDER `with_qe_tail = false`, a base this
     # matrix did not have.  With POLRAD Eq. (44)'s quasi-elastic piece switched
@@ -382,34 +383,33 @@ VARIANTS = [
     # there now, and these cells are what says so.  (On the tagged and
     # coherent channels the BASE itself is refused -- `with_qe_tail` is a tail
     # knob and the tail does not apply -- so the cell skips and says why.)
-    V("rc_qe_suppression", "1 -> 0.5 at with_qe_tail = false", base=RC,
-      var=RC, base_post=NO_QE,
+    V("rc_qe_suppression", "1 -> 0.5 at with_qe_tail = false", base=RC_TPK,
+      var=RC_TPK, base_post=NO_QE,
       post=_chain(NO_QE, _post(**{"rc_options.qe_suppression": 0.5}))),
-    V("rc_qe_kf_gev", "0.169 -> 0.25 at with_qe_tail = false", base=RC,
-      var=RC, base_post=NO_QE,
+    V("rc_qe_kf_gev", "0.169 -> 0.25 at with_qe_tail = false", base=RC_TPK,
+      var=RC_TPK, base_post=NO_QE,
       post=_chain(NO_QE, _post(**{"rc_options.qe_kf_gev": 0.25}))),
-    V("rc_qe_tensor_scale", "0 -> 1 at with_qe_tail = false", base=RC,
-      var=RC, base_post=NO_QE,
+    V("rc_qe_tensor_scale", "0 -> 1 at with_qe_tail = false", base=RC_TPK,
+      var=RC_TPK, base_post=NO_QE,
       post=_chain(NO_QE, _post(**{"rc_options.qe_tensor_scale": 1.0}))),
-    V("rc_tail_model", "t-peak -> t-peak+ll", base=RC,
+    V("rc_tail_model", "polrad-full -> t-peak+ll", base=RC,
       var=dict(RC, rc_tail_model="t-peak+ll")),
-    # THE THIRD MODEL, implemented 2026-09-06: POLRAD Eq. (18) + Appendix B +
-    # Eq. (A.4).  It is a `read` cell like the other one -- the row is a
-    # `tail_row`, so it is `refused` wherever the tail does not apply and the
-    # cell skips there.
-    V("rc_tail_model", "t-peak -> polrad-full", base=RC,
-      var=dict(RC, rc_tail_model="polrad-full")),
+    # THE OTHER MODEL.  Re-based 2026-10-29 (D5): the base is the default,
+    # POLRAD Eq. (18) since 2026-10-27, so the cell runs `polrad-full -> t-peak`
+    # (as `t-peak -> polrad-full` it would vary nothing); `refused` off the tail.
+    V("rc_tail_model", "polrad-full -> t-peak", base=RC,
+      var=dict(RC, rc_tail_model="t-peak")),
     # THE s-/p-PEAK SUB-FAMILY, one level below the tail and one branch over
     # from the quasi-elastic one.  `sp_tensor_scale` prices the tensor
     # fraction of the leading-log s-/p-peaks, which ONLY `t-peak+ll` computes:
-    # under the shipped `t-peak` the u_sp table is identically zero, so the
-    # scale multiplies nothing and is REFUSED rather than recorded as a price
-    # that was never paid.  Both cells are here because the pair is the rule.
+    # under `t-peak` (by name on the inclusive specs since D5) the u_sp table is
+    # identically zero, so the scale multiplies nothing and is REFUSED rather
+    # than recorded as a price that was never paid.  The pair is the rule.
     V("rc_sp_tensor_scale", "0 -> 1 at t-peak+ll",
       base=dict(RC, rc_tail_model="t-peak+ll"),
       var=dict(RC, rc_tail_model="t-peak+ll", rc_sp_tensor_scale=1.0)),
-    V("rc_sp_tensor_scale", "0 -> 1 at t-peak (the shipped tail)", base=RC,
-      var=dict(RC, rc_sp_tensor_scale=1.0)),
+    V("rc_sp_tensor_scale", "0 -> 1 at t-peak (inclusive specs; the default elsewhere)", base=RC_TPK,
+      var=dict(RC_TPK, rc_sp_tensor_scale=1.0)),
     # ... and REFUSED on polrad-full too, for the OPPOSITE reason: that model
     # carries the s-/p-peaks' own Eq. (A.4) tensor content, so the stand-in
     # would double-count a term that RAN.  Same status, different sentence --
@@ -418,18 +418,18 @@ VARIANTS = [
     V("rc_sp_tensor_scale", "0 -> 1 at polrad-full",
       base=dict(RC, rc_tail_model="polrad-full"),
       var=dict(RC, rc_tail_model="polrad-full", rc_sp_tensor_scale=1.0)),
-    V("rc_with_qe_tail", "true -> false", base=RC, var=RC,
+    V("rc_with_qe_tail", "true -> false", base=RC_TPK, var=RC_TPK,
       post=_post(**{"rc_options.with_qe_tail": False})),
     V("rc_with_tail", "true -> false", base=RC, var=RC,
       post=_post(**{"rc_options.with_tail": False})),
     V("rc_n_eta", "128 -> 64", base=RC, var=RC,
       post=_post(**{"rc_options.n_eta": 64})),
-    # 0.01, not 0.5: the ceiling is on the tail RATIO and the shipped tail is
+    # 0.01, not 0.5: the ceiling is on the tail RATIO and the t-peak tail is
     # only a few per cent, so a 0.5 ceiling clips nothing at 60 events (it
     # does at 200).  The test is about whether the knob is CONSULTED.
-    V("rc_tail_max", "10 -> 0.01 (clips every event)", base=RC, var=RC,
+    V("rc_tail_max", "10 -> 0.01 (clips every event)", base=RC_TPK, var=RC_TPK,
       post=_post(**{"rc_options.tail_max": 0.01})),
-    V("rc_m_lepton", "M_ELECTRON -> the muon mass", base=RC, var=RC,
+    V("rc_m_lepton", "M_ELECTRON -> the muon mass", base=RC_TPK, var=RC_TPK,
       post=_post(**{"rc_options.m_lepton": 0.1056583755})),
     # ... and READ on polrad-full since 2026-09-06: it is the m^2 of
     # Eq. (B.13)'s C_1,2(tau), of F_IR and of lambda_s, i.e. what sets the
@@ -502,9 +502,9 @@ def _run(spec, kw, post, plan_kw):
     and one from the `Pipeline` constructor are the same thing to this test --
     both are the run surface saying no before an event exists.
     """
-    args = dict(isotope=spec.isotope, channel=spec.channel, config=1,
-                events=N, seed=SEED)
+    args = dict(isotope=spec.isotope, channel=spec.channel, config=1, events=N, seed=SEED)
     args.update(kw)
+    if args.get("rc_tail_model") == TPK: args["rc_tail_model"] = "t-peak" if spec.channel == "inclusive" else None
     try:
         cfg = lg.make_config(**args)
         if post:

@@ -375,6 +375,14 @@ rather than reading past its tables.
 --events N | --lumi PB       exclusive
 --seed --run --pz --pzz --pe --rel-lumi-offset
 --cluster-beta --p-d --inclusive-b1
+                             --cluster-beta / --p-d: the ANALYTIC (hulthen)
+                             radial scale and 6Li alpha-d D state -- unread on
+                             the default vmc, bar --cluster-beta on the 7Li T1
+                             triton breakup (the knob table says which)
+--cluster-wave vmc|hulthen   cluster radial forms of the TAGGED channels: 'vmc'
+                             (the ANL VMC AV18 tables) is the default since D6
+                             (2026-10-27), 'hulthen' the analytic pair; an
+                             explicit value is refused on inclusive/coherent
 --triton-sf hulthen|ciofi-simula
                              triton spectral function of the 7Li alpha tag's
                              T1 ('hulthen' default, bit-compatible; 'ciofi-

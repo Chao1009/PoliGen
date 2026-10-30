@@ -42,10 +42,10 @@ double wt(const GlauberFsiWeight& f, double k, double theta_deg) {
 }
 
 /// The PROTOTYPE's wave: pure S Hulthen at beta = 0.30 (p_d = 0), which is
-/// exactly what fsi_alpha.py tabulated.  The production S+D channel is pinned
-/// separately below.
+/// exactly what fsi_alpha.py tabulated -- named (D6, 2026-10-29).  The S+D
+/// channel is pinned separately below.
 const TaggedChannel& pure_s_channel() {
-  static const TaggedChannel ch = li6_alpha_channel(0.30, 0.0);
+  static const TaggedChannel ch = li6_alpha_channel(0.30, 0.0, ClusterWaveSource::Hulthen);
   return ch;
 }
 
@@ -200,10 +200,10 @@ TEST_CASE("fsi: elastic_gain rescales the QUADRATIC term and nothing else") {
 }
 
 TEST_CASE("fsi: the production S+D channel row is on the record") {
-  // The default 6Li alpha channel (P_D = 0.0867) SHIFTS the pinned numbers;
-  // this row is what a production run at sigma_XN = 40 mb actually applies,
-  // pinned so the S-vs-S+D difference is loud rather than folklore.
-  const TaggedChannel ch = li6_alpha_channel();
+  // The Hulthen S+D 6Li alpha channel (P_D = 0.0867) SHIFTS the pinned numbers;
+  // this row is what a production run at sigma_XN = 40 mb applied until D6 (now
+  // the --cluster-wave hulthen option: named, 2026-10-29), so S-vs-S+D is loud.
+  const TaggedChannel ch = li6_alpha_channel(BETA_DEFAULT, P_D_LI6, ClusterWaveSource::Hulthen);
   const GlauberFsiWeight f(ch, GlauberFsiOptions());
   CHECK_CLOSE_AT(wt(f, 0.10, 0.0), 0.617, 0.0, 5e-3);
   CHECK_CLOSE_AT(wt(f, 0.10, 90.0), 0.391, 0.0, 5e-3);
@@ -376,11 +376,11 @@ TEST_CASE("fsi: GlauberNucleon is the POINTWISE bracket, not the integrated one"
 }
 
 // D3.  The inventory carried "the per-nucleon Glauber FSI variant is
-// algebraically identical to the cluster one -- the two 'variants' are one".
-// It is not: (a) shadows and (b) does not, and the identity that DOES hold
-// (the Ciofi-Kaptari per-nucleon product on an uncorrelated density collapses
-// onto (a)) is about a code path this file does not have.  Pinned on GENERATED
-// EVENTS, not on the profile alone, so the claim cannot come back.
+// algebraically identical to the cluster one".  It is not: (a) shadows and (b)
+// does not (the Ciofi-Kaptari identity is about a code path this file does not
+// have).  Pinned on GENERATED EVENTS, so the claim cannot come back -- on the
+// HULTHEN alpha-d by name since D6 (2026-10-29): "essentially every event" is
+// that wave's statement, and the VMC run default differs on 64.5 % of them.
 TEST_CASE("fsi: the two variants differ on essentially every event") {
   PipelineConfig cfg;
   cfg.channel = PipelineChannel::TaggedLi6Alpha;
@@ -391,7 +391,7 @@ TEST_CASE("fsi: the two variants differ on essentially every event") {
   cfg.grid.nx = 40;
   cfg.grid.nq2 = 28;
   const RunPlan plan = tensor_thirds_plan(0.7, 0.6);
-
+  cfg.cluster_wave = ClusterWaveSource::Hulthen;   // D6: this case's wave, by name
   PipelineConfig cfg_c = cfg, cfg_n = cfg;
   cfg_c.fsi = PipelineFsi::GlauberCluster;
   cfg_n.fsi = PipelineFsi::GlauberNucleon;
@@ -444,12 +444,12 @@ TEST_CASE("fsi: the two variants differ on essentially every event") {
   CHECK(sum_n / sum_off > 0.56);
   CHECK(sum_n > 1.1 * sum_c);
   // ... and the per-event ratio spans more than an order of magnitude, with
-  // essentially every event moved.  Measured through the pipeline at
-  // tagged-6Li-alpha, 20 000 events, seed 1234, tensor-thirds at
-  // pz = 0.7 / pzz = 0.6 / pe = 0.7, sigma_XN = 40 mb (the default, one end
-  // of the mandatory 20-40 mb band): 99.50 % differ by more than 1 % and the
-  // ratio reaches 68.52.  This case reproduces the SHAPE of that at reduced
-  // statistics; the quoted percentages belong to the 20 000-event run.
+  // essentially every event moved.  Measured 2026-09-04 through the pipeline at
+  // tagged-6Li-alpha (the Hulthen wave, the default then), 20 000 events, seed
+  // 1234, tensor-thirds at pz 0.7 / pzz 0.6 / pe 0.7, sigma_XN = 40 mb: 99.50 %
+  // differ by > 1 %, ratio to 68.52 (2026-10-29, toy SFs: 99.43 % / 69.89 on
+  // --cluster-wave hulthen, 64.5 % / 10.14 on the VMC default, D6).  This case
+  // is the SHAPE at reduced statistics, on the Hulthen wave (it prints 99.5 % / 68.52).
   CHECK(r_lo < 0.9);
   CHECK(r_hi > 5.0);
   CHECK(static_cast<double>(n_differ) / n > 0.98);

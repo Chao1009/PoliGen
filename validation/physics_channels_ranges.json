@@ -180,7 +180,7 @@
   "last": "move every pinned gate number, and it is not a uniform improvement on an"
  },
  "docs/USAGE.md:1978-2169": {
-  "sha256": "90a7c095fadc0dee726f4abe18f015cbe6f0854a37ea71d93e4fac3e9aa7eeef",
+  "sha256": "420b290b6b9ad8a6795a1038d69385160082236eb6a40926ff6d7ae80b85b1e4",
   "first": "## 5. Far-forward routing",
   "last": "  `rc_tensor_lo`/`rc_tensor_hi`/`rc_tail`. **Every other CLI plan is"
  },
@@ -505,7 +505,7 @@
   "last": "/// conditioned on m_S; then the lab boost and the far-forward route."
  },
  "include/lipolgen/tagged.hpp:54-62": {
-  "sha256": "b4fa8b5f608a91a59fef65f8522ca3469f768d0a2f49967afb7afc74d5e3a524",
+  "sha256": "5bab96881095cb23530ae85ed718a20b9036ad2665e2d5ee363da85a1bb823b6",
   "first": "// P_D_LI6 and P_D_DEUTERON are NOT defined here.  Since 2026-08-29 they live",
   "last": "// quadrature residual).  The names, values and meanings are unchanged."
  },

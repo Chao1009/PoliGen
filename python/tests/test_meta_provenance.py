@@ -9,7 +9,8 @@ Measured consequences, all three reproduced by the tests below:
   * three FSI runs of one seed had **identical** `meta` while their total
     rate differed by 48 % / 42 % and individual weights by a factor 68.5
     (tagged-6Li-alpha, 20 000 events, seed 1234, tensor-thirds at
-    P_z = 0.7 / P_zz = 0.6 / P_e = 0.7, sigma_XN = 40 mb);
+    P_z = 0.7 / P_zz = 0.6 / P_e = 0.7, sigma_XN = 40 mb -- on the Hulthen
+    alpha-d, the default until D6; the FSI pair below names that wave);
   * fifteen `--pom-set` runs had **identical** `meta` while the whole
     hadronic final state moved -- the kaon fraction by a factor 2.8 over the
     twelve DPDF fits (3-10, 12-15) about set 6, 20 000 coherent events per
@@ -42,10 +43,13 @@ def _run(**kw):
 
 @pytest.fixture(scope="module")
 def fsi_runs():
+    # D6 (2026-10-29): the D3 claim (> 98 % of events differ; survival
+    # 0.520239 / 0.582899) is the HULTHEN alpha-d's, so the fixture names it;
+    # on the VMC run default the 20 000-event recipe gives 64.5 %, 0.797 / 0.819.
     out = {}
     for v in ("off", "glauber-cluster", "glauber-nucleon"):
         out[v] = _run(isotope="6Li", channel="tagged-6Li-alpha", events=2000,
-                      seed=1234, fsi=v)
+                      seed=1234, fsi=v, cluster_wave="hulthen")
     return out
 
 

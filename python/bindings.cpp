@@ -622,11 +622,10 @@ py::dict columns_to_dict(Columns& c, const Pipeline& p, std::uint64_t n,
   meta["b1_model"] = knob("b1_model").meta_value();
   meta["b1_band_scale"] = p.config().b1_band_scale;
   meta["b1_alpha_d_dwave_weight"] = p.config().b1_alpha_d_dwave_weight;
-  // Which unpolarised PDF the b1 convolution folded against.  Same
-  // provenance rule and the same unconditional write as the three keys above:
-  // "toy" and "mstw" differ by up to a factor 1.85 on Li6ConvolutionB1::b1
-  // and by nothing at all in any other npz key, so without this one they are
-  // indistinguishable files.
+  // Which unpolarised PDF the b1 convolution folded against.  Same provenance
+  // rule and the same unconditional write as the three keys above: "toy" and
+  // "mstw" differ by up to a factor 1.85 on Li6ConvolutionB1::b1 and by nothing
+  // at all in any other npz key, so without this one they are indistinguishable.
   meta["b1_unpol"] = knob("b1_unpol").meta_value();
   // Which R = sigma_L/sigma_T the b1 convolution's numerator AND the kernel
   // that carries its denominator were BOTH built from (`RSource`; CLI
@@ -634,11 +633,12 @@ py::dict columns_to_dict(Columns& c, const Pipeline& p, std::uint64_t n,
   // "unset" and "r1998" differ by -0.6847 % in sigma_pb and by up to
   // +26.4 % in the tensor weight at the standard points (y = 0.5, Q2 = 2.5,
   // x = 0.10; docs/open_items/run_2026-09-06/phase_A_numbers.md sec. A1), so
-  // without this key the two are indistinguishable files.  The row is Read
-  // or Refused at every value but `sigma-lt`, where it is NotRead and this
-  // key carries the label -- which is honest: that run IS bit-identical to
-  // the unset one.
+  // without this key the two are indistinguishable files.  The row is Read or
+  // Refused at every value but `sigma-lt`, where it is NotRead and this key
+  // carries the label -- honest: that run IS bit-identical to the unset one.
   meta["r_source"] = knob("r_source").meta_value();
+  // D6: the wave a tagged run read ("vmc" / "hulthen"); off the tags the label.
+  meta["cluster_wave"] = knob("cluster_wave").meta_value();
   // ... and the SENTENCE, on every run and every channel, from the one
   // definition the CLI run banner also prints (`rank2_input_report`): before
   // it a 7Li npz whose tensor sector was 0.0 could not be told from one whose
@@ -697,20 +697,20 @@ py::dict columns_to_dict(Columns& c, const Pipeline& p, std::uint64_t n,
   // today's key set and no reference gate moves.  Measured on the three runs
   // that made this block necessary (D3.3, --channel tagged-6Li-alpha
   // --events 20000 --seed 1234, tensor-thirds at pz 0.7 / pzz 0.6 / pe 0.7,
-  // at the default sigma_XN = 40 mb): the kinematic columns are BIT-IDENTICAL
-  // across `off` / `glauber-cluster` / `glauber-nucleon`, the total rate
-  // differs by 48 % / 42 %, individual event weights by up to a factor 68.5
-  // -- and the `meta` dicts compared EQUAL, key by key.  That is exactly the
-  // "never quote a single row" rule failing silently, one level worse than
-  // the b1 case it was written for, because `fsi_sigma_mb` carries a
-  // documented 20-40 mb band that must never be quoted as a single row.
+  // sigma_XN = 40 mb, the Hulthen alpha-d of the time): kinematic columns
+  // BIT-IDENTICAL across `off` / `glauber-cluster` / `glauber-nucleon`, total
+  // rate -48 % / -42 %, event weights apart by up to x68.5 (x10.1 and -20 % /
+  // -18 % on the VMC default since D6) -- and the `meta` dicts EQUAL, key by
+  // key.  That is the "never quote a single row" rule failing silently, one
+  // level worse than the b1 case it was written for, because `fsi_sigma_mb`
+  // carries a documented 20-40 mb band that must never be quoted alone.
   if (const GlauberFsiWeight* fw = p.fsi_weight()) {
     meta["fsi"] = std::string(pipeline_fsi_name(p.config().fsi));
     meta["fsi_sigma_mb"] = p.config().fsi_sigma_mb;
     // What the weight actually applied, not only what was asked for: the
     // cluster profile and the integrated survival ARE the difference between
-    // the two variants (131.0 vs 160.0 mb, 0.520 vs 0.583 on the 6Li alpha
-    // tag), so a file that records the name records the numbers too.
+    // the two variants (131.0 vs 160.0 mb; 0.520 vs 0.583 on the Hulthen 6Li
+    // alpha tag, 0.797 vs 0.819 on the VMC default), so the file records both.
     const double sig = fw->sigma_eff_mb(0.0);
     meta["fsi_sigma_cluster_mb"] = fw->sigma_cluster_mb(sig);
     meta["fsi_sigma_cluster_el_mb"] = fw->sigma_cluster_el_mb(sig);
@@ -2728,9 +2728,9 @@ static void bind_spectator(py::module_& m) {
 static void bind_tagged(py::module_& m) {
   // ---- the VMC tabulated backend (cluster.hpp) --------------------------
   py::enum_<ClusterWaveSource>(m, "ClusterWaveSource",
-      "Which family of cluster radial forms a channel is built from.  "
-      "`Hulthen` (the default everywhere) keeps every published number "
-      "bit-for-bit; `VmcAV18` swaps in the ANL VMC tables.")
+      "Which family of cluster radial forms a channel is built from.  The RUN "
+      "default is CLUSTER_WAVE_DEFAULT = `VmcAV18`, the ANL VMC tables (D6); "
+      "`Hulthen`, the analytic pair, is the option and the factories' default.")
       .value("Hulthen", ClusterWaveSource::Hulthen)
       .value("VmcAV18", ClusterWaveSource::VmcAV18);
 
@@ -2825,9 +2825,9 @@ static void bind_tagged(py::module_& m) {
         py::arg("beta") = BETA_DEFAULT, py::arg("p_d") = P_D_LI6,
         py::arg("source") = ClusterWaveSource::Hulthen,
         py::arg("vmc_mc_sigma") = 0.0,
-        "`vmc_mc_sigma` is the ANL tables' own 1-sigma Monte Carlo band, "
-        "fully correlated across k and the same on both waves; 0 is today's "
-        "table bit for bit and it THROWS on Hulthen.");
+        "`source` defaults to the analytic Hulthen family (this FACTORY's "
+        "default; the RUN default is CLUSTER_WAVE_DEFAULT = VmcAV18, D6).  "
+        "`vmc_mc_sigma`: the ANL tables' own 1-sigma band; THROWS on Hulthen.");
   m.def("li7_alpha_channel", &li7_alpha_channel, py::arg("beta") = BETA_DEFAULT,
         py::arg("source") = ClusterWaveSource::Hulthen,
         py::arg("vmc_mc_sigma") = 0.0);
@@ -2839,9 +2839,9 @@ static void bind_tagged(py::module_& m) {
   m.def("deuteron_channel", &deuteron_channel, py::arg("beta") = BETA_DEFAULT,
         py::arg("p_d") = P_D_DEUTERON,
         py::arg("source") = ClusterWaveSource::Hulthen,
-        "`source = VmcAV18` swaps the analytic Hulthen pair at the scenario "
-        "P_D_DEUTERON = 0.045 for the exact AV18 deuteron of fdeut.av18 at "
-        "its own P_D (`deuteron_av18_p_d()`).");
+        "`source = VmcAV18` (the RUN default's wave since D6; not this "
+        "factory's default) swaps the analytic pair at P_D_DEUTERON = 0.045 "
+        "for the AV18 fdeut.av18 deuteron at its own P_D (deuteron_av18_p_d).");
   m.def("deuteron_av18", []() { return DEUTERON_AV18(); },
         "The embedded deuteron of ClusterWaveSource.VmcAV18: beams.deuteron() "
         "with eff_pol = vector_dilution_of(deuteron_av18_p_d()) = 0.913600 "
@@ -4471,18 +4471,18 @@ static void bind_pipeline(py::module_& m) {
       .def("n1_cs", &CiofiSimulaTriton::n1_cs, py::arg("k_gev"));
 
   py::class_<BreakupOptions>(m, "BreakupOptions",
-      "Configuration of the T1 cluster breakup.  `beta` and `f2` are "
-      "overwritten by the Pipeline with the run's own values.")
+      "Configuration of the T1 cluster breakup.  `beta`, `source` and `f2` "
+      "are overwritten by the Pipeline with the run's own values.")
       .def(py::init<>())
       .def_readwrite("beta", &BreakupOptions::beta)
       .def_readwrite("p_d", &BreakupOptions::p_d)
       .def_readwrite("source", &BreakupOptions::source,
                      "ClusterWaveSource of the DEUTERON the T1 breakup "
-                     "resolves into.  Hulthen (default) = the analytic S + D "
-                     "pair at p_d; VmcAV18 = the exact AV18 fdeut deuteron at "
-                     "its own P_D = 0.057600.  Pipeline forwards "
-                     "PipelineConfig.cluster_wave here so the spin the record "
-                     "carries and the g1 the rate uses are one deuteron "
+                     "resolves into.  Hulthen (this struct's default) = the "
+                     "analytic S + D pair at p_d; VmcAV18 = the AV18 fdeut "
+                     "deuteron at its own P_D = 0.057600.  Pipeline forwards "
+                     "PipelineConfig.cluster_wave (VmcAV18 by default, D6) so "
+                     "the record's spin and the rate's g1 are one deuteron "
                      "(C5.5b).  The triton path is not affected.")
       .def_readwrite("kappa_nn", &BreakupOptions::kappa_nn)
       .def_readwrite("k_max", &BreakupOptions::k_max)
@@ -4666,13 +4666,13 @@ static void bind_pipeline(py::module_& m) {
       .def_readwrite("cluster_vmc_mc_sigma",
                      &PipelineConfig::cluster_vmc_mc_sigma,
                      "ANL VMC Monte Carlo band in units of the tables' own "
-                     "printed 1 sigma, fully correlated across k.  0 = today "
-                     "bit for bit; validate() refuses it off a lithium "
-                     "alpha-tag channel with cluster_wave = VmcAV18.")
+                     "printed 1 sigma, fully correlated across k.  0 = the "
+                     "tables bit for bit; READ on the default lithium alpha "
+                     "tags (D6), refused anywhere else (Hulthen, d-p, untagged).")
       .def_readwrite("cluster_wave", &PipelineConfig::cluster_wave,
-                     "ClusterWaveSource for the lithium alpha-tag channels; "
-                     "Hulthen by default (bit-compatible), VmcAV18 swaps in "
-                     "the ANL VMC tables and ignores cluster_beta / p_d.")
+                     "ClusterWaveSource of the tagged channels: VmcAV18 (the "
+                     "ANL VMC tables) by default since D6, CLUSTER_WAVE_DEFAULT; "
+                     "Hulthen the option.  Off the tagged channels, unread.")
       .def_readwrite("struck", &PipelineConfig::struck)
       .def_readwrite("tier", &PipelineConfig::tier,
                      "Fidelity tier of the tagged final state; Tier.T1 by "
@@ -5160,4 +5160,11 @@ static void bind_io(py::module_& m) {
   // Bound here, at the end of the module, after every line the documents cite.
   m.attr("DELTA_COS2PHI_NORM") = DELTA_COS2PHI_NORM;
   m.attr("DELTA_CONVENTION") = DELTA_CONVENTION;
+  // D6 (2026-10-27): the RUN default of the tagged channels' cluster wave
+  // (cluster.hpp) and its run-surface name, READ by cli.py (texts that call it
+  // vmc: cluster.hpp's static_assert).  At the end, for the same reason as D4's.
+  m.attr("CLUSTER_WAVE_DEFAULT") = CLUSTER_WAVE_DEFAULT;
+  m.def("cluster_wave_name", &cluster_wave_name, py::arg("source"),
+        "'hulthen' / 'vmc': the --cluster-wave spelling of a ClusterWaveSource "
+        "(the one meta[\"cluster_wave\"] and the knob table carry).");
 }

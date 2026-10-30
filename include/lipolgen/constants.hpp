@@ -123,13 +123,13 @@ inline constexpr double B1_MILLER_TABLE_TO_PER_NUCLEON =
 inline constexpr double B1_CDKS_TABLE_TO_PER_NUCLEON = 1.0;
 
 /// Rank-2 transfer of the embedded deuteron's tensor polarization to 6Li:
-/// `TaggedModel(li6_alpha_channel()).tensor_dilution()` evaluated at
-/// `P_D_LI6` (beams.hpp), pinned in tests/test_tagged.cpp (plans/08 D9).
-/// It is a QUADRATURE over the channel and not a closed form: the closed form
-/// 1 - (9/10) P_D gives 0.921970 against the 0.9219490 measured, so the two
-/// are pinned to each other at 1e-4 and not asserted equal.  (0.9219467 until
-/// the 2026-09-06 tagged S-D sign fix, which moves this quadrature residual by
-/// +2.46e-6 -- against a 1e-4 pin, so the constant itself does not move.)
+/// `TaggedModel(li6_alpha_channel()).tensor_dilution()` at `P_D_LI6` -- the
+/// HULTHEN factory channel; the D6 run-default (VMC) channel's is 0.982576
+/// (x1.0658: registry row 10, the author's question; the constant is kept).
+/// A QUADRATURE, not a closed form: 1 - (9/10) P_D gives 0.921970 against the
+/// 0.9219490 measured, pinned to each other at 1e-4 (tests/test_tagged.cpp,
+/// plans/08 D9).  (0.9219467 until the 2026-09-06 S-D sign fix, which moved
+/// the residual by +2.46e-6 -- inside the 1e-4 pin; the constant did not move.)
 inline constexpr double LI6_B1_RANK2_TRANSFER = 0.921947;
 /// The pre-2026-08-28 VECTOR dilution 1 - (3/2) P_D -- the wrong rank for b1.
 inline constexpr double LI6_B1_LEGACY_TRANSFER = 0.87;

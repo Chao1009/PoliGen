@@ -49,8 +49,9 @@ SHIPPED settings, nothing moved:
            as a cross-check on both (Q_d via the tree's
            `alpha_d_quadrupole_fm2`, eta via the tree's spline transformed
            to r = 20 fm: -0.24 %).
-  hulthen  `deuteron_channel()` -- THE DEFAULT deuteron control of the
-           tagged channel: the analytic pair psi_0 = 1/(k^2+kappa^2) -
+  hulthen  `deuteron_channel()` -- the deuteron control of the tagged channel
+           by default until D6 (2026-10-27), an option since (the run default
+           is AV18): the analytic pair psi_0 = 1/(k^2+kappa^2) -
            1/(k^2+beta^2), psi_2 = k^2/((k^2+kappa^2)(k^2+beta^2)^2) at
            beta = BETA_DEFAULT = 0.30 GeV, P_D = P_D_DEUTERON = 0.045, kappa
            from DEUTERON_P_TAG's separation energy, normalised exactly as
@@ -143,7 +144,11 @@ Hulthen of `spectator.hpp`'s `MomentumSampler` (the P_D = 0 limit of the
 same pair) is not a separate row: eta = Q_d = 0 there by construction.  The
 survey's sentence (02 sec. 5.2) that eta validates "the S-D mixture of the
 deuteron wave function the tagged channel ... rides on" holds for CD-Bonn
-and AV18 only: the tagged channel's DEFAULT deuteron is the Hulthen pair.
+and AV18 only: the tagged channel's DEFAULT deuteron was the Hulthen pair
+until D6 (2026-10-27) and is AV18 since.  D6 NOTE (2026-10-29): the eta rule
+above covers EVERY shipped wave function and the Hulthen still ships, as
+`--cluster-wave hulthen`, so the row stays FAIL; re-declaring it to "the
+default wave" would be a post-hoc re-declaration, the author's to make.
 
 Run:  source env.sh && python3 validation/benchmarks/t2_deuteron_static.py [--plot]
 
@@ -501,7 +506,8 @@ def hulthen(beta=None):
         / (kappa * beta_used * (kappa + beta_used)))
     ratio_an = n0_an / n0
     out = dict(
-        label="Hulthen pair (deuteron_channel() default: beta = %.2f GeV, "
+        label="Hulthen pair (deuteron_channel() default; the tagged runs' "
+              "--cluster-wave hulthen option since D6: beta = %.2f GeV, "
               "P_D = %.3f, kappa = %.6f GeV), TaggedModel normalisation"
               % (beta_used, p_d_nom, kappa),
         eta=eta, eta_source="this harness: -N_2 A/N_0, the k^2 = -kappa^2 "
@@ -639,7 +645,7 @@ def run(path=DATA, verbose=True):
 # ------------------------------------------------------------------ figure
 
 #: the figure's palette slot and row label of each shipped wave
-PLOT_SLOTS = {"hulthen": ("default", "Hulthen\n(tagged default)"),
+PLOT_SLOTS = {"hulthen": ("default", "Hulthen\n(tagged option)"),
               "av18": ("alt", "AV18"), "cdbonn": ("alt2", "CD-Bonn")}
 
 

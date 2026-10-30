@@ -134,20 +134,20 @@
 /// implement, not about the single-scattering limit that it does.  On one
 /// event stream reweighted three ways (`--channel tagged-6Li-alpha --events
 /// 20000 --seed 1234 --fsi {off,glauber-cluster,glauber-nucleon}`, plan
-/// `tensor-thirds` at P_z = 0.7 / P_zz = 0.6 / P_e = 0.7, at the DEFAULT
-/// sigma_XN = 40 mb -- the whole claim is one stream at one end of the
-/// 20-40 mb band; the kinematic columns are bit-identical across the three):
+/// `tensor-thirds` at P_z = 0.7 / P_zz = 0.6 / P_e = 0.7, sigma_XN = 40 mb,
+/// the kinematic columns bit-identical across the three), re-measured
+/// 2026-10-29 with the wave NAMED (D6 made VMC the default; toy SFs):
 ///
-///     Sum w             20000.0      10419.07     11632.10
-///     Sum w / Sum w_off      1       0.520954     0.581605
-///     per-event min..max     1    0.0208..1.404  0.2139..6.952
+///   --cluster-wave hulthen   Sum w 20000 / 10403.75 / 11584.83 (0.52019 /
+///     0.57924); w 0.018..1.414 / 0.212..6.963; w_n/w_c percentiles [1, 5,
+///     25, 50, 75, 95, 99] = 0.821 .. 0.897 .. 5.935, max 69.89; 99.43 % differ
+///   --cluster-wave vmc       Sum w 20000 / 15989.35 / 16428.71 (0.79947 /
+///     0.82144); w 0.068..37.9 / 0.203..50 (the w_max ceiling); median 0.991,
+///     max 10.14; 64.52 % of the events differ by more than 1 %
 ///
-/// and per event w_nucleon/w_cluster has percentiles [1, 5, 25, 50, 75, 95,
-/// 99] = 0.821, 0.827, 0.853, 0.897, 0.934, 3.337, 5.935 with a maximum of
-/// 68.52.  **99.50 % of the 20 000 events differ by more than 1 %**, and
-/// `np.allclose(rtol = 1e-14)` is False.  Different by construction, not by
-/// parameter choice.  Pinned in `tests/test_fsi.cpp` ("the two variants
-/// differ on essentially every event").
+/// (the 2026-09-04 sample, Hulthen before the 2026-09-06 S-D sign fix:
+/// 10419.07 / 11632.10, max 68.52, 99.50 %).  `np.allclose(rtol = 1e-14)` is
+/// False on both: different by construction.  Pinned in tests/test_fsi.cpp (Hulthen).
 ///
 /// TODO (open): the two corrections that would make a true per-nucleon
 /// product differ from (a) -- the centre-of-mass constraint Sum_i s_i = 0

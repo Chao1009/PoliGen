@@ -41,7 +41,8 @@ THE TREE SIDE.  n(k) of the three deuteron waves this tree ships, at
 k = p_m (the paper's own PWIA identification; instant form, which is also
 how the generator places the spectator), in fm^3:
   hulthen  the analytic Hulthen pair of deuteron_channel() (beta = 0.30 GeV,
-           P_D = 0.045) -- the tagged channel's DEFAULT;
+           P_D = 0.045) -- the tagged channel's DEFAULT until D6 (2026-10-27),
+           the --cluster-wave hulthen option since (see the D6 addendum);
   av18     deuteron_channel(source = ClusterWaveSource.VmcAV18);
   cdbonn   cdbonn_wave() (Machleidt 2001 App. D), n = (psi_s^2 + psi_d^2)/(4 pi)
            with INT (psi_s^2 + psi_d^2) p^2 dp = 1;
@@ -127,6 +128,15 @@ its lower node.  At the data's p_m the cell value is 1.0051 .. 1.1605
 with the smooth reading gives hulthen 23.42 / 21 (p = 0.32), av18 14.61
 (p = 0.84), cdbonn unchanged (analytic) -- the verdict does not turn on
 the grid.  The figure draws every wave through its node values.
+
+D6 ADDENDUM (2026-10-29, OUTSIDE the hashed block, which is unchanged).
+Since LiPolGen's decision D6 (2026-10-27, docs/open_items/run_2026-10-27/
+DECISIONS.md) the tagged channels' shipped wave is AV18 (CLUSTER_WAVE_DEFAULT
+= VmcAV18).  The block's "(hulthen)" names the verdict wave, which is also
+`deuteron_channel()`'s own default and stays the analytic pair under D6, so
+DEFAULT_WAVE stays "hulthen" and the verdict is not re-pointed after its
+numbers were seen.  AV18, the shipped wave, passes by the same rule (11.54/21,
+p = 0.951): PASS either way.
 
 THE THREE NORMALISATION RULES (BENCHMARK_PLAN.md sec. 8), for THIS row:
   1. b1 normalisations -- NOT APPLICABLE (unpolarized).
@@ -659,7 +669,7 @@ def run(path=DATA, verbose=True):
     m = measure(path)
     v = m["verdict"]
     win = m["window"]
-    generator = ("n(k = p_m) x s, one free scale: hulthen (default) chi2 = %.2f/%d "
+    generator = ("n(k = p_m) x s, one free scale: hulthen (the design block's verdict wave) chi2 = %.2f/%d "
                  "(p = %.3g, s = %.3f); av18 %.2f (p = %.3g); cdbonn %.2f (p = %.3g)"
                  % (v["hulthen"]["chi2"], v["hulthen"]["ndf"], v["hulthen"]["p"],
                     v["hulthen"]["s"], v["av18"]["chi2"], v["av18"]["p"],
@@ -814,12 +824,12 @@ def plot(report, out_dir=None):
     """Top: sigma_red against p_m on a log axis -- the 35 and 45 deg points
     (ink; the reference) with their bars, the 75 deg points (grey, record
     (r7): drawn, never compared), each wave's n(k = p_m) times its
-    own fitted scale (a line in its slot: the default `hulthen`, `av18` the
-    alternative's, `cdbonn` the third's), and the declared allowance band
-    s n (1 +- A) around the default wave (grey).  Bottom: the same over
-    s n_hulthen -- the data with their bars (divided by the verdict's model,
-    the TaggedModel cell value at each p_m), the band 1 +- A, and the other
-    two waves' fitted shapes over the default's.  The lines go through the
+    own fitted scale (a line in its slot: the verdict's `hulthen`, `av18` the
+    alternative's -- the tagged runs' shipped wave since D6 --, `cdbonn` the
+    third's), and the declared allowance band s n (1 +- A) around the verdict
+    wave (grey).  Bottom: the same over s n_hulthen -- the data with their bars
+    (divided by the verdict's model, the TaggedModel cell value at each p_m), the
+    band 1 +- A, and the other two waves' fitted shapes over the verdict wave's.  The lines go through the
     TaggedModel's k nodes (its density is piecewise constant between them),
     for display only; every number the figure states is the report's."""
     if HERE not in sys.path:

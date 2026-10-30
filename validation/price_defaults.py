@@ -766,12 +766,12 @@ def family_li7_tagged(events, seed, log):
     # the T1 final-state columns a READ --triton-sf moves, kept to say WHAT it moves
     final_state = ("n_partner", "struck_virtuality", "struck_pol")
     kept = {}
-    out = _price(fam, "shipped default (hulthen, hulthen, toy, toy)", None, None,
-                 base, _tagged_li7, events, seed, log)
+    out = _price(fam, "shipped default (%s, hulthen, toy, toy)" % _waves()[0], None,
+                 None, base, _tagged_li7, events, seed, log)
     if out is not None:
         kept["default"] = {c: np.asarray(out[c]).copy() for c in final_state}
     del out
-    for knob, val in (("cluster_wave", "vmc"), ("triton_sf", "ciofi-simula"),
+    for knob, val in (("cluster_wave", _waves()[1]), ("triton_sf", "ciofi-simula"),
                       ("pol_sf", "nnpdfpol"), ("unpol_sf", "mstw"),
                       ("unpol_sf", "ct18nlo")):
         out = _price(fam, "%s = %s" % (knob, val), knob, val,
@@ -814,30 +814,30 @@ def family_li6_tagged(events, seed, log):
          ("azz_tag_030", "A_zz^tag(k ~ 0.30)", "azz"),
          ("rp_frac", "RP tag fraction (generated)", "frac")])
     base = dict(isotope="6Li", channel="tagged-alpha", plan="tensor-thirds")
-    _price(fam, "shipped default (cluster_wave = hulthen)", None, None, base,
+    _price(fam, "shipped default (cluster_wave = %s)" % _waves()[0], None, None, base,
            _tagged_li6, events, seed, log)
-    for knob, val in (("cluster_wave", "vmc"), ("unpol_sf", "mstw"),
+    for knob, val in (("cluster_wave", _waves()[1]), ("unpol_sf", "mstw"),
                       ("unpol_sf", "ct18nlo")):
         _price(fam, "%s = %s" % (knob, val), knob, val, dict(base, **{knob: val}),
                _tagged_li6, events, seed, log)
-    default = fam["rows"][0]
-    vmc = [r for r in fam["rows"] if r["setting"] == "cluster_wave = vmc"
+    default, (dw, aw) = fam["rows"][0], _waves()
+    alt = [r for r in fam["rows"] if r["setting"] == "cluster_wave = %s" % aw
            and r["provenance"] == "read"]
-    if vmc:
-        a, b = default["values"], vmc[0]["values"]
+    if alt:
+        a, b = default["values"], alt[0]["values"]
         fam["notes"].append(
             "the k- and angle-integrated struck-deuteron dilutions (TaggedModel."
-            "vector_dilution / tensor_dilution, N-independent): hulthen %.6f / %.6f, "
-            "vmc %.6f / %.6f (x%.5f / x%.5f).  A_zz on sigma_tot is zero by "
+            "vector_dilution / tensor_dilution, N-independent): %s %.6f / %.6f, "
+            "%s %.6f / %.6f (x%.5f / x%.5f).  A_zz on sigma_tot is zero by "
             "construction on this channel (%.1e / %.1e), and with NO acceptance "
-            "weight the same curve reads %.1e / %.1e (hulthen) and %.1e / %.1e (vmc) "
+            "weight the same curve reads %.1e / %.1e (%s) and %.1e / %.1e (%s) "
             "at the two k cells: the tensor signal is the cos theta_k shape of the "
             "momentum distribution, so A_zz^tag(k) exists only through the "
             "acceptance." % (
-                a["vec_dil"], a["tens_dil"], b["vec_dil"], b["tens_dil"],
+                dw, a["vec_dil"], a["tens_dil"], aw, b["vec_dil"], b["tens_dil"],
                 b["vec_dil"] / a["vec_dil"], b["tens_dil"] / a["tens_dil"],
                 a["azz_sigma_tot"], b["azz_sigma_tot"], a["azz_4pi_020"],
-                a["azz_4pi_030"], b["azz_4pi_020"], b["azz_4pi_030"]))
+                a["azz_4pi_030"], dw, b["azz_4pi_020"], b["azz_4pi_030"], aw))
     for knob, val, expect in (("pol_sf", "nnpdfpol", "not-read"),
                               ("triton_sf", "ciofi-simula", "not-read"),
                               ("r_source", "r1998", "refused"),
@@ -1087,7 +1087,7 @@ def plot(table, out_dir=None):
               ("li6-coh", "sigma", r"coh $\sigma$"),
               ("li6-coh", "c2_exp", r"coh $c_2$ ($\langle|t|\rangle$ = 0.020)"),
               ("li6-coh", "c2_tag", r"coh $c_2$ (tag $\langle|t|\rangle$)")]
-    series_b = [("alt", "cluster_wave = vmc", "o", "cluster_wave = vmc"),
+    series_b = [("alt", "cluster_wave = " + _waves()[1], "o", "cluster_wave = " + _waves()[1]),
                 ("alt2", "triton_sf = ciofi-simula", "s", "triton_sf = ciofi-simula"),
                 ("alt3", "eps_b0 = -0.0070 (measured Q)", "D", "eps_b0 = ")]
 
@@ -1095,6 +1095,7 @@ def plot(table, out_dir=None):
         xs = np.arange(len(cats))
         offs = np.linspace(-0.24, 0.24, len(series))
         drawn = set()
+        drawn_y = []
         for (slot, label, marker, _p), off in zip(series, offs):
             px, py = [], []
             for i, (fam, key, _lab) in enumerate(cats):
@@ -1105,6 +1106,7 @@ def plot(table, out_dir=None):
             if px:
                 ax.plot(px, py, **_plots.style_series(slot, label=label, marker=marker))
                 drawn.add(slot)
+                drawn_y.extend(py)
         if f0_band:
             lo = _r(table, "li6-coh", "f0 = %g" % F0_BAND[0], "sigma")
             hi = _r(table, "li6-coh", "f0 = %g" % F0_BAND[1], "sigma")
@@ -1120,12 +1122,20 @@ def plot(table, out_dir=None):
                 ax.fill_between([xs[i] - 0.34, xs[i] - 0.14], min(pair), max(pair),
                                 color=_plots.BAND, alpha=0.9, linewidth=0, zorder=1,
                                 label="f0 in {0.02, 0.08} (band)" if first else None)
+                drawn_y.extend(pair)
                 first = False
         ax.axhline(1.0, color=_plots.INK, linewidth=0.8, zorder=2)
         ax.set_yscale("log")
-        ax.set_yticks([0.1, 0.2, 0.5, 1.0, 2.0])
-        ax.set_yticklabels(["0.1", "0.2", "0.5", "1", "2"])
-        ax.set_ylim(0.1, 2.6)
+        # F6 (2026-10-29): the range is the drawn points' own, never narrower
+        # than 0.1 .. 2.6.  It was FIXED at 0.1 .. 2.6, so once D6 made hulthen
+        # the priced cluster wave its A_zz^tag(0.30) ratio, x4.78, had no marker.
+        lo = min([0.1] + [v / 1.25 for v in drawn_y])
+        hi = max([2.6] + [v * 1.25 for v in drawn_y])
+        ticks = [t for t in (0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0,
+                             20.0, 50.0) if lo <= t <= hi]
+        ax.set_yticks(ticks)
+        ax.set_yticklabels(["%g" % t for t in ticks])
+        ax.set_ylim(lo, hi)
         ax.set_xticks(xs)
         ax.set_xticklabels([c[2] for c in cats], rotation=30, ha="right", fontsize=7)
         ax.set_ylabel("ratio to the shipped default")
@@ -1137,7 +1147,7 @@ def plot(table, out_dir=None):
 
     def ratio_b(fam, key, slot):
         if slot == "alt":
-            return _r(table, fam, "cluster_wave = vmc", key)
+            return _r(table, fam, "cluster_wave = " + _waves()[1], key)
         if slot == "alt2":
             return _r(table, fam, "triton_sf = ciofi-simula", key)
         if slot == "alt3":
@@ -1193,6 +1203,15 @@ def main(argv=None):
         traceback.print_exc()
         return 2
     return 0
+
+
+def _waves():
+    """D6 (2026-10-27): (the shipped --cluster-wave, the other one), READ from
+    the library's `CLUSTER_WAVE_DEFAULT` (cluster.hpp) -- so the tagged
+    families' default row is named by what ships, and the priced alternative
+    is the wave that does not (hulthen since D6; vmc before)."""
+    d = lg._lipolgen.cluster_wave_name(lg._lipolgen.CLUSTER_WAVE_DEFAULT)
+    return d, ("hulthen" if d == "vmc" else "vmc")
 
 
 if __name__ == "__main__":

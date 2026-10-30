@@ -70,17 +70,17 @@ bool tagged_blob_present() {
       .good();
 }
 
-
+// D6 (2026-10-29): polligen's tagged.json and the P_D = 0 limits are the HULTHEN family, named.
 const TaggedModel& li6_model() {
-  static const TaggedModel m(li6_alpha_channel());
+  static const TaggedModel m(li6_alpha_channel(BETA_DEFAULT, P_D_LI6, ClusterWaveSource::Hulthen));
   return m;
 }
 const TaggedModel& li7_model() {
-  static const TaggedModel m(li7_alpha_channel());
+  static const TaggedModel m(li7_alpha_channel(BETA_DEFAULT, ClusterWaveSource::Hulthen));
   return m;
 }
 const TaggedModel& deut_model() {
-  static const TaggedModel m(deuteron_channel());
+  static const TaggedModel m(deuteron_channel(BETA_DEFAULT, P_D_DEUTERON, ClusterWaveSource::Hulthen));
   return m;
 }
 const TaggedModel& model_by_key(const std::string& key) {
@@ -338,7 +338,7 @@ TEST_CASE("tagged: sum_M n_M is isotropic about the axis") {
 }
 
 TEST_CASE("tagged: a pure S wave is m-independent and diagonal in the spin") {
-  const TaggedModel model(li6_alpha_channel(BETA_DEFAULT, 0.0));
+  const TaggedModel model(li6_alpha_channel(BETA_DEFAULT, 0.0, ClusterWaveSource::Hulthen));
   const std::vector<double>& n1 = model.n_of_kc(1.0);
   for (double m : {0.0, -1.0}) {
     const std::vector<double>& n = model.n_of_kc(m);
@@ -511,7 +511,7 @@ TEST_CASE("tagged: 6Li embedded-deuteron dilutions") {
 TEST_CASE("tagged: the 6Li S-wave limit reduces to the inclusive deuteron") {
   // P_D = 0: p(m_d|M) = delta_{m_d,M}, so the k-integrated tagged tensor
   // asymmetry is the inclusive polarized-deuteron azz, bin by bin.
-  const TaggedModel model(li6_alpha_channel(BETA_DEFAULT, 0.0));
+  const TaggedModel model(li6_alpha_channel(BETA_DEFAULT, 0.0, ClusterWaveSource::Hulthen));
   InclusiveKernel::Options opt;
   opt.b1_func = [](double x, double q2, double f1) { return toy_b1(x, q2, f1); };
   const InclusiveKernel kern(DEUTERON(), opt);
@@ -831,7 +831,7 @@ TEST_CASE("tagged: sample_kc reproduces its own density") {
 TEST_CASE("tagged: the P_D = 0 boost matches spectator.py quantile by quantile") {
   // Same density, same boost algebra, different (and unmatched) random
   // streams: the comparison is quantile by quantile, as in the Python.
-  const TaggedModel model(li6_alpha_channel(BETA_DEFAULT, 0.0));
+  const TaggedModel model(li6_alpha_channel(BETA_DEFAULT, 0.0, ClusterWaveSource::Hulthen));
   const double p_u = default_configs("6Li")[1].ion_momentum_per_nucleon;
   const std::size_t n = 100000;
   Rng rng_a(31337, 0, 0, 23);
@@ -1571,7 +1571,7 @@ TEST_CASE("T25 the deuteron control channel, Hulthen against AV18" *
   CHECK(v.channel().waves[1].vmc->psi()[1] > 0.0);
   // fdeut.av18 prints no MC error column, so this table carries no band.
   CHECK(!v.channel().waves[1].vmc->has_errors());
-  // Hulthen stays bit for bit the default.
+  // Hulthen stays bit for bit the FACTORY default (D6's DD-1; the run is VMC).
   CHECK(h.channel().waves[1].prob == P_D_DEUTERON);
 }
 
@@ -1614,7 +1614,7 @@ TEST_CASE("T26 the alpha-d normalisation spread, and the inclusive drift" *
               5e-2);
   CHECK(std::fabs(mw.tensor_dilution() / m14.tensor_dilution() - 1.0) < 1e-3);
 
-  // --- C5.5.  On the HULTHEN default the inclusive constant and the tagged
+  // --- C5.5.  On the HULTHEN wave (the factories' default) the inclusive constant and the tagged
   // model ARE one wave function, to 7.84e-6 (0.869950 closed form against the
   // measured 0.8699431789; 1.22e-5 before the 2026-09-06 S-D sign fix moved
   // the quadrature residual).  The CHECK below stays at 2e-5.
@@ -1664,7 +1664,7 @@ TEST_CASE("T26 the alpha-d normalisation spread, and the inclusive drift" *
 // (`deuteron_av18_p_d`, T25), i.e. 0.9136 -- so every polarized tagged-alpha
 // observable under the flag was 2.069 % HIGH against the wave function the flag
 // claims to select, and the run held two deuteron wave-function families.  This
-// pins that it now holds one, and that the Hulthen default is untouched.
+// pins that it now holds one, and that the Hulthen path (the factory default) is untouched.
 TEST_CASE("T27 the embedded deuteron follows --cluster-wave" *
           doctest::skip(!vmc_data_present())) {
   REQUIRE(vmc_data_present());   // the decorator already guaranteed it

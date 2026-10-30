@@ -128,10 +128,10 @@ def test_plan_names_all_build():
         assert abs(sum(c.lumi_fraction for c in plan.categories) - 1.0) < 1e-9
 
 
-def test_cluster_wave_flag_reaches_the_config():
+def test_cluster_wave_flag_reaches_the_config():   # D6 (2026-10-29) re-take
     opts = cli.resolve(["--channel", "tagged-alpha", "--cluster-wave", "vmc"])
     assert opts["cluster_wave"] == "vmc"
-    assert cli.resolve(["--channel", "tagged-alpha"])["cluster_wave"] == "hulthen"
+    assert cli.resolve(["--channel", "tagged-alpha"])["cluster_wave"] is None
 
 
 # --------------------------------------------------------------------------
@@ -344,3 +344,48 @@ def test_nthreads_changes_no_number(tmp_path):
             np.load(str(many), allow_pickle=False) as b:
         for key in ("x", "q2", "phi", "weight", "k", "cos_theta_k", "route"):
             assert np.array_equal(np.asarray(a[key]), np.asarray(b[key])), key
+
+
+# --------------------------------------------------------------------------
+# D6 (2026-10-29): the tagged channels' run default cluster wave is the
+# library's `CLUSTER_WAVE_DEFAULT` (VmcAV18).  The CLI READS it -- "not
+# given" resolves to None (test_cluster_wave_flag_reaches_the_config's
+# re-taken last line), so the config keeps the C++ default -- and never
+# retypes it.  These tests sit at the END of the file so that every line
+# above keeps the number the run records cite.
+
+def test_d6_an_explicit_cluster_wave_off_the_tagged_channels_is_one_line(capsys):
+    """Registry row 11 under D6: `--cluster-wave` of EITHER value on a channel
+    that never reads it is refused in one line, by `make_config` (the value
+    rule of validate() cannot see an explicit request of the default)."""
+    for wave in ("vmc", "hulthen"):
+        for chan in ("inclusive", "coherent"):
+            with pytest.raises(SystemExit) as e:
+                cli.main(["--channel", chan, "--cluster-wave", wave,
+                          "--events", "10", "--quiet"])
+            msg = str(e.value)
+            assert msg.startswith("PipelineConfig: cluster_wave = '%s'" % wave)
+            assert "\n" not in msg
+
+
+def test_d6_a_tagged_banner_names_the_wave_and_the_npz_records_it(tmp_path, capsys):
+    out = tmp_path / "t.npz"
+    assert cli.main(["--channel", "tagged-alpha", "--events", "200",
+                     "--npz", str(out)]) == 0
+    text = capsys.readouterr().out
+    assert "cluster wave: vmc -- the run default since D6" in text
+    meta = json.loads(str(np.load(out, allow_pickle=False)["meta"]))
+    assert meta["cluster_wave"] == "vmc"
+    assert meta["knob_provenance"]["cluster_wave"]["at_default"] is True
+    assert cli.main(["--channel", "tagged-alpha", "--events", "200",
+                     "--cluster-wave", "hulthen", "--npz", str(out)]) == 0
+    assert "cluster wave: hulthen -- an option" in capsys.readouterr().out
+    meta = json.loads(str(np.load(out, allow_pickle=False)["meta"]))
+    assert meta["cluster_wave"] == "hulthen"
+    # off the tagged channels the key carries the LABEL, never a bare "vmc"
+    assert cli.main(["--channel", "inclusive", "--events", "200",
+                     "--npz", str(out)]) == 0
+    assert "cluster wave:" not in capsys.readouterr().out
+    meta = json.loads(str(np.load(out, allow_pickle=False)["meta"]))
+    assert meta["cluster_wave"] == "not read on channel inclusive"
+    assert meta["knob_provenance"]["cluster_wave"]["status"] == "refused"

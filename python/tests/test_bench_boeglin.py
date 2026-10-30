@@ -246,9 +246,9 @@ def test_report_line(mod, capsys):
     out = capsys.readouterr().out.splitlines()
     rows = [l for l in out if l.startswith("REPORT |")]
     assert len(rows) == 1
-    assert rows[0].startswith(
-        "REPORT | t2_boeglin_nk | n(k = p_m) x s, one free scale: hulthen (default) "
-        "chi2 = 21.98/21 (p = 0.4, s = 0.481); av18 11.54 (p = 0.951); cdbonn 8.89 "
+    assert rows[0].startswith(  # D6 (2026-10-29) re-take: the label only, every number kept
+        "REPORT | t2_boeglin_nk | n(k = p_m) x s, one free scale: hulthen (the design "
+        "block's verdict wave) chi2 = 21.98/21 (p = 0.4, s = 0.481); av18 11.54 (p = 0.951); cdbonn 8.89 "
         "(p = 0.99) | Boeglin et al. PRL 107 (2011) 262501 Fig. 2")
     assert rows[0].endswith("| PASS")
     subs = [l for l in out if l.startswith("SUBROW |")]

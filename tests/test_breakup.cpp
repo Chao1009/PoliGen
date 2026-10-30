@@ -413,8 +413,8 @@ TEST_CASE("T1 pipeline: T0 is unchanged by the tier switch, and T1 adds only "
   // fixed, so the two tiers give the SAME T0 record -- except at an index
   // where T1's own timelike-X rejection fires and T0's does not.  X shrinks
   // from k + P_X - k' to the per-nucleon k + p_N - k', so a draw that was
-  // fine at T0 can leave a spacelike remainder here; measured 0.024 % of
-  // 6Li-alpha draws (0.022 % 7Li-alpha, 0.004 % d control) over 50 k events.
+  // fine at T0 can leave a spacelike remainder: 0.038 % of 6Li-alpha draws (0.022 % 7Li,
+  // 0.002 % d) over 50 k, on Hulthen; D6 (2026-10-29) on VMC: 0.054 / 0.014 / 0.006 %.
   std::size_t n_redrawn = 0;
   for (std::uint64_t i = 0; i < 2000; ++i) {
     const Event a = p0.event(i), b = p1.event(i);

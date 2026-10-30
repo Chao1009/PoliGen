@@ -871,15 +871,15 @@ def test_tagged_band_applies_but_the_tail_is_exactly_one():
     assert np.all(cols["rc_tensor_lo"] + cols["rc_tensor_hi"] == 2.0)
     # THE PUBLISHED BAND EDGES ARE POSITIVE AND BOUNDED.  tau_tag =
     # 1 - nbar/n_M is unbounded at the nodes of the M-dependent spectator
-    # density, and without RcOptions.band_tau_max this run shipped
-    # rc_tensor_hi down to -1.79 -- negative weights in the npz.  An analysis
+    # density, and without RcOptions.band_tau_max this run (on the Hulthen
+    # wave, the default then) shipped rc_tensor_hi down to -1.79.  An analysis
     # multiplying weight * rc_tensor_hi must never get one.
     for k in ("rc_tensor_lo", "rc_tensor_hi"):
         assert cols[k].min() > 0.0, (k, cols[k].min())
         assert cols[k].max() <= 2.0, (k, cols[k].max())
         # ... and, tighter, inside [1 - delta, 1 + delta] with delta <= 0.30.
         assert np.all(np.abs(cols[k] - 1.0) <= _l.RC_DELTA_LOW_X + 1e-12)
-    # The clamp actually bites here, and the run says how often.
+    # The clamp actually bites here (D6: on the VMC default too, if less often), and the run says how often.
     meta = cols["meta"]
     assert meta["rc_band_tau_max"] == _l.RC_BAND_TAU_MAX
     assert meta["rc_clipped_band_events"] > 0

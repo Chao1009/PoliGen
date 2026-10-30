@@ -268,8 +268,8 @@ gated at rtol 1e-12 against regenerated `validation/reference/*.json`
   needs no caller-side hook (`docs/T2_CHAIN.md` §1a: worst residual 1.4e-13 relative,
   charge 0, no-surrogate tail 0/300 on each tagged channel).
 - **T1 breakup realism** (what stays open inside it): the deuteron internal wave
-  function is Hulthén S+D at P_D = 0.045 with the full m_S angular correlation, which
-  is as good as the cluster model gets without VMC overlaps; the **triton remnant
+  function is the run's — the AV18 `fdeut` deuteron by default since D6 (2026-10-27), Hulthén S+D at P_D = 0.045 on
+  `--cluster-wave hulthen` — with the full m_S angular correlation; the **triton remnant
   default is the crude, flagged sequential model** (plans/05 risk table) — a
   sequential two-body decay at the AME2020 separation energies with an isotropic
   S-wave relative direction and the unbound nn split at its virtual-state pole, no

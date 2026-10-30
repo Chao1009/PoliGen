@@ -47,20 +47,20 @@ double nucleus_mass(const std::string& name, int a, int z);
 // already includes, and `tagged.hpp` uses these names rather than keeping its
 // own copies (`polli_fastsim.beams`, which `polligen.tagged` re-exports from).
 //
-// "THE INCLUSIVE AND TAGGED 6Li CANNOT DRIFT APART" IS TRUE OF THE DEFAULT AND
-// FALSE OF `ClusterWaveSource::VmcAV18` (open item C5.5, measured 2026-09-04).
-// On the Hulthen default the two ARE one wave function: `LI6_CLUSTER_POLA-
+// "THE INCLUSIVE AND TAGGED 6Li CANNOT DRIFT APART" IS TRUE OF THE HULTHEN WAVE
+// AND FALSE OF `ClusterWaveSource::VmcAV18` -- THE RUN DEFAULT SINCE D6 (C5.5).
+// On the Hulthen option the two ARE one wave function: `LI6_CLUSTER_POLA-
 // RIZATION`'s alpha-d factor 1 - 1.5 P_D_LI6 = 0.869950 and the tagged
 // `TaggedModel(li6_alpha_channel()).vector_dilution()` = 0.8699431789 agree to
 // 7.84e-6 (a grid quadrature against a closed form; 6.82e-6 absolute).
 // Re-measured 2026-09-06 on the fixed tagged S-D interference sign, which
 // moves the quadrature residual by +4.3e-6: it read 0.869939 / 1.22e-5
 // before.  Under `--cluster-wave
-// vmc` the tagged channel's alpha-d wave is the ANL VMC overlap with
-// P_D = `VMC_P_D_LI6` = 0.019355, whose vector dilution is 0.970966 -- and the
-// inclusive constant below does NOT move, so the two differ by +11.61 %.  The
+// vmc` (THE DEFAULT SINCE D6) the tagged alpha-d wave is the ANL VMC overlap,
+// P_D = `VMC_P_D_LI6` = 0.019355, vector dilution 0.970966 -- and the inclusive
+// constant below does NOT move, so the two DEFAULT runs differ by +11.61 %.  The
 // same drift in the rank-2 sector is +6.58 % (`LI6_B1_RANK2_TRANSFER` = 0.9219
-// against the VMC channel's tensor_dilution 0.9826).
+// against the VMC channel's tensor_dilution 0.9826): registry row 10's question.
 //
 // IT IS NOT CLOSED BY SUBSTITUTION, AND THAT IS THE POINT.  Feeding
 // `VMC_P_D_LI6` into the product below gives 0.905427, which is 6.8 % ABOVE
@@ -76,7 +76,7 @@ double nucleus_mass(const std::string& name, int a, int z);
 // drift under `--cluster-wave vmc` is DOCUMENTED at 11.61 % rather than
 // "fixed", and nothing quotes an inclusive 6Li polarization without the band
 // 0.81 .. 0.91.  Numbers: docs/open_items/run_2026-09-03/phase_C_numbers.md
-// sec. C5.5.
+// sec. C5.5.  D6 (2026-10-27): kept, pending the author's answer (row 10).
 //
 // WHAT *IS* CLOSED, AND WAS NOT (sec. C5.5b, 2026-09-04).  The 11.61 % above is
 // between two RUNS and is left standing.  Inside ONE `--cluster-wave vmc`
@@ -93,9 +93,9 @@ double nucleus_mass(const std::string& name, int a, int z);
 /// alpha-d relative D-state probability.  Chosen so that the embedded
 /// deuteron's vector dilution 1 - (3/2) P_D reproduces the 0.87 of
 /// `b1_li6_from_deuteron` (SCENARIO -- VMC overlaps are the scheduled
-/// replacement, plans/04 #15).  It is also the DEFAULT of the Hulthen tagged
-/// channel, which is the bit-compatibility path; `VMC_P_D_LI6` (tagged.hpp)
-/// is the measured replacement `ClusterWaveSource::VmcAV18` uses.
+/// replacement, plans/04 #15).  It is also the `p_d` of the Hulthen tagged
+/// channel (the factories' default; the run default until D6); `VMC_P_D_LI6`
+/// (tagged.hpp) is what `ClusterWaveSource::VmcAV18`, the run default, uses.
 inline constexpr double P_D_LI6 = 0.0867;
 /// The deuteron's own D-state probability (AV18-like).
 inline constexpr double P_D_DEUTERON = 0.045;

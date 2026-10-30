@@ -95,13 +95,13 @@ OPTICS = {
     "tagging-legacy": _lipolgen.OpticsChoice.TaggingLegacyLevers,
 }
 
-#: cluster radial-form families.  "hulthen" is the DEFAULT and is
-#: bit-compatible with every published number; "vmc" swaps in the ANL VMC
-#: tables (see docs/CONVENTIONS.md and docs/open_items/vmc_reconciliation.md)
-#: and then ignores `cluster_beta` and `p_d` on the lithium alpha tags.
-#: It is read on the TAGGED channels only and `PipelineConfig.validate`
-#: refuses it elsewhere; on the 6Li alpha tag it selects the embedded
-#: deuteron as well as the alpha-d relative motion (C5.5b).
+#: cluster radial-form families.  "vmc" -- the ANL VMC tables (docs/CONVENTIONS.md,
+#: docs/open_items/vmc_reconciliation.md), which ignore `cluster_beta` (bar the
+#: 7Li T1 triton breakup) and `p_d` -- is the RUN default since D6
+#: (`CLUSTER_WAVE_DEFAULT`, cluster.hpp); "hulthen", the analytic pair, the option.
+#: It is read on the TAGGED channels only: `make_config` refuses an explicit
+#: value elsewhere and `PipelineConfig.validate` a moved one; on the 6Li alpha
+#: tag it selects the embedded deuteron as well as the alpha-d motion (C5.5b).
 CLUSTER_WAVES = {
     "hulthen": _lipolgen.ClusterWaveSource.Hulthen,
     "vmc": _lipolgen.ClusterWaveSource.VmcAV18,
@@ -455,9 +455,9 @@ def make_config(isotope="6Li", config=1, channel="inclusive", events=0,
     `CoherentScenario` field): 0.2 by default, kept there by the Mantysaari
     anchor's |t| <= 0.30 digitization range rather than by positivity, and
     recorded in the npz meta.  `cluster_wave` is a
-    key of `CLUSTER_WAVES` ("hulthen", the default, or "vmc") or a
-    `ClusterWaveSource` directly; "vmc" replaces the lithium alpha-tag radial
-    forms with the ANL VMC tables and then ignores `cluster_beta` / `p_d`.
+    key of `CLUSTER_WAVES` ("vmc", the run default since D6, or "hulthen") or
+    a `ClusterWaveSource`; None keeps `CLUSTER_WAVE_DEFAULT`, and an explicit
+    value on a channel that never reads it raises RuntimeError (registry row 11).
     `triton_sf` is a key of `TRITON_SFS` ("hulthen", the default, or
     "ciofi-simula") or a `TritonSfChoice` directly; "ciofi-simula" replaces
     the 7Li alpha tag's sequential triton breakup with the three-channel
@@ -553,8 +553,8 @@ def make_config(isotope="6Li", config=1, channel="inclusive", events=0,
     if p_d is not None:
         cfg.p_d = float(p_d)
     if cluster_wave is not None:
-        cfg.cluster_wave = CLUSTER_WAVES[cluster_wave] \
-            if cluster_wave in CLUSTER_WAVES else cluster_wave
+        _cluster_wave_on_tagged_only(cfg, cluster_wave)     # D6 (2026-10-27)
+        cfg.cluster_wave = CLUSTER_WAVES.get(cluster_wave, cluster_wave)
     if triton_sf is not None:
         if isinstance(triton_sf, str):
             if triton_sf not in TRITON_SFS:
@@ -872,3 +872,31 @@ def run(isotope="6Li", config=1, channel="inclusive", plan="tensor-thirds",
     if bridge is not None:
         out["bridge"] = bridge
     return out
+
+
+def _cluster_wave_on_tagged_only(cfg, cluster_wave):
+    """D6 (2026-10-27): the EXPLICIT-request guard of registry row 11.
+
+    `PipelineConfig.validate()` refuses a `cluster_wave` MOVED FROM the run
+    default off the tagged channels, and since D6 that default
+    (`CLUSTER_WAVE_DEFAULT`, VMC) is exactly what a user asking for a "VMC
+    6Li" inclusive row would type -- so a value rule alone would accept the
+    request and deliver `LI6_CLUSTER_POLARIZATION` = 0.811228, the wave
+    unread.  This sees what the config cannot, that the caller NAMED a wave,
+    and refuses EITHER value on a channel that never reads one.  The message
+    starts "PipelineConfig:" like every `validate()` refusal, so the CLI
+    prints it in one line and validation/price_defaults.py classifies it as
+    a refusal.  A C++ caller (or one assigning `cfg.cluster_wave` directly)
+    who sets the default value is indistinguishable from one who did not, as
+    for every knob."""
+    if _lipolgen.is_tagged(cfg.channel):
+        return
+    name = cluster_wave if isinstance(cluster_wave, str) \
+        else _lipolgen.cluster_wave_name(cluster_wave)
+    raise RuntimeError(
+        "PipelineConfig: cluster_wave = %r was asked for on channel %s, which "
+        "never reads a cluster wave -- the inclusive 6Li constants "
+        "(LI6_CLUSTER_POLARIZATION = 0.811228, the Hulthen-era cluster "
+        "product) and the coherent form factors follow neither value (open "
+        "item C5.5, registry row 11, D6).  Drop the cluster wave, or run a "
+        "tagged channel" % (name, _lipolgen.pipeline_channel_name(cfg.channel)))

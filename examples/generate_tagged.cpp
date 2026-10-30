@@ -1,4 +1,4 @@
-// Generates T0 spectator-tagged events -- 6Li(e, e' alpha)X on the embedded
+// Generates spectator-tagged events -- 6Li(e, e' alpha)X on the embedded
 // deuteron, 7Li(e, e' alpha)X on the quasi-free triton, or the d(e, e' p)X
 // Cosyn-Weiss control -- through lipolgen::Pipeline, writes them as HepMC3
 // Asciiv3, and prints the accepted cross section per spin category, the
@@ -9,15 +9,15 @@
 //     --channel 6Li-alpha|7Li-alpha|d-p   tagged channel      (default 6Li-alpha)
 //     --config 0|1|2        energy point low/mid/top          (default 1)
 //     --plan NAME           azz | apar | pure                 (default azz)
-//     --optics NAME         high-acceptance | high-divergence |
-//                           tagging | tagging-legacy          (default
-//                                                              high-acceptance)
+//     --optics NAME         high-acceptance | high-divergence | tagging |
+//                           tagging-legacy           (default high-acceptance)
 //     --events N            fixed event count                 (default 200000)
 //     --lumi L              integrated luminosity [pb^-1] instead of --events
 //     --seed S              RNG seed                          (default 20260713)
 //     --threads N           worker threads (output is identical for any N)
-//     --beta B              short-range scale of the radial waves (0.20-0.40)
-//     --pd P                alpha-d D-state probability (6Li)
+//     --cluster-wave W      hulthen | vmc (default CLUSTER_WAVE_DEFAULT: vmc, D6)
+//     --beta B              ANALYTIC radial scale: refused where the run reads none
+//     --pd P                alpha-d D state (6Li, hulthen): refused likewise
 //     --inclusive-b1        put an inclusive b1 in the struck-cluster kernel
 //                           (double-counts the wave-function tensor
 //                            asymmetry -- for the RATE identity only)
@@ -50,8 +50,8 @@ struct Args {
   double lumi = -1.0;
   unsigned long long seed = 20260713;
   unsigned threads = 1;
-  double beta = BETA_DEFAULT;
-  double p_d = P_D_LI6;
+  std::string cluster_wave = cluster_wave_name(CLUSTER_WAVE_DEFAULT);   // D6
+  double beta = BETA_DEFAULT, p_d = P_D_LI6;
   bool inclusive_b1 = false;
   std::string out = "generate_tagged.hepmc";
 };
@@ -62,9 +62,9 @@ struct Args {
             << " [--channel 6Li-alpha|7Li-alpha|d-p] [--config 0|1|2]\n"
                "       [--plan azz|apar|pure] [--optics high-acceptance|"
                "high-divergence|tagging|tagging-legacy]\n"
-               "       [--events N | --lumi PB] [--seed S] [--threads N]"
-               " [--beta B] [--pd P]\n"
-               "       [--inclusive-b1] [--out FILE]\n";
+               "       [--events N | --lumi PB] [--seed S] [--threads N]\n"
+               "       [--cluster-wave hulthen|vmc] [--beta B] [--pd P]"
+               " [--inclusive-b1] [--out FILE]\n";
   std::exit(2);
 }
 
@@ -84,6 +84,7 @@ Args parse(int argc, char** argv) {
     else if (k == "--lumi") { a.lumi = std::stod(next()); a.events = -1; }
     else if (k == "--seed") a.seed = std::stoull(next());
     else if (k == "--threads") a.threads = static_cast<unsigned>(std::stoul(next()));
+    else if (k == "--cluster-wave") a.cluster_wave = next();
     else if (k == "--beta") a.beta = std::stod(next());
     else if (k == "--pd") a.p_d = std::stod(next());
     else if (k == "--inclusive-b1") a.inclusive_b1 = true;
@@ -95,7 +96,6 @@ Args parse(int argc, char** argv) {
   if (a.threads < 1) usage(argv[0], "--threads must be >= 1");
   return a;
 }
-
 PipelineChannel channel_of(const std::string& s, const char* argv0) {
   if (s == "6Li-alpha") return PipelineChannel::TaggedLi6Alpha;
   if (s == "7Li-alpha") return PipelineChannel::TaggedLi7Alpha;
@@ -142,6 +142,13 @@ int main(int argc, char** argv) {
     cfg.beam_config = args.config;
     cfg.optics_choice = optics_of(args.optics, argv[0]);
     cfg.seed = args.seed;
+    // D6: the wave by its run-surface name; the default is the library's own.
+    for (ClusterWaveSource s : {ClusterWaveSource::Hulthen, ClusterWaveSource::VmcAV18}) {
+      if (args.cluster_wave == cluster_wave_name(s)) cfg.cluster_wave = s;
+    }
+    if (args.cluster_wave != cluster_wave_name(cfg.cluster_wave)) {
+      usage(argv[0], "unknown --cluster-wave " + args.cluster_wave);
+    }
     cfg.cluster_beta = args.beta;
     cfg.p_d = args.p_d;
     cfg.struck.inclusive_b1 = args.inclusive_b1;
@@ -155,17 +162,42 @@ int main(int argc, char** argv) {
     const Pipeline p(cfg, plan);
     const auto t_build1 = std::chrono::steady_clock::now();
 
+    // D6: --beta / --pd set away from their defaults are REFUSED where this
+    // run reads neither -- the knob table's own rule (channel x tier x wave),
+    // the one the CLI banner prints, never "the wave alone".
+    const std::vector<KnobProvenance> knobs = p.knob_provenance(KnobRunContext());
+    auto knob = [&knobs](const std::string& name) -> const KnobProvenance& {
+      for (const KnobProvenance& r : knobs) {
+        if (r.name == name) return r;
+      }
+      throw std::runtime_error("no knob_provenance row " + name);
+    };
+    const KnobProvenance& beta_row = knob("cluster_beta");
+    if (args.beta != BETA_DEFAULT && beta_row.status != KnobStatus::Read) {
+      usage(argv[0], "--beta is not read on this run: " + beta_row.reason);
+    }
+    if (args.p_d != P_D_LI6 && knob("p_d").status != KnobStatus::Read) {
+      usage(argv[0], "--pd is not read on this run: " + knob("p_d").reason);
+    }
+
     const BeamConfig& bc = p.beam_config();
     const TaggedChannel& ch = *p.tagged_channel();
-    std::printf("LiPolGen tagged T0 generator -- %s\n", ch.label.c_str());
+    std::printf("LiPolGen tagged %s generator -- %s\n",
+                p.tier() == Tier::T1 ? "T1" : "T0", ch.label.c_str());
     std::printf("  beams        %s (sqrt(s_eN) = %.2f GeV), pot config %s\n",
                 bc.label().c_str(), bc.sqrt_s_per_nucleon(),
                 p.pot_config().c_str());
     std::printf("  cluster      spectator %s (A=%d, Z=%d), struck %s,"
-                " kappa = %.4f GeV, beta = %.2f\n",
+                " kappa = %.4f GeV\n",
                 ch.base.spectator.c_str(), ch.base.spectator_A,
                 ch.base.spectator_Z, ch.dis_target.name.c_str(),
-                ch.base.kappa(), args.beta);
+                ch.base.kappa());
+    const bool dflt = cfg.cluster_wave == CLUSTER_WAVE_DEFAULT;   // D6
+    std::printf("  wave         %s (%s%s, D6); beta = %.2f %s\n",
+                cluster_wave_name(cfg.cluster_wave),
+                dflt ? "the run default" : "an option; the run default is ",
+                dflt ? "" : cluster_wave_name(CLUSTER_WAVE_DEFAULT), args.beta,
+                beta_row.status == KnobStatus::Read ? "(read)" : "(not read on this run)");
     std::printf("  waves       ");
     for (const Wave& w : ch.waves) std::printf(" L=%d P=%.4f", w.l, w.prob);
     std::printf("   R(k=0) = %.5f, vector dilution %.4f\n",

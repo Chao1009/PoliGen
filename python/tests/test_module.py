@@ -267,21 +267,21 @@ def test_vmc_cluster_waves_are_reachable_and_carry_their_provenance():
     # the S-D relative sign the momentum densities alone cannot give
     s = [w for w in ch.waves if w.l == 0][0]
     assert s.vmc(0.05) > 0 > d.vmc(0.05)
-    # ... and the Hulthen default carries no table at all
+    # ... and the Hulthen FACTORY default (D6's DD-1; the RUN default is VMC) has none
     assert all(w.vmc is None for w in lg._lipolgen.li6_alpha_channel().waves)
 
 
 @pytest.mark.skipif(not _have_vmc(), reason="data/vmc is not present")
-def test_make_config_takes_cluster_wave_by_name():
+def test_make_config_takes_cluster_wave_by_name():   # D6 (2026-10-29) re-take
     assert lg.make_config(channel="tagged-alpha", events=10).cluster_wave \
-        == lg._lipolgen.ClusterWaveSource.Hulthen
-    cfg = lg.make_config(channel="tagged-alpha", events=500,
-                         cluster_wave="vmc")
+        == lg._lipolgen.CLUSTER_WAVE_DEFAULT == lg._lipolgen.ClusterWaveSource.VmcAV18
+    assert lg.make_config(channel="tagged-alpha", events=10, cluster_wave="hulthen") \
+        .cluster_wave == lg._lipolgen.ClusterWaveSource.Hulthen   # the option
+    cfg = lg.make_config(channel="tagged-alpha", events=500, cluster_wave="vmc")
     assert cfg.cluster_wave == lg._lipolgen.ClusterWaveSource.VmcAV18
     p = lg.Pipeline(cfg, lg.tensor_thirds_plan(0.7, 0.6))
     assert "VMC" in p.tagged_model.channel.label
-    cols = p.generate(0, 500, 1)
-    assert cols["x"].size == 500
+    assert p.generate(0, 500, 1)["x"].size == 500
 
 
 def test_a_parallel_splits_massless_from_exact():
@@ -593,12 +593,26 @@ def test_c5_2_the_vmc_tables_carry_their_monte_carlo_band():
     with pytest.raises(RuntimeError):
         L.li6_alpha_channel(source=L.ClusterWaveSource.Hulthen,
                             vmc_mc_sigma=1.0)
-    cfg = lg.make_config(channel="tagged-alpha", events=10)
+    # D6 (2026-10-29): the refusal half is the HULTHEN option's, by name.
+    cfg = lg.make_config(channel="tagged-alpha", events=10,
+                         cluster_wave="hulthen")
     cfg.cluster_vmc_mc_sigma = 1.0
     with pytest.raises(RuntimeError):
         cfg.validate()
     cfg.cluster_wave = L.ClusterWaveSource.VmcAV18
     cfg.validate()
+    # ... and since D6 the DEFAULT lithium alpha tags read the band, so a
+    # default config accepts it there and still refuses it on the d control.
+    for channel, isotope, ok in (("tagged-alpha", "6Li", True),
+                                 ("tagged-alpha", "7Li", True),
+                                 ("tagged-d-p", "d", False)):
+        cfg = lg.make_config(isotope=isotope, channel=channel, events=10)
+        cfg.cluster_vmc_mc_sigma = 1.0
+        if ok:
+            cfg.validate()
+        else:
+            with pytest.raises(RuntimeError):
+                cfg.validate()
 
 
 @pytest.mark.skipif(not _have_vmc(), reason="data/vmc is not present")
@@ -627,7 +641,8 @@ def test_c5_4_the_deuteron_control_on_av18():
 @pytest.mark.skipif(not _have_vmc(), reason="data/vmc is not present")
 def test_c5_5_the_inclusive_tagged_drift_and_why_substitution_is_not_the_fix():
     L = lg._lipolgen
-    # on the Hulthen default the two ARE one wave function
+    # on the Hulthen option (the factories' default; the run default until D6)
+    # the two ARE one wave function
     hul = L.TaggedModel(L.li6_alpha_channel())
     assert hul.vector_dilution() == pytest.approx(1.0 - 1.5 * lg.P_D_LI6,
                                                   rel=2e-5)
@@ -687,7 +702,7 @@ def test_c5_5b_one_run_one_deuteron():
         assert k_before.tables(x, q2).g1 / k_now.tables(x, q2).g1 \
             == pytest.approx(was_high, rel=1e-12)
     # the T1 breakup follows too.  `BreakupOptions.source` defaults to
-    # Hulthen and `Pipeline` forwards `cluster_wave` into it; the model it
+    # Hulthen (DD-1, D6) and `Pipeline` forwards `cluster_wave` into it; the model it
     # builds is `deuteron_channel(beta, p_d, source)`, and the gate is that
     # the dilution the SPIN DRAW implies is the one the RATE uses.  (The
     # `ClusterBreakup` object itself is checked in C++ T27.)
@@ -712,19 +727,33 @@ def test_c5_5b_one_run_one_deuteron():
 
 
 def test_c5_5b_cluster_wave_is_refused_where_it_is_never_read():
+    # D6 (2026-10-29 re-take): validate() refuses a value MOVED from the
+    # default (VmcAV18) off the tagged channels, and make_config refuses an
+    # EXPLICIT request of either value there -- registry row 11's protection,
+    # which a value rule cannot give once "vmc" is the default.
     L = lg._lipolgen
     for channel, isotope, tagged in (("inclusive", "6Li", False),
                                      ("coherent", "6Li", False),
                                      ("tagged-alpha", "6Li", True),
                                      ("tagged-d-p", "d", True)):
         cfg = lg.make_config(isotope=isotope, channel=channel, events=10)
-        cfg.validate()                      # Hulthen is legal everywhere
-        cfg.cluster_wave = L.ClusterWaveSource.VmcAV18
+        assert cfg.cluster_wave == L.CLUSTER_WAVE_DEFAULT
+        cfg.validate()                      # the default is legal everywhere
+        cfg.cluster_wave = L.ClusterWaveSource.Hulthen
         if tagged:
             cfg.validate()
         else:
             with pytest.raises(RuntimeError):
                 cfg.validate()
+        for wave in ("vmc", "hulthen", L.ClusterWaveSource.VmcAV18):
+            if tagged:
+                lg.make_config(isotope=isotope, channel=channel, events=10,
+                               cluster_wave=wave).validate()
+            else:
+                with pytest.raises(RuntimeError, match="^PipelineConfig: "
+                                   "cluster_wave = '(vmc|hulthen)' was asked"):
+                    lg.make_config(isotope=isotope, channel=channel,
+                                   events=10, cluster_wave=wave)
 
 
 def test_shifted_by_sigma_is_the_identity_without_errors():

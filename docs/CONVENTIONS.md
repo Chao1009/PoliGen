@@ -100,14 +100,14 @@ knobs recorded nowhere at all
   eff_pol_n = LI6_CLUSTER_POLARIZATION/3`, so `Z·P_p = N·P_n = 0.81123`.  The
   two D-state probabilities live in **`beams.hpp`** — one source of truth, as
   in `polli_fastsim.beams` — and `tagged.hpp` uses those names rather than
-  keeping copies, so **on the Hulthén default** the INCLUSIVE effective
+  keeping copies, so **on the Hulthén wave (the run default until D6, the option since)** the INCLUSIVE effective
   polarization and the TAGGED S/D interference of `li6_alpha_channel` are the
   same wave function seen in two experiments — measured 2026-09-04 and
   re-measured 2026-09-06 on the fixed S–D interference sign, they agree
   to **7.84e−6** (0.869950 against the tagged model's **0.8699431789**, a closed
   form against a grid quadrature; 6.82e−6 absolute).  *(The pre-fix pair was
   0.869939 and 1.22e−5: the fix moves the 96-cell quadrature residual by
-  +4.3e−6 and nothing else here — the dilution is angle-integrated.)*  **Under `--cluster-wave vmc` they do not**: the
+  +4.3e−6 and nothing else here — the dilution is angle-integrated.)*  **Under `vmc` — the run default since D6 (2026-10-27), so between the two DEFAULT runs — they do not**: the
   tagged α–d wave becomes the ANL VMC overlap at `VMC_P_D_LI6` = 0.019355 and
   the inclusive constant does not follow, so the two differ by **+11.61 %** in
   the vector sector and **+6.58 %** in the rank-2 one (`LI6_B1_RANK2_TRANSFER`
@@ -123,7 +123,7 @@ knobs recorded nowhere at all
   FORMULA carries the error, not the choice of P_D.  Author decision
   2026-09-04: the default stays 0.811228, the drift is documented at 11.61 %
   rather than "fixed", and no inclusive ⁶Li polarization is quoted without the
-  band 0.81–0.91 (`docs/open_items/run_2026-09-03/phase_C_numbers.md` §C5.5,
+  band 0.81–0.91 (D6 keeps all three pending the author's answer, registry row 10; `docs/open_items/run_2026-09-03/phase_C_numbers.md` §C5.5,
   pinned in `tests/test_tagged.cpp` **T26**).  The drift is between a tagged
   row and an inclusive row of one programme, never inside one run — **and that
   sentence was false when it was first written (§C5.5b, 2026-09-04).**  A
@@ -135,10 +135,10 @@ knobs recorded nowhere at all
   (`ClusterBreakup` samples k from that same deuteron).  Every polarized
   tagged-α observable was **+2.069 %** high against the AV18 deuteron
   (P_D = 0.057600) belonging to that overlap.  Since 2026-09-04 both follow
-  the flag (`DEUTERON_AV18()`, `BreakupOptions::source`), the opt-in path moved
-  by −2.027 %, the Hulthén default is bit for bit, and a `vmc` run's
-  whole-nucleus reading is one Hamiltonian's: 0.887076.  `validate()` now also
-  **refuses** `cluster_wave` on `Inclusive` and `CoherentLi6`, where it is
+  the flag (`DEUTERON_AV18()`, `BreakupOptions::source`), that path (opt-in then, the default since D6) moved
+  by −2.027 %, the Hulthén path is bit for bit, and a `vmc` run's
+  whole-nucleus reading is one Hamiltonian's: 0.887076.  `cluster_wave` is also
+  **refused** on `Inclusive` and `CoherentLi6` (since D6 a moved value by `validate()`, an explicit one by `make_config` / the CLI), where it is
   never read — accepting it unread was how the 11.61 % above reached a user
   who thought they had asked for a VMC ⁶Li (**T27**, and the pipeline test).
   The deuteron slot carries `DEUTERON_VECTOR_POLARIZATION =
@@ -325,8 +325,8 @@ knobs recorded nowhere at all
   momentum.  `β = x/x_P` and `M_X²` are on the record.  X must be TIMELIKE on
   every channel — a hard check in `Pipeline::add_hadronic_x` and in
   `InclusiveGenerator`, never a clip.
-- **Cluster radial forms.** `ClusterWaveSource::Hulthen` is the DEFAULT
-  everywhere; its radial forms are bit-compatible with `polligen` and with
+- **Cluster radial forms.** `ClusterWaveSource::VmcAV18` is the RUN default since D6 (2026-10-27): `CLUSTER_WAVE_DEFAULT` (`cluster.hpp`) is what `PipelineConfig::cluster_wave`, the CLI, `lg.run` and `lg.make_config` start from, defined once and read everywhere else.  `ClusterWaveSource::Hulthen` is the option, and still the ARGUMENT default of the channel factories and `BreakupOptions` (their β and P_D are its parameters; the polligen port gate `tagged.json` pins it, by name in the tests)
+  — so `lg.li6_alpha_channel()` and `lg.run(channel="tagged-6Li-alpha")` differ; its radial forms are bit-compatible with `polligen` and with
   every number published **since** the 2026-09-06 S–D sign fix (which is every
   ⁷Li number ever published).  The spin-1 tagged numbers published BEFORE that
   date carry the inverted S–D sign and are not reproduced, by design —
@@ -372,8 +372,8 @@ knobs recorded nowhere at all
   P_D is a property of the wave function (`VMC_P_D_LI6` = 0.01935, the file's
   own 0.015861/(0.80362+0.015861), against the 0.0867 SCENARIO placeholder).
   Tables are ZERO outside 5 fm⁻¹ = 0.9866 GeV, so the sampler cannot draw a
-  spectator past it.  The deuteron control channel is Hulthén **by default and
-  follows `--cluster-wave vmc`** (C5.4, 2026-09-04): `fdeut.av18`'s u(k), w(k)
+  spectator past it.  The deuteron control channel follows the run's wave — **the AV18 deuteron by default
+  since D6, Hulthén on `--cluster-wave hulthen`** (C5.4, 2026-09-04): `fdeut.av18`'s u(k), w(k)
   ARE the p–n relative waves, so the sentence that used to stand here — "the
   deuteron control channel is always Hulthen … no d → p+n two-cluster table
   exists" — was false, and the flag had been *silently ignored* there.
@@ -458,14 +458,14 @@ knobs recorded nowhere at all
   ONE event stream reweighted both ways — `--channel tagged-6Li-alpha
   --events 20000 --seed 1234`, `tensor-thirds` at P_z = 0.7 / P_zz = 0.6 /
   P_e = 0.7, at the default σ_XN = 40 mb, with `k`, `cos_theta_k`, `phi_k`,
-  `x` and `q2` bit-identical across the three runs — they differ on
+  `x` and `q2` bit-identical across the three runs — they differ, on the Hulthén α–d of 2026-09-04, on
   **99.50 %** of events by more than **1 %** (|w_nucleon/w_cluster − 1| > 0.01;
   Σw 10419.07 vs 11632.10, i.e. Σw/Σw_off **0.520954** vs **0.581605**) and by
-  up to a factor **68.52** per event.  Σw/Σw_off is the SAMPLE mean weight and
-  is not the model's own grid-integrated `GlauberFsiWeight::survival()`, which
-  is **0.520239** vs **0.582899** — the number `meta["fsi_survival"]` carries
-  and `tests/test_fsi.cpp` pins.  Quote that window with the two numbers; the
-  whole claim is about one stream and one σ_XN.  The weight table
+  up to a factor **68.52** per event (re-measured 2026-10-29 with the wave named, toy SFs: 99.43 % and 69.89 on
+  `--cluster-wave hulthen`; **64.5 %** and **10.14** on the default VMC waves since D6).  Σw/Σw_off is the SAMPLE mean weight, not the
+  model's own grid-integrated `GlauberFsiWeight::survival()`, which is **0.520239** vs **0.582899** on Hulthén and
+  **0.797094** vs **0.819119** on the default — the number `meta["fsi_survival"]` carries (`tests/test_fsi.cpp` pins the Hulthén pair by name).
+  Quote that window with the two numbers; the whole claim is about one stream and one σ_XN.  The weight table
   is built on a (k_z, k_T) grid — a deliberate deviation from the design
   note's literal (k, cos θ_k): the eikonal kernel transfers k_T only, so the
   table is smooth and even in k_z there — and read per event by bilinear

@@ -193,7 +193,8 @@ def test_deuteron_static_verdict_follows_the_numbers(dmod, ds):
         assert m["eta_status"] == ("pass" if abs(m["eta_pull"]) <= 2.0 else "fail")
     assert ds["status"] == ("pass" if all(m["eta_status"] == "pass"
                                           for m in ds["models"].values()) else "fail")
-    # measured: CD-Bonn and AV18 inside, the DEFAULT Hulthen pair far outside
+    # measured: CD-Bonn and AV18 inside, the Hulthen pair (the default until
+    # D6, an option since) far outside
     assert ds["models"]["cdbonn"]["eta_pull"] == pytest.approx(-0.0715, abs=1e-3)
     assert ds["models"]["av18"]["eta_pull"] == pytest.approx(-1.388, abs=1e-3)
     assert ds["models"]["hulthen"]["eta_pull"] == pytest.approx(17.196, abs=1e-3)

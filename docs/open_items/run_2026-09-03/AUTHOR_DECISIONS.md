@@ -354,6 +354,15 @@ Otherwise: `beams.hpp:134`, re-dump `beams.json`/`xsec.json`, T-pins in
 `python/tests/test_module.py`, the `CONVENTIONS.md`/`PHYSICS_CHANNELS.md:83,248`
 sentences.
 
+> **2026-10-29 — D6** (`../run_2026-10-27/DECISIONS.md`; implemented in
+> `../run_2026-10-27/phase_I6_cluster_wave.md`). With the VMC cluster waves
+> the shipped run default, the drift (a) describes is between the two
+> DEFAULT runs: a default tagged ⁶Li α run reads 0.887076 whole-nucleus and
+> 0.982576 rank-2, a default inclusive one 0.811228 and 0.921947 (×1.0935 /
+> ×1.0658). Option (iii) together with its rank-2 analogue is the consistent
+> one; (i) is what stands. No constant moved: the question is re-posed to
+> the author (`../run_2026-10-27/plan_D6_cluster_wave_default.md` §11.1).
+
 ### B7. `Li6ConvolutionOptions` keeps R = `r_sigma_lt`, the gate keeps `r1998` (`STATUS.md` row 3; `OPEN_ITEMS_SOLUTIONS.md` §10 condition 4)
 
 **(a)** Should the opt-in ⁶Li convolution backend use the R the A = 2 gate was
@@ -516,6 +525,15 @@ the **stored** ψ₂ = +W, which is what it was about; what changed is that the
 `tagged.hpp` (`DEUTERON_AV18()`) / `breakup.hpp` (`BreakupOptions::source`),
 re-dump `tagged.json`, T25.
 
+> **2026-10-29 — decided by D6** (`../run_2026-10-27/DECISIONS.md`; implemented
+> in `../run_2026-10-27/phase_I6_cluster_wave.md`): the control follows the
+> shipped run default, now the AV18 deuteron (P_D = 0.057600). Said truthfully,
+> this is **not** (e)'s option (ii): the default moved on the RUN surface only
+> (`PipelineConfig::cluster_wave` = `CLUSTER_WAVE_DEFAULT`, the design's DD-1);
+> `deuteron_channel()`, the other factories and `BreakupOptions::source` keep
+> the analytic default, and `tagged.json` and T25 are unchanged — (d)'s
+> "`tagged.json` moves at rtol 1e−12" does not happen. The row is closed.
+
 ### B10. The embedded deuteron follows `--cluster-wave`, and the flag is refused where it is never read — *applied, confirm or revert* (`STATUS.md` row 11)
 
 **(a)** Confirm the run's choice among follow / refuse / document for a
@@ -542,6 +560,11 @@ events). `validate()` now refuses `cluster_wave` on `inclusive`/`coherent`.
 **(e)** Confirm: close the row. Revert: `tagged.cpp`/`breakup.cpp` back to the
 unconditional `DEUTERON()`, T27 and the two pytests removed, the five
 `CONVENTIONS.md`/`USAGE.md`/`PHYSICS_CHANNELS.md` sites restated.
+
+> **2026-10-29 — amended by D6** (`../run_2026-10-27/phase_I6_cluster_wave.md`):
+> `validate()` now refuses a `cluster_wave` moved from the default (`VmcAV18`)
+> off the tagged channels, and `make_config` / the CLI refuse an explicit
+> request of either value there; the off-channel knob row withholds the value.
 
 ### B11. The published `A_zz(Born)` column is wrong by ×3.253983 — **republished BESIDE the original on 2026-09-06** (`STATUS.md` row 6; `../run_2026-09-02/phase_C_numbers.md` §8.1c-corr / §8.2-corr / §8.3-corr)
 
@@ -827,7 +850,7 @@ event-weighted (+0.61 %) and fails per cell (331 of 1356 cells, worst ×6444
 at x = 0.79, y = 0.0088). `qe_tensor_scale = 1` — Δ(ΔA_zz) 0.086 % / 0.0003 %
 / 0.25 % of the band at x = 0.01 / 0.10 / 0.30. `a_transfer_frac` — A_zz band
 half-widths 1.358472e−04 / 1.518818e−04 / 1.921170e−04 at f = 0 / 0.5 / 1.
-`cluster_vmc_mc_sigma` — 0.02 % on the tagged tensor observable. `pol_sf` —
+`cluster_vmc_mc_sigma` — 0.02 % on the tagged tensor observable (*2026-10-29, D6: no longer a no-op path — the band is READ on the default lithium α tags, which are VMC since D6, and still 0 by default*). `pol_sf` —
 read on no channel at the CLI default plan. The first four are inside `--rc`,
 itself opt-in, so they move nothing at the CLI default whichever way they go.
 **`sp_tensor_scale = 1`, priced 2026-09-06** (`../run_2026-09-06/phase_B_numbers.md`

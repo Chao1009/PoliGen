@@ -1311,30 +1311,30 @@ inclusive b₁ double-counts the tagged tensor asymmetry
 for the k-integrated **rate** identity
 `Azz(σ₊₁, σ₀, σ₋₁) = tensor_dilution × ⟨Azz⟩_σ`.
 
-### Cluster radial forms: Hulthen (default) or the ANL VMC tables
+### Cluster radial forms: the ANL VMC tables (default since D6) or Hulthén
 
 ```cpp
-cfg.cluster_wave = ClusterWaveSource::VmcAV18;   // default: Hulthen
+cfg.cluster_wave = ClusterWaveSource::Hulthen;   // the option; default VmcAV18 (D6)
 ```
 ```bash
-python -m lipolgen.cli --channel tagged-alpha --cluster-wave vmc --events 400000
+python -m lipolgen.cli --channel tagged-alpha --cluster-wave hulthen --events 400000
 ```
 ```python
 cfg = lipolgen.make_config(channel="tagged-alpha", events=400000,
-                           cluster_wave="vmc")     # or "hulthen" (default)
+                           cluster_wave="hulthen")  # or "vmc", the default since D6
 ```
 
-`Hulthen` is the two-parameter analytic family (`--cluster-beta`, `--p-d`) and
-stays the default, so every published number is unchanged bit-for-bit.
-`VmcAV18` swaps in the tabulated ANL variational-Monte-Carlo cluster wave
-functions for the two **lithium alpha tags** — magnitudes from
-`data/vmc/momenta/`, the S–D relative sign from `data/vmc/li6_alpha_d/li6.ad`
-— and then **ignores `cluster_beta` and `p_d`**: the shape is the table's, and
-P_D(⁶Li) is a property of the wave function (1.935 %, against the 8.67 %
-scenario placeholder).  Data
-files are found at `$LIPOLGEN_DATA_DIR`, else the compiled-in
-`${CMAKE_SOURCE_DIR}/data`; the tables are zero past 5 fm⁻¹ = 0.9866 GeV, so
-no spectator is drawn beyond that.
+**Since D6 (2026-10-27) `VmcAV18` is the shipped default** (`CLUSTER_WAVE_DEFAULT`,
+`cluster.hpp`): the tabulated ANL variational-Monte-Carlo cluster wave functions
+for the two **lithium alpha tags** — magnitudes from `data/vmc/momenta/`, the
+S–D relative sign from `data/vmc/li6_alpha_d/li6.ad` — which **ignore
+`cluster_beta` and `p_d`** (bar `--cluster-beta` on the ⁷Li T1 triton breakup): the
+shape is the table's, and P_D(⁶Li) is the wave function's (1.935 %, against the
+8.67 % of the analytic pair).  `Hulthen` — the two-parameter analytic family
+(`--cluster-beta`, `--p-d`) and the channel FACTORIES' own default — is the option;
+a `--cluster-wave hulthen` run is bit for bit the pre-D6 default run.  Data files are found at
+`$LIPOLGEN_DATA_DIR`, else the compiled-in `${CMAKE_SOURCE_DIR}/data` (an installed library finds it only while
+that tree exists); the tables are zero past 5 fm⁻¹ = 0.9866 GeV, so no spectator is drawn beyond that.
 
 **Since 2026-09-04 the flag also reaches the deuteron control channel** (open
 item C5.4).  It used to be **silently ignored** there — the comment said "there
@@ -1346,8 +1346,8 @@ the control from that table at its own P_D = **0.057600**
 
 | deuteron control | P_D | `vector_dilution` | `tensor_dilution` |
 |---|---|---|---|
-| Hulthén (default, bit for bit) | 0.045 | 0.932496109 | 0.959488878 |
-| AV18 `fdeut` | 0.0575998920 | 0.913595979 | 0.948146339 |
+| Hulthén (the option; the default until D6) | 0.045 | 0.932496109 | 0.959488878 |
+| AV18 `fdeut` (the default since D6) | 0.0575998920 | 0.913595979 | 0.948146339 |
 | change | +28.00 % | **−2.03 %** | **−1.18 %** |
 
 *(The four dilutions were re-measured on the fixed library 2026-09-06 and moved
@@ -1375,10 +1375,10 @@ tagged sector's S–D interference sign was therefore inverted, against
 Cosyn–Weiss II Eq. (6.12) (`src/core/tagged.cpp` `build_amp2`, one
 `(-1)^floor(L/2)`; `docs/benchmarking/07_cw_sign_investigation.md`).  `rad_[2]`
 and `Wave::psi()` are **not** negated, so ψ₂ = +W remains the stored convention
-this paragraph is about.  Hulthén stays the default because the control's job is to be the
-Cosyn–Weiss tagged limit of the same analytic family the ⁶Li channel is built
-from, and because `fdeut.av18` prints no MC errors (so the AV18 row carries no
-band of its own).
+this paragraph is about.  Hulthén stayed the default until D6 because the control's job is to be the
+Cosyn–Weiss tagged limit of the same family the ⁶Li channel is built from — which since
+D6 (registry row 9) is the AV18/VMC one, so the control follows it; `fdeut.av18` prints no
+MC errors, so the default control carries no band of its own.
 
 That rationale — *switching only one thing would make the control and the
 channel it controls two different wave-function families* — is what §C5.5b
@@ -1395,7 +1395,7 @@ band at all.  `VmcRadial` now carries `dpsi()`, `shifted_by_sigma(n)` and
 because one variational walk fixes neither), and the run-level knob is
 
 ```cpp
-cfg.cluster_wave = ClusterWaveSource::VmcAV18;
+cfg.cluster_wave = ClusterWaveSource::VmcAV18;   // the default since D6
 cfg.cluster_vmc_mc_sigma = +1.0;    // or -1.0; 0 (default) is bit for bit
 ```
 ```python
@@ -1405,8 +1405,8 @@ ch = lipolgen._lipolgen.li6_alpha_channel(
 
 It shifts every point of both waves by the same n·σ (fully correlated — the
 conservative envelope) and moves P_D by the ratio the shifted norms imply.
-`validate()` **refuses** it off a lithium α-tag channel or on `Hulthen`, by the
-same rule the b₁ band scales are refused under: a knob that did not run may not
+`validate()` **refuses** it off a lithium α-tag channel or on `Hulthen` (it is READ on a
+default lithium α-tag run since D6), by the b₁ band scales' rule: a knob that did not run may not
 be recorded as if it had.  Measured, it is small: **0.47 % / 1.62 %**
 (correlated) on the S/D norms, **1.1 %** on P_D per σ, and **0.02 %** on the
 tagged `tensor_dilution` — against 6.6 % for the Hulthén → VMC choice itself.
@@ -1432,7 +1432,7 @@ Both now follow it (`DEUTERON_AV18()`; `BreakupOptions::source`).
 | **now** | **0.913600** (AV18 `fdeut`) | **0.887076** (both AV18) |
 | change | **−2.027 %** | −2.027 % |
 
-The Hulthén default is untouched, bit for bit.  ⁷Li deliberately does **not**
+The Hulthén path (the default then, the option since D6) is untouched, bit for bit.  ⁷Li deliberately does **not**
 move: there is no AV18 A = 3 wave function in this tree, so on the α–t channel
 the flag selects the relative motion alone.
 
@@ -1442,15 +1442,15 @@ column — unpolarised and plan-independent — moves on this flag as well.
 Measured on `--cluster-wave vmc --events 400 --seed 4242` (tagged-6Li-alpha,
 `tensor-thirds`) against the same command on the pre-fix build: **378 of 400
 events** differ, ⟨p² − M²⟩ **−0.0567 → −0.0599 GeV²**, σ ×1.54; `k`, `weight`
-and every other T0 column are bit-identical, and the Hulthén default is
+and every other T0 column are bit-identical, and the Hulthén path is
 untouched there too.
 
-**And the inclusive constants do NOT follow the flag.** Under
-`--cluster-wave vmc` a tagged row and an inclusive row of the same programme
-describe ⁶Li with wave functions whose vector dilutions differ by **+11.61 %**
-and whose rank-2 transfers differ by **+6.58 %** (open item C5.5).  Since
-2026-09-04 `validate()` **refuses** `cluster_wave` on `--channel inclusive` and
-`--channel coherent`, where it is never read: accepting it unread was how that
+**And the inclusive constants do NOT follow the flag.** Under `vmc` — the DEFAULT
+since D6, so between the two default runs — a tagged and an inclusive row of one programme
+describe ⁶Li with wave functions whose α–d vector dilutions differ by **+11.61 %**
+and rank-2 transfers by **+6.58 %** (C5.5; whole nucleus 0.887076 against 0.811228, the author's open question, registry row 10).  Since
+2026-09-04 `cluster_wave` is **refused** on `--channel inclusive` and `--channel coherent` (since D6 a moved value by `validate()`,
+an explicit `--cluster-wave` of either value by `make_config` / the CLI), where it is never read: accepting it unread was how that
 11.61 % reached someone who had asked for a "VMC ⁶Li" row and got the shipped
 0.811228 with no warning.  Substituting the VMC P_D into
 `LI6_CLUSTER_POLARIZATION` is **not** the fix: it gives 0.905427, 6.8 % *above*
@@ -1460,7 +1460,7 @@ the ab-initio six-body VMC 0.848, where the shipped 0.811228 is 4.3 % below it.
 What it changes (40 k events, 10 × 99.5 GeV/u; full tables and the derivation
 in `docs/open_items/vmc_reconciliation.md`):
 
-| | Hulthen β = 0.30 | VMC AV18 |
+| | Hulthen β = 0.30 (the option) | VMC AV18 (the default since D6) |
 |---|---|---|
 | ⁶Li ⟨k⟩ / P(k>0.2) / P(k>0.45) | 0.1219 / 0.1476 / 0.0157 | 0.1225 / 0.2410 / 0.0019 |
 | ⁷Li ⟨k⟩ / P(k>0.3) / P(k>0.45) | 0.2893 / 0.3527 / 0.1555 | 0.1864 / 0.2111 / 0.0114 |
@@ -1533,9 +1533,9 @@ regenerated rather than annotated.  For what a single tensor-polarised fill
 does (up to −24.5 % at the CLI's own default fill), see the correction box
 above and `docs/open_items/vmc_reconciliation.md`.
 
-The cluster-wave systematic is quoted as the difference between a
-`--cluster-wave hulthen` run and a `--cluster-wave vmc` run; the Hulthén β
-band is retired as a systematic (the `--cluster-beta` knob stays).
+The cluster-wave systematic is quoted as the difference between a `--cluster-wave hulthen` run and a default (`vmc`) run — a
+difference of models, not a band around the default: the Hulthén α–d pair's asymptotic D/S ratio is +0.0701, the opposite sign to
+George–Knutson's −0.025 ± 0.012 and the VMC −0.0482 (D6, 2026-10-29); the Hulthén β band is retired as a systematic (the knob stays).
 
 Reach the tables directly when you want them: `VmcRadial`,
 `vmc_from_overlap_k`, `vmc_from_overlap_r` (a Fourier–Bessel transform of an
@@ -1556,7 +1556,7 @@ momentum from the cluster's own wave function and writes
 
 | channel | struck cluster | partners | model |
 |---|---|---|---|
-| ⁶Li α | embedded d | 1 nucleon | S + D Hulthén at `P_D_DEUTERON`, the m_S-dependent \|A_{m_sc}\|²; species `F2p : F2n`; nucleon spins from the pair CG factor, so ⟨P_N⟩ = (1 − 3/2 P_D) m_S |
+| ⁶Li α | embedded d | 1 nucleon | the run's deuteron — the AV18 `fdeut` (P_D = 0.057600) by default since D6, the S + D Hulthén at `P_D_DEUTERON` on `--cluster-wave hulthen` — the m_S-dependent \|A_{m_sc}\|²; species `F2p : F2n`; nucleon spins from the pair CG factor, so ⟨P_N⟩ = (1 − 3/2 P_D) m_S |
 | ⁷Li α | quasi-free t | d, or two n | sequential two-body at the AME2020 S_n(³H) = 6.2572 MeV / S(p+n+n) = 8.4818 MeV, nn split at 1/\|a_nn\| = 10.44 MeV — **crude and flagged** (plans/05 5.D) |
 | d control | already a nucleon | none | relabelled only |
 
@@ -1575,7 +1575,7 @@ Set `cfg.tier = Tier::T0` for the pre-T1 record
 (`k + P_ion = k' + p_spec + X`, `X = k + P_X − k'`, no partners, no struck
 nucleon), which is what every tagged number published before this tier was
 made with — every T0 quantity is bit-identical between the two apart from the
-0.02 % of draws T1's own timelike-X rejection redraws.
+0.002–0.054 % of draws T1's own timelike-X rejection redraws (50 k events, re-measured 2026-10-29: 0.054 / 0.014 / 0.006 % of ⁶Li α / ⁷Li α / d–p draws on the default VMC waves, D6; 0.038 / 0.022 / 0.002 % on `--cluster-wave hulthen`).
 
 Naming the struck nucleon is also what makes the **T2 chain conserve with no
 caller-side hook** (§6, `docs/T2_CHAIN.md` §1a).
@@ -1664,8 +1664,8 @@ Three rules, from the header, in order of importance:
 
 The run summary logs the survival probability (∫w dΓ/∫dΓ, what
 `weight_normalised` divides by — the distortion is ~73 % absorptive, so it is
-well below 1 and that is physical): 0.520 at 40 mb, 0.671 at 20 mb on the
-⁶Li α tag (S+D). `glauber-cluster` (the default variant) shadows the X–α
+well below 1 and that is physical): 0.797 at 40 mb, 0.864 at 20 mb on the default (VMC, D6) ⁶Li α tag,
+0.520 / 0.671 on `--cluster-wave hulthen` (S+D). `glauber-cluster` (the default variant) shadows the X–α
 cross section over the α's own Gaussian profile — σ_Xα = 131.0 mb at
 σ_XN = 40, B_α = 27.2 GeV⁻², σ_el/σ_tot = 0.269 vs the measured α-p 0.258 —
 while `glauber-nucleon` is the **unshadowed A·σ_XN = 160 mb single-scattering
@@ -1676,23 +1676,23 @@ term feeds strength back into the tag; `fsi.hpp` header, pinned in
 `weight` column with no further wiring; `Pipeline::fsi_weight()` exposes the
 model (`survival()`, `sigma_eff_mb`, the profile) for printing.
 
-**The two variants are NOT one** — measured 2026-09-04 (D3), because the
-open-items inventory said they were. On ONE event stream reweighted three
+**The two variants are NOT one** — measured 2026-09-04 (D3), because the open-items inventory said they were; re-measured
+2026-10-29 with the wave NAMED (D6 made VMC the default; toy SFs). On ONE event stream reweighted three
 ways (`--channel tagged-6Li-alpha --events 20000 --seed 1234`, plan
 `tensor-thirds` at P_z = 0.7 / P_zz = 0.6 / P_e = 0.7, at the default
 σ_XN = 40 mb — one stream at one end of the mandatory 20–40 mb band; the
 columns `k`, `cos_theta_k`, `phi_k`, `x`, `q2` bit-identical across the three
-files):
+files), **vmc (the default) / hulthen**:
 
 | | `off` | `glauber-cluster` | `glauber-nucleon` |
 |---|---|---|---|
-| Σ weight (20 000 events) | 20000.0 | 10419.07 | 11632.10 |
-| Σw/Σw_off (the sample mean weight) | 1 | 0.520954 | 0.581605 |
-| `survival()` — the model's own grid-integrated one, `meta["fsi_survival"]` | 1 | 0.520239 | 0.582899 |
-| per-event weight, min … max | 1 | 0.0208 … 1.4043 | 0.2139 … 6.9523 |
+| Σ weight (20 000 events) | 20000.0 | 15989.35 / 10403.75 | 16428.71 / 11584.83 |
+| Σw/Σw_off (the sample mean weight) | 1 | 0.799467 / 0.520188 | 0.821436 / 0.579241 |
+| `survival()` — the model's own grid-integrated one, `meta["fsi_survival"]` | 1 | 0.797094 / 0.520239 | 0.819119 / 0.582899 |
+| per-event weight, min … max | 1 | 0.0681 … 37.92 / 0.0181 … 1.4138 | 0.2026 … 50.0 (the `w_max` ceiling, 2 events) / 0.2124 … 6.9625 |
 
-Per event, w_nucleon/w_cluster has median 0.897 and reaches **68.52**, and
-**99.50 % of the events differ by more than 1 %**. Different by construction,
+Per event, w_nucleon/w_cluster has median 0.991 / 0.897 and reaches **10.14 / 69.89**, and **64.5 % / 99.4 % of the events differ by more than 1 %** (the
+2026-09-04 Hulthén sample, before the S–D fix: Σw 10419.07 / 11632.10, 68.52, 99.50 %); on the default the weight table clips at w_max = 50 on 0.70 % / 5.25 % of its cells (0 on Hulthén). Different by construction,
 not by parameter choice: the algebraic identity that *does* hold (the Ciofi
 degli Atti–Kaptari per-nucleon product on an uncorrelated density collapses
 onto the cluster form) is about a code path this library does not have, which
@@ -1992,11 +1992,11 @@ bool  seen = rp_tagged(ev, tag, p.pot_config()); // main window + near-beam tail
 levers everywhere — the way every tagging number published before 2026-08-29 was
 made. `OpticsChoice::Custom` uses `PipelineConfig::optics` verbatim.
 
-Measured ⁶Li α tag at 10 × 99.5 GeV/u (400 k events): **0.0248** at the Yellow
-Report high-acceptance optics, **0.3046** at the tagging optics with the legacy
-levers, **0.2547** with the per-configuration levers — against the Python's
-0.0247 / 0.3061 / 0.2545. The ⁷Li α tag is optics-blind at 0.966 / 0.974 / 0.979
-(YR) against 0.981 / 0.993 / 0.994 (tagging).
+Measured ⁶Li α tag at 10 × 99.5 GeV/u (400 k events, `--cluster-wave hulthen`, the Python's wave): **0.0249** at the Yellow
+Report high-acceptance optics, **0.3051** at the tagging optics with the legacy
+levers, **0.2543** with the per-configuration levers — against the Python's
+0.0247 / 0.3061 / 0.2545; on the default VMC waves (D6) 0.0334 / 0.2874 / 0.2486. The ⁷Li α tag is optics-blind at 0.966 / 0.974 / 0.979
+(YR) against 0.981 / 0.993 / 0.994 (tagging) on Hulthén, 0.998 / 0.998 / 0.998 against 0.9996 / 0.9994 / 0.9995 on the default.
 
 ## 6. HepMC3, and handing events to the T2 (PYTHIA) tier
 
@@ -2226,9 +2226,9 @@ nothing is ever refused so a channel scan need not special-case `--rc`):
   Unclamped, a 20 k-event tagged-alpha run published `rc_tensor_hi` down to
   **−1.79** (⁷Li: **−8.35**), i.e. **negative weights in the npz**.
   `RcOptions::band_tau_max` (default 1.0) holds every published edge inside
-  `[1 − δ, 1 + δ]`; the clipped fraction is **1.2 % of ⁶Li tagged-alpha
-  events and 2.6 % of ⁷Li** (re-measured 2026-09-15; the ⁶Li 0.6 % predates
-  the S–D fix `a7b3d18`), is printed by the run and lands in
+  `[1 − δ, 1 + δ]`; the clipped fraction is **0.080 % of ⁶Li tagged-alpha events and 2.535 % of ⁷Li on the default VMC waves**
+  (D6; **1.2250 % / 2.600 %** on `--cluster-wave hulthen`, re-measured 2026-09-15 — 20 k events, seed 1 / seed 11, the P_z = 0 fills
+  of the suites, toy SFs, re-confirmed 2026-10-29; the ⁶Li 0.6 % predates the S–D fix `a7b3d18`), is printed by the run and lands in
   `meta["rc_clipped_band_event_fraction"]` and per event in
   `Event.rc_clipped`. `n_M → 0` is exactly where "rescale the tensor part by
   δ" stops meaning anything, so the clamp is a **choice**, not a fix.
@@ -2239,7 +2239,7 @@ quote the lo/hi envelope on `A_zz`:
 
 | knob | rows to run | what it prices |
 |---|---|---|
-| `--rc-delta-low-x` | **0.19 and 0.30** (and, since 2026-09-06, **0.266 and 0.113** as priced alternatives) | 0.30 is the conservative end of Gakh–Shekhovtsova's 10–30 %; 0.19 is the residual HERMES actually achieved at its lowest-x bin. **Which way the default errs:** the 0.30 is that paper's panel value **carried upward in x**, and **0.113 is what the panel reads at x = 0.00966, the x nearest the 0.01 anchor** (0.266 at its own bottom, x = 0.00226) — the shipped anchor is **×2.65** that reading. Priced, not adopted (registry row 17, `open_items/run_2026-09-06/phase_A_numbers.md` §A2): band half-width on A_zz at Q² = 5, P_zz = +1, ⁶Li config 1 = **1.358472e−04 / 1.204512e−04 / 5.116913e−05** at x = 0.01, **1.459067e−04 / 1.308566e−04 / 6.313127e−05** at x = 0.063 (where the band peaks on all three), **9.680016e−05 / 8.798804e−05 / 4.833349e−05** at x = 0.10 and **1.920691e−05** at x = 0.16 on all three — the high anchor pins x ≥ 0.16, so the whole choice lives below it. It moves **two columns and two of the 60 `meta` keys** (`rc_delta_low_x` and the `knob_provenance` row that records it) and **not** the tagged band's clipped-event fraction (245 of 20 000 = 1.2250 % on all three, seed 1 — re-measured 2026-09-15; 124 = 0.62 % predates the S–D fix `a7b3d18`: `clamp_tau` clips \|τ\| and δ never enters it) |
+| `--rc-delta-low-x` | **0.19 and 0.30** (and, since 2026-09-06, **0.266 and 0.113** as priced alternatives) | 0.30 is the conservative end of Gakh–Shekhovtsova's 10–30 %; 0.19 is the residual HERMES actually achieved at its lowest-x bin. **Which way the default errs:** the 0.30 is that paper's panel value **carried upward in x**, and **0.113 is what the panel reads at x = 0.00966, the x nearest the 0.01 anchor** (0.266 at its own bottom, x = 0.00226) — the shipped anchor is **×2.65** that reading. Priced, not adopted (registry row 17, `open_items/run_2026-09-06/phase_A_numbers.md` §A2): band half-width on A_zz at Q² = 5, P_zz = +1, ⁶Li config 1 = **1.358472e−04 / 1.204512e−04 / 5.116913e−05** at x = 0.01, **1.459067e−04 / 1.308566e−04 / 6.313127e−05** at x = 0.063 (where the band peaks on all three), **9.680016e−05 / 8.798804e−05 / 4.833349e−05** at x = 0.10 and **1.920691e−05** at x = 0.16 on all three — the high anchor pins x ≥ 0.16, so the whole choice lives below it. It moves **two columns and two of the 60 `meta` keys** (`rc_delta_low_x` and the `knob_provenance` row that records it) and **not** the tagged band's clipped-event fraction (245 of 20 000 = 1.2250 % on all three, seed 1, on `--cluster-wave hulthen` — re-measured 2026-09-15; 16 = 0.080 % on the default VMC waves since D6; 124 = 0.62 % predates the S–D fix `a7b3d18`: `clamp_tau` clips \|τ\| and δ never enters it) |
 | `--rc-a-transfer-frac` | **0 (default), 0.5, 1** | the **A = 2 → A = 6 TRANSFER** of the band. Every number δ(x) interpolates between is a **deuteron** number — HERMES's measured low-x residual, Gakh–Shekhovtsova's 10–30 % (itself a Q² = 0.1 GeV² figure — the only panel of its Fig. 2 inside the x ∼ 10⁻³–10⁻² the sentence quotes it for), E12-13-011's 1.5 % — and **no A > 2 tensor RC calculation exists at all**, so the default band silently assumes the deuteron *fractional* RC transfers to ⁶Li exactly. This adds `f·δ(x)` in quadrature: `δ_eff = δ√(1+f²)`, i.e. the band widens by **1× / 1.118× / 1.414×**. Half-widths on A_zz at x = 0.01, Q² = 5: **1.358e−04 / 1.519e−04 / 1.921e−04**. It moves the **band only** — not `rc_tail`, not τ — and **no measurement prefers any value**: it is a price tag, not a correction. `meta["rc_a_transfer_frac"]` records it |
 | `--rc-fq-scale` | **0, 1, 2** | ±100 % on the ⁶Li quadrupole form factor. σ^el_T is **quadratic** in it, so this band must be **RUN, never rescaled** from one row — the two edges are not symmetric about the nominal, and at `x = 0.01, Q² = 5` they even bracket a **sign change** of ΔA_zz — on both tail models (+2.255e−07 → −5.786e−07 on `t-peak`, +2.908e−07 → −5.257e−07 on the default `polrad-full`, re-measured 2026-10-29) |
 | `--rc-tail-tensor-scale` | **0.5, 1, 2** | the η·F_m² tensor sector, which `--rc-fq-scale` does **not** span |
@@ -2556,7 +2556,7 @@ fractions, since nodes are not event-weighted — and both land in the npz as
 the per-event bits on `Event.rc_clipped` (`1` = tail, `2` = band). On
 `--rc-tail-model t-peak` **nothing clips on the tail** (the pre-2026-09-03 numbers,
 1.71 % of nodes and 21.95 % of the `y > 0.9` ones, were an artefact of the
-factor-6 per-nucleon error) and 1.2–2.6 % of tagged events clip on the band.
+factor-6 per-nucleon error) and 0.08–2.5 % of tagged events clip on the band (VMC default; 1.2–2.6 % on Hulthén).
 On `--rc-tail-model t-peak+ll` the **nodes** do clip again — **0.36 %**
 globally and **4.62 %** of the `y > 0.9` band on the 101 × 77 CLI grid — which
 is the same `y → 1` edge as everything else in this bullet; the **event**
@@ -2758,7 +2758,7 @@ array is bit for bit):
 * `--cluster-wave`, `--triton-sf`, `--inclusive-b1`, `--cluster-beta`,
   `--p-d`, `--fsi-sigma-mb`, `--coherent-t-max` and `--x-max` were accepted
   and recorded **nowhere**; they now have a row on every channel, so a VMC and
-  a Hulthén tagged file are no longer indistinguishable in `meta`.
+  a Hulthén tagged file are no longer indistinguishable in `meta` (since D6 also `meta["cluster_wave"]`; a HepMC3 file carries no record of the wave — its `GenRunInfo` has the tool name and version only).
 * `--pom-set` / `--pom-rescale` / `--coherent-t2` are labelled off the
   coherent channel and without `--hadronize`.
 

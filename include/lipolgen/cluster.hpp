@@ -403,9 +403,21 @@ VmcRadial vmc_from_momentum(const std::string& path, int block, int column,
 
 /// Which family of radial forms a cluster channel is built from.
 enum class ClusterWaveSource {
-  Hulthen = 0,   ///< the analytic two-parameter forms above -- THE DEFAULT
+  Hulthen = 0,   ///< the analytic two-parameter forms above -- an OPTION (D6)
   VmcAV18 = 1,   ///< the ANL VMC tables (AV18+UX magnitudes, AV18+UIX signs)
 };
+/// THE RUN DEFAULT, defined ONCE (decision D6, 2026-10-27): what
+/// `PipelineConfig::cluster_wave` -- hence `lipolgen-run`, `lg.run` and
+/// `lg.make_config` -- starts from: the ANL VMC tables, one AV18 family across
+/// the alpha-d, alpha-t and p-n waves and the embedded deuteron.  Every VALUE
+/// reads it; the TEXTS that call vmc the run default cannot (the CLI help, the
+/// bindings' docstrings, validate()'s message, the knob reasons, the example's
+/// usage), so the static_assert below makes them move together.  NOT the
+/// default of the channel FACTORIES or of `BreakupOptions::source`: their
+/// `beta` and `p_d` are the analytic family's, so they keep `Hulthen`, the
+/// family the polligen port gate (`validation/reference/tagged.json`) pins.
+inline constexpr ClusterWaveSource CLUSTER_WAVE_DEFAULT = ClusterWaveSource::VmcAV18;
+static_assert(CLUSTER_WAVE_DEFAULT == ClusterWaveSource::VmcAV18, "texts say vmc");
 /// The run-surface name of a wave source -- the same two strings the CLI's
 /// `--cluster-wave` takes (`python/lipolgen/__init__.py`'s `CLUSTER_WAVES`),
 /// defined ONCE here so a `meta` key, a `KnobProvenance` row and a banner line

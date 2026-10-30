@@ -217,21 +217,21 @@ def build_parser():
     p.add_argument("--rel-lumi-offset", type=float, default=None,
                    help="relative-luminosity offset on the plan's own category")
     p.add_argument("--cluster-beta", type=float, default=None,
-                   help="short-range scale of the cluster radial waves")
+                   help="short-range scale of the ANALYTIC cluster waves: read at --cluster-wave hulthen, and on the default vmc by the 7Li T1 triton breakup alone")
     p.add_argument("--p-d", type=float, default=None,
-                   help="D-state probability (6Li alpha tag)")
+                   help="alpha-d D-state probability of the 6Li alpha tag's ANALYTIC pair: read at --cluster-wave hulthen only (the vmc default carries its own)")
     p.add_argument("--cluster-wave", choices=sorted(CLUSTER_WAVES),
                    default=None,
-                   help="cluster radial forms: 'hulthen' (default, "
-                        "bit-compatible) or 'vmc' (ANL VMC tables; ignores "
-                        "--cluster-beta and --p-d on the lithium alpha tags).  "
-                        "TAGGED CHANNELS ONLY -- refused on --channel "
-                        "inclusive / coherent, where it is never read (their "
-                        "6Li constants do not follow it, 11.61 %% away).  On "
-                        "tagged-alpha it also selects the EMBEDDED deuteron "
-                        "(AV18 fdeut, P_D = 0.0576), which is -2.03 %% on the "
-                        "polarised observables against what that path gave "
-                        "before 2026-09-04.  SIGN NOTE (2026-09-06): the "
+                   help="cluster radial forms: '"
+                        + _l.cluster_wave_name(_l.CLUSTER_WAVE_DEFAULT) +
+                        "' is the run default since D6, 2026-10-27 (the ANL "
+                        "VMC AV18 tables: --p-d and --cluster-beta are unread, "
+                        "bar the 7Li T1 triton); 'hulthen', the analytic "
+                        "pair, the option.  TAGGED CHANNELS ONLY: an explicit "
+                        "value on --channel inclusive / coherent is refused "
+                        "(their 6Li constants follow neither).  On "
+                        "tagged-alpha vmc also selects the EMBEDDED deuteron "
+                        "(AV18 fdeut, P_D = 0.0576).  SIGN NOTE (2026-09-06): the "
                         "tagged S-D interference sign was inverted before that "
                         "date -- build_amp2 summed psi_L where the amplitude "
                         "needs phi_L = i^L psi_L -- so any A_zz^tag quoted "
@@ -802,7 +802,7 @@ DEFAULTS = dict(isotope="6Li", config=1, channel="inclusive",
                 rel_lumi_offset=0.0, nthreads=1, hadronize=False,
                 quiet=False,
                 hepmc=None, npz=None, hfs_npz=None, cluster_beta=None,
-                p_d=None, cluster_wave="hulthen", triton_sf="hulthen",
+                p_d=None, cluster_wave=None, triton_sf="hulthen",  # D6: None = CLUSTER_WAVE_DEFAULT
                 fsi="off", fsi_sigma_mb=40.0,
                 # CONVENTIONS.md "no physics number defined twice": the band
                 # anchors live in rc.hpp and are exported, so read them rather
@@ -1273,8 +1273,8 @@ def main(argv=None):
     # -- the rule this module already states for `make_plan` below and for the
     # PYTHIA bridge, and which `make_config` was outside of until 2026-09-16.
     # `PipelineConfig::validate()` throws `RuntimeError` (--fsi
-    # glauber-cluster off a tagged channel, --cluster-wave vmc off its
-    # channels, --b1-band-scale off {0,1,2}, --rc-sp-tensor-scale on a
+    # glauber-cluster off a tagged channel, --cluster-wave off its channels
+    # (`make_config`), --b1-band-scale off {0,1,2}, --rc-sp-tensor-scale on a
     # non-tensor-band --rc, ...), `make_config` itself raises `ValueError`
     # (--config 5), a pybind setter raises `TypeError` (--events -5, --seed -1
     # through the unsigned cast) and `ion_spin` raises `KeyError` (--isotope
@@ -1775,6 +1775,20 @@ def main(argv=None):
     # differs by a factor 2 between a file made before that date and one made
     # after.  The same string is `meta["delta_convention"]` (constants.hpp).
     say("  Delta (cos 2phi) convention: %s" % _l.DELTA_CONVENTION)
+    # WHICH CLUSTER WAVE A TAGGED RUN READ (D6, 2026-10-27): the run default is
+    # `CLUSTER_WAVE_DEFAULT`, the ANL VMC tables, and a default run used to name
+    # its wave nowhere.  `meta["cluster_wave"]` carries the same name (the knob
+    # table's row); a HepMC3 file carries neither (its GenRunInfo has the tool
+    # name and version only).
+    if _l.is_tagged(cfg.channel):
+        ch, dflt = p.tagged_channel, _l.cluster_wave_name(_l.CLUSTER_WAVE_DEFAULT)
+        say("  cluster wave: %s -- %s: %s; %s; struck %s eff_pol p/n %.6f / %.6f"
+            % (_l.cluster_wave_name(cfg.cluster_wave),
+               "the run default since D6 (--cluster-wave hulthen for the "
+               "analytic pair)" if cfg.cluster_wave == _l.CLUSTER_WAVE_DEFAULT
+               else "an option (the run default is %s, D6)" % dflt,
+               ch.label, ", ".join("L=%d P=%.6f" % (w.l, w.prob) for w in ch.waves),
+               ch.dis_target.name, ch.dis_target.eff_pol_p, ch.dis_target.eff_pol_n))
 
     # Events are only materialized when something needs the records: the HFS
     # exporter always, HepMC only when the T2 tier is on (regenerating a

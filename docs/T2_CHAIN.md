@@ -106,11 +106,11 @@ Two identities move at T1 and one does not:
   failing, not the record.
 * `Sum p_T,hadrons = p_N,T - p_T,e'` is unchanged, 1.4 × 10⁻¹² GeV.
 
-Mean struck-nucleon virtuality `p_N² - M_N²` over 50 k events:
+Mean struck-nucleon virtuality `p_N² - M_N²` over 50 k events, measured on the Hulthén waves (the run default before D6):
 **-0.057 GeV²** (⁶Li α), **-0.124** (⁷Li α), **-0.035** (d control) -- a
-Fermi-motion scale, not a nuclear-mass one. The timelike-X rejection is
-redone on the (smaller) T1 X and fires on 0.024 % / 0.022 % / 0.004 % of
-draws respectively.
+Fermi-motion scale, not a nuclear-mass one. On the VMC waves, the run default since D6 (re-measured 2026-10-29, seed 20260830): **-0.058 / -0.085 / -0.036 GeV²**. The timelike-X rejection is
+redone on the (smaller) T1 X and fires on 0.038 % / 0.022 % / 0.002 % of
+draws respectively on Hulthén (2026-10-29, seed 20260830: 19 / 11 / 1 of 50 k draws; first published 2026-08-29 as 0.024 % / 0.022 % / 0.004 %, on an earlier sample) and on 0.054 % / 0.014 % / 0.006 % (27 / 7 / 3) on VMC, the run default since D6.
 
 ## 2. What `abconv` / `npsim` expect
 

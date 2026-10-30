@@ -19,6 +19,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <tuple>
 #include <vector>
 
 #include "check_close.hpp"
@@ -37,23 +38,21 @@ using namespace lipolgen;
 
 namespace {
 
-constexpr double kPZ = 0.7;
-constexpr double kPZZ = 0.6;
+constexpr double kPZ = 0.7, kPZZ = 0.6;
+constexpr ClusterWaveSource kHulthen = ClusterWaveSource::Hulthen;   // D6 pins
 
-/// One built pipeline per (channel, config, optics, n_events) key: the tagged
-/// model's amplitude tables and the sampler grids cost more than the events.
+/// One built pipeline per (channel, config, optics, n_events, plan, wave) key:
+/// the tagged model's tables and the sampler grids cost more than the events.
 struct Key {
   PipelineChannel ch;
   int config;
   OpticsChoice optics;
   std::uint64_t n;
   int plan_id;
+  ClusterWaveSource wave;
   bool operator<(const Key& o) const {
-    if (ch != o.ch) return ch < o.ch;
-    if (config != o.config) return config < o.config;
-    if (optics != o.optics) return optics < o.optics;
-    if (n != o.n) return n < o.n;
-    return plan_id < o.plan_id;
+    return std::tie(ch, config, optics, n, plan_id, wave) <
+           std::tie(o.ch, o.config, o.optics, o.n, o.plan_id, o.wave);
   }
 };
 
@@ -71,9 +70,10 @@ RunPlan plan_of(int plan_id) {
 }
 
 const Pipeline& pipe(PipelineChannel ch, int config, OpticsChoice optics,
-                     std::uint64_t n, int plan_id) {
+                     std::uint64_t n, int plan_id,
+                     ClusterWaveSource wave = PipelineConfig().cluster_wave) {
   static std::map<Key, std::shared_ptr<Pipeline>> cache;
-  const Key key{ch, config, optics, n, plan_id};
+  const Key key{ch, config, optics, n, plan_id, wave};
   const auto it = cache.find(key);
   if (it != cache.end()) return *it->second;
   PipelineConfig cfg;
@@ -83,8 +83,8 @@ const Pipeline& pipe(PipelineChannel ch, int config, OpticsChoice optics,
   cfg.beam_config = config;
   cfg.optics_choice = optics;
   cfg.n_events = n;
-  // A coarser grid than the 100x72 default: these tests are about the
-  // integration layer, and the grid is P3's gate.
+  cfg.cluster_wave = wave;   // the run default unless a caller names one
+  // A coarser grid than the 100x72 default (the grid is P3's gate, not ours).
   cfg.grid.nx = 40;
   cfg.grid.nq2 = 28;
   auto p = std::make_shared<Pipeline>(cfg, plan_of(plan_id));
@@ -148,8 +148,8 @@ TEST_CASE("pipeline: a TILTED fill and a spin-dependent struck-cluster term "
 
   SUBCASE("P_e != 0 on a tilted fill is refused on every tagged channel") {
     // P_e IS read on all three: measured the same day, `sigma_per_category_pb`
-    // moves between P_e = 0 and 0.7 on each (asymmetry -1.72e-03
-    // tagged-6Li-alpha, +6.41e-04 tagged-7Li-alpha, -5.73e-03 tagged-d-p).
+    // moves between P_e = 0 and 0.7 on each (asymmetry -1.72e-03 6Li-alpha,
+    // +6.41e-04 7Li-alpha, -5.73e-03 d-p; on the Hulthen waves, the default then).
     CHECK_THROWS_AS(Pipeline(tagged_cfg(false), RunPlan({tilted_pe}, 0.0, 1.0,
                                                         1.0)),
                     std::runtime_error);
@@ -397,15 +397,15 @@ TEST_CASE("pipeline: the tagged spectator spectrum is the TaggedModel marginal")
 
 TEST_CASE("pipeline: 6Li alpha Roman-Pot tag fractions reproduce the Python") {
   // The published numbers (evgen/scripts/money_tagged_azz.py, plans/09 B2) at
-  // 10 x 99.5 GeV/u: 0.0247 at the Yellow Report high-acceptance optics of the
-  // configuration, and 0.3061 at the lithium tagging optics as it was priced
-  // before 2026-08-29 (the 18x275 pot levers everywhere).  The per-
-  // configuration levers, the default since then, give 0.2545 for the same
-  // sample -- both are checked, because the pair is the whole content of the
-  // lever change.
+  // 10 x 99.5 GeV/u: 0.0247 at the YR high-acceptance optics, 0.3061 at the
+  // lithium tagging optics with the 18x275 pot levers everywhere (the pricing
+  // before 2026-08-29) and 0.2545 with the per-configuration levers, the default
+  // since -- both checked: the pair is the whole content of the lever change.
+  // D6 (2026-10-29): a port comparison with that HULTHEN prototype, so it runs
+  // the `--cluster-wave hulthen` option by name, not the run default (VMC).
   const std::uint64_t n_ev = 400000;
   const Pipeline& p = pipe(PipelineChannel::TaggedLi6Alpha, 1,
-                           OpticsChoice::YellowReportHighAcceptance, n_ev, 0);
+                           OpticsChoice::YellowReportHighAcceptance, n_ev, 0, kHulthen);
   const double p_u = p.beam_config().ion_momentum_per_nucleon;
   const Optics ha = optics_for(OpticsChoice::YellowReportHighAcceptance, "6Li", p_u);
   const Optics tg = optics_for(OpticsChoice::Tagging, "6Li", p_u);
@@ -437,9 +437,9 @@ TEST_CASE("pipeline: 6Li alpha Roman-Pot tag fractions reproduce the Python") {
 
 TEST_CASE("pipeline: the 7Li alpha tag is optics-blind") {
   // R = 0.856 puts the 7Li alpha in the MIDDLE of the Roman-Pot momentum
-  // window, so it never has to clear the near-beam envelope and its
-  // acceptance barely moves with the optics (plans/09 B3).  Python, same
-  // fills and the same 2e5 events:
+  // window, so it never has to clear the near-beam envelope and its acceptance
+  // barely moves with the optics (plans/09 B3).  Python (Hulthen alpha-t, so
+  // D6, 2026-10-29: pinned on that option by name), same fills and 2e5 events:
   //     YR   0.9655 / 0.9735 / 0.9788
   //     tag  0.9803 / 0.9929 / 0.9944
   const double py_ha[3] = {0.9655, 0.9735, 0.9788};
@@ -447,7 +447,7 @@ TEST_CASE("pipeline: the 7Li alpha tag is optics-blind") {
   for (int ci = 0; ci < 3; ++ci) {
     CAPTURE(ci);
     const Pipeline& p = pipe(PipelineChannel::TaggedLi7Alpha, ci,
-                             OpticsChoice::YellowReportHighAcceptance, 100000, 1);
+                             OpticsChoice::YellowReportHighAcceptance, 100000, 1, kHulthen);
     const double p_u = p.beam_config().ion_momentum_per_nucleon;
     const Optics ha = optics_for(OpticsChoice::YellowReportHighAcceptance, "7Li", p_u);
     const Optics tg = optics_for(OpticsChoice::Tagging, "7Li", p_u);
@@ -484,9 +484,9 @@ TEST_CASE("pipeline: A_zz^tag(k) closes on the acceptance-weighted truth") {
   // an identity of the fill pattern: for the three tensor-thirds fills,
   // p^+ + p^- - 2 p^0 = P_zz (1, -2, 1) and p^+ + p^- + p^0 = (1, 1, 1) over
   // m = +1, 0, -1, so the P_zz divides out and only the m-dependence of the
-  // spectator density is left.  This is the tagged-mode counterpart of
-  // evgen/tests/test_tagged.py::test_tagged_rate_asymmetry_matches_analytic,
-  // which pins the same statement on the k-INTEGRATED rates.
+  // spectator density is left (test_tagged.py::test_tagged_rate_asymmetry_
+  // matches_analytic pins it k-INTEGRATED).  D6 (2026-10-29): on the HULTHEN
+  // option by name -- ndf >= 8 was declared on its spectrum; VMC gives 7 at YR.
   const std::uint64_t n_ev = 1200000;
   const int nb = 12;
   const double klo = 0.0, khi = 0.6, kw = (khi - klo) / nb;
@@ -495,7 +495,7 @@ TEST_CASE("pipeline: A_zz^tag(k) closes on the acceptance-weighted truth") {
     const OpticsChoice oc = which == 0
                                 ? OpticsChoice::YellowReportHighAcceptance
                                 : OpticsChoice::Tagging;
-    const Pipeline& p = pipe(PipelineChannel::TaggedLi6Alpha, 1, oc, n_ev, 0);
+    const Pipeline& p = pipe(PipelineChannel::TaggedLi6Alpha, 1, oc, n_ev, 0, kHulthen);
     REQUIRE(p.plan().categories().size() == 3);
 
     std::vector<std::vector<double>> cnt(3, std::vector<double>(nb, 0.0));
@@ -1288,8 +1288,8 @@ TEST_CASE("pipeline: the tagged pipeline runs on the VMC cluster waves" *
   }
 }
 
-// C5.5b.  `cluster_wave` is refused where it is NEVER READ.
-//
+// C5.5b.  `cluster_wave` is refused where it is NEVER READ -- since D6
+// (2026-10-29 re-take) a value MOVED from the default, VmcAV18.
 // The flag selects the CLUSTER RELATIVE wave function, and `Pipeline`'s
 // `is_tagged` branch is its only reader.  On `Inclusive` and `CoherentLi6` it
 // used to be accepted and silently ignored -- exactly the defect C5.4 named on
@@ -1314,10 +1314,10 @@ TEST_CASE("pipeline: cluster_wave is refused on the channels that never read it"
     cfg.channel = row.ch;
     cfg.isotope = iso;
     cfg.n_events = 10;
-    // Hulthen -- the default -- is legal everywhere, on every channel.
-    cfg.cluster_wave = ClusterWaveSource::Hulthen;
+    // The DEFAULT (VmcAV18 since D6) is legal everywhere, on every channel.
+    cfg.cluster_wave = CLUSTER_WAVE_DEFAULT;
     CHECK_NOTHROW(cfg.validate());
-    cfg.cluster_wave = ClusterWaveSource::VmcAV18;
+    cfg.cluster_wave = ClusterWaveSource::Hulthen;   // moved from the default
     if (row.tagged) {
       CHECK_NOTHROW(cfg.validate());
     } else {
@@ -1646,5 +1646,146 @@ TEST_CASE("D1: the loud zero fires for 7Li inclusive and for nothing else") {
     CHECK(flat.pzz_true() == 0.0);
     CHECK(rank2_input_report(c, flat).find("THIS RUN'S PLAN")
           == std::string::npos);
+  }
+}
+
+// ------------------------------------------------------------------- D6
+// Decision D6 (2026-10-27, implemented 2026-10-29): the VMC AV18+UX cluster
+// waves are the shipped RUN default (`CLUSTER_WAVE_DEFAULT`, cluster.hpp);
+// the channel factories and `BreakupOptions` keep the analytic family as
+// their own argument default (design DD-1), so the polligen port gate
+// (`tagged.json`) and every factory-level pin are untouched.
+
+TEST_CASE("D6: the run default is VmcAV18 in ONE place; the factories keep Hulthen") {
+  CHECK(CLUSTER_WAVE_DEFAULT == ClusterWaveSource::VmcAV18);
+  CHECK(PipelineConfig().cluster_wave == CLUSTER_WAVE_DEFAULT);
+  CHECK(std::string(cluster_wave_name(CLUSTER_WAVE_DEFAULT)) == "vmc");
+  CHECK(std::string(cluster_wave_name(ClusterWaveSource::Hulthen)) == "hulthen");
+  // the enum numbering is unchanged
+  CHECK(static_cast<int>(ClusterWaveSource::Hulthen) == 0);
+  CHECK(static_cast<int>(ClusterWaveSource::VmcAV18) == 1);
+  // DD-1: the building blocks' OWN defaults are still the analytic family --
+  // no table on any wave, and the breakup's deuteron is the Hulthen pair.
+  for (const TaggedChannel& ch :
+       {li6_alpha_channel(), li7_alpha_channel(), deuteron_channel()}) {
+    CAPTURE(ch.label);
+    for (const Wave& w : ch.waves) CHECK(w.vmc == nullptr);
+  }
+  CHECK(BreakupOptions().source == ClusterWaveSource::Hulthen);
+}
+
+TEST_CASE("D6: a default tagged run reads the VMC waves, and the knob rows say "
+          "what it reads" * doctest::skip(!vmc_momenta_present())) {
+  auto cfg_of = [](PipelineChannel ch, const char* iso) {
+    PipelineConfig c;
+    c.channel = ch;
+    c.isotope = iso;
+    c.n_events = 10;
+    c.grid.nx = 20;
+    c.grid.nq2 = 14;
+    return c;
+  };
+  auto row = [](const Pipeline& p, const std::string& name) {
+    for (const KnobProvenance& r : p.knob_provenance(KnobRunContext())) {
+      if (r.name == name) return r;
+    }
+    throw std::runtime_error("no knob row " + name);
+  };
+  const RunPlan thirds = tensor_thirds_plan(0.7, 0.6);
+  const RunPlan flip = helicity_flip_plan(1.5, 0.7, 0.7);
+
+  // 6Li alpha, the default: the VMC alpha-d, the AV18 embedded deuteron, the
+  // AV18 T1 breakup deuteron -- one family end to end.
+  const Pipeline li6(cfg_of(PipelineChannel::TaggedLi6Alpha, "6Li"), thirds);
+  CHECK(li6.tagged_channel()->label.find("VMC") != std::string::npos);
+  CHECK_CLOSE(li6.tagged_channel()->dis_target.eff_pol_p,
+              DEUTERON_AV18().eff_pol_p, 1e-15);
+  REQUIRE(li6.breakup() != nullptr);
+  CHECK(li6.breakup()->options().source == ClusterWaveSource::VmcAV18);
+  CHECK(li6.breakup()->deuteron_model().channel().waves[1].prob
+        == deuteron_av18_p_d());
+  CHECK(row(li6, "cluster_wave").status == KnobStatus::Read);
+  CHECK(row(li6, "cluster_wave").value == "vmc");
+  CHECK(row(li6, "cluster_wave").at_default);
+  CHECK(row(li6, "cluster_vmc_mc_sigma").status == KnobStatus::Read);
+  CHECK(row(li6, "cluster_beta").status == KnobStatus::NotRead);
+  CHECK(row(li6, "p_d").status == KnobStatus::NotRead);
+
+  // 7Li alpha, the default at T1: --cluster-beta IS read (the triton breakup
+  // stays analytic at beta), and is not at T0; p_d is never read on 7Li.
+  const Pipeline li7(cfg_of(PipelineChannel::TaggedLi7Alpha, "7Li"), flip);
+  CHECK(row(li7, "cluster_wave").value == "vmc");
+  CHECK(row(li7, "cluster_vmc_mc_sigma").status == KnobStatus::Read);
+  CHECK(row(li7, "cluster_beta").status == KnobStatus::Read);
+  CHECK(row(li7, "p_d").status == KnobStatus::NotRead);
+  PipelineConfig t0 = cfg_of(PipelineChannel::TaggedLi7Alpha, "7Li");
+  t0.tier = Tier::T0;
+  CHECK(row(Pipeline(t0, flip), "cluster_beta").status == KnobStatus::NotRead);
+
+  // the d control, the default: the AV18 deuteron; no MC band to read.
+  const Pipeline dp(cfg_of(PipelineChannel::TaggedDeuteronP, "d"), thirds);
+  CHECK(dp.tagged_channel()->waves[1].prob == deuteron_av18_p_d());
+  CHECK(row(dp, "cluster_vmc_mc_sigma").status == KnobStatus::Refused);
+  CHECK(row(dp, "cluster_beta").status == KnobStatus::NotRead);
+
+  // the Hulthen option: beta and p_d are read again on the 6Li alpha tag.
+  PipelineConfig hul = cfg_of(PipelineChannel::TaggedLi6Alpha, "6Li");
+  hul.cluster_wave = ClusterWaveSource::Hulthen;
+  const Pipeline li6h(hul, thirds);
+  CHECK(row(li6h, "cluster_wave").value == "hulthen");
+  CHECK_FALSE(row(li6h, "cluster_wave").at_default);
+  CHECK(row(li6h, "cluster_beta").status == KnobStatus::Read);
+  CHECK(row(li6h, "p_d").status == KnobStatus::Read);
+  CHECK(row(li6h, "cluster_vmc_mc_sigma").status == KnobStatus::Refused);
+
+  // OFF the tagged channels the row withholds the value: a default inclusive
+  // or coherent file must not read as a "VMC 6Li" one (registry row 11).
+  for (const PipelineChannel ch :
+       {PipelineChannel::Inclusive, PipelineChannel::CoherentLi6}) {
+    const Pipeline p(cfg_of(ch, "6Li"), thirds);
+    const KnobProvenance r = row(p, "cluster_wave");
+    CAPTURE(r.value);
+    CHECK(r.status == KnobStatus::Refused);
+    CHECK(r.at_default);
+    CHECK(r.value == std::string("not read on channel ") +
+                         pipeline_channel_name(ch));
+    CHECK(r.meta_value() == r.value);
+    CHECK(r.value.find("vmc") == std::string::npos);
+  }
+}
+
+TEST_CASE("D6: the MC band is accepted where the default reads it, refused elsewhere") {
+  auto cfg_of = [](PipelineChannel ch, const char* iso) {
+    PipelineConfig c;
+    c.channel = ch;
+    c.isotope = iso;
+    c.n_events = 10;
+    c.cluster_vmc_mc_sigma = 1.0;
+    return c;
+  };
+  // READ on the default lithium alpha tags (C5.2's band, now on the default)
+  CHECK_NOTHROW(cfg_of(PipelineChannel::TaggedLi6Alpha, "6Li").validate());
+  CHECK_NOTHROW(cfg_of(PipelineChannel::TaggedLi7Alpha, "7Li").validate());
+  // ... refused on the Hulthen option, on the d control and off the tags
+  PipelineConfig hul = cfg_of(PipelineChannel::TaggedLi6Alpha, "6Li");
+  hul.cluster_wave = ClusterWaveSource::Hulthen;
+  CHECK_THROWS_AS(hul.validate(), std::runtime_error);
+  CHECK_THROWS_AS(cfg_of(PipelineChannel::TaggedDeuteronP, "d").validate(),
+                  std::runtime_error);
+  CHECK_THROWS_AS(cfg_of(PipelineChannel::Inclusive, "6Li").validate(),
+                  std::runtime_error);
+  // F6 (2026-10-29): a NaN or infinite band is != 0.0, so it was ACCEPTED here
+  // and failed only at construction, as "the plan has no rate"; now it is
+  // refused by validate() with the knob named, on any channel and either wave.
+  for (const double bad : {std::nan(""), HUGE_VAL, -HUGE_VAL}) {
+    for (const ClusterWaveSource w :
+         {ClusterWaveSource::VmcAV18, ClusterWaveSource::Hulthen}) {
+      PipelineConfig c = cfg_of(PipelineChannel::TaggedLi6Alpha, "6Li");
+      c.cluster_vmc_mc_sigma = bad;
+      c.cluster_wave = w;
+      CHECK_THROWS_WITH_AS(c.validate(),
+                           doctest::Contains("cluster_vmc_mc_sigma must be finite"),
+                           std::runtime_error);
+    }
   }
 }

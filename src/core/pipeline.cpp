@@ -487,42 +487,42 @@ void PipelineConfig::validate() const {
   // and the mechanism by which C5.5's 11.61 % inclusive-vs-tagged drift used to
   // reach a user: they set the flag wanting a "VMC 6Li" inclusive row, nothing
   // refused it, and they got `LI6_CLUSTER_POLARIZATION` = 0.811228 with no
-  // warning.  The asymmetry with `cluster_vmc_mc_sigma` (refused for a 0.02 %
-  // effect two lines below) had no defence: this one is worth 11.61 %.
-  //
-  // WHAT THE REFUSAL DOES NOT CLAIM.  It does not make an inclusive VMC 6Li
-  // available -- there is none, and C5.5 is the argument that substituting
-  // `VMC_P_D_LI6` into `LI6_CLUSTER_POLARIZATION` would move it AWAY from the
-  // one ab initio anchor.  It converts a silent 11.61 % into an error message.
-  if (cluster_wave != ClusterWaveSource::Hulthen && !is_tagged(channel)) {
+  // warning (`cluster_vmc_mc_sigma`, a 0.02 % effect, was refused already).
+  // D6 (2026-10-27): the default is `CLUSTER_WAVE_DEFAULT` = VmcAV18, so the
+  // rule refuses a value MOVED FROM THE DEFAULT (the RcOptions rule); an
+  // EXPLICIT request is refused by `make_config` / the CLI, which can see one.
+  // NOT CLAIMED: an inclusive VMC 6Li -- there is none, and C5.5 is the argument
+  // that substituting `VMC_P_D_LI6` into `LI6_CLUSTER_POLARIZATION` would move
+  // it AWAY from the one ab initio anchor.  A silent 11.61 % becomes an error.
+  if (cluster_wave != CLUSTER_WAVE_DEFAULT && !is_tagged(channel)) {
     throw std::runtime_error(
         std::string("PipelineConfig: cluster_wave selects the CLUSTER RELATIVE "
                     "wave function of a tagged channel and is never read on ")
         + pipeline_channel_name(channel)
-        + " -- the inclusive 6Li effective polarization "
-          "(LI6_CLUSTER_POLARIZATION = 0.811228) and the coherent form factors "
-          "do not follow it, so accepting it would promise a VMC row and "
-          "deliver the shipped one, 11.61 % away in the vector sector (open "
-          "item C5.5).  Leave it at Hulthen, or run a tagged channel");
+        + " -- the inclusive 6Li constants (LI6_CLUSTER_POLARIZATION = "
+          "0.811228, the Hulthen-era cluster product) and the coherent form "
+          "factors do not follow it, so a value moved from the default (vmc, "
+          "D6) would promise a row the run does not make (C5.5).  Leave "
+          "cluster_wave at its default, or run a tagged channel");
   }
   // C5.2.  A KNOB THAT DID NOT RUN MAY NOT BE RECORDED AS IF IT HAD -- the
   // same rule the b1 band scales are refused under.  The MC band exists only
-  // where a table carries printed 1-sigma errors, which is the two `momenta/`
-  // files and nothing else: the Hulthen forms are analytic and `fdeut.av18`
-  // (the deuteron control's VmcAV18 wave) prints none.
+  // where a table carries printed 1-sigma errors: the two `momenta/` files (the
+  // Hulthen forms are analytic; `fdeut.av18`, the d control's wave, prints none).
   if (cluster_vmc_mc_sigma != 0.0) {
+    if (!std::isfinite(cluster_vmc_mc_sigma))  // F6 (2026-10-29): NaN != 0.0 too
+      throw std::runtime_error("PipelineConfig: cluster_vmc_mc_sigma must be "
+                               "finite (a number of the tables' printed sigmas)");
     if (cluster_wave != ClusterWaveSource::VmcAV18) {
-      throw std::runtime_error(
-          "PipelineConfig: cluster_vmc_mc_sigma is the ANL VMC tables' own "
-          "Monte Carlo band and needs cluster_wave = VmcAV18 (the analytic "
-          "Hulthen forms carry no MC error)");
+      throw std::runtime_error("PipelineConfig: cluster_vmc_mc_sigma is the ANL "
+          "VMC tables' own Monte Carlo band and needs cluster_wave = VmcAV18 (the "
+          "analytic Hulthen forms carry no MC error)");
     }
     if (channel != PipelineChannel::TaggedLi6Alpha
         && channel != PipelineChannel::TaggedLi7Alpha) {
       throw std::runtime_error(
           std::string("PipelineConfig: cluster_vmc_mc_sigma needs a lithium "
-                      "alpha-tag channel, got ")
-          + pipeline_channel_name(channel)
+                      "alpha-tag channel, got ") + pipeline_channel_name(channel)
           + " (only li6_ad1.momentum and li7_at3.momentum print MC errors; "
             "the deuteron control's fdeut.av18 does not, so the band would be "
             "recorded without having run)");
@@ -1673,8 +1673,8 @@ Pipeline::Pipeline(PipelineConfig config, RunPlan plan)
     tier_ = cfg_.tier;
     if (tier_ == Tier::T1) {
       BreakupOptions bo = cfg_.breakup;
-      // One beta, one F2 backend.  The breakup's internal wave function and
-      // its species draw MUST be the ones the rest of the run is made with,
+      // One beta, one wave family, one F2.  The breakup's internal wave function
+      // and its species draw MUST be the ones the rest of the run is made with,
       // or the T1 tier would describe a different nucleus from the T0 one
       // (docs/CONVENTIONS.md: no physics number is defined twice).
       bo.beta = cfg_.cluster_beta;
@@ -2803,18 +2803,18 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
     const bool vmc = c.cluster_wave == ClusterWaveSource::VmcAV18;
     const bool li_tag = (c.channel == PipelineChannel::TaggedLi6Alpha ||
                          c.channel == PipelineChannel::TaggedLi7Alpha);
-    add("cluster_wave", "--cluster-wave",
-        cluster_wave_name(c.cluster_wave),
+    add("cluster_wave", "--cluster-wave",  // D6: no bare "vmc" off the tags
+        tag ? std::string(cluster_wave_name(c.cluster_wave)) : off_ch.substr(0, off_ch.size() - 2),
         tag ? KnobStatus::Read : KnobStatus::Refused,
         tag ? std::string("the family of radial forms of this channel's "
                           "cluster relative wave -- and, on the 6Li alpha "
                           "tag and the d control, of the embedded deuteron "
-                          "too (open items C5.4, C5.5b)")
+                          "too (open items C5.4, C5.5b); vmc is the run default since D6")
             : (off_ch +
-               "the inclusive 6Li constants (LI6_CLUSTER_POLARIZATION = "
-               "0.811228) and the coherent form factors do not follow it, so "
-               "validate() refuses it here rather than promise a VMC row and "
-               "deliver the shipped one, 11.61 % away (C5.5)"),
+               "the value is withheld -- the run default (vmc since D6) is read on the tagged "
+               "channels only; the inclusive 6Li constants (LI6_CLUSTER_POLARIZATION = 0.811228, "
+               "the Hulthen-era product) and the coherent form factors do not follow it, so "
+               "validate() refuses a moved value and make_config / the CLI an explicit one (C5.5)"),
         c.cluster_wave == d.cluster_wave);
     const bool mc_read = vmc && li_tag;
     add("cluster_vmc_mc_sigma", "", fmt_g(c.cluster_vmc_mc_sigma),
@@ -2822,7 +2822,7 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
         mc_read ? std::string("the ANL VMC tables' own printed 1-sigma band, "
                               "fully correlated across k (open item C5.2); "
                               "+-1 sigma is 0.02 % on the tagged tensor "
-                              "dilution")
+                              "dilution; READ on the default lithium tags (D6)")
                 : std::string("only li6_ad1.momentum and li7_at3.momentum "
                               "print MC errors -- the analytic Hulthen forms "
                               "and fdeut.av18 print none -- so validate() "

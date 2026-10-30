@@ -228,6 +228,15 @@ MEASURED (2026-10-26, this tree, AFTER the rule above was fixed): FAIL.
   averaging it uniformly over each p_s bin and each cos bin moves v by
   -0.4 ... -1.9 % of itself (< 2 %); it is exactly symmetric,
   max |w(c) - w(-c)| = 0.
+D6 NOTE (2026-10-29; decision D6 of 2026-10-27,
+docs/open_items/run_2026-10-27/DECISIONS.md): the tagged channels' shipped
+wave is AV18 since (CLUSTER_WAVE_DEFAULT).  Rule (d) above DEFINES the
+verdict configuration as the Hulthen deuteron at 40 mb, so DEFAULT_CONFIG
+stays "hulthen-40mb"; AV18 at 40 mb, recorded under (e), fails too (3/12
+and 0/16; tree shape 221.6/84 against Hulthen's 226.3/84).  The row is FAIL
+either way; re-pointing it to the shipped wave belongs to the author's
+pending re-declaration of this row (run_2026-10-26/SUMMARY.md, "For the
+author", item 6).
 
 THE THREE NORMALISATION RULES (BENCHMARK_PLAN.md sec. 8), for THIS row:
   1. b1 normalisations -- NOT APPLICABLE (unpolarized; the weight is spin
@@ -956,7 +965,8 @@ def run(path=BONUS, verbose=True):
     report = dict(
         name=NAME,
         generator=(
-            "Hulthen 40 mb GlauberFsiWeight over its backward mean inside the "
+            "Hulthen (rule (d)'s configuration; AV18 ships since D6 and fails too) "
+            "40 mb GlauberFsiWeight over its backward mean inside the "
             "data's 1-sigma flat band in %d/%d (4 GeV) and %d/%d (5 GeV) DIS "
             "blocks; worst v/delta %.2f (4 GeV %s), %.2f (5 GeV %s); backward "
             "chi2 flat %.1f, tree shape %.1f on %d dof"

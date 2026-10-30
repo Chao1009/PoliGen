@@ -91,14 +91,14 @@ THE THREE NORMALISATION RULES (BENCHMARK_PLAN.md sec. 8), for THIS row:
 MEASURED (2026-09-27, this tree): FAIL.  PWIA-window shape chi2/ndf,
 187 dof in 57 (Q2, W*, cos) groups of >= 2 points (one single-point group
 skipped; 245 of the 604 kept points), stat (+) syst:
-  Hulthen (default)  LC 627.85 (p = 5e-49)   instant form 322.54 (p = 3e-9)
+  Hulthen (verdict)  LC 627.85 (p = 5e-49)   instant form 322.54 (p = 3e-9)
   AV18               LC 579.12 (p = 1e-41)   instant form 805.16
   CD-Bonn            LC 278.81 (p = 1.5e-5)  instant form 359.88
   Hulthen LC x GlauberFsiWeight 422.92.
 NO wave under EITHER prescription reaches p >= 0.01, so the choice of the
-LC prescription for the verdict does not decide it.  Where the default
-misses: data / fitted model runs 0.79, 0.95, 1.27, 1.72, 1.41 over the five
-p_s bins -- the Hulthen tail falls too fast between 0.30 and 0.46 GeV/c
+LC prescription for the verdict does not decide it.  Where the verdict wave
+(Hulthen) misses: data / fitted model runs 0.79, 0.95, 1.27, 1.72, 1.41 over
+the five p_s bins -- its tail falls too fast between 0.30 and 0.46 GeV/c
 (AV18 the other way at 0.53: 0.64).  Transverse window: data/PWIA rises
 0.76 -> 2.96 from p_s = 0.30 to 0.53; the tree's Glauber weight points the
 same way in 4 of 5 bins (not at 0.30) but overshoots 2-6x (1.68 -> 18.9).
@@ -110,6 +110,18 @@ WHAT THIS DOES NOT VALIDATE: the tagged spectrum at EIC kinematics (the
 frame caveat of t2_bonus_spectator_shape.py applies: Deeps tags backward in
 the target rest frame), p_s < 0.28 GeV/c (BONuS's window, still blocked),
 or the absolute rate.
+
+D6 NOTE (2026-10-29; LiPolGen decision D6 of 2026-10-27,
+docs/open_items/run_2026-10-27/DECISIONS.md).  The tagged channels' RUN
+default is now the VMC/AV18 wave (`CLUSTER_WAVE_DEFAULT`), so "the shipped
+default ... (the tagged-channel default)" in the declaration above no longer
+names one object.  The declaration also names it `deuteron_channel()` -- the
+channel FACTORY, whose own default D6 leaves the analytic Hulthen pair -- and
+this row's chi2s were all known when D6 was taken, so the verdict wave stays
+the Hulthen pair (DEFAULT_WAVE below): re-pointing a verdict after its
+numbers were seen is the author's call, as for t2_deuteron_static.  AV18,
+the wave the tagged runs now ship, is the recorded sub-row 579.12/187
+(p = 1e-41): FAIL either way.
 
 Run:  source env.sh && python3 validation/benchmarks/t2_deeps_spectator_tail.py [--plot]
 
@@ -459,7 +471,8 @@ def run(path=DEEPS, verbose=True):
            for k, v in tr["per_ps"].items()})
     report = dict(
         name=NAME,
-        generator="shape chi2/ndf = %.2f/%d (p = %.3g), Hulthen default, LC "
+        generator="shape chi2/ndf = %.2f/%d (p = %.3g), Hulthen (the declared "
+                  "verdict wave, deuteron_channel(); an option since D6), LC "
                   "n(k) E_k/(2-alpha), cos_pq <= -0.3; AV18 %.2f/%d, CD-Bonn "
                   "%.2f/%d" % (head["chi2"], head["ndf"], head["p"],
                                m["waves"]["av18"]["lc"]["chi2"],
@@ -469,7 +482,8 @@ def run(path=DEEPS, verbose=True):
         reference="CLAS Deeps F2N x P(p_s), Klimenko PRC 73 (2006) 035212 "
                   "(60 blocks at Q2 = 1.8/2.8, %d PWIA-window points)"
                   % m["n_points_pwia"],
-        tolerance="p(chi2, ndf) >= %.2f, default wave, one free scale per "
+        tolerance="p(chi2, ndf) >= %.2f, the declared wave (deuteron_channel(): "
+                  "Hulthen), one free scale per "
                   "(Q2, W*, cos) group" % P_MIN,
         status=status,
         config=dict(wave=WAVE_LABELS[DEFAULT_WAVE],
@@ -509,7 +523,7 @@ def run(path=DEEPS, verbose=True):
             if "data_over_model_by_ps" in s:
                 print("  %-30s %s" % (name, " ".join(
                     "%.3f" % v for v in s["data_over_model_by_ps"])))
-        print("default wave, per (Q2, W*):")
+        print("verdict wave (%s), per (Q2, W*):" % DEFAULT_WAVE)
         for k, v in head["per_q2_w"].items():
             print("  %-16s %7.2f/%-3d p = %.3g" % (k, v["chi2"], v["ndf"], v["p"]))
         print("transverse |cos_pq| < 0.3 (recorded, not asserted), %d points; "
@@ -530,7 +544,7 @@ def run(path=DEEPS, verbose=True):
 
 #: the figure's palette slot and legend name of each wave, and the line
 #: style and legend name of each prescription (the recorded sub-rows)
-PLOT_WAVES = {"hulthen": ("default", "Hulthen (shipped default)"),
+PLOT_WAVES = {"hulthen": ("default", "Hulthen (the verdict wave; an option since D6)"),
               "av18": ("alt", "AV18"), "cdbonn": ("alt2", "CD-Bonn")}
 PLOT_FORMS = {"lc": ("-", "o", "LC n(k) E_k/(2 - alpha) (the verdict's)"),
               "instant-form": ("--", "s", "instant form n(k = p_s) (recorded)"),

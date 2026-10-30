@@ -233,7 +233,7 @@ NO_QE = _post(**{"rc_options.with_qe_tail": False})   # Eq. (44)'s QE tail off
 CDKS, CONV = dict(b1_model="cdks"), dict(b1_model="li6-convolution")
 RC = dict(rc="tensor-band")
 RC_TPK = dict(RC, rc_tail_model=TPK)   # D5 (2026-10-29): see the RC block below
-VMC = dict(cluster_wave="vmc")
+VMC, HUL = dict(cluster_wave="vmc"), dict(cluster_wave="hulthen")   # D6: HUL = the option
 FSI_ON = dict(fsi="glauber-cluster")
 
 VARIANTS = [
@@ -328,17 +328,17 @@ VARIANTS = [
       var=dict(CONV, r_source="r1998"), base_post=XM, post=XM),
     V("r_source", "unset -> sigma-lt on li6-convolution (x_max .95)",
       base=CONV, var=dict(CONV, r_source="sigma-lt"), base_post=XM, post=XM),
-    # --- the tagged cluster ----------------------------------------------
-    V("cluster_wave", "hulthen -> vmc", var=VMC),
-    V("cluster_vmc_mc_sigma", "0 -> 1 on hulthen",
+    # --- the tagged cluster (D6, 2026-10-29: the default is vmc; HUL rides in base AND var) ---
+    V("cluster_wave", "vmc -> hulthen", var=HUL),
+    V("cluster_vmc_mc_sigma", "0 -> 1 on hulthen", base=HUL, var=HUL,
       post=_post(cluster_vmc_mc_sigma=1.0)),
-    V("cluster_vmc_mc_sigma", "0 -> 1 on vmc", base=VMC, var=VMC,
+    V("cluster_vmc_mc_sigma", "0 -> 1 on the default (vmc)",
       post=_post(cluster_vmc_mc_sigma=1.0)),
-    V("cluster_beta", "0.30 -> 0.33", var=dict(cluster_beta=0.33)),
-    V("cluster_beta", "0.30 -> 0.33 on vmc", base=VMC,
-      var=dict(VMC, cluster_beta=0.33)),
-    V("p_d", "0.0867 -> 0.10", var=dict(p_d=0.10)),
-    V("p_d", "0.0867 -> 0.10 on vmc", base=VMC, var=dict(VMC, p_d=0.10)),
+    V("cluster_beta", "0.30 -> 0.33 on hulthen", base=HUL, var=dict(HUL, cluster_beta=0.33)),
+    V("cluster_beta", "0.30 -> 0.33 on the default (vmc)",
+      var=dict(cluster_beta=0.33)),
+    V("p_d", "0.0867 -> 0.10 on hulthen", base=HUL, var=dict(HUL, p_d=0.10)),
+    V("p_d", "0.0867 -> 0.10 on the default (vmc)", var=dict(p_d=0.10)),
     V("triton_sf", "hulthen -> ciofi-simula", var=dict(triton_sf="ciofi-simula")),
     V("tier", "T1 -> T0", post=_post(tier=_l.Tier.T0)),
     V("inclusive_b1", "off -> on", var=dict(inclusive_b1=True)),

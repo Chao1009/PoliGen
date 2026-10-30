@@ -761,12 +761,12 @@ struct PipelineConfig {
   std::string pot_config;
 
   // --- tagged channels ----------------------------------------------------
-  double cluster_beta = BETA_DEFAULT;  ///< short-range scale of the radial waves
-  double p_d = P_D_LI6;                ///< D-state probability (6Li alpha tag)
-  /// Which family of radial forms the tagged channels use.  `Hulthen` is the
-  /// default and keeps every published number bit-for-bit; `VmcAV18` swaps in
-  /// the ANL VMC tables and then IGNORES `cluster_beta` and `p_d`
-  /// (`docs/CONVENTIONS.md`).
+  double cluster_beta = BETA_DEFAULT;  ///< ANALYTIC radial scale (Hulthen; 7Li T1)
+  double p_d = P_D_LI6;                ///< alpha-d D state of the Hulthen 6Li tag
+  /// Which family of radial forms the tagged channels use.  SINCE D6
+  /// (2026-10-27) the default is `CLUSTER_WAVE_DEFAULT` = `VmcAV18`, the ANL VMC
+  /// tables, which IGNORE `cluster_beta` (bar the 7Li T1 triton breakup) and
+  /// `p_d`; `Hulthen`, the analytic pair, is the option (`docs/CONVENTIONS.md`).
   ///
   /// EXACTLY WHERE IT REACHES, AND WHERE IT DOES NOT.  Read this before
   /// quoting anything made with it.
@@ -795,8 +795,8 @@ struct PipelineConfig {
   ///     the embedded deuteron from the 0.045 scenario: two deuteron
   ///     wave-function families in one run, with every polarized tagged-alpha
   ///     observable 2.069 % HIGH against the wave function this flag says it
-  ///     selects.  Fixing it moved that opt-in path by -2.027 % and left the
-  ///     Hulthen default bit for bit (T27).
+  ///     selects.  Fixing it moved that path (then opt-in, the default since
+  ///     D6) by -2.027 % and left the Hulthen path bit for bit (T27).
   ///
   /// IT DOES NOT REACH:
   ///   * the 7Li TRITON's internal spin structure (`TRITON()`, a Faddeev-family
@@ -805,28 +805,28 @@ struct PipelineConfig {
   ///     the alpha-t relative motion and nothing else;
   ///   * the 6Li INCLUSIVE constants (`LI6_CLUSTER_POLARIZATION` = 0.811228,
   ///     `LI6_B1_RANK2_TRANSFER` = 0.921947), which are not read on a tagged
-  ///     channel at all.  A `VmcAV18` tagged row and an inclusive row of one
-  ///     PROGRAMME therefore describe 6Li with wave functions whose vector
-  ///     dilutions differ by 11.61 % and whose rank-2 transfers differ by
-  ///     6.58 % (C5.5) -- band any comparison of the two.  Since 2026-09-04
+  ///     channel at all.  A `VmcAV18` tagged row -- the DEFAULT one since D6 --
+  ///     and an inclusive row therefore describe 6Li with wave functions whose
+  ///     alpha-d vector dilutions differ by 11.61 % and rank-2 transfers by
+  ///     6.58 % (C5.5; the author's question, registry row 10).  Since 2026-09-04
   ///     `validate()` REFUSES this field on `Inclusive` and `CoherentLi6`
   ///     rather than accepting it unread, because accepting it was the route
   ///     by which that 11.61 % reached someone who thought they had asked for
   ///     a VMC 6Li.
   ///
-  /// WHAT ONE `VmcAV18` 6Li RUN THEREFORE SAYS THE WHOLE-NUCLEUS POLARIZATION
-  /// IS: 0.887076 = `li6_cluster_polarization(VMC_P_D_LI6,
-  /// deuteron_av18_p_d())`, one Hamiltonian end to end, against the shipped
-  /// default's 0.811228.  Neither reproduces the ab initio six-body
+  /// WHAT ONE `VmcAV18` 6Li RUN (the default) SAYS THE WHOLE-NUCLEUS
+  /// POLARIZATION IS: 0.887076 = `li6_cluster_polarization(VMC_P_D_LI6,
+  /// deuteron_av18_p_d())`, one Hamiltonian end to end, against the inclusive
+  /// constant's 0.811228 (x1.0935).  Neither reproduces the ab initio six-body
   /// `LI6_POLARIZATION_VMC_SIX_BODY` = 0.848 (+4.6 % and -4.3 %); the cluster
   /// PRODUCT is what carries that error and C5.5 is the argument.
-  ClusterWaveSource cluster_wave = ClusterWaveSource::Hulthen;
+  ClusterWaveSource cluster_wave = CLUSTER_WAVE_DEFAULT;
   /// Monte Carlo band of the ANL VMC tables, in units of their own printed
   /// 1-sigma error column, fully correlated across k (`li6_alpha_channel`,
-  /// open item C5.2).  0 = today bit for bit.  `validate()` REFUSES it unless
-  /// the run is a lithium alpha-tag channel on `cluster_wave = VmcAV18`: the
-  /// Hulthen forms carry no MC error and `fdeut.av18` prints none, so anywhere
-  /// else the knob would be recorded in the metadata without having run.
+  /// open item C5.2).  0 = the tables bit for bit.  `validate()` REFUSES it
+  /// unless the run is a lithium alpha-tag channel on `cluster_wave = VmcAV18`
+  /// -- since D6 the DEFAULT lithium alpha tags, where it is READ: the Hulthen
+  /// forms and `fdeut.av18` print no MC error, so elsewhere it would not run.
   /// Measured: +-1 sigma moves the tagged tensor dilution by 0.02 %, i.e. the
   /// ANL statistics are NOT the systematic that matters (the wave-function
   /// choice, worth 6.6 %, is).

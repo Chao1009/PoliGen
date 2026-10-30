@@ -1492,9 +1492,9 @@ def main():
 
     # Build and render EVERY document before anything is written, then write
     # them all or none (write_all_atomically; review 2026-09-26) -- after the
-    # D4 preflight, which refuses a cos 2phi coefficient the port gates cannot
-    # read (defined below main(), with the README's D4 addendum).
+    # D4 and D6 preflights (defined below main(), with the README's addendum).
     _preflight_delta_convention()
+    _preflight_cluster_wave()
     tables = [
         ("spin.json", build_spin),
         ("xsec.json", build_xsec),
@@ -1616,6 +1616,42 @@ README_ADDENDA = {"xsec.json": (
     "and prints which it is.  There is no `--accept-changed-numbers` guard in\n"
     "this script (that is `dump_b1_default_li6.py`'s): a re-dump rewrites all\n"
     "seven tables with whatever moved, so read the diff.")}
+
+
+def _preflight_cluster_wave():
+    """LiPolGen's decision D6 (2026-10-27): its RUN default is the ANL VMC
+    cluster waves, while `tagged.json` pins its channel FACTORIES, whose own
+    argument default stays the analytic (Hulthen) family -- that is what the
+    rtol-1e-12 port gates in tests/test_tagged.cpp compare, BY NAME.  So the
+    file must be polligen's Hulthen family.  `build_tagged()` reads polligen's
+    DEFAULT channels, so a sibling-side flip of those defaults to its VMC
+    tables would re-pin VMC numbers against LiPolGen's Hulthen factories under
+    the same file name.  Run BEFORE any file is written: REFUSES unless each
+    default channel is the analytic family (plain `Wave`s, no table) and,
+    where polligen has the switch, equal to its explicit `wave="hulthen"`
+    build."""
+    def sig(ch):
+        return (ch.label, tuple((type(w).__name__, w.l, float(w.prob),
+                                 float(getattr(w, "beta", float("nan"))))
+                                for w in ch.waves))
+    pairs = [("li6_alpha", tagged.li6_alpha_channel,
+              lambda: tagged.li6_alpha_channel(wave="hulthen")),
+             ("li7_alpha", tagged.li7_alpha_channel,
+              lambda: tagged.li7_alpha_channel(wave="hulthen")),
+             ("deuteron", tagged.deuteron_channel, None)]
+    for key, default, hulthen in pairs:
+        d = default()
+        kinds = {type(w).__name__ for w in d.waves}
+        if kinds != {"Wave"} or (hulthen is not None and sig(d) != sig(hulthen())):
+            raise SystemExit(
+                "polligen's default %s channel is %r: not its analytic Hulthen "
+                "family, which tagged.json pins against LiPolGen's channel "
+                "factories (D6, 2026-10-27; the RUN default there is VMC, the "
+                "factories' own default is not).  Dump the Hulthen channels by "
+                "name, or re-declare the port gate.  Nothing written."
+                % (key, sig(d)))
+    print("polligen's default tagged channels: the analytic Hulthen family "
+          "(what tagged.json pins; LiPolGen's run default is VMC since D6)")
 
 
 if __name__ == "__main__":

@@ -888,3 +888,39 @@ def test_make_report_records_the_four_t1_rows_blocked_without_the_sets(tmp_path)
     for h, want in _HARNESS_SET.items():
         assert (rows[h]["status"], rows[h]["reason"]) == (
             "blocked (environment)", "environment: LHAPDF set %s not installed" % want), h
+
+
+@pytest.mark.parametrize("harness", sorted(_HARNESS_SET))
+def test_a_store_without_lhapdf_conf_blocks_the_row_by_the_environment(
+        harness, tmp_path):
+    """Verification of D7, code finding 8 (2026-11-03): a data path holding
+    the SETS but not LHAPDF's own lhapdf.conf makes the pre-flight say "LHAPDF's
+    own lhapdf.conf was not found"; the T1 harnesses classified a missing set
+    only on "Info file not found", so that environment gave `error`.  Now it is
+    `blocked (environment)`, exit 2, naming the set and the missing conf."""
+    if not getattr(lg, "HAVE_LHAPDF", False):
+        pytest.skip("lipolgen built without the LHAPDF tier")
+    want = _HARNESS_SET[harness]
+    src = None
+    for p in os.environ.get("LHAPDF_DATA_PATH", "").split(os.pathsep):
+        if p and os.path.isdir(os.path.join(p, want)):
+            src = p
+            break
+    if src is None:
+        pytest.skip("the set %s is not on LHAPDF_DATA_PATH here" % want)
+    for name in os.listdir(src):
+        if name != "lhapdf.conf" and os.path.isdir(os.path.join(src, name)):
+            os.symlink(os.path.join(src, name), str(tmp_path / name))
+    env = dict(os.environ)
+    here = os.path.dirname(os.path.dirname(os.path.abspath(lg.__file__)))
+    env["PYTHONPATH"] = os.pathsep.join(
+        [here] + [p for p in env.get("PYTHONPATH", "").split(os.pathsep) if p])
+    env["LHAPDF_DATA_PATH"] = str(tmp_path) + "::"
+    res = subprocess.run([sys.executable, os.path.join(_BENCH, harness + ".py")],
+                         capture_output=True, text=True, env=env, timeout=300)
+    assert res.returncode == 2, (res.returncode, res.stderr[-2000:])   # never 134
+    last = [l for l in res.stderr.splitlines() if l.startswith("RuntimeError: ")][-1]
+    assert "lhapdf.conf was not found" in last, last
+    assert _classify(RuntimeError(last[len("RuntimeError: "):])) == (
+        "blocked (environment)",
+        "environment: LHAPDF set %s present, lhapdf.conf was not found" % want)

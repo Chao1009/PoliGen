@@ -503,4 +503,37 @@ TEST_CASE("D7: threaded generation on the shared frozen grids is bit-identical "
   }
 }
 
+TEST_CASE("D7 verification (2026-11-03, code finding 1): a grid selector "
+          "holding any object but the tier's shipped one is refused") {
+  // Before this rule a default config with ToyF2 in unpol_sf_obj ran the toy
+  // (591846.1688784091 pb) while meta and the knob row said ct18nlo.
+  FillerScope filler;
+  PipelineConfig c;
+  c.n_events = 10;
+  c.unpol_sf_obj = std::make_shared<const ToyF2>();      // selector left Ct18Nlo
+  CHECK_THROWS_WITH_AS(c.validate(),
+                       doctest::Contains("not the LHAPDF tier's shipped CT18NLO"),
+                       std::runtime_error);
+  CHECK_THROWS_AS(Pipeline(c, tensor_thirds_plan(0.7, 0.6)), std::runtime_error);
+  c.unpol_sf = UnpolSfSource::Custom;                    // named for what it is
+  CHECK_NOTHROW(c.validate());
+  c.unpol_sf = UnpolSfSource::Ct18Nlo;                   // the shipped object
+  c.unpol_sf_obj = make_lhapdf_unpol_sf(UnpolSfSource::Ct18Nlo);
+  CHECK_NOTHROW(c.validate());
+  c.unpol_sf_obj = std::make_shared<const LhapdfSF>("CT18NLO", 0);  // a copy is
+  CHECK_THROWS_AS(c.validate(), std::runtime_error);     // not the shipped one
+  c.unpol_sf_obj.reset();
+  c.pol_sf_obj = std::make_shared<const ToyG1>();        // selector left NnpdfPol
+  CHECK_THROWS_WITH_AS(c.validate(),
+                       doctest::Contains("not the LHAPDF tier's shipped NNPDFpol11_100"),
+                       std::runtime_error);
+  c.pol_sf = PolSfSource::Custom;
+  CHECK_NOTHROW(c.validate());
+  c.pol_sf = PolSfSource::NnpdfPol;
+  c.pol_sf_obj = make_lhapdf_pol_sf(PolSfSource::NnpdfPol);
+  CHECK_NOTHROW(c.validate());
+  const Pipeline p(c, tensor_thirds_plan(0.7, 0.6));     // the shipped pair runs
+  CHECK(p.sigma_pb() == doctest::Approx(496334.155954048).epsilon(1e-12));
+}
+
 #endif  // LIPOLGEN_HAVE_LHAPDF

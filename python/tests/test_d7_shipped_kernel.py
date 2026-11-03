@@ -227,3 +227,33 @@ def test_the_preflight_advice_follows_what_is_missing(tmp_path):
     assert "--unpol-sf toy" in got["noconf"]
     assert "Info file not found for PDF set 'CT18NLO'" in got["empty"]
     assert "Install the set" in got["empty"] and "--unpol-sf toy" in got["empty"]
+
+
+#: Verification of D7, honesty finding 5 (2026-11-03): `_OPPOSITE_CONF` keeps
+#: this store's `Extrapolator: continuation` and differs only in the
+#: interpolator and ForcePositive, so the test above does not exercise the
+#: EXTRAPOLATOR (the absolute 496334.155954048 pin does).  This variant names a
+#: DIFFERENT extrapolator -- `error`, under which the pre-freeze build refused
+#: the run outright (plan_D7, underrated risk 1) -- and must change nothing.
+_OTHER_EXTRAPOLATOR_CONF = """Verbosity: 0
+Interpolator: linear
+Extrapolator: error
+ForcePositive: 2
+AlphaS_Type: analytic
+"""
+
+
+def test_the_default_numbers_do_not_depend_on_the_conf_extrapolator(tmp_path):
+    store = _store()
+    if store is None:
+        pytest.skip("LHAPDF_DATA_PATH names no directory holding both shipped "
+                    "sets, so the other environment cannot be assembled")
+    other = tmp_path / "other_extrapolator"
+    other.mkdir()
+    (other / "lhapdf.conf").write_text(_OTHER_EXTRAPOLATOR_CONF)
+    for s in ("CT18NLO", "NNPDFpol11_100"):
+        os.symlink(os.path.join(store, s), str(other / s))
+    here = _probe(None)
+    there = _probe(str(other) + "::")
+    assert here == there
+    assert float(there["6Li/inclusive"][0]) == pytest.approx(496334.155954048, rel=1e-12)

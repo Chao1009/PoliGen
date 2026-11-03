@@ -461,10 +461,10 @@ def f2_backend(name):
         try:
             lg.LhapdfSF(CT18)
         except RuntimeError as exc:
-            if "Info file not found for PDF set" not in str(exc):
+            if "Info file not found for PDF set" not in str(exc) and "lhapdf.conf was not found" not in str(exc):  # 2026-11-03
                 raise
-            return None, "LhapdfSF(%s)" % CT18, ("environment: LHAPDF set %s "
-                                                  "not installed" % CT18)
+            return None, "LhapdfSF(%s)" % CT18, (("environment: LHAPDF set %s "
+                                                  "not installed" if "Info file not found" in str(exc) else "environment: LHAPDF set %s present, lhapdf.conf was not found") % CT18)
         return (lambda: lg.LhapdfSF(CT18)), "LhapdfSF(%s) at LO" % CT18, None
     raise ValueError("unknown F2 backend %r" % name)
 

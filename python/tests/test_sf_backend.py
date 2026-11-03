@@ -1025,3 +1025,41 @@ def test_set_pythia_hadronizer_refuses_a_bridge_on_another_backend():
     good = _l.PythiaBridge(beams, opts)
     assert good.options.f2_source is cfg.unpol_sf_obj
     _l.set_pythia_hadronizer(cfg, good)              # the same object: fine
+
+
+# ----------------------------------------- D7 verification (2026-11-03)
+
+@needs_lhapdf
+@pytest.mark.parametrize("channel", CHANNELS)
+def test_a_grid_selector_refuses_any_object_but_the_shipped_one(channel):
+    """Verification of D7, code finding 1 (2026-11-03).  Before the rule, a
+    default config with `ToyF2()` put back under `unpol_sf = Ct18Nlo` (or
+    `ToyG1()` under `pol_sf = NnpdfPol`) VALIDATED, ran the toy's rate
+    (591846.1688784091 pb on the inclusive channel) and the knob row read
+    "ct18nlo | read".  Now it is refused; named `Custom` it runs as the toy
+    and the knob row says custom; the tier's own shipped object is accepted."""
+    c = _cfg(channel)
+    c.unpol_sf_obj = lg.ToyF2()                       # the setter says Custom ...
+    c.unpol_sf = _l.UnpolSfSource.Ct18Nlo             # ... put back by hand
+    with pytest.raises(RuntimeError, match="not the LHAPDF tier's shipped CT18NLO"):
+        c.validate()
+    with pytest.raises(RuntimeError):
+        _l.Pipeline(c, _plan())
+    c.unpol_sf = _l.UnpolSfSource.Custom              # named for what it is
+    p = _l.Pipeline(c, _plan())
+    assert p.sigma_pb() == SIGMA_TOY[channel]
+    row = [r for r in p.knob_provenance() if r.name == "unpol_sf"][0]
+    assert "ct18nlo" not in str(row.value) and "custom" in str(row.value)
+
+    g = _cfg(channel)
+    g.pol_sf_obj = lg.ToyG1()
+    g.pol_sf = _l.PolSfSource.NnpdfPol
+    with pytest.raises(RuntimeError, match="not the LHAPDF tier's shipped NNPDFpol11_100"):
+        g.validate()
+    g.pol_sf = _l.PolSfSource.Custom
+    g.validate()
+
+    s = _cfg(channel)                                 # the shipped objects
+    _l.attach_shipped_sf_backends(s)
+    s.validate()
+    assert _l.Pipeline(s, _plan()).sigma_pb() == SIGMA_D7[channel]

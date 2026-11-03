@@ -98,8 +98,8 @@ namespace lipolgen {
 /// number (none of the three installed sets' .info files carries these keys;
 /// measured 2026-10-27, `Extrapolator: nearest` against `continuation` in the
 /// global lhapdf.conf moved the 6Li default cross section +5.03 %).  The
-/// author's choice (D7): FREEZE every set at its grid edges -- `nearest`, the
-/// knot-array edge, which is what the letter's `--pdf grid` chain does at Q0
+/// supervisor's choice under D7: FREEZE every set at its grid edges -- `nearest`, the
+/// knot-array edge in x AND Q2 (the letter's `--pdf grid` chain freezes Q2 only, at Q0)
 /// -- with LHAPDF's standard `logcubic` interpolation and no positivity
 /// forcing (ForcePositive 0: Delta q may be negative).
 inline constexpr const char* LHAPDF_EXTRAPOLATOR = "nearest";

@@ -196,15 +196,26 @@ double Epps21Ratio::f2a(double x, double q2, int A) const {
 
 namespace {
 
+// 2026-11-03 (verification of D7): "shipped" is DERIVED from the two
+// constants, not keyed on a retyped set name, and the escape says that the
+// generate_* examples have no toy switch (regression finding 1).
+constexpr const char* kExamplesHaveNoToySwitch =
+    " (the generate_* example programs have no toy switch: use lipolgen-run "
+    "or lipolgen::toy_config())";
+
 std::string escape_for(const std::string& set) {
-  if (set == "CT18NLO")
-    return "it is the shipped --unpol-sf default (and --b1-unpol ct18nlo): run "
+  const char* u = lhapdf_set_name(UNPOL_SF_DEFAULT);
+  const char* g = lhapdf_set_name(POL_SF_DEFAULT);
+  if (u != nullptr && set == u)
+    return std::string("it is the shipped --unpol-sf default (and --b1-unpol ") +
+           unpol_sf_name(UNPOL_SF_DEFAULT) + "): run "
            "the toy explicitly with --unpol-sf toy (Python unpol_sf='toy', C++ "
-           "UnpolSfSource::Toy or lipolgen::toy_config()) and say so";
-  if (set == "NNPDFpol11_100")
-    return "it is the shipped --pol-sf default: run the toy explicitly with "
+           "UnpolSfSource::Toy or lipolgen::toy_config()) and say so" +
+           kExamplesHaveNoToySwitch;
+  if (g != nullptr && set == g)
+    return std::string("it is the shipped --pol-sf default: run the toy explicitly with "
            "--pol-sf toy (Python pol_sf='toy', C++ PolSfSource::Toy or "
-           "lipolgen::toy_config()) and say so";
+           "lipolgen::toy_config()) and say so") + kExamplesHaveNoToySwitch;
   return "no shipped default reads it; it was asked for by name";
 }
 

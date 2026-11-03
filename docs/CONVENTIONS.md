@@ -41,7 +41,7 @@ that go through `KnobProvenance::meta_value()` — `pol_sf`, `rc_scope`,
 time in `python/bindings.cpp` — the CLI's `KNOB PROVENANCE` banner block
 (`cli.knob_provenance_lines`), and `python/tests/test_knob_provenance.py`,
 which rebuilds the (spec × knob) matrix — 12 (isotope, channel, plan) specs
-× 81 knob variants = 627 cells (re-measured 2026-09-15; 76 / 592 was Phase A's,
+× 81 knob variants = 627 cells (re-measured 2026-09-15; 76 / 592 was Phase A's; plus, since 2026-11-03, 14 cells of two sub-knobs on the shipped `polrad-full` tail = 641,
 left behind by Phase B), not the full (channel × plan) product; see
 `USAGE.md` §7c — and asserts the table against
 the **output hash**. **A knob added without a row fails that test.** Do not add
@@ -62,7 +62,7 @@ under `helicity-flip` was the second example until 2026-09-06, when
 `--pzz-mode typed` made that flag reachable there and the label moved onto the
 mode.) A rule that depends on
 the RUN PLAN can only be labelled: `validate()` has no plan (`rc_scope` under a
-θ_S = 0 fill).
+θ_S = 0 fill). **An explicit request for the DEFAULT value of a knob the run never reads is handled three ways, by history and not by one rule** (stated 2026-11-03 by the verification of D5–D7, not unified; the author's call): `--cluster-wave vmc` (D6) on `inclusive` / `coherent` is REFUSED by `make_config` and the CLI, and an unread wave's knob row reads "not read on channel …", never a bare `vmc`; `--rc-tail-model polrad-full` (D5) on a run that builds no tail (e.g. `tagged-6Li-alpha --rc tensor-band`) is ACCEPTED — an explicit `t-peak` there is refused — and its knob row is `refused` with the bare value `polrad-full`, `meta["rc_tail_model"]` saying `polrad-full` beside `rc_tail_applies` False; `--pol-sf nnpdfpol` (D7) on `coherent` is ACCEPTED and labelled `not-read` (deliberately: the LABEL branch above). Pinned by `test_knob_provenance.py::test_an_explicit_default_on_an_unread_knob_is_handled_three_ways`.
 
 Why it needs a mechanism at all: the rule was enforced knob by knob and then
 broke five times in one run, each time on an axis the previous fix had not

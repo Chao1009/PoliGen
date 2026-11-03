@@ -198,8 +198,8 @@ class V:
 
     def __init__(self, knob, label, base=None, var=None, base_post=None,
                  post=None, plan=None, base_plan=None, lhapdf=False,
-                 alts=None):
-        self.knob, self.label = knob, label
+                 alts=None, pythia=False):
+        self.knob, self.label, self.pythia = knob, label, pythia  # pythia: 2026-11-03
         self.base = base or {}
         self.var = var or {}
         self.base_post, self.post = base_post, post
@@ -312,7 +312,7 @@ VARIANTS = [
     V("b1_unpol", "toy -> ct18nlo on the default b1_model",
       var=dict(b1_unpol="ct18nlo"), lhapdf=True),
     V("b1_unpol", "ct18nlo -> mstw on li6-convolution (x_max .95; D7)", base=CONV,
-      var=dict(CONV, b1_unpol="mstw"), base_post=XM, post=XM, lhapdf=True),
+      var=dict(CONV, b1_unpol="mstw"), base_post=XM, post=XM, lhapdf=True, pythia=True),
     # `--r-source`, the ONE R hook into BOTH halves of the tensor weight.
     # THREE CELLS, because the axis has three statuses and each is a
     # different claim: refused off li6-convolution (the b1_unpol rule), READ
@@ -541,8 +541,8 @@ CELLS = [(s, v) for s in SPECS for v in VARIANTS
 def test_the_table_matches_the_output_hash(cache, spec, variant):
     """THE gate.  Moved -> `read`; did not move -> `not-read`; refused ->
     `refused`.  Nothing else is accepted, in either direction."""
-    if variant.lhapdf and not _l.HAVE_LHAPDF:
-        pytest.skip(NO_LHAPDF)
+    if (variant.lhapdf and not _l.HAVE_LHAPDF) or (variant.pythia and not _l.HAVE_PYTHIA8):
+        pytest.skip(NO_PYTHIA_CELL if variant.pythia and not _l.HAVE_PYTHIA8 else NO_LHAPDF)
     base = _baseline(cache, spec, variant)
     if base[0] != "ran":
         pytest.skip("the BASE of this cell is refused on %s, so there is no "
@@ -906,3 +906,72 @@ def test_the_t2_knobs_are_read_on_the_coherent_channel_alone(channel, isotope):
         assert off_rows[k]["status"] == "not-read"
         assert "--hadronize" in off_rows[k]["reason"]
         assert k not in off_meta          # the block stays conditional ...
+
+
+# ------------------------------- verification of D5-D7 (2026-11-03)
+#
+# Code findings 5 and 6 of the run-2026-10-27 verification.
+#
+# (5) A cell whose VARIANT needs the PYTHIA tier (`--b1-unpol mstw`) was
+# flagged `lhapdf=True` only: in the PYTHIA-off CI job `make_config` refused it,
+# `_run` classified that `refused`, and the cell passed measuring nothing.
+# `pythia=True` now SKIPS it there, with this reason.
+NO_PYTHIA_CELL = ("needs the OPTIONAL PYTHIA 8 tier: the variant names "
+                  "--b1-unpol mstw (MstwSF reads PYTHIA's own pdfdata), which "
+                  "a build without the tier refuses -- the cell would then "
+                  "pass through the refused branch measuring nothing, so it "
+                  "is skipped and says so (rebuild with -DLIPOLGEN_WITH_PYTHIA=ON)")
+
+# (6) Since D5 the band and tail sub-knob cells run on `t-peak` BY NAME on the
+# inclusive specs (RC_TPK, for runtime), so nothing checked a tail sub-knob on
+# the SHIPPED `polrad-full` tail.  One cell for the quasi-elastic family and
+# one for the tail scales, on the default model; the verifier measured all
+# twelve sub-knob cells consistent there (N = 60, seed 7).  Each costs one
+# polrad-full table build (~13 s) per inclusive spec.
+SHIPPED_TAIL_VARIANTS = [
+    V("rc_qe_suppression", "1 -> 0.5 at polrad-full (the shipped tail)",
+      base=RC, var=dict(RC, rc_qe_suppression=0.5)),
+    V("rc_fq_scale", "1 -> 2 at polrad-full (the shipped tail)",
+      base=RC, var=dict(RC, rc_fq_scale=2.0)),
+]
+SHIPPED_TAIL_CELLS = [(s, v) for s in SPECS for v in SHIPPED_TAIL_VARIANTS
+                      if s.full]
+
+
+@pytest.mark.parametrize(
+    "spec,variant", SHIPPED_TAIL_CELLS,
+    ids=["%s|%s" % (s.tag, v.id) for s, v in SHIPPED_TAIL_CELLS])
+def test_the_table_matches_the_output_hash_on_the_shipped_tail(cache, spec,
+                                                               variant):
+    """The matrix's gate, on the shipped `polrad-full` tail (D5)."""
+    test_the_table_matches_the_output_hash(cache, spec, variant)
+
+
+@pytest.mark.skipif(not _l.HAVE_LHAPDF, reason=NO_LHAPDF)
+def test_an_explicit_default_on_an_unread_knob_is_handled_three_ways():
+    """Code finding 4 of the 2026-11-03 verification, STATED rather than
+    unified (docs/CONVENTIONS.md, "Refuse or label"): an explicit request for
+    the DEFAULT value of a knob the run never reads is refused by D6, accepted
+    and recorded `refused` by D5, accepted and labelled `not-read` by D7.  This
+    test pins the three behaviours so the sentence cannot go stale silently;
+    unifying them is the author's call."""
+    plan = lg.tensor_thirds_plan(0.7, 0.6)
+    # D6: --cluster-wave vmc off the tags -- refused by make_config
+    with pytest.raises((RuntimeError, ValueError), match="cluster_wave"):
+        lg.make_config(channel="inclusive", cluster_wave="vmc", events=10)
+    # D5: --rc-tail-model polrad-full where no tail is built -- ACCEPTED, the
+    # row `refused` with the bare value; an explicit t-peak there is refused
+    cfg = lg.make_config(channel="tagged-6Li-alpha", rc="tensor-band",
+                         rc_tail_model="polrad-full", events=10)
+    row = [r for r in _l.Pipeline(cfg, plan).knob_provenance()
+           if r.name == "rc_tail_model"][0]
+    assert row.status == _l.KnobStatus.Refused
+    assert row.value == "polrad-full"
+    with pytest.raises((RuntimeError, ValueError)):
+        _l.Pipeline(lg.make_config(channel="tagged-6Li-alpha", rc="tensor-band",
+                                   rc_tail_model="t-peak", events=10), plan)
+    # D7: --pol-sf nnpdfpol on coherent -- accepted, labelled not-read
+    cfg = lg.make_config(channel="coherent", pol_sf="nnpdfpol", events=10)
+    row = [r for r in _l.Pipeline(cfg, plan).knob_provenance()
+           if r.name == "pol_sf"][0]
+    assert row.status == _l.KnobStatus.NotRead

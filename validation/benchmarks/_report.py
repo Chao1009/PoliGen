@@ -47,8 +47,8 @@ REPORT_STATUSES = HARNESS_STATUSES + (ENV_BLOCKED, ERROR, SKIPPED_OPT_IN)
 
 #: LHAPDF's message when a set is not installed; an exception carrying it is
 #: an environment fact, not a broken harness
-LHAPDF_MISSING = "Info file not found for PDF set"
-_LHAPDF_SET = re.compile(r"Info file not found for PDF set '?([^'\s]+)'?")
+LHAPDF_MISSING = "Info file not found for PDF set"; LHAPDF_CONF_MISSING = "lhapdf.conf was not found"  # the pre-flight's sentence, 2026-11-03
+_LHAPDF_SET = re.compile(r"(?:Info file not found for PDF set|LHAPDF cannot open the set|LHAPDF set) '?([^'\s]+)'?")
 
 #: significant digits kept for numbers written into REPORT.json
 SIG_DIGITS = 10
@@ -192,7 +192,7 @@ def emit(row, stream=None):
 
 def lhapdf_missing_set(message):
     """The LHAPDF set a message says is not installed, else None."""
-    if LHAPDF_MISSING not in str(message):
+    if LHAPDF_MISSING not in str(message) and LHAPDF_CONF_MISSING not in str(message):
         return None
     m = _LHAPDF_SET.search(str(message))
     return m.group(1) if m else "(name not in the message)"
@@ -210,7 +210,7 @@ def classify_exception(exc):
     exception's type and FIRST line."""
     missing = lhapdf_missing_set(exc)
     if missing is not None:
-        return ENV_BLOCKED, "environment: LHAPDF set %s not installed" % missing
+        return ENV_BLOCKED, ("environment: LHAPDF set %s not installed" if LHAPDF_MISSING in str(exc) else "environment: LHAPDF set %s present, lhapdf.conf was not found") % missing
     fl = first_line(exc)
     return ERROR, ("%s: %s" % (type(exc).__name__, fl) if fl
                    else type(exc).__name__)

@@ -715,8 +715,16 @@ the ⁷Li cluster cells clipped at 20 mb, where this phase's measurement is
    fingerprinted blocks: a human re-read and `--record-ranges`.
 11. **A finite bound on `cluster_vmc_mc_sigma`** (F6, §12 V-8). `validate()` now
    refuses a non-finite band, but 1000 σ still builds (the α–d P_D becomes
-   0.133). No bound is declared anywhere, and choosing one is a new rule, so it
+      0.133). No bound is declared anywhere, and choosing one is a new rule, so it
    is left to the author.
+12. **One clause, two readings** (added by the fix stage of 2026-11-03,
+   physics finding 4 of the run's verification): this phase read a
+   harness's "the shipped default" as the configuration its declaration
+   names, so Deeps kept its Hulthén verdict (`deuteron_channel()`; AV18
+   579.12/187 recorded), while I7 read the same clause as the run's shipped
+   default and re-pointed the T1 headlines (`phase_I7_backends.md` §6). No
+   verdict is wrong either way (Deeps fails on both waves); which reading the
+   rules mean is the author's.
 
 ## 10. Texts for the supervisor
 

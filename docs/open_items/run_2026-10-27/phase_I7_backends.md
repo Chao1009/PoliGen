@@ -41,22 +41,31 @@ PASS).
 
 ## 1. The decision, the development item, and what D7 does not move
 
-The decision, verbatim (`DECISIONS.md`):
+The decision, as `DECISIONS.md` records it since the fix stage of
+2026-11-03 (re-quoted then: until that day this section quoted the `fbc24f2`
+entry as "verbatim" although `DECISIONS.md` had been rewritten at `7fd441c`;
+the bold text now says "grid sets … (free nucleon, without its EPPS21
+ratio)" where it said "grid backends", honesty finding 9):
 
-> **D7 — the shipped structure-function defaults become the grid backends
-> the letter's production uses: `--unpol-sf ct18nlo` (CT18NLO through LHAPDF)
-> and `--pol-sf nnpdfpol` (NNPDFpol1.1); `ToyF2` and `ToyG1` stay as opt-in
-> options; the leading-order evaluation of the NLO sets (no coefficient
-> functions, massless charm and bottom) is filed as the development item.**
-> *(decision 4, on the supervisor's recommendation; the implementation
-> follows `plan_D7_backend_defaults.md`)*
+> **D7 — the shipped structure-function defaults become the grid sets the
+> letter's production uses (free nucleon, without its EPPS21 ratio):
+> `--unpol-sf ct18nlo` (CT18NLO through LHAPDF) and `--pol-sf nnpdfpol`
+> (NNPDFpol1.1); `ToyF2` and `ToyG1` stay as opt-in options; the
+> leading-order evaluation of the NLO sets (no coefficient functions,
+> massless charm and bottom) is filed as the development item.**
+> *(decision 4, on the supervisor's recommendation; implemented 2026-10-29
+> per `plan_D7_backend_defaults.md` and `phase_I7_backends.md`. …)*
 
 The author's words (`DECISIONS.md`): *"Your recommendation sounds the best
-approach, go with it."* Below-grid behaviour, as the author chose it: the
-sets are FROZEN at their grid edges — "LHAPDF extrapolator nearest, set
-programmatically on every PDF object the tier builds, so that no lhapdf.conf
-on any machine can change a default number; this is what the letter's
-`--pdf grid` chain does at Q0".
+approach, go with it."* — the author's only words on D7. Below-grid
+behaviour is the SUPERVISOR's choice, not the author's (corrected
+2026-11-03; this record said "as the author chose it"): the design
+(`plan_D7` §1.3) proposed LHAPDF's continuation, its adversarial check
+proposed the freeze, and the supervisor took it — the sets are FROZEN at
+their grid edges, "LHAPDF extrapolator nearest, set programmatically on every
+PDF object the tier builds, so that no lhapdf.conf on any machine can change
+a default number". The letter's `--pdf grid` chain freezes Q² only, at Q₀,
+on a nuclear set; LiPolGen clamps x and Q² on a free nucleon.
 
 **The development item, in the words the record proposes for it** (§13 of
 the plan, with the check's wrong statement 6 corrected): *both shipped grids
@@ -74,7 +83,17 @@ the ⁶Li-α tag (g₁/F₁ ≈ 2 inclusive, 4.4 on the struck neutron of
 rank-2 term contributes a comparable share (−0.41 / −0.60 / −0.71 of w_avg at
 configs 0 / 1 / 2 against the vector −0.59 / −0.42 / −0.31), and with the
 toy g₁ configs 0 and 1 are still refused, at a different cell where the
-rank-2 term dominates (§3.5).*
+rank-2 term dominates (§3.5).* **Added by the fix stage (2026-11-03,
+physics finding 1):** the refusals are the visible half; at LO the shipped
+pair breaks |A₁| ≤ 1 from x ≳ 0.83 on the free neutron and from x ≳ 0.87 on
+the deuteron and the proton (A₁ⁿ = g₁ⁿ/F₁ⁿ 1.22 at x = 0.85, 1.455 / 1.415 /
+1.399 at x = 0.871 for Q² = 10 / 100 / 1000, 1.91 at 0.90; A₁ᵖ 1.006 at
+0.871, Q² = 10; the shipped deuteron kernel's A₁ᵈ 0.96 at 0.85, 1.22 / 1.21 /
+1.15 at 0.90, 1.53 at 0.93 — the verifier's numbers, the neutron and proton
+ones re-taken by the fix stage). `--x-max 0.95` prevents the positivity
+REFUSAL but not the violation: the x = 0.871 cell still generates with
+|A₁| > 1 on `tagged-d-p` and the inclusive deuteron, not refused because
+1 + w_avg stays positive at P_e P_z = 0.49.
 
 **What D7 does not move** (ground rules of the task, each kept): EPPS21 —
 the unpolarised input stays the free nucleon Z F₂ᵖ + N F₂ⁿ, and
@@ -136,12 +155,21 @@ call, 3.7 s against 0.016 s for 5000 events, so the clamp is what runs and
 the setter is the documented equivalent. Measured consequences:
 
 * **No `lhapdf.conf` moves a default number.** Two fresh processes — this
-  store, and the same set files under an `lhapdf.conf` saying
-  `continuation`, `linear`, `ForcePositive: 1` (`LHAPDF_DATA_PATH=<dir>::`) —
+  store (its conf: `logcubic`, `continuation`, `ForcePositive: 0`), and the
+  same set files under an `lhapdf.conf` saying `continuation`, `linear`,
+  `ForcePositive: 1` (`LHAPDF_DATA_PATH=<dir>::`; the SAME extrapolator, so
+  this pair tests the interpolator and ForcePositive, and the extrapolator
+  rests on the absolute σ pin — named so 2026-11-03, honesty finding 5; the
+  fix stage added a variant saying `Extrapolator: error`,
+  `test_the_default_numbers_do_not_depend_on_the_conf_extrapolator`) —
   give the same σ and per-category σ to the bit on ⁶Li inclusive, coherent,
   `tagged-d-p` and ⁷Li inclusive (`test_the_default_numbers_do_not_depend_on_lhapdf_conf`,
-  new). The pre-D7 build under the same two files: ⁷Li σ 470360.0619 →
-  470574.0414 pb (+4.5 × 10⁻⁴).
+  new). The pre-D7 build under the same two files (interpolator and
+  ForcePositive differing, extrapolator not): ⁷Li σ 470360.0619 →
+  470574.0414 pb (+4.5 × 10⁻⁴). A different comparison — this store's conf
+  against one saying `Extrapolator: nearest`, i.e. continuation against
+  the freeze — moved the pre-freeze ⁶Li σ by +5.03 % (`plan_D7`, underrated
+  risk 1); `DECISIONS.md` quotes that one.
 * `meta` records it: `unpol_sf_extrapolation` / `pol_sf_extrapolation`
   (`"nearest"`; `"none (...)"` on the toy), `pol_sf_grid_q2_min` (1.0) and
   `pol_sf_below_grid_frac` (0.0 on the shipped window) beside the existing
@@ -280,6 +308,12 @@ every one builds at `--x-max 0.95`:
 | `tagged-d-p`, config 1 | 1119 | −0.02414 | −1.024 (4.406) | 0 | 6 | builds | builds |
 | `tagged-6Li-alpha`, config 0 | 480.9 | −0.02789 | −1.028 (1.98) | 0 | 5 | builds | builds |
 
+**Not only refusals** (fix stage, 2026-11-03, physics finding 1): the
+`--x-max 0.95` cure removes negative densities, not unphysical asymmetries —
+the shipped pair has |A₁| > 1 from x ≳ 0.83 (neutron) and x ≳ 0.87
+(deuteron, proton), so the x = 0.871 cell of the d inclusive and
+`tagged-d-p` rows builds at 0.95 with |A₁| > 1 (§1).
+
 **The inclusive-deuteron split, as measured** (the check's wrong statement 6):
 the default pair's refused cell is NOT the tensor-only one; both terms are
 negative and of comparable size there; with the toy g₁ configs 0 and 1 still
@@ -394,8 +428,8 @@ reproduces them to the last printed digit.
 | … the knob spreads at x = 0.01 (qe_suppression, qe_kf_gev, c0_shape, qe_tensor_scale, fq_scale, tail_tensor_scale) | 1.165e−7, 5.819e−8, 3.467e−8, 2.650e−7, 8.165e−7, 3.656e−8 | **1.491e−7, 7.450e−8, 3.894e−8, 2.998e−7, 9.240e−7, 4.137e−8** — the ordering and "`qe_kf_gev` the smaller QE knob" hold | OPEN_ITEMS 836–844 |
 | … `qe_tensor_scale` 1 as % of the band at x = 0.01 / 0.10 / 0.30 | 0.195 / 0.018 / 1454 % | 0.195 / 0.018 / 1454 % (both scale with A_zz) | USAGE 2249 |
 | … ΔA_zz(vmc-ft)/ΔA_zz(ho) − 1 | +29.4 / −0.0 / +0.0 % (t-peak +18.7 / −4.0 / +90.7) | **+43.9** / −0.0 / +0.0 % (t-peak +22.5 / −4.6 / +109.7) | USAGE 2267 |
-| … mean `rc_tail`, 5000-event CLI files (P_z 0.7) | t-peak 1.020341, polrad-full 1.028010 (max 3.2380 / 4.0053) | **1.027211 / 1.037150** (max 3.8526 / 4.8560), 0 clipped | — |
-| … whole-run mean `rc_tail`, 200 k, seed 1234, t-peak / t-peak+ll / polrad-full, P_z 0.7 | 1.021778527 / 1.040274188 / 1.029702912 | **1.025494331 / 1.047116364 / 1.034783841** | PHYSICS_CHANNELS 828–831, OPEN_ITEMS 832, USAGE 2449 |
+| … mean `rc_tail`, 5000-event CLI files (P_z 0.7) | t-peak 1.020341, polrad-full 1.028010 (max 3.2380 / 4.0053) | **1.027211 / 1.037150** (max 3.8526 / 4.8560), 0 clipped — recipe (seed) not kept; re-taken 2026-11-03 with the CLI default seed (`lipolgen-run --events 5000 --rc tensor-band --rc-tail-model t-peak` / `polrad-full`): **1.027943 / 1.037955** (max 3.7617 / 4.6656) | — |
+| … whole-run mean `rc_tail`, 200 k, seed 1234, t-peak / t-peak+ll / polrad-full, P_z 0.7 | 1.021778527 / 1.040274188 / 1.029702912 | **1.025494331 / 1.047116364 / 1.034783841** | PHYSICS_CHANNELS 828–831, OPEN_ITEMS 832, USAGE 2449; USAGE 2377–2379, `rc.hpp`'s `tail_model` note and the `--rc-tail-model` help labelled only by the fix stage, 2026-11-03 (code finding 3: this row named them as labelled) |
 | … at P_z 0 | 1.021836305 / 1.040368933 / 1.029775347 | **1.025506240 / 1.047148070 / 1.034803052** | same |
 | … node clip at `tail_max` on configs 0 / 1 / 2 | 0.3986 / 0.3858 / 0.3600 % | unchanged (model-level) | — |
 
@@ -430,8 +464,18 @@ returns". Design A keeps the one-argument kernel the class-level toy, so the
 two halves now name different backends. The task's amendment 8 instructs the
 "shipped default" reading, and the headlines follow it; the toy rows stay
 recorded beside them with their old numbers, so either reading can be read
-off the report. The F₂ᵈ/F₂ᵖ flip is robust to the cut (the check: 245.19/211,
-p = 0.053 on the plain Q² ≥ 1 cut). The author may want the other reading (§13).
+off the report. The F₂ᵈ/F₂ᵖ flip is robust to the cut: on the frozen shipped backend the plain
+Q² ≥ 1 cut gives 244.41/211, p = 0.057 (the verifier, 2026-11-03; the 245.19/211,
+p = 0.053 this record quoted was the check's number on the CONTINUED, pre-freeze
+backend). The declared verdict drops every point below 1.677 GeV², and
+does not cover the frozen region, where 39 % of the default rate now sits.
+The author may want the other reading (§13). **The same clause read two
+opposite ways** (fix stage, 2026-11-03, physics finding 4): I6 kept Deeps'
+verdict on the Hulthén its declaration names (`deuteron_channel()`), reading
+"the shipped default" as the declared configuration; I7 re-pointed the T1
+headlines to the shipped default after the `ct18nlo` sub-rows were already in
+the report. No verdict is wrong as a result (Deeps fails on AV18 too,
+579.12/187); which reading the rules mean is the author's.
 
 PLOT_SLOTS and labels follow: the shipped backend takes the "default"
 palette slot and the "(shipped since D7)" label in `t1_nmc_f2d`,
@@ -839,7 +883,8 @@ JSON or hashed block is wrong. The fix stage F7 started on 2026-10-30 at about 0
 05:40 UTC, while it was running its final gates. It had applied most findings in place, but its scratch directory did not survive
 and it wrote no record. The edits it left carry `F7` marks in 20 files, and other F7 edits are recognisable by date (files
 modified 2026-10-30 05:00–05:19 UTC). F7 resumed on 2026-11-03. That work established the state of each finding against the tree,
-re-checked each one, did what was left, and ran every gate on the final tree. No finding was refuted. Nothing is committed.
+re-checked each one, did what was left, and ran every gate on the final tree. No finding was refuted. Committed as `7fd441c`
+(this sentence said "Nothing is committed" until the fix stage of 2026-11-03).
 
 | # | lens | finding | state found in the tree (2026-11-03) | re-check | what was done |
 |---|---|---|---|---|---|
@@ -874,3 +919,13 @@ re-checked each one, did what was left, and ran every gate on the final tree. No
 2. The brief's "exit 0" for a harness with a missing set. F7 follows the README's convention 6 instead (the harness exits 2; make_report exits 0 with `blocked (environment)`).
 3. USAGE §8's D7 throughput, re-measured 2026-10-30, has no surviving raw log; it can be re-taken on an idle machine.
 4. §13's open points 1 and 3–8 are unchanged.
+
+**After the run's verification (2026-11-03).** The four-lens verification of
+the whole run and its fix stage are recorded in `phase_V_verification.md`.
+Two of its items concern this phase directly: (a) a non-null `unpol_sf_obj` /
+`pol_sf_obj` under a grid selector is now refused unless it is the tier's
+shipped object (code finding 1); (b) the regression lens built
+`-DLIPOLGEN_WITH_LHAPDF=OFF` after D7 (Python off, in its scratch): 0
+warnings, the examples not built (as `docs/PACKAGING.md` says),
+`lipolgen_tests` 411 / 411 with 17 242 996 assertions — no record had
+measured it.

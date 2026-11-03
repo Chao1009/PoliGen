@@ -1021,3 +1021,32 @@ def test_cli_exposes_the_rc_switches():
     assert opts["rc_qe_suppression"] == 0.0
     assert opts["rc_qe_tensor_scale"] == 1.0
     assert opts["rc_sp_tensor_scale"] == 0.5
+
+
+# ------------------------------------------ verification of D5 (2026-11-03)
+
+#: Every text that RETYPES "polrad-full is the default since D5" -- the D5
+#: default has no static_assert (RcOptions holds a shared_ptr, so it is not a
+#: constant expression), so this test is the tie: if `RcOptions::tail_model`
+#: moves, it fails and names every site to re-read.  Code finding 7.
+D5_DEFAULT_TEXTS = {
+    "include/lipolgen/rc.hpp": ("(2026-09-06; the DEFAULT since D5)",
+                                "PolradFull = 1,   ///< DEFAULT since D5"),
+    "src/core/pipeline.cpp": ("// DEFAULT since D5:", "(the default since D5, "),
+    "python/lipolgen/cli.py": ('\\"polrad-full\\" (the DEFAULT since D5',
+                               '\\"polrad-full\\" (2026-09-06; the default since D5)',
+                               "the DEFAULT since D5.  Its PROTON"),
+}
+
+
+def test_the_texts_that_call_polrad_full_the_default_are_tied_to_it():
+    import pathlib
+    root = pathlib.Path(__file__).resolve().parents[2]
+    assert _l.RcOptions().tail_model == _l.RcTailModel.PolradFull, (
+        "the D5 default moved: re-read every text in D5_DEFAULT_TEXTS "
+        "(and the CLI help) before re-pinning this")
+    assert _l.rc_tail_model_name(_l.RcOptions().tail_model) == "polrad-full"
+    for rel, phrases in D5_DEFAULT_TEXTS.items():
+        text = (root / rel).read_text(encoding="utf-8")
+        for ph in phrases:
+            assert ph in text, "%s no longer carries %r" % (rel, ph)

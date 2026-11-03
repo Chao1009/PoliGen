@@ -2666,18 +2666,18 @@ divided by P_zz; A_∥ is `(σ₊−σ₋)/(σ₊+σ₋)/(P_e P_z)` on
 | channel | backend | σ [pb] | A_zz | A_∥ |
 |---|---|---|---|---|
 | inclusive | `toy` | 591846.2 | −5.193231e−4 | −1.171716e−3 |
-| inclusive | `ct18nlo` | 472571.9 (×0.79847) | −6.503970e−4 (×1.25239) | −9.668880e−4 (×0.82519) |
+| inclusive | `ct18nlo` (continued, pre-D7; frozen since D7, 2026-11-03 re-measure: σ 496334.2 ×0.83862, A_zz −6.192590e−4 ×1.19243, A_∥ −9.848331e−4 ×0.84050) | 472571.9 (×0.79847) | −6.503970e−4 (×1.25239) | −9.668880e−4 (×0.82519) |
 | inclusive | `mstw` | 469556.5 (×0.79338) | −6.545739e−4 (×1.26044) | −1.057030e−3 (×0.90212) |
 | inclusive | `nnpdfpol` | 591846.2 (×1, exactly) | −5.193231e−4 (×1, exactly) | −1.270806e−4 (×0.10846) |
 | tagged-6Li-α | `toy` | 591846.2 | **0 exactly** | −3.514730e−3 |
-| tagged-6Li-α | `ct18nlo` | 472571.9 (×0.79847) | **0 exactly** | −2.900243e−3 (×0.82517) |
+| tagged-6Li-α | `ct18nlo` (continued, pre-D7, Hulthén wave; frozen since D7, VMC wave: σ ×0.83862, A_∥ ×0.84049) | 472571.9 (×0.79847) | **0 exactly** | −2.900243e−3 (×0.82517) |
 | tagged-6Li-α | `mstw` | 469556.5 (×0.79338) | **−1.3774e−16** (qual. 1) | −3.170626e−3 (×0.90210) |
 | tagged-6Li-α | `nnpdfpol` | 591846.2 (×1, exactly) | **0 exactly** | −3.811967e−4 (×0.10846) |
 
 **The A_zz column is at the shipped window, `Scenario::x_max` = 1.0** — it was
 printed at `--x-max 0.95` until 2026-09-05, in the same rows whose σ and A_∥
 were at 1.0, so one row carried two windows. At 0.95 the same three numbers are
-−5.193192e−4 / −6.503956e−4 / −6.545724e−4; the ratios ×1.25239 / ×1.26044 are
+−5.193192e−4 / −6.503956e−4 (ct18nlo continued, pre-D7) / −6.545724e−4; the ratios ×1.25239 / ×1.26044 are
 the same to six digits in either window, which is why the error was invisible.
 
 Three qualifications travel with that table and are not optional.
@@ -2721,10 +2721,10 @@ channel. This is the single strongest argument for the polarised selector,
 and it is a first measurement of this run.
 
 **The grid clause.** CT18NLO's grid starts at Q² = 1.677 and the shipped
-window's accepted cells start at 1.054; below its grid LHAPDF continues the
-evolution downward rather than freezing, and F₂ᵖ at x = 3e−4 is a factor 2.34
-below the toy at Q² = 0.7. **36.18 %** of a CT18NLO run's own accepted cell
-cross section (42.33 % of the toy run's) is there. It is not refused —
+window's accepted cells start at 1.054; below its grid LHAPDF continued (until D7) the
+evolution downward rather than freezing, and F₂ᵖ at x = 3e−4 was a factor 2.34
+below the toy at Q² = 0.7 (frozen since D7: the toy is ×1.2516 the frozen edge). **36.18 %** of a CT18NLO run's own accepted cell
+cross section (42.33 % of the toy run's) was there (continued, pre-D7; frozen since D7: **39.23 %**). It is not refused —
 refusing would make the flag unusable on the shipped scenario — but the
 banner prints it and `meta` carries it, computed from the grid's own
 `q2Min()` and written NaN (never 0) for a backend that reports no floor.

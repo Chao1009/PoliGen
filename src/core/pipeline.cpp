@@ -989,9 +989,9 @@ void PipelineConfig::validate() const {
   //     then attaches the object when it is built (`fill_grid_sf_backends`,
   //     the D7 block of pipeline.hpp).  The core links no LHAPDF, and the toy
   //     in its place would be 20 % away on the 6Li rate and wrong-signed on g1n.
-  // (2) `Toy` WITH AN OBJECT is the same contradiction the other way: the
-  //     Python setters name an attached object `Custom`, so reaching this
-  //     state means the provenance and the realisation drifted apart.
+  // (2) `Toy` WITH AN OBJECT -- or a GRID selector holding any object but
+  //     the tier's shipped one (2026-11-03) -- is the same contradiction: the
+  //     Python setters name an attached object `Custom`; reaching it is drift.
   // (3) BESIDE A CALLER-SUPPLIED KERNEL the selectors are NOT READ (the
   //     kernel wins on the inclusive branch; the tagged one refuses it, (6)),
   //     so they are accepted at their shipped defaults -- `meta` then says
@@ -1079,12 +1079,12 @@ void PipelineConfig::validate() const {
              : " -- Custom means the object YOU attach; put it in pol_sf_obj "
                "or leave pol_sf at Toy"));
   }
+  refuse_foreign_grid_sf_objects(*this);  // (2), grid half: pipeline.hpp, 2026-11-03
   // (5) ... and the same rule for the tagged branch's own slots: an object
   //     put straight into `struck.f2_source` / `struck.g1_model` (`Pipeline`
   //     fills them only when empty) runs while `meta` names the SELECTOR's
   //     backend.  Until D7 refused under `Toy` only; MEASURED 2026-10-27, a
-  //     tagged-6Li-alpha run with ToyF2 there and unpol_sf = ct18nlo ran at
-  //     591846.1688784088 pb, the toy's, labelled ct18nlo.
+  //     tagged-6Li-alpha run, ToyF2 there, ct18nlo named: 591846.1688784088 pb.
   if (struck.f2_source && unpol_sf != UnpolSfSource::Custom) {
     throw std::runtime_error(
         std::string("PipelineConfig: struck.f2_source is set but unpol_sf = ") +
@@ -1408,7 +1408,7 @@ std::string pol_sf_reach_report(const PipelineConfig& cfg,
            "kernel still carries the selected g1_model, so "
            "dis_sampler().kernel().tables(x, q2).g1 does move -- the RUN "
            "never asks for it.  --unpol-sf, by contrast, DOES reach this "
-           "channel (x0.705841 on the shipped 6Li ct18nlo run), through the "
+           "channel (x0.755407 on the shipped, frozen 6Li ct18nlo run), through the "
            "very cell cross sections above";
   }
   if (cfg.kernel) return "caller-supplied kernel";
@@ -3865,6 +3865,65 @@ void fill_grid_sf_backends(PipelineConfig& cfg) {
   // reads would cost the load and record nothing.
   if (cfg.kernel || !grid_sf_slot_empty(cfg)) return;
   if (const GridSfFiller f = grid_sf_filler()) f(cfg);
+}
+
+namespace {
+std::mutex& shipped_grid_sf_mutex() {
+  static std::mutex m;
+  return m;
+}
+const UnpolSF*& shipped_grid_unpol_slot() {
+  static const UnpolSF* p = nullptr;
+  return p;
+}
+const PolSF*& shipped_grid_pol_slot() {
+  static const PolSF* p = nullptr;
+  return p;
+}
+}  // namespace
+
+void register_shipped_grid_sf(const UnpolSF* obj) {
+  std::lock_guard<std::mutex> lock(shipped_grid_sf_mutex());
+  shipped_grid_unpol_slot() = obj;
+}
+void register_shipped_grid_sf(const PolSF* obj) {
+  std::lock_guard<std::mutex> lock(shipped_grid_sf_mutex());
+  shipped_grid_pol_slot() = obj;
+}
+bool is_shipped_grid_sf(const UnpolSF* obj) {
+  std::lock_guard<std::mutex> lock(shipped_grid_sf_mutex());
+  return obj != nullptr && obj == shipped_grid_unpol_slot();
+}
+bool is_shipped_grid_sf(const PolSF* obj) {
+  std::lock_guard<std::mutex> lock(shipped_grid_sf_mutex());
+  return obj != nullptr && obj == shipped_grid_pol_slot();
+}
+
+void refuse_foreign_grid_sf_objects(const PipelineConfig& cfg) {
+  // Verification of D7, 2026-11-03 (code finding 1): measured before this
+  // clause, make_config() with unpol_sf_obj = ToyF2() and unpol_sf = Ct18Nlo
+  // ran at 591846.1688784091 pb (the toy's) with the knob row "ct18nlo | read".
+  if (cfg.unpol_sf == UnpolSfSource::Ct18Nlo && cfg.unpol_sf_obj &&
+      !is_shipped_grid_sf(cfg.unpol_sf_obj.get())) {
+    throw std::runtime_error(
+        "PipelineConfig: unpol_sf = ct18nlo with an object in unpol_sf_obj "
+        "that is not the LHAPDF tier's shipped CT18NLO (make_lhapdf_unpol_sf"
+        "(UnpolSfSource::Ct18Nlo)) -- the run would compute with YOUR object "
+        "while meta[\"unpol_sf\"] and the knob row said ct18nlo.  Name it "
+        "Custom (Python: config.unpol_sf_obj = obj, which sets Custom), or "
+        "clear the slot and let the Pipeline attach the shipped grid");
+  }
+  if (cfg.pol_sf == PolSfSource::NnpdfPol && cfg.pol_sf_obj &&
+      !is_shipped_grid_sf(cfg.pol_sf_obj.get())) {
+    throw std::runtime_error(
+        "PipelineConfig: pol_sf = nnpdfpol with an object in pol_sf_obj "
+        "that is not the LHAPDF tier's shipped NNPDFpol11_100 "
+        "(make_lhapdf_pol_sf(PolSfSource::NnpdfPol)) -- the run would compute "
+        "with YOUR object while meta[\"pol_sf\"] and the knob row said "
+        "nnpdfpol.  Name it Custom (Python: config.pol_sf_obj = obj, which "
+        "sets Custom), or clear the slot and let the Pipeline attach the "
+        "shipped grid");
+  }
 }
 
 PipelineConfig toy_config() {

@@ -372,10 +372,10 @@ def build_backend(name):
         try:
             sf = lg.LhapdfSF(CT18)
         except RuntimeError as exc:
-            if "Info file not found for PDF set" not in str(exc):
+            if "Info file not found for PDF set" not in str(exc) and "lhapdf.conf was not found" not in str(exc):  # 2026-11-03
                 raise
             return (None, None, "LhapdfSF(%s)" % CT18, None,
-                    "environment: LHAPDF set %s not installed" % CT18)
+                    ("environment: LHAPDF set %s not installed" if "Info file not found" in str(exc) else "environment: LHAPDF set %s present, lhapdf.conf was not found") % CT18)
         return sf, float(sf.q2_min), "LhapdfSF(%s) (shipped since D7, LO)" % CT18, _kernel_on(sf), None
     raise ValueError("unknown configuration %r" % name)
 
@@ -449,10 +449,10 @@ def run(path=None, verbose=True):
         for n in CONFIGS if n != HEADLINE)
     report = dict(
         name=NAME,
-        generator="%s = %s: chi2/ndf = %.1f/%d, p = %s on Q2 >= 1, "
-                  "W2 >= 4 [diagonal]; sub-rows: %s"
+        generator="%s = %s: chi2/ndf = %.1f/%d, p = %s on Q2 >= %.4g, "
+                  "W2 >= 4 [diagonal]; sub-rows: %s"  # the cut from q2_floor, 2026-11-03
                   % (HEADLINE, h["label"], h["dis"]["chi2"], h["dis"]["n"],
-                     _fmt_p(h["dis"]["p"]), others),
+                     _fmt_p(h["dis"]["p"]), h["q2_floor"], others),
         reference="%s, %d of %d points in the DIS cut"
                   % (REFERENCE, h["dis"]["n"], len(pts)),
         tolerance="p(chi2, ndf) >= %.2f on the DIS cut, stat (+) sys diagonal"

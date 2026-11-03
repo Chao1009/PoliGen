@@ -165,7 +165,7 @@ def _import_lipolgen():
     return lipolgen
 
 
-lg = _import_lipolgen(); U_DEF, P_DEF = lg.unpol_sf_name(lg.UNPOL_SF_DEFAULT), lg.pol_sf_name(lg.POL_SF_DEFAULT)  # D7
+lg = _import_lipolgen(); U_DEF, P_DEF = lg.unpol_sf_name(lg.UNPOL_SF_DEFAULT), lg.pol_sf_name(lg.POL_SF_DEFAULT); assert "toy" not in (U_DEF, P_DEF), "the probes below type the 'toy' ALTERNATIVE literally (D7); a default moved back to toy would price it against itself -- re-read them (2026-11-03)"  # D7
 
 
 # ------------------------------------------------------------------ helpers

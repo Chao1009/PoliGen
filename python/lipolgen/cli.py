@@ -405,16 +405,16 @@ def build_parser():
                         "that ceiling mislabelled; that cell is x3449.9 "
                         "unclipped).  Mean rc_tail on 6Li config 1, each "
                         "with its estimator AND its P_z: EVENT-weighted over "
-                        "200 000 events at seed 1234 AT THE DEFAULT FILL "
+                        "200 000 events at seed 1234 (toy SFs) AT THE DEFAULT FILL "
                         "P_z = 0.7, 1.021778527 (t-peak) -> "
                         "1.040274188 (t-peak+ll) -> 1.029702912 "
-                        "(polrad-full), and at --pz 0 (the plan both test "
+                        "(polrad-full) [D7's grids: 1.025494331 -> 1.047116364 -> 1.034783841], and at --pz 0 (the plan both test "
                         "suites use) 1.021836305 -> 1.040368933 -> "
-                        "1.029775347 on the same build -- the fill plan "
+                        "1.029775347 on the same build [D7: 1.025506240 -> 1.047148070 -> 1.034803052] -- the fill plan "
                         "moves which events the sampler draws, so an "
                         "event-weighted mean is a statement about a "
                         "POLARISATION as well as a seed; "
-                        "CELL-cross-section-weighted over the "
+                        "CELL-cross-section-weighted (toy SFs) over the "
                         "3051 accepted cells, 1.02217080 -> 1.04097066 -> "
                         "1.03021634 unclipped, the last becoming 1.03020526 "
                         "at tail_max = 10, and that estimator is P_z-free "
@@ -595,7 +595,7 @@ def build_parser():
                         "the wiring's own test, not a physics variation, and "
                         "the provenance table labels it not-read.  'r1998' "
                         "installs the A = 2 gate's SLAC world fit in both.  "
-                        "MEASURED at y = 0.5, Q2 = 2.5 against unset: "
+                        "MEASURED at y = 0.5, Q2 = 2.5 against unset (toy SFs): "
                         "K/D_phi (and so A_zz) -3.84 %% / +26.40 %% / "
                         "+3.35 %% and the cos 2phi amplitude -8.33 %% / "
                         "-6.73 %% / -3.14 %% at x = 0.05 / 0.10 / 0.30; the "
@@ -606,10 +606,10 @@ def build_parser():
                         "numerator-only swap of registry option (ii) is "
                         "y-independent to 2 ulp.  Unlike "
                         "--b1-unpol it moves the UNPOLARISED rate too "
-                        "(sigma_pb -0.6847 %% on a 2000-event 6Li run at "
+                        "(sigma_pb -0.6847 %% on the toy SFs, -0.59899 %% on the shipped ct18nlo with --b1-unpol ct18nlo, a 2000-event 6Li run at "
                         "--x-max 0.95), "
                         "because the kernel's r_func reaches F1, F_L, D(y) "
-                        "and ToyG1.  REFUSED with miller and cdks, which "
+                        "and, under --pol-sf toy, ToyG1.  REFUSED with miller and cdks, which "
                         "have no numerator R to share")
     p.add_argument("--unpol-sf", choices=sorted(UNPOL_SF), default=None,
                    help="UNPOLARISED structure-function backend of EVERY "
@@ -1602,7 +1602,7 @@ def main(argv=None):
             # WHICH R the two halves of the tensor weight were built from.
             # Printed on every li6-convolution run, "unset" included, for the
             # `--b1-unpol` reason: at r1998 the weight moves by up to +26 %
-            # at x = 0.10 and the unpolarised rate by -0.6847 %, and nothing
+            # at x = 0.10 and the unpolarised rate by -0.6847 % (toy SFs; -0.59899 % shipped), and nothing
             # else in the banner says so.
             say("     R = sigma_L/sigma_T %s (--r-source; %s)"
                 % (_l.r_source_name(cfg.r_source),

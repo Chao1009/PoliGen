@@ -628,7 +628,7 @@ const char* r_source_name(RSource s);
 /// i.e. Q2 = 1.677, and the shipped 6Li window's accepted cells start at
 /// Q2 = 1.054.  Below its grid the tier FREEZES it since D7 (LHAPDF `nearest`
 /// set on the object, plus a clamp at the knot edges: the letter's `--pdf
-/// grid` chain at Q0); before D7 LHAPDF continued the evolution downward.
+/// grid` chain freezes Q2 only, at Q0); before D7 LHAPDF continued downward.
 /// MEASURED, the shipped window: 42.33 % of the toy run's accepted cell
 /// cross section, and 39.23 % of the shipped run's OWN (36.18 % continued),
 /// sits below the floor.  This is NOT refused -- refusing would make the
@@ -1738,6 +1738,21 @@ PipelineConfig toy_config();
 // reverted default fails to compile until they are read again.
 static_assert(UNPOL_SF_DEFAULT == UnpolSfSource::Ct18Nlo, "texts say ct18nlo");
 static_assert(POL_SF_DEFAULT == PolSfSource::NnpdfPol, "texts say nnpdfpol");
+
+// Verification of D7 (2026-11-03, code finding 1): an object in a GRID slot
+// (`unpol_sf_obj` under `Ct18Nlo`, `pol_sf_obj` under `NnpdfPol`) must be the
+// tier's SHIPPED object -- before this, `PipelineConfig cfg; cfg.unpol_sf_obj
+// = std::make_shared<const ToyF2>();` ran the toy (591846.17 pb) while meta
+// and the knob row said "ct18nlo".  The tier registers the one cached object
+// it builds (`make_lhapdf_unpol_sf` / `make_lhapdf_pol_sf`); `validate()`
+// refuses any other object there and names `Custom` as the honest selector.
+void register_shipped_grid_sf(const UnpolSF* obj);
+void register_shipped_grid_sf(const PolSF* obj);
+/// True when `obj` is the object the LHAPDF tier built for the shipped grid.
+bool is_shipped_grid_sf(const UnpolSF* obj);
+bool is_shipped_grid_sf(const PolSF* obj);
+/// Throws (naming Custom) when a grid selector holds a foreign object.
+void refuse_foreign_grid_sf_objects(const PipelineConfig& cfg);
 
 }  // namespace lipolgen
 

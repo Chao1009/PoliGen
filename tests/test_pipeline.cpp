@@ -1479,15 +1479,15 @@ TEST_CASE("D2: validate() refuses every way the selectors could mislabel a "
     PipelineConfig c = cfg;
     c.unpol_sf = s;
     CHECK_THROWS_AS(c.validate(), std::runtime_error);
-    c.unpol_sf_obj = std::make_shared<const ScaledF2>(1.0);
-    CHECK_NOTHROW(c.validate());
+    c.unpol_sf_obj = std::make_shared<const ScaledF2>(1.0);  // 2026-11-03 (D7 verification): a foreign object under ct18nlo is REFUSED
+    if (s == UnpolSfSource::Ct18Nlo) { CHECK_THROWS_AS(c.validate(), std::runtime_error); } else { CHECK_NOTHROW(c.validate()); }
   }
   {
     PipelineConfig c = cfg;
     c.pol_sf = PolSfSource::NnpdfPol;
     CHECK_THROWS_AS(c.validate(), std::runtime_error);
     c.pol_sf_obj = std::make_shared<const ScaledG1>(1.0);
-    CHECK_NOTHROW(c.validate());
+    CHECK_THROWS_AS(c.validate(), std::runtime_error);  // 2026-11-03 (D7 verification): not the shipped NNPDFpol
   }
   // toy WITH an object is the same contradiction the other way
   {

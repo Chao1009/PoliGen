@@ -37,7 +37,10 @@ std::shared_ptr<const UnpolSF> make_lhapdf_unpol_sf(UnpolSfSource source) {
   }
   std::lock_guard<std::mutex> lock(shipped_mutex());
   static std::shared_ptr<const UnpolSF> ct18;
-  if (!ct18) ct18 = std::make_shared<const LhapdfSF>(set, 0);
+  if (!ct18) {
+    ct18 = std::make_shared<const LhapdfSF>(set, 0);
+    register_shipped_grid_sf(ct18.get());  // validate() accepts THIS object only
+  }
   return ct18;
 }
 
@@ -50,7 +53,10 @@ std::shared_ptr<const PolSF> make_lhapdf_pol_sf(PolSfSource source) {
   }
   std::lock_guard<std::mutex> lock(shipped_mutex());
   static std::shared_ptr<const PolSF> nnpdfpol;
-  if (!nnpdfpol) nnpdfpol = std::make_shared<const LhapdfG1>(set, 0);
+  if (!nnpdfpol) {
+    nnpdfpol = std::make_shared<const LhapdfG1>(set, 0);
+    register_shipped_grid_sf(nnpdfpol.get());  // validate() accepts THIS object only
+  }
   return nnpdfpol;
 }
 

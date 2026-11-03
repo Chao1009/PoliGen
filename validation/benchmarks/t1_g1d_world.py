@@ -450,9 +450,9 @@ def _lhapdf(setname, make):
     try:
         return make(), None
     except RuntimeError as exc:
-        if "Info file not found for PDF set" not in str(exc):
+        if "Info file not found for PDF set" not in str(exc) and "lhapdf.conf was not found" not in str(exc):  # 2026-11-03
             raise
-        return None, "environment: LHAPDF set %s not installed" % setname
+        return None, ("environment: LHAPDF set %s not installed" if "Info file not found" in str(exc) else "environment: LHAPDF set %s present, lhapdf.conf was not found") % setname
 
 
 def _kernel(unpol=None, pol=None):

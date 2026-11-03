@@ -226,14 +226,14 @@ B1_UNPOL = {
 #: and 0.9): it is the wiring's own test, not a physics variation, and
 #: `knob_provenance` labels it `not-read` for exactly that reason.  "r1998" installs the A = 2 gate's R in both.
 #:
-#: MEASURED at y = 0.5, Q2 = 2.5 (docs/open_items/run_2026-09-06/
+#: MEASURED on the toy SFs at y = 0.5, Q2 = 2.5 (docs/open_items/run_2026-09-06/
 #: phase_A_numbers.md sec. A1), against "unset": the tensor weight K/D_phi --
 #: and A_zz, which is -(2/3) of it -- moves -3.84 % / +26.40 % / +3.35 % at
 #: x = 0.05 / 0.10 / 0.30, and the cos 2phi amplitude, whose numerator
 #: carries no R at all, moves -8.33 % / -6.73 % / -3.14 % there.  Unlike
-#: `--b1-unpol` this one moves the UNPOLARISED rate too (sigma_pb -0.6847 %
+#: `--b1-unpol` this one moves the UNPOLARISED rate too (sigma_pb -0.6847 % on the toy SFs, -0.59899 % on the shipped ct18nlo with b1_unpol ct18nlo,
 #: on a 2000-event 6Li run at x_max 0.95), because the kernel's `r_func`
-#: reaches F1, F_L, D(y) and `ToyG1`.
+#: reaches F1, F_L, D(y) and, under pol_sf="toy", `ToyG1`.
 #:
 #: Read only by "li6-convolution"; `validate()` refuses it on the other two
 #: models rather than let `meta["r_source"]` record an R that never touched

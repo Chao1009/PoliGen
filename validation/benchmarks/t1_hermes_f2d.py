@@ -372,10 +372,10 @@ def build_backend(name):
         try:
             sf = lg.LhapdfSF(CT18)
         except RuntimeError as exc:
-            if "Info file not found for PDF set" not in str(exc):
+            if "Info file not found for PDF set" not in str(exc) and "lhapdf.conf was not found" not in str(exc):  # 2026-11-03
                 raise
             return (None, None, "LhapdfSF(%s)" % CT18, None,
-                    "environment: LHAPDF set %s not installed" % CT18)
+                    ("environment: LHAPDF set %s not installed" if "Info file not found" in str(exc) else "environment: LHAPDF set %s present, lhapdf.conf was not found") % CT18)
         return sf, float(sf.q2_min), "LhapdfSF(%s) (shipped since D7, LO)" % CT18, _kernel_on(sf), None
     raise ValueError("unknown configuration %r" % name)
 
@@ -512,10 +512,10 @@ def run(path=None, verbose=True, b1_path=None, r1990_path=None):
              % (PER_NUCLEON + PER_DEUTERON)))
     report = dict(
         name=NAME,
-        generator=(HEADLINE + " (shipped since D7, LO) on F2d: chi2/ndf = %.1f/%d, p = %s on Q2 >= 1, "
+        generator=(HEADLINE + " (shipped since D7, LO) on F2d: chi2/ndf = %.1f/%d, p = %s on Q2 >= %.4g, "
                    "W2 >= 4 [per-bin diagonal + correlated 7.5 %% normalisation]; "
                    "sub-rows: %s; HERMES b1 inversion: F2d_implied/F2d_HERMES = %s "
-                   "-> %s" % (hd["chi2"], hd["n"], _fmt_p(hd["p"]), others,
+                   "-> %s" % (hd["chi2"], hd["n"], _fmt_p(hd["p"]), h["q2_floor"], others,
                               " / ".join("%.3f" % b["ratio"] for b in inv["bins"]),
                               inv["reading"].upper())),
         reference="%s, %d of %d deuteron points in the DIS cut"

@@ -1308,18 +1308,18 @@ enum class RcTailModel : int {
                     ///< carried the cell-weighted, ceiling-clipped numbers
                     ///< under the label "event-weighted":
                     ///<   EVENT-weighted, 200 000 events at seed 1234, AT
-                    ///<   THE CLI's DEFAULT FILL P_z = 0.7
+                    ///<   THE CLI's DEFAULT FILL P_z = 0.7, ON THE TOY SFs (pre-D7)
                     ///<   (`tensor_thirds_plan(0.7, 0.6)`) --
                     ///<   1.021778527 (TPeak) -> 1.040274188 (TPeakPlusLL)
-                    ///<   -> 1.029702912 (PolradFull), 0 clipped.  SAY WHICH
+                    ///<   -> 1.029702912 (PolradFull), 0 clipped (D7's grids: 1.025494331 -> 1.047116364 -> 1.034783841).  SAY WHICH
                     ///<   P_z: at P_z = 0 (`tensor_thirds_plan(0.0, 0.6)`,
                     ///<   the plan both test suites use) the SAME build
-                    ///<   gives 1.021836305 -> 1.040368933 -> 1.029775347
+                    ///<   gives 1.021836305 -> 1.040368933 -> 1.029775347 (D7: 1.025506240 -> 1.047148070 -> 1.034803052)
                     ///<   (re-measured 2026-09-15).  The fill plan moves
                     ///<   which events the sampler draws, so an
                     ///<   event-weighted mean is a statement about a
                     ///<   POLARISATION as well as a seed;
-                    ///<   CELL-cross-section-weighted over the 3051 accepted
+                    ///<   CELL-cross-section-weighted (toy SFs) over the 3051 accepted
                     ///<   cells -- 1.02217080 -> 1.04097066 -> 1.03021634
                     ///<   unclipped, the last becoming 1.03020526 at the
                     ///<   shipped `tail_max` = 10; this one is P_z-FREE

@@ -90,9 +90,9 @@ def _plan():
 #: D7 (2026-10-27): sigma of `_cfg(channel)` on `_plan()` -- the toy NAMED
 #: (= the pre-D7 default, measured on c52c164's build: the same doubles) and
 #: the shipped default (CT18NLO / NNPDFpol1.1, frozen), 2026-10-29
-SIGMA_TOY = {"inclusive": 591846.1688784091, "coherent": 12476.025113185518,
+SIGMA_TOY = {"inclusive": 591846.168878409, "coherent": 12476.025113185518,   # A1 (2026-11-03): incl. -1 ulp (b1)
              "tagged-6Li-alpha": 591846.1688784088}
-SIGMA_D7 = {"inclusive": 496334.1559540481, "coherent": 9424.476321023749,
+SIGMA_D7 = {"inclusive": 496334.15595404804, "coherent": 9424.476321023749,   # A1: incl. -1 ulp (b1)
             "tagged-6Li-alpha": 496334.15595404874}
 
 
@@ -536,7 +536,7 @@ def test_meta_records_both_backends_on_every_channel(channel):
     if channel == "inclusive":
         hf = lg.helicity_flip_plan(1.0, 0.7, 0.7)
         assert _l.pol_sf_is_read(cfg, hf)
-        read = _l.Pipeline(_cfg(channel), hf).generate(1, True)["meta"]
+        read = _l.Pipeline(_x95(_cfg(channel)), hf).generate(1, True)["meta"]   # A1: see _x95
         assert read["pol_sf"] == "nnpdfpol" and read["pol_sf_extrapolation"] == "nearest"
         assert read["pol_sf_grid_q2_min"] == pytest.approx(1.0, rel=1e-12)
         assert read["pol_sf_below_grid_frac"] == 0.0    # no shipped cell under Q2 = 1
@@ -1063,3 +1063,14 @@ def test_a_grid_selector_refuses_any_object_but_the_shipped_one(channel):
     _l.attach_shipped_sf_backends(s)
     s.validate()
     assert _l.Pipeline(s, _plan()).sigma_pb() == SIGMA_D7[channel]
+
+
+def _x95(cfg):
+    """A1 (2026-11-03): the default inclusive 6Li helicity-flip fill (P_z =
+    P_e = 0.7) is refused since A1 at the window's top cell (x = 0.955,
+    1 + w_avg = -0.0185; DECISIONS A4 keeps that refusal), so the run that
+    reads g1 here stops at x_max = 0.95 -- the cure the refusal names."""
+    sc = cfg.scenario
+    sc.x_max = 0.95
+    cfg.scenario = sc
+    return cfg

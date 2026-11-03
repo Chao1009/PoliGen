@@ -94,10 +94,10 @@ knobs recorded nowhere at all
   What does NOT: |A_zz|, the whole Δ (cos 2φ) sector, and `A_zz^tag(k)`
   (`azz_tensor_curve*`), which is a ratio of cluster-wave populations and
   carries no b₁ at all.
-- **⁶Li effective polarization.** The CLUSTER PICTURE since 2026-08-29
-  (plans/04 #6, closed).  `LI6_CLUSTER_POLARIZATION = (1 − 1.5 P_D_LI6)
-  (1 − 1.5 P_D_DEUTERON) = 0.81123` whole-nucleus, and `LI6().eff_pol_p =
-  eff_pol_n = LI6_CLUSTER_POLARIZATION/3`, so `Z·P_p = N·P_n = 0.81123`.  The
+- **⁶Li effective polarization — since A1 (2026-11-03; `open_items/run_2026-11-03/DECISIONS.md` A1, the supervisor's choice under the author's delegation) the single copies are:** `LI6_CLUSTER_POLARIZATION` = `LI6_POLARIZATION_VMC_SIX_BODY` = **0.848** whole-nucleus (`beams.hpp`; `LI6().eff_pol_p = eff_pol_n = 0.848/3`), band **0.811 … 0.887 around 0.848** (the two cluster readings; the ab initio value is the default); `LI6_B1_RANK2_TRANSFER` = `LI6_B1_RANK2_TRANSFER_VMC` = **0.982576** (`constants.hpp`; the VMC α–d tensor dilution — unquantified systematic: the 4.4 % non-cluster depletion that takes the vector sector from the cluster 0.887 to the six-body 0.848 has no rank-2 counterpart); `P_D_DEUTERON` = **0.0576** (AV18, `deuteron_av18_p_d`), `DEUTERON_VECTOR_POLARIZATION` = **0.9136**.  The pre-A1 values keep names — `LI6_CLUSTER_POLARIZATION_HULTHEN` = 0.811228, `LI6_B1_RANK2_TRANSFER_HULTHEN` = 0.921947, `P_D_DEUTERON_SCENARIO` = 0.045 (still the Hulthén tag's deuteron) — and are reached through the API only (`li6_ion`, `deuteron_ion`, `default_inclusive_kernel(…, b1_transfer)`), which is how the polligen port gates pass them.  The rest of this bullet is the PRE-A1 record (its "default" is the pre-A1 one).
+  The CLUSTER PICTURE since 2026-08-29 (plans/04 #6, closed): pre-A1 `LI6_CLUSTER_POLARIZATION = (1 − 1.5 P_D_LI6)
+  (1 − 1.5 P_D_DEUTERON) = 0.81123` whole-nucleus (now `_HULTHEN`), and `LI6().eff_pol_p =
+  eff_pol_n = LI6_CLUSTER_POLARIZATION/3`, so `Z·P_p = N·P_n = 0.81123` (pre-A1; 0.848 now).  The
   two D-state probabilities live in **`beams.hpp`** — one source of truth, as
   in `polli_fastsim.beams` — and `tagged.hpp` uses those names rather than
   keeping copies, so **on the Hulthén wave (the run default until D6, the option since)** the INCLUSIVE effective
@@ -123,7 +123,7 @@ knobs recorded nowhere at all
   FORMULA carries the error, not the choice of P_D.  Author decision
   2026-09-04: the default stays 0.811228, the drift is documented at 11.61 %
   rather than "fixed", and no inclusive ⁶Li polarization is quoted without the
-  band 0.81–0.91 (D6 keeps all three pending the author's answer, registry row 10; `docs/open_items/run_2026-09-03/phase_C_numbers.md` §C5.5,
+  band 0.81–0.91 (D6 kept all three pending the answer, registry row 10 — closed by A1, which moved all three; `docs/open_items/run_2026-09-03/phase_C_numbers.md` §C5.5,
   pinned in `tests/test_tagged.cpp` **T26**).  The drift is between a tagged
   row and an inclusive row of one programme, never inside one run — **and that
   sentence was false when it was first written (§C5.5b, 2026-09-04).**  A
@@ -141,9 +141,9 @@ knobs recorded nowhere at all
   **refused** on `Inclusive` and `CoherentLi6` (since D6 a moved value by `validate()`, an explicit one by `make_config` / the CLI), where it is
   never read — accepting it unread was how the 11.61 % above reached a user
   who thought they had asked for a VMC ⁶Li (**T27**, and the pipeline test).
-  The deuteron slot carries `DEUTERON_VECTOR_POLARIZATION =
-  1 − 1.5 P_D_DEUTERON = 0.9325` verbatim, so per-nucleon
-  g₁(⁶Li)/g₁(d) = (1 − 1.5 P_D_LI6)/3 = 0.290 exactly (the deuteron's own D
+  The deuteron slot carried (pre-A1) `DEUTERON_VECTOR_POLARIZATION =
+  1 − 1.5 P_D_DEUTERON = 0.9325` verbatim (0.9136 since A1), so per-nucleon
+  g₁(⁶Li)/g₁(d) = (1 − 1.5 P_D_LI6)/3 = 0.290 exactly pre-A1 (0.309399 since A1; the deuteron's own D
   state cancels between the two isoscalar ions).  The retired Cloet
   convention stays reachable as `LI6_NAIVE_ONE_THIRD` — a whole-nucleus 1.0,
   1.233× this one and above the **0.81–0.91** band of this tree's wave

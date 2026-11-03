@@ -37,7 +37,7 @@ data comparison of a shipped default physics input failed** (D7 moved the defaul
 NMC F₂ᵈ at χ²/ndf = 8307.9/155 (and no opt-in backend passes it either —
 MSTW 416.5/155, CT18NLO evaluated at leading order 3401.8/146, while the
 ratio F₂ᵈ/F₂ᵖ passes for both); ToyG1 against world g₁ᵈ at 107.8/15, 69.4/15,
-54.9/28 with a Bjorken integral that does not exist; the Hulthén deuteron's η
+54.9/28 (pre-A1; 103.3 / 69.7 / 55.3 on A1's AV18 deuteron, 2026-11-03) with a Bjorken integral that does not exist; the Hulthén deuteron's η
 at +17.2σ; the ⁶Li C0 zero +0.27 fm⁻¹ above the data band; the Deeps
 spectator tail for every wave (p = 4.9e−49 for the Hulthén, the default until D6, 1.5e−5
 for CD-Bonn/LC); HERMES b₁ᵈ matched in every bin by no configuration. And
@@ -227,8 +227,8 @@ for this file.
   relation gated at 1e−12, U-9), and b₁(⁶Li) itself — the first A > 2 b₁ of
   any kind.
 - **Rides on.** `Li6B1(MillerB1)` — Miller's digitized b₁ᵈ × 0.5 (row 2,
-  likely not certain) × `LI6_B1_RANK2_TRANSFER` = 0.921949 (the α–d tensor
-  dilution at P_D_LI6 = 0.0867, a fitted effective depolarisation, row 10) ×
+  likely not certain) × `LI6_B1_RANK2_TRANSFER` = 0.982576 since A1 (2026-11-03; the VMC α–d tensor dilution — pre-A1 0.921949,
+  the Hulthén one at P_D_LI6 = 0.0867, a fitted effective depolarisation; registry row 10, closed by A1) ×
   2/6 (an inert α, a modelling assumption); the ±100 % band from Q(⁶Li) vs
   Q_d; F₁ from CT18NLO since D7 (`ToyF2` before) and `r_sigma_lt`; the RC band (row 17).
 - **Validated today.** `t2_hermes_b1_table2` FAIL — Miller ×0.5 at χ²/6 =
@@ -257,7 +257,7 @@ for this file.
   rank-3 structure function prices** (`PHYSICS_CHANNELS.md` §13); **no**
   polarized-medium modification reachable from generation.
 - **Validated today.** `t1_g1d_world` FAIL on ToyG1, ToyG1-on-MSTW,
-  ToyG1-on-CT18NLO and NNPDFpol11 (phase 0: COMPASS 45.0/15) — the last
+  ToyG1-on-CT18NLO and NNPDFpol11 (phase 0: COMPASS 45.0/15; 42.4/15 since A1, P_D 0.0576) — the last
   pointing at the harness's D-state / F₁ construction before the PDF
   (phase D); the Bjorken integral FAIL on ToyG1, within 10–19 % on NNPDFpol;
   the rank-2 zero pinned.

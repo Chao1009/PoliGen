@@ -358,12 +358,12 @@ const char* triton_sf_name(TritonSfChoice s);
 ///
 ///   Miller          the DEFAULT, and bit-for-bit what every published
 ///                   inclusive tensor number was made with:
-///                   `Li6B1(MillerB1)` through `LI6_B1_RANK2_TRANSFER` and
+///                   `Li6B1(MillerB1)` through `LI6_B1_RANK2_TRANSFER` (A1) and
 ///                   `LI6_B1_PER_NUCLEON` (2/6).  This IS the run PLAN's
 ///                   "toy": today's default b1_func is `Li6B1(MillerB1)`,
 ///                   which is what `toy_b1` reaches.  Pinned at rtol 1e-12
-///                   by `validation/reference/b1_default_li6.json`
-///                   (tests/test_b1_nuclear.cpp T9).
+///                   by `validation/reference/b1_default_li6.json` at the
+///                   pre-A1 transfer 0.921947, passed explicitly (T9).
 ///   Cdks            the same 6Li rank-2 transfer on the CDKS convolution
 ///                   camp (`CdksB1`, the digitized PRD 95 (2017) 074036
 ///                   Fig. 4 column): |b1| two orders of magnitude smaller
@@ -782,7 +782,7 @@ struct PipelineConfig {
   ///     u(k) and w(k) ARE the p-n relative S and D waves; the flag was being
   ///     SILENTLY IGNORED there, the same defect the b1 knobs are refused for.
   ///     It now selects the exact AV18 deuteron at its own P_D = 0.057600
-  ///     instead of the analytic pair at the scenario `P_D_DEUTERON` = 0.045
+  ///     instead of the analytic pair at the scenario `P_D_DEUTERON_SCENARIO` = 0.045
   ///     (-2.03 % on that channel's vector dilution, -1.18 % on its tensor
   ///     one);
   ///   * SINCE 2026-09-04 the EMBEDDED DEUTERON of the 6Li alpha tag, in BOTH
@@ -803,12 +803,12 @@ struct PipelineConfig {
   ///     per-nucleon slot).  Not an oversight and not silent: this tree has no
   ///     AV18 A = 3 wave function to switch it to, so on 7Li the flag selects
   ///     the alpha-t relative motion and nothing else;
-  ///   * the 6Li INCLUSIVE constants (`LI6_CLUSTER_POLARIZATION` = 0.811228,
-  ///     `LI6_B1_RANK2_TRANSFER` = 0.921947), which are not read on a tagged
-  ///     channel at all.  A `VmcAV18` tagged row -- the DEFAULT one since D6 --
-  ///     and an inclusive row therefore describe 6Li with wave functions whose
-  ///     alpha-d vector dilutions differ by 11.61 % and rank-2 transfers by
-  ///     6.58 % (C5.5; the author's question, registry row 10).  Since 2026-09-04
+  ///   * the 6Li INCLUSIVE constants (`LI6_CLUSTER_POLARIZATION` = 0.848 and
+  ///     `LI6_B1_RANK2_TRANSFER` = 0.982576 since A1, 2026-11-03; 0.811228 /
+  ///     0.921947 before), which are not read on a tagged channel at all.  Until
+  ///     A1 a `VmcAV18` tagged row and an inclusive row differed by 11.61 % in
+  ///     the vector sector and 6.58 % in the rank-2 one (C5.5, registry row 10);
+  ///     since A1 by +4.6 % (0.887076 / 0.848) and 0 (the same 0.982576).  Since 2026-09-04
   ///     `validate()` REFUSES this field on `Inclusive` and `CoherentLi6`
   ///     rather than accepting it unread, because accepting it was the route
   ///     by which that 11.61 % reached someone who thought they had asked for
@@ -817,9 +817,9 @@ struct PipelineConfig {
   /// WHAT ONE `VmcAV18` 6Li RUN (the default) SAYS THE WHOLE-NUCLEUS
   /// POLARIZATION IS: 0.887076 = `li6_cluster_polarization(VMC_P_D_LI6,
   /// deuteron_av18_p_d())`, one Hamiltonian end to end, against the inclusive
-  /// constant's 0.811228 (x1.0935).  Neither reproduces the ab initio six-body
-  /// `LI6_POLARIZATION_VMC_SIX_BODY` = 0.848 (+4.6 % and -4.3 %); the cluster
-  /// PRODUCT is what carries that error and C5.5 is the argument.
+  /// constant's 0.848 since A1 (0.811228, x1.0935, before).  0.848 IS the ab
+  /// initio six-body `LI6_POLARIZATION_VMC_SIX_BODY` (+4.6 % for the tag); the
+  /// cluster PRODUCT is what carries that error and C5.5 is the argument.
   ClusterWaveSource cluster_wave = CLUSTER_WAVE_DEFAULT;
   /// Monte Carlo band of the ANL VMC tables, in units of their own printed
   /// 1-sigma error column, fully correlated across k (`li6_alpha_channel`,
@@ -1016,9 +1016,9 @@ struct PipelineConfig {
 /// physics on the shipped grids (the form below; Python `shipped_inclusive_kernel`).
 std::shared_ptr<const InclusiveKernel> default_inclusive_kernel(const Ion& ion);
 /// The same with the b1 backend chosen (`PipelineConfig::b1_model` and the two
-/// knobs).  The one-argument form above is exactly
-/// `default_inclusive_kernel(ion, B1Model::Miller, 1.0, 1.0)`, so
-/// `examples/generate_inclusive.cpp` and every existing caller are untouched.
+/// knobs); the one-argument form is `(ion, B1Model::Miller, 1.0, 1.0)`.  A1
+/// (2026-11-03): `b1_transfer` is what `Li6B1` applies on Miller / Cdks (every
+/// spin-1 ion, the deuteron too), default 0.982576; the gates pass 0.921947.
 ///
 /// `band_scale` multiplies the whole b1 of the non-Miller backends;
 /// `w_alpha_d` is `Li6ConvolutionOptions::w_alpha_d_dwave`.  The Delta slot is
@@ -1062,7 +1062,7 @@ std::shared_ptr<const InclusiveKernel> default_inclusive_kernel(
     std::shared_ptr<const UnpolSF> b1_unpol = nullptr,
     std::shared_ptr<const UnpolSF> unpol_sf = nullptr,
     std::shared_ptr<const PolSF> pol_sf = nullptr,
-    RSource r_source = RSource::Unset);
+    RSource r_source = RSource::Unset, double b1_transfer = LI6_B1_RANK2_TRANSFER);
 
 // ------------------------------------------- the 7Li rank-2 zero, out loud
 //
@@ -1753,6 +1753,49 @@ bool is_shipped_grid_sf(const UnpolSF* obj);
 bool is_shipped_grid_sf(const PolSF* obj);
 /// Throws (naming Custom) when a grid selector holds a foreign object.
 void refuse_foreign_grid_sf_objects(const PipelineConfig& cfg);
+
+// ------------------------------- the inclusive polarization factors (A1)
+//
+// A1 (2026-11-03; docs/open_items/run_2026-11-03/DECISIONS.md, the
+// supervisor's choice under the author's delegation) moved the three factors
+// an INCLUSIVE run reads -- the 6Li whole-nucleus vector polarization
+// (`LI6_CLUSTER_POLARIZATION` 0.811228 -> 0.848), the 6Li rank-2 transfer
+// (`LI6_B1_RANK2_TRANSFER` 0.921947 -> 0.982576) and the deuteron species'
+// P_D (`P_D_DEUTERON` 0.045 -> 0.0576) -- with no CLI knob, so a file made
+// before A1 and one made after would carry the same `meta` and differ by
+// x1.0453 / x1.0658 / x0.9797 in their polarized observables.  This is the
+// record of the factors ONE run actually used, read off the run's own
+// kernel: the vector factor from its Ion's slots (so a caller-supplied
+// kernel built on `li6_ion(0.811228)` reports 0.811228), the transfer from
+// the default kernel's `b1_transfer` (unknowable inside a caller-supplied
+// kernel's closure, and said so).  `meta` (python/bindings.cpp) and the CLI
+// banner both read it; nothing else does.
+struct InclusivePolarizationFactors {
+  /// The 6Li whole-nucleus vector polarization Z * eff_pol_p of the run's ion
+  /// (6Li inclusive runs only; NaN otherwise).
+  double li6_cluster_polarization = NAN;  // <cmath>
+  /// The deuteron's P_D, (1 - eff_pol_p) / 1.5 (d inclusive runs only).
+  double deuteron_p_d = NAN;  // <cmath>
+  /// The rank-2 transfer `Li6B1` applied (spin-1 inclusive runs on the
+  /// default kernel at b1_model miller / cdks; NaN otherwise).
+  double li6_b1_rank2_transfer = NAN;  // <cmath>
+  /// One sentence for the banner; empty off the inclusive channel and on an
+  /// inclusive run that reads none of the three (7Li, p, 3He).
+  std::string report;
+  /// True on a caller-supplied kernel: the transfer is then not knowable.
+  bool caller_kernel = false;
+  /// The `meta` keys: the three names above, each only where it is not NaN.
+  std::vector<std::pair<std::string, double>> meta() const {
+    std::vector<std::pair<std::string, double>> out;
+    if (!std::isnan(li6_cluster_polarization))
+      out.emplace_back("li6_cluster_polarization", li6_cluster_polarization);
+    if (!std::isnan(deuteron_p_d)) out.emplace_back("deuteron_p_d", deuteron_p_d);
+    if (!std::isnan(li6_b1_rank2_transfer))
+      out.emplace_back("li6_b1_rank2_transfer", li6_b1_rank2_transfer);
+    return out;
+  }
+};
+InclusivePolarizationFactors inclusive_polarization_factors(const Pipeline& p);
 
 }  // namespace lipolgen
 

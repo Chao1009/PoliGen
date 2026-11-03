@@ -65,11 +65,11 @@ The tree side is the generator's OWN per-nucleon deuteron g1,
     g1^d_tree(x, Q2) = PolSF.g1_nucleus(deuteron(), x, Q2) / 2
                      = (1 - 1.5 P_D) (g1p + g1n)/2,   P_D = P_D_DEUTERON,
 
-with P_D_DEUTERON = 0.045 (beams.hpp) -- exactly what
+with P_D_DEUTERON = 0.0576 (beams.hpp; A1, 2026-11-03: AV18's, 0.045 before) -- exactly what
 `InclusiveKernel(deuteron()).tables(x, Q2).g1` returns
 (xsec.cpp `g1a` = g1_nucleus / A; beams.hpp: the deuteron's eff_pol_p =
 eff_pol_n = DEUTERON_VECTOR_POLARIZATION = vector_dilution_of(P_D_DEUTERON)
-= 0.9325).  THIS is the verdict's theory.  RECORDED beside it: the
+= 0.9136; 0.9325 before A1).  THIS is the verdict's theory.  RECORDED beside it: the
 NO-D-STATE variant (g1p + g1n)/2, i.e. the same nucleons without the
 (1 - 1.5 P_D) depolarisation -- the 7 % that 06_critic.md sec. 5.1 (line
 524) warns is applied twice or not at all.  Four polarized backends:
@@ -122,8 +122,8 @@ no-D-state variant prices the other reading.
   convention HOLDS, g1d_tree is the like-for-like comparison and keeps the
   verdict; NO column is swapped; dis_no_dstate stays recorded beside it.
   Not like for like in one number, stated rather than corrected: the
-  papers' omega_D = 0.05 against the tree's P_D = 0.045 (factors 0.925 and
-  0.9325, 0.8 % of g1d) -- a property of the tree's deuteron model on the
+  papers' omega_D = 0.05 against the tree's P_D = 0.0576 since A1 (factors 0.925 and
+  0.9136, 1.2 % of g1d; 0.045 / 0.9325 / 0.8 % before A1) -- a property of the tree's deuteron model on the
   theory side; the experiments' omega_D does not enter the published g1d.
   PREVIEWED before this resolution (phase 0, 2026-10-26, the first run with
   the LHAPDF sets installed): NNPDFpol1.1 FAILS on this column -- COMPASS
@@ -186,7 +186,7 @@ THE THREE NORMALISATION RULES (BENCHMARK_PLAN.md sec. 8), for THIS row:
      side is the isoscalar nucleon combination (g1p + g1n)/2 times the
      deuteron's vector dilution, built in ONE place (`g1d_tree`) through
      the tree's own `g1_nucleus`; python/tests/test_bench_t1_nucleon.py
-     asserts g1d_tree = 0.9325 (g1p + g1n)/2 = kernel tables().g1.  No
+     asserts g1d_tree = 0.9136 (g1p + g1n)/2 = kernel tables().g1 (A1).  No
      nuclear PDF grid enters.
   3. per nucleus / per nucleon -- structure functions PER NUCLEON on both
      sides.  Not like for like, stated rather than corrected: beyond the

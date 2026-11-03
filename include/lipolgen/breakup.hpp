@@ -34,7 +34,7 @@
 ///     function -- the `deuteron_channel()` `TaggedModel`: on
 ///     `BreakupOptions::source` = `VmcAV18` (what a DEFAULT run forwards
 ///     since D6) the exact AV18 deuteron at its own P_D = 0.057600, on
-///     `Hulthen` the S + D forms of `cluster.hpp` at P_D = `P_D_DEUTERON` =
+///     `Hulthen` the S + D forms of `cluster.hpp` at P_D = `P_D_DEUTERON_SCENARIO` =
 ///     0.045 and kappa = sqrt(2 mu S_d) = 45.7 MeV.  The draw is the
 ///     m_S-dependent joint density |A_{m_sc}(m_S; k, khat)|^2, NOT the
 ///     spherical marginal: the D wave correlates khat with the spin, and that
@@ -208,7 +208,7 @@ struct BreakupResult {
 /// CHOICE; there is no other copy of any of these numbers.
 struct BreakupOptions {
   double beta = BETA_DEFAULT;      ///< short-range scale of the radial forms
-  double p_d = P_D_DEUTERON;       ///< deuteron D-state probability (0.045)
+  double p_d = P_D_DEUTERON_SCENARIO;  ///< Hulthen deuteron P_D (0.045; A1 kept)
   /// WHICH DEUTERON THE T1 BREAKUP RESOLVES INTO (C5.5b, 2026-09-04).
   /// `Hulthen` (this struct's default) is the analytic S + D pair at `p_d`
   /// above, bit for bit what this module always did; `VmcAV18` is the AV18

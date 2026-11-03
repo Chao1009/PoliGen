@@ -317,30 +317,30 @@ def test_dp_mstw_hook_is_q2_frozen(dp_mod, dp):
 
 def test_g1d_theory_is_g1_nucleus_over_two_with_the_d_state_factor(g1_mod, g1):
     """The tree's per-nucleon deuteron g1 is g1_nucleus(deuteron)/2 =
-    (1 - 1.5 P_D) (g1p + g1n)/2 with P_D = 0.045 -- asserted, together with
+    (1 - 1.5 P_D) (g1p + g1n)/2 with P_D = 0.0576 (A1; 0.045 before) -- asserted, with
     the no-D-state variant it is reported beside."""
     d = lg.deuteron()
     assert (d.A, d.Z) == (2, 1)
-    assert lg.P_D_DEUTERON == 0.045
+    assert lg.P_D_DEUTERON == 0.0576   # A1 (2026-11-03): AV18's; was 0.045
     assert lg.DEUTERON_VECTOR_POLARIZATION == lg.vector_dilution_of(lg.P_D_DEUTERON)
-    assert lg.DEUTERON_VECTOR_POLARIZATION == pytest.approx(1 - 1.5 * 0.045, abs=1e-15)
+    assert lg.DEUTERON_VECTOR_POLARIZATION == pytest.approx(1 - 1.5 * 0.0576, abs=1e-15)
     assert d.eff_pol_p == d.eff_pol_n == lg.DEUTERON_VECTOR_POLARIZATION
     toy = lg.ToyG1()
     kern = lg.default_inclusive_kernel(d)
     for x, q2 in _PTS:
         iso = 0.5 * (toy.g1p(x, q2) + toy.g1n(x, q2))
         tree = g1_mod.g1d_tree(toy, d, x, q2)
-        assert tree == pytest.approx(0.9325 * iso, rel=1e-14)
+        assert tree == pytest.approx(0.9136 * iso, rel=1e-14)   # A1: was 0.9325
         assert tree == kern.tables(x, q2).g1
         assert g1_mod.g1d_no_dstate(toy, x, q2) == iso
-    assert g1["dstate"]["p_d"] == 0.045
-    assert g1["dstate"]["factor"] == pytest.approx(0.9325, abs=1e-15)
+    assert g1["dstate"]["p_d"] == 0.0576   # A1 (2026-11-03): was 0.045
+    assert g1["dstate"]["factor"] == pytest.approx(0.9136, abs=1e-15)   # A1: was 0.9325
     assert g1["dstate"]["vector_dilution_of_p_d"] == g1["dstate"]["factor"]
     assert g1["configs"]["toy"]["kernel_max_rel_diff"] == 0.0
-    # the no-D-state variant is exactly the tree theory / 0.9325, per point
+    # the no-D-state variant is exactly the tree theory / 0.9136, per point (A1)
     e = g1["configs"]["toy"]["experiments"]["compass"]
     for t, t0 in zip(e["theory"], e["theory_no_dstate"]):
-        assert t == pytest.approx(0.9325 * t0, rel=1e-14)
+        assert t == pytest.approx(0.9136 * t0, rel=1e-14)   # A1: was 0.9325
 
 
 def test_g1d_theory_mstw_is_the_kernels(g1_mod, g1):
@@ -350,7 +350,7 @@ def test_g1d_theory_mstw_is_the_kernels(g1_mod, g1):
     d, pol = lg.deuteron(), lg.ToyG1(m)
     for x, q2 in _PTS[1:]:
         assert g1_mod.g1d_tree(pol, d, x, q2) == pytest.approx(
-            0.9325 * 0.5 * (pol.g1p(x, q2) + pol.g1n(x, q2)), rel=1e-14)
+            0.9136 * 0.5 * (pol.g1p(x, q2) + pol.g1n(x, q2)), rel=1e-14)   # A1: was 0.9325
 
 
 # ------------------------------------------------- the numbers, independently
@@ -539,14 +539,14 @@ def test_dp_pinned_mstw(dp):
     assert c["all_frozen"]["chi2"] == pytest.approx(310.17827, rel=1e-6)
 
 
-_G1_TOY = dict(compass=(15, 107.84918, None, 126.36996),
-               hermes=(15, 69.383903, 104.45971, 71.167262),
-               e143=(28, 54.927009, 51.526179, 55.509263),
-               smc=(12, 16.652517, None, 16.503757))
-_G1_MSTW = dict(compass=(15, 53.237005, None, 66.298574),
-                hermes=(15, 47.134153, 68.827103, 64.040126),
-                e143=(28, 50.243680, 51.339501, 61.496627),
-                smc=(12, 14.401418, None, 14.756620))
+_G1_TOY = dict(compass=(15, 103.31742, None, 126.36996),   # A1 (2026-11-03): re-taken on
+               hermes=(15, 69.738149, 103.75466, 71.167262),  # the AV18 deuteron (P_D 0.0576,
+               e143=(28, 55.264637, 50.959498, 55.509263),    # factor 0.9136; 0.045 / 0.9325
+               smc=(12, 16.817106, None, 16.503757))          # before); no-D-state unmoved
+_G1_MSTW = dict(compass=(15, 50.197387, None, 66.298574),     # A1 (2026-11-03): re-taken
+                hermes=(15, 43.658876, 63.269472, 64.040126),
+                e143=(28, 47.859860, 49.115060, 61.496627),
+                smc=(12, 14.441033, None, 14.756620))
 
 
 def _check_g1(c, table):
@@ -564,38 +564,38 @@ def _check_g1(c, table):
 def test_g1d_pinned_toy(g1):
     c = g1["configs"]["toy"]
     _check_g1(c, _G1_TOY)
-    assert (c["world_chi2"], c["world_ndf"]) == (pytest.approx(232.16009, rel=1e-6), 58)
+    assert (c["world_chi2"], c["world_ndf"]) == (pytest.approx(228.32020, rel=1e-6), 58)  # A1: was 232.16009
     # the scout's diagnosis: COMPASS's x < 0.01 points drive the toy's chi2
     e = c["experiments"]["compass"]
-    assert e["theory"][0] == pytest.approx(-0.96277, abs=5e-5)
+    assert e["theory"][0] == pytest.approx(-0.94325, abs=5e-5)   # A1 (2026-11-03): was -0.96277
     assert e["dis"]["worst_x"] < 0.01
 
 
 def test_g1d_pinned_mstw(g1):
     c = _config(g1, "mstw")
     _check_g1(c, _G1_MSTW)
-    assert c["world_chi2"] == pytest.approx(150.61484, rel=1e-6)
+    assert c["world_chi2"] == pytest.approx(141.71612, rel=1e-6)   # A1 (2026-11-03): was 150.61484
     assert c["status"] == "fail"
 
 
 # the LHAPDF sub-rows as first measured on 2026-10-26 (phase 0; the sets
 # build_deps.sh installs), pinned by phase D; each skips, with the harness's
 # own blocked reason, where its set is not installed
-_G1_CT18 = dict(compass=(11, 20.180505, None, 28.826518),
-                hermes=(11, 64.297665, 100.82810, 85.999715),
-                e143=(24, 58.955188, 59.028234, 74.347229),
-                smc=(11, 14.129973, None, 14.729001))
-_G1_NNPDFPOL = dict(compass=(15, 44.996236, None, 56.387194),
-                    hermes=(15, 52.581236, 78.488459, 67.475268),
-                    e143=(28, 50.956136, 52.225468, 61.924143),
-                    smc=(12, 13.416504, None, 13.805659))
+_G1_CT18 = dict(compass=(11, 18.322892, None, 28.826518),   # A1 (2026-11-03): the with-D-state
+                hermes=(11, 59.551977, 93.179763, 85.999715),  # columns re-taken on P_D 0.0576
+                e143=(24, 55.485744, 56.070022, 74.347229),
+                smc=(11, 14.105540, None, 14.729001))
+_G1_NNPDFPOL = dict(compass=(15, 42.398405, None, 56.387194),  # A1 (2026-11-03): re-taken
+                    hermes=(15, 49.611092, 73.062069, 67.475268),
+                    e143=(28, 48.643958, 50.009342, 61.924143),
+                    smc=(12, 13.449157, None, 13.805659))
 
 
 def test_g1d_pinned_ct18nlo(g1):
     c = _config(g1, "ct18nlo")
     _check_g1(c, _G1_CT18)
     assert c["q2_floor"] == pytest.approx(1.677025, rel=1e-6)
-    assert c["world_chi2"] == pytest.approx(143.43336, rel=1e-6)
+    assert c["world_chi2"] == pytest.approx(133.36061, rel=1e-6)   # A1 (2026-11-03): was 143.43336
     # COMPASS passes on its own (p = 0.043); the sub-row fails on the other two
     assert c["experiments"]["compass"]["status"] == "pass"
     assert c["status"] == "fail"
@@ -609,7 +609,7 @@ def test_g1d_pinned_nnpdfpol_and_the_d_state_reading(g1):
     c = _config(g1, "nnpdfpol")
     _check_g1(c, _G1_NNPDFPOL)
     assert c["q2_floor"] == 1.0
-    assert c["world_chi2"] == pytest.approx(148.53361, rel=1e-6)
+    assert c["world_chi2"] == pytest.approx(140.65345, rel=1e-6)   # A1 (2026-11-03): was 148.53361
     for e in ("compass", "hermes", "e143"):
         s = c["experiments"][e]
         assert s["status"] == "fail"

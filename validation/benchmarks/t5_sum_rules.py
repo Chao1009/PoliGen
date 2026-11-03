@@ -141,7 +141,7 @@ THE THREE NORMALISATION RULES (BENCHMARK_PLAN.md sec. 8), for THIS row:
      the Bjorken sum is the isovector p - n difference of FREE-nucleon g1.
   3. per nucleon / per nucleus -- bc_ww: g1p, g1n and g2p, g2n are PER
      NUCLEON; the deuteron's `g1_nucleus` is PER NUCLEUS, Z P_p g1p + N P_n
-     g1n with P_p = P_n = 0.9325 = 1 - 1.5 P_D (NOT divided by A = 2; the
+     g1n with P_p = P_n = 0.9136 = 1 - 1.5 P_D (A1; 0.9325 before) (NOT divided by A = 2; the
      inclusive kernel's g1a divides by A).  The closure is linear and
      homogeneous in g1, so the normalisation cancels between its two sides;
      it is stated, and pytest asserts the composition.  bjorken: per nucleon,

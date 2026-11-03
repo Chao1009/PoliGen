@@ -55,7 +55,7 @@ the configuration, sample, energy or knob it was measured at.
 | 1 | VMC α+d / α+t cluster wave functions | **the shipped default since D6, 2026-10-27** (`--cluster-wave vmc`; the Hulthén pair is `--cluster-wave hulthen`, bit for bit the pre-D6 default; the factories keep it as their own default) **+ author decisions rows 9 (decided by D6), 10 (re-posed by D6: the default tagged and inclusive ⁶Li runs now differ, 0.887076 against 0.811228), 11 (amended), and — since 2026-09-15 — 26 and 27**, the tagged S–D interference phase that these densities feed (*applied — confirm or revert*) and the same phase in the sibling repository | ⁶Li α-tag fraction **0.0264 → 0.0348** (×1.315; regenerated 2026-09-06 on the sign-fixed build — the pre-fix sample read 0.0249 → 0.0348, ×1.40) at 10 × 99.5 on the YR high-acceptance envelope, 0.2551 → 0.2486 (regenerated 2026-09-06; pre-fix sample 0.2530 → 0.2485) on the tagging optics; the shipped whole-nucleus ⁶Li polarization is **0.811228** against the ab-initio **0.848**, so **no inclusive ⁶Li polarization may be quoted without the band 0.81 … 0.91** **2026-09-23 — the port gate is back:** `validation/reference/tagged.json` is dumped from `polligen` again in every block (the sibling took the same phase in `1066555`); the two spin-1 `model` blocks moved by ≤ 1.33e−13 (⁶Li) / 2.28e−13 (deuteron) relative, and the tree's gate asserts `provenance == "polligen"` (`run_2026-09-23/phase_A_port_gate.md`). Row 26's re-pin is overtaken; row 26 stays *applied — confirm or revert* for the phase itself. | §1; `phase_C_numbers.md` §§C5.4–C5.5b |
 | 2 | ePIC chain gate (HepMC3 → abconv → npsim) | **closed** | **10/10** events through `npsim`, directly and via `abconv -p ip6_hiacc_100x10`, with the writer fix that puts m_e = 0.51099895 MeV in `generated_mass` | §2; `T2_CHAIN.md` |
 | 3 | Tensor sign `TENSOR_LL_SIGN` | **author decision — `STATUS.md` row 22** (carried forward, confirm only) | **−1**, the value four independent sources give for A_zz = −(2/3) b₁/F₁; the code has shipped it since 2026-08-29 while two documents still read "author to confirm" | §3–4; `AUTHOR_DECISIONS.md` §B1 |
-| 4 | ⁶Li / ⁷Li effective polarizations | **author decision — row 23** | whole-nucleus VMC **0.85 ± 0.03** for ⁶Li (0.848, Wiringa 2014 Table I) against the shipped cluster-picture **0.811228**; ⁷Li 0.866 / −0.037 | §3–4; `AUTHOR_DECISIONS.md` §B6 |
+| 4 | ⁶Li / ⁷Li effective polarizations | **author decision — row 23** | whole-nucleus VMC **0.85 ± 0.03** for ⁶Li (0.848, Wiringa 2014 Table I) against the pre-A1 cluster-picture **0.811228** (A1, 2026-11-03: the shipped default IS 0.848; band 0.811 … 0.887); ⁷Li 0.866 / −0.037 | §3–4; `AUTHOR_DECISIONS.md` §B6 |
 | 5 | Coherent T2 final state | **opt-in shipped** (`--coherent-t2`, `--pom-set`) **+ author decision row 19** (`PomSet` 11 refused) | over all 15 sets × 20 000 events the T0 columns are **bit-identical across the fourteen sets that still run** (one md5), so the DPDF band on M_X, \|t\|, x_P and σ is **identically zero**; the systematic is the hadronic final state — ⟨n_charged⟩ **−2.6 % / +9.9 %** over the twelve DPDF fits, kaon fraction **×2.8** | §5.1–5.2; `phase_D_numbers.md` §D4 |
 | 6 | Triton remnant (t* → N + …) | **opt-in shipped** (`--triton-sf ciofi-simula`) | the Ciofi–Simula n₀+n₁ model at **S₀ = 0.6525, untuned**; the sequential Hulthén default is unchanged bit for bit | §6 |
 | 7 | Spectator FSI | **opt-in shipped** (`--fsi`) **+ a retraction** | the two Glauber variants are **not one**: **99.50 %** of events differ by more than **1 %** (\|w_nucleon/w_cluster − 1\| > 0.01), ratio to **68.5**, on the Hulthén α–d of 2026-09-04 (re-measured 2026-10-29, toy SFs: 99.43 % / 69.89 on `--cluster-wave hulthen`, **64.5 % / 10.14 on the default VMC waves since D6**, whose survival is 0.797 / 0.819 and whose weight table clips at `w_max` on 0.70 % / 5.25 % of its cells), measured on ONE stream — `tagged-6Li-alpha`, 20 000 events, seed 1234, `tensor-thirds` at P_z 0.7 / P_zz 0.6 / P_e 0.7, **σ_XN = 40 mb**, one end of the mandatory 20–40 mb band. Σw/Σw_off **0.520954** vs **0.581605**; the model's own grid-integrated `survival()`, which `meta["fsi_survival"]` carries, **0.520239** vs **0.582899** | §7.1–7.2; `phase_D_numbers.md` §D3 |
@@ -1523,7 +1523,7 @@ F₁ᵈ: ~3e−4 of term (2d).
     consequence to carry: `close_kumano_integral(false)` and
     `close_kumano_integral(true)` integrate the RAW columns and are therefore on
     **different scales** — never compare them to each other.
-* **Q6.** `LI6_B1_RANK2_TRANSFER` = 0.921947 is tied to the Hulthén-scenario
+* **Q6.** *(Closed by A1, 2026-11-03: the transfer is the VMC 0.982576.)* `LI6_B1_RANK2_TRANSFER` = 0.921947 is tied to the Hulthén-scenario
   P_D = 0.0867; the VMC value 0.0193549 would give 0.982581. Changing it would
   move every published inclusive tensor number, so it stays — but this backend
   makes the inconsistency visible (the tagged channel already uses VMC at
@@ -2323,7 +2323,7 @@ shipped default moved and `validation/reference/*.json` is untouched.**
   ab-initio six-body VMC **0.848** where the shipped 0.811228 is 4.3 % below it,
   so the cluster product — not the choice of P_D — carries the error. Author
   decision: default kept, drift documented, and **no inclusive ⁶Li polarization
-  is quoted without the band 0.81 … 0.91**.
+  is quoted without the band 0.81 … 0.91** (A1, 2026-11-03: 0.848 shipped, band 0.811 … 0.887).
 * **C5.5b — the claim C5.5 shipped was false, and C5.4 is what made it false.**
   "Nothing *inside* one run is inconsistent" went to five sites and was wrong:
   `li6_alpha_channel` set `dis_target = DEUTERON()` **unconditionally**, and
@@ -2661,7 +2661,7 @@ Phase A's `B1UnpolSource` thread, copied piece for piece:
 ⁶Li, `default_configs("6Li")[1]`, the shipped window, through the pipeline.
 A_zz is the canonical thirds estimator on `tensor_thirds_plan(0, 0.6)`
 divided by P_zz; A_∥ is `(σ₊−σ₋)/(σ₊+σ₋)/(P_e P_z)` on
-`helicity_flip_plan(1, 0.7, 0.7)`.
+`helicity_flip_plan(1, 0.7, 0.7)`.  The inclusive A_zz / A_∥ below are pre-A1 (2026-11-03: ×1.06576 / ×1.04533).
 
 | channel | backend | σ [pb] | A_zz | A_∥ |
 |---|---|---|---|---|

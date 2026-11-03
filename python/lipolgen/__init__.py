@@ -881,7 +881,7 @@ def _cluster_wave_on_tagged_only(cfg, cluster_wave):
     default off the tagged channels, and since D6 that default
     (`CLUSTER_WAVE_DEFAULT`, VMC) is exactly what a user asking for a "VMC
     6Li" inclusive row would type -- so a value rule alone would accept the
-    request and deliver `LI6_CLUSTER_POLARIZATION` = 0.811228, the wave
+    request and deliver `LI6_CLUSTER_POLARIZATION` (0.848 since A1), the wave
     unread.  This sees what the config cannot, that the caller NAMED a wave,
     and refuses EITHER value on a channel that never reads one.  The message
     starts "PipelineConfig:" like every `validate()` refusal, so the CLI
@@ -896,13 +896,13 @@ def _cluster_wave_on_tagged_only(cfg, cluster_wave):
     raise RuntimeError(
         "PipelineConfig: cluster_wave = %r was asked for on channel %s, which "
         "never reads a cluster wave -- the inclusive 6Li constants "
-        "(LI6_CLUSTER_POLARIZATION = 0.811228, the Hulthen-era cluster "
-        "product) and the coherent form factors follow neither value (open "
+        "(LI6_CLUSTER_POLARIZATION = 0.848, the six-body value since A1) "
+        "and the coherent form factors follow neither value (open "
         "item C5.5, registry row 11, D6).  Drop the cluster wave, or run a "
         "tagged channel" % (name, _lipolgen.pipeline_channel_name(cfg.channel)))
 
 
-def shipped_inclusive_kernel(ion):
+def shipped_inclusive_kernel(ion, b1_transfer=None):
     """D7 (2026-10-27): the INCLUSIVE kernel a default run builds for `ion`.
 
     `default_inclusive_kernel(ion)` -- one argument -- is the CLASS-LEVEL TOY
@@ -912,8 +912,14 @@ def shipped_inclusive_kernel(ion):
     `default_inclusive_kernel(ion, unpol_sf=<CT18NLO>, pol_sf=<NNPDFpol11_100>)`
     with the process's shared, frozen objects -- exactly what
     `Pipeline(make_config(isotope=...), plan).dis_sampler.kernel` holds.  Needs
-    the LHAPDF tier and both sets (the pre-flight's message otherwise)."""
+    the LHAPDF tier and both sets (the pre-flight's message otherwise).
+
+    A1 (2026-11-03): `b1_transfer` (None = LI6_B1_RANK2_TRANSFER = 0.982576)
+    is the 6Li rank-2 transfer; LI6_B1_RANK2_TRANSFER_HULTHEN is the pre-A1
+    0.921947.  The vector factors are the ION's: li6_ion(...) / deuteron_ion(...)."""
     return _lipolgen.default_inclusive_kernel(
         ion,
         unpol_sf=_lipolgen.make_lhapdf_unpol_sf(_lipolgen.UNPOL_SF_DEFAULT),
-        pol_sf=_lipolgen.make_lhapdf_pol_sf(_lipolgen.POL_SF_DEFAULT))
+        pol_sf=_lipolgen.make_lhapdf_pol_sf(_lipolgen.POL_SF_DEFAULT),
+        b1_transfer=(_lipolgen.LI6_B1_RANK2_TRANSFER if b1_transfer is None
+                     else b1_transfer))

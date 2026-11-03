@@ -1497,11 +1497,11 @@ TEST_CASE("b1_nuclear T6: the no-smearing limit IS b1_li6_from_deuteron") {
                   1e-12);
     }
   }
-  // ... and at P_D = P_D_LI6 the weight equals LI6_B1_RANK2_TRANSFER, which is
-  // the analytic bridge from this backend to the constant the default uses.
-  CHECK_CLOSE(1.0 - 0.9 * P_D_LI6, LI6_B1_RANK2_TRANSFER, 1e-4);
-  // The VMC P_D gives 0.98258 instead -- design 1.7's table.
-  CHECK_CLOSE(1.0 - 0.9 * VMC_P_D_LI6, 0.98258, 1e-4);
+  // ... and at P_D = P_D_LI6 the weight equals the Hulthen transfer (A1: the
+  // pre-A1 default); at VMC_P_D_LI6 it is the default since A1, 0.982576.
+  CHECK_CLOSE(1.0 - 0.9 * P_D_LI6, LI6_B1_RANK2_TRANSFER_HULTHEN, 1e-4);  // A1 (2026-11-03): the Hulthen value, named
+  CHECK_CLOSE(1.0 - 0.9 * VMC_P_D_LI6, LI6_B1_RANK2_TRANSFER, 1e-4);   // A1 (2026-11-03)
+  CHECK_CLOSE(1.0 - 0.9 * VMC_P_D_LI6, 0.98258, 1e-4);   // design 1.7's table
 }
 
 // ===================================================================== T7
@@ -1861,8 +1861,8 @@ TEST_CASE("b1_nuclear T9: default_inclusive_kernel(LI6()) is unchanged") {
   CHECK(doc["kernel"]["ion"].str() == "6Li");
   CHECK(doc["kernel"]["b1_model"].str() == "miller");
 
-  const auto kernel = default_inclusive_kernel(LI6());
-  REQUIRE(kernel);
+  const auto kernel = default_inclusive_kernel(li6_ion(LI6_CLUSTER_POLARIZATION_HULTHEN), B1Model::Miller, 1.0, 1.0, nullptr, nullptr, nullptr, RSource::Unset, LI6_B1_RANK2_TRANSFER_HULTHEN);
+  REQUIRE(kernel);   // A1 (2026-11-03): polligen's constants, passed explicitly above; the shipped default is 0.848 / 0.982576
   CHECK(kernel->ion().A == 6);
   CHECK(kernel->target_mass() == doc["kernel"]["target_mass"].boolean());
   CHECK(kernel->tensor_gamma() == doc["kernel"]["tensor_gamma"].boolean());

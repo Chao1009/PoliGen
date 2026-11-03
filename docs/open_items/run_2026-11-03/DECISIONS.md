@@ -70,6 +70,25 @@ inclusive ⁶Li polarization is quoted; the report regenerated; registry row
 10 closed by this entry. What does not: the tagged channel (on the VMC wave
 since D6), the Hulthén option, the sibling.*
 
+*Supervisor's note, 2026-11-03, after phase P1 (its record
+`phase_P1_polarization_factors.md` §5) — two consequences the entry above
+does not name. (1) The default inclusive ⁶Li `--plan helicity-flip` and
+`--plan apar` runs (P_z = P_e = 0.7, spin configuration 1) are now refused by
+the sampler's positivity check at the top cell of the shipped window
+(x = 0.955, Q² = 1897 GeV²): 1 + w_avg = −0.0185 (vector term −0.2578, rank-2
+term −0.7607), where the pre-A1 factors gave +0.0396. The choice: the refusal
+stands. It is the rank-2 (b₁) term of the toy tensor model at the top cell,
+the same term behind the refused deuteron cases of
+`../run_2026-10-27/phase_I7_backends.md` §3.5, and A4 keeps the rank-2
+refusals; A3's clip acts on g₁ (A₁ = 0.616 at that cell) and will not lift
+it; `x_max` stays 1.0 (A4). The tests whose subject is not that cell run that
+one configuration at x_max = 0.95 through helpers carrying a dated reason;
+USAGE and the CLI say so; P2 re-measures it beside the deuteron cases.
+(2) The inclusive deuteron's b₁ / A_zz moved ×1.0658 as well, because the
+class-level toy kernel fills the bare deuteron's b₁ with the ⁶Li transfer
+(`Li6B1(MillerB1)` for every spin-1 ion). Pre-existing, recorded, not a
+choice of this run; it goes to the author with the summary.*
+
 **A2 — EPPS21 and R1998 stay options; the shipped default stays the
 free-nucleon CT18NLO with the toy R (`r_sigma_lt`).** *Why: EPPS21's Li6
 ratio parametrizes the inclusive nuclear modification — shadowing, EMC,

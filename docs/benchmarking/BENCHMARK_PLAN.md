@@ -102,7 +102,7 @@ harnesses added by tier, none tuned, every tolerance stated in its header
 recorded only): the tables vendored from the PyPI nnpdf-data 4.1.5 wheel
 (HEPData CC0) by `vendor_nnpdf_commondata.py`; tolerance p(χ², ndf) ≥ 0.01
 on Q² ≥ 1, W² ≥ 4 GeV², stat ⊕ sys diagonal; **FAIL recorded** for the
-shipped ToyF2 / ToyG1 (8307.9/155; 2161.4/211; 107.8/15, 69.4/15, 54.9/28),
+shipped ToyF2 / ToyG1 (8307.9/155; 2161.4/211; 107.8/15, 69.4/15, 54.9/28 — g₁ᵈ pre-A1; 103.3 / 69.7 / 55.3 since A1, 2026-11-03),
 with MSTW sub-rows 416.5/155, 247.2/211 (p = 0.044), 53.2 / 47.1 / 50.2 and
 the CT18NLO / NNPDFpol11 sub-rows blocked (environment). **T2** —
 `t2_deuteron_static`: η_d within 2σ of 0.0256(4) for CD-Bonn (−0.07σ) and

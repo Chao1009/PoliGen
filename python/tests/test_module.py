@@ -44,19 +44,19 @@ def test_constants_have_one_definition():
     # the 6Li cluster wave function -- beams.hpp, one definition, and the
     # inclusive eff_pol slots are a third of it each (plans/04 #6)
     assert lg.P_D_LI6 == 0.0867
-    assert lg.P_D_DEUTERON == 0.045
-    assert lg.LI6_CLUSTER_POLARIZATION == (
-        (1.0 - 1.5 * lg.P_D_LI6) * (1.0 - 1.5 * lg.P_D_DEUTERON))
-    assert lg.LI6_CLUSTER_POLARIZATION == pytest.approx(0.81123, abs=5e-6)
+    assert lg.P_D_DEUTERON == 0.0576 and lg.P_D_DEUTERON_SCENARIO == 0.045   # A1 (2026-11-03)
+    assert lg.LI6_CLUSTER_POLARIZATION_HULTHEN == (   # A1: the pre-A1 constant, named
+        (1.0 - 1.5 * lg.P_D_LI6) * (1.0 - 1.5 * lg.P_D_DEUTERON_SCENARIO))
+    assert lg.LI6_CLUSTER_POLARIZATION == lg.LI6_POLARIZATION_VMC_SIX_BODY == 0.848   # A1: was 0.81123
     li6 = lg.li6()
     assert li6.Z * li6.eff_pol_p == pytest.approx(
         lg.LI6_CLUSTER_POLARIZATION, rel=1e-15)
     assert li6.N * li6.eff_pol_n == pytest.approx(
         lg.LI6_CLUSTER_POLARIZATION, rel=1e-15)
-    assert lg.deuteron().eff_pol_p == 1.0 - 1.5 * lg.P_D_DEUTERON
-    # the retired Cloet convention stays reachable and is 1.233x this one
+    assert lg.deuteron().eff_pol_p == 1.0 - 1.5 * lg.P_D_DEUTERON   # A1: 0.9136
+    # the retired Cloet convention stays reachable; 1.233x the Hulthen reading (A1: 1.179x the default)
     assert lg.LI6_NAIVE_ONE_THIRD == 1.0 / 3.0
-    assert lg.LI6_NAIVE_ONE_THIRD / (lg.LI6_CLUSTER_POLARIZATION / 3.0) == \
+    assert lg.LI6_NAIVE_ONE_THIRD / (lg.LI6_CLUSTER_POLARIZATION_HULTHEN / 3.0) == \
         pytest.approx(1.233, abs=5e-4)
 
 
@@ -619,11 +619,11 @@ def test_c5_2_the_vmc_tables_carry_their_monte_carlo_band():
 def test_c5_4_the_deuteron_control_on_av18():
     L = lg._lipolgen
     assert L.deuteron_av18_p_d() == pytest.approx(0.0575998919874, rel=1e-9)
-    assert L.deuteron_av18_p_d() / lg.P_D_DEUTERON == pytest.approx(1.28,
-                                                                    rel=1e-4)
+    assert L.deuteron_av18_p_d() / lg.P_D_DEUTERON_SCENARIO == pytest.approx(  # A1: named
+        1.28, rel=1e-4)
     h = L.TaggedModel(L.deuteron_channel())
     v = L.TaggedModel(L.deuteron_channel(source=L.ClusterWaveSource.VmcAV18))
-    assert h.channel.waves[1].prob == lg.P_D_DEUTERON
+    assert h.channel.waves[1].prob == lg.P_D_DEUTERON_SCENARIO   # A1 (2026-11-03): named
     assert v.channel.waves[1].prob == L.deuteron_av18_p_d()
     assert v.vector_dilution() / h.vector_dilution() - 1.0 == pytest.approx(
         -0.020268, rel=1e-3)
@@ -646,26 +646,26 @@ def test_c5_5_the_inclusive_tagged_drift_and_why_substitution_is_not_the_fix():
     hul = L.TaggedModel(L.li6_alpha_channel())
     assert hul.vector_dilution() == pytest.approx(1.0 - 1.5 * lg.P_D_LI6,
                                                   rel=2e-5)
-    assert lg.LI6_CLUSTER_POLARIZATION == lg.li6_cluster_polarization(
-        lg.P_D_LI6, lg.P_D_DEUTERON)
+    assert lg.LI6_CLUSTER_POLARIZATION_HULTHEN == lg.li6_cluster_polarization(
+        lg.P_D_LI6, lg.P_D_DEUTERON_SCENARIO)   # A1 (2026-11-03): the pre-A1 constant, named
     # under VmcAV18 they drift: +11.61 % vector, +6.58 % rank-2
     vmc = L.TaggedModel(L.li6_alpha_channel(
         source=L.ClusterWaveSource.VmcAV18))
     assert vmc.vector_dilution() / hul.vector_dilution() - 1.0 \
         == pytest.approx(0.116131, rel=1e-4)
-    assert vmc.tensor_dilution() / lg.LI6_B1_RANK2_TRANSFER - 1.0 \
-        == pytest.approx(0.065762, rel=1e-4)
-    assert lg.LI6_CLUSTER_POLARIZATION_VMC / lg.LI6_CLUSTER_POLARIZATION - 1.0 \
+    assert vmc.tensor_dilution() / lg.LI6_B1_RANK2_TRANSFER_HULTHEN - 1.0 \
+        == pytest.approx(0.065762, rel=1e-4)   # A1 (2026-11-03): against the Hulthen values
+    assert lg.LI6_CLUSTER_POLARIZATION_VMC / lg.LI6_CLUSTER_POLARIZATION_HULTHEN - 1.0 \
         == pytest.approx(0.116119, rel=1e-4)
     # substitution is NOT the fix: it moves AWAY from the ab initio anchor
     ab = lg.LI6_POLARIZATION_VMC_SIX_BODY
-    assert lg.LI6_CLUSTER_POLARIZATION / ab - 1.0 == pytest.approx(-0.04336,
-                                                                   rel=1e-3)
+    assert lg.LI6_CLUSTER_POLARIZATION_HULTHEN / ab - 1.0 == pytest.approx(
+        -0.04336, rel=1e-3)   # A1: the Hulthen reading; the default IS ab
     assert lg.LI6_CLUSTER_POLARIZATION_VMC / ab - 1.0 == pytest.approx(
         +0.06772, rel=1e-3)
     both = lg.li6_cluster_polarization(lg.VMC_P_D_LI6, L.deuteron_av18_p_d())
     assert both == pytest.approx(0.8870761569, rel=1e-8)
-    assert abs(lg.LI6_CLUSTER_POLARIZATION / ab - 1.0) \
+    assert abs(lg.LI6_CLUSTER_POLARIZATION_HULTHEN / ab - 1.0) \
         < abs(lg.LI6_CLUSTER_POLARIZATION_VMC / ab - 1.0)
 
 
@@ -683,9 +683,9 @@ def test_c5_5b_one_run_one_deuteron():
     L = lg._lipolgen
     h = L.li6_alpha_channel()
     v = L.li6_alpha_channel(source=L.ClusterWaveSource.VmcAV18)
-    # the default is beams.DEUTERON() itself, bit for bit
-    assert h.dis_target.eff_pol_p == lg.deuteron().eff_pol_p
-    assert h.dis_target.eff_pol_p == lg.DEUTERON_VECTOR_POLARIZATION
+    # the Hulthen factory's is the scenario deuteron (A1, 2026-11-03: the pre-A1 deuteron()), bit for bit
+    assert h.dis_target.eff_pol_p == lg.deuteron_scenario().eff_pol_p
+    assert h.dis_target.eff_pol_p == lg.DEUTERON_VECTOR_POLARIZATION_SCENARIO
     # the VMC one is the same Ion with the AV18 D state, and nothing else
     assert (v.dis_target.name, v.dis_target.A, v.dis_target.Z,
             v.dis_target.spin) == (h.dis_target.name, h.dis_target.A,
@@ -697,7 +697,7 @@ def test_c5_5b_one_run_one_deuteron():
     was_high = h.dis_target.eff_pol_p / v.dis_target.eff_pol_p
     assert was_high - 1.0 == pytest.approx(0.0206872095, rel=1e-8)
     k_now = L.InclusiveKernel(v.dis_target)
-    k_before = L.InclusiveKernel(lg.deuteron())
+    k_before = L.InclusiveKernel(lg.deuteron_scenario())   # A1 (2026-11-03): the pre-A1 deuteron()
     for x, q2 in ((0.05, 2.0), (0.1, 5.0), (0.3, 10.0), (0.5, 20.0)):
         assert k_before.tables(x, q2).g1 / k_now.tables(x, q2).g1 \
             == pytest.approx(was_high, rel=1e-12)

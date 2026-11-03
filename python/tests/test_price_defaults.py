@@ -36,15 +36,15 @@ SCRIPT = os.path.join(_ROOT, "validation", "price_defaults.py")
 
 # measured by the script, 2026-10-26: 6Li config 1, the shipped window (TOY row since D7)
 SIGMA_TOY_PB = 591846.1688784091          # tensor-thirds, meta["sigma_pb"]
-AZZ_TOY = -5.193230890419342e-04          # thirds estimator on meta's per-category sigma
+AZZ_TOY = -5.534747697354494e-04          # thirds estimator; A1 (2026-11-03): x1.06576 (-5.193230890419342e-04)
 # cos 2phi' amplitude per unit P_zz, super-bins S1..S4 (sibling fig1.json).
 # Re-taken at D4 (2026-10-27, the Jaffe-Manohar coefficient): exactly 1/2 of
 # the 2026-10-26 -1.302913804135417e-03 / -1.0625622769273495e-03 /
 # -1.4290788342523734e-03 / -1.3290877454563259e-03 (a sum of halved terms).
-A2_TOY = (-6.514569020677085e-04,
-          -5.312811384636748e-04,
-          -7.145394171261867e-04,
-          -6.645438727281629e-04)
+A2_TOY = (-6.514513502101775e-04,   # A1 (2026-11-03): re-taken, the cells' weights carry b1
+          -5.312780194694191e-04,   # (-6.514569020677085e-04, -5.312811384636748e-04,
+          -7.145295294557536e-04,   #  -7.145394171261867e-04, -6.645438727281629e-04)
+          -6.645350442646617e-04)
 #: backend -> (sigma ratio, A_zz ratio) against the SHIPPED default.  D7
 #: (2026-10-29): re-taken on CT18NLO (frozen) -- the toy is now a priced row;
 RATIOS = {"mstw": (0.9460490391711457, 1.0570276577574238),
@@ -54,11 +54,11 @@ RATIOS = {"mstw": (0.9460490391711457, 1.0570276577574238),
 # Pre-D7 (ToyF2/ToyG1) the RATIOS were mstw x0.7934 / x1.2604 and ct18nlo
 # x0.7985 / x1.2524 on sigma / A_zz, ct18nlo then continued below Q0.
 SIGMA_PB = 496334.155954048               # tensor-thirds, meta["sigma_pb"]
-AZZ = -6.192589749678352e-04              # thirds estimator, as AZZ_TOY
-A2 = (-6.520871589918197e-04,             # cos 2phi' amplitude per unit P_zz,
-      -5.317407554104979e-04,             # S1..S4 -- F2 cancels per cell, so
-      -7.145333058009431e-04,             # they move only through the cells'
-      -6.633634143805892e-04)             # cross-section weights
+AZZ = -6.599826308749011e-04              # thirds estimator; A1 (2026-11-03): x1.06576 (-6.192589749678352e-04)
+A2 = (-6.520807683198287e-04,             # cos 2phi' amplitude per unit P_zz,
+      -5.317366976891354e-04,             # S1..S4 -- F2 cancels per cell, so
+      -7.145237489847445e-04,             # they move only through the cells'
+      -6.633554244821122e-04)             # cross-section weights (A1 re-taken)
 
 
 def test_price_defaults_li6_inclusive_runs_returns_table_and_png(tmp_path):
@@ -90,7 +90,7 @@ def test_price_defaults_li6_inclusive_runs_returns_table_and_png(tmp_path):
     assert d["values"]["azz"] == pytest.approx(AZZ, rel=1e-9)
     for i, a2 in enumerate(A2, 1):
         assert d["values"]["A2_S%d" % i] == pytest.approx(a2, rel=1e-9)
-    # D7: the toy ROW is the pre-D7 default, its 2026-10-26 numbers unmoved
+    # D7: the toy ROW is the pre-D7 default (A1, 2026-11-03: its A_zz x1.06576, A2 through the weights)
     t = rows["unpol_sf = toy"]
     assert t["values"]["sigma"] == pytest.approx(SIGMA_TOY_PB, rel=1e-9)
     assert t["values"]["azz"] == pytest.approx(AZZ_TOY, rel=1e-9)

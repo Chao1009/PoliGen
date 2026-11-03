@@ -135,10 +135,10 @@ TEST_CASE("breakup: the deuteron partner reproduces the S-wave marginal at "
 
 TEST_CASE("breakup: the deuteron's struck nucleon carries the D-state-diluted "
           "polarization (1 - 3/2 P_D) m_S") {
-  BreakupOptions bo;                       // P_D = P_D_DEUTERON = 0.045
+  BreakupOptions bo;                       // P_D = P_D_DEUTERON_SCENARIO = 0.045
   ClusterBreakup br(bo);
   const double m_d = nuclear_mass(1, 2);
-  const double want = 1.0 - 1.5 * P_D_DEUTERON;
+  const double want = 1.0 - 1.5 * P_D_DEUTERON_SCENARIO;  // A1 (2026-11-03): the Hulthen default's P_D, named
 
   for (double m_s : {1.0, 0.0, -1.0}) {
     Rng rng(kSeed, 2, 0, static_cast<std::uint64_t>(m_s + 2.0));

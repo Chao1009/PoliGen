@@ -119,7 +119,7 @@ first; the second pass's findings on A1 and A7 are under SECOND PASS).
       vendored record (else BLOCKED, environment: a different set version).
   A5  g1^g = P_eff * Delta g, Delta g = NNPDFpol11_100 member 0 (the replica
       average) per nucleon, P_eff = (Z eff_pol_p + N eff_pol_n)/A of the
-      tree's li6() = 0.2704 (the cluster picture's 0.81123/3, the convention
+      tree's li6() = 0.2827 (0.848/3 since A1, 2026-11-03; 0.2704 = 0.81123/3 before; the convention
       `PolSF::g1_nucleus` uses), i.e. the 6Li m = +1 state; integrated on
       the set's own grid, x >= 1e-5.  Delta g = 0 is the other band edge (V1).
   A6  f1LL^g = 0.  Band (V2): f1LL^g = +- f1^g, the largest band symmetric
@@ -247,7 +247,7 @@ number, no verdict and no tolerance.
 THE THREE NORMALISATION RULES (BENCHMARK_PLAN.md sec. 8), for THIS row:
   1. b1 normalisations -- the moment bound has no b1.  The sub-row (b) reads
      the shipped b1(6Li) only through the kernel's own per-state rates,
-     whatever its normalisation (Li6B1(MillerB1): 0.921947 x (2/6) x Miller
+     whatever its normalisation (Li6B1(MillerB1): 0.982576 x (2/6) x Miller (A1; 0.921947 before)
      per nucleon, per nucleon like F1), so no b1 is compared to another.
   2. isoscalar denominator -- NOT APPLICABLE as a structure-function
      denominator; the gluon is isospin symmetric (f1^g, Delta g of the

@@ -53,7 +53,7 @@ SHIPPED settings, nothing moved:
            by default until D6 (2026-10-27), an option since (the run default
            is AV18): the analytic pair psi_0 = 1/(k^2+kappa^2) -
            1/(k^2+beta^2), psi_2 = k^2/((k^2+kappa^2)(k^2+beta^2)^2) at
-           beta = BETA_DEFAULT = 0.30 GeV, P_D = P_D_DEUTERON = 0.045, kappa
+           beta = BETA_DEFAULT = 0.30 GeV, P_D = P_D_DEUTERON_SCENARIO = 0.045 (A1), kappa
            from DEUTERON_P_TAG's separation energy, normalised exactly as
            `TaggedModel` normalises them (the constants N_L are READ from
            `TaggedModel(...).radial_table(L)`, not recomputed).

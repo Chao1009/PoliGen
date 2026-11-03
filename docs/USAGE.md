@@ -179,7 +179,7 @@ choice, not a fact:
 
 | `--b1-model` | `B1Model` | what it is |
 |---|---|---|
-| `miller` (default) | `B1Model::Miller` | `Li6B1(MillerB1)` through `LI6_B1_RANK2_TRANSFER` and `LI6_B1_PER_NUCLEON` (2/6). **Bit-for-bit what every published inclusive tensor number was made with**, and pinned at rtol 1e-12 by the **self-pin** `validation/reference/b1_default_li6.json` (this library's own C++ output — a regression guard, not a reference) (`tests/test_b1_nuclear.cpp` T9). This IS the run PLAN's "toy": today's default `b1_func` is `Li6B1(MillerB1)`, which is what `toy_b1` reaches. |
+| `miller` (default) | `B1Model::Miller` | `Li6B1(MillerB1)` through `LI6_B1_RANK2_TRANSFER` and `LI6_B1_PER_NUCLEON` (2/6). **Bit-for-bit what every published inclusive tensor number was made with** up to the transfer, which A1 (2026-11-03) moved 0.921947 → 0.982576 (×1.06576), and pinned at rtol 1e-12, at the pre-A1 transfer passed explicitly, by the **self-pin** `validation/reference/b1_default_li6.json` (this library's own C++ output — a regression guard, not a reference) (`tests/test_b1_nuclear.cpp` T9). This IS the run PLAN's "toy": today's default `b1_func` is `Li6B1(MillerB1)`, which is what `toy_b1` reaches. |
 | `cdks` | `B1Model::Cdks` | the same ⁶Li rank-2 transfer on the **other camp** for b₁ᵈ — the digitized Cosyn–Dong–Kumano–Sargsian PRD **95** (2017) 074036 Fig. 4 column. \|b₁\| is **two orders of magnitude smaller below x ≈ 0.1 and comparable to or larger than Miller's above it**: peak \|x·b₁\| **3.34e−4** against Miller's 4.27e−4 over x ∈ [0.02, 0.95] at Q² = 2.5, and at x = 0.3 it is **8× larger** with the opposite sign (∫b₁ dx **1.39e−4** against 9.1e−4). Different sign structure throughout. **These numbers DOUBLED on 2026-09-03**: `b1_convolution()` stopped applying `B1_PER_DEUTERON_TO_PER_NUCLEON` to a column that CDKS Eq. (10) and the text under their Eq. (16) say is already per nucleon (§2a "The two b₁ camps are not per the same thing"). |
 | `li6-convolution` | `B1Model::Li6Convolution` | `Li6ConvolutionB1` (`b1_nuclear.hpp`): the **four-term α–d convolution** of `docs/open_items/run_2026-09-02/design_D_b1_li6.md`. |
 
@@ -620,14 +620,14 @@ cfg = lipolgen.make_config(b1_model="li6-convolution", b1_unpol="mstw",
 
 Both opt-in backends carry the CDKS camp's b₁ᵈ, which is a **Q² = 2.5
 digitization with no Q² evolution**. In the topmost cell of the default window
-(x = 0.954993) F₁ has fallen far enough that b₁/F₁ reaches **48.67** for `cdks`
+(x = 0.954993) F₁ has fallen far enough that b₁/F₁ reaches **51.87** for `cdks` (A1, 2026-11-03: the 6Li transfer ×1.06576; 48.67 before)
 and **42.85** for `li6-convolution` on the shipped CT18NLO F₁ (D7; **6.52** / **5.91** on the toy) — past where the phi-averaged density 1 + w_avg
 stays positive, and `InclusiveSampler` refuses the run with *"negative
 phi-averaged density"*. Use `--x-max 0.95` (or `cfg.scenario.x_max = 0.95`).
 `lipolgen-run` now checks this **before** building the pipeline and says which
 flag fixes it, rather than letting that message — which names neither `--x-max`
 nor the CDKS table — come out of the sampler three frames down.
-`miller`'s b₁ is a ratio model (1.085 at the same point; 0.145 on the toy) and does not need it.
+`miller`'s b₁ is a ratio model (1.156 at the same point since A1, 1.085 before; 0.145 on the toy) and does not need it under `tensor-thirds` — but since A1 the default inclusive ⁶Li `--plan helicity-flip` (P_z 0.7, P_e 0.7) IS refused at that cell (1 + w_avg = −0.0185: vector −0.2578, rank-2 −0.7607; +0.04 before A1), so that plan needs `--x-max 0.95` too.
 Those three figures are MEASURED off the shipped kernel (re-measured
 2026-09-16, and 2026-10-29 for D7 — CT18NLO's F₁ is ×0.134 of ToyF2's there) and are defined once, in `python/lipolgen/cli.py`'s
 `B1_TOP_CELL_B1_OVER_F1`, which the `--x-max` help and the `--b1-model`
@@ -790,7 +790,7 @@ A_∥ is `(σ₊ − σ₋)/(σ₊ + σ₋)/(P_e P_z)` on `helicity_flip_plan(1,
 was printed at `--x-max 0.95` until 2026-09-05, in rows whose σ and A_∥ were at
 1.0, so one row carried two windows (at 0.95 the three A_zz are
 −5.193192e−4 / −6.503956e−4 / −6.545724e−4, and both ratios are unchanged to
-six digits, which is what hid it).
+six digits, which is what hid it).  The inclusive rows below are PRE-A1 (A1, 2026-11-03: inclusive ⁶Li A_zz ×1.06576 and A_∥ ×1.04533 on every backend, so every ratio stands; the tagged rows do not move).
 
 | channel | backend | σ [pb] | ratio | A_zz | ratio | A_∥ | ratio |
 |---|---|---|---|---|---|---|---|
@@ -1342,7 +1342,7 @@ is no VMC d → p+n cluster table, the deuteron IS the cluster", which is true o
 the `momenta/` files and false of `data/vmc/deuteron/fdeut.av18`, whose u(k)
 and w(k) *are* the p–n relative S and D waves.  `--cluster-wave vmc` now builds
 the control from that table at its own P_D = **0.057600**
-(`deuteron_av18_p_d()`, +28 % over the scenario `P_D_DEUTERON` = 0.045):
+(`deuteron_av18_p_d()`, +28 % over the scenario `P_D_DEUTERON_SCENARIO` = 0.045 — A1 (2026-11-03): `P_D_DEUTERON` is this 0.0576 now):
 
 | deuteron control | P_D | `vector_dilution` | `tensor_dilution` |
 |---|---|---|---|
@@ -1445,17 +1445,17 @@ events** differ, ⟨p² − M²⟩ **−0.0567 → −0.0599 GeV²**, σ ×1.54;
 and every other T0 column are bit-identical, and the Hulthén path is
 untouched there too.
 
-**And the inclusive constants do NOT follow the flag.** Under `vmc` — the DEFAULT
-since D6, so between the two default runs — a tagged and an inclusive row of one programme
-describe ⁶Li with wave functions whose α–d vector dilutions differ by **+11.61 %**
-and rank-2 transfers by **+6.58 %** (C5.5; whole nucleus 0.887076 against 0.811228, the author's open question, registry row 10).  Since
+**And the inclusive constants do NOT follow the flag.** Until A1 (2026-11-03) — under `vmc`, the DEFAULT
+since D6 — a tagged and an inclusive row of one programme
+described ⁶Li with wave functions whose α–d vector dilutions differ by **+11.61 %**
+and rank-2 transfers by **+6.58 %** (C5.5; whole nucleus 0.887076 against the pre-A1 0.811228, registry row 10, closed by A1: the inclusive factors are now 0.848 / 0.982576 / P_D 0.0576, so the two default runs differ by +4.6 % (0.887076 / 0.848) and 0 in the rank-2 sector; no CLI knob moves them — the old values are an API route: `lipolgen.li6_ion(LI6_CLUSTER_POLARIZATION_HULTHEN)`, `deuteron_ion(P_D_DEUTERON_SCENARIO)` and `default_inclusive_kernel(…, b1_transfer=LI6_B1_RANK2_TRANSFER_HULTHEN)` as `cfg.kernel`; every inclusive npz carries `meta["li6_cluster_polarization"]` / `["deuteron_p_d"]` / `["li6_b1_rank2_transfer"]` where read, and the banner a line "inclusive polarization factors").  Since
 2026-09-04 `cluster_wave` is **refused** on `--channel inclusive` and `--channel coherent` (since D6 a moved value by `validate()`,
 an explicit `--cluster-wave` of either value by `make_config` / the CLI), where it is never read: accepting it unread was how that
 11.61 % reached someone who had asked for a "VMC ⁶Li" row and got the shipped
 0.811228 with no warning.  Substituting the VMC P_D into
 `LI6_CLUSTER_POLARIZATION` is **not** the fix: it gives 0.905427, 6.8 % *above*
-the ab-initio six-body VMC 0.848, where the shipped 0.811228 is 4.3 % below it.
-**Quote no inclusive ⁶Li polarization without the band 0.81 … 0.91.**
+the ab-initio six-body VMC 0.848, where the pre-A1 0.811228 is 4.3 % below it; A1 ships 0.848 itself.
+**Quote no inclusive ⁶Li polarization without the band 0.811 … 0.887 around 0.848** (the two cluster readings; the ab initio value is the default; pre-A1 "0.81 … 0.91").
 
 What it changes (40 k events, 10 × 99.5 GeV/u; full tables and the derivation
 in `docs/open_items/vmc_reconciliation.md`):
@@ -1556,7 +1556,7 @@ momentum from the cluster's own wave function and writes
 
 | channel | struck cluster | partners | model |
 |---|---|---|---|
-| ⁶Li α | embedded d | 1 nucleon | the run's deuteron — the AV18 `fdeut` (P_D = 0.057600) by default since D6, the S + D Hulthén at `P_D_DEUTERON` on `--cluster-wave hulthen` — the m_S-dependent \|A_{m_sc}\|²; species `F2p : F2n`; nucleon spins from the pair CG factor, so ⟨P_N⟩ = (1 − 3/2 P_D) m_S |
+| ⁶Li α | embedded d | 1 nucleon | the run's deuteron — the AV18 `fdeut` (P_D = 0.057600) by default since D6, the S + D Hulthén at `P_D_DEUTERON_SCENARIO` (0.045) on `--cluster-wave hulthen` — the m_S-dependent \|A_{m_sc}\|²; species `F2p : F2n`; nucleon spins from the pair CG factor, so ⟨P_N⟩ = (1 − 3/2 P_D) m_S |
 | ⁷Li α | quasi-free t | d, or two n | sequential two-body at the AME2020 S_n(³H) = 6.2572 MeV / S(p+n+n) = 8.4818 MeV, nn split at 1/\|a_nn\| = 10.44 MeV — **crude and flagged** (plans/05 5.D) |
 | d control | already a nucleon | none | relabelled only |
 

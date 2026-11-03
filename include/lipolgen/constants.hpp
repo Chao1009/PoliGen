@@ -122,19 +122,19 @@ inline constexpr double B1_MILLER_TABLE_TO_PER_NUCLEON =
 /// normalisation.
 inline constexpr double B1_CDKS_TABLE_TO_PER_NUCLEON = 1.0;
 
-/// Rank-2 transfer of the embedded deuteron's tensor polarization to 6Li:
-/// `TaggedModel(li6_alpha_channel()).tensor_dilution()` at `P_D_LI6` -- the
-/// HULTHEN factory channel; the D6 run-default (VMC) channel's is 0.982576
-/// (x1.0658: registry row 10, the author's question; the constant is kept).
-/// A QUADRATURE, not a closed form: 1 - (9/10) P_D gives 0.921970 against the
-/// 0.9219490 measured, pinned to each other at 1e-4 (tests/test_tagged.cpp,
-/// plans/08 D9).  (0.9219467 until the 2026-09-06 S-D sign fix, which moved
-/// the residual by +2.46e-6 -- inside the 1e-4 pin; the constant did not move.)
-inline constexpr double LI6_B1_RANK2_TRANSFER = 0.921947;
-/// The pre-2026-08-28 VECTOR dilution 1 - (3/2) P_D -- the wrong rank for b1.
-inline constexpr double LI6_B1_LEGACY_TRANSFER = 0.87;
-/// 6Li carries two polarized nucleons out of six.
-inline constexpr double LI6_B1_PER_NUCLEON = 2.0 / 6.0;
+/// Rank-2 transfer of the embedded deuteron's tensor polarization to 6Li, the
+/// quadrature `TaggedModel(li6_alpha_channel(..)).tensor_dilution()`: HULTHEN at P_D_LI6
+/// (1 - 0.9 P_D = 0.921970, pinned at 1e-4; 0.9219467 before the 2026-09-06 S-D
+/// sign fix) and VMC AV18+UX (0.98257587, pinned to the literal at 5e-7, test_tagged.cpp).
+inline constexpr double LI6_B1_RANK2_TRANSFER_HULTHEN = 0.921947;  // pre-A1, polligen's
+inline constexpr double LI6_B1_RANK2_TRANSFER_VMC = 0.982576;      // the default wave's
+/// A1 (2026-11-03): the inclusive b1 / A_zz read the VMC value, x1.06576 (the old one
+/// via `default_inclusive_kernel(..., b1_transfer)`).  UNQUANTIFIED SYSTEMATIC: the
+/// non-cluster depletion taking the vector sector from the cluster 0.887 to the
+/// six-body 0.848 (4.4 %) has no rank-2 counterpart, so none is applied here.
+inline constexpr double LI6_B1_RANK2_TRANSFER = LI6_B1_RANK2_TRANSFER_VMC;
+inline constexpr double LI6_B1_LEGACY_TRANSFER = 0.87;  ///< pre-2026-08-28 VECTOR 1 - 1.5 P_D: wrong rank for b1
+inline constexpr double LI6_B1_PER_NUCLEON = 2.0 / 6.0;  ///< 6Li: two polarized nucleons of six
 
 /// Sather-Schmidt bag-model sum-rule coefficient (PRD 42:1424):
 /// int_0^1 x Delta dx = C_BAG * alpha_s(Q2).

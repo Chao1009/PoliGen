@@ -49,11 +49,11 @@ N = 400
 SEED = 7
 
 # The CDKS camp's b1_d is a Q2 = 2.5 DIGITIZATION with no Q2 evolution, and in
-# the topmost cell of the default window (x = 0.954993) its b1/F1 reaches 48.67
+# the topmost cell of the default window (x = 0.954993) its b1/F1 reaches 51.87 (A1; 48.67 before)
 # for `cdks` and 42.85 for `li6-convolution` on the shipped CT18NLO F1 (D7,
 # 2026-10-29; 6.52 / 5.91 on the toy) -- past where 1 + w_avg stays positive,
 # so `InclusiveSampler` refuses the run.  Both opt-in backends need a window
-# that stops below it; Miller's b1 is a ratio model (1.085 there; 0.145 toy).
+# that stops below it; Miller's b1 is a ratio model (1.156 there since A1, 1.085 before; 0.145 toy).
 #
 # Those two numbers live in ONE place, `cli.B1_TOP_CELL_B1_OVER_F1`, and
 # `test_the_top_cell_note_is_the_measured_one` below pins them against the
@@ -344,7 +344,7 @@ def test_default_kernel_is_the_miller_kernel(repo_root):
     with open(path) as fh:
         doc = json.load(fh)
     assert doc["kernel"]["b1_model"] == "miller"
-    k = _l.default_inclusive_kernel(_l.li6())
+    k = _l.default_inclusive_kernel(_l.li6(), b1_transfer=_l.LI6_B1_RANK2_TRANSFER_HULTHEN)  # A1 (2026-11-03): the pre-A1 transfer, explicitly; default 0.982576
     xs = doc["x"]
     assert len(xs) == 200 and len(doc["tables"]) == 3
     n = 0
@@ -1327,7 +1327,7 @@ def test_the_top_cell_note_is_the_measured_one():
         assert got == pytest.approx(want, abs=tol), (name, got, want)
 
     # ... and the sentence the two CLI sites share really does carry them.
-    assert "48.67" in cli.B1_TOP_CELL_NOTE        # D7 (6.52 on the toy)
+    assert "51.87" in cli.B1_TOP_CELL_NOTE        # D7 (6.52 on the toy); A1 (2026-11-03): was 48.67
     assert "42.85" in cli.B1_TOP_CELL_NOTE        # D7 (5.91 on the toy)
 
 

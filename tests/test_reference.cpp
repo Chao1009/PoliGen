@@ -60,12 +60,12 @@ bool load(const char* name, jsonmin::Value& out) {
 bool reference_blob_present(const char* name) {
   return std::ifstream(ref_path(name)).good();
 }
-
-
+// A1 (2026-11-03): polligen's constants, passed explicitly (6Li 0.811228 whole-nucleus, d P_D 0.045); the shipped default is 0.848 / 0.0576.
+Ion polligen_ion(const std::string& n) { return n == "6Li" ? li6_ion(LI6_CLUSTER_POLARIZATION_HULTHEN) : n == "d" ? DEUTERON_SCENARIO() : ion_by_name(n); }
 /// Rebuild the kernel a named reference block was dumped with.
 InclusiveKernel build_kernel(const std::string& ion_name,
                              const std::string& block) {
-  const Ion& ion = ion_by_name(ion_name);
+  const Ion ion = polligen_ion(ion_name);   // A1 (2026-11-03): polligen's constants, explicitly
   InclusiveKernel::Options opt;
   // C2: `target_mass` DEFAULTS to true (xsec.py:149), so the finite-gamma
   // block is built from the DEFAULT options -- this is the assertion that the
@@ -147,16 +147,16 @@ TEST_CASE("reference tables: beams.json" *
     CHECK(PROTON_CONFIG_ENERGIES[i] == c["PROTON_CONFIG_ENERGIES"][i].num());
     CHECK(ELECTRON_ENERGIES[i] == c["ELECTRON_ENERGIES"][i].num());
   }
-  // the 6Li cluster wave function: the two D-state probabilities live in
-  // beams.hpp (as they do in beams.py since 2026-08-29), and the inclusive
-  // eff_pol slots below are LI6_CLUSTER_POLARIZATION/3 built from them
+  // A1 (2026-11-03): polligen's constants, passed explicitly; the shipped default is
+  // LI6_CLUSTER_POLARIZATION = 0.848, P_D_DEUTERON = 0.0576 (0.9136); polligen's are
+  // the named pre-A1 ones (the Hulthen cluster product and the scenario deuteron)
   CHECK(P_D_LI6 == c["P_D_LI6"].num());
-  CHECK(P_D_DEUTERON == c["P_D_DEUTERON"].num());
+  CHECK(P_D_DEUTERON_SCENARIO == c["P_D_DEUTERON"].num());
   CHECK_CLOSE(ALPHA_D_VECTOR_POLARIZATION,
               c["ALPHA_D_VECTOR_POLARIZATION"].num(), kRtol);
-  CHECK_CLOSE(DEUTERON_VECTOR_POLARIZATION,
+  CHECK_CLOSE(DEUTERON_VECTOR_POLARIZATION_SCENARIO,
               c["DEUTERON_VECTOR_POLARIZATION"].num(), kRtol);
-  CHECK_CLOSE(LI6_CLUSTER_POLARIZATION,
+  CHECK_CLOSE(LI6_CLUSTER_POLARIZATION_HULTHEN,
               c["LI6_CLUSTER_POLARIZATION"].num(), kRtol);
   CHECK(LI6_NAIVE_ONE_THIRD == c["LI6_NAIVE_ONE_THIRD"].num());
 
@@ -171,7 +171,7 @@ TEST_CASE("reference tables: beams.json" *
   }
 
   for (const auto& kv : doc["ions"].obj()) {
-    const Ion& ion = ion_by_name(kv.first);
+    const Ion ion = polligen_ion(kv.first);   // A1 (2026-11-03): polligen's constants, explicitly
     const jsonmin::Value& v = kv.second;
     CHECK(ion.A == static_cast<int>(v["A"].num()));
     CHECK(ion.Z == static_cast<int>(v["Z"].num()));
@@ -331,7 +331,7 @@ TEST_CASE("reference tables: xsec.json" *
   CHECK_CLOSE(GEV2_TO_PB, consts["GEV2_TO_PB"].num(), kRtol);
   CHECK(TENSOR_LL_SIGN == consts["TENSOR_LL_SIGN"].num());
   CHECK(M_NUCLEON == consts["M_NUCLEON"].num());
-  CHECK_CLOSE(LI6_CLUSTER_POLARIZATION,
+  CHECK_CLOSE(LI6_CLUSTER_POLARIZATION_HULTHEN,   // A1 (2026-11-03): polligen's, explicitly; default 0.848
               consts["LI6_CLUSTER_POLARIZATION"].num(), kRtol);
 
   std::vector<double> xs, q2s;

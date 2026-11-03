@@ -159,7 +159,7 @@ def test_deuteron_static_eta_values_and_cross_checks(ds):
     # Hulthen: pole residues, and the large-r ratio of the closed forms
     assert h["eta"] == pytest.approx(0.03247843, rel=1e-6)
     assert h["eta_check_r80"] == pytest.approx(h["eta"], rel=1e-8)
-    assert h["beta_gev"] == 0.30 and h["p_d_nominal"] == lg.P_D_DEUTERON
+    assert h["beta_gev"] == 0.30 and h["p_d_nominal"] == lg.P_D_DEUTERON_SCENARIO   # A1 (2026-11-03): named
 
 
 def test_deuteron_static_qd_values_and_in_tree_cross_checks(ds):

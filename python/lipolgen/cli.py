@@ -48,7 +48,7 @@ from . import (B1_MODELS, B1_UNPOL, CHANNELS, CLUSTER_WAVES, FSI, OPTICS,
 #: window's top cell (x = 0.954993, Q2 = 167.34413006, 6Li) -- re-taken
 #: 2026-10-29 for D7 on CT18NLO / NNPDFpol1.1 (li6-convolution on
 #: `--b1-unpol ct18nlo`, the default's own object), whose F1 there is x0.134
-#: of ToyF2's: 48.67 / 42.85 / 1.085.  On the toy (2026-09-16, the shipped
+#: of ToyF2's: 51.87 / 42.85 / 1.156 since A1 (48.67 / 42.85 / 1.085 before).  On the toy (2026-09-16, the shipped
 #: kernel until D7): 6.52 / 5.91 / 0.145 -- `default_inclusive_kernel(ion, m)`
 #: with one argument still returns those.  The D7 recipe, with U, P =
 #: `_l.make_lhapdf_unpol_sf(_l.UNPOL_SF_DEFAULT)`, `..._pol_sf(POL_SF_DEFAULT)`:
@@ -59,8 +59,8 @@ from . import (B1_MODELS, B1_UNPOL, CHANNELS, CLUSTER_WAVES, FSI, OPTICS,
 #: twice the rounded 3.3 -- rounded arithmetic, not a measurement.
 B1_TOP_CELL_X = 0.954993
 B1_TOP_CELL_Q2 = 167.34413006
-B1_TOP_CELL_B1_OVER_F1 = {"cdks": 48.67, "li6-convolution": 42.85,   # D7
-                          "miller": 1.085}
+B1_TOP_CELL_B1_OVER_F1 = {"cdks": 51.87, "li6-convolution": 42.85,   # D7; A1 (2026-11-03): cdks 48.67 -> 51.87,
+                          "miller": 1.156}   # miller 1.085 -> 1.156 (the 6Li transfer x1.06576)
 
 #: The sentence those numbers are quoted in, written ONCE.
 B1_TOP_CELL_NOTE = (
@@ -1789,6 +1789,13 @@ def main(argv=None):
                else "an option (the run default is %s, D6)" % dflt,
                ch.label, ", ".join("L=%d P=%.6f" % (w.l, w.prob) for w in ch.waves),
                ch.dis_target.name, ch.dis_target.eff_pol_p, ch.dis_target.eff_pol_n))
+    # A1 (2026-11-03): the INCLUSIVE polarization factors this run used (no
+    # CLI knob moves them; meta["li6_cluster_polarization"] / ["deuteron_p_d"]
+    # / ["li6_b1_rank2_transfer"] carry the same numbers), so a file made
+    # before A1 (0.811228 / 0.045 / 0.921947) and one made after can be told apart.
+    pf = _l.inclusive_polarization_factors(p)["report"]
+    if pf:
+        say("  inclusive polarization factors: %s" % pf)
 
     # Events are only materialized when something needs the records: the HFS
     # exporter always, HepMC only when the T2 tier is on (regenerating a

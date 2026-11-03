@@ -175,7 +175,7 @@
   "last": "`docs/OPEN_ITEMS_SOLUTIONS.md` §12–13 and `docs/open_items/engineering.md` §C)."
  },
  "docs/USAGE.md:163-533": {
-  "sha256": "06f999f85c08e40e228fbf5a5ffd0c26792814cf8906053ffe0bad06c78d9961",
+  "sha256": "a56130737cf753455a3eb8541cf84920080bc3bcd870c499a0e2d50f964c8090",
   "first": "X (pdg 92). The balance is **per-nucleon**, `k + P_N = k' + X`, exactly as",
   "last": "move every pinned gate number, and it is not a uniform improvement on an"
  },
@@ -275,9 +275,9 @@
   "last": "double nucleus_mass(const std::string& name, int a, int z);"
  },
  "include/lipolgen/beams.hpp:99-100": {
-  "sha256": "1508e0fa708220555dce35155c4f7f25c741daf23a359d218329f391dbce713e",
+  "sha256": "520d94762137a3bcdb484d5958911c93c7fdb49eddd3e40bdbb3a469b475a461",
   "first": "inline constexpr double P_D_LI6 = 0.0867;",
-  "last": "/// The deuteron's own D-state probability (AV18-like)."
+  "last": "inline constexpr double P_D_DEUTERON_SCENARIO = 0.045;  ///< the pre-A1 \"AV18-like\" scenario (notes…"
  },
  "include/lipolgen/bookkeeping.hpp:133-154": {
   "sha256": "14ba8dc8ef35317649d034093c0dd52e80805a09901c9100ed91abbfee877336",

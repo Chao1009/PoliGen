@@ -319,10 +319,10 @@ LICENSE AUTHORS CITATION.cff   GPL-3.0-or-later, the copyright holder(s) and how
 Head-on frame (ion +z, electron −z); populations ordered m = +J … −J;
 `TENSOR_LL_SIGN = −1` (A_zz = −(2/3) b₁/F₁, Cosyn Eq. 27 / HERMES — the
 value four sources give, and an author decision still open to confirm,
-row 22); ⁶Li effective polarization **0.811228** whole-nucleus in the
-cluster picture (0.811/3 per nucleon; 0.887076 on a default tagged ⁶Li α run since D6, registry row 10) — **no inclusive ⁶Li polarization may
-be quoted without the band 0.81 … 0.91**, which brackets the ab-initio
-six-body VMC 0.848;
+row 22); ⁶Li effective polarization **0.848** whole-nucleus, the ab-initio
+six-body VMC (A1, 2026-11-03; pre-A1 0.811228, the Hulthén cluster product; 0.848/3 per nucleon; 0.887076 on a default tagged ⁶Li α run), the inclusive ⁶Li rank-2 transfer **0.982576** (pre-A1 0.921947) and the inclusive deuteron's P_D **0.0576** (AV18; pre-A1 0.045, eff_pol 0.9136 against 0.9325) — **no inclusive ⁶Li polarization may
+be quoted without the band 0.811 … 0.887 around 0.848** (the two cluster
+readings; the ab initio value is the default; pre-A1 "0.81 … 0.91");
 `EmcBaseline::Epps21`; γ-matched beam energies (⁶Li 40.8 / 99.5 / 137.5,
 ⁷Li 40.8 / 99.5 / 117.9 GeV/u); counter-based RNG keyed by (seed, run, bunch,
 event) — identical output for any thread count.

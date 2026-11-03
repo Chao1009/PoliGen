@@ -22,7 +22,7 @@ sigma(apar+)/sigma(unpol) - 1 = -6.80e-4, and a sigma comparison between an
 unweighted and a weighted sample resolves it at 3 sigma only with >~ 4e7
 events per route -- a closure that could not tell a working Mode W from
 w = 1.  In this window the EXACT tables (sigma_tot_pb, noise-free) give a
-shift of +1.47 % (toy SFs; +1.59 % on D7's grids), resolved at 3 sigma by ~ 8.3e4 events per route; the
+shift of +1.47 % (toy SFs; +1.59 % on D7's grids; +1.66 % since A1, 2026-11-03), resolved at 3 sigma by ~ 8.3e4 events per route; the
 window was picked from those exact numbers alone (x >= 0.05/0.1/0.2 and
 y >= 0.3/0.5/0.7 were tabulated), before any pull in it was computed.
 
@@ -53,11 +53,11 @@ no-op Mode W (w = 1) would give -- the closure's power.
 
 N AND RUNTIME.  L = LUMI_PB = 34000 pb^-1 per nucleon per route (the window's
 sigma_unpol is 87.9 pb; 78.5 pb on D7's grids), i.e. <N> ~ 2.99e6 (2.7e6) events per route; single thread.
-The pull's resolution is ~ 8.2e-4 relative, against the +1.47 % shift (+1.59 % since D7).
+The pull's resolution is ~ 8.2e-4 relative, against the +1.47 % shift (+1.59 % since D7, +1.66 % since A1).
 Measured 2.7 s wall for the whole harness, interpreter start-up included
 (2.6 s inside run()), on the development container, 2026-09-26.
 
-WHAT WAS MEASURED (2026-09-26, PASS, on the toy SFs -- the D7 re-take on the shipped kernel, 2026-10-29: 79.7924 +- 0.0484 vs 79.7677 +- 0.0488 pb, N 2 712 940 / 2 669 772, pull +0.359, exact 79.767466 (apar+) / 78.522871 (unpol), shift +1.5850e-2, no-op +18.61).  Unweighted N_U/L = 89.1934 +- 0.0512
+WHAT WAS MEASURED (2026-09-26, PASS, on the toy SFs -- the D7 re-take on the shipped kernel, 2026-10-29: 79.7924 +- 0.0484 vs 79.7677 +- 0.0488 pb, N 2 712 940 / 2 669 772, pull +0.359, exact 79.767466 (apar+) / 78.522871 (unpol), shift +1.5850e-2, no-op +18.61; A1 (2026-11-03): 79.8484 +- 0.0485 vs 79.8237 +- 0.0489, N_U 2 714 846, pull +0.359, shift +1.6564e-2, no-op +19.42).  Unweighted N_U/L = 89.1934 +- 0.0512
 pb (N_U = 3 032 577) against weighted sum w/L = 89.1674 +- 0.0516 pb
 (N_W = 2 987 706, <w> = 1.014722, w in [1.0061, 1.0676]): pull +0.359.
 Exact sigma_tot_pb: 89.167123 pb (apar+), 87.873873 pb (unpol), shift

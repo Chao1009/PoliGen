@@ -47,7 +47,7 @@ def _kernel_6li(target_mass=False):
     opt.b1_func = lambda x, q2, f1: lg.toy_b1(x, q2, f1, lg.B1Mode.Toy)
     opt.delta_func = lambda x, q2, f1: lg.toy_delta_gluon(x, q2, f1, 1e-3)
     opt.target_mass = target_mass
-    return lg.InclusiveKernel(lg.li6(), opt)
+    return lg.InclusiveKernel(lg.li6_ion(lg.LI6_CLUSTER_POLARIZATION_HULTHEN), opt)  # A1 (2026-11-03): polligen's constants, passed explicitly; the shipped default is 0.848
 
 
 def _kernel_6li_tensor_gamma():
@@ -61,7 +61,7 @@ def _kernel_6li_tensor_gamma():
     opt.b4_func = lambda x, q2, f1: -0.02 * f1
     opt.tensor_gamma = True
     opt.target_mass = False
-    return lg.InclusiveKernel(lg.li6(), opt)
+    return lg.InclusiveKernel(lg.li6_ion(lg.LI6_CLUSTER_POLARIZATION_HULTHEN), opt)  # A1: polligen's, explicitly
 
 
 #: the tree's cos 2phi coefficient in units of -(1-y)/y^2: Jaffe-Manohar's,
@@ -114,10 +114,10 @@ def test_constants_match_the_reference(xsec_ref):
     assert lg.GEV2_TO_PB == c["GEV2_TO_PB"]
     assert lg.M_NUCLEON == c["M_NUCLEON"]
     assert lg.TENSOR_LL_SIGN == c["TENSOR_LL_SIGN"]
-    assert lg.LI6_CLUSTER_POLARIZATION == pytest.approx(
+    assert lg.LI6_CLUSTER_POLARIZATION_HULTHEN == pytest.approx(  # A1 (2026-11-03): polligen's constants, passed explicitly; the shipped default is 0.848
         c["LI6_CLUSTER_POLARIZATION"], rel=RTOL)
     for name, row in c["ions"].items():
-        ion = lg.ion_by_name(name)
+        ion = _polligen_ion(name)   # A1: polligen's 6Li 0.811228 / d 0.9325, explicitly
         assert ion.eff_pol_p == pytest.approx(row["eff_pol_p"], rel=RTOL)
         assert ion.eff_pol_n == pytest.approx(row["eff_pol_n"], rel=RTOL)
     for name, row in c["ions"].items():
@@ -376,3 +376,14 @@ def test_reference_manifest_lists_exactly_the_tables_on_disk(reference_dir,
         # The paths are recorded repo-relative with the repo name in front.
         rel = script.split("LiPolGen/", 1)[-1]
         assert os.path.isfile(os.path.join(repo_root, rel)), (blob, script)
+
+
+def _polligen_ion(name):
+    """A1 (2026-11-03): polligen's constants, passed explicitly -- the 6Li Ion at
+    the Hulthen cluster product 0.811228 and the scenario deuteron (P_D 0.045);
+    the shipped defaults are 0.848 and 0.0576 (DECISIONS.md A1)."""
+    if name == "6Li":
+        return lg.li6_ion(lg.LI6_CLUSTER_POLARIZATION_HULTHEN)
+    if name == "d":
+        return lg.deuteron_scenario()
+    return lg.ion_by_name(name)

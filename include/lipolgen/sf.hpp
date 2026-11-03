@@ -535,11 +535,11 @@ DeltaModel make_delta_toy(double scale = 1e-3);
 // polarization, so the same physics is expressed by a `dilution` multiplying
 // Delta (1/3 for 6Li).  That 1/3 is a COUNTING fraction -- two polarized
 // nucleons of six -- and NOT a polarization.  In particular it is not
-// `LI6().eff_pol_p`, which since 2026-08-29 is the cluster picture's
-// LI6_CLUSTER_POLARIZATION/3 (plans/04 #6): that is the VECTOR polarization of
+// `LI6().eff_pol_p`, which is LI6_CLUSTER_POLARIZATION/3 (the cluster product
+// 2026-08-29, plans/04 #6; 0.848/3 since A1): that is the VECTOR polarization of
 // the pair, rank 1, while Delta is rank 2 like b1, where the same wave function
 // transfers `LI6_B1_RANK2_TRANSFER`.  Whether Delta should carry that rank-2
-// transfer as b1 does (1/3 -> 0.3073) is open, and nothing published assumes
+// transfer as b1 does (1/3 -> 0.3275 since A1, 0.3073 before) is open, and nothing published assumes
 // it.  Do not set dilution != 1 AND use a per-nucleon-normalized P_zz at the
 // same time.
 /// Interpretation A: Delta = dilution * A * alpha_s(Q2) * F1 * shape.

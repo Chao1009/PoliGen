@@ -691,7 +691,7 @@ py::dict columns_to_dict(Columns& c, const Pipeline& p, std::uint64_t n,
   const std::pair<double, double> grid = unpol_sf_grid_report(p);
   meta["unpol_sf_grid_q2_min"] = grid.first;
   meta["unpol_sf_below_grid_frac"] = grid.second;
-  for (const auto& kv : sf_grid_extras(p, knob("pol_sf"))) meta[kv.first] = kv.second;  // D7; F7: pol keys only where g1 ran
+  for (const auto& kv : sf_grid_extras(p, knob("pol_sf"))) meta[kv.first] = kv.second;  for (const auto& kv : inclusive_polarization_factors(p).meta()) meta[py::str(kv.first)] = kv.second;  // D7; F7: pol keys only where g1 ran; A1 (2026-11-03): the three inclusive polarization factors used, where read
   // fsi.hpp -- CONDITIONAL, following the `rc` precedent below rather than
   // the unconditional `b1` one, so an `--fsi off` npz carries exactly
   // today's key set and no reference gate moves.  Measured on the three runs
@@ -1108,7 +1108,7 @@ PYBIND11_MODULE(_lipolgen, m) {
         py::arg("p_d_alpha_d"), py::arg("p_d_deuteron"),
         "(1 - 1.5 P_D^{alpha-d})(1 - 1.5 P_D^d) -- the ONE home of the "
         "cluster-picture product.  LI6_CLUSTER_POLARIZATION is this at "
-        "(P_D_LI6, P_D_DEUTERON).");
+        "(P_D_LI6, P_D_DEUTERON_SCENARIO) is LI6_CLUSTER_POLARIZATION_HULTHEN.");
   m.attr("LI6_NAIVE_ONE_THIRD") = LI6_NAIVE_ONE_THIRD;
 
   // numerics.hpp -- the NumPy primitives, exposed for the bit-level tests
@@ -2837,10 +2837,10 @@ static void bind_tagged(py::module_& m) {
   m.attr("VMC_S_ALPHA_T_LI7") = VMC_S_ALPHA_T_LI7;
   m.attr("LI6_CLUSTER_POLARIZATION_VMC") = LI6_CLUSTER_POLARIZATION_VMC;
   m.def("deuteron_channel", &deuteron_channel, py::arg("beta") = BETA_DEFAULT,
-        py::arg("p_d") = P_D_DEUTERON,
+        py::arg("p_d") = P_D_DEUTERON_SCENARIO,  // A1: the Hulthen factory keeps 0.045
         py::arg("source") = ClusterWaveSource::Hulthen,
         "`source = VmcAV18` (the RUN default's wave since D6; not this "
-        "factory's default) swaps the analytic pair at P_D_DEUTERON = 0.045 "
+        "factory's default) swaps the analytic pair at P_D_DEUTERON_SCENARIO = 0.045 "
         "for the AV18 fdeut.av18 deuteron at its own P_D (deuteron_av18_p_d).");
   m.def("deuteron_av18", []() { return DEUTERON_AV18(); },
         "The embedded deuteron of ClusterWaveSource.VmcAV18: beams.deuteron() "
@@ -4720,15 +4720,15 @@ static void bind_pipeline(py::module_& m) {
   m.def("default_inclusive_kernel", [](const Ion& ion, B1Model model,
                                        double band_scale, double w_alpha_d,
                                        std::shared_ptr<UnpolSF> b1_unpol, RSource r_source,
-                                       std::shared_ptr<UnpolSF> unpol_sf, std::shared_ptr<PolSF> pol_sf) {
+                                       std::shared_ptr<UnpolSF> unpol_sf, std::shared_ptr<PolSF> pol_sf, double b1_transfer) {
     return std::const_pointer_cast<InclusiveKernel>(
         default_inclusive_kernel(ion, model, band_scale, w_alpha_d,
                                  std::move(b1_unpol), std::move(unpol_sf),
-                                 std::move(pol_sf), r_source));
+                                 std::move(pol_sf), r_source, b1_transfer));
   }, py::arg("ion"), py::arg("model") = B1Model::Miller,
      py::arg("band_scale") = 1.0, py::arg("w_alpha_d") = 1.0,
      py::arg("b1_unpol") = nullptr, py::arg("r_source") = RSource::Unset,
-     py::arg("unpol_sf") = nullptr, py::arg("pol_sf") = nullptr);
+     py::arg("unpol_sf") = nullptr, py::arg("pol_sf") = nullptr, py::arg("b1_transfer") = LI6_B1_RANK2_TRANSFER);  // A1
 
   m.def("momentum_residual", &momentum_residual, py::arg("ev"));
   m.def("momentum_scale", &momentum_scale, py::arg("ev"));
@@ -5190,6 +5190,36 @@ static void bind_io(py::module_& m) {
   }, py::arg("pipeline"),
      "(q2_min, below_grid_frac) of the POLARISED backend: unpol_sf_grid_report's "
      "twin (D7), the same three cases, against the same channel's own rate.");
+  // A1 (2026-11-03): the three INCLUSIVE polarization factors, their pre-A1
+  // values under names, and the PARAMETERS through which a caller reaches them
+  // (beams.hpp `li6_ion` / `deuteron_ion`, constants.hpp; the polligen port
+  // gates pass the old values here).  At the end, for the same reason as D4's.
+  m.attr("LI6_CLUSTER_POLARIZATION_HULTHEN") = LI6_CLUSTER_POLARIZATION_HULTHEN;
+  m.attr("LI6_B1_RANK2_TRANSFER_HULTHEN") = LI6_B1_RANK2_TRANSFER_HULTHEN;
+  m.attr("LI6_B1_RANK2_TRANSFER_VMC") = LI6_B1_RANK2_TRANSFER_VMC;
+  m.attr("P_D_DEUTERON_SCENARIO") = P_D_DEUTERON_SCENARIO;
+  m.attr("DEUTERON_VECTOR_POLARIZATION_SCENARIO") = DEUTERON_VECTOR_POLARIZATION_SCENARIO;
+  m.def("li6_ion", &li6_ion, py::arg("whole_nucleus_polarization") = LI6_CLUSTER_POLARIZATION,
+        "The 6Li Ion at a chosen whole-nucleus vector polarization (a third in each "
+        "slot).  li6() is this at LI6_CLUSTER_POLARIZATION = 0.848 (A1); "
+        "li6_ion(LI6_CLUSTER_POLARIZATION_HULTHEN) is the pre-A1 li6(), bit for bit.");
+  m.def("deuteron_ion", &deuteron_ion, py::arg("p_d") = P_D_DEUTERON,
+        "The deuteron Ion at a chosen P_D (eff_pol = 1 - 1.5 P_D).  deuteron() is "
+        "AV18's P_D_DEUTERON = 0.0576 since A1; deuteron_scenario() is the 0.045 one.");
+  m.def("deuteron_scenario", []() { return DEUTERON_SCENARIO(); },
+        "The scenario deuteron (eff_pol 0.9325): the pre-A1 deuteron(), bit for bit, "
+        "the Hulthen alpha tag's embedded deuteron and polligen's.");
+  m.def("inclusive_polarization_factors", [](const Pipeline& p) {
+    const InclusivePolarizationFactors f = inclusive_polarization_factors(p);
+    py::dict d;
+    for (const auto& kv : f.meta()) d[py::str(kv.first)] = kv.second;
+    d["report"] = f.report;
+    return d;
+  }, py::arg("pipeline"),
+     "A1: the inclusive polarization factors THIS run used -- the meta keys "
+     "li6_cluster_polarization / deuteron_p_d / li6_b1_rank2_transfer, each "
+     "only where read and known -- and the banner sentence ('report'; empty "
+     "off the inclusive channel and on an inclusive run that reads none).");
 #if LIPOLGEN_HAVE_LHAPDF
   m.attr("LHAPDF_EXTRAPOLATOR") = std::string(LHAPDF_EXTRAPOLATOR);
   m.attr("LHAPDF_INTERPOLATOR") = std::string(LHAPDF_INTERPOLATOR);

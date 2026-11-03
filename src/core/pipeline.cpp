@@ -486,7 +486,7 @@ void PipelineConfig::validate() const {
   // "silently ignored flag" C5.4 named as a defect on the deuteron control,
   // and the mechanism by which C5.5's 11.61 % inclusive-vs-tagged drift used to
   // reach a user: they set the flag wanting a "VMC 6Li" inclusive row, nothing
-  // refused it, and they got `LI6_CLUSTER_POLARIZATION` = 0.811228 with no
+  // refused it, and they got `LI6_CLUSTER_POLARIZATION` = 0.811228 (pre-A1) with no
   // warning (`cluster_vmc_mc_sigma`, a 0.02 % effect, was refused already).
   // D6 (2026-10-27): the default is `CLUSTER_WAVE_DEFAULT` = VmcAV18, so the
   // rule refuses a value MOVED FROM THE DEFAULT (the RcOptions rule); an
@@ -500,7 +500,7 @@ void PipelineConfig::validate() const {
                     "wave function of a tagged channel and is never read on ")
         + pipeline_channel_name(channel)
         + " -- the inclusive 6Li constants (LI6_CLUSTER_POLARIZATION = "
-          "0.811228, the Hulthen-era cluster product) and the coherent form "
+          "0.848, the six-body ab initio value since A1) and the coherent form "
           "factors do not follow it, so a value moved from the default (vmc, "
           "D6) would promise a row the run does not make (C5.5).  Leave "
           "cluster_wave at its default, or run a tagged channel");
@@ -1158,7 +1158,7 @@ std::shared_ptr<const InclusiveKernel> default_inclusive_kernel(
     const Ion& ion, B1Model model, double band_scale, double w_alpha_d,
     std::shared_ptr<const UnpolSF> b1_unpol,
     std::shared_ptr<const UnpolSF> unpol_sf,
-    std::shared_ptr<const PolSF> pol_sf, RSource r_source) {
+    std::shared_ptr<const PolSF> pol_sf, RSource r_source, double b1_transfer) {
   InclusiveKernel::Options opt;
   // ONE UnpolSF, shared: the core must not link LHAPDF or PYTHIA (sf.hpp),
   // so an `LhapdfSF` / `MstwSF` only ever enters through the `unpol_sf`
@@ -1192,22 +1192,22 @@ std::shared_ptr<const InclusiveKernel> default_inclusive_kernel(
   // what the run surface now says out loud instead of returning silent zeros.
   if (kernel_fills_rank2(ion)) {
     if (model == B1Model::Miller) {
-      // UNCHANGED DEFAULT PATH, including the function-local `static`:
-      // `TensorSF::b1_func()` returns a closure capturing raw `this` and
-      // "must not outlive the backend" (sf.hpp), and this is how that
-      // lifetime has always been met here.  `band_scale` is deliberately NOT
-      // applied -- Miller's numbers are the published ones and stay bit for
-      // bit; the band belongs to the two opt-in backends.
-      static const auto li6_b1 =
-          std::make_shared<Li6B1>(std::make_shared<MillerB1>());
-      opt.b1_func = li6_b1->b1_func();
+      // The DEFAULT transfer keeps the function-local `static`
+      // (`TensorSF::b1_func()` captures raw `this` and "must not outlive the
+      // backend", sf.hpp); any other `b1_transfer` (A1, 2026-11-03: the
+      // polligen gates' 0.921947) gets its own object, kept alive by value
+      // capture.  `band_scale` is NOT applied: Miller's are the published.
+      static const auto li6_b1 = std::make_shared<Li6B1>(std::make_shared<MillerB1>());
+      const auto b = std::make_shared<const Li6B1>(std::make_shared<MillerB1>(), b1_transfer);
+      if (b1_transfer == LI6_B1_RANK2_TRANSFER) opt.b1_func = li6_b1->b1_func();
+      else opt.b1_func = [b](double x, double q2, double f1) { return b->b1(x, q2, f1); };
     } else if (model == B1Model::Cdks) {
       // NOT a `static`: that would freeze the first band scale for the whole
       // process, so a `--b1-band-scale 0` run after a `1` run would silently
       // get the wrong object.  Capturing the shared_ptr BY VALUE in the
       // closure keeps the backend alive exactly as long as the closure --
       // which is what `b1_func()`'s raw-`this` capture cannot do.
-      const auto b = std::make_shared<const Li6B1>(std::make_shared<CdksB1>());
+      const auto b = std::make_shared<const Li6B1>(std::make_shared<CdksB1>(), b1_transfer);  // A1
       opt.b1_func = [b, band_scale](double x, double q2, double f1) {
         return band_scale * b->b1(x, q2, f1);
       };
@@ -1529,7 +1529,7 @@ Pipeline::Pipeline(PipelineConfig config, RunPlan plan)
             : cfg_.channel == PipelineChannel::TaggedLi7Alpha
                   ? li7_alpha_channel(cfg_.cluster_beta, cfg_.cluster_wave,
                                       cfg_.cluster_vmc_mc_sigma)
-                  : deuteron_channel(cfg_.cluster_beta, P_D_DEUTERON,
+                  : deuteron_channel(cfg_.cluster_beta, P_D_DEUTERON_SCENARIO,
                                      cfg_.cluster_wave)));
     model_ = std::make_shared<TaggedModel>(*channel_);
     StruckClusterOptions sopt = cfg_.struck;
@@ -2812,8 +2812,8 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
                           "too (open items C5.4, C5.5b); vmc is the run default since D6")
             : (off_ch +
                "the value is withheld -- the run default (vmc since D6) is read on the tagged "
-               "channels only; the inclusive 6Li constants (LI6_CLUSTER_POLARIZATION = 0.811228, "
-               "the Hulthen-era product) and the coherent form factors do not follow it, so "
+               "channels only; the inclusive 6Li constants (LI6_CLUSTER_POLARIZATION = 0.848, "
+               "the six-body value since A1) and the coherent form factors do not follow it, so "
                "validate() refuses a moved value and make_config / the CLI an explicit one (C5.5)"),
         c.cluster_wave == d.cluster_wave);
     const bool mc_read = vmc && li_tag;
@@ -3931,6 +3931,64 @@ PipelineConfig toy_config() {
   c.unpol_sf = UnpolSfSource::Toy;
   c.pol_sf = PolSfSource::Toy;
   return c;
+}
+
+// A1 (2026-11-03): the three inclusive polarization factors ONE run used
+// (pipeline.hpp, `InclusivePolarizationFactors`).  Read off the run's own
+// kernel so that a caller-supplied one (the API route to the pre-A1 values)
+// reports what it carries, not what the defaults say.
+InclusivePolarizationFactors inclusive_polarization_factors(const Pipeline& p) {
+  InclusivePolarizationFactors f;
+  const PipelineConfig& c = p.config();
+  if (c.channel != PipelineChannel::Inclusive) return f;
+  f.caller_kernel = static_cast<bool>(c.kernel);
+  const Ion& ion = p.dis_sampler().kernel().ion();
+  std::string s;
+  char buf[256];
+  if (ion.name == "6Li") {
+    // The default `LI6()` reports the constant itself rather than 3 x (P/3).
+    f.li6_cluster_polarization = (ion.eff_pol_p == LI6().eff_pol_p)
+                                     ? LI6_CLUSTER_POLARIZATION
+                                     : ion.Z * ion.eff_pol_p;
+    std::snprintf(buf, sizeof(buf),
+                  "6Li whole-nucleus vector polarization %.6g%s", f.li6_cluster_polarization,
+                  f.li6_cluster_polarization == LI6_CLUSTER_POLARIZATION
+                      ? " (the six-body VMC value, A1; band 0.811 ... 0.887, the two "
+                        "cluster readings)"
+                      : f.li6_cluster_polarization == LI6_CLUSTER_POLARIZATION_HULTHEN
+                            ? " (the pre-A1 Hulthen cluster product, passed explicitly)"
+                            : " (caller-supplied)");
+    s += buf;
+  } else if (ion.name == "d") {
+    f.deuteron_p_d = (ion.eff_pol_p == DEUTERON_VECTOR_POLARIZATION) ? P_D_DEUTERON
+                     : (ion.eff_pol_p == DEUTERON_VECTOR_POLARIZATION_SCENARIO)
+                         ? P_D_DEUTERON_SCENARIO
+                         : (1.0 - ion.eff_pol_p) / 1.5;
+    std::snprintf(buf, sizeof(buf),
+                  "deuteron P_D %.6g, eff_pol %.6g%s", f.deuteron_p_d, ion.eff_pol_p,
+                  f.deuteron_p_d == P_D_DEUTERON
+                      ? " (AV18's, A1; 0.045 scenario before)"
+                      : f.deuteron_p_d == P_D_DEUTERON_SCENARIO
+                            ? " (the pre-A1 scenario, passed explicitly)"
+                            : " (caller-supplied)");
+    s += buf;
+  }
+  if (std::fabs(ion.spin - 1.0) < 1e-9) {   // `kernel_fills_rank2`
+    if (f.caller_kernel) {
+      s += "; rank-2 transfer: caller-supplied kernel (not knowable from the run)";
+    } else if (c.b1_model == B1Model::Miller || c.b1_model == B1Model::Cdks) {
+      f.li6_b1_rank2_transfer = LI6_B1_RANK2_TRANSFER;
+      std::snprintf(buf, sizeof(buf),
+                    "; 6Li rank-2 transfer %.6g (the VMC alpha-d value, A1; 0.921947 "
+                    "before)%s", f.li6_b1_rank2_transfer,
+                    ion.name == "d" ? ", which the deuteron's class-level b1 reads too" : "");
+      s += buf;
+    } else {
+      s += "; rank-2 transfer not read (b1_model li6-convolution builds its own)";
+    }
+  }
+  f.report = s;
+  return f;
 }
 
 }  // namespace lipolgen

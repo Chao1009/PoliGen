@@ -231,9 +231,9 @@ TEST_CASE("the legacy analytic b1 shapes are unchanged") {
 }
 
 TEST_CASE("the 6Li b1 transfer constants") {
-  CHECK_CLOSE(LI6_B1_RANK2_TRANSFER, 0.921947, 1e-6);
+  CHECK_CLOSE(LI6_B1_RANK2_TRANSFER, 0.982576, 1e-6);   // A1 (2026-11-03): was 0.921947
   CHECK_CLOSE(LI6_B1_PER_NUCLEON, 1.0 / 3.0, 1e-15);
-  CHECK_CLOSE(b1_li6_from_deuteron(1.0), 0.30731566666666665, kRtol);
+  CHECK_CLOSE(b1_li6_from_deuteron(1.0), 0.982576 / 3.0, kRtol);   // A1: was 0.30731566666666665
   CHECK_CLOSE(b1_li6_from_deuteron(3.0, LI6_B1_LEGACY_TRANSFER, 1.0), 2.61,
               1e-14);
 }

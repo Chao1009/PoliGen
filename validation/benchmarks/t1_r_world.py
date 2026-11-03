@@ -49,7 +49,7 @@ order and with these LABELS:
          r_sigma_lt) and F2p from MstwSF (MSTW2008 LO, a fit that includes
          HERA's F2 data; the opt-in `--unpol-sf mstw`) -- F2 is the nuisance
          here and MSTW is the tree's backend closest to the proton F2 at these
-         (x, Q2).  RECORDED beside it: the same with the SHIPPED ToyF2's F2p
+         (x, Q2).  RECORDED beside it: the same with ToyF2's F2p (SHIPPED until D7)
          (the generator's own proton F_L) and with CT18NLO's (evaluated at
          leading order).  The verdict set is the record's Table 9 (= the
          paper's Table 2: eight Q2-averaged points, stat / uncorrelated /
@@ -443,7 +443,7 @@ def f2_backend(name):
     import lipolgen as lg
     import lipolgen._lipolgen as _l
     if name == "toy":
-        return (lambda: lg.ToyF2()), "ToyF2 (shipped default)", None
+        return (lambda: lg.ToyF2()), "ToyF2 (the shipped default until D7)", None
     if name == "mstw":
         if not getattr(_l, "HAVE_PYTHIA8", False):
             return None, "MstwSF", ("environment: lipolgen built without the "

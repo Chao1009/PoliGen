@@ -36,9 +36,9 @@ onto the physical target — conservation to 1e-13).
 
 ## What ships behind a selector
 
-Almost every physics ingredient beyond the toy backends is **opt-in**: the
-default run is the one every reference JSON is pinned against at rtol 1e-12 (bar the tagged waves: since D6 the run default is VMC and `tagged.json` pins the factories' Hulthén family, by name),
-and each selector below is off unless asked for — D5's tail model and D6's cluster waves are decided defaults. **The cost of turning one on
+Almost every physics ingredient is **opt-in**: the reference JSONs pin the CLASS-LEVEL kernels at rtol 1e-12 —
+the toy structure functions (since D7 the run's are CT18NLO / NNPDFpol1.1, pinned by `python/tests/test_d7_shipped_kernel.py`) and, for the tagged waves, the factories' Hulthén family (since D6 the run default is VMC),
+and each selector below is off unless asked for — D5's tail model, D6's cluster waves and D7's structure functions are decided defaults. **The cost of turning one on
 is measured, and no number here stands without the window it was measured in.**
 
 | selector | default | what the other value adds | measured, with its window |
@@ -46,16 +46,16 @@ is measured, and no number here stands without the window it was measured in.**
 | `--cluster-wave {hulthen,vmc}` | `vmc` since D6 (2026-10-27): the ANL VMC AV18 α+d / α+t tables and the AV18 deuteron everywhere the run reads one | `hulthen`: the analytic Hulthén pair (α–d P_D = 0.0867, deuteron 0.045), the run default until D6 and bit for bit what it gave | ⁶Li α-tag fraction **0.0348 (vmc) against 0.0264 (hulthen)** at 10 × 99.5 on the YR high-acceptance envelope (40 k events, seed 20260829, regenerated 2026-09-06 on the fixed S–D sign); vmc over hulthen is ×1.116 / ×1.066 on the integrated vector / tensor dilutions and ×0.430 / ×0.209 on A_zz^tag at k = 0.20 / 0.30 GeV (`docs/open_items/run_2026-10-26/phase_A_baseline.md` §4), and the default tagged ⁶Li run reads the whole-nucleus polarization 0.887076 against the inclusive constant's 0.811228 — the author's open question (registry row 10); an explicit value is refused on `inclusive`/`coherent`, where it is never read; the tables open `data/vmc` (`$LIPOLGEN_DATA_DIR`) |
 | `--pzz-mode {ladder,typed}` | `ladder`, bit for bit (it is the branch that was already there) | `--plan helicity-flip` honours the typed `--pzz` instead of the max-entropy ladder at `--pz`, and REFUSES a value outside the plan's domain with the edge named rather than clamping | inclusive config 1, 100 000 events, seed 20260713, `--pz 0.7 --pe 0.7`, `--pzz 0.5` against the ladder: **on ⁷Li no observable moves** (rank-2 identically zero; σ agrees to 1 ulp, A_∥ to 6 × 10⁻¹⁴ of its own error) while **0.1060 %** of events re-cell on last-bit arithmetic; on **⁶Li** σ **−0.0023527 %** and A_∥ **−4.27 × 10⁻⁶ σ_stat** on the shipped `miller` (22–36× less on the opt-in b₁ models). The **recorded alignment** moves 0.4 → 0.5 (⁷Li) / 0.409403 → 0.5 (⁶Li), i.e. **−20 % / −18.12 %** on δ(A_zz) and δ(cos 2φ) at fixed N |
 | `--triton-sf {hulthen,ciofi-simula}` | `hulthen`, bit for bit | the Ciofi–Simula three-channel A = 3 spectral function | S₀ = **0.6525, untuned** |
-| `--fsi {off,glauber-cluster,glauber-nucleon}` | `off` | a Glauber survival **weight** on `Event::weight` — never a momentum shift | the two variants are **not** one, on `tagged-6Li-alpha`, 20 000 events, seed 1234, `tensor-thirds`, **σ_XN = 40 mb** — one end of the mandatory 20–40 mb band (toy SFs, re-measured 2026-10-29): on the default VMC waves **64.5 %** of events differ by more than **1 %** (\|w_nucleon/w_cluster − 1\| > 0.01), ratio to **10.1**, survival 0.797 / 0.819, and the weight table clips at w_max = 50 on 0.70 % / 5.25 % of its cells; on `--cluster-wave hulthen` **99.4 %**, ratio to **69.9**, survival 0.520 / 0.583 |
+| `--fsi {off,glauber-cluster,glauber-nucleon}` | `off` | a Glauber survival **weight** on `Event::weight` — never a momentum shift | the two variants are **not** one, on `tagged-6Li-alpha`, 20 000 events, seed 1234, `tensor-thirds`, **σ_XN = 40 mb** — one end of the mandatory 20–40 mb band (toy SFs, re-measured 2026-10-29): on the default VMC waves **64.5 %** of events differ by more than **1 %** (\|w_nucleon/w_cluster − 1\| > 0.01), ratio to **10.1**, survival 0.797 / 0.819, and the weight table clips at w_max = 50 on 0.70 % / 5.25 % of its cells (all unchanged to these digits on D7's grids); on `--cluster-wave hulthen` **99.4 %**, ratio to **69.9**, survival 0.520 / 0.583 |
 | `--rc {off,tensor-band}` | `off`, byte-identical | the tensor RC **band** `rc_tensor_lo/hi` plus the radiative tails, on `Event::rc_weights` and never on `Event::weight` | the band is the answer; a single edge is not. `--rc` is accepted and does nothing on `coherent`, and a non-default rc sub-knob there is refused |
-| `--rc-tail-model {t-peak,t-peak+ll,polrad-full}` | **`polrad-full`** since 2026-10-27 (decision D5); `t-peak` until then — every RC-tail number published before that date without a model label is a `t-peak` number, made on the structure-function backends shipped then | **`polrad-full`** (2026-09-06) is the exact Eq. (18) + Appendix B + Eq. (A.4) tail, its proton slot checked against DJANGOH (row 7), ~12 s of table build per run (0.16 s on `t-peak`); **`t-peak`** is POLRAD's t-peak alone, a lower bound; **`t-peak+ll`** adds the leading-log s-/p-peaks | the two t-peak edges agree to **+0.62 % event-weighted at the CLI default P_z = 0.7** (8.719649e−03 → 8.773752e−03, 5194 of 200 000 events, seed 1234; **+0.61 %** / 5182 at P_z = 0, the fill both suites use) in the Q² ≥ 20 GeV², y ≤ 0.9 window, and disagree **per cell**: 331 of 1356 accepted cells (24.4 %) by > 1 %, worst ×6444 at x = 0.7943, y = 0.0088. **The pair is a price range, not a bracket**: the exact `polrad-full` tail lies **outside both edges on 1326 of 3051 accepted cells (43.5 %)** and above both in that window (8.815031e−03, +1.09 %) |
+| `--rc-tail-model {t-peak,t-peak+ll,polrad-full}` | **`polrad-full`** since 2026-10-27 (decision D5); `t-peak` until then — every RC-tail number published before that date without a model label is a `t-peak` number, made on the structure-function backends shipped then | **`polrad-full`** (2026-09-06) is the exact Eq. (18) + Appendix B + Eq. (A.4) tail, its proton slot checked against DJANGOH (row 7), ~12 s of table build per run (0.16 s on `t-peak`); **`t-peak`** is POLRAD's t-peak alone, a lower bound; **`t-peak+ll`** adds the leading-log s-/p-peaks | on the toy SFs (the default until D7), the two t-peak edges agree to **+0.62 % event-weighted at the CLI default P_z = 0.7** (8.719649e−03 → 8.773752e−03, 5194 of 200 000 events, seed 1234; **+0.61 %** / 5182 at P_z = 0, the fill both suites use) in the Q² ≥ 20 GeV², y ≤ 0.9 window, and disagree **per cell**: 331 of 1356 accepted cells (24.4 %) by > 1 %, worst ×6444 at x = 0.7943, y = 0.0088. **The pair is a price range, not a bracket**: the exact `polrad-full` tail lies **outside both edges on 1326 of 3051 accepted cells (43.5 %)** and above both in that window (8.815031e−03, +1.09 %) |
 | `--r-source {unset,sigma-lt,r1998}` | `unset`, bit for bit by construction | ONE R = σ_L/σ_T hook threaded through `default_inclusive_kernel` into both `Li6ConvolutionOptions::r_func` and `InclusiveKernel::Options::r_func`, so the tensor weight's numerator and denominator cannot disagree | registry **row 3**, priced not decided. `unset` does not enter the branch; `sigma-lt` is measured byte-identical (hence `not-read`); `r1998` moves K/D_φ — and A_zz with it — by **−3.8357 % / +26.3988 % / +3.3518 %** at x = 0.05 / 0.10 / 0.30, y = 0.5, Q² = 2.5, and moves the unpolarised rate (σ_pb **−0.684681 %**), which the numerator-only option cannot |
 | `--rc-sp-tensor-scale` | **0**, and refused unless `--rc-tail-model t-peak+ll` | the tensor fraction of the leading-log s-/p-peaks, which `t-peak+ll` otherwise adds to the **unpolarised** numerator alone | **a bound with no derivation, and EMPTY where it matters**: at the three standard points (x = 0.01 / 0.10 / 0.30, Q² = 5) ΔA_zz moves by exactly 0 at scale 0, 0.5 and 1 — **0.0 % of the collapse recovered**. It bites on 77 of 3051 accepted cells and recovers **at most 21.72 %** anywhere. Exactly linear, so one run rescales |
 | `--rc-c0-shape {ho,vmc-ft}` | `ho`, bit for bit | the j₀ transform of the committed ANL VMC ⁶Li point-proton density at the same ⟨r²⟩ | the ⁶Li C0 shape is a **band**, and both the sign and the magnitude are band edges: σ^el_T/σ^el_U at x = 0.10, Q² = 5 is **+9.357e−04 on `ho`** and **−2.442e−04 on `vmc-ft`** on the `t-peak` tail — a factor **67** resp. **≈ 255** below POLRAD's own deuteron value +0.062 (re-driven 2026-09-23; was 68 / ≈ 260 / +0.064) — and **+2.674e−04 / −9.821e−04** (×233 / ×63 below it) on the default `polrad-full` (2026-10-29), with the SIGN flipping between the edges on both, so the published sign is withdrawn |
 | `--b1-model {miller,cdks,li6-convolution}` | `miller`, bit for bit | the four-term α–d convolution for b₁(⁶Li) | opt-in and **band-mandatory** (`--b1-band-scale` 0/1/2); the ±100 % band comes from Q(⁶Li) vs Q_d, not from the A = 2 gate, so it stays after the gate passes |
-| `--b1-unpol {toy,mstw,ct18nlo}` | `toy` | MSTW2008 LO — CDKS's own PDF — read from the grid PYTHIA already ships | this is the selector that **emits the gate's passing configuration**: G3b **0.843243** at CDKS Eq. (21), inside [0.5, 2], against **0.440** on the shipped `toy`, outside it. Needs the optional PYTHIA tier and is refused, never silently downgraded, without it |
-| `--unpol-sf {toy,mstw,ct18nlo}` | `toy`, bit for bit | one unpolarised structure-function backend for **every** kernel the run builds, the tagged struck-cluster kernel included | cost of having been on the toy, ⁶Li at config 1: accepted σ **×0.7985** (ct18nlo) / **×0.7934** (mstw), run-level A_zz ×1.2524 / ×1.2604 |
-| `--pol-sf {toy,nnpdfpol}` | `toy`, bit for bit | NNPDFpol1.1 g₁ on the inclusive and tagged kernels | it is read **only** where the fill carries λ_e·P_e ≠ 0 — under `tensor-thirds`, this CLI's default plan, on **no** channel — and it is *labelled, not credited*, wherever it did not run. The shipped `ToyG1`'s g₁ⁿ has the **wrong sign over roughly 0.25 < x < 0.6** |
+| `--b1-unpol {toy,mstw,ct18nlo}` | `toy` | MSTW2008 LO — CDKS's own PDF — read from the grid PYTHIA already ships | this is the selector that **emits the gate's passing configuration**: G3b **0.843243** at CDKS Eq. (21), inside [0.5, 2], against **0.440** on `toy` (its default), outside it. Needs the optional PYTHIA tier and is refused, never silently downgraded, without it |
+| `--unpol-sf {toy,mstw,ct18nlo}` | **`ct18nlo`** since D7 (2026-10-27): CT18NLO at LO on the free nucleon (no EPPS21), frozen at its grid edges; `toy` until then | one unpolarised structure-function backend for **every** kernel the run builds, the tagged struck-cluster kernel included — `toy` the pre-D7 default, `mstw` MSTW2008 LO | against the toy, ⁶Li at config 1: accepted σ **×0.8386** (ct18nlo, frozen; ×0.7985 continued, pre-D7) / **×0.7934** (mstw), run-level A_zz ×1.1924 / ×1.2604; 39 % of the default rate sits below CT18NLO's Q² = 1.677 floor, on the frozen edge (`docs/USAGE.md` §10) |
+| `--pol-sf {toy,nnpdfpol}` | **`nnpdfpol`** since D7: NNPDFpol1.1 g₁ at LO, frozen below Q² = 1; `toy` until then | `toy`: the pre-D7 `ToyG1` on the inclusive and tagged kernels | it is read **only** where the fill carries λ_e·P_e ≠ 0 — under `tensor-thirds`, this CLI's default plan, on **no** channel — and it is *labelled, not credited*, wherever it did not run. The toy `ToyG1`'s g₁ⁿ (shipped until D7) has the **wrong sign over roughly 0.25 < x < 0.6** |
 | `--coherent-t2`, `--pom-set` | `pomeron`, set 6 — both read only under `--hadronize`, itself off | the γ*–Pomeron hadronic final state on a PYTHIA Pomeron beam (id 990) | over all 15 sets × 20 000 events the T0 columns are **bit-identical across the fourteen sets that still run** (set 11 is refused), so the DPDF band on M_X, \|t\|, x_P and σ is identically zero; the systematic is hadronic — ⟨n_charged⟩ **−2.6 % / +9.9 %** over the twelve DPDF fits, kaons ×2.8 |
 | `--coherent-t-max` | 0.2 GeV² | a different coherent \|t\| ceiling | the ceiling's reason is the **anchor range** (\|t\| ≤ 0.30, knob-independent); positivity is the contingent second reason — its edge is 0.245 at the shipped `eps_b0` and 2.80 at the measured quadrupole. Truncation redistributes exp(−B t_max) = **4.5e−5** of the rate |
 
@@ -164,8 +164,8 @@ four-term α–d convolution for b₁(⁶Li), `--b1-model li6-convolution` — o
 band-mandatory, and since 2026-09-03 through its A = 2 validation gate, see
 below; packaging, `pip install -e .`; one structure-function backend for
 **every** kernel, `--unpol-sf toy|mstw|ct18nlo` / `--pol-sf toy|nnpdfpol` —
-row 14, and the toy costs ×0.80 on σ(⁶Li) while the toy g₁ⁿ has the wrong sign
-over 0.25 < x < 0.6). Rows 8 and 15 the board calls **deferred with design**:
+row 14, the DEFAULT since D7 (CT18NLO / NNPDFpol1.1; the toy, ×1.19 on σ(⁶Li) with a wrong-sign g₁ⁿ
+over 0.25 < x < 0.6, is the option). Rows 8 and 15 the board calls **deferred with design**:
 row 8 is the spin-3/2 finite-γ theory note, which changes no behaviour
 (`docs/theory/SPIN32_FINITE_GAMMA.md`); row 15 is the ⁷Li inclusive rank-2
 sector, **exactly zero**, saying so since phase D in the run banner and in
@@ -185,13 +185,13 @@ below Q² = 0.1 in any source this tree has seen. Still open: an external check 
 the coherent ⁶Li slot and the tensor term are unchecked), the tensor cos 2φ dipole-model run with
 the Mäntysaari group, b₁(⁶Li) beyond the α–d picture, and the polarized
 quasi-elastic tail. **The A = 2 convolution gate now passes — for one
-unpolarized nucleon input, not for the shipped default.** With MSTW2008 LO —
+unpolarized nucleon input, not for `--b1-unpol`'s default.** With MSTW2008 LO —
 CDKS's own nucleon PDF, checklist item 4 — at CDKS Eq. (21)'s δ-function the
 peak ratio is **0.843** against the digitized Fig. 4, inside the factor-2
-window; on the **default** toy F₂ it is **0.440**, *outside* it. So quote
+window; on `--b1-unpol`'s **default** toy F₂ it is **0.440**, *outside* it. So quote
 numbers made with `--b1-unpol mstw`, the selector that emits the passing
 configuration (it needs the optional PYTHIA tier and is refused, never
-silently downgraded, without it); the default `toy` backend's numbers are not
+silently downgraded, without it); the `toy` backend's numbers are not
 covered by the lift, and the two are not a rescaling of each other — mstw/toy
 on b₁ is 1.848 / 1.276 / 0.817 at x = 0.10 / 0.30 / 0.50. With the real
 CD-Bonn wave function as well the ratio is **1.000338**, i.e. a residual below
@@ -217,8 +217,8 @@ its options and their measured cost, in `AUTHOR_DECISIONS.md` (§B12, §B7,
 ## Build
 
 Dependencies (built from source into `../deps/install` on the development
-machine; any prefix works): HepMC3 ≥ 3.2, LHAPDF ≥ 6.5 with `CT18NLO`,
-`NNPDFpol11_100`, `EPPS21nlo_CT18Anlo_Li6`, PYTHIA ≥ 8.310 (with `--with-python`
+machine; any prefix works): HepMC3 ≥ 3.2, LHAPDF ≥ 6.5 with `CT18NLO` and
+`NNPDFpol11_100` (the SHIPPED defaults since D7 — every default run needs them) and `EPPS21nlo_CT18Anlo_Li6`, PYTHIA ≥ 8.310 (with `--with-python`
 if you want `import pythia8` too), pybind11 ≥ 2.12, Python ≥ 3.10 with numpy.
 
 ```bash
@@ -247,8 +247,8 @@ measured 2026-09-05 with auditwheel 6.8.2 + patchelf 0.19.1: it vendors
 `libpythia8`, `libLHAPDF` and `libHepMC3` in, **1 779 767 B → 7 232 971 B
 (×4.06)**, tag **`manylinux_2_35_x86_64`** (glibc 2.35 — a wider tag needs a
 build inside an older manylinux image). With the whole deps prefix replaced
-by an empty tmpfs, `import lipolgen` and the pure-C++ generator **work**
-(bit-identical output) while `LhapdfSF` and `--hadronize` **fail**, because
+by an empty tmpfs, `import lipolgen` and the pure-C++ generator **work** (since D7 only a run naming the toys, `--unpol-sf toy --pol-sf toy`:
+the default run is refused by name without the sets, re-enacted 2026-10-29) while `LhapdfSF` and `--hadronize` **fail**, because
 PYTHIA's `xmldoc`/`pdfdata` and LHAPDF's set store are not in the wheel and
 their compiled-in defaults are the build machine's absolute paths. Vendoring
 those three libraries also makes the wheel a combined work under
@@ -340,8 +340,8 @@ under 30 s today; a row that costs more, or a generator-vs-generator sample
 `make_report.py --all --plots` regenerates `docs/benchmarking/REPORT.md` /
 `REPORT.json` (the M2 baseline) and one figure per row that draws one. A
 harness that disagrees with the tree is recorded, never tuned. As of
-2026-10-26 (23 harnesses, every row run, the three LHAPDF sets installed):
-13 pass, 10 fail (recorded), 0 blocked.
+2026-10-29 (D7; 23 harnesses, every row run, the three LHAPDF sets installed):
+14 pass, 9 fail (recorded), 0 blocked — F₂ᵈ/F₂ᵖ passes on the shipped CT18NLO (13 / 10 on 2026-10-26, on the toys).
 
 ## Citing
 

@@ -5,10 +5,10 @@ and the FSI unitarity sum of 05 sec. 1.1 (tier T5).  Three sub-rows:
 
   bc_ww                Burkhardt-Cottingham on the tree's `g2_ww`
                        (asserted; PASS)
-  bjorken[toyg1]       Bjorken sum on the shipped `ToyG1`
-                       (asserted; FAIL, recorded)
-  bjorken[nnpdfpol11]  the same on `LhapdfG1("NNPDFpol11_100")`
-                       (BLOCKED: environment, the set is not installed)
+  bjorken[toyg1]       Bjorken sum on `ToyG1` (the shipped g1 until D7,
+                       2026-10-27; an option since) (asserted; FAIL, recorded)
+  bjorken[nnpdfpol11]  the same on `LhapdfG1("NNPDFpol11_100")`, the shipped
+                       g1 since D7 (BLOCKED: environment, when not installed)
   fsi_unitarity        Strikman-Weiss int dGamma S[FSI + FSI^2] = 0
                        (BLOCKED: not definable in the tree as built)
 
@@ -74,8 +74,8 @@ reference's own uncertainty (g_A, alpha_s(M_Z), and the size of the last
 included term) is reported; it is 2.6 / 1.3 / 0.8 % at Q2 = 2 / 5 / 10,
 the truncation term dominating.  In 05's words the sum rule is a
 property of the PDF SET, not of the generator: on `ToyG1` this sub-row
-measures what the shipped default g1 does; on `LhapdfG1` it would check the
-isovector flavour plumbing.
+measures the toy (shipped until D7); on `LhapdfG1` -- the shipped g1 since
+D7 -- what the shipped default does, and the isovector flavour plumbing.
 
     TOLERANCE (declared before computing; see the honesty note below).
     For each Q2, over the x_min scan (toy: 1e-2 ... 1e-6; LHAPDF: 1e-2 ...
@@ -181,8 +181,8 @@ that machine (measured 2026-10-26: the LhapdfG1 NOTE above);
 fsi_unitarity BLOCKED (not definable); survival recorded 0.520239.  The row
 as a whole is therefore FAIL, recorded: the status rule is "fail if any
 evaluated sub-row fails, pass if all evaluated pass, blocked if none was
-evaluated", and the failing sub-row is the shipped toy's Bjorken integral,
-not the WW implementation.
+evaluated", and the failing sub-rows are the Bjorken integrals (the toy's,
+and since D7 the shipped NNPDFpol1.1's), not the WW implementation.
 
 Run:  source env.sh && python3 validation/benchmarks/t5_sum_rules.py [--plot]
 
@@ -575,10 +575,20 @@ def run(verbose=True):
 
     q5 = bj_toy["per_q2"][5.0]
     g_last = q5["rows"][-1]
-    generator = ("bc_ww closure max|resid|/tol = %.3f over %d cells (%s); "
+    # D7 (2026-10-27): the SHIPPED g1 is NNPDFpol1.1, so its Bjorken sub-row
+    # leads the line when it was evaluated; the toy's (the shipped g1 until
+    # then) follows, recorded.  The row's status rule is unchanged.
+    lead = ""
+    if bj_lh["status"] != "blocked":
+        l5 = bj_lh["per_q2"][5.0]
+        lead = ("Bjorken NNPDFpol11 (shipped since D7, LO) Q2=5: int_{1e-5}^1 "
+                "(g1p-g1n) = %.4f (%+.0f %% of the reference, %s); "
+                % (l5["rows"][-1]["gamma_pn"], 100.0 * l5["verdict"]["distance_rel"],
+                   bj_lh["status"].upper()))
+    generator = ("bc_ww closure max|resid|/tol = %.3f over %d cells (%s); %s"
                  "Bjorken ToyG1 Q2=5: int_{1e-6}^1 (g1p-g1n) = %.4f, last decade "
                  "+%.4f (divergent: g1n ~ x^-%.3f)"
-                 % (worst["ratio"], len(cells), bc_row["status"].upper(),
+                 % (worst["ratio"], len(cells), bc_row["status"].upper(), lead,
                     g_last["gamma_pn"], q5["verdict"]["last_decade_step"],
                     1.0 + bc[("n", 5.0)]["toy_lambda"]))
     reference = ("BC: -x_min int g1/u du (exact truncation of int g2^WW); "
@@ -669,8 +679,8 @@ def run(verbose=True):
 
 #: the figure's palette slot and legend name of each Bjorken sub-row, and the
 #: marker of each Q2
-PLOT_SLOTS = {"bjorken[toyg1]": ("default", "ToyG1 (shipped)"),
-              "bjorken[nnpdfpol11]": ("nnpdfpol", "NNPDFpol1.1 (LhapdfG1)")}
+PLOT_SLOTS = {"bjorken[toyg1]": ("alt", "ToyG1 (option; shipped until D7)"),
+              "bjorken[nnpdfpol11]": ("default", "NNPDFpol1.1 (shipped since D7; LO)")}
 PLOT_Q2_MARKERS = {2.0: "o", 5.0: "s", 10.0: "^"}
 
 

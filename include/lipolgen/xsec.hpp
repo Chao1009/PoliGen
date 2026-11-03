@@ -177,7 +177,7 @@ double density_min(double a1n, double a2n);
 ///
 /// `r_func` is threaded to ALL FOUR places the kernel needs R -- F1 in
 /// `NuclearF2::f1a`, F_L in `dsigma_dx_dq2`, D(y) in `depolarization_d`, and
-/// the g1/F1 of the default `ToyG1` -- so one argument moves R consistently.
+/// the g1/F1 of the null-branch `ToyG1` -- so one argument moves R consistently.
 /// An EXPLICIT `g1_model` keeps whatever R it was built with.
 ///
 /// `target_mass` (DEFAULT TRUE since 2026-08-29, matching `xsec.py`'s own
@@ -195,8 +195,8 @@ double density_min(double a1n, double a2n);
 class InclusiveKernel {
  public:
   struct Options {
-    std::shared_ptr<const UnpolSF> f2_source;   ///< default: ToyF2
-    std::shared_ptr<const PolSF> g1_model;      ///< default: ToyG1 on f2_source
+    std::shared_ptr<const UnpolSF> f2_source;   ///< null: ToyF2 (class level; D7 runs pass CT18NLO)
+    std::shared_ptr<const PolSF> g1_model;      ///< null: ToyG1 on f2_source (D7 runs: NNPDFpol1.1)
     SFFunc3 b1_func, b2_func, delta_func;       ///< spin-1 rank-2 slots
     /// Higher-twist tensor slots b3, b4 of Cosyn Eqs. (17); both default to
     /// empty -> zero, and only the `tensor_gamma` path reads them.

@@ -241,7 +241,7 @@ C-6 (Machleidt Table XX), C-1 (T22 η, a consistency band on the quadrupole dial
    contact points are E-1 (deuteron, tagged) and E-2 (deuteron, inclusive b₁).
 2. **b₁(⁶Li).** The α–d convolution is validated **only** at A = 2 (E-2), and
    even there the pass is configuration-specific (MSTW2008 LO + CD-Bonn, 1.000;
-   shipped `ToyF2` default, 0.440 — outside the window).
+   `--b1-unpol`'s `ToyF2` default, 0.440 — outside the window; D7 left that default).
 3. **b₂, b₃, b₄, Δ.** Unmeasured everywhere. `b₂ = 2x·b₁` is a default; b₃/b₄
    carry scenario shapes; Δ is a scenario ansatz (`toy_delta_gluon`, `C_BAG`).
 4. **The J = 3/2 rank-2 normalisation** (⁷Li). Open item plans/04 #14; the

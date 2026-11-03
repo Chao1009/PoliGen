@@ -275,12 +275,12 @@ std::shared_ptr<const InclusiveKernel> struck_cluster_kernel(
   }
   o.delta_func = opt.delta_func;
   // The tagged channels' ONLY structure-function injection point (D2).
-  // BOTH SLOTS ARE NULL BY DEFAULT and are handed over unchanged, so the
+  // BOTH SLOTS ARE NULL AT CLASS LEVEL and are handed over unchanged, so the
   // null branch of `InclusiveKernel`'s constructor -- a fresh `ToyF2` and a
   // `ToyG1` built on it with this kernel's own `r_func` -- is taken exactly
-  // as it was before these fields existed.  A default tagged run is
-  // therefore bit for bit BY CONSTRUCTION.  `Pipeline` fills them from
-  // `PipelineConfig::unpol_sf_obj` / `pol_sf_obj`; note that
+  // as it was before these fields existed: the toy NAMED is the pre-D7
+  // default bit for bit BY CONSTRUCTION.  `Pipeline` fills them from
+  // `PipelineConfig::unpol_sf_obj` / `pol_sf_obj` (D7: the grids); note that
   // `PipelineConfig::kernel` does NOT reach here (the `Pipeline` reads it on
   // the non-tagged branch alone), which is why these two fields, and not
   // that escape hatch, are what a tagged run has.
@@ -979,28 +979,28 @@ void PipelineConfig::validate() const {
         "variation that did not run");
   }
   // --unpol-sf / --pol-sf: the structure-function backend of EVERY kernel
-  // this config builds (`UnpolSfSource`, `PolSfSource`).  Five clauses, all
-  // of them the rules already enforced above, and the last two new because
-  // these two selectors are the first ones that reach the tagged channels.
+  // this config builds (`UnpolSfSource`, `PolSfSource`).  Six clauses; since
+  // D7 (2026-10-27) the SHIPPED defaults are grid backends (`ct18nlo` /
+  // `nnpdfpol`), which moved clauses (1), (3) and (5).
   //
   // (1) A NAMED BACKEND WITH AN EMPTY SLOT IS AN ERROR, NEVER A FALLBACK --
-  //     the `b1_unpol` rule verbatim.  The core library links neither the
-  //     PYTHIA nor the LHAPDF tier, so it cannot build `MstwSF` /
-  //     `LhapdfSF` / `LhapdfG1`; falling back to the toy would put the toy's
-  //     numbers under a label that says otherwise, and the toy is 20 % away
-  //     on the 6Li rate and has the WRONG SIGN on g1n over 0.25 < x < 0.6.
+  //     the `b1_unpol` rule verbatim -- UNLESS it is a grid backend and the
+  //     LHAPDF tier's filler is installed in this process: the `Pipeline`
+  //     then attaches the object when it is built (`fill_grid_sf_backends`,
+  //     the D7 block of pipeline.hpp).  The core links no LHAPDF, and the toy
+  //     in its place would be 20 % away on the 6Li rate and wrong-signed on g1n.
   // (2) `Toy` WITH AN OBJECT is the same contradiction the other way: the
   //     Python setters name an attached object `Custom`, so reaching this
   //     state means the provenance and the realisation drifted apart.
-  // (3) A CALLER-SUPPLIED KERNEL WINS over both selectors on the inclusive
-  //     branch and is not even read on the tagged one, while `meta` would
-  //     print both -- the `b1_model` argument verbatim.
+  // (3) BESIDE A CALLER-SUPPLIED KERNEL the selectors are NOT READ (the
+  //     kernel wins on the inclusive branch; the tagged one refuses it, (6)),
+  //     so they are accepted at their shipped defaults -- `meta` then says
+  //     "caller-supplied kernel" -- and refused at any other value (D7).
   // (4) THE b1 COLLISION.  See `B1UnpolSource`: with a non-toy `unpol_sf`
   //     the `Li6Convolution` branch's null `b1_unpol` no longer means
   //     `ToyF2`, so `meta["b1_unpol"] = "toy"` would name something else.
-  // (5) A DIRECTLY SET `struck.f2_source` / `struck.g1_model` with the
-  //     matching selector still at `Toy` -- same rule, tagged branch.
-  //
+  // (5) A DIRECTLY SET `struck.f2_source` / `struck.g1_model` under any
+  //     selector but `Custom` -- same rule, tagged branch (D7: not only `Toy`).
   // (6) A CALLER-SUPPLIED KERNEL ON A TAGGED CHANNEL, selectors or no
   //     selectors -- the `cluster_wave` rule (a knob that is never read on
   //     this channel is refused, not accepted in silence) applied to the
@@ -1025,7 +1025,8 @@ void PipelineConfig::validate() const {
           "run on your own UnpolSF (Python: config.unpol_sf_obj = obj, which "
           "sets Custom for you), or clear the slot");
     }
-  } else if (!unpol_sf_obj) {
+  } else if (!unpol_sf_obj && !kernel &&
+             !(unpol_sf == UnpolSfSource::Ct18Nlo && grid_sf_filler())) {
     throw std::runtime_error(
         std::string("PipelineConfig: unpol_sf = ") + unpol_sf_name(unpol_sf) +
         " but unpol_sf_obj is empty, and it is NEVER silently replaced by "
@@ -1041,14 +1042,13 @@ void PipelineConfig::validate() const {
                "/ _lipolgen.set_unpol_sf(cfg, UnpolSfSource.Mstw), C++ "
                "cfg.unpol_sf_obj = std::make_shared<const MstwSF>()"
              : unpol_sf == UnpolSfSource::Ct18Nlo
-                   ? " -- LhapdfSF lives in the OPTIONAL LHAPDF tier "
-                     "(src/lhapdf/lhapdf_sf.cpp), which the core library "
-                     "deliberately does not link.  Configure with "
-                     "-DLIPOLGEN_WITH_LHAPDF=ON (and the CT18NLO set in "
-                     "LHAPDF's store), then attach it: Python "
-                     "lipolgen.make_config(unpol_sf='ct18nlo'), C++ "
-                     "cfg.unpol_sf_obj = std::make_shared<const LhapdfSF>("
-                     "\"CT18NLO\", 0)"
+                   ? " -- ct18nlo is the SHIPPED default since D7 (2026-10-27); "
+                     "LhapdfSF lives in the OPTIONAL LHAPDF tier, which the core "
+                     "does not link, and no tier filler is installed here.  Build "
+                     "with the tier and the CT18NLO set on LHAPDF_DATA_PATH, call "
+                     "lipolgen::install_lhapdf_sf_filler() once or attach_shipped_"
+                     "sf_backends(cfg) (Python does it at import) -- or run the "
+                     "toy NAMED (lipolgen::toy_config(), --unpol-sf toy); say so"
                    : " -- Custom means the object YOU attach; put it in "
                      "unpol_sf_obj or leave unpol_sf at Toy"));
   }
@@ -1062,56 +1062,56 @@ void PipelineConfig::validate() const {
           "(Python: config.pol_sf_obj = obj, which sets Custom for you), or "
           "clear the slot");
     }
-  } else if (!pol_sf_obj) {
+  } else if (!pol_sf_obj && !kernel &&
+             !(pol_sf == PolSfSource::NnpdfPol && grid_sf_filler())) {
     throw std::runtime_error(
         std::string("PipelineConfig: pol_sf = ") + pol_sf_name(pol_sf) +
         " but pol_sf_obj is empty, and it is NEVER silently replaced by "
         "ToyG1" +
         (pol_sf == PolSfSource::NnpdfPol
-             ? " -- LhapdfG1 lives in the OPTIONAL LHAPDF tier "
-               "(src/lhapdf/lhapdf_sf.cpp), which the core library "
-               "deliberately does not link.  Configure with "
-               "-DLIPOLGEN_WITH_LHAPDF=ON (and the NNPDFpol11_100 set in "
-               "LHAPDF's store -- it is the only POLARISED set installed "
-               "here), then attach it: Python "
-               "lipolgen.make_config(pol_sf='nnpdfpol'), C++ cfg.pol_sf_obj "
-               "= std::make_shared<const LhapdfG1>(\"NNPDFpol11_100\", 0)"
+             ? " -- nnpdfpol is the SHIPPED default since D7 (2026-10-27), "
+               "and LhapdfG1(\"NNPDFpol11_100\", 0) lives in the OPTIONAL LHAPDF "
+               "tier, which the core does not link, and no tier filler is "
+               "installed in this process.  Build with the tier and the set "
+               "and call lipolgen::install_lhapdf_sf_filler() once or "
+               "attach_shipped_sf_backends(cfg) -- or run the toy NAMED "
+               "(lipolgen::toy_config(), --pol-sf toy) and say so"
              : " -- Custom means the object YOU attach; put it in pol_sf_obj "
                "or leave pol_sf at Toy"));
   }
-  // (5) ... and the same rule for the tagged branch's own slots.  A C++
-  //     caller may put an object straight into `struck.f2_source` /
-  //     `struck.g1_model` (the `breakup.triton_sf` arrangement: `Pipeline`
-  //     fills them only when they are empty), but then `meta["unpol_sf"]`
-  //     would still write "toy" for a run made on something else.  Naming
-  //     the selector `Custom` alongside costs one line and keeps the file
-  //     honest.
-  if (struck.f2_source && unpol_sf == UnpolSfSource::Toy) {
+  // (5) ... and the same rule for the tagged branch's own slots: an object
+  //     put straight into `struck.f2_source` / `struck.g1_model` (`Pipeline`
+  //     fills them only when empty) runs while `meta` names the SELECTOR's
+  //     backend.  Until D7 refused under `Toy` only; MEASURED 2026-10-27, a
+  //     tagged-6Li-alpha run with ToyF2 there and unpol_sf = ct18nlo ran at
+  //     591846.1688784088 pb, the toy's, labelled ct18nlo.
+  if (struck.f2_source && unpol_sf != UnpolSfSource::Custom) {
     throw std::runtime_error(
-        "PipelineConfig: struck.f2_source is set but unpol_sf = toy -- the "
-        "tagged kernel would run on your object while meta[\"unpol_sf\"] "
-        "recorded \"toy\".  Set unpol_sf = Custom as well (Python: "
-        "config.unpol_sf_obj = obj, which sets Custom for you, and Pipeline "
-        "then fills struck.f2_source from it), or clear the slot");
+        std::string("PipelineConfig: struck.f2_source is set but unpol_sf = ") +
+        unpol_sf_name(unpol_sf) + " -- the tagged kernel would run on your "
+        "object while meta[\"unpol_sf\"] recorded that selector.  Name it "
+        "Custom (Python: config.unpol_sf_obj = obj, which sets Custom, and "
+        "Pipeline fills struck.f2_source from it), or clear the slot");
   }
-  if (struck.g1_model && pol_sf == PolSfSource::Toy) {
+  if (struck.g1_model && pol_sf != PolSfSource::Custom) {
     throw std::runtime_error(
-        "PipelineConfig: struck.g1_model is set but pol_sf = toy -- the "
-        "tagged kernel would run on your object while meta[\"pol_sf\"] "
-        "recorded \"toy\".  Set pol_sf = Custom as well (Python: "
-        "config.pol_sf_obj = obj), or clear the slot");
+        std::string("PipelineConfig: struck.g1_model is set but pol_sf = ") +
+        pol_sf_name(pol_sf) + " -- the tagged kernel would run on your "
+        "object while meta[\"pol_sf\"] recorded that selector.  Name it "
+        "Custom (Python: config.pol_sf_obj = obj), or clear the slot");
   }
-  if (kernel && (unpol_sf != UnpolSfSource::Toy ||
-                 pol_sf != PolSfSource::Toy)) {
+  const PipelineConfig shipped;  // (3): the shipped defaults, read not retyped
+  if (kernel && (unpol_sf != shipped.unpol_sf || pol_sf != shipped.pol_sf)) {
     throw std::runtime_error(
         std::string("PipelineConfig: unpol_sf = ") + unpol_sf_name(unpol_sf) +
-        " / pol_sf = " + pol_sf_name(pol_sf) +
-        " with a caller-supplied kernel: on the inclusive channel the kernel "
-        "wins and the selectors would be silently ignored, and on a tagged "
-        "channel the kernel is not read at all -- either way meta would "
-        "record a backend that did not run, so the two are refused together "
-        "(drop one; a hand-built kernel already carries its own f2_source "
-        "and g1_model)");
+        " / pol_sf = " + pol_sf_name(pol_sf) + " with a caller-supplied "
+        "kernel: beside a kernel the selectors are NOT READ (it wins on the "
+        "inclusive channel and is refused on a tagged one), so they are "
+        "accepted only at their shipped defaults, " +
+        unpol_sf_name(shipped.unpol_sf) + " / " + pol_sf_name(shipped.pol_sf) +
+        " (D7), and refused at any other value, which meta would record as "
+        "a backend that did not run.  Leave them at the defaults (a "
+        "hand-built kernel carries its own f2_source and g1_model)");
   }
   if (kernel && is_tagged(channel)) {
     throw std::runtime_error(
@@ -1137,14 +1137,14 @@ void PipelineConfig::validate() const {
         "means \"the kernel's own UnpolSF, shared as one object\", and that "
         "object is no longer ToyF2 -- so meta[\"b1_unpol\"] would record "
         "\"toy\" for a b1 folded against " + unpol_sf_name(unpol_sf) +
-        ".  Name the b1 backend explicitly instead: " +
+        (unpol_sf == UNPOL_SF_DEFAULT ? " (the shipped default since D7); name --b1-unpol: " : "; name --b1-unpol: ") +
         (unpol_sf == UnpolSfSource::Custom
              ? std::string("attach the same object (Python: "
                            "config.b1_unpol_sf = config.unpol_sf_obj)")
              : std::string("--b1-unpol ") + unpol_sf_name(unpol_sf) +
                    " to fold against the same one") +
-        ", or --b1-unpol mstw for the configuration the A = 2 gate passes "
-        "on (G3b 0.843243)");
+        ", --b1-unpol mstw for the configuration the A = 2 gate passes on "
+        "(G3b 0.843243), or --unpol-sf toy for the pre-D7 toy pair");
   }
   scenario.validate();
 }
@@ -1162,16 +1162,16 @@ std::shared_ptr<const InclusiveKernel> default_inclusive_kernel(
   InclusiveKernel::Options opt;
   // ONE UnpolSF, shared: the core must not link LHAPDF or PYTHIA (sf.hpp),
   // so an `LhapdfSF` / `MstwSF` only ever enters through the `unpol_sf`
-  // argument (filled one layer up by `_lipolgen.set_unpol_sf`), a
+  // argument (the `Pipeline` passes the tier's D7 grids, `set_unpol_sf`), a
   // caller-supplied `cfg.kernel`, or a validation script.  Naming the object
   // here rather than letting `InclusiveKernel` default it is what lets the
   // `Li6Convolution` branch hand the SAME object to
   // `Li6ConvolutionOptions::unpol`, so "the kernel's UnpolSF" is literally
   // one object and not a second one that merely looks like it.  ToyF2 is
-  // stateless closed form, so the default is bit for bit the old null
-  // default (validation/reference/b1_default_li6.json, T9).
+  // stateless closed form, so the null path is bit for bit the old null
+  // default (validation/reference/b1_default_li6.json, T9: the class toy).
   // `--unpol-sf` / `--pol-sf` (`UnpolSfSource`, `PolSfSource`).  NULL -- the
-  // default, and every caller that predates them -- keeps the shared `ToyF2`
+  // class-level toy, every caller that predates them -- keeps the shared `ToyF2`
   // named on the line below and leaves `g1_model` UNSET, so
   // `InclusiveKernel` takes its own null branch and builds `ToyG1` on that
   // same object with this kernel's own `r_func`, exactly as before: bit for
@@ -1225,7 +1225,7 @@ std::shared_ptr<const InclusiveKernel> default_inclusive_kernel(
       // (`InclusiveSampler::cell_xsec_pb`) is bit-identical across settings,
       // and the tensor-weighted per-category cross sections move, which is
       // the point.  That asymmetry is deliberate and documented at
-      // `B1UnpolSource`.  Off that default the shared object is no longer
+      // `B1UnpolSource`.  Off the toy (D7's shipped ct18nlo too) the object is not
       // `ToyF2`, and `b1_unpol = Toy` would then record "toy" for something
       // else -- which `PipelineConfig::validate()` refuses outright rather
       // than resolve silently.
@@ -1506,7 +1506,7 @@ bool struck_cluster_of(const Event& ev, const TaggedChannel& channel,
 
 Pipeline::Pipeline(PipelineConfig config, RunPlan plan)
     : cfg_(std::move(config)), plan_(std::move(plan)) {
-  cfg_.validate();
+  fill_grid_sf_backends(cfg_); cfg_.validate();  // D7: grid backends attach lazily
   if (plan_.categories().empty()) {
     throw std::runtime_error("Pipeline: the run plan has no category");
   }
@@ -2052,7 +2052,7 @@ double Pipeline::coherent_rate_x_edge() const {
   // largest rate-carrying centre (0.0954992586 at config 1), not the top of
   // that cell (exp(logx_hi) = 0.1 + 1 ulp).  Measured 2026-09-05: every
   // x_max in (0.09549926, 0.1] is bit-identical to the default (1822 cells,
-  // 1726 carrying, sigma 12476.025113185518), and 0.09549 is the first value
+  // 1726 carrying, sigma 12476.025113185518 on the toy SFs, pre-D7), and 0.09549 is the first value
   // that moves (1770 / 1702, 12475.913921); the boundary rule called 0.097
   // "read" on a run identical to the default.
   auto edge_of = [](const std::vector<double>& w,
@@ -2069,7 +2069,7 @@ double Pipeline::coherent_rate_x_edge() const {
   // 0.05 by construction, so the edge comes back 0.047863 and the rule
   // concluded "0.05 is above the edge, it clips nothing" about a value that
   // had just removed 320 of 1726 rate-carrying cells and moved sigma from
-  // 12476.025113 to 12446.109030 pb.  The edge belongs to the WINDOW AT THE
+  // 12476.025113 to 12446.109030 pb (toy SFs).  The edge belongs to the WINDOW AT THE
   // SHIPPED x_max, which is a property of the channel and of the rest of the
   // scenario, and not of the knob being judged.
   const double ref_x_max = std::max(d.scenario.x_max, cfg_.scenario.x_max);
@@ -2597,7 +2597,7 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
       // `--x-max 0.05` the surviving cells lie below 0.05 by construction,
       // the edge came back 0.047863, and the row said NOT READ of a value
       // that had just removed 320 of the 1726 rate-carrying cells and moved
-      // sigma from 12476.025113 to 12446.109030 pb.  (2) It compared
+      // sigma from 12476.025113 to 12446.109030 pb (toy SFs).  (2) It compared
       // exactly, and the edge is `exp(logx_hi)` of a grid boundary: at
       // `--x-max 0.1` the edge comes back 0.10000000000000002, one ulp above
       // the value that produced it, so a run BIT-IDENTICAL to the default
@@ -2648,8 +2648,8 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
                "`kernel` reaches the ion-level one alone; validate() refuses "
                "it here")
             : std::string("the ion-level kernel of this run: it WINS over "
-                          "--unpol-sf / --pol-sf / --b1-model, which "
-                          "validate() therefore refuses beside it"),
+                          "--unpol-sf / --pol-sf / --b1-model, which validate() "
+                          "accepts beside it only at their defaults, unread"),
         false);
   } else {
     add("kernel", "", "null (default_inclusive_kernel)",
@@ -2669,8 +2669,8 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
       c.kernel ? KnobStatus::Refused : KnobStatus::Read,
       c.kernel
           ? std::string("a caller-supplied kernel carries its own f2_source, "
-                        "so validate() refuses any non-toy selector beside "
-                        "one")
+                        "so the selector is not read: validate() accepts it "
+                        "at its default only (D7) and refuses any other value")
           : std::string("-> InclusiveKernel::Options::f2_source on EVERY "
                         "kernel this run builds: the unpolarised rate, the "
                         "D_phi denominator of the tensor weight, the T1 "
@@ -3826,6 +3826,52 @@ std::uint64_t Pipeline::for_each(const EventSink& sink, unsigned nthreads,
     pos += static_cast<std::uint64_t>(nthreads) * chunk;
   }
   return total_;
+}
+
+// ===================================================== D7 (2026-10-27)
+// The grid-backend filler (pipeline.hpp, "D7").  One function pointer per
+// process, under a mutex: it is set at import / program start and read by
+// every `Pipeline` constructor and `validate()`.
+
+namespace {
+std::mutex& grid_sf_filler_mutex() {
+  static std::mutex m;
+  return m;
+}
+GridSfFiller& grid_sf_filler_slot() {
+  static GridSfFiller f = nullptr;
+  return f;
+}
+}  // namespace
+
+void set_grid_sf_filler(GridSfFiller filler) {
+  std::lock_guard<std::mutex> lock(grid_sf_filler_mutex());
+  grid_sf_filler_slot() = filler;
+}
+
+GridSfFiller grid_sf_filler() {
+  std::lock_guard<std::mutex> lock(grid_sf_filler_mutex());
+  return grid_sf_filler_slot();
+}
+
+bool grid_sf_slot_empty(const PipelineConfig& cfg) {
+  return (cfg.unpol_sf == UnpolSfSource::Ct18Nlo && !cfg.unpol_sf_obj) ||
+         (cfg.pol_sf == PolSfSource::NnpdfPol && !cfg.pol_sf_obj);
+}
+
+void fill_grid_sf_backends(PipelineConfig& cfg) {
+  // Beside a caller-supplied kernel the selectors are not read (validate()'s
+  // clause (3)), so nothing is attached for them: loading a grid nobody
+  // reads would cost the load and record nothing.
+  if (cfg.kernel || !grid_sf_slot_empty(cfg)) return;
+  if (const GridSfFiller f = grid_sf_filler()) f(cfg);
+}
+
+PipelineConfig toy_config() {
+  PipelineConfig c;
+  c.unpol_sf = UnpolSfSource::Toy;
+  c.pol_sf = PolSfSource::Toy;
+  return c;
 }
 
 }  // namespace lipolgen

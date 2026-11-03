@@ -79,4 +79,72 @@ class Epps21Ratio {
 
 }  // namespace lipolgen
 
+// ===================================================== D7 (2026-10-27)
+//
+// SINCE D7 THE SHIPPED STRUCTURE-FUNCTION DEFAULTS ARE THIS TIER'S GRIDS:
+// `UNPOL_SF_DEFAULT` = ct18nlo is `LhapdfSF("CT18NLO", 0)` and `POL_SF_DEFAULT`
+// = nnpdfpol is `LhapdfG1("NNPDFpol11_100", 0)` (pipeline.hpp), both evaluated
+// at LEADING ORDER (the development item of DECISIONS.md D7).  The core cannot
+// build them, so this tier does, and attaches them to the configs that name
+// them -- lazily, through the filler a `Pipeline` calls (`install_lhapdf_sf_
+// filler`, which the Python module runs at import), or per config
+// (`attach_shipped_sf_backends`).  Nothing here is ever replaced by a toy.
+#include "lipolgen/pipeline.hpp"
+
+namespace lipolgen {
+
+/// How EVERY LHAPDF grid this tier opens is evaluated, set ON THE OBJECT with
+/// LHAPDF's per-PDF setters so that no lhapdf.conf on any machine can move a
+/// number (none of the three installed sets' .info files carries these keys;
+/// measured 2026-10-27, `Extrapolator: nearest` against `continuation` in the
+/// global lhapdf.conf moved the 6Li default cross section +5.03 %).  The
+/// author's choice (D7): FREEZE every set at its grid edges -- `nearest`, the
+/// knot-array edge, which is what the letter's `--pdf grid` chain does at Q0
+/// -- with LHAPDF's standard `logcubic` interpolation and no positivity
+/// forcing (ForcePositive 0: Delta q may be negative).
+inline constexpr const char* LHAPDF_EXTRAPOLATOR = "nearest";
+inline constexpr const char* LHAPDF_INTERPOLATOR = "logcubic";
+inline constexpr int LHAPDF_FORCE_POSITIVE = 0;
+
+/// The PRE-FLIGHT: "" when LHAPDF can open member `member` of `set`, else the
+/// refusal every constructor of this tier throws -- built from
+/// `LHAPDF::findFile` / `paths()` ALONE, before any LHAPDF Config exists, so a
+/// missing lhapdf.conf can no longer abort the process at exit (Config's
+/// function-static re-throws from its own destructor: std::terminate, exit 134,
+/// measured 2026-10-27).  A missing set is reported in LHAPDF's own words,
+/// "Info file not found for PDF set '<name>'", which
+/// validation/benchmarks/_report.py reads as "blocked (environment)"; the
+/// message names the searched paths, LHAPDF_DATA_PATH, lhapdf.conf's state and
+/// the escape (`--unpol-sf toy` / `--pol-sf toy`).
+std::string lhapdf_set_problem(const std::string& set, int member = 0);
+
+/// The LHAPDF set a grid selector names: "CT18NLO" for `UnpolSfSource::
+/// Ct18Nlo`, "NNPDFpol11_100" for `PolSfSource::NnpdfPol`, nullptr otherwise.
+const char* lhapdf_set_name(UnpolSfSource source);
+const char* lhapdf_set_name(PolSfSource source);
+
+/// The object a grid selector names -- ONE per process, built on first use
+/// under a mutex and shared read-only thereafter (a 6Li inclusive `Pipeline`
+/// took 0.21 s against 0.06 s on the toy, and every `Pipeline` re-loading the
+/// 23-28 ms grid would only repeat that).  Throws the pre-flight message on a
+/// missing set and `std::invalid_argument` on a selector that names no grid.
+std::shared_ptr<const UnpolSF> make_lhapdf_unpol_sf(UnpolSfSource source);
+std::shared_ptr<const PolSF> make_lhapdf_pol_sf(PolSfSource source);
+
+/// Fill every EMPTY slot of `cfg` whose selector names a grid backend --
+/// `unpol_sf_obj` on `Ct18Nlo`, `pol_sf_obj` on `NnpdfPol` -- with the shared
+/// objects above; a slot already holding an object is left alone.  NOT
+/// `b1_unpol_sf`: `b1_unpol` stays toy by default and a C++ program attaches
+/// `make_lhapdf_unpol_sf(UnpolSfSource::Ct18Nlo)` there itself, as before D7.
+/// What a C++ program calls before building a `PythiaBridge` that must share
+/// the run's backend (the T2 species draw).
+void attach_shipped_sf_backends(PipelineConfig& cfg);
+
+/// `set_grid_sf_filler(&attach_shipped_sf_backends)`: from then on every
+/// `Pipeline` of this process attaches the shipped grids itself.  Loads
+/// nothing; the Python module calls it at import.
+void install_lhapdf_sf_filler();
+
+}  // namespace lipolgen
+
 #endif  // LIPOLGEN_LHAPDF_SF_HPP

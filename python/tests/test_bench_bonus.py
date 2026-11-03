@@ -318,6 +318,8 @@ def test_light_cone_map_is_the_deeps_rows(tree):
 
 
 def test_toyf2_hook_is_the_shipped_formula(tree):
+    """ToyF2's species ratio -- the SHIPPED one until D7 (2026-10-27), which
+    the recorded sub-row compares; since D7 the run's is CT18NLO's."""
     for x in (0.177, 0.3235, 0.6155, 0.95):
         assert tree.toy.f2n_over_f2p(x) == pytest.approx(
             min(1.0, max(0.25, 1.0 - 0.75 * x)), rel=1e-15)

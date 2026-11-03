@@ -37,7 +37,7 @@
 #include <memory>
 #include <string>
 #include <vector>
-
+#include "lipolgen/lhapdf_sf.hpp"  // D7: the shipped SF grids (install_lhapdf_sf_filler)
 #include "lipolgen/hepmc_writer.hpp"
 #include "lipolgen/pipeline.hpp"
 
@@ -122,7 +122,7 @@ RunPlan plan_of(const std::string& name, const Scenario& sc, const char* argv0) 
 int main(int argc, char** argv) {
   const Args args = parse(argc, argv);
   try {
-    PipelineConfig cfg;
+    PipelineConfig cfg; install_lhapdf_sf_filler();  // D7: the Pipeline attaches CT18NLO
     cfg.channel = PipelineChannel::CoherentLi6;
     cfg.isotope = "6Li";
     cfg.beam_config = args.config;

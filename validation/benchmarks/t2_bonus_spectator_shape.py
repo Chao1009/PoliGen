@@ -166,11 +166,11 @@ vendored file; the window below is defined on the block LABELS alone.
       p_s is the size of what the prescription alone moves in this ratio's
       shape.  Not the tree's prediction of R_D/S (the tree is not run
       through BONuS's binning or acceptance);
-    * F2n/F2p: the shipped `ToyF2.f2n_over_f2p(x)` at x*_aver against the
-      section-5 W* > 1.8 GeV table (the paper's DIS-most cut, Fig. 21; 10
-      rows, ratio method, cross-normalised to the CJ fit at x = 0.32),
-      stat (+) syst: chi2 absolute and with one free scale, tree/data per
-      row, and the 5 rows with W*_aver >= 2 GeV separately.  No tolerance.
+    * F2n/F2p: `ToyF2.f2n_over_f2p(x)` (the shipped species ratio until D7,
+      2026-10-27; CT18NLO's since, not computed here) at x*_aver against the
+      section-5 W* > 1.8 GeV table (Fig. 21; 10 rows, ratio method, cross-
+      normalised to CJ at x = 0.32), stat (+) syst: chi2 absolute and with one
+      free scale, tree/data per row, the 5 rows with W*_aver >= 2 GeV apart.
 (f) THE FIGURE (`--plot`; a view, never the record): one panel, R_D/S over
     its block's backward Rbar against cos theta_pq for the two highest-W*
     blocks per beam at Q2 = 1.66 GeV^2, p_s = 0.093 GeV/c (85-100 MeV/c,
@@ -641,7 +641,7 @@ def flat_band(vals, errs):
 class Tree:
     """The tree side: GlauberFsiWeight on the deuteron control (a library
     evaluation), the waves' unpolarized densities, the light-cone map, and
-    the shipped ToyF2."""
+    ToyF2 (the shipped default until D7, 2026-10-27)."""
 
     def __init__(self):
         import lipolgen as lg                   # env.sh puts it on the path

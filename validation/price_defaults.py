@@ -18,8 +18,8 @@ same channel, plan, window, N and seed.  A knob the table reports `not-read`
 is recorded by its LABEL, and the run is checked bit-identical to the default
 one; a knob `PipelineConfig.validate()` refuses is recorded by its REFUSAL
 TEXT; a backend whose build tier or LHAPDF set is missing is recorded as
-`environment` with the library's own message.  None of the three is ever
-written as a number.  NOTHING HERE MOVES A DEFAULT.
+`environment` with the library's own message, and so is every probe of an
+`environment` default row (F7).  None is ever a number.  NOTHING HERE MOVES A DEFAULT.
 
 THE WINDOW -- every number is in it unless its row says otherwise
   beam      default_configs(<isotope>)[1]: e 10 GeV x ion 99.5 GeV/u
@@ -109,7 +109,7 @@ NAME = "price_defaults"
 N_DEFAULT = 200000
 SEED = 20261026
 PZ, PZZ, PE = 0.7, 0.6, 0.7       # lg.run's own plan defaults
-X_MAX_CONVOLUTION = 0.95          # docs/USAGE.md sec. 2a, "The top x cell"
+X_MAX_CONVOLUTION = 0.95; X_MAX_BAND2 = 0.85  # USAGE.md sec. 2a, "The top x cell"; D7: x2 row
 N_PHI_ACCEPTANCE = 32             # 07_cw_sign_investigation.md sec. 6.4
 K_POINTS = (0.20, 0.30)           # GeV; read at the nearest TaggedModel cell
 K_HALF_WIDTH = 0.025              # GeV; the generated cross-check's k bin
@@ -165,7 +165,7 @@ def _import_lipolgen():
     return lipolgen
 
 
-lg = _import_lipolgen()
+lg = _import_lipolgen(); U_DEF, P_DEF = lg.unpol_sf_name(lg.UNPOL_SF_DEFAULT), lg.pol_sf_name(lg.POL_SF_DEFAULT)  # D7
 
 
 # ------------------------------------------------------------------ helpers
@@ -231,7 +231,7 @@ def _probe(base_kw, knob, value, events, seed, default_row, extract,
     else:
         kw[knob] = value
     setting = "%s = %s" % (knob, value)
-    out, err = _attempt(kw, events, seed)
+    out, err = (None, default_row["label"]) if default_row["provenance"] == "environment" else _attempt(kw, events, seed)  # F7: nothing to compare against
     if err is not None:
         if _is_environment(err):
             return _row(setting, knob, value, "environment", err)
@@ -518,9 +518,9 @@ def family_li6_inclusive(events, seed, log):
         log("  %-48s ok" % ("li6-incl: " + setting))
         del tt, th
 
-    both({}, "unpol_sf = toy (shipped default)", None, "toy")
+    both({}, "unpol_sf = %s (shipped default)" % U_DEF, None, U_DEF)   # D7: ct18nlo
     both(dict(unpol_sf="mstw"), "unpol_sf = mstw", "unpol_sf", "mstw")
-    both(dict(unpol_sf="ct18nlo"), "unpol_sf = ct18nlo", "unpol_sf", "ct18nlo")
+    both(dict(unpol_sf="toy"), "unpol_sf = toy", "unpol_sf", "toy")    # D7: an option
     default = fam["rows"][0]
 
     def amp_extract(out):
@@ -534,9 +534,9 @@ def family_li6_inclusive(events, seed, log):
     # pol_sf: NOT READ under any tensor fill -- label, and bit-identity on BOTH plans
     for plan, ext, fp in (("transverse-tensor", amp_extract, "fingerprint_tt"),
                           ("tensor-thirds", thirds_extract, "fingerprint")):
-        d = dict(default, fingerprint=default[fp])
+        d = dict(default, fingerprint=default.get(fp))      # F7: absent on an environment default
         r = _probe(dict(isotope="6Li", channel="inclusive", plan=plan),
-                   "pol_sf", "nnpdfpol", events, seed, d, ext, "not-read")
+                   "pol_sf", "toy", events, seed, d, ext, "not-read")   # D7: the option
         r["setting"] += " (%s)" % plan
         fam["rows"].append(r)
     d3 = dict(default)
@@ -544,7 +544,7 @@ def family_li6_inclusive(events, seed, log):
                               ("cluster_wave", "vmc", "refused")):
         fam["rows"].append(_probe(base_3, knob, val, events, seed, d3,
                                   thirds_extract, expect))
-    dtt = dict(default, fingerprint=default["fingerprint_tt"])
+    dtt = dict(default, fingerprint=default.get("fingerprint_tt"))   # F7: as above
     for knob, val in (("triton_sf", "ciofi-simula"), ("eps_b0", EPS_B0_MEASURED),
                       ("f0", F0_BAND[0])):
         fam["rows"].append(_probe(base_tt, knob, val, events, seed, dtt,
@@ -552,7 +552,7 @@ def family_li6_inclusive(events, seed, log):
     _ratios(fam)
     fam["notes"].append(
         "A2 per cell is the same double on every --unpol-sf backend (F2 cancels: "
-        "max |a2_cell/a2_cell(toy) - 1| = %s over the %d accepted cells); the "
+        "max |a2_cell/a2_cell(default) - 1| = %s over the %d accepted cells); the "
         "super-bin A2 moves only through the cross-section weights sigma_c (1 + w_avg) "
         "of its cells." % (", ".join("%.2g" % r["values"].get("cell_max_rel_a2", float("nan"))
                                      for r in fam["rows"][1:3] if r["provenance"] == "read"),
@@ -566,7 +566,7 @@ def family_li6_inclusive_r(events, seed, log):
         "li6-incl-r",
         "Inclusive 6Li on the opt-in li6-convolution path -- --r-source "
         "(refused on the shipped miller b1, so priced here and labelled)",
-        "6Li, channel inclusive, --b1-model li6-convolution, --b1-unpol toy, "
+        "6Li, channel inclusive, --b1-model li6-convolution, --b1-unpol ct18nlo (D7), "
         "--b1-band-scale 1 unless stated, x_max %.2f (the backend's top-cell "
         "positivity); A2 on transverse-tensor, A_zz and sigma on tensor-thirds; "
         "N = %d, seed %d" % (X_MAX_CONVOLUTION, events, seed),
@@ -576,8 +576,8 @@ def family_li6_inclusive_r(events, seed, log):
          ("A2_S3", "A2(S3)", "asym"), ("A2_S4", "A2(S4)", "asym")])
     sc = lg.PipelineConfig().scenario
     sc.x_max = X_MAX_CONVOLUTION
-    conv = dict(isotope="6Li", channel="inclusive", scenario=sc,
-                b1_model="li6-convolution")
+    conv = dict(isotope="6Li", channel="inclusive", scenario=sc,  # D7: --b1-unpol NAMED
+                b1_model="li6-convolution", b1_unpol=U_DEF)
     kernels = {}
     for setting, knob, value in (("r_source = unset (the path's default)", None, "unset"),
                                  ("r_source = r1998", "r_source", "r1998")):
@@ -619,8 +619,8 @@ def family_li6_inclusive_r(events, seed, log):
     # the band: the ratio does not depend on the mandatory band scale
     band = {}
     for scale in (2.0, 0.0):
-        for value in ("unset", "r1998"):
-            kw = dict(conv, plan="tensor-thirds", b1_band_scale=scale)
+        for value in ("unset", "r1998"):  # D7: the x2 row needs x_max 0.85 on CT18NLO's F1
+            kw = dict(conv, plan="tensor-thirds", b1_band_scale=scale, scenario=_xmax(sc, X_MAX_BAND2 if scale > 1.0 else X_MAX_CONVOLUTION))
             if value != "unset":
                 kw["r_source"] = value
             out, err = _attempt(kw, events, seed)
@@ -633,9 +633,9 @@ def family_li6_inclusive_r(events, seed, log):
     b0u, b0r = band.get((0.0, "unset")), band.get((0.0, "r1998"))
     if all(isinstance(v, float) for v in (b2u, b2r, b0u, b0r)):
         fam["notes"].append(
-            "band: at --b1-band-scale 2, A_zz = %.7e (unset) / %.7e (r1998), ratio "
-            "%.6f; at band 0, A_zz = %.3e / %.3e (zero on both: no ratio)." % (
-                b2u, b2r, b2r / b2u, b0u, b0r))
+            "band: at --b1-band-scale 2 (x_max %.2f, D7), A_zz = %.7e (unset) / %.7e (r1998), "
+            "ratio %.6f; at band 0, A_zz = %.3e / %.3e (zero on both: no ratio)." % (
+                X_MAX_BAND2, b2u, b2r, b2r / b2u, b0u, b0r))
         fam["band"] = dict(azz_unset_2=b2u, azz_r1998_2=b2r, ratio_2=b2r / b2u,
                            azz_unset_0=b0u, azz_r1998_0=b0r)
     else:
@@ -643,7 +643,7 @@ def family_li6_inclusive_r(events, seed, log):
     # the quotable configuration of the A = 2 gate: --b1-unpol mstw
     mst = {}
     for value in ("unset", "r1998"):
-        kw = dict(conv, plan="tensor-thirds", b1_unpol="mstw")
+        kw = dict(conv, plan="tensor-thirds", b1_unpol="mstw")  # mstw over D7's named ct18nlo
         if value != "unset":
             kw["r_source"] = value
         out, err = _attempt(kw, events, seed)
@@ -725,19 +725,19 @@ def family_li7_inclusive(events, seed, log):
         a = _apar(out)
         return dict(sigma=a["sigma"], apar=a["apar"]), {}
 
-    for pol in ("toy", "nnpdfpol"):
-        for unpol in ("toy", "mstw", "ct18nlo"):
+    for pol in (P_DEF, "toy"):                 # D7: the shipped pair first
+        for unpol in (U_DEF, "mstw", "toy"):
             kw = {}
-            if pol != "toy":
+            if pol != P_DEF:
                 kw["pol_sf"] = pol
-            if unpol != "toy":
+            if unpol != U_DEF:
                 kw["unpol_sf"] = unpol
             setting = "pol_sf = %s, unpol_sf = %s%s" % (
                 pol, unpol, " (shipped default)" if not kw else "")
-            knob = None if not kw else ("pol_sf" if pol != "toy" else "unpol_sf")
+            knob = None if not kw else ("pol_sf" if pol != P_DEF else "unpol_sf")
             out = _price(fam, setting, knob, "%s/%s" % (pol, unpol), dict(base, **kw),
                          ext, events, seed, log)
-            if out is not None and pol != "toy" and unpol != "toy":
+            if out is not None and pol != P_DEF and unpol != U_DEF:
                 if _kp(out, "unpol_sf")["status"] != "read":
                     raise RuntimeError("unpol_sf not read on %s" % setting)
             del out
@@ -766,14 +766,14 @@ def family_li7_tagged(events, seed, log):
     # the T1 final-state columns a READ --triton-sf moves, kept to say WHAT it moves
     final_state = ("n_partner", "struck_virtuality", "struck_pol")
     kept = {}
-    out = _price(fam, "shipped default (%s, hulthen, toy, toy)" % _waves()[0], None,
+    out = _price(fam, "shipped default (%s, hulthen, %s, %s)" % (_waves()[0], U_DEF, P_DEF), None,
                  None, base, _tagged_li7, events, seed, log)
     if out is not None:
         kept["default"] = {c: np.asarray(out[c]).copy() for c in final_state}
     del out
     for knob, val in (("cluster_wave", _waves()[1]), ("triton_sf", "ciofi-simula"),
-                      ("pol_sf", "nnpdfpol"), ("unpol_sf", "mstw"),
-                      ("unpol_sf", "ct18nlo")):
+                      ("pol_sf", "toy"), ("unpol_sf", "mstw"),
+                      ("unpol_sf", "toy")):               # D7: the toys priced
         out = _price(fam, "%s = %s" % (knob, val), knob, val,
                      dict(base, **{knob: val}), _tagged_li7, events, seed, log)
         if out is not None and knob == "triton_sf":
@@ -817,7 +817,7 @@ def family_li6_tagged(events, seed, log):
     _price(fam, "shipped default (cluster_wave = %s)" % _waves()[0], None, None, base,
            _tagged_li6, events, seed, log)
     for knob, val in (("cluster_wave", _waves()[1]), ("unpol_sf", "mstw"),
-                      ("unpol_sf", "ct18nlo")):
+                      ("unpol_sf", "toy")):                  # D7: the toy priced
         _price(fam, "%s = %s" % (knob, val), knob, val, dict(base, **{knob: val}),
                _tagged_li6, events, seed, log)
     default, (dw, aw) = fam["rows"][0], _waves()
@@ -838,7 +838,7 @@ def family_li6_tagged(events, seed, log):
                 b["vec_dil"] / a["vec_dil"], b["tens_dil"] / a["tens_dil"],
                 a["azz_sigma_tot"], b["azz_sigma_tot"], a["azz_4pi_020"],
                 a["azz_4pi_030"], dw, b["azz_4pi_020"], b["azz_4pi_030"], aw))
-    for knob, val, expect in (("pol_sf", "nnpdfpol", "not-read"),
+    for knob, val, expect in (("pol_sf", "toy", "not-read"),   # D7: the option
                               ("triton_sf", "ciofi-simula", "not-read"),
                               ("r_source", "r1998", "refused"),
                               ("eps_b0", EPS_B0_MEASURED, "not-read"),
@@ -868,20 +868,20 @@ def family_li6_coherent(events, seed, log):
         _price(fam, "%s = %g (API: coherent={%r: %g})" % (knob, val, knob, val)
                if knob == "eps_b0" else "%s = %g (--coherent-f0)" % (knob, val),
                knob, val, dict(base, coherent={knob: val}), _coherent, events, seed, log)
-    for val in ("mstw", "ct18nlo"):
+    for val in ("mstw", "toy"):                             # D7: the toy priced
         _price(fam, "unpol_sf = %s" % val, "unpol_sf", val, dict(base, unpol_sf=val),
                _coherent, events, seed, log)
-    default = fam["rows"][0]
-    dv = default["values"]
-    fam["notes"].append(
-        "c2 = P_zz (-eps_b0 B |t| / 2 + amp) is linear in |t| (coherent.hpp), so its "
-        "expectation over the generated spectrum is c2 at the spectrum's exact <|t|> "
-        "= %.6f GeV^2 (B exp(-B|t|) on [0, %.2f], B = %.0f); the tag <|t|> = %.4f "
-        "GeV^2 is CoherentScenario::mean_t_tagged(%.2f GeV), the letter's envelope; "
-        "%d of N coherent recoils reach the pots at the YR envelope." % (
-            dv["t_exp"], dv["t_max"], dv["slope_b"], dv["t_tag"], TAG_ENVELOPE_PT,
-            dv["rp_n"]))
-    for knob, val, expect in (("pol_sf", "nnpdfpol", "not-read"),
+    default = fam["rows"][0]; dv = default["values"]
+    if default["provenance"] == "default":   # F7: an environment default has no values
+        fam["notes"].append(
+            "c2 = P_zz (-eps_b0 B |t| / 2 + amp) is linear in |t| (coherent.hpp), so its "
+            "expectation over the generated spectrum is c2 at the spectrum's exact <|t|> "
+            "= %.6f GeV^2 (B exp(-B|t|) on [0, %.2f], B = %.0f); the tag <|t|> = %.4f "
+            "GeV^2 is CoherentScenario::mean_t_tagged(%.2f GeV), the letter's envelope; "
+            "%d of N coherent recoils reach the pots at the YR envelope." % (
+                dv["t_exp"], dv["t_max"], dv["slope_b"], dv["t_tag"], TAG_ENVELOPE_PT,
+                dv["rp_n"]))
+    for knob, val, expect in (("pol_sf", "toy", "not-read"),   # D7: the option
                               ("cluster_wave", "vmc", "refused"),
                               ("triton_sf", "ciofi-simula", "not-read"),
                               ("r_source", "r1998", "refused")):
@@ -1058,20 +1058,20 @@ def plot(table, out_dir=None):
               ("li6-coh", "sigma", r"coh $\sigma$"),
               ("li6-coh", "c2_exp", r"coh $c_2$")]
     series_a = [("mstw", "unpol_sf = mstw", "o", "unpol_sf = mstw"),
-                ("ct18nlo", "unpol_sf = ct18nlo", "s", "unpol_sf = ct18nlo"),
-                ("nnpdfpol", "pol_sf = nnpdfpol", "D", None),
+                ("alt", "unpol_sf = toy (an option since D7)", "s", "unpol_sf = toy"),
+                ("alt2", "pol_sf = toy (an option since D7)", "D", None),
                 ("r1998", "r_source = r1998 (li6-convolution path)", "^", None)]
 
     def ratio_a(fam, key, slot):
         if slot == "mstw":
             return _r(table, fam, "unpol_sf = mstw" if fam != "li7-incl"
-                      else "pol_sf = toy, unpol_sf = mstw", key)
-        if slot == "ct18nlo":
-            return _r(table, fam, "unpol_sf = ct18nlo" if fam != "li7-incl"
-                      else "pol_sf = toy, unpol_sf = ct18nlo", key)
-        if slot == "nnpdfpol":
-            return _r(table, fam, "pol_sf = nnpdfpol" if fam != "li7-incl"
-                      else "pol_sf = nnpdfpol, unpol_sf = toy", key)
+                      else "pol_sf = %s, unpol_sf = mstw" % P_DEF, key)
+        if slot == "alt":                                  # D7: the toy F2, priced
+            return _r(table, fam, "unpol_sf = toy" if fam != "li7-incl"
+                      else "pol_sf = %s, unpol_sf = toy" % P_DEF, key)
+        if slot == "alt2":                                 # D7: the toy g1, priced
+            return _r(table, fam, "pol_sf = toy" if fam != "li7-incl"
+                      else "pol_sf = toy, unpol_sf = %s" % U_DEF, key)
         if slot == "r1998":
             if fam != "li6-incl":
                 return None
@@ -1212,6 +1212,15 @@ def _waves():
     is the wave that does not (hulthen since D6; vmc before)."""
     d = lg._lipolgen.cluster_wave_name(lg._lipolgen.CLUSTER_WAVE_DEFAULT)
     return d, ("hulthen" if d == "vmc" else "vmc")
+
+
+# D7 (2026-10-27): the shipped scenario at another x_max -- the band's x2 row,
+# which on CT18NLO's F1 survives only x_max 0.85 (measured: refused at 0.95 and
+# 0.9 by the sampler's positivity check, cell x = 0.871).
+def _xmax(_sc, x_max):
+    s = lg.PipelineConfig().scenario
+    s.x_max = x_max
+    return s
 
 
 if __name__ == "__main__":

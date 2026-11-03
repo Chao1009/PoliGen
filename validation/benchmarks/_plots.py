@@ -31,7 +31,7 @@ Usage in a harness:
     from _plots import new_figure, save, style_series, status_title
     fig, (ax, axp) = new_figure(two_panel=True)
     ax.errorbar(x, y, yerr=dy, **style_series("reference"))
-    ax.plot(x, model, **style_series("default", label="ToyF2 (shipped)"))
+    ax.plot(x, model, **style_series("default", label="CT18NLO (shipped)"))
     status_title(fig, NAME, report["status"])
     return save(fig, NAME)                      # docs/benchmarking/figures/<NAME>.png
 """
@@ -47,10 +47,10 @@ FIGURES = os.path.join(ROOT, "docs", "benchmarking", "figures")
 #: the reference palette's categorical slots, in their fixed order; a
 #: configuration name maps to ONE slot everywhere (never cycled)
 PALETTE = {
-    "default": "#2a78d6",    # slot 1 blue   -- the shipped default
+    "default": "#2a78d6",    # slot 1 blue   -- the shipped default (CT18NLO / NNPDFpol1.1 since D7)
     "mstw": "#eb6834",       # slot 2 orange -- MSTW2008 LO
     "ct18nlo": "#1baf7a",    # slot 3 aqua   -- CT18NLO
-    "alt": "#eda100",        # slot 4 yellow -- the alternative wave / model (AV18, instant form, ...)
+    "alt": "#eda100",        # slot 4 yellow -- the alternative wave / model (AV18, instant form, the toy SFs since D7, ...)
     "r1998": "#e87ba4",      # slot 5 magenta
     "nnpdfpol": "#6250d6",   # slot 7 violet
     "alt2": "#008300",       # slot 6 green  -- a third configuration (CD-Bonn, t-peak since D5, ...)

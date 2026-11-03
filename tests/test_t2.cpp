@@ -59,7 +59,7 @@
 #include "doctest.h"
 #include <stdexcept>
 
-#include "lipolgen/pipeline.hpp"
+#include "sf_test_support.hpp"  // D7: pipeline.hpp and the toy_config() rule
 #include "lipolgen/pythia_bridge.hpp"
 
 #ifdef LIPOLGEN_HAVE_HEPMC3
@@ -248,7 +248,7 @@ PythiaBridgeOptions bridge_opts(std::uint64_t seed) {
 // ---------------------------------------------------------------------------
 
 TEST_CASE("T2 chain: inclusive, 300 events, per-nucleon balance") {
-  PipelineConfig cfg;
+  PipelineConfig cfg = toy_config();  // D7: the toy NAMED (sf_test_support.hpp)
   cfg.channel = PipelineChannel::Inclusive;
   cfg.isotope = "6Li";
   cfg.beam_config = 1;
@@ -288,7 +288,7 @@ TEST_CASE("T2 chain: tagged at T1, whole-record balance with NO caller-side "
       {PipelineChannel::TaggedDeuteronP, "d control", 21},
   };
   for (const Row& row : rows) {
-    PipelineConfig cfg;
+    PipelineConfig cfg = toy_config();  // D7: the toy NAMED (sf_test_support.hpp)
     cfg.channel = row.ch;
     cfg.isotope = channel_isotope(cfg.channel);
     cfg.beam_config = 1;
@@ -343,7 +343,7 @@ TEST_CASE("T2 chain: tagged 7Li-alpha at T1 with --triton-sf ciofi-simula -- "
   // (triton_sf.hpp), whose third channel (struck n -> a (p n) continuum)
   // the sequential model does not have.  The whole-record balance must not
   // care which model resolved the triton.
-  PipelineConfig cfg;
+  PipelineConfig cfg = toy_config();  // D7: the toy NAMED (sf_test_support.hpp)
   cfg.channel = PipelineChannel::TaggedLi7Alpha;
   cfg.isotope = channel_isotope(cfg.channel);
   cfg.beam_config = 1;
@@ -381,7 +381,7 @@ TEST_CASE("T2 chain: tagged 7Li-alpha at T1 with --triton-sf ciofi-simula -- "
 
 TEST_CASE("T2 chain: coherent 6Li -- the gamma*-Pomeron tier, 300 events, "
           "whole-record balance") {
-  PipelineConfig cfg;
+  PipelineConfig cfg = toy_config();  // D7: the toy NAMED (sf_test_support.hpp)
   cfg.channel = PipelineChannel::CoherentLi6;
   cfg.isotope = "6Li";
   cfg.beam_config = 1;
@@ -502,7 +502,7 @@ TEST_CASE("T2 chain: coherent 6Li -- the gamma*-Pomeron tier, 300 events, "
 }
 
 TEST_CASE("T2 chain: coherent 6Li -- CoherentT2::Off leaves the record at T0") {
-  PipelineConfig cfg;
+  PipelineConfig cfg = toy_config();  // D7: the toy NAMED (sf_test_support.hpp)
   cfg.channel = PipelineChannel::CoherentLi6;
   cfg.isotope = "6Li";
   cfg.beam_config = 1;
@@ -673,7 +673,7 @@ TEST_CASE("T2 chain: determinism -- same seed gives the identical HepMC3 "
           "content") {
 #ifdef LIPOLGEN_HAVE_HEPMC3
   auto run = [&](const std::string& path) {
-    PipelineConfig cfg;
+    PipelineConfig cfg = toy_config();  // D7: the toy NAMED (sf_test_support.hpp)
     cfg.channel = PipelineChannel::Inclusive;
     cfg.isotope = "6Li";
     cfg.beam_config = 1;
@@ -713,7 +713,7 @@ TEST_CASE("T2 chain: determinism -- same seed gives the identical HepMC3 "
 #ifdef LIPOLGEN_HAVE_HEPMC3
 TEST_CASE("T2 chain: HepMC3 round trip through the full chain (tagged "
           "6Li-alpha) -- counts and attributes") {
-  PipelineConfig cfg;
+  PipelineConfig cfg = toy_config();  // D7: the toy NAMED (sf_test_support.hpp)
   cfg.channel = PipelineChannel::TaggedLi6Alpha;
   cfg.isotope = channel_isotope(cfg.channel);
   cfg.beam_config = 1;
@@ -777,7 +777,7 @@ TEST_CASE("T2 chain: HepMC3 round trip through the full chain (coherent "
   // byte-identical files -- which extends the full-record determinism
   // guarantee (only proven for the inclusive channel by the byte-compare
   // test above) to the coherent record.
-  PipelineConfig cfg;
+  PipelineConfig cfg = toy_config();  // D7: the toy NAMED (sf_test_support.hpp)
   cfg.channel = PipelineChannel::CoherentLi6;
   cfg.isotope = "6Li";
   cfg.beam_config = 1;

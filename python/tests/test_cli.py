@@ -167,9 +167,14 @@ def test_a_lower_case_isotope_still_runs(typed, resolved, capsys):
     (the typed one is the run's) and on one that implies its own (the typed
     one is dropped, which is how these spellings ran before `choices=`)."""
     # `helicity-flip` is the one plan that takes any j, so the same command
-    # line covers the spin-1/2 beam species as well as 6Li and d.
+    # line covers the spin-1/2 beam species as well as 6Li and d.  D7
+    # (2026-10-29): on the shipped CT18NLO / NNPDFpol1.1 the deuteron's top
+    # cell (x = 0.955) is REFUSED under helicity-flip at config 1 -- A1 =
+    # g1/F1 = 2.02 there, 1 + w_avg = -0.0195, 7 cells -- and --x-max 0.95 is
+    # the cure the refusal computes; the test is about the spelling, so every
+    # spelling runs the same cut window.
     assert cli.main(["--isotope", typed, "--channel", "inclusive",
-                     "--plan", "helicity-flip",
+                     "--plan", "helicity-flip", "--x-max", "0.95",
                      "--events", "2", "--quiet"]) == 0
     assert cli.resolve(["--isotope", typed])["isotope"] == resolved
     capsys.readouterr()

@@ -239,9 +239,9 @@
 ///     is 2.65x it.  Both alternatives (0.266, 0.113) are priced at
 ///     `docs/open_items/run_2026-09-06/phase_A_numbers.md` sec. A2; on A_zz
 ///     at x = 0.01, Q^2 = 5 the half-width runs 1.358472e-04 / 1.204512e-04 /
-///     5.116913e-05, and the band still leads the WHOLE radiative tail by
-///     x1152 / x1022 / x434 there on the default tail (x768 / x681 / x289 on
-///     t-peak, D5), so the ordering survives all three.  UNDECIDED here.
+///     5.116913e-05 on the toy SFs (D7's grids: 1.537e-04 / 1.363e-04 / 5.790e-05),
+///     and the band leads the WHOLE radiative tail by x1152 / x1022 / x434 on the
+///     default tail (D7: x1732 / x1536 / x652; t-peak x768 / x681 / x289), so the ordering survives all three.  UNDECIDED here.
 ///   * No RC calculation exists for a TAGGED tensor asymmetry.  Applying
 ///     delta(x) to tau_tag is a defensible, conservative EXTRAPOLATION and
 ///     must never be quoted as a published result.

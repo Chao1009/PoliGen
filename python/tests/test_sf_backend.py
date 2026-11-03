@@ -42,6 +42,18 @@ G12 the neutron-tagged `ct18nlo` + `nnpdfpol` pair is refused with the CELL
     and the CURE (`--x-max`), and the CLI reports it as a configuration error.
 G13 `set_pythia_hadronizer` refuses a bridge whose species draw is on a
     different unpolarised backend from the run's kernel.
+
+D7 (2026-10-27): THE SHIPPED DEFAULTS ARE THE GRIDS.  `--unpol-sf ct18nlo` and
+`--pol-sf nnpdfpol` (`UNPOL_SF_DEFAULT` / `POL_SF_DEFAULT`, frozen at their
+grid edges, attached LAZILY by the LHAPDF tier's filler when a Pipeline is
+built), the toys an option.  Every gate above was written on "the default is
+the toy" and is RE-TAKEN on the D7 default with a dated comment: G1 splits into
+G1a (the toy NAMED is bit for bit the pre-D7 default, pinned to its measured
+sigma) and G1b (the default IS ct18nlo / nnpdfpol, by the literal names and bit
+for bit against them named); G3's grid backends attach lazily; G4's kernel
+rule compares with the shipped defaults; G6, G7, G9, G10 compare the toy
+named against the default; G12's "each backend alone" and G13's "both unset"
+are the toy pair now.  The numbers below the grid are the FROZEN set's.
 """
 
 import numpy as np
@@ -75,19 +87,36 @@ def _plan():
 
 # --------------------------------------------------------------------- G1
 
+#: D7 (2026-10-27): sigma of `_cfg(channel)` on `_plan()` -- the toy NAMED
+#: (= the pre-D7 default, measured on c52c164's build: the same doubles) and
+#: the shipped default (CT18NLO / NNPDFpol1.1, frozen), 2026-10-29
+SIGMA_TOY = {"inclusive": 591846.1688784091, "coherent": 12476.025113185518,
+             "tagged-6Li-alpha": 591846.1688784088}
+SIGMA_D7 = {"inclusive": 496334.1559540481, "coherent": 9424.476321023749,
+            "tagged-6Li-alpha": 496334.15595404874}
+
+
+@pytest.mark.parametrize("channel", CHANNELS)
+def test_the_toy_named_is_the_pre_d7_default_bit_for_bit(channel):
+    """G1a (D7).  The toy is an OPTION since D7, and naming it reproduces the
+    pre-D7 default -- every number published before 2026-10-27 -- to the bit:
+    sigma pinned to the value the c52c164 build gave unnamed."""
+    toy = _l.Pipeline(_cfg(channel, unpol_sf="toy", pol_sf="toy"), _plan())
+    assert toy.sigma_pb() == SIGMA_TOY[channel]
+    assert toy.sigma_pb() != SIGMA_D7[channel]
+
+
 @pytest.mark.parametrize("channel", CHANNELS)
 def test_the_default_is_bit_for_bit_on_every_channel(channel):
-    """THE PROOF OBLIGATION OF THE WHOLE CHANGE.
-
-    `unpol_sf = pol_sf = Toy` leaves both `InclusiveKernel.Options` slots
-    exactly as they were -- `f2_source` at the shared `ToyF2` the pipeline has
-    always named, `g1_model` UNSET so the class builds its own `ToyG1` on it.
-    So the default path is unchanged BY CONSTRUCTION rather than by
-    inspection, and this test is what turns that sentence into a measurement.
-    Not `approx`: `np.array_equal`.
-    """
-    implicit = _l.Pipeline(_cfg(channel), _plan())
-    explicit = _l.Pipeline(_cfg(channel, unpol_sf="toy", pol_sf="toy"),
+    """G1b (D7).  The DEFAULT is ct18nlo / nnpdfpol -- asserted by the literal
+    names, not through the constant -- and an unset run is bit for bit the
+    same run with both NAMED, on every channel.  Not `approx`."""
+    cfg = _cfg(channel)
+    assert cfg.unpol_sf == _l.UnpolSfSource.Ct18Nlo
+    assert cfg.pol_sf == _l.PolSfSource.NnpdfPol
+    implicit = _l.Pipeline(cfg, _plan())
+    assert implicit.sigma_pb() == SIGMA_D7[channel]
+    explicit = _l.Pipeline(_cfg(channel, unpol_sf="ct18nlo", pol_sf="nnpdfpol"),
                            _plan())
     assert np.array_equal(np.asarray(implicit.dis_sampler.cell_xsec_pb),
                           np.asarray(explicit.dis_sampler.cell_xsec_pb))
@@ -111,18 +140,22 @@ def test_the_enum_and_the_object_stay_in_step():
     `Toy`, and `set_*` goes the other way.
     """
     cfg = _cfg()
-    assert cfg.unpol_sf == _l.UnpolSfSource.Toy and cfg.unpol_sf_obj is None
-    assert cfg.pol_sf == _l.PolSfSource.Toy and cfg.pol_sf_obj is None
+    # D7 (2026-10-27): the shipped grids, named, with EMPTY slots -- the
+    # Pipeline attaches them (make_config loads nothing)
+    assert cfg.unpol_sf == _l.UnpolSfSource.Ct18Nlo and cfg.unpol_sf_obj is None
+    assert cfg.pol_sf == _l.PolSfSource.NnpdfPol and cfg.pol_sf_obj is None
 
     cfg.unpol_sf_obj = lg.ToyF2()
     assert cfg.unpol_sf == _l.UnpolSfSource.Custom
-    cfg.unpol_sf_obj = None
-    assert cfg.unpol_sf == _l.UnpolSfSource.Toy
+    cfg.unpol_sf_obj = None                    # D7: back to the SHIPPED default,
+    assert cfg.unpol_sf == _l.UnpolSfSource.Ct18Nlo   # the toy only by name
 
     cfg.pol_sf_obj = lg.ToyG1()
     assert cfg.pol_sf == _l.PolSfSource.Custom
     cfg.pol_sf_obj = None
-    assert cfg.pol_sf == _l.PolSfSource.Toy
+    assert cfg.pol_sf == _l.PolSfSource.NnpdfPol
+    toy = _cfg(unpol_sf="toy", pol_sf="toy")    # the toy NAMED: no object at all
+    assert toy.unpol_sf == _l.UnpolSfSource.Toy and toy.unpol_sf_obj is None
 
     # `Custom` cannot be asked for by name: it names an object these
     # functions cannot build.
@@ -153,9 +186,22 @@ def test_validate_refuses_a_named_backend_with_an_empty_slot():
     6Li rate, and the WRONG SIGN on g1n over 0.25 < x < 0.6 -- under a label
     that says otherwise, which is the whole defect these flags remove.
     """
-    for src in (_l.UnpolSfSource.Mstw, _l.UnpolSfSource.Ct18Nlo,
-                _l.UnpolSfSource.Custom):
-        cfg = _cfg()
+    # D7 (2026-10-27): the GRID backends (ct18nlo, nnpdfpol) are attached by
+    # the tier's filler when a Pipeline is built, so an empty slot is LEGAL
+    # for them in this (tier-on) process; the refusal of the same config in a
+    # process with no filler is gated in C++ (tests/test_lhapdf.cpp, "D7: a
+    # default PipelineConfig needs the tier's filler").
+    assert _l.grid_sf_filler_installed() == _l.HAVE_LHAPDF
+    for src in (_l.UnpolSfSource.Ct18Nlo,) if _l.HAVE_LHAPDF else ():
+        cfg = _cfg(unpol_sf="toy", pol_sf="toy")
+        cfg.unpol_sf = src
+        cfg.validate()
+    cfg = _cfg(unpol_sf="toy", pol_sf="toy")
+    cfg.pol_sf = _l.PolSfSource.NnpdfPol
+    if _l.HAVE_LHAPDF:
+        cfg.validate()
+    for src in (_l.UnpolSfSource.Mstw, _l.UnpolSfSource.Custom):
+        cfg = _cfg(unpol_sf="toy", pol_sf="toy")
         cfg.unpol_sf = src                     # the enum ALONE, no object
         with pytest.raises(RuntimeError) as e:
             cfg.validate()
@@ -164,8 +210,8 @@ def test_validate_refuses_a_named_backend_with_an_empty_slot():
         cfg.unpol_sf = src
         cfg.validate()
 
-    for src in (_l.PolSfSource.NnpdfPol, _l.PolSfSource.Custom):
-        cfg = _cfg()
+    for src in (_l.PolSfSource.Custom,):
+        cfg = _cfg(unpol_sf="toy", pol_sf="toy")
         cfg.pol_sf = src
         with pytest.raises(RuntimeError) as e:
             cfg.validate()
@@ -175,21 +221,18 @@ def test_validate_refuses_a_named_backend_with_an_empty_slot():
         cfg.validate()
 
     # the missing tier is NAMED, not merely refused
-    cfg = _cfg()
+    cfg = _cfg(unpol_sf="toy", pol_sf="toy")
     cfg.unpol_sf = _l.UnpolSfSource.Mstw
     with pytest.raises(RuntimeError) as e:
         cfg.validate()
     assert "PYTHIA" in str(e.value)
-    cfg = _cfg()
-    cfg.unpol_sf = _l.UnpolSfSource.Ct18Nlo
-    with pytest.raises(RuntimeError) as e:
-        cfg.validate()
-    assert "LHAPDF" in str(e.value)
-    cfg = _cfg()
-    cfg.pol_sf = _l.PolSfSource.NnpdfPol
-    with pytest.raises(RuntimeError) as e:
-        cfg.validate()
-    assert "LHAPDF" in str(e.value)
+    # D7: a missing SET is named by the pre-flight, in LHAPDF's own words, with
+    # the escape -- before any LHAPDF Config exists (lhapdf_set_problem)
+    if _l.HAVE_LHAPDF:
+        assert _l.lhapdf_set_problem("CT18NLO") is None
+        msg = _l.lhapdf_set_problem("NO_SUCH_SET")
+        assert "Info file not found for PDF set 'NO_SUCH_SET'" in msg
+        assert "LHAPDF_DATA_PATH" in msg and "lhapdf.conf" in msg
 
 
 def test_validate_refuses_toy_with_an_object_attached():
@@ -204,6 +247,12 @@ def test_validate_refuses_toy_with_an_object_attached():
     cfg.unpol_sf = _l.UnpolSfSource.Toy
     with pytest.raises(RuntimeError):
         cfg.validate()
+    if _l.HAVE_LHAPDF:                        # D7: an ATTACHED default, then the
+        cfg = _cfg()                          # enum alone set to toy: the same
+        _l.attach_shipped_sf_backends(cfg)    # contradiction, refused
+        cfg.unpol_sf = _l.UnpolSfSource.Toy
+        with pytest.raises(RuntimeError):
+            cfg.validate()
 
     cfg = _cfg()
     cfg.pol_sf_obj = lg.ToyG1()
@@ -230,6 +279,16 @@ def test_validate_refuses_a_caller_supplied_kernel_beside_either_selector():
         setattr(cfg, field, obj)
         with pytest.raises(RuntimeError):
             cfg.validate()
+    # D7 (2026-10-27): ONE rule -- beside a kernel the selectors are not read,
+    # so they are accepted at their SHIPPED defaults (compared with a fresh
+    # PipelineConfig()) and refused at any other value, the TOY included
+    for kw in (dict(unpol_sf="toy"), dict(pol_sf="toy")):
+        cfg = _cfg(**kw)
+        cfg.kernel = _l.default_inclusive_kernel(_l.li6())
+        with pytest.raises(RuntimeError) as e:
+            cfg.validate()
+        assert "caller-supplied kernel" in str(e.value)
+        assert "ct18nlo / nnpdfpol" in str(e.value)    # it names the defaults
 
 
 def test_validate_refuses_the_b1_unpol_collision():
@@ -242,7 +301,14 @@ def test_validate_refuses_the_b1_unpol_collision():
     the provenance discipline exists to prevent, so it is refused rather than
     resolved silently.  The fix is to name the b1 backend.
     """
-    cfg = lg.make_config(events=N, b1_model="li6-convolution")
+    # D7 (2026-10-27): the DEFAULT now IS the collision -- ct18nlo with
+    # b1_unpol toy -- so `--b1-model li6-convolution` alone is refused by name
+    with pytest.raises(RuntimeError) as e:
+        lg.make_config(events=N, b1_model="li6-convolution")
+    assert "--b1-unpol" in str(e.value) and "shipped default since D7" in str(e.value)
+    lg.make_config(events=N, b1_model="li6-convolution", b1_unpol="ct18nlo")
+    cfg = lg.make_config(events=N, b1_model="li6-convolution",
+                         unpol_sf="toy", pol_sf="toy")   # the toy pair, named
     sc = cfg.scenario
     sc.x_max = 0.95                 # both opt-in b1 backends need it
     cfg.scenario = sc
@@ -285,6 +351,18 @@ def test_validate_refuses_a_directly_set_struck_slot_under_a_toy_selector():
     assert "pol_sf" in str(e.value)
     cfg.pol_sf_obj = lg.ToyG1()
     cfg.validate()
+    # D7 (2026-10-27): refused unless the selector is CUSTOM.  The measured
+    # mislabel of plan_D7 sec. 3.5 -- ct18nlo NAMED and attached, ToyF2 in the
+    # struck slot -- ran at the toy's 591846.1688784088 pb labelled ct18nlo
+    if _l.HAVE_LHAPDF:
+        cfg = _cfg("tagged-6Li-alpha")
+        _l.attach_shipped_sf_backends(cfg)
+        st = cfg.struck
+        st.f2_source = lg.ToyF2()
+        cfg.struck = st
+        with pytest.raises(RuntimeError) as e:
+            cfg.validate()
+        assert "struck.f2_source is set but unpol_sf = ct18nlo" in str(e.value)
 
 
 # --------------------------------------------------------------------- G5
@@ -293,8 +371,10 @@ def test_the_cli_surface():
     for key, flag, choices in (("unpol_sf", "--unpol-sf", lg.UNPOL_SF),
                                ("pol_sf", "--pol-sf", lg.POL_SF)):
         assert key in cli.DEFAULTS
-        assert cli.DEFAULTS[key] == "toy"
-        assert cli.resolve([])[key] == "toy"
+        # D7 (2026-10-27): the LITERAL shipped names, read from C++ by cli.py
+        assert cli.DEFAULTS[key] == {"unpol_sf": "ct18nlo", "pol_sf": "nnpdfpol"}[key]
+        assert cli.resolve([])[key] == cli.DEFAULTS[key]
+        assert cli.resolve(["--%s" % key.replace("_", "-"), "toy"])[key] == "toy"
         help_text = cli.build_parser().format_help()
         assert flag in help_text
         for choice in choices:
@@ -334,10 +414,22 @@ def test_the_run_banner_says_which_backends_and_what_they_cost():
     assert "unpol toy" in toy and "pol toy" in toy
     assert "TOY" in toy                      # it says what that costs
     assert "grid floor" not in toy           # ToyF2 has no grid
+    assert "LEADING ORDER" not in toy
 
-    ct = "\n".join(cli.sf_banner_lines("ct18nlo", "toy", 1.6770249, 0.3617907))
+    # D7 (2026-10-27): the frozen default's fraction (0.3617907 when LHAPDF
+    # continued below the grid), the freeze and the LO caveat said
+    ct = "\n".join(cli.sf_banner_lines("ct18nlo", "toy", 1.6770249, 0.3923453))
     assert "does NOT mean g1 is unchanged" in ct   # the non-orthogonality
-    assert "36.18 %" in ct and "1.67702" in ct
+    assert "39.23 %" in ct and "1.67702" in ct and "FROZEN" in ct
+    assert "LEADING ORDER" in ct and "DECISIONS.md D7" in ct
+    d7 = "\n".join(cli.sf_banner_lines("ct18nlo", "nnpdfpol", 1.6770249, 0.3923453,
+                                       True, 1.0, 0.0))
+    assert "polarised grid floor Q2 = 1" in d7 and "0.00 %" in d7
+    # F7 (2026-10-30): where g1 did not run the polarised floor is not printed
+    # (it was, under "[--pol-sf did not run]", on every tensor-plan run)
+    unread = "\n".join(cli.sf_banner_lines("ct18nlo", "nnpdfpol", 1.6770249,
+                                           0.3923453, False, 1.0, 0.0))
+    assert "--pol-sf did not run" in unread and "polarised grid floor" not in unread
 
     nan = float("nan")
     unknown = "\n".join(cli.sf_banner_lines("mstw", "nnpdfpol", nan, nan))
@@ -357,8 +449,9 @@ def test_the_tagged_struck_cluster_kernel_actually_moves():
     asserts that a tagged run's own kernel is now the selected backend, by
     value, and that the whole-nucleus rate moves with it.
     """
-    p_toy = _l.Pipeline(_cfg("tagged-6Li-alpha"), _plan())
-    p_ct = _l.Pipeline(_cfg("tagged-6Li-alpha", unpol_sf="ct18nlo"), _plan())
+    p_toy = _l.Pipeline(_cfg("tagged-6Li-alpha", unpol_sf="toy", pol_sf="toy"),
+                        _plan())                 # D7: the toy NAMED vs the default
+    p_ct = _l.Pipeline(_cfg("tagged-6Li-alpha"), _plan())
 
     f2_toy = p_toy.dis_sampler.kernel.nuclear_f2.f2a(0.3, 10.0)
     f2_ct = p_ct.dis_sampler.kernel.nuclear_f2.f2a(0.3, 10.0)
@@ -371,13 +464,16 @@ def test_the_tagged_struck_cluster_kernel_actually_moves():
     # channel does (both 6Li and the embedded deuteron are isoscalar and every
     # structure function here is per nucleon).
     r_tagged = p_ct.sigma_pb() / p_toy.sigma_pb()
-    assert r_tagged == pytest.approx(0.7984709, rel=1e-5)
+    # D7 (2026-10-29): x0.8386202 on the FROZEN grid (x0.7984709 when LHAPDF
+    # continued it below Q2 = 1.677, plan_D7 sec. 3.2)
+    assert r_tagged == pytest.approx(0.8386202, rel=1e-5)
 
 
 @needs_lhapdf
 def test_the_polarised_selector_reaches_the_tagged_kernel_too():
-    p_toy = _l.Pipeline(_cfg("tagged-6Li-alpha"), _plan())
-    p_np = _l.Pipeline(_cfg("tagged-6Li-alpha", pol_sf="nnpdfpol"), _plan())
+    p_toy = _l.Pipeline(_cfg("tagged-6Li-alpha", unpol_sf="toy", pol_sf="toy"),
+                        _plan())                 # D7: the toy pair NAMED
+    p_np = _l.Pipeline(_cfg("tagged-6Li-alpha", unpol_sf="toy"), _plan())
     t = p_toy.dis_sampler.kernel.tables(0.2, 10.0)
     n = p_np.dis_sampler.kernel.tables(0.2, 10.0)
     assert n.f1 == t.f1                        # an explicit g1 moves g1 alone
@@ -406,7 +502,7 @@ def test_meta_records_both_backends_on_every_channel(channel):
     block it sits beside."""
     cfg = _cfg(channel)
     meta = _l.Pipeline(cfg, _plan()).generate(1, True)["meta"]
-    assert meta["unpol_sf"] == "toy"
+    assert meta["unpol_sf"] == "ct18nlo"          # D7 (2026-10-27): the default
     # ... and the POLARISED key is the backend name only where the backend was
     # READ.  On the coherent channel nothing evaluates g1, so "toy" there
     # would name a backend that did not run exactly as "nnpdfpol" would
@@ -419,13 +515,37 @@ def test_meta_records_both_backends_on_every_channel(channel):
     # went in on 2026-09-05; before it, this assertion passed on the inclusive
     # and tagged channels with the label missing (see G9b).
     if _l.pol_sf_is_read(cfg, _plan()):
-        assert meta["pol_sf"] == "toy"
+        assert meta["pol_sf"] == "nnpdfpol"
     else:
         assert meta["pol_sf"] == _l.pol_sf_unread_label(cfg, _plan())
     assert meta["pol_sf_reach"] == _l.pol_sf_reach_report(cfg, _plan())
+    # D7: the grids' own floors, the run's own fractions, and HOW each set is
+    # evaluated below its floor (never an lhapdf.conf's choice)
+    assert meta["unpol_sf_grid_q2_min"] == pytest.approx(1.677025, rel=1e-12)
+    assert meta["unpol_sf_extrapolation"] == "nearest"
+    # F7 (2026-10-30): the POLARISED twins are credited only where g1 RAN --
+    # meta["pol_sf"]'s own rule, labelled, not credited.  `_plan()` reads g1
+    # on no channel, so they carry that label and NaN (until F7: 'nearest', a
+    # floor of 1 and 0.0, for a backend that never ran); helicity-flip on the
+    # inclusive channel reads g1, and there they are the grid's own.
+    assert not _l.pol_sf_is_read(cfg, _plan())
+    assert meta["pol_sf_extrapolation"] == meta["pol_sf"] == \
+        _l.pol_sf_unread_label(cfg, _plan())
+    assert np.isnan(meta["pol_sf_grid_q2_min"])
+    assert np.isnan(meta["pol_sf_below_grid_frac"])
+    if channel == "inclusive":
+        hf = lg.helicity_flip_plan(1.0, 0.7, 0.7)
+        assert _l.pol_sf_is_read(cfg, hf)
+        read = _l.Pipeline(_cfg(channel), hf).generate(1, True)["meta"]
+        assert read["pol_sf"] == "nnpdfpol" and read["pol_sf_extrapolation"] == "nearest"
+        assert read["pol_sf_grid_q2_min"] == pytest.approx(1.0, rel=1e-12)
+        assert read["pol_sf_below_grid_frac"] == 0.0    # no shipped cell under Q2 = 1
     # ToyF2 is closed form and has no grid, so nothing can be below one.
-    assert meta["unpol_sf_grid_q2_min"] == 0.0
-    assert meta["unpol_sf_below_grid_frac"] == 0.0
+    toy = _l.Pipeline(_cfg(channel, unpol_sf="toy", pol_sf="toy"),
+                      _plan()).generate(1, True)["meta"]
+    assert toy["unpol_sf"] == "toy" and toy["unpol_sf_extrapolation"].startswith("none")
+    assert toy["unpol_sf_grid_q2_min"] == 0.0
+    assert toy["unpol_sf_below_grid_frac"] == 0.0
 
 
 def test_meta_says_so_when_a_caller_supplied_kernel_won():
@@ -441,17 +561,16 @@ def test_meta_says_so_when_a_caller_supplied_kernel_won():
 
 @needs_lhapdf
 def test_meta_carries_the_measured_below_grid_fraction():
-    """36 % of a shipped 6Li run's own rate is below CT18NLO's grid floor.
+    """39 % of a shipped 6Li run's own rate is below CT18NLO's grid floor.
 
-    Below it LHAPDF does not freeze -- it keeps evolving downward -- so this
-    is not a detail: it is a third of the run on an off-grid extrapolation.
-    It is not refused (that would make the flag unusable on the shipped
-    scenario), it is MEASURED per run and recorded.
+    D7 (2026-10-27): below it the set is FROZEN at its grid edge (LHAPDF's
+    `nearest`, set on the object); until then LHAPDF continued the evolution
+    downward and the fraction was 0.3617907.  Not refused -- MEASURED per run.
     """
     meta = _l.Pipeline(_cfg(unpol_sf="ct18nlo"), _plan()).generate(1, True)["meta"]
     assert meta["unpol_sf"] == "ct18nlo"
     assert meta["unpol_sf_grid_q2_min"] == pytest.approx(1.6770250, rel=1e-9)
-    assert meta["unpol_sf_below_grid_frac"] == pytest.approx(0.3617907, rel=1e-5)
+    assert meta["unpol_sf_below_grid_frac"] == pytest.approx(0.3923453, rel=1e-5)
 
 
 @needs_pythia
@@ -481,14 +600,15 @@ def test_the_pythia_bridge_species_draw_is_on_the_kernels_own_backend():
     None (so a default run is bit for bit).
     """
     opts = _l.PythiaBridgeOptions()
-    assert opts.f2_source is None                # the shipped default
+    assert opts.f2_source is None                # the bridge's own ToyF2
 
     cfg = _cfg(unpol_sf="ct18nlo")
-    opts.f2_source = cfg.unpol_sf_obj            # what cli.main does
+    _l.attach_shipped_sf_backends(cfg)           # D7: what cli.main does first
+    opts.f2_source = cfg.unpol_sf_obj            # ... and then this
     assert opts.f2_source is cfg.unpol_sf_obj    # the same object, not a copy
     assert opts.f2_source.f2p(0.5, 10.0) == cfg.unpol_sf_obj.f2p(0.5, 10.0)
 
-    toy_cfg = _cfg()
+    toy_cfg = _cfg(unpol_sf="toy", pol_sf="toy")  # D7: the toy NAMED
     opts.f2_source = toy_cfg.unpol_sf_obj
     assert opts.f2_source is None                # ... and the toy stays unset
 
@@ -503,8 +623,9 @@ def test_lipolgen_run_wires_the_bridge_to_the_same_backend():
     """
     out = lg.run(events=40, hadronize=True, unpol_sf="ct18nlo")
     assert out["bridge"].stats.n_ok == 40
-    assert out["pipeline"].sigma_pb() != lg.run(
-        events=20, hadronize=True)["pipeline"].sigma_pb()
+    assert out["bridge"].options.f2_source is not None   # D7: the shipped object
+    assert out["pipeline"].sigma_pb() != lg.run(          # D7: against the toy
+        events=20, hadronize=True, unpol_sf="toy", pol_sf="toy")["pipeline"].sigma_pb()
 
 
 # --------------------------------------------------------------------- G9
@@ -606,7 +727,7 @@ def test_the_meta_of_a_default_plan_run_records_the_label_not_the_backend():
     # ... and the knob-provenance row says the same thing, from one table.
     row = meta["knob_provenance"]["pol_sf"]
     assert row["status"] == "not-read"
-    assert row["value"] == "toy"               # what was ASKED for
+    assert row["value"] == "nnpdfpol"          # what was ASKED for (D7: the default)
     assert row["label"] == meta["pol_sf"]
     assert row["reason"] == meta["pol_sf_reach"]
 
@@ -615,7 +736,7 @@ def test_the_meta_of_a_default_plan_run_records_the_label_not_the_backend():
 def test_the_polarised_selector_does_not_reach_the_coherent_channel():
     """MEASURED, not asserted from the code: a coherent run is bit-identical
     between `--pol-sf toy` and `--pol-sf nnpdfpol`, column by column."""
-    toy = _l.Pipeline(_cfg("coherent"), _plan())
+    toy = _l.Pipeline(_cfg("coherent", pol_sf="toy"), _plan())   # D7: named
     npd = _l.Pipeline(_cfg("coherent", pol_sf="nnpdfpol"), _plan())
     assert npd.sigma_pb() == toy.sigma_pb()
     assert np.array_equal(np.asarray(npd.sigma_per_category_pb()),
@@ -632,8 +753,9 @@ def test_the_polarised_selector_does_not_reach_the_coherent_channel():
             != toy.dis_sampler.kernel.tables(0.2, 10.0).g1)
     # ... and the same `--unpol-sf` DOES reach this channel, which is why it
     # is labelled rather than refused.
-    ct = _l.Pipeline(_cfg("coherent", unpol_sf="ct18nlo"), _plan())
-    assert ct.sigma_pb() / toy.sigma_pb() == pytest.approx(0.705841, rel=1e-5)
+    ft = _l.Pipeline(_cfg("coherent", unpol_sf="toy", pol_sf="toy"), _plan())
+    # D7 (2026-10-29): x0.7554070 on the frozen grid (x0.705841 continued)
+    assert toy.sigma_pb() / ft.sigma_pb() == pytest.approx(0.7554070, rel=1e-5)
 
 
 @needs_lhapdf
@@ -651,10 +773,10 @@ def test_meta_records_the_label_and_not_the_backend_on_the_coherent_channel():
     assert meta["pol_sf_reach"] == _l.pol_sf_reach_report(cfg, plan)
     # and "toy" is refused there for the same reason -- ToyG1 did not run
     # either
-    toy_meta = _l.Pipeline(_cfg("coherent"), plan).generate(1, True)["meta"]
+    toy_meta = _l.Pipeline(_cfg("coherent", pol_sf="toy"), plan).generate(1, True)["meta"]
     assert toy_meta["pol_sf"] == meta["pol_sf"]
     # the UNPOLARISED key is untouched: that one does reach the channel
-    assert toy_meta["unpol_sf"] == "toy"
+    assert toy_meta["unpol_sf"] == "ct18nlo"   # D7 (2026-10-27): the default
 
 
 def test_the_banner_makes_no_hand_written_reach_claim_at_all():
@@ -671,10 +793,10 @@ def test_the_banner_makes_no_hand_written_reach_claim_at_all():
     cfg = _cfg("coherent")
     plan = lg.helicity_flip_plan(1.0, 0.7, 0.7)
     unread = "\n".join(cli.sf_banner_lines(
-        "ct18nlo", "nnpdfpol", 1.6770249, 0.4474601,
+        "ct18nlo", "nnpdfpol", 1.6770249, 0.4837146,   # D7: the frozen fraction
         _l.pol_sf_is_read(cfg, plan)))
     assert "reaches EVERY kernel" not in unread
-    assert "44.75 %" in unread
+    assert "48.37 %" in unread
     # ... and the run's own table is where the sentence now lives, verbatim.
     rows = _l.Pipeline(cfg, plan).knob_provenance()
     pol = [r for r in rows if r.name == "pol_sf"][0]
@@ -732,10 +854,11 @@ def test_the_below_grid_fraction_is_taken_against_the_channels_own_rate():
     q2_min_c, below_c = _l.unpol_sf_grid_report(
         _l.Pipeline(_cfg("coherent", unpol_sf="ct18nlo"), _plan()))
     assert q2_min_c == q2_min_i == pytest.approx(1.6770250, rel=1e-9)
-    # the inclusive number is unchanged -- this run's rate IS its cells
-    assert below_i == pytest.approx(0.3617907, rel=1e-6)
-    # ... and the coherent one is its own, 8.6 points higher
-    assert below_c == pytest.approx(0.4474601, rel=1e-6)
+    # D7 (2026-10-29): re-taken on the FROZEN grid (0.3617907 / 0.4474601 when
+    # LHAPDF continued below it): the inclusive run's rate IS its cells
+    assert below_i == pytest.approx(0.3923453, rel=1e-6)
+    # ... and the coherent one is its own, 9.1 points higher
+    assert below_c == pytest.approx(0.4837146, rel=1e-6)
     assert below_c != below_i
 
 
@@ -744,9 +867,10 @@ def test_meta_carries_the_coherent_channels_own_below_grid_fraction():
     meta = _l.Pipeline(_cfg("coherent", unpol_sf="ct18nlo"),
                        _plan()).generate(1, True)["meta"]
     assert meta["unpol_sf"] == "ct18nlo"
-    assert meta["unpol_sf_below_grid_frac"] == pytest.approx(0.4474601,
-                                                             rel=1e-6)
-    assert meta["sigma_pb"] == pytest.approx(8806.096207, rel=1e-9)
+    # D7 (2026-10-29): on the frozen grid (0.4474601 and 8806.096207 pb when
+    # LHAPDF continued it below Q2 = 1.677)
+    assert meta["unpol_sf_below_grid_frac"] == pytest.approx(0.4837146, rel=1e-6)
+    assert meta["sigma_pb"] == pytest.approx(9424.476321, rel=1e-9)
 
 
 # -------------------------------------------------------------------- G11
@@ -836,8 +960,13 @@ def test_x_max_095_cures_it_and_each_backend_alone_never_needed_it():
     sc.x_max = 0.95
     cfg.scenario = sc
     assert _l.Pipeline(cfg, _dp_plan()).sigma_pb() > 0.0
-    for kw in ({}, dict(unpol_sf="ct18nlo"), dict(pol_sf="nnpdfpol")):
+    # D7 (2026-10-27): the PAIR is the default now, so "either alone" is the
+    # toy pair and each grid backend beside the other toy -- measured to build
+    for kw in (dict(unpol_sf="toy", pol_sf="toy"), dict(pol_sf="toy"),
+               dict(unpol_sf="toy")):
         assert _l.Pipeline(_cfg("tagged-d-p", **kw), _dp_plan()).sigma_pb() > 0
+    with pytest.raises(RuntimeError):         # ... and the DEFAULT is the pair
+        _l.Pipeline(_cfg("tagged-d-p"), _dp_plan())
     # ... and P_e = 0 removes it too, because w_avg scales with P_e P_z
     assert _l.Pipeline(_cfg("tagged-d-p", unpol_sf="ct18nlo",
                             pol_sf="nnpdfpol"),
@@ -875,16 +1004,22 @@ def test_set_pythia_hadronizer_refuses_a_bridge_on_another_backend():
     plain = _l.PythiaBridge(beams, _l.PythiaBridgeOptions())
     assert plain.options.f2_source is None          # the bridge's own ToyF2
 
-    # the default run: both unset, i.e. the same object -- accepted
-    _l.set_pythia_hadronizer(_cfg(), plain)
+    # D7 (2026-10-27): the TOY NAMED run -- both unset, i.e. the same object
+    _l.set_pythia_hadronizer(_cfg(unpol_sf="toy", pol_sf="toy"), plain)
+
+    # ... while the DEFAULT run refuses it: the shipped CT18NLO is attached
+    # (lazily -- set_pythia_hadronizer fills the slot first) and the plain
+    # bridge would draw its T2 species from ToyF2 under a ct18nlo label
+    for cfg in (_cfg(), _cfg(unpol_sf="ct18nlo")):
+        with pytest.raises(RuntimeError) as e:
+            _l.set_pythia_hadronizer(cfg, plain)
+        msg = str(e.value)
+        assert "species draw" in msg and "unpol_sf" in msg
+        assert "config.unpol_sf_obj" in msg              # it names the fix
+        assert "attach_shipped_sf_backends" in msg
 
     cfg = _cfg(unpol_sf="ct18nlo")
-    with pytest.raises(RuntimeError) as e:
-        _l.set_pythia_hadronizer(cfg, plain)
-    msg = str(e.value)
-    assert "species draw" in msg and "unpol_sf" in msg
-    assert "config.unpol_sf_obj" in msg              # it names the fix
-
+    _l.attach_shipped_sf_backends(cfg)
     opts = _l.PythiaBridgeOptions()
     opts.f2_source = cfg.unpol_sf_obj
     good = _l.PythiaBridge(beams, opts)

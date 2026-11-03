@@ -24,7 +24,7 @@
 #include "doctest.h"
 #include "lipolgen/fsi.hpp"
 #include "lipolgen/numerics.hpp"
-#include "lipolgen/pipeline.hpp"
+#include "sf_test_support.hpp"  // D7: pipeline.hpp and the toy_config() rule
 #include "lipolgen/tagged.hpp"
 
 using namespace lipolgen;
@@ -382,7 +382,7 @@ TEST_CASE("fsi: GlauberNucleon is the POINTWISE bracket, not the integrated one"
 // HULTHEN alpha-d by name since D6 (2026-10-29): "essentially every event" is
 // that wave's statement, and the VMC run default differs on 64.5 % of them.
 TEST_CASE("fsi: the two variants differ on essentially every event") {
-  PipelineConfig cfg;
+  PipelineConfig cfg = toy_config();  // D7: the toy NAMED (sf_test_support.hpp)
   cfg.channel = PipelineChannel::TaggedLi6Alpha;
   cfg.isotope = "6Li";
   cfg.beam_config = 1;
@@ -508,7 +508,7 @@ TEST_CASE("fsi: pipeline weights never move a four-vector") {
   // BIT-IDENTICAL to the FSI-off run in every particle four-vector, every
   // residual and every kinematic label -- only Event::weight differs.  The
   // weight consumes no RNG, so this is exact, not statistical.
-  PipelineConfig cfg;
+  PipelineConfig cfg = toy_config();  // D7: the toy NAMED (sf_test_support.hpp)
   cfg.channel = PipelineChannel::TaggedLi6Alpha;
   cfg.isotope = "6Li";
   cfg.beam_config = 1;
@@ -602,7 +602,7 @@ TEST_CASE("fsi: pipeline weights never move a four-vector") {
 }
 
 TEST_CASE("fsi: the configuration refuses FSI off the tagged channels") {
-  PipelineConfig cfg;
+  PipelineConfig cfg = toy_config();  // D7: the toy NAMED (sf_test_support.hpp)
   cfg.n_events = 10;
   cfg.fsi = PipelineFsi::GlauberCluster;
   cfg.channel = PipelineChannel::Inclusive;

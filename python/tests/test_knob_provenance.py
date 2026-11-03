@@ -63,9 +63,9 @@ from lipolgen import _lipolgen as _l
 N = 60
 SEED = 7
 
-NO_LHAPDF = ("needs the OPTIONAL LHAPDF tier: --unpol-sf ct18nlo, --pol-sf "
-             "nnpdfpol and a caller-supplied kernel on a real fit cannot be "
-             "constructed in a build without it (rebuild with "
+NO_LHAPDF = ("needs the LHAPDF tier: --b1-unpol ct18nlo -- and since D7 "
+             "(2026-10-27) every default base, --unpol-sf ct18nlo / --pol-sf "
+             "nnpdfpol -- cannot be constructed in a build without it (rebuild with "
              "-DLIPOLGEN_WITH_LHAPDF=ON).  The reach RULE for those knobs is "
              "then untested on this build, and the skip says so rather than "
              "passing silently.")
@@ -172,9 +172,9 @@ def _chain(*fs):
     return f
 
 
-def _kernel_ct18(cfg):
+def _kernel_toyf2(cfg):   # D7 (2026-10-29): was CT18NLO -- now the default's F2
     o = _l.InclusiveKernel.Options()
-    o.f2_source = _l.LhapdfSF("CT18NLO", 0)
+    o.f2_source = _l.ToyF2()     # the class-level toy, NOT the run default
     cfg.kernel = _l.InclusiveKernel(_l.ion_by_name(cfg.isotope), o)
 
 
@@ -220,7 +220,7 @@ class V:
         return "%s:%s" % (self.knob, self.label)
 
 
-XM = _x_max(0.95)
+XM, XM85 = _x_max(0.95), _x_max(0.85)   # D7: the cdks band x2 row runs at 0.85 only
 #: The values the ROUTE knobs are swept over, and the ones
 #: `Pipeline::RouteReach` re-routes this run's own sample at.  ONE list per
 #: knob, here and in src/core/pipeline.cpp; a value in one and not the other
@@ -230,7 +230,7 @@ NSIGMA_ALTS = (1.0, 3.0, 30.0)
 POT_ALTS = ("5x41", "10x100", "18x275")
 TPK = "t-peak on the inclusive specs only"   # D5 sentinel, resolved in `_run`
 NO_QE = _post(**{"rc_options.with_qe_tail": False})   # Eq. (44)'s QE tail off
-CDKS, CONV = dict(b1_model="cdks"), dict(b1_model="li6-convolution")
+CDKS, CONV = dict(b1_model="cdks"), dict(b1_model="li6-convolution", b1_unpol="ct18nlo")  # D7: named
 RC = dict(rc="tensor-band")
 RC_TPK = dict(RC, rc_tail_model=TPK)   # D5 (2026-10-29): see the RC block below
 VMC, HUL = dict(cluster_wave="vmc"), dict(cluster_wave="hulthen")   # D6: HUL = the option
@@ -295,15 +295,15 @@ VARIANTS = [
     V("x_max", "1.0 -> 0.0955", post=_x_max(0.0955)),
     V("x_max", "1.0 -> 0.09549", post=_x_max(0.09549)),
     # --- structure-function selectors ------------------------------------
-    V("unpol_sf", "toy -> ct18nlo", var=dict(unpol_sf="ct18nlo"), lhapdf=True),
-    V("pol_sf", "toy -> nnpdfpol", var=dict(pol_sf="nnpdfpol"), lhapdf=True),
-    V("kernel", "null -> InclusiveKernel(F2 = CT18NLO)", post=_kernel_ct18,
-      lhapdf=True),
+    V("unpol_sf", "ct18nlo -> toy", var=dict(unpol_sf="toy")),   # D7 (2026-10-29): the
+    V("pol_sf", "nnpdfpol -> toy", var=dict(pol_sf="toy")),      # defaults are the grids
+    V("kernel", "null -> InclusiveKernel(F2 = ToyF2)", post=_kernel_toyf2,
+      lhapdf=False),  # D7: a CT18NLO kernel is bit-identical to the default on coherent
     V("b1_model", "miller -> cdks (x_max .95)", var=CDKS, base_post=XM,
       post=XM),
     V("b1_band_scale", "1 -> 2 on the default b1_model", var=dict(b1_band_scale=2.0)),
-    V("b1_band_scale", "1 -> 2 on cdks (x_max .95)", base=CDKS,
-      var=dict(CDKS, b1_band_scale=2.0), base_post=XM, post=XM),
+    V("b1_band_scale", "1 -> 2 on cdks (x_max .85; D7: refused at .95)", base=CDKS,
+      var=dict(CDKS, b1_band_scale=2.0), base_post=XM85, post=XM85),
     V("b1_alpha_d_dwave_weight", "1 -> 2 on the default b1_model",
       var=dict(b1_alpha_d_dwave_weight=2.0)),
     V("b1_alpha_d_dwave_weight", "1 -> 2 on li6-convolution (x_max .95)",
@@ -311,8 +311,8 @@ VARIANTS = [
       base_post=XM, post=XM),
     V("b1_unpol", "toy -> ct18nlo on the default b1_model",
       var=dict(b1_unpol="ct18nlo"), lhapdf=True),
-    V("b1_unpol", "toy -> ct18nlo on li6-convolution (x_max .95)", base=CONV,
-      var=dict(CONV, b1_unpol="ct18nlo"), base_post=XM, post=XM, lhapdf=True),
+    V("b1_unpol", "ct18nlo -> mstw on li6-convolution (x_max .95; D7)", base=CONV,
+      var=dict(CONV, b1_unpol="mstw"), base_post=XM, post=XM, lhapdf=True),
     # `--r-source`, the ONE R hook into BOTH halves of the tensor weight.
     # THREE CELLS, because the axis has three statuses and each is a
     # different claim: refused off li6-convolution (the b1_unpol rule), READ
@@ -341,7 +341,7 @@ VARIANTS = [
     V("p_d", "0.0867 -> 0.10 on the default (vmc)", var=dict(p_d=0.10)),
     V("triton_sf", "hulthen -> ciofi-simula", var=dict(triton_sf="ciofi-simula")),
     V("tier", "T1 -> T0", post=_post(tier=_l.Tier.T0)),
-    V("inclusive_b1", "off -> on", var=dict(inclusive_b1=True)),
+    V("inclusive_b1", "off -> on (x_max .95; D7: refused at 1.0 on the alpha tag)", var=dict(inclusive_b1=True), base_post=XM, post=XM),
     # --- FSI -------------------------------------------------------------
     V("fsi", "off -> glauber-cluster", var=FSI_ON),
     V("fsi_sigma_mb", "40 -> 20 at fsi off", var=dict(fsi_sigma_mb=20.0)),
@@ -863,6 +863,11 @@ def test_the_t2_knobs_are_read_on_the_coherent_channel_alone(channel, isotope):
             popts.coherent_t2 = (_l.CoherentT2.Pomeron if t2 == "pomeron"
                                  else _l.CoherentT2.Off)
             popts.pom_set = pom_set
+            # D7 (2026-10-29): the bridge's T2 species draw shares THE run's
+            # unpolarised backend -- the lazily attached CT18NLO -- or it is
+            # refused; attach it and hand it over, as lipolgen.run does.
+            _l.fill_grid_sf_backends(cfg)
+            popts.f2_source = cfg.unpol_sf_obj
             beams = _l.default_configs(cfg.isotope)[cfg.beam_config]
             bridge = _l.PythiaBridge(beams, popts)
             _l.set_pythia_hadronizer(cfg, bridge)

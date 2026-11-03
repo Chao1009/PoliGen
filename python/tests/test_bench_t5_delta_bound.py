@@ -303,7 +303,7 @@ def test_s2_the_kernel_coefficient_is_ds16_eq5(mod):
 def test_s2_the_kernel_carries_the_a_cos2phi_coefficient():
     """The shipped kernel's a2 at m = +1, theta_S = 90 deg is the standalone
     a_cos2phi = -(1/2)(1-y)/y^2 Delta/D_phi since D4 (PHYSICS_CHANNELS.md sec. 2)."""
-    k = lg.default_inclusive_kernel(lg.li6())
+    k = lg.shipped_inclusive_kernel(lg.li6())  # D7 (2026-10-29): the shipped one, CT18NLO's F1
     for x, q2, y in ((0.1, 5.0, 0.5), (0.01, 2.0, 0.7), (0.3, 10.0, 0.3)):
         t = k.tables(x, q2)
         a = k.amplitudes(t, x, q2, q2 / (x * y), lg.EventSpinState(
@@ -336,29 +336,29 @@ def test_s1_circular_state_carries_minus_half_the_linear_tensor_asymmetry():
 
 # ------------------------------------------------------------ the measurement
 
-def test_row_passes_and_the_headline_is_pinned(rep):
+def test_row_passes_and_the_headline_is_pinned(rep, mod):
     assert rep["status"] == "pass"
     toy = _sub(rep, "toy_1e-2[shipped]")
     assert toy["status"] == "pass" and toy["in_verdict"] is True
     assert (toy["status_central"], toy["status_v6"]) == ("pass", "pass")
     assert toy["q2"] == [2.0, 5.0, 10.0]
-    assert toy["m2"] == pytest.approx([1.238347186e-4, 1.310790196e-4, 1.380460159e-4],
-                                      rel=1e-7)
+    assert toy["m2"] == pytest.approx([1.460360933e-4, 1.481674776e-4, 1.501340616e-4],
+                                      rel=1e-7)  # D7, 2026-10-29: CT18NLO's F1 (toy: 1.238347186e-4 ...)
     assert toy["bound"] == pytest.approx([1.921562687e-3, 1.633121332e-3, 1.467657982e-3],
                                          rel=1e-7)
-    assert toy["saturation"] == pytest.approx([0.06444479771, 0.08026287884, 0.09405870963],
-                                              rel=1e-7)
-    assert toy["saturation_v6"] == pytest.approx([0.1288895954, 0.1605257577,
-                                                  0.1881174193], rel=1e-7)
-    assert toy["saturation_tight"] == pytest.approx([0.2719227491, 0.3369110821,
-                                                     0.3936582914], rel=1e-7)
-    assert toy["saturation_loose"] == pytest.approx([0.02601242937, 0.03237320575,
-                                                     0.03792158164], rel=1e-7)
-    assert toy["f1ll_critical"] == pytest.approx([-1.923123096, -1.886331427,
-                                                  -1.855643673], rel=1e-7)
-    assert toy["f1ll_critical_v6"] == pytest.approx([-1.790650658, -1.721716574,
-                                                     -1.66298279], rel=1e-7)
-    assert all(e < 1e-15 for e in toy["m2_numerical_error"])
+    assert toy["saturation"] == pytest.approx([0.07599861005, 0.09072655826, 0.1022949921],
+                                              rel=1e-7)  # D7 (toy: 0.06444479771 ...)
+    assert toy["saturation_v6"] == pytest.approx([0.1519972201, 0.1814531165,
+                                                  0.2045899842], rel=1e-7)  # D7
+    assert toy["saturation_tight"] == pytest.approx([0.3206737036, 0.3808336503,
+                                                     0.428129935], rel=1e-7)  # D7
+    assert toy["saturation_loose"] == pytest.approx([0.03067599786, 0.03659362311,
+                                                     0.04124219766], rel=1e-7)  # D7
+    assert toy["f1ll_critical"] == pytest.approx([-1.899373131, -1.864870983,
+                                                  -1.838773258], rel=1e-7)  # D7
+    assert toy["f1ll_critical_v6"] == pytest.approx([-1.743150728, -1.678795686,
+                                                     -1.62924196], rel=1e-7)  # D7
+    assert len(toy["m2_numerical_error"]) == 3 and all(math.isfinite(e) and e >= 0 for e in toy["m2_numerical_error"]) and _toy_m2_errors_below(mod, 1e-15)  # D7/F7: grid row recorded, no pass bound
     assert all(t < 1e-12 for t in toy["m2_tail_x_lo"])
 
 
@@ -373,7 +373,7 @@ def test_toy_moment_by_an_independent_quadrature(rep):
     """The toy's M2 again, with scipy's adaptive quad in ln x on the kernel's
     own Delta (not the harness's Gauss-Legendre rule)."""
     integrate = pytest.importorskip("scipy.integrate")
-    k = lg.default_inclusive_kernel(lg.li6())
+    k = lg.shipped_inclusive_kernel(lg.li6())   # D7 (2026-10-29): the shipped kernel
     toy = _sub(rep, "toy_1e-2[shipped]")
     for q2, m2 in zip(toy["q2"], toy["m2"]):
         def f(u, q2=q2):
@@ -420,8 +420,8 @@ def test_bound_pieces_and_closed_forms(rep, mod):
     assert a_s == pytest.approx([0.354535328227, 0.283892922592, 0.247419816763], rel=1e-9)
     assert xg == pytest.approx([0.397601929906, 0.422961376441, 0.43670378769], rel=1e-8)
     assert xdg == pytest.approx([0.0408730005353, 0.0398438516164, 0.0390052607519], rel=1e-7)
-    assert [b["xg_epps21"] for b in rep["bound_detail"]] == pytest.approx(
-        [0.387398975277, 0.413318103314, 0.427455686421], rel=1e-7)
+    assert [b["xg_epps21"] for b in rep["bound_detail"]] == pytest.approx(  # D7: frozen
+        [0.387398956660, 0.413317802861, 0.427454864451], rel=1e-7)  # below x 1e-7 (EPPS21)
     assert [b["B_loose"] for b in rep["bound_detail"]] == pytest.approx(
         [4.76059797571e-3, 4.04899720355e-3, 3.64030216937e-3], rel=1e-7)
     assert [b["B_peff_naive"] / b["B"] - 1.0 for b in rep["bound_detail"]] == pytest.approx(
@@ -464,8 +464,8 @@ def test_letter_models_recorded_with_their_own_status(rep):
                                                rel=1e-7)
     assert b["saturation_v6"] == pytest.approx([1.476029195, 1.390676453, 1.348651088],
                                                rel=1e-7)
-    assert a["saturation_tight"] == pytest.approx([3.015591601, 2.932959762, 2.938090616],
-                                                  rel=1e-7)
+    assert a["saturation_tight"] == pytest.approx([3.015591746, 2.932961894, 2.938096266],
+                                                  rel=1e-7)  # D7: EPPS21 frozen below x = 1e-7
     assert a["saturation_loose"] == pytest.approx([0.2884748106, 0.2818230533,
                                                    0.2830298399], rel=1e-7)
     assert a["f1ll_critical"] == pytest.approx([-0.5864916293, -0.6179012863,
@@ -497,10 +497,10 @@ def test_helicity_positivity_subrow(rep):
     p = _sub(rep, "helicity_positivity[shipped kernel]")
     assert p["status"] == "pass" and p["in_verdict"] is True
     assert (p["n_points"], p["n_rates"]) == (567, 1701)
-    assert p["w_min"] == pytest.approx(0.9493997990, rel=1e-9)  # D4, 2026-10-27 (0.9493997515)
-    assert p["a_t_min"] == pytest.approx(-0.1012003069, rel=1e-8)  # theta_S = 0: no Delta term
-    assert p["a_t_max"] == pytest.approx(0.05060020096, rel=1e-8)  # D4 (0.05060024846 before)
-    assert p["w_min_at"] == "x=0.9 Q2=2 y=0.95 theta_S=90 phi'=90 m=+0"
+    assert p["w_min"] == pytest.approx(0.9134944997, rel=1e-9)  # D7, 2026-10-29 (toy 0.9493997990)
+    assert p["a_t_min"] == pytest.approx(-0.1730109054, rel=1e-8)  # D7 (toy -0.1012003069)
+    assert p["a_t_max"] == pytest.approx(0.08650550033, rel=1e-8)  # D7 (toy 0.05060020096)
+    assert p["w_min_at"] == "x=0.9 Q2=10 y=0.95 theta_S=90 phi'=90 m=+0"  # D7 (toy: Q2=2)
     assert -2.0 <= p["a_t_min"] <= p["a_t_max"] <= 1.0
 
 
@@ -596,10 +596,10 @@ def test_report_line(mod, capsys):
                                "B = 1.921563e-03 / 1.633121e-03 / 1.467658e-03")
     assert "PASS centrally (A7" in subs[2] and "FAIL under V6 (the pre-D4 kernel" in subs[2]  # D4
     assert rows[0].startswith("REPORT | t5_delta_moment_bound | shipped toy_delta_gluon (scale 0.01) "
-                              "per nucleon, 6Li: M2 = int x Delta dx = 1.2383e-04 / 1.3108e-04 / "
-                              "1.3805e-04 at Q2 = 2 / 5 / 10 GeV2, |M2|/B = 0.0644 / 0.0803 / 0.0941 "
+                              "per nucleon, 6Li: M2 = int x Delta dx = 1.4604e-04 / 1.4817e-04 / "
+                              "1.5013e-04 at Q2 = 2 / 5 / 10 GeV2, |M2|/B = 0.0760 / 0.0907 / 0.1023 "
                               "(Jaffe-Manohar Delta, the kernel's since D4; V6, the pre-D4 kernel / "
-                              "the letter as printed, x2: 0.1289 / 0.1605 / 0.1881);")
+                              "the letter as printed, x2: 0.1520 / 0.1815 / 0.2046);")  # D7
     assert rows[0].endswith("| PASS")
     assert "np.float64" not in "\n".join(out)
     assert r["runtime_s"] < 30.0
@@ -630,3 +630,21 @@ def test_plot_writes_a_png(mod, rep, tmp_path):
     assert path == str(tmp_path / (_NAME + ".png"))
     raw = open(path, "rb").read()
     assert len(raw) > 10000 and raw[:8] == b"\x89PNG\r\n\x1a\n"
+
+
+# D7 (2026-10-29) / F7 (2026-11-03).  The 1e-15 pin on M2's numerical error was
+# declared on the TOY F1 (ToyF2, analytic: ~1e-19); it stays, unchanged, on that
+# integrand, taken here with the harness's own rule on `letter_kernel()`.  Since
+# D7 the shipped row integrates CT18NLO's F1 (LHAPDF's interpolant, C1 at knots):
+# its error (3.3e-14 / 4.9e-14 / 5.5e-14 seen at D7) is RECORDED, with no test
+# pass bound -- any bound chosen now would be chosen after the value (only the
+# harness's own pre-D7 QUAD_REL_TOL broken-rule applies, at run time).
+def _toy_m2_errors_below(mod, bound):
+    k = mod.letter_kernel()
+    spec = mod.load_reference()["grid"]["x_integration"]
+    errs = []
+    for q2 in (2.0, 5.0, 10.0):
+        _, err, _ = mod.integrate(lambda x, q2=q2: x * k.tables(x, q2).delta,
+                                  spec["x_lo"], spec, "M2[toy F1](Q2=%g)" % q2)
+        errs.append(err)
+    return all(e < bound for e in errs)

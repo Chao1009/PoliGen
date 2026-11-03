@@ -101,3 +101,41 @@ def polligen(repo_root):
     except Exception as exc:                       # pragma: no cover
         pytest.skip("polligen is not importable: %s" % exc)
     return polligen
+
+
+#: D7 (2026-10-27): set to 1 to run the suite without the shipped sets anyway
+ALLOW_MISSING_SETS_ENV = "LIPOLGEN_TESTS_ALLOW_MISSING_SETS"
+
+
+def pytest_sessionstart(session):
+    """D7: the SHIPPED structure-function defaults are CT18NLO and
+    NNPDFpol11_100 through the LHAPDF tier, so nearly every run-level test
+    goes through them, and a missing set would surface as hundreds of
+    identical failures.  The session stops at once instead, with the
+    pre-flight's own message (it names the set, the searched paths and the
+    toy escape) and return code 3.  A build WITHOUT the LHAPDF tier stops the
+    same way: since D7 the tier is no longer optional for the shipped
+    default, so this suite needs it too -- a consequence of the decision,
+    stated in docs/PACKAGING.md, not a skip (a suite that skipped would pass
+    without ever running the shipped default).  `LIPOLGEN_TESTS_ALLOW_
+    MISSING_SETS=1` proceeds anyway: every default-path test then fails
+    with that message and the toy-only tests pass.  CI never sets it."""
+    if os.environ.get(ALLOW_MISSING_SETS_ENV) == "1":
+        return
+    try:
+        import lipolgen as _lg
+    except Exception:            # the import failure is reported by the tests
+        return
+    _l = _lg._lipolgen
+    if not _l.HAVE_LHAPDF:
+        pytest.exit("the shipped structure-function defaults (D7, 2026-10-27: "
+                    "--unpol-sf ct18nlo, --pol-sf nnpdfpol) need the LHAPDF "
+                    "tier, and this build has none (lipolgen.HAVE_LHAPDF is "
+                    "False).  Rebuild with -DLIPOLGEN_WITH_LHAPDF=ON, or set "
+                    "%s=1 to run the toy-only tests (the default-path ones then "
+                    "fail by name)" % ALLOW_MISSING_SETS_ENV, returncode=3)
+    problems = [p for p in (_l.lhapdf_set_problem(s)
+                            for s in ("CT18NLO", "NNPDFpol11_100")) if p]
+    if problems:
+        pytest.exit("\n".join(problems) + "\n(set %s=1 to run the suite "
+                    "anyway)" % ALLOW_MISSING_SETS_ENV, returncode=3)

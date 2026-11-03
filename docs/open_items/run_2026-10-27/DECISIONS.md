@@ -53,13 +53,31 @@ implementation follows `plan_D4_jm_convention.md`.)*
 
 **D6 — the VMC AV18+UX cluster waves (`--cluster-wave vmc`) become the
 shipped default; the Hulthén forms stay an option. Supersedes D2 of
-2026-09-27.** *(decision 3; the implementation follows
-`plan_D6_cluster_wave_default.md`)*
+2026-09-27.** *(decision 3; implemented 2026-10-29 as the run-surface
+default per `plan_D6_cluster_wave_default.md` and `phase_I6_cluster_wave.md`:
+the channel factories and the polligen port gate keep the analytic forms.
+Evidence beyond the deuteron's η_d: the Hulthén α–d pair's asymptotic D/S
+ratio has the wrong sign, +0.070 against the VMC wave's −0.048 and the
+measured −0.025 ± 0.012. Still the author's: whether `LI6_CLUSTER_POLARIZATION`
+0.811228 and `LI6_B1_RANK2_TRANSFER` 0.921947, which the default inclusive
+⁶Li run still reads, are re-derived on the VMC wave (0.887 and 0.983); they
+were kept and the inconsistency recorded.)*
 
 **D7 — the shipped structure-function defaults become the grid backends
 the letter's production uses: `--unpol-sf ct18nlo` (CT18NLO through LHAPDF)
 and `--pol-sf nnpdfpol` (NNPDFpol1.1); `ToyF2` and `ToyG1` stay as opt-in
 options; the leading-order evaluation of the NLO sets (no coefficient
 functions, massless charm and bottom) is filed as the development item.**
-*(decision 4, on the supervisor's recommendation; the implementation
-follows `plan_D7_backend_defaults.md`)*
+*(decision 4, on the supervisor's recommendation; implemented 2026-10-29
+per `plan_D7_backend_defaults.md` and `phase_I7_backends.md`. Two choices
+made by the supervisor because the default must not depend on the machine
+(a global `lhapdf.conf` moved the ⁶Li cross section by 5 % in the check): the
+sets are FROZEN at their grid edges in code (LHAPDF's nearest extrapolator
+set on every PDF object the tier builds), which is what the letter's
+`--pdf grid` chain does at Q₀, and the below-grid share of the rate is
+recorded in meta (about 39 % of the default ⁶Li inclusive rate sits below
+CT18NLO's Q² floor of 1.68 GeV²). Still the author's: the EPPS21 ⁶Li ratio by
+default for lithium beams, which no pipeline path applies today, and R1998
+in place of `r_sigma_lt` (registry row 3); the new default is free-nucleon
+CT18NLO with the toy R, neither the letter's grid chain nor its published
+toy footing.)*

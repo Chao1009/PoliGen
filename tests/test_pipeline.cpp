@@ -24,7 +24,7 @@
 
 #include "check_close.hpp"
 #include "lipolgen/asymmetries.hpp"
-#include "lipolgen/pipeline.hpp"
+#include "sf_test_support.hpp"  // D7: pipeline.hpp and the toy_config() rule
 
 #ifdef LIPOLGEN_HAVE_HEPMC3  // the tier's macro: headers present != writer built
 #define LIPOLGEN_TEST_HEPMC 1
@@ -76,7 +76,7 @@ const Pipeline& pipe(PipelineChannel ch, int config, OpticsChoice optics,
   const Key key{ch, config, optics, n, plan_id, wave};
   const auto it = cache.find(key);
   if (it != cache.end()) return *it->second;
-  PipelineConfig cfg;
+  PipelineConfig cfg = toy_config();  // D7: the toy NAMED (sf_test_support.hpp)
   cfg.channel = ch;
   const std::string iso = channel_isotope(ch);
   cfg.isotope = iso.empty() ? "6Li" : iso;
@@ -126,7 +126,7 @@ TEST_CASE("pipeline: a TILTED fill and a spin-dependent struck-cluster term "
   // halves: what is refused, and -- the half that matters more -- how little
   // is refused.
   auto tagged_cfg = [](bool inclusive_b1) {
-    PipelineConfig cfg;
+    PipelineConfig cfg = toy_config();  // D7: the toy NAMED (sf_test_support.hpp)
     cfg.channel = PipelineChannel::TaggedLi6Alpha;
     cfg.isotope = "6Li";
     cfg.n_events = 64;
@@ -169,7 +169,7 @@ TEST_CASE("pipeline: a TILTED fill and a spin-dependent struck-cluster term "
     // `Pipeline::knob_provenance` already reports.  Refusing a tilted fill
     // for a knob that does nothing would be a false refusal with a false
     // reason attached, so it is not refused.
-    PipelineConfig dp;
+    PipelineConfig dp = toy_config();  // D7: the toy NAMED (sf_test_support.hpp)
     dp.channel = PipelineChannel::TaggedDeuteronP;
     dp.isotope = "d";
     dp.n_events = 64;
@@ -562,7 +562,7 @@ TEST_CASE("pipeline: the tagged RATE asymmetry is the diluted inclusive Azz") {
   // b1 survives here; the k-RESOLVED asymmetry of the test above is the other
   // half of the same physics and is why the generator's default kernel has no
   // inclusive b1 (money_tagged_azz.py, 2026-08-29).
-  PipelineConfig cfg;
+  PipelineConfig cfg = toy_config();  // D7: the toy NAMED (sf_test_support.hpp)
   cfg.channel = PipelineChannel::TaggedLi6Alpha;
   cfg.isotope = "6Li";
   cfg.beam_config = 1;
@@ -606,7 +606,7 @@ TEST_CASE("pipeline: the tagged RATE asymmetry is the diluted inclusive Azz") {
 // ------------------------------------------------------------ 7Li polarimeter
 
 TEST_CASE("pipeline: 7Li generated events give <P2(cos theta_k)> = -T/5") {
-  PipelineConfig cfg;
+  PipelineConfig cfg = toy_config();  // D7: the toy NAMED (sf_test_support.hpp)
   cfg.channel = PipelineChannel::TaggedLi7Alpha;
   cfg.isotope = "7Li";
   cfg.beam_config = 1;
@@ -638,7 +638,7 @@ TEST_CASE("pipeline: 7Li generated events give <P2(cos theta_k)> = -T/5") {
 // --------------------------------------------------------------- coherent
 
 TEST_CASE("pipeline: the coherent channel reproduces <|t|> = 1/B and the tag") {
-  PipelineConfig cfg;
+  PipelineConfig cfg = toy_config();  // D7: the toy NAMED (sf_test_support.hpp)
   cfg.channel = PipelineChannel::CoherentLi6;
   cfg.isotope = "6Li";
   cfg.beam_config = 1;
@@ -723,7 +723,7 @@ TEST_CASE("pipeline: the coherent channel reproduces <|t|> = 1/B and the tag") {
 // ------------------------------------------------- determinism and identity
 
 TEST_CASE("pipeline: the inclusive path is bit-identical to InclusiveGenerator::run_n") {
-  PipelineConfig cfg;
+  PipelineConfig cfg = toy_config();  // D7: the toy NAMED (sf_test_support.hpp)
   cfg.channel = PipelineChannel::Inclusive;
   cfg.isotope = "6Li";
   cfg.beam_config = 1;
@@ -822,7 +822,7 @@ TEST_CASE("pipeline: threaded generation is bit-identical to single-threaded") {
 }
 
 TEST_CASE("pipeline: cross sections are share-invariant and counts follow shares") {
-  PipelineConfig cfg;
+  PipelineConfig cfg = toy_config();  // D7: the toy NAMED (sf_test_support.hpp)
   cfg.channel = PipelineChannel::TaggedLi6Alpha;
   cfg.isotope = "6Li";
   cfg.beam_config = 1;
@@ -984,7 +984,7 @@ TEST_CASE("pipeline: single-core throughput per channel") {
 // itself and X = k + P_ion - k' - P_recoil was just the virtual photon,
 // M_X^2 = -Q^2 < 0 in 100 % of events, silently clipped to a massless X.
 TEST_CASE("pipeline: the coherent channel draws x_P and gives a timelike X") {
-  PipelineConfig cfg;
+  PipelineConfig cfg = toy_config();  // D7: the toy NAMED (sf_test_support.hpp)
   cfg.channel = PipelineChannel::CoherentLi6;
   cfg.isotope = "6Li";
   cfg.beam_config = 1;
@@ -1088,7 +1088,7 @@ TEST_CASE("coherent: the azimuthal weight is positive over the whole t range") {
   CHECK(s.t_max() == COHERENT_T_MAX_DEFAULT);   // and leaves it alone
   CHECK_NOTHROW(s.set_t_max(0.24));
   // ... and so does the Pipeline, at every category's own P_zz
-  PipelineConfig bad;
+  PipelineConfig bad = toy_config();  // D7: the toy NAMED (sf_test_support.hpp)
   bad.channel = PipelineChannel::CoherentLi6;
   bad.isotope = "6Li";
   bad.beam_config = 1;
@@ -1097,7 +1097,7 @@ TEST_CASE("coherent: the azimuthal weight is positive over the whole t range") {
   CHECK_THROWS(Pipeline(bad, tensor_thirds_plan(kPZ, kPZZ)));
 
   // no generated event carries a negative weight
-  PipelineConfig cfg;
+  PipelineConfig cfg = toy_config();  // D7: the toy NAMED (sf_test_support.hpp)
   cfg.channel = PipelineChannel::CoherentLi6;
   cfg.isotope = "6Li";
   cfg.beam_config = 1;
@@ -1137,7 +1137,7 @@ TEST_CASE("pipeline: the hadronizer hook fires on every channel, coherent "
     const std::string what = pipeline_channel_name(row.ch);
     CAPTURE(what);
     std::uint64_t calls = 0;
-    PipelineConfig cfg;
+    PipelineConfig cfg = toy_config();  // D7: the toy NAMED (sf_test_support.hpp)
     cfg.channel = row.ch;
     cfg.isotope = row.iso;
     cfg.beam_config = 1;
@@ -1172,7 +1172,7 @@ TEST_CASE("pipeline: the hadronizer hook fires on every channel, coherent "
 // buy their acceptance by de-squeezing beta*_x, and that costs luminosity.
 TEST_CASE("pipeline: the optics luminosity fraction reaches the event count") {
   auto counts = [](OpticsChoice oc, bool apply) {
-    PipelineConfig cfg;
+    PipelineConfig cfg = toy_config();  // D7: the toy NAMED (sf_test_support.hpp)
     cfg.channel = PipelineChannel::TaggedLi6Alpha;
     cfg.isotope = "6Li";
     cfg.beam_config = 0;              // 5x41, where the de-squeeze costs most
@@ -1252,7 +1252,7 @@ TEST_CASE("pipeline: the tagged pipeline runs on the VMC cluster waves" *
   for (const Row& row : rows) {
     const std::string iso = row.iso;
     CAPTURE(iso);
-    PipelineConfig cfg;
+    PipelineConfig cfg = toy_config();  // D7: the toy NAMED (sf_test_support.hpp)
     cfg.channel = row.ch;
     cfg.isotope = iso;
     cfg.beam_config = 1;                       // 10 x 99.5 GeV/u
@@ -1310,7 +1310,7 @@ TEST_CASE("pipeline: cluster_wave is refused on the channels that never read it"
     const std::string iso = row.iso;
     CAPTURE(iso);
     CAPTURE(pipeline_channel_name(row.ch));
-    PipelineConfig cfg;
+    PipelineConfig cfg = toy_config();  // D7: the toy NAMED (sf_test_support.hpp)
     cfg.channel = row.ch;
     cfg.isotope = iso;
     cfg.n_events = 10;
@@ -1327,7 +1327,7 @@ TEST_CASE("pipeline: cluster_wave is refused on the channels that never read it"
   // It is refused for being UNREAD, not for being VMC: `cluster_vmc_mc_sigma`
   // stays refused on the deuteron control (fdeut.av18 prints no MC errors)
   // even though `cluster_wave` itself is legal there.
-  PipelineConfig d;
+  PipelineConfig d = toy_config();  // D7: the toy NAMED (sf_test_support.hpp)
   d.channel = PipelineChannel::TaggedDeuteronP;
   d.isotope = "d";
   d.n_events = 10;
@@ -1464,10 +1464,15 @@ TEST_CASE("D2: default_inclusive_kernel's two new arguments are inert when "
 
 TEST_CASE("D2: validate() refuses every way the selectors could mislabel a "
           "run") {
-  PipelineConfig cfg;
+  // D7 (2026-10-27): re-taken.  The SHIPPED default names ct18nlo / nnpdfpol, grids
+  // the core cannot build; with no LHAPDF filler installed (test_lhapdf.cpp's D7
+  // cases install one and remove it) it is REFUSED by name, never run on the toy.
+  PipelineConfig shipped;
+  shipped.n_events = 10;
+  CHECK_THROWS_AS(shipped.validate(), std::runtime_error);
+  PipelineConfig cfg = toy_config();           // the toy NAMED: the pre-D7 default
   cfg.n_events = 10;
-  CHECK_NOTHROW(cfg.validate());               // the shipped default
-
+  CHECK_NOTHROW(cfg.validate());
   // named but empty -- never a silent fallback to the toy
   for (UnpolSfSource s : {UnpolSfSource::Mstw, UnpolSfSource::Ct18Nlo,
                           UnpolSfSource::Custom}) {
@@ -1486,21 +1491,23 @@ TEST_CASE("D2: validate() refuses every way the selectors could mislabel a "
   }
   // toy WITH an object is the same contradiction the other way
   {
-    PipelineConfig c = cfg;
-    c.unpol_sf_obj = std::make_shared<const ScaledF2>(1.0);
+    PipelineConfig c = cfg; c.unpol_sf_obj = std::make_shared<const ScaledF2>(1.0);
+    CHECK_THROWS_AS(c.validate(), std::runtime_error);
+    c = cfg; c.pol_sf_obj = std::make_shared<const ScaledG1>(1.0);
     CHECK_THROWS_AS(c.validate(), std::runtime_error);
   }
+  // D7: a caller-supplied kernel is accepted beside the selectors at their
+  // SHIPPED defaults (unread: the kernel wins) and refused beside any other
+  // value -- the TOY included, which is no longer the default
   {
-    PipelineConfig c = cfg;
-    c.pol_sf_obj = std::make_shared<const ScaledG1>(1.0);
-    CHECK_THROWS_AS(c.validate(), std::runtime_error);
-  }
-  // a caller-supplied kernel wins, so the two are refused together
-  {
-    PipelineConfig c = cfg;
+    PipelineConfig c = shipped;                // empty slots: not read here
     c.kernel = default_inclusive_kernel(LI6());
     CHECK_NOTHROW(c.validate());
-    c.unpol_sf = UnpolSfSource::Custom;
+    c.unpol_sf = UnpolSfSource::Toy;
+    CHECK_THROWS_AS(c.validate(), std::runtime_error);
+    c.unpol_sf = UNPOL_SF_DEFAULT; c.pol_sf = PolSfSource::Toy;
+    CHECK_THROWS_AS(c.validate(), std::runtime_error);
+    c.pol_sf = POL_SF_DEFAULT; c.unpol_sf = UnpolSfSource::Custom;
     c.unpol_sf_obj = std::make_shared<const ScaledF2>(1.0);
     CHECK_THROWS_AS(c.validate(), std::runtime_error);
   }
@@ -1508,27 +1515,20 @@ TEST_CASE("D2: validate() refuses every way the selectors could mislabel a "
   // longer ToyF2
   {
     PipelineConfig c = cfg;
-    c.b1_model = B1Model::Li6Convolution;
-    c.scenario.x_max = 0.95;
-    c.unpol_sf = UnpolSfSource::Custom;
-    c.unpol_sf_obj = std::make_shared<const ScaledF2>(1.0);
+    c.b1_model = B1Model::Li6Convolution; c.scenario.x_max = 0.95;
+    c.unpol_sf = UnpolSfSource::Custom; c.unpol_sf_obj = std::make_shared<const ScaledF2>(1.0);
     CHECK(c.b1_unpol == B1UnpolSource::Toy);
     CHECK_THROWS_AS(c.validate(), std::runtime_error);
     c.b1_unpol = B1UnpolSource::Custom;
     c.b1_unpol_sf = std::make_shared<const ScaledF2>(1.0);
     CHECK_NOTHROW(c.validate());
   }
-  // ... and NEITHER selector is channel-restricted: they reach the rate on
-  // every channel, which is the whole point of them.
-  for (PipelineChannel ch : {PipelineChannel::Inclusive,
-                             PipelineChannel::CoherentLi6,
-                             PipelineChannel::TaggedLi6Alpha}) {
-    PipelineConfig c = cfg;
-    c.channel = ch;
-    c.unpol_sf = UnpolSfSource::Custom;
-    c.unpol_sf_obj = std::make_shared<const ScaledF2>(1.0);
-    c.pol_sf = PolSfSource::Custom;
-    c.pol_sf_obj = std::make_shared<const ScaledG1>(1.0);
+  // ... and NEITHER selector is channel-restricted (the struck-slot rule, D7,
+  // is in test_lhapdf.cpp's D7 cases and the Python suite)
+  for (PipelineChannel ch : {PipelineChannel::Inclusive, PipelineChannel::CoherentLi6, PipelineChannel::TaggedLi6Alpha}) {
+    PipelineConfig c = cfg; c.channel = ch;
+    c.unpol_sf_obj = std::make_shared<const ScaledF2>(1.0); c.unpol_sf = UnpolSfSource::Custom;
+    c.pol_sf_obj = std::make_shared<const ScaledG1>(1.0); c.pol_sf = PolSfSource::Custom;
     CHECK_NOTHROW(c.validate());
   }
 }
@@ -1566,7 +1566,7 @@ TEST_CASE("D1: the 7Li rank-2 sector is identically zero, and the run says so") 
     CHECK(t6.delta != 0.0);
   }
 
-  PipelineConfig cfg;
+  PipelineConfig cfg = toy_config();  // D7: the toy NAMED (sf_test_support.hpp)
   cfg.isotope = "7Li";
   cfg.channel = PipelineChannel::Inclusive;
   cfg.n_events = 400;
@@ -1594,7 +1594,7 @@ TEST_CASE("D1: the 7Li rank-2 sector is identically zero, and the run says so") 
 }
 
 TEST_CASE("D1: the loud zero fires for 7Li inclusive and for nothing else") {
-  PipelineConfig cfg;
+  PipelineConfig cfg = toy_config();  // D7: the toy NAMED (sf_test_support.hpp)
   cfg.n_events = 100;
   const RunPlan thirds = tensor_thirds_plan(0.0, 0.6);
 
@@ -1677,7 +1677,7 @@ TEST_CASE("D6: the run default is VmcAV18 in ONE place; the factories keep Hulth
 TEST_CASE("D6: a default tagged run reads the VMC waves, and the knob rows say "
           "what it reads" * doctest::skip(!vmc_momenta_present())) {
   auto cfg_of = [](PipelineChannel ch, const char* iso) {
-    PipelineConfig c;
+    PipelineConfig c = toy_config();  // D7: the toy NAMED (sf_test_support.hpp)
     c.channel = ch;
     c.isotope = iso;
     c.n_events = 10;
@@ -1756,7 +1756,7 @@ TEST_CASE("D6: a default tagged run reads the VMC waves, and the knob rows say "
 
 TEST_CASE("D6: the MC band is accepted where the default reads it, refused elsewhere") {
   auto cfg_of = [](PipelineChannel ch, const char* iso) {
-    PipelineConfig c;
+    PipelineConfig c = toy_config();  // D7: the toy NAMED (sf_test_support.hpp)
     c.channel = ch;
     c.isotope = iso;
     c.n_events = 10;

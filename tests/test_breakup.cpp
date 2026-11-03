@@ -13,7 +13,7 @@
 #include "doctest.h"
 
 #include "lipolgen/breakup.hpp"
-#include "lipolgen/pipeline.hpp"
+#include "sf_test_support.hpp"  // D7: pipeline.hpp and the toy_config() rule
 
 using namespace lipolgen;
 
@@ -38,7 +38,7 @@ double mean(const std::vector<double>& v) {
 Vec4 at_rest(double m) { return {m, 0.0, 0.0, 0.0}; }
 
 PipelineConfig tagged_cfg(PipelineChannel ch, std::uint64_t n) {
-  PipelineConfig cfg;
+  PipelineConfig cfg = toy_config();  // D7: the toy NAMED (sf_test_support.hpp)
   cfg.channel = ch;
   cfg.isotope = channel_isotope(ch);
   cfg.beam_config = 1;
@@ -470,7 +470,7 @@ TEST_CASE("T1 pipeline: determinism -- same index, same record, any order") {
 
 TEST_CASE("T1 pipeline: kin.cell is the sampler's own accepted-cell index") {
   // Inclusive: the ION-level sampler.
-  PipelineConfig ci;
+  PipelineConfig ci = toy_config();  // D7: the toy NAMED (sf_test_support.hpp)
   ci.channel = PipelineChannel::Inclusive;
   ci.isotope = "6Li";
   ci.beam_config = 1;

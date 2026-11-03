@@ -535,19 +535,23 @@ def test_hermes_mstw_pinned(hrep):
     assert d["deuteron"]["status"] == "fail"
 
 
-def test_hermes_ct18nlo_reported_not_dropped(hrep):
-    c = hrep["configs_detail"]["ct18nlo"]
-    if not getattr(lg, "HAVE_LHAPDF", False):
-        assert c["status"] == "blocked"
-        assert c["reason"] == ("environment: lipolgen built without the LHAPDF "
-                               "tier (HAVE_LHAPDF false)")
-    elif _lhapdf_missing("CT18NLO"):
-        assert c["status"] == "blocked"
-        assert c["reason"] == "environment: LHAPDF set CT18NLO not installed"
-    else:
-        d = c["experiments"]["deuteron"]
-        assert d["chi2"] == pytest.approx(1788.2315, rel=1e-6)
-        assert c["q2_floor"] == pytest.approx(1.677025, rel=1e-6)
+def test_hermes_ct18nlo_reported_not_dropped(hmod, request):
+    """F7 (2026-10-30): ct18nlo is the row's VERDICT configuration since D7, so
+    its set (or the tier) missing blocks the whole row -- run() raises, in
+    LHAPDF's own words for the set (`blocked (environment)` in the report) --
+    where until D7 it was a BLOCKED sub-row (and the I7 tree crashed on
+    KeyError 'experiments')."""
+    if not getattr(lg, "HAVE_LHAPDF", False) or _lhapdf_missing("CT18NLO"):
+        with pytest.raises(RuntimeError) as e:
+            hmod.run(verbose=False)
+        assert ("Info file not found for PDF set 'CT18NLO'" in str(e.value)
+                if getattr(lg, "HAVE_LHAPDF", False)
+                else "built without the LHAPDF tier" in str(e.value))
+        return
+    c = request.getfixturevalue("hrep")["configs_detail"]["ct18nlo"]
+    d = c["experiments"]["deuteron"]
+    assert d["chi2"] == pytest.approx(1788.2315, rel=1e-6)
+    assert c["q2_floor"] == pytest.approx(1.677025, rel=1e-6)
 
 
 def test_hermes_verdict_follows_from_the_numbers(hmod, hrep):
@@ -559,7 +563,7 @@ def test_hermes_verdict_follows_from_the_numbers(hmod, hrep):
             assert e["p"] == pytest.approx(_sf(e["chi2"], e["n"]), rel=1e-9) or e["p"] == 0.0
             assert e["status"] == ("pass" if e["p"] >= 0.01 else "fail")
         assert c["status"] == c["experiments"]["deuteron"]["status"]
-    assert hrep["status"] == hrep["configs_detail"]["toy"]["status"]
+    assert hrep["status"] == hrep["configs_detail"][hmod.HEADLINE]["status"]  # F7: the verdict config
 
 
 def test_hermes_b1_inversion_reads_per_nucleon(hmod, hrep):

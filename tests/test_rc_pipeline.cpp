@@ -26,7 +26,7 @@
 #include <vector>
 
 #include "doctest.h"
-#include "lipolgen/pipeline.hpp"
+#include "sf_test_support.hpp"  // D7: pipeline.hpp and the toy_config() rule
 #include "lipolgen/rc.hpp"
 
 using namespace lipolgen;
@@ -39,7 +39,7 @@ namespace {
 RunPlan thirds_plan() { return tensor_thirds_plan(0, 0.6); }
 
 PipelineConfig base_cfg(PipelineChannel ch, std::uint64_t n) {
-  PipelineConfig cfg;
+  PipelineConfig cfg = toy_config();  // D7: the toy NAMED (sf_test_support.hpp)
   cfg.channel = ch;
   cfg.isotope = "6Li";
   cfg.beam_config = 1;

@@ -411,7 +411,7 @@ install-prefix fallback, `deps/src/LHAPDF-6.5.5/src/Paths.cc:27-31`):
   destructor (:25-31, `deps/src/LHAPDF-6.5.5/include/LHAPDF/Config.h:56-58`) → `std::terminate`.
   LiPolGen reaches `Config::get()` through `lhapdf_quiet()` →
   `LHAPDF::setVerbosity(0)` in every tier constructor
-  (`src/lhapdf/lhapdf_sf.cpp:39`, `:86-89`, `:98`, `:133`, `:157`). **Today
+  (`src/lhapdf/lhapdf_sf.cpp:39` (as of c52c164), `:86-89`, `:98`, `:133`, `:157` (as of c52c164)). **Today
   only an explicit `--unpol-sf ct18nlo` / `--pol-sf nnpdfpol` can reach it;
   under D7 the all-default run does.** The toy default, which never touches
   LHAPDF, exits 0 in the same environment (MEASURED). The pre-flight of §2
@@ -588,7 +588,7 @@ history; reason given).
 | `python/lipolgen/cli.py:1049-1125` | `sf_banner_lines`: "BOTH ARE THE TOY BACKENDS" (1088-1097) | KEEP for an explicit toy run; **NEW** a default-run clause naming the LO caveat (the development item) |
 | `python/lipolgen/cli.py:1379-1388` | the bridge's `f2_source = cfg.unpol_sf_obj`: "bit for bit at `--unpol-sf toy`" | KEEP the code; REWORD |
 | `python/lipolgen/cli.py:1406-1432` | `Pipeline` refusal comment (the d–p case) | REWORD (six default-path cases) |
-| `python/README.md:212-213`, `:262-266` | "a toy backend is always there"; the bridge note | REWORD (D7 default) |
+| `python/README.md:212-213` (as of c52c164), `:262-266` | "a toy backend is always there"; the bridge note | REWORD (D7 default) |
 
 ### 4.3 Examples
 
@@ -656,16 +656,16 @@ mechanical and greppable.
 
 | file:line | what | action |
 |---|---|---|
-| `validation/benchmarks/t1_nmc_f2d.py:21-23`, `:72-73`, `:167`, `:344`, `:439`, `:487` | "toy ToyF2() -- the SHIPPED default … THE REPORT ROW'S VERDICT IS THIS CONFIGURATION'S"; `HEADLINE = "toy"`; labels | **HEADLINE → `ct18nlo`**; labels; dated note (§6) |
-| `validation/benchmarks/t1_nmc_f2d_over_f2p.py:33-35`, `:81-82`, `:150`, `:353`, `:452`, `:505` | the same rule ("ToyF2 (shipped default)", `HEADLINE = "toy"`) | **HEADLINE → `ct18nlo`** (FAIL → PASS) |
+| `validation/benchmarks/t1_nmc_f2d.py:21-23`, `:72-73`, `:167`, `:344`, `:439` (as of c52c164), `:487` | "toy ToyF2() -- the SHIPPED default … THE REPORT ROW'S VERDICT IS THIS CONFIGURATION'S"; `HEADLINE = "toy"`; labels | **HEADLINE → `ct18nlo`**; labels; dated note (§6) |
+| `validation/benchmarks/t1_nmc_f2d_over_f2p.py:33-35`, `:81-82`, `:150`, `:353`, `:452` (as of c52c164), `:505` | the same rule ("ToyF2 (shipped default)", `HEADLINE = "toy"`) | **HEADLINE → `ct18nlo`** (FAIL → PASS) |
 | `validation/benchmarks/t1_hermes_f2d.py:19-21`, `:170`, `:353`, `:515`, `:606` | the same rule, on F₂ᵈ ("ToyF2 (shipped default)", `HEADLINE = "toy"`) | **HEADLINE → `ct18nlo`** |
 | `validation/benchmarks/t1_g1d_world.py:77-78`, `:165`, `:235`, `:473`, `:594` | "ToyG1 on ToyF2 -- the SHIPPED default … THE REPORT ROW'S VERDICT IS THIS ONE'S" | **HEADLINE → `nnpdfpol`** |
 | `validation/benchmarks/t5_sum_rules.py:8`, `:64-78`, `:184` | "Bjorken sum on the shipped `ToyG1`"; "the failing sub-row is the shipped toy's" | REWORD (the shipped sub-row becomes `bjorken[nnpdfpol11]`); `bc_ww` stays on `ToyG1()` (an implementation closure) |
-| `validation/benchmarks/t5_delta_moment_bound.py:66-73`, `:628-630`, `:865` | "SHIPPED (the verdict): `default_inclusive_kernel(li6())`'s Delta … F1 the shipped ToyF2" | `shipped_kernel()` → the D7 kernel; **NEW** `letter_kernel()` = the toy, for `moment_A`/`moment_B` (they reproduce the letter's printed A = −0.2924 on its toy footing) |
+| `validation/benchmarks/t5_delta_moment_bound.py:66-73` (as of c52c164), `:628-630`, `:865` | "SHIPPED (the verdict): `default_inclusive_kernel(li6())`'s Delta … F1 the shipped ToyF2" | `shipped_kernel()` → the D7 kernel; **NEW** `letter_kernel()` = the toy, for `moment_A`/`moment_B` (they reproduce the letter's printed A = −0.2924 on its toy footing) |
 | `validation/benchmarks/t1_r_world.py:52-53`, `:446`, `:605` | "the SHIPPED ToyF2's F2p" (a recorded H1 variant); `k_ship = default_inclusive_kernel(li6())` | REWORD labels (the toy variant stays recorded, a CT18NLO one is "shipped"); `k_ship` → the D7 kernel (the a₂ ratio is F₂-free) |
 | `validation/benchmarks/t4_djangoh_rad_noRad.py:20-21`, `:33-35`, `:269-271`, `:590-592` (`lg.make_config`) | "LiPolGen's own Born is `InclusiveKernel::dsigma_unpol` with the shipped `UnpolSfSource.Toy`" — **outside** the hashed block (`:41-187`, `DESIGN_BEGIN`/`DESIGN_END` `:369-370`) | recommended: follow the shipped default — re-word `:20-21` and `:33-35`, add a dated D7 addendum after `:187` (`DESIGN BLOCK END`; the block is never edited), re-take the recorded sub-rows (§6); alternative: `make_config(..., unpol_sf="toy", pol_sf="toy")` at `:590` |
 | `validation/benchmarks/t4_pythia_ep_closure.py:60-61` | "(… LiPolGen's kernel on ToyF2)" | REWORD (CT18NLO since D7); the row follows the default |
-| `validation/benchmarks/t5_weighted_unweighted.py:9-14`, `:143-145` | "the shipped defaults … `default_inclusive_kernel(li6())` (Miller b1, ToyF2, ToyG1), which is what `Pipeline` builds" | the D7 kernel (binding extension, §4.2); RETAKE |
+| `validation/benchmarks/t5_weighted_unweighted.py:9-14`, `:143-145` (as of c52c164) | "the shipped defaults … `default_inclusive_kernel(li6())` (Miller b1, ToyF2, ToyG1), which is what `Pipeline` builds" | the D7 kernel (binding extension, §4.2); RETAKE |
 | `validation/benchmarks/t2_hermes_b1_table2.py:15-17`, `:34`, `:160` | `cdks_conv_default` = the class's default Options (`ToyF2`); F₂ for the inversion = `_l.MstwSF()`, `_l.ToyF2()` if no PYTHIA | KEEP (by design; not the run default) |
 | `validation/benchmarks/t3_nmc_li6_over_d.py` | `Epps21Ratio` on CT18NLO | KEEP |
 | `validation/price_defaults.py:521`, `:736`, `:769`, `:817`, `:864`, `:1068-1074` | the default row "unpol_sf = toy (shipped default)"; family defaults | **RETAKE**: the default row = the D7 pair (and D5/D6's defaults), `unpol_sf = toy` / `pol_sf = toy` become priced rows |
@@ -784,7 +784,7 @@ old option explicitly when its purpose is to pin the old physics. Applied:
 | `t1_hermes_f2d` (row 14) | the same, on F₂ᵈ ("the SHIPPED default": `validation/benchmarks/t1_hermes_f2d.py:19-21`, `:170`) | toy 5303.5/68 FAIL | `ct18nlo` 1788.2/45 FAIL | FAIL → FAIL |
 | `t1_g1d_world` | "ToyG1 on ToyF2 -- the SHIPPED default … THE REPORT ROW'S VERDICT IS THIS ONE'S" (`validation/benchmarks/t1_g1d_world.py:77-78`, `:165`, `:235` `HEADLINE`) | toy 107.8/15, 69.4/15, 54.9/28 FAIL | `nnpdfpol` 45.0/15, 52.6/15, 51.0/28 FAIL | FAIL → FAIL |
 | `t5_sum_rules` | "bjorken -- A MEASUREMENT OF THE SHIPPED MODEL … on `ToyG1` this sub-row measures what the shipped default g1 does" (`validation/benchmarks/t5_sum_rules.py:64-78`); "fail if any evaluated sub-row fails" (`:181-183`) | `bjorken[toyg1]` FAIL (divergent), `bjorken[nnpdfpol11]` FAIL | the shipped label moves to `bjorken[nnpdfpol11]` (+19.3 / +12.4 / +9.6 %, not converged) | FAIL → FAIL |
-| `t5_delta_moment_bound` (row 13) | "SHIPPED (the verdict): `default_inclusive_kernel(li6())`'s Delta … F1 the shipped ToyF2" (`validation/benchmarks/t5_delta_moment_bound.py:66-73`) | 0.0644 / 0.0803 / 0.0941 PASS | 0.0760 / 0.0907 / 0.1023 (MEASURED, §3.8); positivity w_min 0.9135 | PASS → PASS |
+| `t5_delta_moment_bound` (row 13) | "SHIPPED (the verdict): `default_inclusive_kernel(li6())`'s Delta … F1 the shipped ToyF2" (`validation/benchmarks/t5_delta_moment_bound.py:66-73` (as of c52c164)) | 0.0644 / 0.0803 / 0.0941 PASS | 0.0760 / 0.0907 / 0.1023 (MEASURED, §3.8); positivity w_min 0.9135 | PASS → PASS |
 | `t4_djangoh_rad_noRad` (row 7) | "LiPolGen's own Born is … the shipped `UnpolSfSource.Toy`" (`validation/benchmarks/t4_djangoh_rad_noRad.py:20-21`, outside the hashed block); "The verdict is on R … which needs no Born at all" (`:29-30`) | `polrad-full` 1.0199 / 1.0261 / 1.0219 / 1.0098 PASS | 1.0213 / 1.0262 / 1.0219 / 1.0090 (MEASURED) | PASS → PASS |
 | `t1_r_world` (row 12) | "THE ROW'S VERDICT IS THIS BACKEND'S" — R's, `r_sigma_lt` (`validation/benchmarks/t1_r_world.py:11-18`); the ToyF2 F₂ᵖ is a RECORDED H1 variant (`:52-53`) | 12.54/10 PASS | unchanged (D7 does not move R; the a₂ ratio is F₂-free) | PASS → PASS |
 | `t4_pythia_ep_closure` | "LiPolGen's kernel on ToyF2" (`validation/benchmarks/t4_pythia_ep_closure.py:60-61`); verdict at matched (x, Q²) | worst 0.076 PASS | worst 0.065 (MEASURED) | PASS → PASS |
@@ -810,7 +810,7 @@ block, and the REPORT's plan-row texts follow `make_report.py`'s regeneration
 | `docs/benchmarking/REPORT.md`, `REPORT.json`, `figures/` | §6 | `LIPOLGEN_BENCH=1 python3 validation/benchmarks/make_report.py --all --plots --compare <pre-I7 REPORT.json> --out-dir docs/benchmarking` |
 | the price table (`../run_2026-10-26/phase_A_baseline.md` §4.2 is dated, stays) | a new default row and the toy as a priced row | `python3 validation/price_defaults.py --plot` → the I7 record |
 | `README.md:56-58` selector table | the default column; the prices are toy-vs-grid prices and stay | by hand |
-| `README.md:39-41` ("pinned against at rtol 1e-12"), `:160-167` ("the toy costs ×0.80"), `:186-198` ("0.440"), `:243-256` (the wheel's `LhapdfSF` failure) | sentences, no new number | by hand |
+| `README.md:39-41` ("pinned against at rtol 1e-12"), `:160-167` (as of c52c164) ("the toy costs ×0.80"), `:186-198` ("0.440"), `:243-256` (the wheel's `LhapdfSF` failure) | sentences, no new number | by hand |
 | `docs/USAGE.md:782-881` price tables ("What the toy has been costing, measured") | stay (prices, both ends named) | — |
 | `docs/USAGE.md:1162`, `docs/PHYSICS_CHANNELS.md:128` | ⁷Li σ 590952.42641509 pb at "the default" | by hand: label "(toy)" or re-take 470360.0619 pb |
 | `docs/USAGE.md:2785-2787` | throughput 2.83 / 1.02 / 2.32 M ev/s | the examples, re-run (machine-dependent) or label "toy" |

@@ -274,7 +274,7 @@ G3c: int b1 dx (x >= 0.01) = 0.00044858 ; digitized CDKS 0.0004592
 
 i.e. the *wave function* moves the A = 2 gate by 19 %, and the *nucleon F₁*
 (toy vs MSTW2008 LO) moves it by roughly a factor of two (`00_in_tree_checks.md`
-§3: shipped ToyF2 gives 0.440 and fails the window). Both of those levers are
+§3: `--b1-unpol`'s ToyF2 default gives 0.440 and fails the window; D7 left that default). Both of those levers are
 exactly what §3, §4 and §7 constrain — which is the argument for wiring them.
 
 ### 5.2 The asymptotic D/S ratio η_d — a measurement hiding inside a published constant

@@ -209,11 +209,11 @@ class LhapdfSF : public UnpolSF {
 
   /// The loaded grid's OWN lower Q2 edge (`LHAPDF::PDF::q2Min()`), read from
   /// the set's metadata and not transcribed anywhere -- CT18NLO's is 1.677
-  /// (QMin 1.295 GeV), NNPDFpol11_100's is 1.  BELOW IT LHAPDF DOES NOT
-  /// FREEZE: it continues the evolution downward, and F2p falls fast (a
-  /// factor 2.34 below `ToyF2` at x = 3e-4, Q2 = 0.7).  The shipped 6Li
-  /// window's accepted cells start at Q2 = 1.054, so a `--unpol-sf ct18nlo`
-  /// run puts a third of its rate there; `PipelineConfig`'s run banner and
+  /// (QMin 1.295 GeV), NNPDFpol11_100's is 1.  BELOW IT THE TIER FREEZES the
+  /// grid at its edge since D7 (LHAPDF `nearest`, set on the object; before,
+  /// LHAPDF continued the evolution down: F2p 1/2.34 of `ToyF2` at x = 3e-4,
+  /// Q2 = 0.7).  The shipped 6Li window starts at Q2 = 1.054, so the SHIPPED
+  /// default run puts 39 % of its rate there; `PipelineConfig`'s banner and
   /// `meta["unpol_sf_below_grid_frac"]` are computed FROM THIS accessor so
   /// that the fraction is never a typed-in number.
   double q2_min() const;
@@ -231,7 +231,7 @@ class LhapdfG1 : public PolSF {
   ~LhapdfG1() override;
   double g1p(double x, double q2) const override;
   double g1n(double x, double q2) const override;
-
+  double q2_min() const;  ///< the grid's own Q2 floor (1 for NNPDFpol11_100; D7)
  private:
   struct Impl;
   std::unique_ptr<Impl> impl_;

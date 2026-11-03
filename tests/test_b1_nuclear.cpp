@@ -42,7 +42,7 @@
 #include "lipolgen/cluster.hpp"
 #include "lipolgen/constants.hpp"
 #include "lipolgen/numerics.hpp"
-#include "lipolgen/pipeline.hpp"
+#include "sf_test_support.hpp"  // D7: pipeline.hpp and the toy_config() rule
 #include "lipolgen/sf.hpp"
 #include "lipolgen/spectator.hpp"
 #include "lipolgen/tagged.hpp"
@@ -1914,7 +1914,7 @@ TEST_CASE("b1_nuclear T9: default_inclusive_kernel(LI6()) is unchanged") {
 
 TEST_CASE("b1_nuclear T11: b1_model channel and isotope legality") {
   auto base = [] {
-    PipelineConfig c;
+    PipelineConfig c = toy_config();  // D7: the toy NAMED (sf_test_support.hpp)
     c.channel = PipelineChannel::Inclusive;
     c.isotope = "6Li";
     c.n_events = 100;
@@ -1985,7 +1985,7 @@ TEST_CASE("b1_nuclear T11: b1_model channel and isotope legality") {
   }
   // ---- a caller-supplied kernel and a non-default b1_model contradict
   {
-    PipelineConfig c = base();
+    PipelineConfig c = base(); c.unpol_sf = UNPOL_SF_DEFAULT; c.pol_sf = POL_SF_DEFAULT;  // D7: a kernel sits beside the SHIPPED selectors
     c.kernel = default_inclusive_kernel(LI6());
     CHECK_NOTHROW(c.validate());              // ... with the DEFAULT model
     c.b1_model = B1Model::Cdks;
@@ -2092,7 +2092,7 @@ TEST_CASE("b1_nuclear T16: --b1-unpol reaches the kernel and the default "
   // ---- validate(): the provenance rules, and the guard that STAYS
   {
     auto base = [] {
-      PipelineConfig c;
+      PipelineConfig c = toy_config();  // D7: the toy NAMED (sf_test_support.hpp)
       c.channel = PipelineChannel::Inclusive;
       c.isotope = "6Li";
       c.n_events = 100;
@@ -2133,7 +2133,7 @@ TEST_CASE("b1_nuclear T16: --b1-unpol reaches the kernel and the default "
     // gate-passing configuration through -- the selector routes around the
     // need for it.
     {
-      PipelineConfig c = base();
+      PipelineConfig c = base(); c.unpol_sf = UNPOL_SF_DEFAULT; c.pol_sf = POL_SF_DEFAULT;  // D7: so the b1 guard, not the SF one, refuses
       c.kernel = default_inclusive_kernel(LI6());
       c.b1_unpol = B1UnpolSource::Custom;
       c.b1_unpol_sf = toy;
@@ -2415,7 +2415,7 @@ TEST_CASE("b1_nuclear T18: --r-source puts ONE R in numerator and denominator") 
 
   // (4) the provenance rule: refused where the hook is not installed.
   {
-    PipelineConfig c;
+    PipelineConfig c = toy_config();  // D7: the toy NAMED (sf_test_support.hpp)
     c.channel = PipelineChannel::Inclusive;
     c.isotope = "6Li";
     c.n_events = 100;

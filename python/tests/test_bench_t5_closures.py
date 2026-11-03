@@ -334,21 +334,26 @@ def test_wu_row_passes_and_verdict_follows(wu_rep, wu_mod):
     assert (wu_rep["seed"], wu_rep["runs"], wu_rep["lumi_pb"]) == (
         20260926, (1, 2), 34000.0)
     assert (wu_rep["x_min"], wu_rep["y_min"]) == (0.1, 0.5)
-    assert (wu_rep["n_unweighted"], wu_rep["n_weighted"]) == (3032577, 2987706)
-    assert wu_rep["sigma_u"] == pytest.approx(89.193441, rel=1e-8)
-    assert wu_rep["sigma_w"] == pytest.approx(89.167357, rel=1e-8)
-    assert wu_rep["err_w"] == pytest.approx(0.051588, rel=1e-5)
+    # D7 (2026-10-29): re-taken on the shipped CT18NLO / NNPDFpol1.1 kernel --
+    # the harness's physics point IS "the shipped defaults of make_config()".
+    # On the toy (until D7): N = (3032577, 2987706), sigma_u 89.193441, sigma_w
+    # 89.167357, err_w 0.051588, pull 0.359, sigma_cat 89.167123, unpol 87.873873.
+    assert (wu_rep["n_unweighted"], wu_rep["n_weighted"]) == (2712940, 2669772)
+    assert wu_rep["sigma_u"] == pytest.approx(79.792353, rel=1e-8)
+    assert wu_rep["sigma_w"] == pytest.approx(79.767651, rel=1e-8)
+    assert wu_rep["err_w"] == pytest.approx(0.0488204, rel=1e-5)
     assert wu_rep["pull"] == pytest.approx(0.359, abs=2e-3)
-    assert wu_rep["sigma_cat_pb"] == pytest.approx(89.167123, rel=1e-8)
-    assert wu_rep["sigma_unpol_pb"] == pytest.approx(87.873873, rel=1e-8)
+    assert wu_rep["sigma_cat_pb"] == pytest.approx(79.767466, rel=1e-8)
+    assert wu_rep["sigma_unpol_pb"] == pytest.approx(78.522871, rel=1e-8)
 
 
 def test_wu_sensitivity_is_as_stated(wu_rep):
     """The window was chosen so that the closure can FAIL: the exact
-    polarized shift is +1.47 % and a no-op Mode W would pull ~ +18."""
-    assert wu_rep["rate_shift"] == pytest.approx(1.4717e-2, abs=5e-7)
+    polarized shift is +1.59 % and a no-op Mode W would pull ~ +18.6 (D7,
+    2026-10-29, on the shipped grids; +1.47 % and +18.29 on the toy)."""
+    assert wu_rep["rate_shift"] == pytest.approx(1.58501e-2, abs=5e-7)   # D7
     assert wu_rep["null_pull"] > 10.0
-    assert wu_rep["null_pull"] == pytest.approx(18.29, abs=0.02)
+    assert wu_rep["null_pull"] == pytest.approx(18.61, abs=0.02)         # D7
 
 
 def test_wu_compare_catches_mutated_weights(wu_rep, wu_mod):

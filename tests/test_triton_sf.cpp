@@ -13,7 +13,7 @@
 #include "check_close.hpp"
 #include "doctest.h"
 
-#include "lipolgen/pipeline.hpp"
+#include "sf_test_support.hpp"  // D7: pipeline.hpp and the toy_config() rule
 #include "lipolgen/triton_sf.hpp"
 
 using namespace lipolgen;
@@ -174,7 +174,7 @@ TEST_CASE("triton sf: RNG stream discipline -- exactly 6 uniforms per "
 
 TEST_CASE("triton sf: T1 pipeline with --triton-sf ciofi-simula -- "
           "whole-record conservation, the three channels, and determinism") {
-  PipelineConfig cfg;
+  PipelineConfig cfg = toy_config();  // D7: the toy NAMED (sf_test_support.hpp)
   cfg.channel = PipelineChannel::TaggedLi7Alpha;
   cfg.isotope = channel_isotope(cfg.channel);
   cfg.beam_config = 1;

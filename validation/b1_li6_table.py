@@ -27,11 +27,11 @@ design section 5.4's Escalation clause reads the peak ratio AFTER the
 checklist, and checklist item 4 IS the nucleon PDF.  Measured 2026-09-03
 (docs/open_items/run_2026-09-03/phase_A_numbers.md): 0.843, a factor 1.19
 low, INSIDE the factor of 2 -- G3b passes there.  It does NOT pass on the
-SHIPPED DEFAULT unpolarised backend, the library ToyF2 (0.440, a factor 2.27
+--b1-unpol's DEFAULT unpolarised backend, the library ToyF2 (0.440, a factor 2.27
 low, OUTSIDE the [0.5, 2] window), and it clears by only 4 % at Eq. (17)'s
 kappa = 1 (0.520).  So the lift is about a CONFIGURATION: quote numbers made
 with --b1-unpol mstw (PipelineConfig.b1_unpol = B1UnpolSource.Mstw); the
-default toy backend's numbers are not covered by it.  With the real CD-Bonn
+toy backend's numbers (--b1-unpol's default, which D7 left) are not covered.  With the real CD-Bonn
 wave function as well (checklist item 5) the ratio is 1.000338 -- read that as
 "the residual is below the error of digitizing a published figure", NEVER as
 three-digit agreement with CDKS, and note it is specific to CD-Bonn AND MSTW

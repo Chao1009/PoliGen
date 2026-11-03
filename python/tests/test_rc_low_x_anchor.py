@@ -67,13 +67,20 @@ HALF_WIDTH = {
             4.83334937275573e-05, 1.920690621629717e-05),
 }
 # A_zz(Born) at those four x, same configuration (phase_B_numbers.md sec. B3.2
-# corrected the x = 0.01 / 0.10 entries; 0.063 and 0.16 are new here).
+# corrected the x = 0.01 / 0.10 entries; 0.063 and 0.16 are new here).  D7
+# (2026-10-29): both tables were measured on ToyF2 / ToyG1, the shipped default
+# until D7, so A2 NAMES the toy pair (`toy=True`); on the shipped CT18NLO /
+# NNPDFpol1.1 the four A_zz are -5.124064e-04, -1.286892e-03, -1.391150e-03,
+# -1.062647e-03 -- the band's delta(x) does not depend on the backend.
 AZZ = (-4.528241648849e-04, -1.316774298646e-03,
        -1.528923484258e-03, -1.280460414420e-03)
 
 
-def _pipeline(anchor=None, channel="inclusive", events=2000, seed=99):
+def _pipeline(anchor=None, channel="inclusive", events=2000, seed=99,
+              toy=False):
     kw = {} if anchor is None else {"rc_delta_low_x": anchor}
+    if toy:                       # D7 (2026-10-29): the pre-D7 default, NAMED
+        kw.update(unpol_sf="toy", pol_sf="toy")
     # D5 (2026-10-29): t-peak BY NAME on the inclusive builds, for RUNTIME --
     # A1-A4 read the band, which no tail model touches, and a polrad-full
     # table costs ~13 s a build.  Never on A5's tagged-alpha builds: an
@@ -104,7 +111,7 @@ def test_the_shipped_anchor_has_not_moved():
 
 def test_the_three_row_table_of_band_half_widths_on_azz():
     """A2.  The priced table, re-run reduced, at rtol 1e-12."""
-    p0 = _pipeline()
+    p0 = _pipeline(toy=True)
     kern, s = p0.dis_sampler.kernel, p0.dis_sampler.s
     azz = []
     for x in XS:

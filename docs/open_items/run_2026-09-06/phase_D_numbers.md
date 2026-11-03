@@ -1015,7 +1015,7 @@ writes a formula in Unicode where the code writes ASCII — and are exempted in
 
 | # | citation | was | is now | why |
 |---|---|---|---|---|
-| 1 | `PHYSICS_CHANNELS.md:173` | `src/core/pipeline.cpp:1016` | `:1110` | `:1016` is the unrelated `unpol_sf = toy` refusal; `:1110` is the guard that refuses a caller-supplied kernel on a tagged channel |
+| 1 | `PHYSICS_CHANNELS.md:173` | `src/core/pipeline.cpp:1016` | `:1110` (as of c52c164) | `:1016` is the unrelated `unpol_sf = toy` refusal; `:1110` (as of c52c164) is the guard that refuses a caller-supplied kernel on a tagged channel |
 | 2 | `PHYSICS_CHANNELS.md:206` | `include/lipolgen/constants.hpp:86` (as of a3c9ecb) | `include/lipolgen/constants.hpp:139` (anchor read 2026-09-15 "Sather-Schmidt") | the line naming Sather-Schmidt PRD 42:1424, two above `C_BAG` |
 | 3 | `PHYSICS_CHANNELS.md:299` | `python/lipolgen/cli.py:183` (anchor read 2026-09-16 "'ladder' (the DEFAULT)") | `python/lipolgen/cli.py:221` (anchor read 2026-09-16 `add_argument("--p-d"`) | `--p-d` is declared there; line 101 is the `--pzz-mode` help |
 | 4 | `PHYSICS_CHANNELS.md:301` | `docs/CONVENTIONS.md:378` (anchor read 2026-09-15 "deuteron control channel") | `docs/CONVENTIONS.md:415` (anchor read 2026-09-15 "KAPPA_NN_VIRTUAL") | where `a_nn = −18.9 fm` is |

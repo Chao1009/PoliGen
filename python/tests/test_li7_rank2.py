@@ -305,7 +305,7 @@ def test_make_plan_refuses_the_spin1_tensor_plans_at_j_32(name):
     assert "SPIN-1 pattern" in msg
     assert "helicity-flip" in msg           # what does take j
     assert "tagged-7Li-alpha" in msg        # what does carry the alignment
-    assert "590952.42641509" in msg         # the measured zero, with its config
+    assert "494062.76099942" in msg         # the measured zero, with its config (D7, 2026-10-29: the shipped grids; the toy's 590952.42641509 beside it)
 
 
 def test_make_plan_still_builds_all_four_at_spin_1_and_helicity_flip_at_32():
@@ -336,9 +336,9 @@ def test_the_sf_selectors_reach_the_7li_inclusive_kernel():
     tensor sector stays exactly zero under every setting, because nothing
     fills the slot the backend would feed.
     """
-    p0, s0 = _sigma()
-    p1, s1 = _sigma(unpol_sf="ct18nlo")
-    assert p1.sigma_pb() < 0.85 * p0.sigma_pb()      # measured ratio 0.795936
+    p0, s0 = _sigma(unpol_sf="toy")     # D7 (2026-10-29): ct18nlo IS the default, the toy the variant
+    p1, s1 = _sigma()
+    assert p1.sigma_pb() < 0.85 * p0.sigma_pb()      # measured ratio 0.836045 on the frozen grid (D7; 0.795936 pre-D7, continued)
     assert s0[0] == s0[1] and s1[0] == s1[1]          # still exactly zero
     meta = p1.generate(0, False)["meta"]
     assert meta["unpol_sf"] == "ct18nlo"
@@ -351,8 +351,8 @@ def test_the_sf_selectors_reach_the_tagged_7li_kernel():
         cfg = _cfg(channel="tagged-7Li-alpha", **kw)
         return _l.Pipeline(cfg, lg.make_plan("helicity-flip", j=1.5, pz=0.7,
                                              pe=0.7))
-    p0, p1 = run(), run(unpol_sf="ct18nlo")
-    assert p1.sigma_pb() < 0.85 * p0.sigma_pb()      # measured ratio 0.792543
+    p0, p1 = run(unpol_sf="toy"), run()   # D7 (2026-10-29): the default IS ct18nlo
+    assert p1.sigma_pb() < 0.85 * p0.sigma_pb()      # measured ratio 0.832599 on the frozen grid (D7; 0.792543 pre-D7, continued)
     assert p1.generate(0, False)["meta"]["unpol_sf"] == "ct18nlo"
 
 

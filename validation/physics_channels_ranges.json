@@ -170,17 +170,17 @@
   "last": "old record and prints its honest residual: 0.186 relative, charge wrong by 1."
  },
  "docs/USAGE.md:11-66": {
-  "sha256": "15c41ca77d418168a97bc71ad6b045f5f7c0c61a4e5013fcb4c7db06da0bc184",
+  "sha256": "71836b4cd282910f61b3b59ed424084cd4e4972b9ce8a684aa3b6a1c3e5edd94",
   "first": "### Installing the Python package with pip",
   "last": "`docs/OPEN_ITEMS_SOLUTIONS.md` §12–13 and `docs/open_items/engineering.md` §C)."
  },
  "docs/USAGE.md:163-533": {
-  "sha256": "cdf7e29d8b94889b3de959c204d6697b2281510c6aa893259486a0281c1a8b0d",
+  "sha256": "06f999f85c08e40e228fbf5a5ffd0c26792814cf8906053ffe0bad06c78d9961",
   "first": "X (pdg 92). The balance is **per-nucleon**, `k + P_N = k' + X`, exactly as",
   "last": "move every pinned gate number, and it is not a uniform improvement on an"
  },
  "docs/USAGE.md:1978-2169": {
-  "sha256": "420b290b6b9ad8a6795a1038d69385160082236eb6a40926ff6d7ae80b85b1e4",
+  "sha256": "b14a67160b54f5d7c477d45f7dfb30dc6622b96f5c77133a4817f4de1828ea0c",
   "first": "## 5. Far-forward routing",
   "last": "  `rc_tensor_lo`/`rc_tensor_hi`/`rc_tail`. **Every other CLI plan is"
  },
@@ -540,7 +540,7 @@
   "last": "/// bias is measured by re-running an extraction at g2_scale = 0 and 1.5"
  },
  "include/lipolgen/xsec.hpp:197-233": {
-  "sha256": "a14a993b2c23ff6d3f8625ea5f30df88814ae5f43eb9e6e5f0486d9af7b4bf33",
+  "sha256": "dfb444e635d77564d0cb37f60116aad687c9d01e92eea99309729f2838afdab3",
   "first": "  struct Options {",
   "last": "    int g2_npts = 96;"
  },
@@ -999,7 +999,7 @@
   "name": "Pomeron"
  },
  "tests/test_pipeline.cpp:608-634": {
-  "sha256": "55514592a62083495213b6f5120dbcb273c8b9c2b7f8e5cc0802af0fea29e804",
+  "sha256": "69cb87ebfb3533e427dc357edf7ddaad4cf61218c238e185eef2d0b0971a7123",
   "first": "TEST_CASE(\"pipeline: 7Li generated events give <P2(cos theta_k)> = -T/5\") {",
   "last": "    CHECK(std::fabs(got + t / 5.0) < 4.0 * err);"
  },

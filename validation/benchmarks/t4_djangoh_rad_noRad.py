@@ -18,7 +18,7 @@ THE THREE NORMALISATION RULES (BENCHMARK_PLAN.md sec. 8), FOR THIS ROW
    bremsstrahlung.  PDFs enter only the DIS Born used to DISPLAY the tail as
    a fraction: DJANGOH's Born uses the free-proton CTEQ6.1M (LHAPDF set
    10150, the ePIC samples' set); LiPolGen's own Born is `InclusiveKernel::
-   dsigma_unpol` with the shipped `UnpolSfSource.Toy`.  There is no
+   dsigma_unpol` with `UnpolSfSource.Toy` -- NAMED since D7 (see below).  No
    average-nucleon grid to divide by; the harness asserts A == 1.
 3. Cross sections vs structure functions; per what.  Both tails are ABSOLUTE
    cross sections in microbarn per e-p collision (A = 1: per nucleus = per
@@ -187,7 +187,7 @@ numbers are, with every input card verbatim.
 ==== DESIGN BLOCK END ====
 
 ADDENDA (2026-10-26, after an independent adversarial verification of the
-row; the block above is hashed and stays as written; D5's, 2026-10-29, sits above run()):
+row; the block above is hashed and stays as written; D5's and D7's, 2026-10-29, sit above run()):
   * (b)'s "three phase-space mappings of ONE squared matrix element" is
     loose.  In the source IEL31, IEL32 and IEL33 are the 1/A1, 1/A2 and
     1/t_s partial-fraction pieces of that one squared matrix element
@@ -588,7 +588,7 @@ def build_pipeline(tail_model, qe_kf_gev=0.0):
                     "Eq. (44) Z = 1, N = 0 slot")
 
     cfg = lg.make_config(isotope="p", channel="inclusive", config=CONFIG,
-                         events=10, seed=1, rc="tensor-band",
+                         events=10, seed=1, rc="tensor-band", unpol_sf="toy", pol_sf="toy",  # D7: the Born the block names
                          rc_tail_model=tail_model)
     g = cfg.grid
     g.x_min = X_MIN
@@ -873,6 +873,19 @@ def _bin_label(b):
 # (option)" since that date.  This harness names both models in every
 # Pipeline it builds (`build_pipeline(tail_model)`), so no number moved.  The
 # addendum sits here, below every line the run's records cite, so none moved.
+#
+# ADDENDUM (2026-10-29: decision D7 of 2026-10-27, docs/open_items/run_2026-10-27/
+# DECISIONS.md).  The SHIPPED structure-function defaults are CT18NLO /
+# NNPDFpol1.1 since D7, and `ToyF2` / `ToyG1` options.  The hashed DESIGN BLOCK
+# was written on 2026-10-26 with LiPolGen's own Born on the then-shipped ToyF2
+# (header rule 2, outside the block, said so), and the row's numbers and its
+# 2026-09-23 history (python/tests/test_bench_djangoh_eltail.py,
+# test_bench_chain_rc.py) were made on it.  So `build_pipeline` NAMES the toy
+# (`unpol_sf="toy", pol_sf="toy"`): every number of the row is bit-identical
+# to before D7.  The verdict is on R = sigma_tail(LiPolGen)/sigma_tail(DJANGOH),
+# which moves only at ~1e-3 with the Born (plan_D7 sec. 3.8 measured 1.0199 ->
+# 1.0213 in the first bin on the CT18NLO Born, continued below its grid); that
+# CT18NLO-Born variant is NOT computed here, and no bound moved.
 def run(tail_models=TAIL_MODELS, verbose=True):
     import lipolgen as lg
     if tuple(tail_models) != TAIL_MODELS:

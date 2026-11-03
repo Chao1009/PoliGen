@@ -30,12 +30,12 @@ For ToyF2 the two are the same function (its F2n IS F2p times the hook); for
 MstwSF / LhapdfSF they differ, and the harness prices the difference.
 Three backends (the `--unpol-sf` choices):
 
-  toy      ToyF2() -- the SHIPPED default; the numerator is exactly
-           `default_inclusive_kernel(deuteron()).tables(x, Q2).f2`.
-           THE REPORT ROW'S VERDICT IS THIS CONFIGURATION'S.
+  toy      ToyF2() -- the SHIPPED default until D7 (2026-10-27); the numerator
+           is exactly `default_inclusive_kernel(deuteron()).tables(x, Q2).f2`
+           (the class-level toy).  Since D7 an OPTION: a RECORDED sub-row.
   mstw     MstwSF() -- MSTW2008 LO from PYTHIA 8's pdfdata.  Sub-row.
-  ct18nlo  LhapdfSF("CT18NLO").  Sub-row; BLOCKED (environment) when LHAPDF
-           reports the set not installed -- reported, never dropped.
+  ct18nlo  LhapdfSF("CT18NLO") at LO -- the SHIPPED default since D7: THE REPORT
+           ROW'S VERDICT IS THIS CONFIGURATION'S; its set missing, the ROW is blocked (environment), exit 2.
 
 ZERO free parameters, NO tuning.
 
@@ -79,7 +79,7 @@ t0 rescaling of the MULT component).
 
 TOLERANCE.  p(chi2, ndf) >= 0.01 on the DIS-cut set, diagonal 'hepdata'
 errors, ndf = number of points.  The row's STATUS is the shipped default's
-(toy).  The threshold follows row 4 (`t3_nmc_li6_over_d.py`) and was chosen
+(ct18nlo since D7; toy before).  Threshold as row 4 (`t3_nmc_li6_over_d.py`),
 AFTER the plan scout's previews had been seen (scout, 2026-09-26, all 260
 points, diagonal: ToyF2 chi2 = 2252, MSTW 298 Q2-dependent and 310 with the
 frozen hook); stated here so that it can be argued with, not tuned.  A FAIL
@@ -147,7 +147,7 @@ Q2_CUT = 1.0             # GeV^2 -- the declared DIS cut ...
 W2_CUT = 4.0             # GeV^2 -- ... and its W^2 half
 M_NUCLEON = 0.938272     # GeV, for W^2 only
 CONFIGS = ("toy", "mstw", "ct18nlo")
-HEADLINE = "toy"
+HEADLINE = "ct18nlo"    # the shipped default (D7, 2026-10-27; "toy" until then); _headline() checks it
 PRIMARY, LEGACY = "hepdata", "legacy"
 CT18 = "CT18NLO"
 REFERENCE = ("NMC F2d/F2p (per nucleon), NPB 487 (1997) 3, HEPData ins426595 "
@@ -350,7 +350,7 @@ def build_backend(name):
     import lipolgen as lg
     import lipolgen._lipolgen as _l
     if name == "toy":
-        return (lg.ToyF2(), None, "ToyF2 (shipped default)",
+        return (lg.ToyF2(), None, "ToyF2 (an option since D7; shipped until then)",
                 lg.default_inclusive_kernel(lg.deuteron()), None)
     if name == "mstw":
         if not getattr(_l, "HAVE_PYTHIA8", False):
@@ -376,7 +376,7 @@ def build_backend(name):
                 raise
             return (None, None, "LhapdfSF(%s)" % CT18, None,
                     "environment: LHAPDF set %s not installed" % CT18)
-        return sf, float(sf.q2_min), "LhapdfSF(%s)" % CT18, _kernel_on(sf), None
+        return sf, float(sf.q2_min), "LhapdfSF(%s) (shipped since D7, LO)" % CT18, _kernel_on(sf), None
     raise ValueError("unknown configuration %r" % name)
 
 
@@ -438,7 +438,7 @@ def _line(c):
 def run(path=None, verbose=True):
     t0 = time.perf_counter()
     pts, configs = measure(path)
-    h = configs[HEADLINE]
+    h = _headline(configs)   # F7: the shipped default, checked; a missing set raises LHAPDF's words
     others = "; ".join(
         "%s %s" % (n, "BLOCKED (%s)" % configs[n]["reason"]
                    if configs[n]["status"] == "blocked" else
@@ -449,10 +449,10 @@ def run(path=None, verbose=True):
         for n in CONFIGS if n != HEADLINE)
     report = dict(
         name=NAME,
-        generator="toy (shipped ToyF2): chi2/ndf = %.1f/%d, p = %s on Q2 >= 1, "
+        generator="%s = %s: chi2/ndf = %.1f/%d, p = %s on Q2 >= 1, "
                   "W2 >= 4 [diagonal]; sub-rows: %s"
-                  % (h["dis"]["chi2"], h["dis"]["n"], _fmt_p(h["dis"]["p"]),
-                     others),
+                  % (HEADLINE, h["label"], h["dis"]["chi2"], h["dis"]["n"],
+                     _fmt_p(h["dis"]["p"]), others),
         reference="%s, %d of %d points in the DIS cut"
                   % (REFERENCE, h["dis"]["n"], len(pts)),
         tolerance="p(chi2, ndf) >= %.2f on the DIS cut, stat (+) sys diagonal"
@@ -502,9 +502,9 @@ def run(path=None, verbose=True):
 # ------------------------------------------------------------------ figure
 
 #: the figure's palette slot and legend name of each configuration
-PLOT_SLOTS = {"toy": ("default", "ToyF2 (shipped)"),
+PLOT_SLOTS = {"toy": ("alt", "ToyF2 (option; shipped until D7)"),
               "mstw": ("mstw", "MSTW2008 LO"),
-              "ct18nlo": ("ct18nlo", "CT18NLO (LO formula)")}
+              "ct18nlo": ("default", "CT18NLO (shipped since D7; LO formula)")}
 
 
 def plot(report, out_dir=None):
@@ -554,11 +554,45 @@ def plot(report, out_dir=None):
     axp.set_ylabel("(th - data)/sigma")
     h = configs[HEADLINE]
     status_title(fig, NAME, report["status"],
-                 "ToyF2: %.1f/%d (p = %.2g); tolerance p >= %g on Q2 >= %g, "
-                 "W2 >= %g GeV^2, stat (+) sys diagonal"
-                 % (h["dis"]["chi2"], h["dis"]["n"], h["dis"]["p"], P_MIN, Q2_CUT,
+                 "%s: %.1f/%d (p = %.2g); tolerance p >= %g on Q2 >= %g, "
+                 "W2 >= %g GeV^2, stat (+) sys diagonal" % (PLOT_SLOTS[HEADLINE][1],
+                    h["dis"]["chi2"], h["dis"]["n"], h["dis"]["p"], P_MIN, Q2_CUT,
                     W2_CUT))
     return save(fig, NAME, out_dir)
+
+
+def _headline(configs):
+    """The verdict configuration's entry, for run() (F7, 2026-10-30).
+
+    HEADLINE is a literal, so it is checked here against the library's own
+    shipped default (`lipolgen.UNPOL_SF_DEFAULT`): were the default to move
+    again, the row stops by name until HEADLINE, its labels and the docstring
+    are re-pointed by hand -- the declared rule puts the verdict on the
+    shipped default, and a silent derivation would leave them naming the old
+    one.  Since D7 that configuration needs the LHAPDF tier and CT18NLO.
+    Where LHAPDF reports the set missing, the ROW cannot be evaluated: run()
+    raises in LHAPDF's own words, which make_report records as `blocked
+    (environment)`, exit 2 (README convention 6, the rule of rows 4 and 13);
+    until F7 it crashed on a KeyError there.  Without the tier it raises
+    naming the tier."""
+    import lipolgen as lg
+    shipped = lg.unpol_sf_name(lg.UNPOL_SF_DEFAULT)
+    if HEADLINE != shipped:
+        raise RuntimeError("HEADLINE = %r is not the shipped --unpol-sf default "
+                           "%r: the declared rule puts this row's verdict on the "
+                           "shipped default -- re-point HEADLINE, the labels and "
+                           "the docstring by hand" % (HEADLINE, shipped))
+    h = configs[HEADLINE]
+    if h["status"] != "blocked":
+        return h
+    if h["reason"] == "environment: LHAPDF set %s not installed" % CT18:
+        raise RuntimeError("Info file not found for PDF set '%s' -- the verdict "
+                           "configuration of %s, the shipped --unpol-sf default "
+                           "since D7 (2026-10-27), needs it: the row is blocked "
+                           "(environment)" % (CT18, NAME))
+    raise RuntimeError("%s -- the verdict configuration of %s, the shipped "
+                       "--unpol-sf default since D7 (2026-10-27), needs it"
+                       % (h["reason"], NAME))
 
 
 def main(argv=None):

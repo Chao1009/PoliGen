@@ -52,9 +52,9 @@ the script uses.
 | HepMC3 3.3.0 | `https://hepmc.web.cern.ch/hepmc/releases/HepMC3-3.3.0.tar.gz` | 9 341 637 | yes — `6f876091…5769d6` |
 | LHAPDF 6.5.5 | `https://lhapdf.hepforge.org/downloads/?f=LHAPDF-6.5.5.tar.gz` | (302 → downloader) | yes — `641d5ea0…f5e3a5` |
 | PYTHIA 8.317 | `https://pythia.org/releases/pythia83/pythia8317.tgz` | 31 291 506 | **no — see below** |
-| set `CT18NLO` | `https://lhapdfsets.web.cern.ch/current/CT18NLO.tar.gz` | 18 756 939 | no |
-| set `NNPDFpol11_100` | `https://lhapdfsets.web.cern.ch/current/NNPDFpol11_100.tar.gz` | 20 128 894 | no |
-| set `EPPS21nlo_CT18Anlo_Li6` | `https://lhapdfsets.web.cern.ch/current/EPPS21nlo_CT18Anlo_Li6.tar.gz` | 26 352 280 | no |
+| set `CT18NLO` | `https://lhapdfsets.web.cern.ch/current/CT18NLO.tar.gz` | 18 756 939 | yes since D7 — `c9127231…b7b9c213` |
+| set `NNPDFpol11_100` | `https://lhapdfsets.web.cern.ch/current/NNPDFpol11_100.tar.gz` | 20 128 894 | yes since D7 — `48b586b1…2f0dde5a` |
+| set `EPPS21nlo_CT18Anlo_Li6` | `https://lhapdfsets.web.cern.ch/current/EPPS21nlo_CT18Anlo_Li6.tar.gz` | 26 352 280 | yes since D7 — `1afe5f6f…c665cd868` |
 
 The two pinned checksums are the sha256 of the tarballs still sitting in
 `../deps/src/` on the author's machine, i.e. hashed from the artefact this
@@ -62,8 +62,8 @@ tree was actually built against. The HepMC3 `content-length` above is
 **equal** to that local file's size, so the URL serves the same artefact.
 PYTHIA's tarball had already been deleted after unpacking, so there is
 nothing here to hash it against and it is left **unpinned on purpose** rather
-than given a checksum copied off a web page. The PDF sets are unpinned for the
-same reason (`/current/` is a moving target by construction).
+than given a checksum copied off a web page. The PDF sets were unpinned for the
+same reason (`/current/` moves by construction) until D7 shipped two of them as the defaults: all three are pinned since (§2.5).
 
 Total download for a cold run: **≈ 105 MiB** of sources and **62.2 MiB** of
 PDF sets. Measured throughput from this machine to `lhapdfsets.web.cern.ch`:
@@ -296,7 +296,7 @@ The first three are not cosmetic. They are §2.4.
 
 ### 2.3 Measured: does the repaired wheel import somewhere else?
 
-Installed into a clean venv, run from `/tmp`, with `env -i` — no
+Installed into a clean venv, run from `/tmp`, with `env -i` (2026-09-05, when the toys were the default; D7: §2.5) — no
 `LD_LIBRARY_PATH`, no `PYTHONPATH`, no `PYTHIA8DATA`, no `LHAPDF_DATA_PATH`:
 
 ```
@@ -329,9 +329,9 @@ second machine.
 | | result |
 |---|---|
 | `import lipolgen`, three tiers True | **works** — all three vendored `.so`s load via `$ORIGIN/../lipolgen.libs` |
-| `lg.run(channel='inclusive', …)` | **works**, `<x> = 0.027023337580082865` — *bit-identical* to the unmasked run |
-| `lg.run(channel='tagged-alpha', cluster_wave='vmc')` | **works** — the wheel's own `data/vmc` tables are found with nothing set |
-| `LhapdfSF('CT18NLO')` | **FAILS**: `RuntimeError: Couldn't find required lhapdf.conf system config file`, then LHAPDF's own `terminate` |
+| `lg.run(channel='inclusive', …)` | **worked** on the toy SFs, the default then: `<x> = 0.027023337580082865` — *bit-identical* to the unmasked run. Since D7 the default needs the sets and is refused by name without them; `unpol_sf='toy', pol_sf='toy'` reproduces that `<x>` to the bit (§2.5) |
+| `lg.run(channel='tagged-alpha', cluster_wave='vmc')` | **works** — the wheel's own `data/vmc` tables are found with nothing set (since D7 with the toys named, §2.5) |
+| `LhapdfSF('CT18NLO')` | **FAILED** (2026-09-05): `RuntimeError: Couldn't find required lhapdf.conf system config file`, then LHAPDF's own `terminate`. Since D7 the tier's pre-flight refuses it — and every default run — BEFORE any LHAPDF `Config` exists, keeping LHAPDF's "Info file not found for PDF set" and naming the searched paths and the toy escape: exit 1, no abort (§2.5) |
 | `lipolgen-run --hadronize` | **FAILS**: `PYTHIA Error in Settings::init: settings file /home/cpeng/Projects/polli/deps/install/share/Pythia8/xmldoc/Index.xml not found` → `PYTHIA Abort from Pythia::Pythia: settings unavailable`, exit 1 |
 
 **With the prefix gone but the two data trees present at a completely
@@ -366,6 +366,60 @@ export LIPOLGEN_PYTHIA8_PDFDATA=$DATA/Pythia8/pdfdata
 - Shipping the data trees inside the wheel instead would mean a ~300 MiB wheel
   and raises a separate redistribution question for the LHAPDF grids. Not
   done, not recommended here without a decision.
+
+### 2.5 Since D7 (2026-10-27): the shipped structure functions are LHAPDF data
+
+Decision D7 made `--unpol-sf ct18nlo` / `--pol-sf nnpdfpol` the run's
+defaults (`docs/USAGE.md` §10). Three packaging consequences, each re-enacted
+on this machine on 2026-10-29 (`docs/open_items/run_2026-10-27/phase_I7_backends.md`):
+
+- **The data half now gates the DEFAULT run, not only `LhapdfSF`.** A
+  pip-installed or `auditwheel`-repaired wheel runs a default
+  `lg.run(...)` only with `CT18NLO` and `NNPDFpol11_100` on
+  `LHAPDF_DATA_PATH` (or at the compiled-in prefix). Without them the run is
+  **refused by name** — the tier's pre-flight, run before any LHAPDF
+  `Config` is touched, keeps LHAPDF's own "Info file not found for PDF set
+  '<name>'", lists the searched paths and whether an `lhapdf.conf` was found,
+  and names the escape: `unpol_sf='toy', pol_sf='toy'` (CLI `--unpol-sf toy
+  --pol-sf toy`, C++ `lipolgen::toy_config()`). Exit 1, never LHAPDF's
+  exit-time abort (134). The toy named needs no data and reproduces the
+  pre-D7 `<x> = 0.027023337580082865` of §2.3 to the bit; the default on the
+  sets gives `<x> = 0.033169118940819454`.
+- **No `lhapdf.conf` can move a default number.** The tier sets the
+  extrapolator (`nearest` — the grids FREEZE at their edges), the
+  interpolator (`logcubic`) and ForcePositive (0) on every grid it opens and
+  clamps (x, Q²) at the knot edges itself; `meta["unpol_sf_extrapolation"]`
+  records it. Measured: under an `lhapdf.conf` that says `continuation` /
+  `linear` / `ForcePositive: 1` the default numbers are bit-identical
+  (`python/tests/test_d7_shipped_kernel.py`); the pre-D7 build moved by
+  4.5e−4 on the ⁷Li rate under the same file.
+- **The sets are pinned.** `.github/scripts/build_deps.sh` now verifies the
+  three tarballs' SHA-256 (`CT18NLO` `c9127231…b7b9c213`, `NNPDFpol11_100`
+  `48b586b1…2f0dde5a`, `EPPS21nlo_CT18Anlo_Li6` `1afe5f6f…c665cd868`, the
+  artefacts this tree was measured against), so a re-published `/current/`
+  set FETCHED by it fails the dependency build by name instead of moving the
+  defaults; a set already in the prefix is re-checked only through its cached
+  tarball, and is reported "NOT re-verified" without one (F7, 2026-10-30).
+  CI's `test` job gains a "shipped LHAPDF sets absent" step (the refusal, the
+  toy run and pytest's return code 3), and the wheel job's smoke runs the toy
+  named with nothing set, the default refused under an empty data path, and
+  the default on the restored sets.
+
+**The C++ API contract changed with it.** A default-constructed
+`PipelineConfig` now names grid backends the core library cannot build:
+`Pipeline(PipelineConfig{}, plan)` runs only once the LHAPDF tier's filler is
+installed (`lipolgen::install_lhapdf_sf_filler()`, once per process — the
+Python module does it at import) or the config is filled explicitly
+(`lipolgen::attach_shipped_sf_backends(cfg)`), both from
+`<lipolgen/lhapdf_sf.hpp>`, linking `LiPolGenLHAPDF`. Otherwise
+`validate()` refuses by name. The core-only path is the toy NAMED,
+`lipolgen::toy_config()`. A build with `-DLIPOLGEN_WITH_LHAPDF=OFF` (or no
+`lhapdf-config`) therefore refuses every default run, skips the four
+`generate_*` examples (they include the tier's header), and stops the Python
+suite at session start with return code 3 (`python/tests/conftest.py`;
+`LIPOLGEN_TESTS_ALLOW_MISSING_SETS=1` proceeds for a developer who knows):
+the LHAPDF tier is no longer optional for the shipped default, which is a
+consequence of D7 and is stated here rather than discovered.
 
 ---
 

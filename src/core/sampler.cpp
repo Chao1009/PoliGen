@@ -232,39 +232,39 @@ const InclusiveSampler::StateTables& InclusiveSampler::build_state(
                                                with_perp_);
     const double den = 1.0 + amp.w_avg;
     if (!(den > 0.0)) {
-      // NAME THE CELL AND THE CURE.  This is a CONFIGURATION-TIME refusal --
-      // it fires while the `Pipeline` is being built, before a single event
-      // is drawn -- and the thing the caller has to change is the acceptance
-      // WINDOW, `Scenario::x_max` (the CLI's `--x-max`), which is what drops
-      // the offending cell.  Until 2026-09-05 the message stopped after the
-      // parenthesis and a user met it as a bare traceback naming no way out;
-      // the combination that first showed it is documented under "the top x
-      // cell" in docs/USAGE.md.  The A1 = g1/F1 of the cell is printed
-      // because it is the quantity that is too large: the phi-averaged
-      // modulation is P_e P_z D(y) A1 plus the tensor term, so a backend
-      // pair whose A1 runs away at high x is refused here and a milder one
-      // is not.  NO CLAMP: max(g1, ...) here would be a silent physics
-      // change, and the sampler's own accept-reject would then draw
-      // max(W, 0), diluting the modulation AND skewing the (x, Q2) mixture.
+      // NAME THE CELL, THE TERM AND THE CURE.  This is a CONFIGURATION-TIME
+      // refusal -- it fires while the `Pipeline` is being built, before a
+      // single event is drawn -- and the caller changes either the acceptance
+      // WINDOW, `Scenario::x_max` (the CLI's `--x-max`), which drops the
+      // offending cells, or the polarizations that scale the offending term.
+      // w_avg is SPLIT into its two terms because they are refused for
+      // different reasons -- the vector one is P_e P_z D(y) A1, the rank-2
+      // one (`tensor_amplitudes`) the b1 sector -- and since D7 (2026-10-27)
+      // both happen on the shipped grids: A1 = g1/F1 > 1 at the top cell on
+      // the LO pair, and the mandatory b1 band's x2 row on CT18NLO's F1, where
+      // g1 is not even read.  The cure is COMPUTED over every cell of this
+      // spin state (the lowest refused cell centre), never a typed-in 0.95,
+      // which the x2 band row does not survive.  NO CLAMP: max(W, 0) would be
+      // a silent physics change that dilutes the modulation and skews (x, Q2).
+      const double w_ten = kernel_->tensor_amplitudes(tables_[i], x_cells_[i], q2_cells_[i], s_, state).w_avg;
+      double x_lo = x_cells_[i];
+      std::size_t n_bad = 0;
+      for (std::size_t j = 0; j < n; ++j) {
+        if (1.0 + kernel_->amplitudes(tables_[j], x_cells_[j], q2_cells_[j], s_, state, with_perp_).w_avg > 0.0) continue;
+        ++n_bad;
+        x_lo = std::min(x_lo, x_cells_[j]);
+      }
       const double f1 = tables_[i].f1;
-      char msg[1024];
+      char msg[2048];
       std::snprintf(msg, sizeof(msg),
-                    "negative phi-averaged density for m=%g at x = %.4g, "
-                    "Q2 = %.4g (1 + w_avg = %.4g).  That cell's A1 = g1/F1 "
-                    "is %.4g (F1 = %.4g, g1 = %.4g) at lam_e = %d, "
-                    "P_e = %.4g, J = %g: the phi-averaged rate would go "
-                    "NEGATIVE there, and the sampler refuses rather than "
-                    "draw max(W, 0), which would dilute the modulation and "
-                    "skew the (x, Q2) mixture.  Cure: lower the acceptance "
-                    "window's x_max below %.4g (Scenario::x_max; the CLI's "
-                    "--x-max, e.g. --x-max 0.95 on the shipped grid, whose "
-                    "top cell is x = 0.955), or reduce P_e / P_z, which "
-                    "scale w_avg linearly.  It is a property of the (x, Q2) "
-                    "CELL and the structure-function backends, not of the "
-                    "event count.",
-                    key.m, x_cells_[i], q2_cells_[i], den,
+                    "negative phi-averaged density for m=%g at x = %.4g, Q2 = %.4g (1 + w_avg = %.4g; w_avg = %.4g from the VECTOR term P_e P_z D(y) A1, where that cell's A1 = g1/F1 is %.4g (F1 = %.4g, g1 = %.4g; read only when lam_e P_e != 0: lam_e = %d, P_e = %.4g), plus %.4g from the RANK-2 term, the b1 sector; J = %g).  "
+                    "The phi-averaged rate would go NEGATIVE there, and the sampler refuses rather than draw max(W, 0), which would dilute the modulation and skew the (x, Q2) mixture.  "
+                    "%zu cell(s) of this spin state are refused, the lowest at x = %.4g.  Cure: lower the acceptance window's x_max below x = %.4g (Scenario::x_max; the CLI's --x-max -- no one value suits every run: "
+                    "the shipped grid's top cell is x = 0.955, and the mandatory b1 band's x2 row needs about 0.85), or reduce what scales the larger term (P_e and P_z for the vector one; P_zz, the b1 model or its band for the rank-2 one).  "
+                    "It is a property of the (x, Q2) CELL and the structure-function backends, not of the event count.",
+                    key.m, x_cells_[i], q2_cells_[i], den, den - 1.0 - w_ten,
                     f1 != 0.0 ? tables_[i].g1 / f1 : 0.0, f1, tables_[i].g1,
-                    key.lam_e, key.pe, key.j, x_cells_[i]);
+                    key.lam_e, key.pe, w_ten, key.j, n_bad, x_lo, x_lo);
       throw std::runtime_error(msg);
     }
     st.w_avg[i] = amp.w_avg;

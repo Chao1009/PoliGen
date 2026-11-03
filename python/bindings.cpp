@@ -372,22 +372,20 @@ void generate_columns(const Pipeline& p, std::uint64_t n, Columns& cols,
 }
 
 /// The selected unpolarised backend's own grid floor, and how much of THIS
-/// run's own accepted RATE sits below it.
-///
-/// ONE DEFINITION, read by both `meta["unpol_sf_grid_q2_min"]` /
-/// `meta["unpol_sf_below_grid_frac"]` and the CLI run banner, so the fraction
-/// is never a typed-in number (docs/CONVENTIONS.md).  The floor comes from
-/// the loaded grid's own metadata (`LhapdfSF::q2_min`, LHAPDF's `q2Min()`).
+/// run's own accepted RATE sits below it: ONE DEFINITION, read by
+/// `meta["unpol_sf_grid_q2_min"]` / `["unpol_sf_below_grid_frac"]` and the CLI
+/// banner, never typed in.  The floor is the grid's own (`LhapdfSF::q2_min`,
+/// LHAPDF's `q2Min()`); below it the grid is FROZEN since D7 (2026-10-27).
 ///
 /// THE DENOMINATOR IS THE CHANNEL'S OWN (`Pipeline::cell_rate_weights_pb`),
 /// not the inclusive sampler's cells.  On the inclusive and the tagged
 /// channels the two are the same vector; on the COHERENT one they are not,
 /// because the coherent yield is `sigma_cell * f_coh(x)` over the cells that
 /// admit a diffractive mass, and `f_coh` falls by a factor ~26 across the
-/// window.  Measured on the shipped 6Li ct18nlo run (2026-09-05): the
-/// coherent rate has 0.447460 below CT18NLO's floor where the inclusive
-/// cells it rides on have 0.361791 -- and the coherent weights sum to
-/// 8806.096207 pb, which is `Pipeline::sigma_pb()` exactly.  Reporting the
+/// window.  Measured on the 6Li ct18nlo run of 2026-09-05 (LHAPDF's
+/// continuation below the grid then): the coherent rate had 0.447460 below
+/// CT18NLO's floor where the inclusive cells had 0.361791, and the coherent
+/// weights summed to 8806.096207 pb = `Pipeline::sigma_pb()`.  Reporting the
 /// inclusive number on a coherent run was a quantified `meta` key that did
 /// not describe the run it was attached to.
 ///
@@ -400,6 +398,8 @@ void generate_columns(const Pipeline& p, std::uint64_t n, Columns& cols,
 ///   * anything else (`MstwSF`, a `Custom` object) -- PYTHIA's `MSTWpdf`
 ///     keeps its `qsqmin` private and a custom backend reports nothing, so
 ///     the floor is NOT known and must not be guessed: (NaN, NaN).
+std::pair<double, double> pol_sf_grid_report(const Pipeline& p);  // D7: the polarised twin, defined below the module
+py::dict sf_grid_extras(const Pipeline& p, const KnobProvenance& pol);  // D7: the extrapolation and polarised-grid meta keys, below the module
 std::pair<double, double> unpol_sf_grid_report(const Pipeline& p) {
   const double kNan = std::numeric_limits<double>::quiet_NaN();
   const PipelineConfig& cfg = p.config();
@@ -682,16 +682,16 @@ py::dict columns_to_dict(Columns& c, const Pipeline& p, std::uint64_t n,
   // run self-describing: the label above says the selector did not run, this
   // one says why, and says that `--unpol-sf` DID reach the same run.
   meta["pol_sf_reach"] = knob("pol_sf").reason;
-  // ... and how much of THIS run's accepted rate sits below the selected
-  // grid's own floor.  `--unpol-sf ct18nlo` on the shipped 6Li window puts
-  // 36 % of its own cell cross section below CT18NLO's Q2 = 1.677, where
-  // LHAPDF keeps evolving downward instead of freezing; that is a property
-  // of the run, not of the flag, so it is measured per run rather than
-  // quoted.  NaN means "the backend reports no grid floor" (MstwSF, a Custom
-  // object, or a caller-supplied kernel) -- never a silent 0.
+  // ... and, per grid, how much of THIS run's accepted rate sits below the
+  // set's own Q2 floor and how the set is evaluated there: since D7 every
+  // LHAPDF grid is FROZEN at its edges (`LHAPDF_EXTRAPOLATOR`, set on the
+  // object, so no lhapdf.conf moves it).  Measured per run, never quoted.
+  // NaN = "the backend reports no grid floor" (MstwSF, a Custom object, a
+  // caller-supplied kernel) -- never a silent 0; 0 = the closed-form toy.
   const std::pair<double, double> grid = unpol_sf_grid_report(p);
   meta["unpol_sf_grid_q2_min"] = grid.first;
   meta["unpol_sf_below_grid_frac"] = grid.second;
+  for (const auto& kv : sf_grid_extras(p, knob("pol_sf"))) meta[kv.first] = kv.second;  // D7; F7: pol keys only where g1 ran
   // fsi.hpp -- CONDITIONAL, following the `rc` precedent below rather than
   // the unconditional `b1` one, so an `--fsi off` npz carries exactly
   // today's key set and no reference gate moves.  Measured on the three runs
@@ -1572,13 +1572,13 @@ static void bind_sf(py::module_& m) {
       .def_property_readonly("q2_min", &LhapdfSF::q2_min,
           "The loaded grid's OWN lower Q2 edge (LHAPDF's q2Min()), read from "
           "the set metadata and never transcribed: 1.677 for CT18NLO "
-          "(QMin 1.295 GeV), 1 for NNPDFpol11_100.  Below it LHAPDF does NOT "
-          "freeze -- it keeps evolving downward and F2p falls fast -- which "
-          "is why unpol_sf_grid_report() exists and why the run banner and "
-          "meta['unpol_sf_below_grid_frac'] are computed from this.");
+          "(QMin 1.295 GeV), 1 for NNPDFpol11_100.  Below it the grid is "
+          "FROZEN since D7 (LHAPDF_EXTRAPOLATOR, set on the object; LHAPDF's "
+          "continuation ran here until then) -- unpol_sf_grid_report(), the run "
+          "banner and meta['unpol_sf_below_grid_frac'] are computed from this.");
   py::class_<LhapdfG1, PolSF, std::shared_ptr<LhapdfG1>>(m, "LhapdfG1")
       .def(py::init<std::string, int>(), py::arg("setname") = "NNPDFpol11_100",
-           py::arg("member") = 0);
+           py::arg("member") = 0).def_property_readonly("q2_min", &LhapdfG1::q2_min);
   py::class_<Epps21Ratio>(m, "Epps21Ratio")
       .def(py::init<std::string, int, std::string, int>(),
            py::arg("nuclear_set") = "EPPS21nlo_CT18Anlo_Li6",
@@ -4080,24 +4080,24 @@ static void bind_pipeline(py::module_& m) {
       "Which UNPOLARISED backend b1_model = Li6Convolution folds its own F1 "
       "against (Li6ConvolutionOptions.unpol; CLI --b1-unpol).  It reaches the "
       "b1 and NOTHING else -- InclusiveKernel's own f2_source is set by a "
-      "SEPARATE flag, --unpol-sf (UnpolSfSource), and at its shipped default "
-      "'toy' it is ToyF2 on every --b1-unpol setting, so the SPIN-BLIND cell "
+      "SEPARATE flag, --unpol-sf (UnpolSfSource), and at any ONE --unpol-sf "
+      "(ct18nlo since D7) it is ONE object on every --b1-unpol, so the SPIN-BLIND cell "
       "cross section (InclusiveSampler.cell_xsec_pb) is bit for bit under "
       "THIS flag and only the tensor shift moves.  The two are kept separate "
       "because they are different quantities (this one is the deuteron F1 "
       "inside CDKS Eq. (22), a CDKS-comparability choice the A = 2 gate "
       "verdict rests on); validate() refuses the one combination that would "
-      "mislabel them, b1_unpol = Toy under a non-toy unpol_sf.\n"
-      "  Toy      the DEFAULT: the kernel's own ToyF2, shared as ONE object.  "
-      "Bit for bit what every published number was made with.\n"
+      "mislabel them, b1_unpol = Toy under a non-toy unpol_sf (D7's SHIPPED one).\n"
+      "  Toy      the DEFAULT (D7 left it): the kernel's own UnpolSF, shared as "
+      "ONE object -- ToyF2 on the toy pair; under ct18nlo li6-convolution names one.\n"
       "  Mstw     MstwSF -- MSTW2008 LO over PYTHIA 8's pdfdata grid, the PDF "
       "CDKS computed their b1_d with, and the one the A = 2 gate passes on "
       "(G3b 0.843 against 0.440 on the toy).  MEASURED on "
       "Li6ConvolutionB1.b1(x, 2.5): x1.847766 / x1.275961 / x0.816971 at "
       "x = 0.10 / 0.30 / 0.50 -- not a normalisation.  Needs the PYTHIA "
       "tier.\n"
-      "  Ct18Nlo  LhapdfSF('CT18NLO', 0), the phase-D stand-in, kept "
-      "selectable so the systematic can be quoted.  x2.221302 / x1.238833 / "
+      "  Ct18Nlo  LhapdfSF('CT18NLO', 0), the phase-D stand-in (since D7 the "
+      "SAME cached, frozen object as --unpol-sf's default).  x2.221302 / x1.238833 / "
       "x1.045870 at the same points.  Needs the LHAPDF tier.\n"
       "  Custom   whatever object is in PipelineConfig.b1_unpol_sf; the enum "
       "is the provenance meta['b1_unpol'] records.\n"
@@ -4174,7 +4174,7 @@ static void bind_pipeline(py::module_& m) {
         break;
       case B1UnpolSource::Ct18Nlo:
 #if LIPOLGEN_HAVE_LHAPDF
-        cfg.b1_unpol_sf = std::make_shared<const LhapdfSF>("CT18NLO", 0);
+        cfg.b1_unpol_sf = make_lhapdf_unpol_sf(UnpolSfSource::Ct18Nlo);  // D7: the one cached, frozen object
 #else
         throw std::runtime_error(
             "set_b1_unpol: b1_unpol = ct18nlo needs the OPTIONAL LHAPDF tier, "
@@ -4201,28 +4201,28 @@ static void bind_pipeline(py::module_& m) {
       "a Pipeline builds: the inclusive kernel, the coherent channel that "
       "rides its cell cross sections, and the tagged struck-cluster kernel "
       "(PipelineConfig.unpol_sf; CLI --unpol-sf).\n"
-      "  Toy      the DEFAULT: the kernel's own ToyF2, bit for bit what "
-      "every published number was made with.  ToyF2 is labelled TOY in "
+      "  Toy      an OPTION since D7 (the DEFAULT until 2026-10-27, bit for bit "
+      "every pre-D7 number): the kernel's own ToyF2, labelled TOY in "
       "sf.hpp and anchored BY EYE -- 'factor-1.5 rate estimates ONLY'.\n"
       "  Mstw     MstwSF (MSTW2008 LO over PYTHIA 8's pdfdata grid).  Needs "
       "the PYTHIA tier.\n"
-      "  Ct18Nlo  LhapdfSF('CT18NLO', 0).  Needs the LHAPDF tier.  READ THE "
-      "GRID CLAUSE: 36 % of a shipped 6Li run's own accepted cell cross "
-      "section sits below CT18NLO's Q2 = 1.677 grid floor, where LHAPDF "
-      "extrapolates downward rather than freezing.\n"
+      "  Ct18Nlo  THE DEFAULT since D7 (UNPOL_SF_DEFAULT): LhapdfSF('CT18NLO', 0), "
+      "LO on the FREE nucleon (no EPPS21), attached by the Pipeline.  Needs the LHAPDF tier.  39 % of the shipped "
+      "6Li run's own accepted cell cross section sits below the Q2 = 1.677 grid "
+      "floor, where the tier FREEZES the grid (LHAPDF nearest, set on the object).\n"
       "  Custom   whatever object is in PipelineConfig.unpol_sf_obj; the "
       "enum is the provenance meta['unpol_sf'] records.\n"
       "MEASURED on 6Li inclusive at config 1: the summed accepted cell cross "
-      "section is 591846.2 pb (toy), 472571.9 (ct18nlo, x0.7985), 469556.5 "
+      "section is 591846.2 pb (toy), 496334.2 (ct18nlo frozen, x0.8386), 469556.5 "
       "(mstw, x0.7934) -- and it is not a normalisation, F2p at Q2 = 10 "
       "moves x0.92 / x1.11 / x1.37 / x1.26 (ct18nlo) at x = 0.01 / 0.10 / "
       "0.30 / 0.50.\n"
-      "NOT ORTHOGONAL TO PolSfSource: InclusiveKernel's default ToyG1 is "
+      "NOT ORTHOGONAL TO PolSfSource: InclusiveKernel's null-branch ToyG1 is "
       "built on the kernel's OWN UnpolSF, so this flag alone moves g1 too "
       "(A1 = g1/F1 moves 5-8 %).  pol_sf = Toy does NOT mean 'g1 "
       "unchanged'.\n"
-      "Set it with set_unpol_sf(config, source), which builds the backend "
-      "and raises here if the tier or the grid is missing -- it is NEVER "
+      "Set it with set_unpol_sf(config, source), which checks the tier and "
+      "the grid (D7 pre-flight) and raises here if either is missing -- NEVER "
       "silently replaced by ToyF2.")
       .value("Toy", UnpolSfSource::Toy)
       .value("Mstw", UnpolSfSource::Mstw)
@@ -4234,11 +4234,11 @@ static void bind_pipeline(py::module_& m) {
       "Which POLARISED backend supplies g1 -- and through Wandzura-Wilczek "
       "g2 -- to the INCLUSIVE and TAGGED kernels a Pipeline builds "
       "(PipelineConfig.pol_sf; CLI --pol-sf).\n"
-      "  Toy       the DEFAULT: the kernel's own ToyG1, built on the "
-      "kernel's own UnpolSF and r_func.\n"
-      "  NnpdfPol  LhapdfG1('NNPDFpol11_100', 0) -- the only POLARISED set "
-      "installed in this tree's LHAPDF store, and already LhapdfG1's own "
-      "default.  Needs the LHAPDF tier.\n"
+      "  Toy       an OPTION since D7 (the DEFAULT until then): ToyG1, built "
+      "on the kernel's own UnpolSF and r_func.\n"
+      "  NnpdfPol  THE DEFAULT since D7 (POL_SF_DEFAULT): LhapdfG1('NNPDFpol11_100', "
+      "0), LO, frozen below Q2 = 1 -- the only POLARISED set in this tree's store, "
+      "and LhapdfG1's own default.  Needs the LHAPDF tier.\n"
       "  Custom    whatever object is in PipelineConfig.pol_sf_obj.\n"
       "MEASURED on 6Li per-nucleon g1A (A_par tracks it to better than "
       "0.1 % at y = 0.5): nnpdfpol/toy = 0.669 / 1.114 / 1.349 / 0.982 / "
@@ -4246,9 +4246,9 @@ static void bind_pipeline(py::module_& m) {
       "(0.50, 25) / (0.70, 50) -- x0.64 to x1.35, and not monotone.\n"
       "THE NEUTRON IS A SIGN, not a factor: ToyG1's a1n crosses zero near "
       "x ~ 0.25 and is POSITIVE above it while NNPDFpol1.1's g1n stays "
-      "negative to x ~ 0.6, so the shipped toy g1n has the WRONG SIGN over "
-      "roughly 0.25 < x < 0.6.  That matters most on a neutron-tagged run "
-      "(d + p tagging), least on isoscalar 6Li.\n"
+      "negative to x ~ 0.6, so the toy g1n (shipped until D7) has the WRONG SIGN "
+      "over roughly 0.25 < x < 0.6.  That matters most on a struck-NEUTRON run "
+      "(tagged-d-p, the proton tagged), least on isoscalar 6Li.\n"
       "SCOPE -- IT DOES NOT REACH EVERY KERNEL, and unlike UnpolSfSource it "
       "never could; this is the C++ header's own caveat "
       "(include/lipolgen/pipeline.hpp, PolSfSource), which this docstring "
@@ -4380,13 +4380,13 @@ static void bind_pipeline(py::module_& m) {
         break;
       case UnpolSfSource::Ct18Nlo:
 #if LIPOLGEN_HAVE_LHAPDF
-        cfg.unpol_sf_obj = std::make_shared<const LhapdfSF>("CT18NLO", 0);
+        if (const std::string e = lhapdf_set_problem("CT18NLO"); !e.empty()) throw std::runtime_error(e); cfg.unpol_sf_obj.reset();  // D7: attached by the Pipeline
 #else
         throw std::runtime_error(
-            "set_unpol_sf: unpol_sf = ct18nlo needs the OPTIONAL LHAPDF "
-            "tier, and this build has none -- lipolgen.HAVE_LHAPDF is False. "
-            " Rebuild with -DLIPOLGEN_WITH_LHAPDF=ON and install the CT18NLO "
-            "set.  It is never silently replaced by ToyF2.");
+            "set_unpol_sf: unpol_sf = ct18nlo (the shipped default since D7) "
+            "needs the OPTIONAL LHAPDF tier, and this build has none -- "
+            "lipolgen.HAVE_LHAPDF is False.  Rebuild with -DLIPOLGEN_WITH_LHAPDF=ON "
+            "and the CT18NLO set, or run the toy NAMED: unpol_sf='toy' (--unpol-sf toy).");
 #endif
         break;
       case UnpolSfSource::Custom:
@@ -4408,14 +4408,14 @@ static void bind_pipeline(py::module_& m) {
         break;
       case PolSfSource::NnpdfPol:
 #if LIPOLGEN_HAVE_LHAPDF
-        cfg.pol_sf_obj = std::make_shared<const LhapdfG1>("NNPDFpol11_100", 0);
+        if (const std::string e = lhapdf_set_problem("NNPDFpol11_100"); !e.empty()) throw std::runtime_error(e); cfg.pol_sf_obj.reset();  // D7: attached by the Pipeline
 #else
         throw std::runtime_error(
-            "set_pol_sf: pol_sf = nnpdfpol needs the OPTIONAL LHAPDF tier, "
-            "and this build has none -- lipolgen.HAVE_LHAPDF is False.  "
-            "Rebuild with -DLIPOLGEN_WITH_LHAPDF=ON and install the "
-            "NNPDFpol11_100 set.  It is never silently replaced by ToyG1, "
-            "whose g1n has the WRONG SIGN over 0.25 < x < 0.6.");
+            "set_pol_sf: pol_sf = nnpdfpol (the shipped default since D7) "
+            "needs the OPTIONAL LHAPDF tier, and this build has none -- "
+            "lipolgen.HAVE_LHAPDF is False.  Rebuild with -DLIPOLGEN_WITH_LHAPDF=ON "
+            "and the NNPDFpol11_100 set, or run the toy NAMED: pol_sf='toy' "
+            "(--pol-sf toy).  It is never silently replaced by ToyG1.");
 #endif
         break;
       case PolSfSource::Custom:
@@ -4534,9 +4534,9 @@ static void bind_pipeline(py::module_& m) {
           },
           "InclusiveKernel.Options.f2_source of the struck cluster's kernel "
           "-- the tagged channels' ONLY unpolarised injection point.  None "
-          "(the default) is the kernel class's own ToyF2, bit for bit.  "
-          "Pipeline fills it from PipelineConfig.unpol_sf_obj when it is "
-          "left empty.")
+          "is the kernel class's own ToyF2 (class level).  The Pipeline fills "
+          "it from PipelineConfig.unpol_sf_obj when it is left empty -- since "
+          "D7 the shipped CT18NLO.")
       .def_property("g1_model",
           [](const StruckClusterOptions& o) {
             return std::const_pointer_cast<PolSF>(o.g1_model);
@@ -4545,9 +4545,9 @@ static void bind_pipeline(py::module_& m) {
             o.g1_model = std::move(g);
           },
           "InclusiveKernel.Options.g1_model of the struck cluster's kernel.  "
-          "None (the default) is the kernel's own ToyG1 on its own UnpolSF.  "
-          "Pipeline fills it from PipelineConfig.pol_sf_obj when it is left "
-          "empty.");
+          "None is the kernel's own ToyG1 on its own UnpolSF (class level).  "
+          "The Pipeline fills it from PipelineConfig.pol_sf_obj when it is left "
+          "empty -- since D7 the shipped NNPDFpol1.1.");
 
   py::class_<PipelineConfig>(m, "PipelineConfig")
       .def(py::init<>())
@@ -4580,8 +4580,8 @@ static void bind_pipeline(py::module_& m) {
                      "band.")
       .def_readwrite("b1_unpol", &PipelineConfig::b1_unpol,
                      "B1UnpolSource: which UNPOLARISED backend "
-                     "b1_model = Li6Convolution folds its F1 against.  Toy is "
-                     "the default and is today bit for bit.  Assigning the "
+                     "b1_model = Li6Convolution folds its F1 against.  Toy stays "
+                     "the default (D7 left it; named under ct18nlo).  Assigning the "
                      "enum here does NOT build the backend -- use "
                      "set_b1_unpol(config, source), or validate() will refuse "
                      "the named-but-empty combination.")
@@ -4612,11 +4612,11 @@ static void bind_pipeline(py::module_& m) {
       .def_readwrite("unpol_sf", &PipelineConfig::unpol_sf,
                      "UnpolSfSource: which UNPOLARISED backend EVERY kernel "
                      "this config builds takes its F2 from -- inclusive, "
-                     "coherent and tagged alike.  Toy is the default and is "
-                     "today bit for bit.  Assigning the enum here does NOT "
-                     "build the backend -- use set_unpol_sf(config, source), "
-                     "or validate() will refuse the named-but-empty "
-                     "combination.")
+                     "coherent and tagged alike.  Ct18Nlo is the default since "
+                     "D7 (UNPOL_SF_DEFAULT), attached by the Pipeline; Toy is "
+                     "the option.  Assigning the enum builds nothing -- "
+                     "set_unpol_sf(config, source) builds / pre-flights it, and "
+                     "validate() refuses toy with an object attached.")
       .def_property("unpol_sf_obj",
           [](const PipelineConfig& c) {
             return std::const_pointer_cast<UnpolSF>(c.unpol_sf_obj);
@@ -4624,12 +4624,12 @@ static void bind_pipeline(py::module_& m) {
           [](PipelineConfig& c, std::shared_ptr<UnpolSF> u) {
             // The provenance and the realisation are one choice; this setter
             // is what keeps them from drifting (the b1_unpol_sf arrangement).
-            c.unpol_sf = u ? UnpolSfSource::Custom : UnpolSfSource::Toy;
+            c.unpol_sf = u ? UnpolSfSource::Custom : UNPOL_SF_DEFAULT;  // D7
             c.unpol_sf_obj = std::move(u);
           },
           "The UnpolSF unpol_sf names.  Assigning one sets unpol_sf = "
-          "Custom; assigning None clears it back to Toy.  For the named "
-          "backends use set_unpol_sf(config, source), which builds them.")
+          "Custom; assigning None re-selects the shipped default (D7: "
+          "ct18nlo, attached by the Pipeline) -- the toy only by name.")
       .def_readwrite("pol_sf", &PipelineConfig::pol_sf,
                      "PolSfSource: which POLARISED backend the INCLUSIVE and "
                      "TAGGED kernels take their g1 (and, through "
@@ -4638,19 +4638,19 @@ static void bind_pipeline(py::module_& m) {
                      "any unpolarised-beam plan (tensor-thirds included, "
                      "which is the CLI default), so the run LABELS the "
                      "selector there rather than crediting it (PolSfSource's "
-                     "own SCOPE note; pol_sf_is_read(config, plan)).  Toy is "
-                     "the default and is today bit for bit.  Use "
-                     "set_pol_sf(config, source) to build the backend.")
+                     "own SCOPE note; pol_sf_is_read(config, plan)).  NnpdfPol "
+                     "is the default since D7 (POL_SF_DEFAULT); Toy the option.  "
+                     "Use set_pol_sf(config, source) to select one.")
       .def_property("pol_sf_obj",
           [](const PipelineConfig& c) {
             return std::const_pointer_cast<PolSF>(c.pol_sf_obj);
           },
           [](PipelineConfig& c, std::shared_ptr<PolSF> g) {
-            c.pol_sf = g ? PolSfSource::Custom : PolSfSource::Toy;
+            c.pol_sf = g ? PolSfSource::Custom : POL_SF_DEFAULT;  // D7
             c.pol_sf_obj = std::move(g);
           },
           "The PolSF pol_sf names.  Assigning one sets pol_sf = Custom; "
-          "assigning None clears it back to Toy.")
+          "assigning None re-selects the shipped default (D7: nnpdfpol).")
       .def_readwrite("with_virtual_photon", &PipelineConfig::with_virtual_photon)
       .def_readwrite("seed", &PipelineConfig::seed)
       .def_readwrite("run", &PipelineConfig::run)
@@ -4713,22 +4713,22 @@ static void bind_pipeline(py::module_& m) {
       .def("validate", &PipelineConfig::validate);
 
   // The FULL form, defaulted so that `default_inclusive_kernel(ion)` is the
-  // one-argument overload it has always been -- i.e. (Miller, 1, 1, null),
-  // which `validation/reference/b1_default_li6.json` pins at rtol 1e-12.
-  // `b1_unpol` is the object `PipelineConfig::b1_unpol_sf` carries; null is
-  // the kernel's own ToyF2, shared as ONE object.
+  // one-argument overload -- (Miller, 1, 1, null), the CLASS-LEVEL TOY that
+  // `validation/reference/b1_default_li6.json` pins at rtol 1e-12.  D7: the
+  // kernel a DEFAULT run builds is this with `unpol_sf` / `pol_sf` = the
+  // shipped grid objects (lipolgen.shipped_inclusive_kernel; null = the toy).
   m.def("default_inclusive_kernel", [](const Ion& ion, B1Model model,
                                        double band_scale, double w_alpha_d,
-                                       std::shared_ptr<UnpolSF> b1_unpol,
-                                       RSource r_source) {
+                                       std::shared_ptr<UnpolSF> b1_unpol, RSource r_source,
+                                       std::shared_ptr<UnpolSF> unpol_sf, std::shared_ptr<PolSF> pol_sf) {
     return std::const_pointer_cast<InclusiveKernel>(
         default_inclusive_kernel(ion, model, band_scale, w_alpha_d,
-                                 std::move(b1_unpol), nullptr, nullptr,
-                                 r_source));
+                                 std::move(b1_unpol), std::move(unpol_sf),
+                                 std::move(pol_sf), r_source));
   }, py::arg("ion"), py::arg("model") = B1Model::Miller,
      py::arg("band_scale") = 1.0, py::arg("w_alpha_d") = 1.0,
-     py::arg("b1_unpol") = nullptr,
-     py::arg("r_source") = RSource::Unset);
+     py::arg("b1_unpol") = nullptr, py::arg("r_source") = RSource::Unset,
+     py::arg("unpol_sf") = nullptr, py::arg("pol_sf") = nullptr);
 
   m.def("momentum_residual", &momentum_residual, py::arg("ev"));
   m.def("momentum_scale", &momentum_scale, py::arg("ev"));
@@ -5129,26 +5129,26 @@ static void bind_io(py::module_& m) {
     // in this run follows (the `Li6Convolution` b1 shares the kernel's own
     // `UnpolSF`; `BreakupOptions::f2` is the sampler kernel's own), and two
     // separately constructed `LhapdfSF("CT18NLO", 0)` are two grids whose
-    // agreement nothing here checks.  Both null -- the shipped default -- is
-    // the same object, so a default run is untouched.
-    if (br->options().f2_source != cfg.unpol_sf_obj) {
-      throw std::runtime_error(
-          std::string("set_pythia_hadronizer: the bridge's species draw is "
-                      "on a different unpolarised backend from this run's "
-                      "kernel -- bridge f2_source is ") +
-          (br->options().f2_source ? "an attached object"
-                                   : "unset (the bridge's own ToyF2)") +
-          " while the config's unpol_sf is " + unpol_sf_name(cfg.unpol_sf) +
-          (cfg.unpol_sf_obj ? " with an object attached" : " with no object") +
-          ".  The T2 struck-nucleon species draw is "
-          "P(p) = Z F2p/(Z F2p + N F2n) on PythiaBridgeOptions::f2_source, "
-          "so the run would draw its T2 species from one backend while "
-          "meta[\"unpol_sf\"] recorded the other, and the toy's F2n/F2p is "
-          "up to 24 % away from CT18NLO's.  Hand the bridge THE SAME OBJECT "
-          "before constructing it: opts.f2_source = config.unpol_sf_obj "
-          "(what lipolgen-run and lipolgen.run do), or leave both unset for "
-          "the toy");
-    }
+    // agreement nothing here checks.
+    //
+    // SINCE D7 (2026-10-27) THE RULE LIVES IN THE C++ PYTHIA TIER
+    // (`check_bridge_species_backend`, pythia_bridge.hpp), so a C++ caller
+    // binding a default-option bridge to a default config meets the same
+    // refusal (`examples/generate_full.cpp` used to do exactly that, drawing
+    // its T2 species from ToyF2 under a CT18NLO run).  And the config's grid
+    // slots are FILLED FIRST: the shipped CT18NLO is attached lazily, so a
+    // default config's `unpol_sf_obj` is empty until a Pipeline exists, and a
+    // bridge left on its own ToyF2 (f2_source None) must be refused against
+    // what WILL run, not waved through against the empty slot.  The fix the
+    // message names is what `lipolgen-run` and `lipolgen.run` do:
+    // `_lipolgen.attach_shipped_sf_backends(config)`, then
+    // `opts.f2_source = config.unpol_sf_obj`, then the bridge.  With the toy
+    // NAMED (`unpol_sf="toy"`) both stay unset and agree, as before D7.
+    fill_grid_sf_backends(cfg);
+    check_bridge_species_backend(cfg, *br);
+    //
+    // (`fill_grid_sf_backends` is a no-op without the LHAPDF tier's filler.)
+    //
     cfg.hadronizer = PythiaHadronizerHook{std::move(br)};
   }, py::arg("config"), py::arg("bridge"),
      "config.hadronizer = bridge.hadronize, as a pure C++ callable "
@@ -5167,4 +5167,123 @@ static void bind_io(py::module_& m) {
   m.def("cluster_wave_name", &cluster_wave_name, py::arg("source"),
         "'hulthen' / 'vmc': the --cluster-wave spelling of a ClusterWaveSource "
         "(the one meta[\"cluster_wave\"] and the knob table carry).");
+  // D7 (2026-10-27): the SHIPPED structure-function defaults (pipeline.hpp,
+  // "D7"), READ by cli.py and lipolgen.make_config (texts that call them
+  // ct18nlo / nnpdfpol: pipeline.hpp's static_asserts), the core-only toy
+  // path, the lazy grid filler and the tier's pre-flight.  At the end, for
+  // the same reason as D4's and D6's.
+  m.attr("UNPOL_SF_DEFAULT") = UNPOL_SF_DEFAULT;
+  m.attr("POL_SF_DEFAULT") = POL_SF_DEFAULT;
+  m.def("toy_config", &toy_config,
+        "PipelineConfig() with unpol_sf = Toy and pol_sf = Toy NAMED -- the "
+        "pre-D7 default, bit for bit, and the path that needs no LHAPDF data.");
+  m.def("grid_sf_filler_installed", [] { return grid_sf_filler() != nullptr; },
+        "True when this process's Pipelines attach the shipped grid backends "
+        "themselves (the LHAPDF tier's filler, installed at import).");
+  m.def("fill_grid_sf_backends", &fill_grid_sf_backends, py::arg("config"),
+        "Attach, in place, the grid objects config's selectors name to its "
+        "EMPTY slots, through the installed filler (a no-op beside a "
+        "caller-supplied kernel or without the LHAPDF tier).");
+  m.def("pol_sf_grid_report", [](const Pipeline& p) {
+    const std::pair<double, double> g = pol_sf_grid_report(p);
+    return py::make_tuple(g.first, g.second);
+  }, py::arg("pipeline"),
+     "(q2_min, below_grid_frac) of the POLARISED backend: unpol_sf_grid_report's "
+     "twin (D7), the same three cases, against the same channel's own rate.");
+#if LIPOLGEN_HAVE_LHAPDF
+  m.attr("LHAPDF_EXTRAPOLATOR") = std::string(LHAPDF_EXTRAPOLATOR);
+  m.attr("LHAPDF_INTERPOLATOR") = std::string(LHAPDF_INTERPOLATOR);
+  m.attr("LHAPDF_FORCE_POSITIVE") = LHAPDF_FORCE_POSITIVE;
+  m.def("lhapdf_set_problem", [](const std::string& set, int member) -> py::object {
+    const std::string e = lhapdf_set_problem(set, member);
+    return e.empty() ? py::object(py::none()) : py::object(py::str(e));
+  }, py::arg("set"), py::arg("member") = 0,
+     "None when LHAPDF can open the set, else the pre-flight's refusal (it "
+     "keeps LHAPDF's own 'Info file not found for PDF set' and names the "
+     "escape).  Touches no LHAPDF Config, so it is safe without lhapdf.conf.");
+  m.def("attach_shipped_sf_backends", &attach_shipped_sf_backends,
+        py::arg("config"),
+        "Fill config's EMPTY grid slots (unpol_sf_obj on ct18nlo, pol_sf_obj on "
+        "nnpdfpol; not b1_unpol_sf, whose setter attaches) with the process's "
+        "shared objects, in place -- what a caller does before a PythiaBridge.");
+  m.def("make_lhapdf_unpol_sf", [](UnpolSfSource s) {
+    return std::const_pointer_cast<UnpolSF>(make_lhapdf_unpol_sf(s));
+  }, py::arg("source"), "The process's ONE shared object for a grid unpol_sf.");
+  m.def("make_lhapdf_pol_sf", [](PolSfSource s) {
+    return std::const_pointer_cast<PolSF>(make_lhapdf_pol_sf(s));
+  }, py::arg("source"), "The process's ONE shared object for a grid pol_sf.");
+  // Every Pipeline of this process now attaches the shipped grids itself.
+  // Nothing is loaded here; a missing set fails when a Pipeline needs it.
+  install_lhapdf_sf_filler();
+#endif
 }
+
+namespace {
+
+std::pair<double, double> pol_sf_grid_report(const Pipeline& p) {
+  // `unpol_sf_grid_report`'s rules verbatim, for the POLARISED backend.
+  const double kNan = std::numeric_limits<double>::quiet_NaN();
+  const PipelineConfig& cfg = p.config();
+  if (cfg.kernel) return {kNan, kNan};
+  if (cfg.pol_sf == PolSfSource::Toy) return {0.0, 0.0};
+#if LIPOLGEN_HAVE_LHAPDF
+  if (const auto lh = std::dynamic_pointer_cast<const LhapdfG1>(cfg.pol_sf_obj)) {
+    const double q2_min = lh->q2_min();
+    const std::vector<double>& sc = p.cell_rate_weights_pb();
+    const std::vector<double>& q2c = p.dis_sampler().q2_cells();
+    double tot = 0.0, below = 0.0;
+    for (std::size_t i = 0; i < sc.size(); ++i) {
+      tot += sc[i];
+      if (q2c[i] < q2_min) below += sc[i];
+    }
+    return {q2_min, tot > 0.0 ? below / tot : kNan};
+  }
+#endif
+  return {kNan, kNan};
+}
+
+py::dict sf_grid_extras(const Pipeline& p, const KnobProvenance& pol) {
+  // D7: HOW each backend of this run is evaluated outside its grid (never
+  // read from an lhapdf.conf), and the polarised grid's below-floor share.
+  // F7 (2026-10-30): the POLARISED keys follow meta["pol_sf"]'s rule --
+  // labelled, not credited.  Where g1 did not run (the pol_sf row is NotRead:
+  // every tensor plan, the coherent channel) the extrapolation key carries
+  // that row's label and the two numbers are NaN; until F7 they credited
+  // 'nearest', a floor of 1 and a below-floor share of 0 to a backend that
+  // never ran.
+  const bool pol_unread = pol.status == KnobStatus::NotRead;
+  const PipelineConfig& cfg = p.config();
+  auto how = [&cfg](const void* obj, bool is_toy, bool is_lhapdf) {
+    if (cfg.kernel) return std::string("caller-supplied kernel");
+    if (is_toy) return std::string("none (closed-form toy)");
+#if LIPOLGEN_HAVE_LHAPDF
+    if (obj != nullptr && is_lhapdf) return std::string(LHAPDF_EXTRAPOLATOR);
+#else
+    (void)is_lhapdf;
+#endif
+    return std::string(obj != nullptr ? "the backend's own (not an LHAPDF grid)"
+                                      : "no object");
+  };
+  py::dict out;
+#if LIPOLGEN_HAVE_LHAPDF
+  const bool unpol_lh =
+      std::dynamic_pointer_cast<const LhapdfSF>(cfg.unpol_sf_obj) != nullptr;
+  const bool pol_lh =
+      std::dynamic_pointer_cast<const LhapdfG1>(cfg.pol_sf_obj) != nullptr;
+#else
+  const bool unpol_lh = false, pol_lh = false;
+#endif
+  out["unpol_sf_extrapolation"] =
+      how(cfg.unpol_sf_obj.get(), cfg.unpol_sf == UnpolSfSource::Toy, unpol_lh);
+  out["pol_sf_extrapolation"] =
+      pol_unread ? pol.label
+                 : how(cfg.pol_sf_obj.get(), cfg.pol_sf == PolSfSource::Toy, pol_lh);
+  const double kNan = std::numeric_limits<double>::quiet_NaN();
+  const std::pair<double, double> g =
+      pol_unread ? std::make_pair(kNan, kNan) : pol_sf_grid_report(p);
+  out["pol_sf_grid_q2_min"] = g.first;
+  out["pol_sf_below_grid_frac"] = g.second;
+  return out;
+}
+
+}  // namespace

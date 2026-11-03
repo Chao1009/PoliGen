@@ -63,12 +63,12 @@ Delta/D_phi since D4, 2026-10-27 (no 1/2 before: the D4 note) (src/core/xsec.cpp
 Delta = delta_func(x, Q2, f1) evaluated on f1 = F1A/A, the PER-NUCLEON F1
 (`InclusiveKernel::tables`), and D_phi per nucleon.  This row therefore takes
 Delta PER NUCLEON exactly as the kernel carries it, in the per-nucleon x.
-  1. SHIPPED (the verdict): `default_inclusive_kernel(li6())`'s Delta --
+  1. SHIPPED (the verdict): `shipped_inclusive_kernel(li6())`'s Delta (D7) --
      toy_delta_gluon(x, Q2, F1, 1e-2) = 1e-2 F1 x^0.3 (1-x)^4, the pipeline's
      hard-coded 1e-2 "discovery scale" (src/core/pipeline.cpp, the Delta slot
      after the b1 branches; `rank2_input_report`), NOT the function's default
-     1e-3; F1 the shipped ToyF2 per nucleon.  The tree applies NO dilution to
-     it: P_zz is the whole-nucleus fill and nothing multiplies Delta.  The
+     1e-3; F1 the SHIPPED kernel's per nucleon (CT18NLO since D7, 2026-10-27;
+     ToyF2 before).  NO dilution: P_zz is the whole-nucleus fill.  The
      harness reads Delta from the kernel's own tables and records the scale
      it finds (Delta / (F1 x^0.3 (1-x)^4) at every node).
   2. THE LETTER'S moment_A and moment_B (PolarizedLithiumSim plans/07 sec.
@@ -81,8 +81,8 @@ Delta PER NUCLEON exactly as the kernel carries it, in the per-nucleon x.
      sibling folds into P_zz = 0.8/3 and the tree expresses on Delta with
      P_zz whole-nucleus (sf.hpp, the `dilution` comment), so with dilution
      1/3 the model IS the letter's physical per-nucleon Delta in the tree's
-     normalisation; moment_A solved on the shipped kernel's F1 at q2_ref =
-     4.474 GeV2, the letter's toy-column <Q2> (plans/07 addendum: A =
+     normalisation; moment_A solved on the letter's toy F1 (`letter_kernel()`, the pre-D7 shipped kernel -- which the sha256-pinned, NOT edited
+     delta_moment_bound_sources.json:164 still calls "the shipped 6Li kernel's per-nucleon F1 (ToyF2)", true until D7) at q2_ref = 4.474 GeV2, the toy column's <Q2> (A =
      -0.2924; the harness reproduces it and records the check).  Each is
      RECORDED beside the verdict with its own outcome of rule (a) under the
      central assumptions and under V6 (no run path of the generator uses
@@ -625,20 +625,20 @@ def bound_side(body, sets, ion):
 
 # ---------------------------------------------------------------- the models
 
-def shipped_kernel():
+def shipped_kernel():  # D7 (2026-10-27): what a DEFAULT run builds -- CT18NLO F1, NNPDFpol g1
     import lipolgen as lg  # noqa: WPS433
-    return lg.default_inclusive_kernel(lg.li6())
+    return lg.shipped_inclusive_kernel(lg.li6())
+def letter_kernel(): import lipolgen as lg; return lg.default_inclusive_kernel(lg.li6())  # noqa: E704 -- the letter's TOY F1 (D7)
 
-
-def model_moments(body, kernel, bound, ct_alphas):
+def model_moments(body, kernel, bound, ct_alphas, letter_k=None):
     """M2 = int x Delta dx per Q2 for every model, and the shipped scale check.
-    `ct_alphas` is CT18NLO's alpha_s(Q2) (A3), handed to the letter's models."""
+    `ct_alphas` is CT18NLO's alpha_s(Q2) (A3), handed to the letter's models;
+    `letter_k` (D7) the kernel whose F1 the letter's models are built on."""
     import lipolgen as lg  # noqa: WPS433
     spec = body["grid"]["x_integration"]
-    letter = body["letter_models"]
-
+    letter, lk = body["letter_models"], letter_k or kernel
     def f1(x, q2):
-        return kernel.tables(x, q2).f1
+        return lk.tables(x, q2).f1
 
     la, lb = letter["moment_A"], letter["moment_B"]
     dil = la["dilution_num"] / float(la["dilution_den"])
@@ -670,7 +670,7 @@ def model_moments(body, kernel, bound, ct_alphas):
         out["toy_shipped"].append(dict(q2=q2, m2=m, err=e, tail=tail))
         for k, mod in built.items():
             def g(x, q2=q2, mod=mod):
-                return x * mod(x, q2, kernel.tables(x, q2).f1)
+                return x * mod(x, q2, lk.tables(x, q2).f1)
             m, e, tail = integrate(g, spec["x_lo"], spec, "M2[%s](Q2=%g)" % (k, q2))
             out[k].append(dict(q2=q2, m2=m, err=e, tail=tail))
         for k, d in (("moment_B_letter", dil), ("moment_B_dilution1", 1.0)):
@@ -793,7 +793,7 @@ def measure(path=DATA):
     ion = lg.li6()
     kernel = shipped_kernel()
     bound = bound_side(body, sets, ion)
-    moments, checks = model_moments(body, kernel, bound, sets["ct18"].alphas)
+    moments, checks = model_moments(body, kernel, bound, sets["ct18"].alphas, letter_kernel())
     letter = body["letter_models"]["moment_A"]
     subrows = [
         saturation_row("toy_1e-2[shipped]", moments["toy_shipped"], bound, True,

@@ -243,6 +243,37 @@ jobs:
       - name: Python suite (pytest)
         run: python -m pytest python/tests -q
 
+      - name: the shipped LHAPDF sets absent -- refused by name, never the toy (D7)
+        # D7 (2026-10-27): the SHIPPED structure functions are CT18NLO and
+        # NNPDFpol11_100.  Without them every DEFAULT run must be refused by
+        # NAME -- exit 1, the set and the toy escape in the message, never
+        # LHAPDF's exit-time abort (134) -- the toy NAMED must still run, and
+        # pytest must stop at once with return code 3 (conftest.py).  `::`
+        # keeps the compiled-in prefix out of LHAPDF's search path.  Re-enacted
+        # locally 2026-10-29 (docs/open_items/run_2026-10-27/phase_I7_backends.md).
+        run: |
+          empty="$RUNNER_TEMP/lhapdf_empty"; conf="$RUNNER_TEMP/lhapdf_conf_only"
+          mkdir -p "$empty" "$conf"
+          cp "$LIPOLGEN_DEPS/share/LHAPDF/lhapdf.conf" "$conf/"
+          for dir in "$empty" "$conf"; do
+            set +e
+            LHAPDF_DATA_PATH="$dir::" ./build/lipolgen-run --events 10 > absent_out.txt 2> absent_err.txt
+            rc=$?
+            set -e
+            cat absent_err.txt
+            test "$rc" = 1
+            grep -q "Info file not found for PDF set 'CT18NLO'" absent_err.txt
+            grep -q -- "--unpol-sf toy" absent_err.txt
+            LHAPDF_DATA_PATH="$dir::" ./build/lipolgen-run --unpol-sf toy --pol-sf toy --events 10 > /dev/null
+          done
+          set +e
+          LHAPDF_DATA_PATH="$empty::" python -m pytest python/tests -q > absent_pytest.txt 2>&1
+          rc=$?
+          set -e
+          tail -5 absent_pytest.txt
+          test "$rc" = 3
+          grep -q "Info file not found for PDF set 'CT18NLO'" absent_pytest.txt
+
       - name: documentation citation gate
         # Strict mode: every `path:line` citation in the covered documents must
         # still point at what it claims.  Exits non-zero on any broken one.
@@ -428,13 +459,41 @@ jobs:
           python -m venv "$RUNNER_TEMP/wheeltest"
           "$RUNNER_TEMP/wheeltest/bin/pip" install repaired/*.whl
           cd "$RUNNER_TEMP"
+          # D7 (2026-10-27): the DEFAULT run needs the CT18NLO / NNPDFpol11_100
+          # data, which the wheel does not carry -- and under `env -i` the
+          # vendored libLHAPDF would find the restored cache through its
+          # compiled-in prefix, so a default run here would pass for the wrong
+          # reason.  Three runs instead: the toy NAMED with nothing set (what the
+          # wheel promises without data), the default with an EMPTY data path
+          # (refused by name, caught, exit 0), the default on the restored sets.
           env -i HOME="$RUNNER_TEMP" PATH=/usr/bin:/bin \
             "$RUNNER_TEMP/wheeltest/bin/python" -c "
           import lipolgen as lg
           print('version', lg.__version__)
           print('tiers', lg.HAVE_LHAPDF, lg.HAVE_HEPMC3, lg.HAVE_PYTHIA8)
+          r = lg.run(channel='inclusive', isotope='6Li', events=20000, seed=1,
+                     unpol_sf='toy', pol_sf='toy')
+          print('mean x (the toy, named)', float(r['x'].mean()))
+          "
+          mkdir -p "$RUNNER_TEMP/lhapdf_empty"
+          env -i HOME="$RUNNER_TEMP" PATH=/usr/bin:/bin \
+            LHAPDF_DATA_PATH="$RUNNER_TEMP/lhapdf_empty::" \
+            "$RUNNER_TEMP/wheeltest/bin/python" -c "
+          import lipolgen as lg
+          try:
+              lg.run(channel='inclusive', isotope='6Li', events=10, seed=1)
+          except RuntimeError as e:
+              assert 'Info file not found for PDF set' in str(e), str(e)
+              print('default refused by name:', str(e).splitlines()[0])
+          else:
+              raise SystemExit('the default ran without its sets')
+          "
+          env -i HOME="$RUNNER_TEMP" PATH=/usr/bin:/bin \
+            LHAPDF_DATA_PATH="${{ github.workspace }}/deps/install/share/LHAPDF" \
+            "$RUNNER_TEMP/wheeltest/bin/python" -c "
+          import lipolgen as lg
           r = lg.run(channel='inclusive', isotope='6Li', events=20000, seed=1)
-          print('mean x', float(r['x'].mean()))
+          print('mean x (the shipped default)', float(r['x'].mean()), r['meta']['unpol_sf'])
           "
 
       - name: the wheel is NOT published

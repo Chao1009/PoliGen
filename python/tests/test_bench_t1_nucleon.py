@@ -14,12 +14,20 @@ need the network; nothing here does).  All three harnesses are cheap
 A harness that DISAGREES with the tree is not a failing test: the tests pin
 what each harness MEASURES, check that its verdict follows from those
 numbers, and assert the normalisation it claims (BENCHMARK_PLAN.md sec. 8
-rule 2).  The shipped ToyF2 / ToyG1 FAIL all three rows -- a recorded
+rule 2).  The shipped ToyF2 / ToyG1 FAILED all three rows -- a recorded
 measurement, never tuned; no test here moves, or asserts a new value for,
-any tree default.  A configuration whose LHAPDF set is not installed must
+any tree default.  D7 (2026-10-27) moved the shipped default to CT18NLO /
+NNPDFpol1.1, and each harness's DECLARED rule -- "the shipped default
+carries the row's verdict" -- moved the headline with it: F2d and g1d still
+FAIL, F2d/F2p now PASSES (CT18NLO's sub-row, p = 0.0904, measured
+2026-10-26 and unchanged); the toy rows are recorded sub-rows, still FAIL.  A configuration whose LHAPDF set is not installed must
 be REPORTED as blocked with its reason (tested either way); a pin that needs
 the PYTHIA tier skips naming exactly that, and one that needs an LHAPDF set
-skips with the harness's own blocked reason.
+skips with the harness's own blocked reason.  Since D7 the VERDICT
+configuration is one of those: where ITS set is missing the whole row is
+blocked -- run() raises in LHAPDF's own words, `blocked (environment)` in the
+report, exit 2 -- and F7 (2026-10-30) tests that too (the I7 tree crashed
+there on a KeyError).
 
 Phase D of the 2026-10-26 run read the papers behind the three rows
 (docs/open_items/run_2026-10-26/phase_D_inputs.md): the g1d D-state
@@ -418,28 +426,31 @@ def test_hermes_statistics_live_in_the_artificial_vectors(g1_mod):
 # ------------------------------------------------- verdicts follow from numbers
 
 def test_f2d_verdict_follows_from_the_numbers(f2d):
-    assert f2d["headline"] == "toy"
+    assert f2d["headline"] == "ct18nlo"      # D7 (2026-10-29): the shipped default
     for name, c in f2d["configs"].items():
         if c["status"] == "blocked":
             continue
         d = c["dis"]
         assert d["p"] == pytest.approx(_sf(d["chi2"], d["n"]), rel=1e-12, abs=1e-300)
         assert c["status"] == ("pass" if _sf(d["chi2"], d["n"]) >= 0.01 else "fail")
-    assert f2d["status"] == f2d["configs"]["toy"]["status"] == "fail"
+    assert f2d["status"] == f2d["configs"]["ct18nlo"]["status"] == "fail"
+    assert f2d["configs"]["toy"]["status"] == "fail"         # the pre-D7 headline
 
 
 def test_dp_verdict_follows_from_the_numbers(dp):
-    assert dp["headline"] == "toy"
+    assert dp["headline"] == "ct18nlo"       # D7 (2026-10-29): the shipped default
     for name, c in dp["configs"].items():
         if c["status"] == "blocked":
             continue
         d = c["dis"]
         assert c["status"] == ("pass" if _sf(d["chi2"], d["n"]) >= 0.01 else "fail")
-    assert dp["status"] == dp["configs"]["toy"]["status"] == "fail"
+    # D7: the row PASSES on its declared rule (FAIL -> PASS, the one flip)
+    assert dp["status"] == dp["configs"]["ct18nlo"]["status"] == "pass"
+    assert dp["configs"]["toy"]["status"] == "fail"          # the pre-D7 headline
 
 
 def test_g1d_verdict_follows_from_the_numbers(g1):
-    assert g1["headline"] == "toy"
+    assert g1["headline"] == "nnpdfpol"      # D7 (2026-10-29): the shipped default
     for name, c in g1["configs"].items():
         if c["status"] == "blocked":
             continue
@@ -455,7 +466,8 @@ def test_g1d_verdict_follows_from_the_numbers(g1):
             c["experiments"][e]["status"] == "pass"
             for e in ("compass", "hermes", "e143")) else "fail")
         assert c["experiments"]["smc"]["in_verdict"] is False
-    assert g1["status"] == g1["configs"]["toy"]["status"] == "fail"
+    assert g1["status"] == g1["configs"]["nnpdfpol"]["status"] == "fail"
+    assert g1["configs"]["toy"]["status"] == "fail"          # the pre-D7 headline
 
 
 def test_chi2_sf_fallback_is_scipy_where_the_verdicts_and_headlines_live(
@@ -519,7 +531,7 @@ def test_dp_pinned_mstw(dp):
     c = _config(dp, "mstw")
     assert c["dis"]["chi2"] == pytest.approx(247.17894, rel=1e-6)
     assert c["dis"]["p"] == pytest.approx(0.0444218, rel=1e-5)
-    assert c["status"] == "pass"             # a sub-row; the row is toy's
+    assert c["status"] == "pass"             # a sub-row; the row is ct18nlo's (D7)
     assert c["dis"]["chi2_cov"] == pytest.approx(251.63526, rel=1e-6)
     assert c["dis"]["chi2_legacy_cov"] == pytest.approx(224.67659, rel=1e-6)
     assert c["dis_frozen"]["chi2"] == pytest.approx(260.70160, rel=1e-6)
@@ -615,7 +627,10 @@ def test_f2d_pinned_ct18nlo(f2d):
     assert c["q2_floor"] == pytest.approx(1.677025, rel=1e-6)
     assert c["dis"]["chi2"] == pytest.approx(3401.7634, rel=1e-6)
     assert c["dis"]["chi2_cov"] == pytest.approx(4553.9425, rel=1e-6)
-    assert c["all"]["chi2"] == pytest.approx(3523.9906, rel=1e-6)
+    # D7 (2026-10-29): re-taken.  "all" keeps the points BELOW the grid's
+    # Q2 = 1.677 floor, where the tier now FREEZES CT18NLO at the edge (was
+    # 3523.9906 with LHAPDF's continuation); the DIS-cut numbers do not move.
+    assert c["all"]["chi2"] == pytest.approx(3959.3713, rel=1e-6)
     assert c["dis"]["mean_ratio"] == pytest.approx(1.0862359, rel=1e-6)
     assert c["dis"]["mean_ratio"] - 1.0 > 3 * 0.025
     assert (c["dis"]["worst_x"], c["dis"]["worst_q2"]) == (0.05, 2.5)
@@ -627,7 +642,7 @@ def test_dp_pinned_ct18nlo(dp):
     assert c["dis"]["n"] == 189
     assert c["dis"]["chi2"] == pytest.approx(215.50757, rel=1e-6)
     assert c["dis"]["p"] == pytest.approx(0.0903941, rel=1e-5)
-    assert c["status"] == "pass"             # a sub-row; the row is toy's
+    assert c["status"] == "pass"             # THE ROW's verdict since D7
     assert c["dis"]["chi2_cov"] == pytest.approx(226.20362, rel=1e-6)
     assert c["dis"]["chi2_legacy_cov"] == pytest.approx(202.51961, rel=1e-6)
     assert c["dis_frozen"]["chi2"] == pytest.approx(239.52030, rel=1e-6)
@@ -649,22 +664,116 @@ def _lhapdf_missing(setname):
     return False
 
 
+#: the set each row's VERDICT configuration -- the shipped default since D7 --
+#: needs, by fixture and by harness
+_VERDICT_SET = {"f2d": "CT18NLO", "dp": "CT18NLO", "g1": "NNPDFpol11_100"}
+_HARNESS_SET = {"t1_nmc_f2d": "CT18NLO", "t1_nmc_f2d_over_f2p": "CT18NLO",
+                "t1_hermes_f2d": "CT18NLO", "t1_g1d_world": "NNPDFpol11_100"}
+
+
+def _classify(exc):
+    """make_report's own classifier (validation/benchmarks/_report.py)."""
+    return _load("_report").classify_exception(exc)
+
+
 @pytest.mark.parametrize("rep_name,config,setname", [
     ("f2d", "ct18nlo", "CT18NLO"), ("dp", "ct18nlo", "CT18NLO"),
     ("g1", "ct18nlo", "CT18NLO"), ("g1", "nnpdfpol", "NNPDFpol11_100")])
 def test_lhapdf_configs_are_reported_not_dropped(request, rep_name, config, setname):
+    """F7 (2026-10-30): since D7 the row's VERDICT configuration is the
+    shipped default, so where ITS set (or the tier) is missing the row is
+    blocked as a whole: run() raises -- in LHAPDF's own words for a missing
+    set, which make_report records as `blocked (environment)` -- and no
+    sub-row is reported.  The I7 tree crashed on a KeyError there (this test
+    failed 4 / 4 with the sets hidden).  Any other configuration whose set is
+    missing is still a BLOCKED sub-row carrying its reason."""
+    mod = request.getfixturevalue(rep_name + "_mod")
+    verdict_set = _VERDICT_SET[rep_name]
+    if not getattr(lg, "HAVE_LHAPDF", False) or _lhapdf_missing(verdict_set):
+        with pytest.raises(RuntimeError) as e:
+            mod.run(verbose=False)
+        if getattr(lg, "HAVE_LHAPDF", False):
+            assert _classify(e.value) == (
+                "blocked (environment)",
+                "environment: LHAPDF set %s not installed" % verdict_set)
+        else:
+            assert "built without the LHAPDF tier" in str(e.value)
+        return
     rep = request.getfixturevalue(rep_name)
     c = rep["configs"][config]
-    if not getattr(lg, "HAVE_LHAPDF", False):
-        assert c["status"] == "blocked"
-        assert c["reason"] == ("environment: lipolgen built without the LHAPDF "
-                               "tier (HAVE_LHAPDF false)")
-    elif _lhapdf_missing(setname):
+    if _lhapdf_missing(setname):            # a sub-row's set; the verdict's is there
         assert c["status"] == "blocked"
         assert c["reason"] == "environment: LHAPDF set %s not installed" % setname
     else:                                   # the set is there: a real sub-row
         assert c["status"] in ("pass", "fail")
         assert c["q2_floor"] >= 1.0
+
+
+@pytest.mark.parametrize("harness", sorted(_HARNESS_SET))
+def test_a_missing_verdict_set_blocks_the_row_by_the_environment(harness, tmp_path):
+    """F7 (2026-10-30), the verifier's medium finding: each T1 harness run with
+    NO LHAPDF data at all -- an empty data path, no lhapdf.conf, `::` keeping
+    the install prefix out -- exits 2 with LHAPDF's own words naming the set
+    its verdict configuration needs, which make_report's classifier records as
+    `blocked (environment)`.  c52c164 reported the toy's verdict there (the
+    grid sub-rows blocked); the I7 tree crashed on KeyError 'dis' /
+    'experiments' (exit 2, `error` in the report)."""
+    if not getattr(lg, "HAVE_LHAPDF", False):
+        pytest.skip("lipolgen built without the LHAPDF tier")
+    env = dict(os.environ)
+    here = os.path.dirname(os.path.dirname(os.path.abspath(lg.__file__)))
+    env["PYTHONPATH"] = os.pathsep.join(
+        [here] + [p for p in env.get("PYTHONPATH", "").split(os.pathsep) if p])
+    env["LHAPDF_DATA_PATH"] = str(tmp_path) + "::"
+    res = subprocess.run([sys.executable, os.path.join(_BENCH, harness + ".py")],
+                         capture_output=True, text=True, env=env, timeout=300)
+    assert res.returncode == 2, (res.returncode, res.stderr[-2000:])   # never 134
+    assert "KeyError" not in res.stderr, res.stderr[-2000:]
+    last = [l for l in res.stderr.splitlines() if l.startswith("RuntimeError: ")][-1]
+    want = _HARNESS_SET[harness]
+    assert "Info file not found for PDF set '%s'" % want in last
+    assert _classify(RuntimeError(last[len("RuntimeError: "):])) == (
+        "blocked (environment)", "environment: LHAPDF set %s not installed" % want)
+
+
+@pytest.mark.parametrize("harness", sorted(_HARNESS_SET))
+def test_the_verdict_configuration_without_the_tier_is_refused_by_name(
+        harness, monkeypatch):
+    """F7: without the LHAPDF tier (simulated: `HAVE_LHAPDF` False, which is
+    what the harnesses read) the verdict configuration cannot be built, and
+    run() says so naming the TIER -- never LHAPDF's "Info file not found",
+    which would claim a missing set the build may well have."""
+    import lipolgen._lipolgen as _l
+    mod = _load(harness)
+    monkeypatch.setattr(_l, "HAVE_LHAPDF", False)
+    with pytest.raises(RuntimeError) as e:
+        mod.run(verbose=False)
+    assert "built without the LHAPDF tier" in str(e.value)
+    assert "Info file not found" not in str(e.value)
+    assert harness in str(e.value)
+
+
+@pytest.mark.parametrize("harness", sorted(_HARNESS_SET))
+def test_headline_is_the_libraries_shipped_default_or_the_row_stops(
+        harness, monkeypatch):
+    """F7, the verifier's V7-8: HEADLINE is a literal; run() checks it against
+    `lipolgen.UNPOL_SF_DEFAULT` / `POL_SF_DEFAULT`, so a later move of the
+    default stops the row by name instead of leaving its verdict on a stale
+    backend under a "shipped" label."""
+    mod = _load(harness)
+    shipped = (lg.pol_sf_name(lg.POL_SF_DEFAULT) if harness == "t1_g1d_world"
+               else lg.unpol_sf_name(lg.UNPOL_SF_DEFAULT))
+    assert mod.HEADLINE == shipped
+    monkeypatch.setattr(mod, "HEADLINE", "toy")
+    with pytest.raises(RuntimeError) as e:
+        mod.run(verbose=False)
+    assert "is not the shipped" in str(e.value) and repr(shipped) in str(e.value)
+
+
+#: the row verdicts on the shipped default.  D7 (2026-10-29): F2d/F2p is
+#: CT18NLO's, PASS; until D7 all three were the toy's, FAIL.
+_STATUS = {"t1_nmc_f2d": "FAIL", "t1_nmc_f2d_over_f2p": "PASS",
+           "t1_g1d_world": "FAIL"}
 
 
 @pytest.mark.parametrize("harness", ["t1_nmc_f2d", "t1_nmc_f2d_over_f2p",
@@ -677,7 +786,7 @@ def test_harness_prints_one_report_row_and_every_subrow(harness, capsys):
     assert len(rows) == 1
     fields = [f.strip() for f in rows[0].split("|")]
     assert fields[1] == rep["name"] == harness and len(fields) == 6
-    assert fields[5] == rep["status"].upper() == "FAIL"
+    assert fields[5] == rep["status"].upper() == _STATUS[harness]
     assert "np." not in out                        # numpy scalars never leak
     sub = [l for l in out.splitlines() if l.startswith("SUBROW |")]
     per = len(mod.EXPERIMENTS) if hasattr(mod, "EXPERIMENTS") else 1
@@ -694,6 +803,7 @@ def test_harness_prints_one_report_row_and_every_subrow(harness, capsys):
 @pytest.mark.parametrize("harness", ["t1_nmc_f2d", "t1_nmc_f2d_over_f2p",
                                      "t1_g1d_world"])
 def test_harness_exits_0_on_a_recorded_fail(harness):
+    """Exit 0 on a RECORDED verdict, FAIL or (F2d/F2p since D7) PASS."""
     env = dict(os.environ)
     here = os.path.dirname(os.path.dirname(os.path.abspath(lg.__file__)))
     env["PYTHONPATH"] = os.pathsep.join(
@@ -702,7 +812,7 @@ def test_harness_exits_0_on_a_recorded_fail(harness):
                          capture_output=True, text=True, env=env, timeout=120)
     assert res.returncode == 0, res.stderr
     assert [l for l in res.stdout.splitlines()
-            if l.startswith("REPORT | %s |" % harness)][0].endswith("| FAIL")
+            if l.startswith("REPORT | %s |" % harness)][0].endswith("| " + _STATUS[harness])
 
 
 def test_harness_exits_2_on_an_altered_file(f2d_mod, dp_mod, g1_mod, tmp_path,
@@ -755,3 +865,26 @@ def test_t1_g1d_world_plot_writes_png(g1_mod, g1, tmp_path):
     with open(path, "rb") as f:
         assert f.read(8) == b"\x89PNG\r\n\x1a\n"
     assert os.path.getsize(path) > 0
+
+
+def test_make_report_records_the_four_t1_rows_blocked_without_the_sets(tmp_path):
+    """F7 (2026-11-03), the verifier's medium finding end to end: make_report
+    itself, run on the four T1 rows with NO LHAPDF data (an empty data path,
+    `::` keeping the install prefix out), exits 0 and records every row as
+    `blocked (environment)` naming the set its verdict configuration needs --
+    the I7 tree gave `error (KeyError ...)` there."""
+    if not getattr(lg, "HAVE_LHAPDF", False):
+        pytest.skip("lipolgen built without the LHAPDF tier")
+    empty, out = tmp_path / "empty", tmp_path / "out"
+    empty.mkdir()
+    env = dict(os.environ, LHAPDF_DATA_PATH=str(empty) + "::")
+    cmd = [sys.executable, os.path.join(_BENCH, "make_report.py"), "--out-dir", str(out)]
+    for h in sorted(_HARNESS_SET):
+        cmd += ["--only", h]
+    res = subprocess.run(cmd, capture_output=True, text=True, env=env, timeout=600)
+    assert res.returncode == 0, (res.returncode, res.stderr[-2000:])
+    with open(out / "REPORT.json") as f:
+        rows = {r["name"]: r for r in json.load(f)["rows"]}
+    for h, want in _HARNESS_SET.items():
+        assert (rows[h]["status"], rows[h]["reason"]) == (
+            "blocked (environment)", "environment: LHAPDF set %s not installed" % want), h

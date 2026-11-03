@@ -39,9 +39,12 @@ def _plan(j, pzz=0.5, mode="ladder", **kw):
                         pzz_mode=mode, **kw)
 
 
-def _pipeline(iso, j, pzz=0.5, mode="ladder", events=200):
+def _pipeline(iso, j, pzz=0.5, mode="ladder", events=200, toy=False):
+    # `toy=True` NAMES the toy structure functions (D7, 2026-10-29): what
+    # every number this file pins at a fixed value was measured on.
     cfg = lg.make_config(isotope=iso, channel="inclusive", config=1,
-                         events=events, seed=SEED)
+                         events=events, seed=SEED,
+                         **(dict(unpol_sf="toy", pol_sf="toy") if toy else {}))
     return _l.Pipeline(cfg, _plan(j, pzz, mode))
 
 
@@ -169,7 +172,10 @@ def test_an_unknown_mode_is_refused_by_name():
 #: beam config 1, seed 20260713, `--plan helicity-flip --pz 0.7 --pe 0.7`,
 #: the shipped `--b1-model miller`.  `sigma_pb` is the cell-grid integral and
 #: does not depend on the event count, so these pin at 200 events exactly what
-#: sec. A3 measured at 100 000.
+#: sec. A3 measured at 100 000.  D7 (2026-10-29): sec. A3 measured on ToyF2 /
+#: ToyG1, the shipped default until D7, so the test NAMES them (`toy=True`);
+#: on the shipped CT18NLO / NNPDFpol1.1 the ladder sigma is 496271.23908496683
+#: (6Li) and 494062.76099941705 (7Li) pb.
 PRICE = {
     # (isotope, j, typed pzz): (sigma ladder, sigma typed, pzz ladder)
     ("6Li", 1.0, 0.5): (591783.2520093301, 591769.3290332475,
@@ -186,8 +192,8 @@ def test_the_measured_price_reproduces(key):
     """P4.  The numbers sec. A3 quotes, from committed state."""
     iso, j, pzz = key
     s_lad, s_typ, pzz_lad = PRICE[key]
-    a = _pipeline(iso, j, pzz, "ladder")
-    b = _pipeline(iso, j, pzz, "typed")
+    a = _pipeline(iso, j, pzz, "ladder", toy=True)
+    b = _pipeline(iso, j, pzz, "typed", toy=True)
     assert a.sigma_pb() == pytest.approx(s_lad, rel=1e-12)
     assert b.sigma_pb() == pytest.approx(s_typ, rel=1e-12)
     assert a.plan.pzz_true == pytest.approx(pzz_lad, rel=1e-12)

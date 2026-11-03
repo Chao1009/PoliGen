@@ -58,7 +58,7 @@ process's outgoing lepton; bridge: `Role.Hadron`, `Status.Final`, via
   n_ch_eta[a,b)  the charged count in lab pseudorapidity bins with edges
               -inf, -2, 0, 2, 4, +inf (the charged eta flow).
 (x, Q^2) MATCHING.  Each generator fills the window with its own (x, Q^2)
-density (PYTHIA's LO cross section vs LiPolGen's kernel on ToyF2), and every
+density (PYTHIA's LO cross section vs LiPolGen's kernel, CT18NLO since D7), every
 observable above moves with (x, Q^2) -- sum_empz IS 2 E_e y.  So the bridge's
 mean is taken in 4 x 4 log-uniform (x, Q^2) sub-bins of the window and
 re-weighted to the STOCK sample's sub-bin populations; stock sub-bins with no
@@ -392,7 +392,7 @@ def bridge_sample(window, n_events, seed):
     beams = lg.default_configs(cfg.isotope)[cfg.beam_config]
     opts = lg.PythiaBridgeOptions()
     opts.seed = seed
-    opts.f2_source = cfg.unpol_sf_obj           # what cli.py does, verbatim
+    lg._lipolgen.fill_grid_sf_backends(cfg); opts.f2_source = cfg.unpol_sf_obj  # as cli.py (D7: attach first)
     bridge = lg.PythiaBridge(beams, opts)
     lg.set_pythia_hadronizer(cfg, bridge)
     pipe = lg.Pipeline(cfg, make_plan())

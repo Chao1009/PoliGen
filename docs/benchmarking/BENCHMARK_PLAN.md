@@ -120,7 +120,7 @@ integrable), FSI unitarity is not definable in the tree as built — row
 `docs/HEPMC3_CONVENTION.md` hold; C13 / C14 (four-momentum, charge) fail on
 the inclusive records, which leave out the (A−1) remnant by design —
 **FAIL recorded**. Numbers, runtimes and tests: `validation/benchmarks/README.md`
-and `REPORT.md`.*
+and `REPORT.md`.* *Status 2026-10-29 (decision D7, `../open_items/run_2026-10-27/phase_I7_backends.md`): the shipped F₂ / g₁ are CT18NLO / NNPDFpol1.1 at LO, frozen at the grid edges, so the T1 rows' declared rule ("the shipped default carries the verdict") moves each headline to that backend: `t1_nmc_f2d_over_f2p` FAIL → **PASS** (CT18NLO 215.5/189, p = 0.0904), `t1_nmc_f2d` (3401.8/146), `t1_hermes_f2d` and `t1_g1d_world` (NNPDFpol11 45.0 / 52.6 / 51.0) stay **FAIL**; the toys are recorded sub-rows; `t5_sum_rules`' Bjorken sub-row moves to NNPDFpol11 by the same rule. Nothing tuned.*
 
 ## 5. Corrections the survey found owed in the tree (apply at M1)
 

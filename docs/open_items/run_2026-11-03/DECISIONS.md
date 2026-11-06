@@ -89,6 +89,20 @@ class-level toy kernel fills the bare deuteron's b₁ with the ⁶Li transfer
 (`Li6B1(MillerB1)` for every spin-1 ion). Pre-existing, recorded, not a
 choice of this run; it goes to the author with the summary.*
 
+*Correction to the note above, 2026-11-06, after phase P2 (its record
+`phase_P2_positivity.md`): the clip DID lift that refusal. A₁ = 0.616 is
+the nucleus's value at that cell; the nucleons sit at A₁ⁿ = 4.4 and
+A₁ᵖ = 1.4 there, both clipped to 1 under A3, and the default inclusive ⁶Li
+`--plan helicity-flip` / `--plan apar` run builds at x_max = 1.0
+(1 + w_avg = +0.1210; vector −0.2578 → −0.1183, rank-2 −0.7607 unmoved).
+Consequences: the x_max = 0.95 test helpers of P1 lose their reason and
+are removed in the P2 commit (pins re-taken with `A3 (2026-11-03)`
+comments, never loosened); the USAGE/CLI sentences say the run builds
+since A3. What A4 keeps: the two inclusive deuteron refusals (spin
+configurations 0 and 1 at the default), each a rank-2 one on the
+class-level toy b₁ — the bare deuteron reading the ⁶Li transfer, item (2)
+above, now the author's most consequential open item of this run.*
+
 **A2 — EPPS21 and R1998 stay options; the shipped default stays the
 free-nucleon CT18NLO with the toy R (`r_sigma_lt`).** *Why: EPPS21's Li6
 ratio parametrizes the inclusive nuclear modification — shadowing, EMC,

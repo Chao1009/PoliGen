@@ -647,7 +647,7 @@ def build_parser():
                         "downgraded to the toy in a build without the "
                         "tier.  With --pol-sf nnpdfpol on '--channel "
                         "tagged-d-p --plan helicity-flip' at --pe != 0 the "
-                        "PAIR needs --x-max 0.95 (see that flag)")
+                        "PAIR needed --x-max 0.95 until A3 (2026-11-03): it builds at 1.0 now (see that flag)")
     p.add_argument("--pol-sf", choices=sorted(POL_SF), default=None,
                    help="POLARISED structure-function backend of the "
                         "INCLUSIVE and TAGGED kernels -- g1, and through the "
@@ -680,12 +680,12 @@ def build_parser():
                         "D7) has the WRONG SIGN over roughly 0.25 < x < 0.6 -- "
                         "which matters most on a struck-neutron run (--channel "
                         "tagged-d-p) and least on isoscalar 6Li.  ON THAT "
-                        "VERY CHANNEL 'nnpdfpol' NEEDS --x-max 0.95 when it "
+                        "VERY CHANNEL 'nnpdfpol' NEEDED --x-max 0.95 when it "
                         "is paired with --unpol-sf ct18nlo|mstw -- THE DEFAULT "
                         "since D7 -- under --plan helicity-flip at --pe != 0: the pair's neutron "
-                        "g1/F1 reaches 4.40579 in the window's top cell and "
-                        "1 + w_avg goes negative, which the sampler refuses "
-                        "by name (see --x-max)")
+                        "g1/F1 reaches 4.40579 in the window's top cell; since "
+                        "A3 (2026-11-03) g1 is clipped to +-F1 per nucleon and "
+                        "the run builds at 1.0 (see --x-max)")
     p.add_argument("--b1-alpha-d-dwave-weight", type=float, default=None,
                    help="knob on the alpha-d orbital terms (2d) AND (2a) of "
                         "--b1-model li6-convolution -- they are one physical "
@@ -705,20 +705,20 @@ def build_parser():
                         "it.  ON THE SHIPPED DEFAULT (D7: CT18NLO / "
                         "NNPDFpol1.1) --x-max 0.95 is ALSO NEEDED, for the "
                         "SAME positivity reason, by --plan helicity-flip at "
-                        "--pe != 0 (this CLI's --pe 0.7) on six runs, "
-                        "measured 2026-10-29: --isotope d --channel inclusive "
-                        "at --config 0 / 1 / 2, --channel tagged-d-p at "
-                        "--config 0 / 1 and --channel tagged-6Li-alpha at "
-                        "--config 0 -- the vector term's g1/F1 reaches about "
-                        "2.0 (inclusive d) and 4.41 (the struck neutron, "
-                        "x = 0.955, Q2 = 1119) in the top cell; by "
+                        "--pe != 0 (this CLI's --pe 0.7) on two runs since A3 "
+                        "(2026-11-03; re-measured 2026-11-06): --isotope d --channel inclusive "
+                        "at --config 0 / 1, the rank-2 term on top of the "
+                        "vector one at the CLIPPED A1 (A3 clips g1 to +-F1 per "
+                        "nucleon, which lifted D7's other four refusals -- "
+                        "d config 2, tagged-d-p 0 / 1, tagged-6Li-alpha 0 -- "
+                        "and the inclusive 6Li one of A1) in the top cell; by "
                         "--inclusive-b1 on --channel tagged-6Li-alpha "
                         "(1 + w_avg = -0.1302 at x = 0.955, Q2 = 167.3); and "
                         "the mandatory band's x2 row (--b1-band-scale 2) "
                         "needs 0.85: refused at 0.95 and 0.9 (cell x = "
                         "0.871, the rank-2 term alone).  The sampler refuses "
                         "each by name and COMPUTES the cure; --unpol-sf toy "
-                        "--pol-sf toy runs the six and --inclusive-b1 at 1.0 "
+                        "--pol-sf toy runs the two and --inclusive-b1 at 1.0 "
                         "and the x2 row at 0.95, as before D7"
                         % (B1_TOP_CELL_X, B1_TOP_CELL_B1_OVER_F1["cdks"],
                            B1_TOP_CELL_B1_OVER_F1["li6-convolution"],
@@ -1793,9 +1793,9 @@ def main(argv=None):
     # CLI knob moves them; meta["li6_cluster_polarization"] / ["deuteron_p_d"]
     # / ["li6_b1_rank2_transfer"] carry the same numbers), so a file made
     # before A1 (0.811228 / 0.045 / 0.921947) and one made after can be told apart.
-    pf = _l.inclusive_polarization_factors(p)["report"]
-    if pf:
-        say("  inclusive polarization factors: %s" % pf)
+    pf = _l.inclusive_polarization_factors(p)["report"]; gc = _l.g1_positivity_clip(p)["report"]  # A3 (2026-11-03): meta["g1_clipped_rate_fraction"]
+    if pf: say("  inclusive polarization factors: %s" % pf)
+    say("  g1 positivity clip (A3, |g1| <= F1 per nucleon): %s" % gc)
 
     # Events are only materialized when something needs the records: the HFS
     # exporter always, HepMC only when the T2 tier is on (regenerating a

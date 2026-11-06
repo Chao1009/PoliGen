@@ -77,8 +77,8 @@ def test_the_default_run_is_bit_identical_to_the_pre_flag_run(j, iso):
     """P1, one level up: a whole run, not just a fill."""
     cfg = lg.make_config(isotope=iso, channel="inclusive", config=1,
                          events=400, seed=SEED)
-    a = _l.Pipeline(_x95(cfg, iso), _plan(j)).generate(0, False, 1)   # A1: see _x95
-    b = _l.Pipeline(_x95(cfg, iso), _l.helicity_flip_plan(j, PZ, PE)).generate(0, False, 1)
+    a = _l.Pipeline(cfg, _plan(j)).generate(0, False, 1)  # A3 (2026-11-03): the shipped window again (the supervisor's correction of 2026-11-06 under A1)
+    b = _l.Pipeline(cfg, _l.helicity_flip_plan(j, PZ, PE)).generate(0, False, 1)
     # BYTES, not `array_equal`: the `R` column is all-NaN on this channel and
     # NaN != NaN, which would make a value-wise comparison silently vacuous
     # in one direction and false in the other.  This is the comparison the
@@ -249,7 +249,7 @@ def _rows(plan_name, iso, j, mode, pzz=0.5):
     ctx = _l.KnobRunContext()
     ctx.plan_name, ctx.pz, ctx.pzz, ctx.pe = plan_name, PZ, pzz, PE
     ctx.pzz_mode, ctx.rel_lumi_offset = mode, 0.0
-    return {r.name: r for r in _l.Pipeline(_x95(cfg, iso, plan_name), plan).knob_provenance(ctx)}
+    return {r.name: r for r in _l.Pipeline(cfg, plan).knob_provenance(ctx)}  # A3 (2026-11-03): the shipped window again (the supervisor's correction of 2026-11-06 under A1)
 
 
 @pytest.mark.parametrize("mode", ["ladder", "typed"])
@@ -298,7 +298,7 @@ def test_a_context_naming_a_mode_that_does_not_exist_is_refused():
     prevent.  Empty stays legal and omits the row."""
     cfg = lg.make_config(isotope="6Li", channel="inclusive", config=1,
                          events=60, seed=7)
-    p = _l.Pipeline(_x95(cfg, "6Li"), _plan(1.0))   # A1: see _x95
+    p = _l.Pipeline(cfg, _plan(1.0))  # A3 (2026-11-03): the shipped window again (the supervisor's correction of 2026-11-06 under A1)
     ctx = _l.KnobRunContext()
     ctx.plan_name, ctx.pz, ctx.pzz, ctx.pe = "helicity-flip", PZ, 0.5, PE
     ctx.pzz_mode = "maxent"
@@ -321,7 +321,7 @@ def test_the_meta_records_the_mode():
     ctx = _l.KnobRunContext()
     ctx.plan_name, ctx.pz, ctx.pzz, ctx.pe = "helicity-flip", PZ, 0.5, PE
     ctx.pzz_mode, ctx.rel_lumi_offset = "typed", 0.0
-    meta = _l.Pipeline(_x95(cfg, "6Li"), plan).generate(1, False, 1, context=ctx)["meta"]
+    meta = _l.Pipeline(cfg, plan).generate(1, False, 1, context=ctx)["meta"]  # A3 (2026-11-03): the shipped window again (the supervisor's correction of 2026-11-06 under A1)
     row = meta["knob_provenance"]["pzz_mode"]
     assert row["value"] == "typed"
     assert row["status"] == "read"
@@ -360,18 +360,3 @@ def test_the_cli_refusal_is_a_systemexit_carrying_the_edge():
     msg = str(e.value)
     assert "0.26 <= t <= 0.58" in msg
     assert "outside here by 0.02" in msg
-
-
-def _x95(cfg, iso, plan_name="helicity-flip"):
-    """A1 (2026-11-03): since A1 the default inclusive 6Li `helicity-flip` fill
-    (P_z = P_e = 0.7) is REFUSED at the shipped window's top cell, x = 0.955,
-    Q2 = 1897 -- 1 + w_avg = -0.0185 (vector -0.2578, rank-2 -0.7607), positive
-    before A1 -- the sampler's documented positivity refusal, which DECISIONS
-    A4 keeps.  These tests are about the fill, not that cell, so the 6Li
-    helicity-flip runs stop at x_max = 0.95 (the cure the refusal names);
-    every other run is untouched.  Recorded in phase_P1_polarization_factors.md."""
-    if iso == "6Li" and plan_name == "helicity-flip":
-        sc = cfg.scenario
-        sc.x_max = 0.95
-        cfg.scenario = sc
-    return cfg

@@ -933,3 +933,27 @@ TEST_CASE("D4: the cos 2phi coefficient is Jaffe-Manohar's") {
                 kRtol);
   }
 }
+
+// A3 (2026-11-03): every InclusiveKernel reads g1 through ONE positivity clip
+// built on its own F1 (base UnpolSF and r_func); the class-level toy is bit for
+// bit what an unclipped ToyG1 on the same base gives.
+TEST_CASE("A3: the kernel installs one positivity clip on its own F1") {
+  const InclusiveKernel k(LI6());
+  const auto* c = dynamic_cast<const PositivityClippedG1*>(&k.g1_model());
+  REQUIRE(c != nullptr);
+  CHECK(dynamic_cast<const ToyG1*>(c->inner().get()) != nullptr);
+  CHECK(c->base().get() == k.nuclear_f2().base().get());
+  const ToyG1 toy(k.nuclear_f2().base());
+  for (double x : {0.01, 0.3, 0.9, 0.955}) {
+    const SFTables t = k.tables(x, 100.0, true);
+    CHECK(t.g1 == toy.g1_nucleus(LI6(), x, 100.0) / 6.0);
+  }
+  // a kernel handed a clipped backend does not clip twice
+  InclusiveKernel::Options o;
+  o.f2_source = k.nuclear_f2().base();
+  o.g1_model = std::make_shared<const PositivityClippedG1>(std::make_shared<const ToyG1>(), o.f2_source);
+  const InclusiveKernel k2(LI6(), o);
+  const auto* c2 = dynamic_cast<const PositivityClippedG1*>(&k2.g1_model());
+  REQUIRE(c2 != nullptr);
+  CHECK(dynamic_cast<const PositivityClippedG1*>(c2->inner().get()) == nullptr);
+}

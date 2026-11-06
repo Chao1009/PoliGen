@@ -147,3 +147,37 @@ def test_the_cli_exposes_coherent_t_max():
     # ... and it is NOT a CoherentScenario field, so it must not land there
     assert "t_max" not in (opts["coherent"] or {})
     assert cli.resolve(["--channel", "coherent"])["coherent_t_max"] is None
+
+
+# A3 (2026-11-03; DECISIONS.md A3, the supervisor's choice under the author's
+# delegation): ONE meta key, g1_clipped_rate_fraction, the share of the run's
+# rate on which the |g1| <= F1 clip binds (pipeline.hpp `G1PositivityClip`);
+# NaN where g1 is not read; the banner prints the same sentence.
+def _clip_run(plan, **kw):
+    cfg = lg.make_config(events=200, seed=5, **kw)
+    p = lg.Pipeline(cfg, lg.make_plan(plan, j=1.0, pz=0.7, pzz=0.6, pe=0.7))
+    return p, p.generate(0, False, 1)["meta"]
+
+
+def test_a3_the_clip_share_is_in_meta_and_zero_on_the_toy():
+    p, meta = _clip_run("helicity-flip", unpol_sf="toy", pol_sf="toy")
+    c = lg.g1_positivity_clip(p)
+    assert meta["g1_clipped_rate_fraction"] == c["g1_clipped_rate_fraction"] == 0.0
+    assert c["max_unclipped_a1p"] < 1.0 and c["max_unclipped_a1n"] < 1.0
+    p, meta = _clip_run("tensor-thirds", unpol_sf="toy", pol_sf="toy")
+    assert np.isnan(meta["g1_clipped_rate_fraction"])          # g1 not read
+    assert "not read" in lg.g1_positivity_clip(p)["report"]
+
+
+@pytest.mark.skipif(not lg.grid_sf_filler_installed(), reason="needs the LHAPDF tier")
+def test_a3_the_default_6li_helicity_flip_builds_and_records_the_clip(capsys):
+    # A3 (2026-11-03): refused since A1 at x = 0.955 (1 + w_avg = -0.0185);
+    # the clip lifts it (measured; P2's record sec. 1).  The tiny share is the
+    # x > 0.83 cells' part of the rate.
+    p, meta = _clip_run("helicity-flip")
+    assert meta["g1_clipped_rate_fraction"] == pytest.approx(3.8639732e-07, rel=1e-6)
+    c = lg.g1_positivity_clip(p)
+    assert c["max_unclipped_a1n"] == pytest.approx(4.436, abs=1e-3)
+    cli.main(["--events", "10", "--plan", "helicity-flip"])
+    out = capsys.readouterr().out
+    assert "g1 positivity clip (A3, |g1| <= F1 per nucleon): binds on 3.864e-05 % of the rate" in out

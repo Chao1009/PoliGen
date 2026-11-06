@@ -1415,14 +1415,14 @@ TEST_CASE("D2: the tagged struck-cluster kernel takes a structure-function "
   // (c) THE POLARISED SLOT MOVES g1 AND NOT F1 -- an EXPLICIT `g1_model`
   // keeps whatever it was built with, so the rate does not move at all.
   StruckClusterOptions with_g1;
-  with_g1.g1_model = std::make_shared<const ScaledG1>(3.0);
+  with_g1.g1_model = std::make_shared<const ScaledG1>(1.5);  // A3 (2026-11-03): x3 broke |g1| <= F1 at x = 0.5 (toy A1p 0.616) and is clipped; x1.5 stays inside
   const auto k_g1 = struck_cluster_kernel(ch, with_g1);
   for (double x : {0.05, 0.20, 0.50}) {
     const SFTables a = k_default->tables(x, 10.0);
     const SFTables b = k_g1->tables(x, 10.0);
     CHECK(b.f2 == a.f2);            // bit for bit: the rate is untouched
     CHECK(b.f1 == a.f1);
-    CHECK(b.g1 == doctest::Approx(3.0 * a.g1).epsilon(1e-14));
+    CHECK(b.g1 == doctest::Approx(1.5 * a.g1).epsilon(1e-14));  // A3 (2026-11-03): was 3.0
   }
 }
 

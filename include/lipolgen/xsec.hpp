@@ -352,7 +352,7 @@ class InclusiveKernel {
   static double positivity_margin(const Amplitudes& a);
 
   const NuclearF2& nuclear_f2() const { return nf2_; }
-  const PolSF& g1_model() const { return *g1_model_; }
+  const PolSF& g1_model() const { return *g1_model_; }  ///< A3 (2026-11-03): a `PositivityClippedG1` around the backend
 
  private:
   double g1a(double x, double q2) const;

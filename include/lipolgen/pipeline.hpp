@@ -1797,6 +1797,31 @@ struct InclusivePolarizationFactors {
 };
 InclusivePolarizationFactors inclusive_polarization_factors(const Pipeline& p);
 
+// A3 (2026-11-03; DECISIONS.md A3, the supervisor's choice under the author's
+// delegation): how much of ONE run's rate the positivity clip |g1| <= F1
+// (sf.hpp, `PositivityClippedG1`) acts on.  DEFINED before it was measured
+// (docs/open_items/run_2026-11-03/phase_P2_positivity.md sec. 1): over the
+// run's accepted cells c, with w_c = `Pipeline::cell_rate_weights_pb()` (the
+// spin-averaged cell cross section, the channel's own rate),
+//   fraction = sum_{c: the clip binds on a nucleon species read} w_c / sum_c w_c,
+// "binds" being |g1_N| > F1_N of the backend at the cell centre for a species
+// N (p, n) the kernel's DIS target carries with a non-zero polarization --
+// the same test the clip makes; plus the largest UNCLIPPED |A1_N| = |g1_N| / F1_N
+// met over those cells per species.  Where g1 is not read (`pol_sf_is_read`
+// false: the coherent channel, every plan at lam_e P_e = 0) the clip changes
+// nothing and the fraction is NaN, "not read".  `meta` (python/bindings.cpp)
+// and the CLI banner both read it; nothing else does.
+struct G1PositivityClip {
+  /// `meta["g1_clipped_rate_fraction"]`: the share above (NaN = g1 not read).
+  double fraction = NAN;  // <cmath>
+  /// Largest unclipped |A1| per species over the cells (NaN = species not read).
+  double max_unclipped_a1p = NAN;  // <cmath>
+  double max_unclipped_a1n = NAN;  // <cmath>
+  /// The banner sentence (one line).
+  std::string report;
+};
+G1PositivityClip g1_positivity_clip(const Pipeline& p);
+
 }  // namespace lipolgen
 
 #endif  // LIPOLGEN_PIPELINE_HPP

@@ -159,7 +159,7 @@ p.for_each([](const Event& ev) {
 });
 ```
 
-The cos 2φ term carries Jaffe–Manohar's normalisation of Δ since 2026-10-27 (decision D4; `docs/CONVENTIONS.md`, "Δ normalisation"): on a tilted fill its Δ-induced amplitude is half the pre-D4 one for the same Δ.  The `meta` of `Pipeline.generate()` names the convention in `meta["delta_convention"]`, and so does every .npz the CLI writes (whose run banner prints the same string); a HepMC3 file, which is what the C++ examples write, carries no record of it.  Record: beam e⁻, beam ion, e′, struck nucleon (status 3), γ\* (status 3),
+The cos 2φ term carries Jaffe–Manohar's normalisation of Δ since 2026-10-27 (decision D4; `docs/CONVENTIONS.md`, "Δ normalisation"): on a tilted fill its Δ-induced amplitude is half the pre-D4 one for the same Δ.  The `meta` of `Pipeline.generate()` names the convention in `meta["delta_convention"]`, and so does every .npz the CLI writes (whose run banner prints the same string); a HepMC3 file, which is what the C++ examples write, carries no record of it.  Since A3 (2026-11-03) every kernel clips g₁ to ±F₁ per nucleon (`PositivityClippedG1`, bit for bit where it does not bind) and `meta["g1_clipped_rate_fraction"]` records the share of the run's rate where it binds (NaN where g₁ is not read); the banner prints it as "g1 positivity clip (A3, |g1| <= F1 per nucleon): binds on … % of the rate (max unclipped A1^p = …, A1^n = …)".  Record: beam e⁻, beam ion, e′, struck nucleon (status 3), γ\* (status 3),
 X (pdg 92). The balance is **per-nucleon**, `k + P_N = k' + X`, exactly as
 `generator.hpp` defines it — the (A−1) remnant is not written, so the
 whole-nucleus balance and the total charge are deliberately open here. This path
@@ -627,7 +627,7 @@ phi-averaged density"*. Use `--x-max 0.95` (or `cfg.scenario.x_max = 0.95`).
 `lipolgen-run` now checks this **before** building the pipeline and says which
 flag fixes it, rather than letting that message — which names neither `--x-max`
 nor the CDKS table — come out of the sampler three frames down.
-`miller`'s b₁ is a ratio model (1.156 at the same point since A1, 1.085 before; 0.145 on the toy) and does not need it under `tensor-thirds` — but since A1 the default inclusive ⁶Li `--plan helicity-flip` (P_z 0.7, P_e 0.7) IS refused at that cell (1 + w_avg = −0.0185: vector −0.2578, rank-2 −0.7607; +0.04 before A1), so that plan needs `--x-max 0.95` too.
+`miller`'s b₁ is a ratio model (1.156 at the same point since A1, 1.085 before; 0.145 on the toy) and does not need it under `tensor-thirds` — from A1 until A3 the default inclusive ⁶Li `--plan helicity-flip` (P_z 0.7, P_e 0.7) was refused at that cell (1 + w_avg = −0.0185: vector −0.2578, rank-2 −0.7607); A3's |g₁| ≤ F₁ clip (2026-11-03; the nucleon A₁ⁿ there is 4.4 unclipped) takes the vector part to −0.1183 and it builds at 1.0 (worst cell +0.1210, measured 2026-11-06).
 Those three figures are MEASURED off the shipped kernel (re-measured
 2026-09-16, and 2026-10-29 for D7 — CT18NLO's F₁ is ×0.134 of ToyF2's there) and are defined once, in `python/lipolgen/cli.py`'s
 `B1_TOP_CELL_B1_OVER_F1`, which the `--x-max` help and the `--b1-model`
@@ -953,7 +953,7 @@ isoscalar ⁶Li the proton term dominates the sum and this mostly hides; on a
 `NEUTRON_TARGET`) it does not. That is the single strongest reason `--pol-sf`
 exists.
 
-#### …and on that channel the pair needs `--x-max 0.95`
+#### …and on that channel the pair needed `--x-max 0.95` (until A3)
 
 ```
 lipolgen-run --isotope d --channel tagged-d-p --plan helicity-flip \
@@ -961,8 +961,8 @@ lipolgen-run --isotope d --channel tagged-d-p --plan helicity-flip \
              --x-max 0.95
 ```
 
-Without `--x-max 0.95` that command — the A_∥ measurement on a free neutron,
-at the CLI's own default `--pe 0.7` — is **refused at configuration time**,
+Until A3 (2026-11-03), without `--x-max 0.95` that command — the A_∥ measurement on a free neutron,
+at the CLI's own default `--pe 0.7` — was **refused at configuration time**,
 before an event is drawn. It is not a bug in either backend; it is what the
 two of them do together at the top of the shipped window. Measured on
 2026-09-05 in the cell the sampler names, x = 0.954993, Q² = 1119.1, on the
@@ -983,8 +983,8 @@ phi-averaged density 1 + w_avg is then negative and `InclusiveSampler` refuses
 the run rather than draw max(W, 0), which would dilute the modulation *and*
 skew the (x, Q²) mixture.
 
-There is **no clamp**, and there will not be one: clamping g₁ or the density
-is a physics change, and a silent one. What the refusal does instead is name
+There is **no clamp of the density** (max(W, 0) would be a silent physics change);
+g₁ itself IS clipped to ±F₁ per nucleon since A3 (2026-11-03), visibly (meta, banner). What the refusal does instead is name
 the cell, the A₁ that made it negative, and the cure —
 
 ```
@@ -1001,7 +1001,7 @@ error, not a traceback** (the `PythiaBridge` rule: show the message the model
 wrote). `--pe 0` also removes it, because w_avg scales with P_e·P_z; so does
 either backend alone. It is the same class of refusal `--b1-model
 cdks|li6-convolution` already carries in the *tensor* sector (§2a, "The top x
-cell"), in the vector sector and on a different channel. **The refusal is the visible half** (stated 2026-11-03, the run's verification): at LO the shipped pair breaks |A₁| ≤ 1 from x ≳ 0.83 on the free neutron and from x ≳ 0.87 on the deuteron and the proton (A₁ⁿ 1.46 at x = 0.871, Q² = 10), so `--x-max 0.95` prevents the refusal but **not the violation**: the x = 0.871 cell still generates with |A₁| > 1 on `tagged-d-p` and the inclusive deuteron (the LO development item, `docs/open_items/run_2026-10-27/DECISIONS.md` D7).
+cell"), in the vector sector and on a different channel. **Since A3 (2026-11-03) this pair builds at x_max 1.0** (g₁ⁿ clipped to F₁ⁿ; `meta["g1_clipped_rate_fraction"]` 2.09e−7 at config 1; the banner prints it). **The refusal was the visible half** (stated 2026-11-03, the run's verification): at LO the shipped pair breaks |A₁| ≤ 1 from x ≳ 0.83 on the free neutron and from x ≳ 0.87 on the deuteron and the proton (A₁ⁿ 1.46 at x = 0.871, Q² = 10), so `--x-max 0.95` prevented the refusal but **not the violation**: the x = 0.871 cell generated with |A₁| > 1 on `tagged-d-p` and the inclusive deuteron until A3 clipped g₁ (the NLO coefficient functions stay the LO development item, `docs/open_items/run_2026-10-27/DECISIONS.md` D7).
 
 ### The grid clause — the shipped `ct18nlo` runs 39 % of the window on its FROZEN edge
 
@@ -1080,8 +1080,8 @@ channel, nor under an unpolarised-beam plan" above.
 Also not refused: the struck-neutron (`tagged-d-p`) `ct18nlo`/`mstw` + `nnpdfpol` pair. That
 one is refused by the **sampler**, not by `validate()`, and only where it
 actually fails — the acceptance window's top cell — with the cell and
-`--x-max` in the message. See "…and on that channel the pair needs
-`--x-max 0.95`" above.
+`--x-max` in the message (until A3, 2026-11-03; it builds since). See "…and on that channel the pair needed
+`--x-max 0.95` (until A3)" above.
 
 ### Scope, and the three things this does not cover
 
@@ -3054,9 +3054,9 @@ sampler's positivity check (`InclusiveSampler`) refuses a cell whose
 φ-averaged density would go negative, names the cell, splits w_avg into its
 VECTOR (P_e P_z D(y) A₁) and RANK-2 parts, and computes the `--x-max` below
 which the run builds. Measured on the 66 isotope × configuration × channel ×
-plan runs at x_max 1.0: the toy refuses none; the default refuses six, all
+plan runs at x_max 1.0: the toy refuses none; the default refused six (D7, 2026-10-29), all
 `helicity-flip` at the CLI's P_e 0.7, all at x = 0.955, all cured by
-`--x-max 0.95`:
+`--x-max 0.95` — **since A3 (2026-11-03) only the d inclusive configs 0 and 1 are refused** (re-measured 2026-11-06: the rank-2 term on top of the vector one at the clipped A₁ = 0.9136; worst cell 1 + w_avg −0.2275 / −0.1410, rank-2 −0.5911 / −0.7607), the other four build:
 
 | run | cell Q² | 1 + w_avg | vector part (A₁) | rank-2 part |
 |---|---|---|---|---|
@@ -3072,7 +3072,7 @@ place of NNPDFpol1.1 (`--pol-sf toy`) configs 0 and 1 are still refused, but
 at a different cell where the RANK-2 term dominates (Q² = 594 / 1707,
 A₁ = 0.845, 1 + w_avg = −0.04631 / −0.007475) and config 2 builds; with the toy
 F₂ (`--unpol-sf toy --pol-sf nnpdfpol`) all three build. The tagged rows are
-the vector term alone (the struck neutron's g₁/F₁ reaches 4.4 on the pair). **The cure removes negative densities, not unphysical asymmetries** (2026-11-03): at LO the pair breaks |A₁| ≤ 1 from x ≳ 0.83 (free neutron) and x ≳ 0.87 (deuteron, proton), so at `--x-max 0.95` the x = 0.871 cell of the d inclusive and `tagged-d-p` runs still generates with |A₁| > 1 — filed under the LO development item (`docs/open_items/run_2026-10-27/DECISIONS.md` D7).
+the vector term alone (the struck neutron's g₁/F₁ reaches 4.4 on the pair, clipped to 1 since A3). **The cure removed negative densities, not unphysical asymmetries** (2026-11-03, before A3's clip): at LO the pair breaks |A₁| ≤ 1 from x ≳ 0.83 (free neutron) and x ≳ 0.87 (deuteron, proton), so at `--x-max 0.95` the x = 0.871 cell of the d inclusive and `tagged-d-p` runs still generates with |A₁| > 1 — filed under the LO development item (`docs/open_items/run_2026-10-27/DECISIONS.md` D7).
 Three more recipes change at the default:
 
 * **the mandatory b₁ band's ×2 row** (`--b1-band-scale 2` on `cdks` or

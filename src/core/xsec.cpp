@@ -77,9 +77,9 @@ InclusiveKernel::InclusiveKernel(Ion ion, Options options)
       target_mass_(options.target_mass),
       tensor_gamma_(options.tensor_gamma),
       g2_npts_(options.g2_npts) {
-  if (!g1_model_) {
-    g1_model_ = std::make_shared<const ToyG1>(nf2_.base(), options.r_func);
-  }
+  if (const auto c = std::dynamic_pointer_cast<const PositivityClippedG1>(g1_model_)) g1_model_ = c->inner();  // A3 (2026-11-03): one clip, never two;
+  if (!g1_model_) g1_model_ = std::make_shared<const ToyG1>(nf2_.base(), options.r_func);
+  g1_model_ = std::make_shared<const PositivityClippedG1>(g1_model_, nf2_.base(), options.r_func);  // |g1| <= F1 per nucleon on THIS kernel's F1 (sf.hpp)
   // `target_mass = true` with `G2Mode::kZero` is NOT refused (xsec.py:126-129):
   // g2 is filled with zeros and the finite-gamma kernel runs on them, which is
   // exactly the g2_scale = 0 twist-3 variation.

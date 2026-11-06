@@ -430,3 +430,47 @@ TEST_CASE("TensorSF backends adapt to the kernel's callable slots") {
   CHECK_CLOSE(li6.b1(0.1, 4.0, 1.0),
               b1_li6_from_deuteron(toy_b1(0.1, 4.0, 1.0)), kRtol);
 }
+
+// A3 (2026-11-03; DECISIONS.md A3, the supervisor's choice under the author's
+// delegation): |g1| <= F1 per nucleon, on the kernel's own F1.
+namespace {
+class TimesG1 : public PolSF {  // ToyG1 scaled: breaks the bound where k A1 > 1
+ public:
+  explicit TimesG1(double k) : k_(k) {}
+  double g1p(double x, double q2) const override { return k_ * toy_.g1p(x, q2); }
+  double g1n(double x, double q2) const override { return k_ * toy_.g1n(x, q2); }
+ private:
+  ToyG1 toy_;
+  double k_;
+};
+}  // namespace
+
+TEST_CASE("A3: the positivity clip is the identity on the toy and +-F1 where it binds") {
+  const auto f2 = std::make_shared<const ToyF2>();
+  const auto toy = std::make_shared<const ToyG1>(f2);
+  const PositivityClippedG1 c(toy, f2);
+  for (double x : {1e-4, 0.01, 0.1, 0.3, 0.5, 0.8, 0.9, 0.955, 0.99}) {
+    for (double q2 : {1.0, 10.0, 1000.0}) {
+      CHECK(c.g1p(x, q2) == toy->g1p(x, q2));   // bit for bit: never binds
+      CHECK(c.g1n(x, q2) == toy->g1n(x, q2));
+      CHECK(c.g2p(x, q2) == toy->g2p(x, q2));
+      CHECK(c.g1_nucleus(LI6(), x, q2) == toy->g1_nucleus(LI6(), x, q2));
+    }
+  }
+  const auto big = std::make_shared<const TimesG1>(3.0);
+  const PositivityClippedG1 k(big, f2);
+  int bound = 0;
+  for (double x : {0.1, 0.3, 0.5, 0.8, 0.955}) {
+    const double q2 = 10.0;
+    const double gp = big->g1p(x, q2), fp = k.f1p(x, q2);
+    CHECK(fp == f2->f1p(x, q2));
+    if (std::fabs(gp) > fp) { CHECK(k.g1p(x, q2) == std::copysign(fp, gp)); ++bound; }
+    else CHECK(k.g1p(x, q2) == gp);
+    CHECK(std::fabs(k.g1n(x, q2)) <= k.f1n(x, q2));
+    // g1_nucleus and the WW g2 read the CLIPPED g1
+    const Ion& d = DEUTERON();
+    CHECK(k.g1_nucleus(d, x, q2) == d.Z * d.eff_pol_p * k.g1p(x, q2) + d.N() * d.eff_pol_n * k.g1n(x, q2));
+    CHECK(k.g2p(x, q2) == g2_ww([&k](double u, double qq) { return k.g1p(u, qq); }, x, q2));
+  }
+  CHECK(bound >= 2);  // x = 0.5 (A1p 1.85) and above
+}

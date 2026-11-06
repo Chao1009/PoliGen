@@ -536,7 +536,7 @@ def test_meta_records_both_backends_on_every_channel(channel):
     if channel == "inclusive":
         hf = lg.helicity_flip_plan(1.0, 0.7, 0.7)
         assert _l.pol_sf_is_read(cfg, hf)
-        read = _l.Pipeline(_x95(_cfg(channel)), hf).generate(1, True)["meta"]   # A1: see _x95
+        read = _l.Pipeline(_cfg(channel), hf).generate(1, True)["meta"]  # A3 (2026-11-03): the shipped window again (the supervisor's correction of 2026-11-06 under A1)
         assert read["pol_sf"] == "nnpdfpol" and read["pol_sf_extrapolation"] == "nearest"
         assert read["pol_sf_grid_q2_min"] == pytest.approx(1.0, rel=1e-12)
         assert read["pol_sf_below_grid_frac"] == 0.0    # no shipped cell under Q2 = 1
@@ -940,21 +940,28 @@ def _dp_plan():
 
 
 @needs_lhapdf
-def test_the_neutron_tagged_pair_is_refused_with_the_cell_and_the_cure():
+def test_the_neutron_tagged_pair_builds_since_a3_and_a_survivor_names_the_cell_and_the_cure():
+    # A3 / A4 (2026-11-03): the struck neutron's g1 is clipped to +-F1, so the
+    # pair BUILDS at x_max 1.0 (it was refused: A1 = 4.406, 1 + w_avg = -0.02414)
+    # and records the clip; the refusal is re-taken on a run it still catches,
+    # the inclusive deuteron at config 1 (the rank-2 term at the clipped A1).
+    p = _l.Pipeline(_cfg("tagged-d-p", unpol_sf="ct18nlo", pol_sf="nnpdfpol"), _dp_plan())
+    c = _l.g1_positivity_clip(p)
+    assert c["g1_clipped_rate_fraction"] == pytest.approx(2.0924992e-07, rel=1e-6)
+    assert c["max_unclipped_a1n"] == pytest.approx(4.436, abs=1e-3) and np.isnan(c["max_unclipped_a1p"])
     with pytest.raises(RuntimeError) as e:
-        _l.Pipeline(_cfg("tagged-d-p", unpol_sf="ct18nlo",
-                         pol_sf="nnpdfpol"), _dp_plan())
+        _l.Pipeline(_cfg("inclusive", isotope="d"), _dp_plan())
     msg = str(e.value)
-    assert "x = 0.955" in msg                 # the cell
-    assert "--x-max" in msg                   # the cure, by flag name
-    assert "A1 = g1/F1 is 4.406" in msg       # why: the measured ratio
-    assert "1 + w_avg = -0.02414" in msg
+    assert "x = 0.955" in msg and "--x-max" in msg   # the cell; the cure, by flag name
+    assert "A1 = g1/F1 is 0.9136" in msg and "1 + w_avg = -0.02078" in msg  # the clipped A1 = eff_pol
+    assert "-0.7189 from the RANK-2 term" in msg
 
 
 @needs_lhapdf
-def test_x_max_095_cures_it_and_each_backend_alone_never_needed_it():
-    """The refusal is a property of the PAIR, which is what makes it worth a
-    message: either backend alone builds on the same plan."""
+def test_x_max_095_and_each_backend_alone_build_and_since_a3_so_does_the_pair():
+    """The refusal WAS a property of the PAIR (|A1| > 1 on the struck neutron);
+    A3 (2026-11-03) clips g1 to +-F1 per nucleon, so the default pair builds at
+    x_max 1.0 too (A4), and so does every pairing and the 0.95 window."""
     cfg = _cfg("tagged-d-p", unpol_sf="ct18nlo", pol_sf="nnpdfpol")
     sc = cfg.scenario
     sc.x_max = 0.95
@@ -965,9 +972,9 @@ def test_x_max_095_cures_it_and_each_backend_alone_never_needed_it():
     for kw in (dict(unpol_sf="toy", pol_sf="toy"), dict(pol_sf="toy"),
                dict(unpol_sf="toy")):
         assert _l.Pipeline(_cfg("tagged-d-p", **kw), _dp_plan()).sigma_pb() > 0
-    with pytest.raises(RuntimeError):         # ... and the DEFAULT is the pair
-        _l.Pipeline(_cfg("tagged-d-p"), _dp_plan())
-    # ... and P_e = 0 removes it too, because w_avg scales with P_e P_z
+    # ... and the DEFAULT, the pair: refused until A3 (2026-11-03), builds now
+    assert _l.Pipeline(_cfg("tagged-d-p"), _dp_plan()).sigma_pb() > 0.0
+    # ... and P_e = 0 builds, as before
     assert _l.Pipeline(_cfg("tagged-d-p", unpol_sf="ct18nlo",
                             pol_sf="nnpdfpol"),
                        lg.helicity_flip_plan(1.0, 0.7, 0.0)).sigma_pb() > 0
@@ -977,8 +984,9 @@ def test_x_max_095_cures_it_and_each_backend_alone_never_needed_it():
 def test_the_cli_reports_it_as_a_configuration_error_not_a_traceback():
     """`lipolgen-run` used to exit 1 through a Python traceback out of
     `_l.Pipeline`.  A configuration refusal is a SystemExit carrying the
-    message the sampler wrote -- the `PythiaBridge` clause's rule."""
-    argv = ["--isotope", "d", "--channel", "tagged-d-p", "--events", "10",
+    message the sampler wrote -- the `PythiaBridge` clause's rule.  A3
+    (2026-11-03): taken on the inclusive deuteron, which A3 still refuses."""
+    argv = ["--isotope", "d", "--channel", "inclusive", "--events", "10",
             "--unpol-sf", "ct18nlo", "--pol-sf", "nnpdfpol",
             "--plan", "helicity-flip", "--pz", "0.7", "--pe", "0.7",
             "--quiet"]
@@ -1063,14 +1071,3 @@ def test_a_grid_selector_refuses_any_object_but_the_shipped_one(channel):
     _l.attach_shipped_sf_backends(s)
     s.validate()
     assert _l.Pipeline(s, _plan()).sigma_pb() == SIGMA_D7[channel]
-
-
-def _x95(cfg):
-    """A1 (2026-11-03): the default inclusive 6Li helicity-flip fill (P_z =
-    P_e = 0.7) is refused since A1 at the window's top cell (x = 0.955,
-    1 + w_avg = -0.0185; DECISIONS A4 keeps that refusal), so the run that
-    reads g1 here stops at x_max = 0.95 -- the cure the refusal names."""
-    sc = cfg.scenario
-    sc.x_max = 0.95
-    cfg.scenario = sc
-    return cfg

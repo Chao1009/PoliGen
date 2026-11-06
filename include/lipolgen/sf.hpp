@@ -552,6 +552,39 @@ DeltaModel make_moment_b(const std::string& variant = "mid_x",
                          double c_moment = C_BAG, double dilution = 1.0,
                          std::function<double(double)> alphas = nullptr);
 
+/// A3 (2026-11-03; DECISIONS.md, the supervisor's choice under the author's
+/// delegation): the positivity bound |g1| <= F1, enforced where the NUCLEON
+/// structure functions are evaluated, per species, for every backend.  It
+/// wraps the backend a kernel reads (toy, grid or custom alike) and returns
+/// g1p / g1n clipped to +-F1 of THAT nucleon, F1 = F2 / (2 x (1 + R)) on the
+/// kernel's own UnpolSF (frozen at the grid edges as D7 left it) and the
+/// kernel's own R, so the bound is the F1 the rate uses.  `g1_nucleus` and
+/// the Wandzura-Wilczek g2 are `PolSF`'s, built on these clipped g1p / g1n.
+/// Where the bound does not bind the inner value is returned AS IS (bit for
+/// bit: `ToyG1` on the kernel's base, |A1| <= 1, never binds); a NaN passes
+/// through.  `InclusiveKernel` installs it on every kernel (xsec.cpp); the
+/// share of a run's rate where it binds is `meta["g1_clipped_rate_fraction"]`
+/// (pipeline.hpp, `G1PositivityClip`).  At LO the shipped pair breaks the
+/// bound from x ~ 0.83 (neutron) and ~ 0.87 (proton, deuteron).
+class PositivityClippedG1 : public PolSF {
+ public:
+  PositivityClippedG1(std::shared_ptr<const PolSF> inner,
+                      std::shared_ptr<const UnpolSF> base, RFunc r_func = nullptr);
+  double g1p(double x, double q2) const override;
+  double g1n(double x, double q2) const override;
+  /// The bound itself: F1 of the nucleon on the base and R above.
+  double f1p(double x, double q2) const;
+  double f1n(double x, double q2) const;
+  /// The unclipped backend.
+  const std::shared_ptr<const PolSF>& inner() const { return inner_; }
+  const std::shared_ptr<const UnpolSF>& base() const { return base_; }
+
+ private:
+  std::shared_ptr<const PolSF> inner_;
+  std::shared_ptr<const UnpolSF> base_;
+  RFunc r_func_;
+};
+
 }  // namespace lipolgen
 
 #endif  // LIPOLGEN_SF_HPP

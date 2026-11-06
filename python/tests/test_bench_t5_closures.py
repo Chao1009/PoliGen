@@ -340,10 +340,10 @@ def test_wu_row_passes_and_verdict_follows(wu_rep, wu_mod):
     # 89.167357, err_w 0.051588, pull 0.359, sigma_cat 89.167123, unpol 87.873873.
     assert (wu_rep["n_unweighted"], wu_rep["n_weighted"]) == (2714846, 2669772)  # A1 (2026-11-03): was 2712940
     assert wu_rep["sigma_u"] == pytest.approx(79.848412, rel=1e-8)   # A1: was 79.792353
-    assert wu_rep["sigma_w"] == pytest.approx(79.823733, rel=1e-8)   # A1: was 79.767651
+    assert wu_rep["sigma_w"] == pytest.approx(79.823731, rel=1e-8)   # A1: was 79.767651; A3 (2026-11-03): 79.823733 -> 79.823731, the WW g2 integral reads the clipped g1 above x ~ 0.83
     assert wu_rep["err_w"] == pytest.approx(0.0488548, rel=1e-5)     # A1: was 0.0488204
     assert wu_rep["pull"] == pytest.approx(0.359, abs=2e-3)          # A1: 0.3586
-    assert wu_rep["sigma_cat_pb"] == pytest.approx(79.823531, rel=1e-8)   # A1: was 79.767466
+    assert wu_rep["sigma_cat_pb"] == pytest.approx(79.823529, rel=1e-8)   # A1: was 79.767466; A3 (2026-11-03): was 79.823531, same reason
     assert wu_rep["sigma_unpol_pb"] == pytest.approx(78.522871, rel=1e-8)
 
 

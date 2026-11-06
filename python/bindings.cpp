@@ -691,7 +691,7 @@ py::dict columns_to_dict(Columns& c, const Pipeline& p, std::uint64_t n,
   const std::pair<double, double> grid = unpol_sf_grid_report(p);
   meta["unpol_sf_grid_q2_min"] = grid.first;
   meta["unpol_sf_below_grid_frac"] = grid.second;
-  for (const auto& kv : sf_grid_extras(p, knob("pol_sf"))) meta[kv.first] = kv.second;  for (const auto& kv : inclusive_polarization_factors(p).meta()) meta[py::str(kv.first)] = kv.second;  // D7; F7: pol keys only where g1 ran; A1 (2026-11-03): the three inclusive polarization factors used, where read
+  for (const auto& kv : sf_grid_extras(p, knob("pol_sf"))) meta[kv.first] = kv.second;  for (const auto& kv : inclusive_polarization_factors(p).meta()) meta[py::str(kv.first)] = kv.second;  meta["g1_clipped_rate_fraction"] = g1_positivity_clip(p).fraction;  // D7; F7: pol keys only where g1 ran; A1 (2026-11-03): the three inclusive polarization factors used, where read; A3 (2026-11-03): the rate share the |g1| <= F1 clip binds on (NaN where g1 is not read)
   // fsi.hpp -- CONDITIONAL, following the `rc` precedent below rather than
   // the unconditional `b1` one, so an `--fsi off` npz carries exactly
   // today's key set and no reference gate moves.  Measured on the three runs
@@ -5220,6 +5220,27 @@ static void bind_io(py::module_& m) {
      "li6_cluster_polarization / deuteron_p_d / li6_b1_rank2_transfer, each "
      "only where read and known -- and the banner sentence ('report'; empty "
      "off the inclusive channel and on an inclusive run that reads none).");
+  // A3 (2026-11-03): the positivity clip |g1| <= F1 (sf.hpp PositivityClippedG1).
+  py::class_<PositivityClippedG1, PolSF, std::shared_ptr<PositivityClippedG1>>(m, "PositivityClippedG1")
+      .def(py::init([](std::shared_ptr<PolSF> inner, std::shared_ptr<UnpolSF> base, RFunc r) {
+             return std::make_shared<PositivityClippedG1>(std::move(inner), std::move(base), std::move(r));
+           }), py::arg("inner"), py::arg("base") = nullptr, py::arg("r_func") = nullptr)
+      .def("f1p", &PositivityClippedG1::f1p, py::arg("x"), py::arg("q2"))
+      .def("f1n", &PositivityClippedG1::f1n, py::arg("x"), py::arg("q2"))
+      .def_property_readonly("inner", [](const PositivityClippedG1& c) {
+             return std::const_pointer_cast<PolSF>(c.inner()); });
+  m.def("g1_positivity_clip", [](const Pipeline& p) {
+    const G1PositivityClip c = g1_positivity_clip(p);
+    py::dict d;
+    d["g1_clipped_rate_fraction"] = c.fraction;
+    d["max_unclipped_a1p"] = c.max_unclipped_a1p;
+    d["max_unclipped_a1n"] = c.max_unclipped_a1n;
+    d["report"] = c.report;
+    return d;
+  }, py::arg("pipeline"),
+     "A3: the share of THIS run's rate the |g1| <= F1 clip binds on "
+     "(meta['g1_clipped_rate_fraction']; NaN where g1 is not read), the largest "
+     "unclipped |A1| per species read (NaN where not read) and the banner sentence.");
 #if LIPOLGEN_HAVE_LHAPDF
   m.attr("LHAPDF_EXTRAPOLATOR") = std::string(LHAPDF_EXTRAPOLATOR);
   m.attr("LHAPDF_INTERPOLATOR") = std::string(LHAPDF_INTERPOLATOR);

@@ -3991,4 +3991,54 @@ InclusivePolarizationFactors inclusive_polarization_factors(const Pipeline& p) {
   return f;
 }
 
+// A3 (2026-11-03): the share of THIS run's rate the positivity clip acts on
+// (pipeline.hpp, `G1PositivityClip`, where the definition is written).
+G1PositivityClip g1_positivity_clip(const Pipeline& p) {
+  G1PositivityClip c;
+  if (!pol_sf_is_read(p.config(), p.plan())) {
+    c.report = "g1 not read on this run (the clip changes nothing)";
+    return c;
+  }
+  const InclusiveKernel& k = p.dis_sampler().kernel();
+  const auto* clip = dynamic_cast<const PositivityClippedG1*>(&k.g1_model());
+  if (clip == nullptr) {  // every InclusiveKernel installs it (xsec.cpp)
+    c.report = "no positivity clip on this kernel";
+    return c;
+  }
+  const Ion& ion = k.ion();
+  const bool rp = ion.Z > 0 && ion.eff_pol_p != 0.0;
+  const bool rn = ion.N() > 0 && ion.eff_pol_n != 0.0;
+  const PolSF& in = *clip->inner();
+  const std::vector<double>& w = p.cell_rate_weights_pb();
+  const std::vector<double>& xc = p.dis_sampler().x_cells();
+  const std::vector<double>& qc = p.dis_sampler().q2_cells();
+  double tot = 0.0, bound = 0.0, mp = 0.0, mn = 0.0;
+  for (std::size_t i = 0; i < w.size() && i < xc.size(); ++i) {
+    tot += w[i];
+    bool binds = false;
+    if (rp) {
+      const double g = in.g1p(xc[i], qc[i]), f = clip->f1p(xc[i], qc[i]);
+      binds = binds || std::fabs(g) > (f > 0.0 ? f : 0.0);
+      if (f > 0.0) mp = std::max(mp, std::fabs(g) / f);
+    }
+    if (rn) {
+      const double g = in.g1n(xc[i], qc[i]), f = clip->f1n(xc[i], qc[i]);
+      binds = binds || std::fabs(g) > (f > 0.0 ? f : 0.0);
+      if (f > 0.0) mn = std::max(mn, std::fabs(g) / f);
+    }
+    if (binds) bound += w[i];
+  }
+  c.fraction = tot > 0.0 ? bound / tot : NAN;
+  if (rp) c.max_unclipped_a1p = mp;
+  if (rn) c.max_unclipped_a1n = mn;
+  char buf[256];
+  std::snprintf(buf, sizeof(buf), "binds on %.4g %% of the rate (max unclipped", 100.0 * c.fraction);
+  std::string s = buf;
+  if (rp) { std::snprintf(buf, sizeof(buf), " A1^p = %.4g", mp); s += buf; }
+  if (rp && rn) s += ",";
+  if (rn) { std::snprintf(buf, sizeof(buf), " A1^n = %.4g", mn); s += buf; }
+  c.report = s + ")";
+  return c;
+}
+
 }  // namespace lipolgen

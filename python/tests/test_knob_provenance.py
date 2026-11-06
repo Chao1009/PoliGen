@@ -84,10 +84,10 @@ needs_pythia = pytest.mark.skipif(
 
 class Spec:
     def __init__(self, tag, isotope, channel, plan_name, j,
-                 pz=0.7, pzz=0.6, pe=0.7, full=True, x_max=None):  # x_max: A1
+                 pz=0.7, pzz=0.6, pe=0.7, full=True):  # A3 (2026-11-03): P1's x_max field removed (the supervisor's correction of 2026-11-06 under A1)
         self.tag, self.isotope, self.channel = tag, isotope, channel
         self.plan_name, self.j = plan_name, j
-        self.pz, self.pzz, self.pe, self.full, self.x_max = pz, pzz, pe, full, x_max
+        self.pz, self.pzz, self.pe, self.full = pz, pzz, pe, full
 
     def plan(self, pz=None, pzz=None, pe=None, rel=0.0, pzz_mode="ladder"):
         return lg.make_plan(self.plan_name, j=self.j,
@@ -122,7 +122,7 @@ SPECS = [
     # --pe 0 carries lam_e != 0 with lam_e * P_e == 0, which is the case that
     # separates the `pe` rule from the `pol_sf` one.
     Spec("inclusive-6Li/helicity-flip", "6Li", "inclusive", "helicity-flip",
-         1.0, full=False, x_max=0.95),   # A1 (2026-11-03): see _spec_x_max
+         1.0, full=False),   # A3 (2026-11-03): the shipped window again (it builds since A3)
     Spec("inclusive-6Li/transverse-tensor", "6Li", "inclusive",
          "transverse-tensor", 1.0, full=False),
     Spec("inclusive-6Li/tensor-flip", "6Li", "inclusive", "tensor-flip", 1.0,
@@ -506,7 +506,7 @@ def _run(spec, kw, post, plan_kw):
     args.update(kw)
     if args.get("rc_tail_model") == TPK: args["rc_tail_model"] = "t-peak" if spec.channel == "inclusive" else None
     try:
-        cfg = _spec_x_max(spec, lg.make_config(**args))
+        cfg = lg.make_config(**args)
         if post:
             post(cfg)
         cfg.validate()
@@ -975,19 +975,3 @@ def test_an_explicit_default_on_an_unread_knob_is_handled_three_ways():
     row = [r for r in _l.Pipeline(cfg, plan).knob_provenance()
            if r.name == "pol_sf"][0]
     assert row.status == _l.KnobStatus.NotRead
-
-
-def _spec_x_max(spec, cfg):
-    """A1 (2026-11-03; DECISIONS.md A1).  Since A1 the inclusive 6Li
-    `helicity-flip` fill at P_z = P_e = 0.7 is REFUSED at the shipped window's
-    top cell (x = 0.955, Q2 = 1897: 1 + w_avg = -0.0185, the vector term
-    -0.2578 and the rank-2 -0.7607; positive before A1), the positivity refusal
-    DECISIONS A4 keeps -- so this spec's BASE no longer ran and its 12 cells
-    skipped.  The spec measures the PLAN axis, not that cell, so it runs at
-    x_max = 0.95 (the cure the refusal names); a variant that sets x_max
-    itself overrides this, and every other spec is untouched."""
-    if spec.x_max is not None:
-        sc = cfg.scenario
-        sc.x_max = spec.x_max
-        cfg.scenario = sc
-    return cfg

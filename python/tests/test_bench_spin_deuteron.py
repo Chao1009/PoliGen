@@ -221,7 +221,7 @@ def hermes_rep():
 HERMES_CHI2 = {
     "cdks_conv_mstw": (22.264, 22.009),
     "cdks_conv_default": (22.669, 22.392),
-    "miller_shipped": (5.262, 5.550),
+    "miller_shipped": (5.262, 7.308),   # A5 (2026-11-03): the headline's A_zz on the shipped F1^d, R (5.550 on MSTW/R1990)
     "miller_x1": (5.297, 4.514),
     "cdks_digitized": (21.782, 21.559),
     "null_b1_zero": (21.799, 21.586),
@@ -230,6 +230,15 @@ HERMES_CHI2 = {
 
 def test_hermes_report_row(hermes_rep):
     _report_row(hermes_rep)
+    # A5 (2026-11-03): the headline is the shipped b1 ("cdks_conv_mstw" until then)
+    assert hermes.HEADLINE == hermes_rep["headline"] == "miller_shipped"
+    h = hermes_rep["configs"]["miller_shipped"]
+    assert (h["status"], h["within_b1"], h["within_azz"]) == ("fail", 4, 3)
+    assert h["chi2_azz_mstw_r1990"] == pytest.approx(5.550, rel=1e-3)   # A5: recorded
+    assert h["within_azz_mstw_r1990"] == 4
+    for p in hermes_rep["per_bin"]:                 # A5: the shipped kernel's own F1 is
+        assert p["f1d_shipped_kernel"] == pytest.approx(   # F2/(2x(1 + r_sigma_lt))
+            p["f2d_shipped"] / (2.0 * p["x"] * (1.0 + p["r_shipped"])), rel=1e-12)
     assert set(hermes_rep["configs"]) == set(hermes.CONFIGS)
     assert len(hermes_rep["per_bin"]) == 6
 
@@ -301,7 +310,7 @@ def test_hermes_chi2_b1_does_not_depend_on_the_f2_backend(hermes_rep, monkeypatc
     monkeypatch.setattr(hermes, "have_mstw", lambda: (False, "forced by the test"))
     toy = hermes.run(verbose=False)
     assert toy["f2_source"] == "ToyF2"
-    assert toy["headline"] == "cdks_conv_default"
+    assert toy["headline"] == "miller_shipped"   # A5 (2026-11-03): "cdks_conv_default" until then
     assert toy["configs"]["cdks_conv_mstw"] == dict(status="blocked",
                                                     reason="forced by the test")
     for name in hermes.CONFIGS[1:]:

@@ -350,15 +350,15 @@ def test_row_passes_and_the_headline_is_pinned(rep, mod):
                                               rel=1e-7)  # D7 (toy: 0.06444479771 ...); A1 (0.07599861005 ...)
     assert toy["saturation_v6"] == pytest.approx([0.1518111076, 0.181249035,
                                                   0.2043715183], rel=1e-7)  # D7; A1 re-taken
-    assert toy["saturation_tight"] == pytest.approx([0.3206737036, 0.3808336503,
-                                                     0.428129935], rel=1e-7)  # D7
+    assert toy["saturation_tight"] == pytest.approx([0.1603368518, 0.1904168252, 0.2140649675], rel=1e-7) and toy["saturation_tight"] == pytest.approx([abs(m) / b["B_tight"] for m, b in zip(toy["m2"], rep["bound_detail"])], rel=1e-15)  # A6 (2026-11-03): TIGHT = V1 + V2(-), no V6 (D7: 0.3206737036 / 0.3808336503 / 0.428129935 with it)
+    assert toy["saturation_tight_v6"] == pytest.approx([0.3206737036, 0.3808336503, 0.428129935], rel=1e-7) and toy["saturation_tight_v6"] == pytest.approx([mod.PRE_D4_OVER_JM * t for t in toy["saturation_tight"]], rel=1e-15)  # A6: the pre-A6 edge (V6's x2), recorded
     assert toy["saturation_loose"] == pytest.approx([0.03065071918, 0.03656594576,
                                                      0.04121259509], rel=1e-7)  # D7; A1 re-taken
     assert toy["f1ll_critical"] == pytest.approx([-1.901893184, -1.867180292,
                                                   -1.840962823], rel=1e-7)  # D7; A1 re-taken
     assert toy["f1ll_critical_v6"] == pytest.approx([-1.74567078, -1.681104995,
                                                      -1.631431525], rel=1e-7)  # D7; A1 re-taken
-    assert len(toy["m2_numerical_error"]) == 3 and all(math.isfinite(e) and e >= 0 for e in toy["m2_numerical_error"]) and _toy_m2_errors_below(mod, 1e-15)  # D7/F7: grid row recorded, no pass bound
+    assert len(toy["m2_numerical_error"]) == 3 and all(math.isfinite(e) and e >= 0 for e in toy["m2_numerical_error"]) and _toy_m2_errors_below(mod, 1e-15) and toy["m2_error_bound"] == pytest.approx([mod.QUAD_REL_TOL * abs(m) for m in toy["m2"]], rel=1e-15) and all(e <= b for e, b in zip(toy["m2_numerical_error"], toy["m2_error_bound"]))  # D7/F7: the toy integrand's 1e-15 stays; A7 (2026-11-03): the grid row's pass bound is the declared QUAD_REL_TOL x |M2| (chosen after the errors, 2.2-3.7e-10 relative, were seen)
     assert all(t < 1e-12 for t in toy["m2_tail_x_lo"])
 
 
@@ -464,8 +464,8 @@ def test_letter_models_recorded_with_their_own_status(rep):
                                                rel=1e-7)  # A1 re-taken
     assert b["saturation_v6"] == pytest.approx([1.474221876, 1.38911235, 1.347210968],
                                                rel=1e-7)  # A1 re-taken
-    assert a["saturation_tight"] == pytest.approx([3.015591746, 2.932961894, 2.938096266],
-                                                  rel=1e-7)  # D7: EPPS21 frozen below x = 1e-7
+    assert a["saturation_tight"] == pytest.approx([1.507795873, 1.466480947, 1.469048133],
+                                                  rel=1e-7)  # A6 (2026-11-03): no V6 (3.015591746 ... with it; D7: EPPS21 frozen below x = 1e-7)
     assert a["saturation_loose"] == pytest.approx([0.2882370918, 0.2816098983,
                                                    0.2828266884], rel=1e-7)  # A1 re-taken
     assert a["f1ll_critical"] == pytest.approx([-0.5890116819, -0.6202105959,
@@ -636,9 +636,9 @@ def test_plot_writes_a_png(mod, rep, tmp_path):
 # declared on the TOY F1 (ToyF2, analytic: ~1e-19); it stays, unchanged, on that
 # integrand, taken here with the harness's own rule on `letter_kernel()`.  Since
 # D7 the shipped row integrates CT18NLO's F1 (LHAPDF's interpolant, C1 at knots):
-# its error (3.3e-14 / 4.9e-14 / 5.5e-14 seen at D7) is RECORDED, with no test
-# pass bound -- any bound chosen now would be chosen after the value (only the
-# harness's own pre-D7 QUAD_REL_TOL broken-rule applies, at run time).
+# its error (3.3e-14 / 4.9e-14 / 5.5e-14 seen at D7) was RECORDED with no test
+# pass bound until A7 (2026-11-03): the harness's own pre-D7 rule, QUAD_REL_TOL
+# x |M2|, is the grid row's bound since -- chosen after the values were seen.
 def _toy_m2_errors_below(mod, bound):
     k = mod.letter_kernel()
     spec = mod.load_reference()["grid"]["x_integration"]

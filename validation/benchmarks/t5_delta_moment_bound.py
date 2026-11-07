@@ -193,10 +193,10 @@ central number and not the verdict rule):
       reading the tree's (and the letter's) Delta follows is a property of
       the kernel's cos 2phi coefficient and the author's to settle (the
       phase record says what each costs) -- this row records both.
-  S3  the edges follow: TIGHT = V1 + V2(-) + V6 on the smaller of the free
-      and EPPS21 gluon moments; LOOSE = V2(+) + V3 on the larger, with the
-      NNPDF Delta g term only if it widens B.  (First pass: TIGHT without
-      V6, LOOSE with V4; its edge values are in the phase record.)
+  S3  the edges follow: TIGHT = V1 + V2(-) (+ V6 until A6 (2026-11-03): the
+      D4 note) on the smaller of the free and EPPS21 gluon moments; LOOSE =
+      V2(+) + V3 on the larger, with the NNPDF Delta g term only if it widens
+      B.  (First pass: TIGHT without V6, LOOSE with V4: the phase record.)
 
 VARIATIONS, RECORDED (never the verdict): V1 Delta g = 0; V2 f1LL^g = -f1^g
 and +f1^g; V3 Tr Q^2 = 10/9; V4 SS90's coefficient applied to DS16's deltaG
@@ -331,7 +331,7 @@ DS16_OVER_TREE = 1.0
 F1LL_BAND = 1.0
 #: the pipeline's toy scale, CHECKED against the kernel, never set by it
 SHIPPED_SCALE = 1e-2
-#: the quadrature's convergence requirement (fine vs coarse, relative)
+#: the quadrature's convergence requirement (fine vs coarse, relative); A7 (2026-11-03): the grid row's pass bound
 QUAD_REL_TOL = 1e-7
 #: the same-grid guard (plugin vs LhapdfSF / LhapdfG1), relative
 SAME_GRID_TOL = 1e-12
@@ -617,7 +617,7 @@ def bound_side(body, sets, ion):
             B=b(), B_dg0=b(g1=0.0), B_ll_minus=b(ll=-F1LL_BAND), B_ll_plus=b(ll=F1LL_BAND),
             B_nf4=b(tr=TR_Q2_NF4), B_ss90=b(norm=SS90_FACTOR), B_epps21=b(xg_=xg_a),
             B_peff_naive=b(g1=P_EFF_NAIVE * xdg),
-            # the edges (SECOND PASS S3): V6 acts on the model side (x2 on M2, PRE_D4_OVER_JM since D4)
+            # the edges (SECOND PASS S3): no V6 in TIGHT since A6 (2026-11-03); V6 (x2 on M2) recorded
             B_tight=b(xg_=xg_lo, ll=-F1LL_BAND, g1=0.0),
             B_loose=b(tr=TR_Q2_NF4, xg_=xg_hi, ll=F1LL_BAND, g1=max(g1m, 0.0))))
     return out
@@ -768,14 +768,14 @@ def saturation_row(name, rows, bound, in_verdict, extra=None):
              in_verdict=in_verdict, status_central=central, status_v6=v6,
              q2=[b["q2"] for b in bound], m2=m2, bound=[b["B"] for b in bound],
              saturation=sat, margin=[1.0 - s for s in sat], saturation_v6=sat_v6,
-             saturation_tight=[PRE_D4_OVER_JM * abs(m) / b["B_tight"]
-                               for m, b in zip(m2, bound)],
+             saturation_tight=[abs(m) / b["B_tight"] for m, b in zip(m2, bound)],  # A6 (2026-11-03): no V6
+             saturation_tight_v6=[PRE_D4_OVER_JM * abs(m) / b["B_tight"] for m, b in zip(m2, bound)],  # pre-A6 edge
              saturation_loose=[abs(m) / b["B_loose"] for m, b in zip(m2, bound)],
              f1ll_critical=[f1ll_critical(m, b) for m, b in zip(m2, bound)],
              f1ll_critical_dg0=[f1ll_critical(m, b, False) for m, b in zip(m2, bound)],
              f1ll_critical_v6=[f1ll_critical(m, b, True, PRE_D4_OVER_JM)
                                for m, b in zip(m2, bound)],
-             m2_numerical_error=[r["err"] for r in rows],
+             m2_numerical_error=[r["err"] for r in rows], m2_error_bound=[QUAD_REL_TOL * abs(r["m2"]) for r in rows],  # A7
              m2_tail_x_lo=[r["tail"] for r in rows])
     for key in ("B_dg0", "B_ll_minus", "B_ll_plus", "B_nf4", "B_ss90", "B_epps21",
                 "B_peff_naive"):
@@ -891,8 +891,8 @@ def _print(report, m):
                   r["q2"], r["alpha_s"], r["alpha_s_lo"], r["xg"], r["xg_err"],
                   r["xg_epps21"], r["xdg"], r["xdg_err"], r["g1_moment"]))
         print("            B = %.6e  [dg0 %.6e, f1LL -/+ %.6e / %.6e, nf4 %.6e, SS90 "
-              "(V4, a misreading) %.6e, EPPS21 %.6e, P_eff = 1/3 %.6e; tight %.6e (V6 on "
-              "M2: %s), loose %.6e]" % (
+              "(V4, a misreading) %.6e, EPPS21 %.6e, P_eff = 1/3 %.6e; tight %.6e (no V6 "
+              "since A6; V6 recorded: %s), loose %.6e]" % (
                   r["B"], r["B_dg0"], r["B_ll_minus"], r["B_ll_plus"], r["B_nf4"],
                   r["B_ss90"], r["B_epps21"], r["B_peff_naive"], r["B_tight"],
                   V6_LABEL, r["B_loose"]))
@@ -943,7 +943,7 @@ def _print(report, m):
 def plot(report, out_dir=None):
     """|M2|/B per Q2 and model as grouped markers: filled = the central
     assumptions (A7, the kernel's own Delta since D4), open = V6 (the pre-D4 kernel / the letter as
-    printed, x2); the whisker spans the LOOSE to the TIGHT edge (SECOND PASS S3, V6 kept); the bound at 1."""
+    printed, x2); the whisker spans the LOOSE to the TIGHT edge (S3; no V6 since A6, 2026-11-03); the bound at 1."""
     sys.path.insert(0, HERE)
     from _plots import INK, MUTED, new_figure, save, status_title, style_series
     fig, ax = new_figure(height=3.9)
@@ -980,7 +980,7 @@ def plot(report, out_dir=None):
     ax.legend(loc="lower right", fontsize=6.2, ncol=2)
     ax.text(0.01, 0.985, "filled: central (f1^g CT18NLO; g1^g = P_eff NNPDFpol11 Delta g; "
             "f1LL^g = 0; Tr Q^2 = 2/3; Jaffe-Manohar Delta, D4)\nwhiskers: loose edge (f1LL^g = +f1^g, "
-            "Tr Q^2 = 10/9) to tight edge (Delta g = 0, f1LL^g = -f1^g, V6: pre-D4 x2)",
+            "Tr Q^2 = 10/9) to tight edge (Delta g = 0, f1LL^g = -f1^g; no V6 since A6)",
             transform=ax.transAxes, fontsize=6.3, color=MUTED, va="top")
     status_title(fig, NAME, report["status"],
                  "a bound under assumptions: PASS iff |M2|/B <= 1 at each Q2 (shipped "
@@ -1002,9 +1002,9 @@ def plot(report, out_dir=None):
 # toy's GENERATED amplitude in DS16's units.  V6 is kept as declared,
 # numerically unchanged, and only RELABELLED: it is the reading of the PRE-D4
 # kernel and of the letter's printed amplitudes (the LOI's Eq. (9), twice
-# Jaffe-Manohar's coefficient: PRE_D4_OVER_JM = 2).  The TIGHT edge keeps V6
-# as S3 declared it: whether it should lose V6 now is the author's question
-# (plan_D4 sec. 12 item 3), and no declared edge is dropped before the answer.
+# Jaffe-Manohar's coefficient: PRE_D4_OVER_JM = 2).  The TIGHT edge kept V6
+# (x PRE_D4_OVER_JM on M2) as S3 declared it until A6 (2026-11-03): V6 left the
+# edge, TIGHT = V1 + V2(-); the x2 edge stays recorded (saturation_tight_v6).
 # Nothing else moves: not M2 (the toy keeps its 1e-2 scale and enters the
 # kernel unconverted), not B, not the rule or its tolerance, not the verdict;
 # sub-row (b)'s rates carry the halved Delta term (min W 0.9493997515 ->
@@ -1016,11 +1016,32 @@ def plot(report, out_dir=None):
 #: V6, relabelled by D4: the PRE-D4 kernel's coefficient (the LOI's Eq. (9),
 #: still the letter's printed Eqs. (1) and (3)) over Jaffe-Manohar's -- the
 #: reading V6 records, numerically unchanged, and the factor the TIGHT edge
-#: carries as S3 declared it (module-level, read by the functions above at
-#: call time)
+#: carried as S3 declared it until A6 (2026-11-03; now saturation_tight_v6)
+#: (module-level, read by the functions above at call time)
 PRE_D4_OVER_JM = 2.0
 #: how the reports name V6 since D4
 V6_LABEL = "the pre-D4 kernel / the letter as printed, x2"
+
+# A6 (2026-11-03; decision A6 of docs/open_items/run_2026-11-03/DECISIONS.md,
+# the supervising session's choice under the author's delegation; applied
+# 2026-11-06, phase P3).  V6 leaves the TIGHT edge: saturation_tight =
+# |M2| / B_tight (TIGHT = V1 + V2(-) on the smaller gluon moment), the
+# convention the tree ships since D4.  Until A6 the edge carried V6 as
+# PRE_D4_OVER_JM = 2 on M2 (not as DS16_OVER_TREE, which is 1 since D4), so
+# every model's TIGHT saturation halves; that x2 edge stays a recorded field,
+# saturation_tight_v6, beside V6's own sub-row (saturation_v6, status_v6,
+# f1ll_critical_v6), all unchanged in value.  No status moves.  The vendored
+# delta_moment_bound_sources.json (sha256-pinned) is not edited: its V6 note
+# stays a record of the sources as read.
+#
+# A7 (2026-11-03; the same file).  The grid row (toy_1e-2[shipped], on the
+# shipped CT18NLO F1 since D7) gets the harness's own convergence rule as its
+# declared pass bound: the integrator's error estimate |fine - coarse| <=
+# QUAD_REL_TOL x |M2| at every Q2 (m2_error_bound).  `integrate()` has refused
+# (exit 2) above that rule since the first pass, so the row could never pass
+# above it; A7 makes it the row's stated bound.  The bound was chosen AFTER
+# the errors were seen (D7: 3.3e-14 / 4.9e-14 / 5.5e-14, 2-4e-10 relative).
+# The 1e-15 absolute pin stays on the toy's analytic integrand (the pytest).
 
 
 def main(argv=None):

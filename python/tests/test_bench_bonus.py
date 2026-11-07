@@ -272,7 +272,14 @@ def test_weight_variation_is_converged_in_its_table(tree):
         mu = sum(ws) / len(ws)
         return max(abs(x / mu - 1.0) for x in ws)
     for ps in (0.078, 0.093, 0.11, 0.135):
-        assert abs(v(fine, ps) - v(tree.fsi[bonus.DEFAULT_CONFIG], ps)) < 5e-4
+        # A5 (2026-11-03): the header's CHECK is on the declared Hulthen weight
+        # (DEFAULT_CONFIG until A5); the headline's AV18 weight misses it at
+        # p_s = 0.11 / 0.135 (|dv| 5.5e-4 / 8.3e-4) -- RECORDED, pinned below
+        assert abs(v(fine, ps) - v(tree.fsi[bonus.DECLARED_CONFIG], ps)) < 5e-4
+    fine18 = lg.GlauberFsiWeight(tree.models["av18"], opt)
+    assert [abs(v(fine18, ps) - v(tree.fsi["av18-40mb"], ps))
+            for ps in (0.078, 0.093, 0.11, 0.135)] == pytest.approx(
+        [3.119e-4, 1.072e-4, 5.465e-4, 8.291e-4], abs=2e-7)   # A5: recorded, not asserted < 5e-4
 
 
 def test_bin_averaging_moves_the_variation_by_under_two_percent(tree):
@@ -286,12 +293,19 @@ def test_bin_averaging_moves_the_variation_by_under_two_percent(tree):
     def v(ws):
         mu = sum(ws) / len(ws)
         return max(abs(x / mu - 1.0) for x in ws)
-    w = lambda ps, c: tree.weight(bonus.DEFAULT_CONFIG, ps, c, 2.44, 1.66)  # noqa: E731
+    # A5 (2026-11-03): the header's CHECK is on the declared Hulthen weight;
+    # the headline's AV18 weight moves by -3.2 / -1.5 / +0.8 / -0.3 % (RECORDED below)
+    w = lambda ps, c: tree.weight(bonus.DECLARED_CONFIG, ps, c, 2.44, 1.66)  # noqa: E731
     for lab, (lo, hi) in bins.items():
         at_label = v([w(lab, c) for c in cs])
         avg = v([sum(w(lo + (hi - lo) * (i + 0.5) / 10, c - 0.1 + 0.02 * (j + 0.5))
                      for i in range(10) for j in range(10)) / 100.0 for c in cs])
         assert abs(avg / at_label - 1.0) < 0.02, (lab, at_label, avg)
+    w18 = lambda ps, c: tree.weight("av18-40mb", ps, c, 2.44, 1.66)  # noqa: E731
+    moved = [v([sum(w18(lo + (hi - lo) * (i + 0.5) / 10, c - 0.1 + 0.02 * (j + 0.5))
+                    for i in range(10) for j in range(10)) / 100.0 for c in cs])
+             / v([w18(lab, c) for c in cs]) - 1.0 for lab, (lo, hi) in bins.items()]
+    assert moved == pytest.approx([-0.03226, -0.01522, 0.00824, -0.00300], abs=2e-5)  # A5: recorded
 
 
 def test_density_is_the_trees_own_n_of_k(tree):
@@ -333,14 +347,16 @@ def test_report_row_shape(rep):
         assert k in rep, k
     assert rep["name"] == NAME and rep["status"] in ("pass", "fail", "blocked")
     assert [k for k, s in rep["subrows"].items() if s["in_verdict"]] == [
-        "4GeV/hulthen-40mb", "5GeV/hulthen-40mb"]
+        "4GeV/av18-40mb", "5GeV/av18-40mb"]   # A5 (2026-11-03): hulthen-40mb until then
+    assert (bonus.DEFAULT_CONFIG, bonus.DECLARED_CONFIG) == ("av18-40mb", "hulthen-40mb")  # A5
     assert rep["history"]["blocked_2026_09_23"] == bonus.BLOCKED_REASON
 
 
 def test_verdict_follows_from_the_numbers(rep):
     m = rep["measured"]
     for name, judged in list(m["judged"].items()) + [
-            ("stat+syst", m["judged_stat_syst"])]:
+            ("stat+syst", m["judged_stat_syst"]),
+            ("stat+syst declared", m["judged_stat_syst_declared"])]:   # A5 (2026-11-03)
         for j in judged:
             s = max(1.0, math.sqrt(j["chi2_flat"] / j["ndf"]))
             assert j["scale_factor"] == pytest.approx(s, rel=1e-12)
@@ -353,7 +369,7 @@ def test_verdict_follows_from_the_numbers(rep):
             continue
         assert sub["status"] == ("pass" if sub["n_pass"] == sub["n_blocks"]
                                  else "fail"), key
-    heads = [rep["subrows"]["%s/hulthen-40mb" % b] for b in ("4GeV", "5GeV")]
+    heads = [rep["subrows"]["%s/av18-40mb" % b] for b in ("4GeV", "5GeV")]   # A5 (2026-11-03)
     assert rep["status"] == ("pass" if all(h["status"] == "pass"
                                            for h in heads) else "fail")
 
@@ -369,6 +385,9 @@ MEASURED = {
     "5GeV/hulthen-20mb": (13, 16, 533.66, 274.12),
     "4GeV/hulthen-40mb stat+syst": (8, 12, 23.49, 19.02),
     "5GeV/hulthen-40mb stat+syst": (8, 16, 33.89, 9.13),
+    # A5 (2026-11-03): the stat (+) syst sub-row follows the headline to AV18
+    "4GeV/av18-40mb stat+syst": (7, 12, 23.49, 19.31),
+    "5GeV/av18-40mb stat+syst": (8, 16, 33.89, 8.64),
 }
 
 
@@ -400,12 +419,28 @@ def test_measured_values_pinned_a_recorded_fail(rep):
     passed = [(j["beam"], j["q2"], j["w_star"])
               for j in rep["measured"]["judged"]["hulthen-40mb"] if j["passed"]]
     assert passed == [("4GeV", 3.38, 2.03)] * 4
+    # A5 (2026-11-03): the headline (AV18, 40 mb)
+    for b in ("4GeV", "5GeV"):
+        assert sub["%s/av18-40mb" % b]["v_by_ps"] == pytest.approx(
+            [0.0355, 0.0555, 0.0871, 0.1505], abs=1e-4)
+    assert sub["4GeV/av18-40mb"]["worst_v_over_delta"] == pytest.approx(2.807, abs=1e-3)
+    assert sub["4GeV/av18-40mb"]["worst_block"] == "Q2=1.66,W*=2.44,ps=0.135"
+    assert sub["5GeV/av18-40mb"]["worst_v_over_delta"] == pytest.approx(3.560, abs=1e-3)
+    assert sub["5GeV/av18-40mb"]["worst_block"] == "Q2=1.66,W*=2.03,ps=0.078"
+    assert [(j["beam"], j["q2"], j["w_star"], j["ps"])
+            for j in rep["measured"]["judged"]["av18-40mb"] if j["passed"]] == [
+        ("4GeV", 3.38, 2.03, 0.078), ("4GeV", 3.38, 2.03, 0.093), ("4GeV", 3.38, 2.03, 0.11)]
 
 
 def test_forward_rise_recorded_not_asserted(rep):
-    sub = rep["subrows"]["forward rise (recorded)"]
+    sub = rep["subrows"]["forward rise [hulthen-40mb, declared] (recorded)"]   # A5 (2026-11-03)
     assert sub["status"] == "recorded" and sub["in_verdict"] is False
-    fwd = rep["measured"]["forward"]
+    fwd = rep["measured"]["forward_declared"]      # A5: the declared Hulthen's, unchanged
+    av = rep["measured"]["forward"]                # A5: the headline's (AV18)
+    assert rep["subrows"]["forward rise (recorded)"]["status"] == "recorded"
+    for v, rt in zip(av.values(), [0.9904, 0.9835, 0.9733, 0.9521] * 2):
+        assert v["rho_tree_min"] == pytest.approx(rt, abs=1e-4)
+    assert sum(v["same_sign_blocks"] for v in av.values()) == 12
     assert list(fwd) == ["%s/ps=%g" % (b, p) for b in ("4GeV", "5GeV")
                          for p in (0.078, 0.093, 0.11, 0.135)]
     assert [v["rho_data"] for v in fwd.values()] == pytest.approx(
@@ -418,7 +453,11 @@ def test_forward_rise_recorded_not_asserted(rep):
 
 
 def test_prescription_and_f2n_f2p_recorded(rep):
-    pr = rep["subrows"]["PWIA prescription instant/LC (recorded, not FSI)"]
+    av = rep["subrows"]["PWIA prescription instant/LC (recorded, not FSI)"]   # A5 (2026-11-03): AV18
+    assert av["max_dev_by_ps"] == pytest.approx([0.0151, 0.0484, 0.0598, 0.0559], abs=1e-4)
+    assert av["ends_ratio_by_ps"] == pytest.approx([1.0298, 1.0977, 1.1211, 1.1118], abs=1e-4)
+    assert av["weight_ends_ratio_by_ps"] == pytest.approx([1.0735, 1.1161, 1.1851, 1.3376], abs=1e-4)
+    pr = rep["subrows"]["PWIA prescription instant/LC [hulthen-40mb, declared] (recorded, not FSI)"]  # A5
     assert pr["status"] == "recorded" and pr["in_verdict"] is False
     assert pr["max_dev_by_ps"] == pytest.approx([0.0227, 0.0309, 0.0409, 0.0571],
                                                 abs=1e-4)
@@ -458,8 +497,8 @@ def test_report_normalises_for_make_report(rep):
     row = _report.normalise_row(rep, NAME)
     assert row["status"] == "fail" and not row["notes"]
     names = [s["name"] for s in row["subrows"]]
-    assert names[:2] == ["4GeV/hulthen-40mb", "5GeV/hulthen-40mb"]
-    assert len(names) == 12
+    assert names[:2] == ["4GeV/av18-40mb", "5GeV/av18-40mb"]   # A5 (2026-11-03)
+    assert len(names) == 16      # A5: + the headline's stat+syst (2), forward, prescription (12 until then)
     verdict = [s["name"] for s in row["subrows"] if s.get("in_verdict")]
     assert verdict == names[:2]
     line = _report.report_line(rep["name"], rep["generator"], rep["reference"],

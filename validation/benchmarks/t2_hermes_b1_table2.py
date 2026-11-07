@@ -161,12 +161,36 @@ def build_models():
     return models, blocked, f2, ("MstwSF" if ok else "ToyF2")
 
 
+# A5 NOTE (decision A5 of 2026-11-03 and the supervisor's note of 2026-11-06
+# under A5, docs/open_items/run_2026-11-03/DECISIONS.md -- the supervising
+# session's choices under the author's delegation; applied 2026-11-06, phase
+# P3; validation/benchmarks/README.md convention 8).  The row's HEADLINE is
+# the shipped b1, `miller_shipped` (HEADLINE; `cdks_conv_mstw` until A5, or
+# `cdks_conv_default` without MSTW), and because the rule names the whole
+# shipped configuration its A_zz is formed on the shipped F1^d backend and R
+# as `lipolgen.make_config()` builds them: F2^d per nucleon from the shipped
+# deuteron kernel (`shipped_inclusive_kernel(deuteron())`, CT18NLO at LO,
+# frozen below its Q2 grid as shipped) and R = `r_sigma_lt` (the kernel's
+# own; its f1 equals F2/(2x(1 + r_sigma_lt)) at every bin), in HERMES's
+# construction F1 = (1 + gamma^2) F2/(2x(1 + R)).  Every other configuration,
+# the declared `cdks_conv_mstw` among them, keeps its A_zz on MstwSF and
+# R1990 (unchanged), recorded.  The b1 chi2 does not depend on F1^d.  Status
+# FAIL -> FAIL.  RECORDED, not acted on: the shipped inclusive deuteron
+# kernel's own b1 is 0.32753 x MillerB1() (= (2/6) x LI6_B1_RANK2_TRANSFER,
+# the 6Li mapping), not MillerB1() -- `miller_shipped` is the MillerB1() the
+# `--b1-model miller` backend names, as declared above.
+#: the headline: the shipped b1 (A5, 2026-11-03; "cdks_conv_mstw" until then)
+HEADLINE = "miller_shipped"
+
+
 def measure():
     import lipolgen._lipolgen as _l
     rows = load_table()
     r1990 = r1990_factory()
     models, blocked, f2, f2_name = build_models()
     miller_undo = 1.0 / _l.B1_MILLER_TABLE_TO_PER_NUCLEON
+    import lipolgen as lg  # noqa: WPS433
+    shipped = lg.shipped_inclusive_kernel(lg.deuteron())   # A5: the shipped F2^d and R
     per_bin = []
     for r in rows:
         x, q2 = r["x"], r["q2"]
@@ -176,6 +200,9 @@ def measure():
         r90, r98 = r1990(x, q2), _l.r1998(x, q2)
         f1d = (1.0 + g2) * f2d / (2.0 * x * (1.0 + r90))
         f1d_r98 = (1.0 + g2) * f2d / (2.0 * x * (1.0 + r98))
+        t = shipped.tables(x, q2)                       # A5 (2026-11-03)
+        r_sh = lg.r_sigma_lt(x, q2)
+        f1d_sh = (1.0 + g2) * t.f2 / (2.0 * x * (1.0 + r_sh))
         b = {}
         for name, m in models.items():
             v = 0.0 if m is None else m.b1(x, q2, 0.0)  # f1 arg unused here
@@ -186,6 +213,9 @@ def measure():
             b1=b,
             azz={k: -(2.0 / 3.0) * v / f1d for k, v in b.items()},
             azz_r1998={k: -(2.0 / 3.0) * v / f1d_r98 for k, v in b.items()},
+            f2d_shipped=t.f2, r_shipped=r_sh, f1d_shipped=f1d_sh,
+            f1d_shipped_kernel=t.f1,
+            azz_shipped={k: -(2.0 / 3.0) * v / f1d_sh for k, v in b.items()},
         ))
     return per_bin, blocked, f2_name
 
@@ -212,17 +242,30 @@ def run(verbose=True):
         cb, wb = chi2_of(per_bin, name, "b1")
         ca, wa = chi2_of(per_bin, name, "azz")
         ca98, _ = chi2_of(per_bin, name, "azz", key="azz_r1998")
+        extra = {}
+        if name == HEADLINE:   # A5 (2026-11-03): A_zz on the shipped F1^d and R
+            extra = dict(chi2_azz_mstw_r1990=ca, within_azz_mstw_r1990=wa,
+                         azz_f1d="shipped: CT18NLO F2 (shipped deuteron kernel), "
+                                 "r_sigma_lt, (1 + gamma^2)")
+            ca, wa = chi2_of(per_bin, name, "azz", key="azz_shipped")
         configs[name] = dict(
             chi2_b1=cb, within_b1=wb, chi2_azz=ca, within_azz=wa,
             chi2_azz_r1998=ca98, ndf=len(per_bin),
-            status="pass" if (wb == len(per_bin) and wa == len(per_bin)) else "fail")
-    head = "cdks_conv_mstw" if "cdks_conv_mstw" not in blocked else "cdks_conv_default"
+            status="pass" if (wb == len(per_bin) and wa == len(per_bin)) else "fail",
+            **extra)
+    head = HEADLINE        # A5 (2026-11-03): "cdks_conv_mstw" (or cdks_conv_default) until then
     h = configs[head]
+    d = configs["cdks_conv_mstw"]
     report = dict(
         name=NAME,
-        generator="%s: chi2/ndf b1 = %.2f/%d, A_zz = %.2f/%d; %d/%d b1 bins "
-                  "within tol" % (head, h["chi2_b1"], h["ndf"], h["chi2_azz"],
-                                  h["ndf"], h["within_b1"], h["ndf"]),
+        generator="%s (the shipped b1; the headline under A5; A_zz on the shipped "
+                  "F1^d and R): chi2/ndf b1 = %.2f/%d, A_zz = %.2f/%d; %d/%d b1 bins "
+                  "within tol; cdks_conv_mstw (declared until A5, recorded): %s" % (
+                      head, h["chi2_b1"], h["ndf"], h["chi2_azz"],
+                      h["ndf"], h["within_b1"], h["ndf"],
+                      "blocked" if d.get("status") == "blocked" else
+                      "b1 %.2f/%d, A_zz %.2f/%d" % (d["chi2_b1"], d["ndf"],
+                                                     d["chi2_azz"], d["ndf"])),
         reference="HERMES PRL 95 (2005) 242001 Table II, 6 bins, per nucleon",
         tolerance="per bin sqrt(stat^2+syst^2)",
         status=h["status"], headline=head, configs=configs,

@@ -138,6 +138,16 @@ DEFAULT_WAVE stays "hulthen" and the verdict is not re-pointed after its
 numbers were seen.  AV18, the shipped wave, passes by the same rule (11.54/21,
 p = 0.951): PASS either way.
 
+A5 ADDENDUM (2026-11-06, OUTSIDE the hashed block, which is unchanged;
+decision A5 of 2026-11-03 and the supervisor's note of 2026-11-06 under A5,
+docs/open_items/run_2026-11-03/DECISIONS.md, the supervising session's
+choices under the author's delegation).  validation/benchmarks/README.md
+convention 8 puts every row's headline on the shipped default; this row is
+its ONE named exception: its verdict wave is named inside the hashed block,
+which is never edited, so the headline stays the Hulthen pair.  The shipped
+wave's number is the sub-row `nk[av18]`, computed here in `run()`, outside
+the block, by the block's own rule: 11.54/21, p = 0.951, PASS (recorded).
+
 THE THREE NORMALISATION RULES (BENCHMARK_PLAN.md sec. 8), for THIS row:
   1. b1 normalisations -- NOT APPLICABLE (unpolarized).
   2. isoscalar denominator -- NOT APPLICABLE; its analogue, the struck

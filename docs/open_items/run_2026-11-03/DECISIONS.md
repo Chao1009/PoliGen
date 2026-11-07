@@ -161,6 +161,41 @@ written. What changes: the Deeps headline (FAIL on both waves, so the report
 stays 14 / 9), the convention text, the README rows; the T1 rows already
 follow it.*
 
+*Supervisor's note, 2026-11-06, after phase P3's survey of every harness
+against the rule (`phase_P3_report_rules.md` §1.2, §5) — the four rows the
+entry did not foresee, each the supervisor's choice under the same
+delegation. (1) `t2_bonus_spectator_shape`: the row's object is the opt-in
+FSI weight; on the shipped `--fsi off` the weight is 1 and every block
+passes trivially (12/12, 16/16), which tests nothing. The rule is refined,
+not excepted: a row whose object is an opt-in component builds its headline
+with that component ON in its shipped form and everything else at the
+shipped default — here AV18 with `GlauberFsiWeight` at the shipped 40 mb
+ceiling (3/12 and 0/16, FAIL → FAIL); the declared Hulthén-at-40 mb numbers
+are the recorded sub-rows; the sub-rows built on the harness's default
+configuration follow the headline, the declared ones stay recorded. The
+refinement is written into convention 8. (2) `t2_deuteron_static`: its
+declared verdict is a conjunction over the three shipped waves; the rule
+applied as written puts the headline on AV18 (η −1.39σ, PASS) with CD-Bonn
+(−0.07σ) and Hulthén (+17.2σ, the deficiency that decided D6) as recorded
+sub-rows, and the declared all-waves verdict (FAIL) recorded beside it.
+Status FAIL → PASS by the rule, not by physics; the row's text says so. The
+choice is uniformity: the rule was written on 2026-11-03 before this
+measurement and admits no exception by row; a headline FAIL driven by an
+option misstates what ships. (3) `t2_hermes_b1_table2`: the headline moves
+from `cdks_conv_mstw` to the shipped b₁ (`miller_shipped`), and, because the
+rule names the whole shipped configuration, its A_zz numbers are built on
+the shipped F₁ᵈ backend and R as `make_config()` builds them; the declared
+`cdks_conv_mstw` on MSTW / R1990 stays a recorded sub-row with its A_zz
+numbers unchanged; every moved number before → after in the record; status
+FAIL → FAIL (χ²(b₁)/6 22.26 → 5.26). (4) `t2_boeglin_nk`: its headline wave
+is named inside the hashed design block, which this run never edits; the
+headline stays Hulthén, the AV18 value (11.54/21, p = 0.951, PASS by the
+same rule) is recorded as a sub-row computed outside the block where the
+harness allows it, otherwise in the README row, and convention 8 names
+this one exception. (5) Deeps' Glauber and transverse-window sub-rows carry
+no status and stay on the declared wave as records. Report tally after
+(1)–(4): 15 pass / 8 fail, the one move labelled as the rule's.*
+
 **A6 — V6 leaves the TIGHT edge of `t5_delta_moment_bound`, recorded as the
 pre-D4 reading.** *Why: V6 is "every M₂ in DS16's normalisation is 2 M₂",
 i.e. the pre-D4 kernel's DS16_OVER_TREE = 2; since D4 that factor is 1, so
@@ -168,6 +203,22 @@ V6 is the central value under another name and the TIGHT edge carries a
 vacuous member; a verdict edge should state the convention the tree ships.
 What changes: the edge's definition (its value unchanged, the factor being
 1), the row's S3 text, a dated edit; no status moves (|M₂|/B 0.076–0.102).*
+
+*Supervisor's amendment, 2026-11-06, from phase P3's measurement
+(`phase_P3_report_rules.md` §1.3): the sentence above, "since D4 that factor
+is 1 … the edge's value unchanged", does not describe the harness. The TIGHT
+edge did not carry V6 through `DS16_OVER_TREE` (1 since D4) but through
+`PRE_D4_OVER_JM = 2.0`, a ×2 on M₂ (the pre-D4 kernel / the letter as
+printed), so removing V6 HALVES every TIGHT saturation: the verdict model
+`toy_1e-2[shipped]` 0.3207 / 0.3808 / 0.4281 → 0.1603 / 0.1904 / 0.2141 at
+Q² = 2 / 5 / 10 GeV², `moment_A[letter]` 3.016 / 2.933 / 2.938 → 1.508 /
+1.466 / 1.469, `moment_B[letter]` 3.114 / 2.919 / 2.822 → 1.557 / 1.459 /
+1.411, the dilution-1 rows 9.05 / 8.80 / 8.81 → 4.52 / 4.40 / 4.41 and
+9.34 / 8.76 / 8.47 → 4.67 / 4.38 / 4.23. The conclusion stands as decided:
+TIGHT = V1 + V2(−); the pre-A6 edge is kept as the recorded
+`saturation_tight_v6`; V6's own sub-row fields are unchanged in value; the
+TIGHT edge carries no status, so no verdict moved; the sources JSON is not
+edited.*
 
 **A7 — the grid row of `t5_delta_moment_bound` gets the harness's declared
 quadrature convergence rule as its pass bound: the integrator's error

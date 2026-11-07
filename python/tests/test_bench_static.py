@@ -191,18 +191,23 @@ def test_deuteron_static_verdict_follows_the_numbers(dmod, ds):
         assert m["eta_pull"] == pytest.approx((m["eta"] - e["value"]) / e["sigma"],
                                               rel=1e-14)
         assert m["eta_status"] == ("pass" if abs(m["eta_pull"]) <= 2.0 else "fail")
-    assert ds["status"] == ("pass" if all(m["eta_status"] == "pass"
-                                          for m in ds["models"].values()) else "fail")
+    assert ds["declared_status"] == ("pass" if all(m["eta_status"] == "pass"   # A5 (2026-11-03): recorded
+                                                   for m in ds["models"].values()) else "fail")
+    assert (dmod.HEADLINE_MODEL, ds["headline"]) == ("av18", "av18")             # A5
+    assert ds["status"] == ds["models"]["av18"]["eta_status"] == "pass"          # A5: FAIL -> PASS by the rule
+    assert [n for n, m in ds["models"].items() if m["in_verdict"]] == ["av18"]   # A5
+    sub = ds["subrows"]["all waves (the declared rule, recorded)"]               # A5
+    assert (sub["status"], sub["in_verdict"], sub["failing"]) == ("fail", False, "hulthen +17.2 sigma")
     # measured: CD-Bonn and AV18 inside, the Hulthen pair (the default until
     # D6, an option since) far outside
     assert ds["models"]["cdbonn"]["eta_pull"] == pytest.approx(-0.0715, abs=1e-3)
     assert ds["models"]["av18"]["eta_pull"] == pytest.approx(-1.388, abs=1e-3)
     assert ds["models"]["hulthen"]["eta_pull"] == pytest.approx(17.196, abs=1e-3)
-    assert ds["status"] == "fail" and ds["failing"] == ["hulthen"]
+    assert ds["declared_status"] == "fail" and ds["failing"] == ["hulthen"]   # A5 (2026-11-03): "status" until then
     # Q_d never enters the verdict: a reference Q_d 100x off changes nothing
     fake = {"eta_d": dict(e), "Q_d": dict(ref["Q_d"], value=100.0 * ref["Q_d"]["value"])}
     models = {k: dict(v) for k, v in ds["models"].items()}
-    assert dmod.verdict(models, fake) == ds["status"]
+    assert dmod.verdict(models, fake) == ds["declared_status"]   # A5 (2026-11-03)
     # and with every eta inside, the row would pass
     for v in models.values():
         v["eta"] = e["value"] + 1.9 * e["sigma"]
@@ -284,11 +289,13 @@ def test_deuteron_static_report_line(dmod, capsys):
     rows = [l for l in out if l.startswith("REPORT |")]
     subs = [l for l in out if l.startswith("SUBROW |")]
     assert len(rows) == 1 and len(subs) == 3
-    assert rows[0].startswith("REPORT | t2_deuteron_static | eta: cdbonn 0.025571 "
+    assert rows[0].startswith("REPORT | t2_deuteron_static | av18 (the shipped wave; the "
+                              "headline under A5) eta 0.025045 (-1.39 sigma) PASS; the "
+                              "declared all-waves rule FAIL, recorded; eta: cdbonn 0.025571 "
                               "(-0.07 sigma), av18 0.025045 (-1.39 sigma), hulthen "
-                              "0.032478 (+17.20 sigma)")
-    assert rows[0].endswith("| FAIL (recorded: hulthen +17.2 sigma outside; "
-                            "nothing moved)")
+                              "0.032478 (+17.20 sigma)")   # A5 (2026-11-03)
+    assert rows[0].endswith("| PASS on the shipped wave (A5); the declared all-waves rule "
+                            "FAIL (hulthen eta +17.2 sigma), recorded")   # A5: FAIL (recorded ...) until then
     assert "np.float64" not in "\n".join(out)
     assert rep["runtime_s"] < 30.0
 

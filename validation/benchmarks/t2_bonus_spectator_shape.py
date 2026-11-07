@@ -237,6 +237,26 @@ and 0/16; tree shape 221.6/84 against Hulthen's 226.3/84).  The row is FAIL
 either way; re-pointing it to the shipped wave belongs to the author's
 pending re-declaration of this row (run_2026-10-26/SUMMARY.md, "For the
 author", item 6).
+A5 NOTE (decision A5 of 2026-11-03 and the supervisor's note of 2026-11-06
+under A5, docs/open_items/run_2026-11-03/DECISIONS.md -- the supervising
+session's choices under the author's delegation; applied 2026-11-06, phase
+P3; validation/benchmarks/README.md convention 8).  The row's object is the
+OPT-IN FSI weight (the shipped run has --fsi off, under which the weight is
+1 and every block passes trivially, 12/12 and 16/16), so its headline is
+built with that component ON in its shipped form and everything else at the
+shipped default: AV18 (CLUSTER_WAVE_DEFAULT) with GlauberFsiWeight at the
+shipped 40 mb ceiling -- DEFAULT_CONFIG = "av18-40mb", 3/12 and 0/16, FAIL
+(FAIL -> FAIL).  Rule (d)'s declared Hulthen-at-40 mb is a recorded
+sub-row (4/12 and 0/16, unchanged), DECLARED_CONFIG.  The sub-rows built on
+the default configuration (stat (+) syst, the forward rise, the PWIA
+prescription, the symmetry and clipped-grid checks) follow the headline to
+AV18; their declared Hulthen values stay recorded beside them.  No
+tolerance, block selection or rule moved.  The CHECKS above were made on the
+Hulthen weight and still hold there; on the AV18 headline weight the table
+convergence |dv| is 3.1e-4 / 1.1e-4 / 5.5e-4 / 8.3e-4 over the four p_s
+bins (above 5e-4 at the last two) and bin averaging moves v by -3.2 / -1.5
+/ +0.8 / -0.3 % (above 2 % at p_s = 0.078) -- RECORDED, not tuned; no
+block's verdict flips under either deviation (0 of 28, checked 2026-11-06).
 
 THE THREE NORMALISATION RULES (BENCHMARK_PLAN.md sec. 8), for THIS row:
   1. b1 normalisations -- NOT APPLICABLE (unpolarized; the weight is spin
@@ -380,11 +400,15 @@ FIGURE_PS = 0.093
 BEAMS = {1: "4GeV", 2: "5GeV"}
 #: configurations: (wave, sigma_XN [mb], in the verdict)
 CONFIGS = collections.OrderedDict([
-    ("hulthen-40mb", ("hulthen", 40.0, True)),
-    ("av18-40mb", ("av18", 40.0, False)),
+    ("av18-40mb", ("av18", 40.0, True)),           # A5 (2026-11-03): the headline
+    ("hulthen-40mb", ("hulthen", 40.0, False)),    # rule (d)'s declared one, recorded
     ("hulthen-20mb", ("hulthen", 20.0, False)),
 ])
-DEFAULT_CONFIG = "hulthen-40mb"
+#: the headline: the shipped wave with the FSI weight ON at the shipped 40 mb
+#: (A5, 2026-11-03; "hulthen-40mb" until then)
+DEFAULT_CONFIG = "av18-40mb"
+#: rule (d)'s declared configuration, a recorded sub-row since A5 (2026-11-03)
+DECLARED_CONFIG = "hulthen-40mb"
 WAVE_LABELS = {
     "hulthen": "Hulthen pair, P_D = 0.045 (deuteron_channel() default)",
     "av18": "AV18 (deuteron_channel(source=VmcAV18), fdeut.av18)",
@@ -824,7 +848,7 @@ def f2n_f2p_record(doc, tree):
     return out
 
 
-def prescription_record(tree, ps_values, wave="hulthen"):
+def prescription_record(tree, ps_values, wave="av18", config=None):  # A5 (2026-11-03): the headline's
     """(e) the instant-form / light-cone factor per p_s, normalised to its
     backward mean at the backward bin centres: its max deviation, and its
     end-to-end ratio f(-0.9)/f(-0.3) beside the default weight's
@@ -834,7 +858,7 @@ def prescription_record(tree, ps_values, wave="hulthen"):
     for ps in ps_values:
         f = [tree.instant_over_lc(wave, ps, c) for c in cs]
         mean = sum(f) / len(f)
-        w = [tree.weight(DEFAULT_CONFIG, ps, c, 2.44, 1.66) for c in cs]
+        w = [tree.weight(config or DEFAULT_CONFIG, ps, c, 2.44, 1.66) for c in cs]
         out["ps=%g" % ps] = dict(max_dev=max(abs(x / mean - 1.0) for x in f),
                                  ends_ratio=f[0] / f[-1],
                                  weight_ends_ratio=w[0] / w[-1])
@@ -854,19 +878,27 @@ def measure(path=BONUS):
     judged_syst = [judge_block(b, lambda c, b=b: tree.weight(
         DEFAULT_CONFIG, b["ps"], c, b["w_star"], b["q2"]), errs="stat+syst")
         for b in bl]
+    judged_syst_declared = [judge_block(b, lambda c, b=b: tree.weight(   # A5: recorded
+        DECLARED_CONFIG, b["ps"], c, b["w_star"], b["q2"]), errs="stat+syst")
+        for b in bl]
     ps_values = sorted({b["ps"] for b in bl})
     return dict(
         census=cen,
         judged=judged,
         judged_stat_syst=judged_syst,
+        judged_stat_syst_declared=judged_syst_declared,
         forward=forward_record(judged[DEFAULT_CONFIG]),
+        forward_declared=forward_record(judged[DECLARED_CONFIG]),
         prescription=prescription_record(tree, ps_values),
+        prescription_declared=prescription_record(tree, ps_values, "hulthen",
+                                                  DECLARED_CONFIG),
         f2n_f2p=f2n_f2p_record(doc, tree),
         weight_symmetric=max(abs(tree.weight(DEFAULT_CONFIG, ps, c, 2.44, 1.66)
                                  - tree.weight(DEFAULT_CONFIG, ps, -c, 2.44, 1.66))
                              for ps in ps_values for c in (0.1, 0.5, 0.9)),
         fsi_sigma_xn_mb={k: tree.fsi[k].sigma_eff_mb(2.44) for k in CONFIGS},
         fsi_clipped_grid_fraction=tree.fsi[DEFAULT_CONFIG].clipped_grid_fraction(),
+        fsi_clipped_grid_fraction_declared=tree.fsi[DECLARED_CONFIG].clipped_grid_fraction(),
         figure=figure_series(doc, tree),
     )
 
@@ -926,19 +958,29 @@ def run(path=BONUS, verbose=True):
         summ[("stat+syst", beam)] = s
         sub["%s/%s stat+syst" % (beam, DEFAULT_CONFIG)] = _beam_subrow(
             s, DEFAULT_CONFIG, False, errs="stat (+) syst")
-    fwd = m["forward"]
-    sub["forward rise (recorded)"] = dict(
-        status="recorded", in_verdict=False,
-        **{k: "rho_data %.3f +- %.3f, rho_tree %.3f..%.3f, same sign in %d/%d"
-           % (v["rho_data"], v["rho_data_err"], v["rho_tree_min"],
-              v["rho_tree_max"], v["same_sign_blocks"], v["n"])
-           for k, v in fwd.items()})
-    pr = m["prescription"]
-    sub["PWIA prescription instant/LC (recorded, not FSI)"] = dict(
-        status="recorded", in_verdict=False, wave=WAVE_LABELS["hulthen"],
-        max_dev_by_ps=[v["max_dev"] for v in pr.values()],
-        ends_ratio_by_ps=[v["ends_ratio"] for v in pr.values()],
-        weight_ends_ratio_by_ps=[v["weight_ends_ratio"] for v in pr.values()])
+    for beam in BEAMS.values():                 # A5 (2026-11-03): the declared one, recorded
+        s = summarise([j for j in m["judged_stat_syst_declared"] if j["beam"] == beam])
+        sub["%s/%s stat+syst" % (beam, DECLARED_CONFIG)] = _beam_subrow(
+            s, DECLARED_CONFIG, False, errs="stat (+) syst")
+    for key, fwd in (("forward rise (recorded)", m["forward"]),
+                     ("forward rise [%s, declared] (recorded)" % DECLARED_CONFIG,
+                      m["forward_declared"])):
+        sub[key] = dict(
+            status="recorded", in_verdict=False,
+            **{k: "rho_data %.3f +- %.3f, rho_tree %.3f..%.3f, same sign in %d/%d"
+               % (v["rho_data"], v["rho_data_err"], v["rho_tree_min"],
+                  v["rho_tree_max"], v["same_sign_blocks"], v["n"])
+               for k, v in fwd.items()})
+    for key, wave, pr in (
+            ("PWIA prescription instant/LC (recorded, not FSI)", "av18",
+             m["prescription"]),
+            ("PWIA prescription instant/LC [%s, declared] (recorded, not FSI)"
+             % DECLARED_CONFIG, "hulthen", m["prescription_declared"])):
+        sub[key] = dict(
+            status="recorded", in_verdict=False, wave=WAVE_LABELS[wave],
+            max_dev_by_ps=[v["max_dev"] for v in pr.values()],
+            ends_ratio_by_ps=[v["ends_ratio"] for v in pr.values()],
+            weight_ends_ratio_by_ps=[v["weight_ends_ratio"] for v in pr.values()])
     f2 = m["f2n_f2p"]
     sub["F2n/F2p ToyF2 vs W*>1.8 table (recorded)"] = dict(
         status="recorded", in_verdict=False,
@@ -965,17 +1007,20 @@ def run(path=BONUS, verbose=True):
     report = dict(
         name=NAME,
         generator=(
-            "Hulthen (rule (d)'s configuration; AV18 ships since D6 and fails too) "
-            "40 mb GlauberFsiWeight over its backward mean inside the "
+            "AV18 (the shipped wave; the headline under A5, the FSI weight ON at "
+            "its shipped 40 mb) GlauberFsiWeight over its backward mean inside the "
             "data's 1-sigma flat band in %d/%d (4 GeV) and %d/%d (5 GeV) DIS "
             "blocks; worst v/delta %.2f (4 GeV %s), %.2f (5 GeV %s); backward "
-            "chi2 flat %.1f, tree shape %.1f on %d dof"
+            "chi2 flat %.1f, tree shape %.1f on %d dof; Hulthen 40 mb (rule (d)'s "
+            "declared configuration, recorded) %d/%d and %d/%d"
             % (h4["n_pass"], h4["n_blocks"], h5["n_pass"], h5["n_blocks"],
                h4["worst_v_over_delta"], h4["worst_block"],
                h5["worst_v_over_delta"], h5["worst_block"],
                h4["chi2_flat_sum"] + h5["chi2_flat_sum"],
                h4["chi2_tree_sum"] + h5["chi2_tree_sum"],
-               h4["ndf_sum"] + h5["ndf_sum"])),
+               h4["ndf_sum"] + h5["ndf_sum"],
+               summ[(DECLARED_CONFIG, "4GeV")]["n_pass"], summ[(DECLARED_CONFIG, "4GeV")]["n_blocks"],
+               summ[(DECLARED_CONFIG, "5GeV")]["n_pass"], summ[(DECLARED_CONFIG, "5GeV")]["n_blocks"])),
         reference=(
             "CLAS BONuS R_D/S vs cos theta_pq, Tkachenko PRC 89 (2014) 045206 "
             "Suppl. (%d blocks; %d in the DIS window W* >= 2, Q2 >= 1, %d with "
@@ -985,7 +1030,8 @@ def run(path=BONUS, verbose=True):
                    "S sigma(Rbar)/Rbar (stat, S = max(1, sqrt(chi2/ndf))), "
                    "every block, both beams"),
         status=status,
-        config=dict(wave=WAVE_LABELS["hulthen"], sigma_xn_mb=40.0,
+        config=dict(wave=WAVE_LABELS["av18"], sigma_xn_mb=40.0,
+                    declared=dict(wave=WAVE_LABELS["hulthen"], sigma_xn_mb=40.0),
                     w_star_min=W_STAR_MIN, q2_min=Q2_MIN,
                     backward_cos_max=BACKWARD_COS_MAX,
                     forward_cos_gt=FORWARD_COS_GT, errors="stat",
@@ -1067,7 +1113,7 @@ def _print(report):
         say("  %-14s rho_data %.3f +- %.3f   rho_tree %.4f..%.4f   same sign "
             "%d/%d" % (k, v["rho_data"], v["rho_data_err"], v["rho_tree_min"],
                        v["rho_tree_max"], v["same_sign_blocks"], v["n"]))
-    say("PWIA prescription (recorded, NOT FSI): Hulthen instant-form / "
+    say("PWIA prescription (recorded, NOT FSI): AV18 (A5) instant-form / "
         "light-cone over the backward window, max deviation | f(-0.9)/f(-0.3)"
         " | the weight's w(-0.9)/w(-0.3):")
     for k, v in m["prescription"].items():
@@ -1110,8 +1156,8 @@ def plot(report, out_dir=None):
             kw.update(markerfacecolor="white")
         ax.errorbar([c + offs.get(key, 0.0) for c in blk["cos"]],
                     blk["r_over_rbar"], yerr=blk["err"], **kw)
-    slots = {"hulthen-40mb": ("default", "Glauber, Hulthen, 40 mb (verdict)"),
-             "av18-40mb": ("alt", "Glauber, AV18, 40 mb"),
+    slots = {"av18-40mb": ("default", "Glauber, AV18, 40 mb (shipped; headline, A5)"),
+             "hulthen-40mb": ("alt", "Glauber, Hulthen, 40 mb (declared)"),
              "hulthen-20mb": ("alt2", "Glauber, Hulthen, 20 mb")}
     for name in sorted(fs["lines"], key=lambda n: n == DEFAULT_CONFIG):
         slot, lab = slots[name]                 # the verdict's line on top
@@ -1130,7 +1176,7 @@ def plot(report, out_dir=None):
     ax.text(0.98, 1.205, "shown: Q2 = 1.66 GeV2, p_s = 85-100 MeV/c",
             fontsize=7, va="top", ha="right", color="#52514e")
     h = report["subrows"]
-    a, b = h["4GeV/hulthen-40mb"], h["5GeV/hulthen-40mb"]
+    a, b = h["4GeV/%s" % DEFAULT_CONFIG], h["5GeV/%s" % DEFAULT_CONFIG]   # A5 (2026-11-03)
     status_title(fig, NAME, report["status"],
                  "W*>=2, Q2>=1, cos<=-0.3: in flat 1-sigma band %d/%d (4 GeV), "
                  "%d/%d (5 GeV); chi2 flat %.0f, tree %.0f /%d"

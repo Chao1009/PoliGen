@@ -341,7 +341,7 @@ under 30 s today; a row that costs more, or a generator-vs-generator sample
 `REPORT.json` (the M2 baseline) and one figure per row that draws one. A
 harness that disagrees with the tree is recorded, never tuned. As of
 2026-10-29 (D7; 23 harnesses, every row run, the three LHAPDF sets installed):
-14 pass, 9 fail (recorded), 0 blocked — F₂ᵈ/F₂ᵖ passes on the shipped CT18NLO (13 / 10 on 2026-10-26, on the toys).
+14 pass, 9 fail (recorded), 0 blocked — F₂ᵈ/F₂ᵖ passes on the shipped CT18NLO (13 / 10 on 2026-10-26, on the toys); 15 / 8 since A5 (2026-11-03: every headline on the shipped default, the deuteron statics PASS on AV18 by that rule).
 
 ## Citing
 

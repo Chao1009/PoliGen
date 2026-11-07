@@ -156,8 +156,12 @@ def test_report_row_shape(rep):
         assert k in rep, k
     assert rep["name"] == "t2_deeps_spectator_tail"
     assert rep["status"] in ("pass", "fail", "blocked")
+    # A5 (2026-11-03): the headline is the shipped wave, AV18 ("hulthen/lc"
+    # until then, now a recorded sub-row)
+    assert (deeps.DEFAULT_WAVE, deeps.DECLARED_WAVE) == ("av18", "hulthen")
     assert [s for s, v in rep["subrows"].items() if v["in_verdict"]] == [
-        "hulthen/lc"]
+        "av18/lc"]
+    assert rep["subrows"]["hulthen/lc"]["status"] == "fail"   # recorded, same rule
 
 
 def test_verdict_follows_from_the_numbers(rep):
@@ -166,7 +170,7 @@ def test_verdict_follows_from_the_numbers(rep):
         sf = chi2_dist.sf
     except ImportError:                  # CI: the harness's scipy-free path
         sf = deeps.chi2_sf
-    head = rep["measured"]["waves"]["hulthen"]["lc"]
+    head = rep["measured"]["waves"]["av18"]["lc"]    # A5 (2026-11-03); "hulthen" until then
     assert head["p"] == pytest.approx(sf(head["chi2"], head["ndf"]))
     assert rep["status"] == ("pass" if head["p"] >= deeps.P_MIN else "fail")
     for name, s in rep["subrows"].items():
@@ -195,6 +199,10 @@ def test_measured_values_pinned(rep):
     assert rep["status"] == "fail"
     by_ps = m["waves"]["hulthen"]["lc"]["data_over_model_by_ps"]
     assert by_ps == pytest.approx([0.790, 0.954, 1.271, 1.715, 1.409], abs=2e-3)
+    # A5 (2026-11-03): the headline wave's (AV18), measured 2026-09-27, unmoved
+    assert m["waves"]["av18"]["lc"]["data_over_model_by_ps"] == pytest.approx(
+        [1.140, 1.196, 1.174, 1.035, 0.641], abs=2e-3)
+    assert rep["generator"].startswith("shape chi2/ndf = 579.12/187 (p = 1.11e-41), AV18")  # A5
 
 
 def test_transverse_window_recorded_not_asserted(rep):

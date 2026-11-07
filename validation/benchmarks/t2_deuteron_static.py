@@ -149,6 +149,17 @@ until D6 (2026-10-27) and is AV18 since.  D6 NOTE (2026-10-29): the eta rule
 above covers EVERY shipped wave function and the Hulthen still ships, as
 `--cluster-wave hulthen`, so the row stays FAIL; re-declaring it to "the
 default wave" would be a post-hoc re-declaration, the author's to make.
+A5 NOTE (decision A5 of 2026-11-03 and the supervisor's note of 2026-11-06
+under A5, docs/open_items/run_2026-11-03/DECISIONS.md -- the supervising
+session's choices under the author's delegation; applied 2026-11-06, phase
+P3; validation/benchmarks/README.md convention 8).  The D6 NOTE's reading is
+superseded: the row's HEADLINE is the shipped wave, AV18
+(CLUSTER_WAVE_DEFAULT; HEADLINE_MODEL, checked by `_headline()`), eta
+-1.39 sigma, PASS by the same 2 sigma; CD-Bonn (-0.07 sigma) and the
+Hulthen pair (+17.2 sigma) are recorded sub-rows, and the declared
+all-waves conjunction above is itself a recorded sub-row, FAIL.  Status
+FAIL -> PASS BY THE RULE, not by any physics change: no eta, Q_d,
+tolerance or reference moved.
 
 Run:  source env.sh && python3 validation/benchmarks/t2_deuteron_static.py [--plot]
 
@@ -193,6 +204,8 @@ BODY_SHA256 = "51adce98ee6ebc80fa40278244cffe9d92d94f22ed8c3213b9e62eba75ea4acb"
 NAME = "t2_deuteron_static"
 ETA_MAX_PULL = 2.0          # tolerance: |eta - eta_d| <= 2 sigma, every model
 MODELS = ("cdbonn", "av18", "hulthen")
+#: the headline: the shipped wave (A5, 2026-11-03; the all-MODELS conjunction until then)
+HEADLINE_MODEL = "av18"
 R_MAX_FM = 80.0             # closed-form quadrature: e^{-2 kappa 80} ~ 1e-16
 N_INTERVALS = 100000        # Simpson intervals on (0, R_MAX_FM]
 ETA_WINDOW_FM = (20.0, 40.0)  # AV18: the r range the asymptotic ratio is read
@@ -556,12 +569,40 @@ def measure(path=DATA):
     return ref, models, band, status
 
 
+def _headline():
+    """A5 (2026-11-03): the headline model must be the shipped cluster wave;
+    a future change of CLUSTER_WAVE_DEFAULT stops the row by name."""
+    import lipolgen as lg  # noqa: WPS433
+    shipped = {lg.ClusterWaveSource.VmcAV18: "av18"}.get(lg.CLUSTER_WAVE_DEFAULT)
+    if HEADLINE_MODEL != shipped:
+        raise RuntimeError("HEADLINE_MODEL = %r is not the shipped cluster wave %r: "
+                           "re-point it by hand (README.md convention 8)"
+                           % (HEADLINE_MODEL, lg.CLUSTER_WAVE_DEFAULT))
+
+
 def run(path=DATA, verbose=True):
     t0 = time.perf_counter()
-    ref, models, band, status = measure(path)
+    _headline()
+    ref, models, band, declared = measure(path)
     e, q = ref["eta_d"], ref["Q_d"]
     failing = [n for n in MODELS if models[n]["eta_status"] == "fail"]
-    generator = ("eta: %s; Q_d (impulse approx., recorded): %s fm^2" % (
+    # A5 (2026-11-03): the headline is the shipped wave's; the declared
+    # all-waves conjunction is a recorded sub-row
+    status = models[HEADLINE_MODEL]["eta_status"]
+    for n in MODELS:
+        models[n]["in_verdict"] = (n == HEADLINE_MODEL)
+    subrows = {"all waves (the declared rule, recorded)": dict(
+        status=declared, in_verdict=False,
+        rule="abs(eta - eta_d) <= %g sigma for every one of %s" % (
+            ETA_MAX_PULL, ", ".join(MODELS)),
+        failing=", ".join("%s %+.1f sigma" % (n, models[n]["eta_pull"])
+                          for n in failing) or "none")}
+    generator = ("%s (the shipped wave; the headline under A5) eta %.6f (%+.2f sigma) "
+                 "%s; the declared all-waves rule %s, recorded; " % (
+                     HEADLINE_MODEL, models[HEADLINE_MODEL]["eta"],
+                     models[HEADLINE_MODEL]["eta_pull"], status.upper(),
+                     declared.upper())
+                 + "eta: %s; Q_d (impulse approx., recorded): %s fm^2" % (
         ", ".join("%s %.6f (%+.2f sigma)" % (n, models[n]["eta"],
                                              models[n]["eta_pull"])
                   for n in MODELS),
@@ -572,11 +613,13 @@ def run(path=DATA, verbose=True):
                  "Q_d = %s (Bishop-Cheung PRA 20 (1979) 381, confirming "
                  "Reid-Vaida); read from the papers 2026-10-26, Q_d corrected "
                  "from 0.2859(3)" % (e["as_printed"], q["as_printed"]))
-    tolerance = ("abs(eta - eta_d) <= %g sigma for each of %s; Q_d recorded, not "
-                 "asserted" % (ETA_MAX_PULL, ", ".join(MODELS)))
+    tolerance = ("abs(eta - eta_d) <= %g sigma on the shipped wave (%s, A5); the "
+                 "declared rule, each of %s, recorded; Q_d recorded, not "
+                 "asserted" % (ETA_MAX_PULL, HEADLINE_MODEL, ", ".join(MODELS)))
     import lipolgen as lg  # noqa: WPS433
     report = dict(name=NAME, generator=generator, reference=reference,
                   tolerance=tolerance, status=status, models=models,
+                  headline=HEADLINE_MODEL, declared_status=declared, subrows=subrows,
                   hulthen_beta_band=band, reference_points=ref,
                   failing=failing,
                   config=dict(lipolgen=getattr(lg, "__version__", None),
@@ -634,19 +677,19 @@ def run(path=DATA, verbose=True):
                      m["eta_status"].upper()))
         print("REPORT | %s | %s | %s | %s | %s" % (
             NAME, generator, reference, tolerance,
-            status.upper() + ("" if status == "pass" else
-                              " (recorded: %s outside; nothing moved)"
-                              % ", ".join("%s %+.1f sigma"
-                                          % (n, models[n]["eta_pull"])
-                                          for n in failing))))
+            status.upper() + (" on the shipped wave (A5); the declared all-waves "
+                              "rule %s (%s), recorded" % (
+                                  declared.upper(), ", ".join(
+                                      "%s eta %+.1f sigma" % (n, models[n]["eta_pull"])
+                                      for n in failing) or "none outside"))))
     return report
 
 
 # ------------------------------------------------------------------ figure
 
 #: the figure's palette slot and row label of each shipped wave
-PLOT_SLOTS = {"hulthen": ("default", "Hulthen\n(tagged option)"),
-              "av18": ("alt", "AV18"), "cdbonn": ("alt2", "CD-Bonn")}
+PLOT_SLOTS = {"hulthen": ("alt", "Hulthen\n(tagged option)"),   # A5 (2026-11-03): AV18 the default slot
+              "av18": ("default", "AV18\n(shipped; headline)"), "cdbonn": ("alt2", "CD-Bonn")}
 
 
 def plot(report, out_dir=None):

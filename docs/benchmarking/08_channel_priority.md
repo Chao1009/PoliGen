@@ -278,11 +278,11 @@ for this file.
   spin-blind Glauber FSI weight; the i^L phase fixed on 2026-09-06 (row 26).
 - **Validated today.** The Cosyn–Weiss gate as an identity on the deuteron
   control (8.88e−16 over 26 880 cells); the port gate. **Against data:
-  `t2_deuteron_static` FAIL for the Hulthén (η +17.2σ; shipped until D6, which
+  `t2_deuteron_static` FAIL for the Hulthén (η +17.2σ, the declared all-waves rule; PASS on the shipped AV18 by the rule since A5, 2026-11-03; shipped until D6, which
   made AV18 the default, D2's physics quotes); `t2_deeps_spectator_tail` FAIL for every
   wave and both prescriptions; `t2_bonus_spectator_shape` FAIL recorded
   2026-10-26: the 40 mb Glauber weight's backward-window variation exceeds
-  the data's 1σ flat band in 24 of 28 DIS blocks, while the data fall
+  the data's 1σ flat band in 24 of 28 DIS blocks (Hulthén; 25 of 28 on the shipped AV18, the headline since A5, 2026-11-03), while the data fall
   toward 90° as the weight does (χ² 739.4 flat against 226.3 for the
   weight's shape, 84 dof) — the rule's premise fails, not the weight's
   direction; `t2_boeglin_nk` (row 16, 2026-10-26) PASS for all three waves

@@ -123,6 +123,21 @@ numbers were seen is the author's call, as for t2_deuteron_static.  AV18,
 the wave the tagged runs now ship, is the recorded sub-row 579.12/187
 (p = 1e-41): FAIL either way.
 
+A5 NOTE (decision A5 of 2026-11-03, docs/open_items/run_2026-11-03/
+DECISIONS.md -- the supervisor's choice under the author's delegation;
+applied 2026-11-06, phase P3; validation/benchmarks/README.md convention 8).
+A row's headline verdict is computed on the library's SHIPPED DEFAULT
+configuration; the configuration a declaration names is a recorded sub-row.
+The D6 NOTE's reading is superseded: the HEADLINE is now AV18
+(`deuteron_channel(source = ClusterWaveSource.VmcAV18)`, the wave the
+default d-p run uses since D6; `_headline()` checks it against
+`lipolgen.CLUSTER_WAVE_DEFAULT`), 579.12/187 (p = 1.1e-41) -> FAIL; the
+Hulthen pair the declaration above names (`deuteron_channel()`) stays a
+recorded sub-row, 627.85/187 (p = 4.9e-49), judged by the same tolerance.
+Status FAIL -> FAIL; no chi2, tolerance or prescription moved.  The
+recorded LC x GlauberFsiWeight sub-row and the transverse window stay on
+the declaration's Hulthen pair (DECLARED_WAVE), unchanged in value.
+
 Run:  source env.sh && python3 validation/benchmarks/t2_deeps_spectator_tail.py [--plot]
 
 Exit status (validation/benchmarks/README.md): 0 when the harness ran and
@@ -158,10 +173,14 @@ TRANSVERSE_ABS_COS = 0.3
 P_MIN = 0.01            # tolerance: p(chi2, ndf) >= 0.01, declared up front
 
 WAVES = ("hulthen", "av18", "cdbonn")
-DEFAULT_WAVE = "hulthen"
+#: the HEADLINE wave: the shipped default (A5, 2026-11-03; "hulthen" until then)
+DEFAULT_WAVE = "av18"
+#: the wave the declaration names (deuteron_channel()); a recorded sub-row since
+#: A5 (2026-11-03), and the wave of the recorded Glauber and transverse sub-rows
+DECLARED_WAVE = "hulthen"
 WAVE_LABELS = {
     "hulthen": "Hulthen pair, P_D = 0.045 (deuteron_channel() default)",
-    "av18": "AV18 (deuteron_channel(source=VmcAV18), fdeut.av18)",
+    "av18": "AV18 (deuteron_channel(source=VmcAV18), fdeut.av18; the shipped wave since D6)",
     "cdbonn": "CD-Bonn (cdbonn_wave(), Machleidt 2001 App. D)",
 }
 
@@ -288,7 +307,7 @@ class Tree:
     @property
     def fsi(self):
         if self._fsi is None:
-            self._fsi = self.lg.GlauberFsiWeight(self.models[DEFAULT_WAVE])
+            self._fsi = self.lg.GlauberFsiWeight(self.models[DECLARED_WAVE])  # A5: recorded, on the declared wave
         return self._fsi
 
     def fsi_weight(self, ps, c, w, q2):
@@ -370,7 +389,7 @@ def shape_chi2(pts, model, err_key="err"):
     )
 
 
-def transverse(pts, tree, wave=DEFAULT_WAVE):
+def transverse(pts, tree, wave=DECLARED_WAVE):  # A5 (2026-11-03): recorded, on the declared wave
     """Data/PWIA in |cos| < 0.3 against the tree's Glauber direction.
     Recorded only."""
     by_qw = collections.defaultdict(list)
@@ -431,7 +450,7 @@ def measure(path=DEEPS):
         inst = shape_chi2(pts, lambda p, wv=wv: tree.p_model(
             wv, p["ps"], p["c"], form="instant"))
         waves[wv] = dict(lc=lc, lc_stat_only=lc_stat, instant=inst)
-    fsi = shape_chi2(pts, lambda p: tree.p_model(DEFAULT_WAVE, p["ps"], p["c"])
+    fsi = shape_chi2(pts, lambda p: tree.p_model(DECLARED_WAVE, p["ps"], p["c"])
                      * tree.fsi_weight(p["ps"], p["c"], p["w"], p["q2"]))
     out.update(waves=waves, lc_times_glauber=fsi,
                transverse=transverse(pts, tree),
@@ -449,7 +468,23 @@ def _sr(r, in_verdict, status=None, **extra):
                 per_q2=r["per_q2"], **extra)
 
 
+def _headline():
+    """A5 (2026-11-03): the headline wave must be the shipped default.  The
+    D6 default is checked against the library, so a future change of
+    CLUSTER_WAVE_DEFAULT stops the row by name until DEFAULT_WAVE, its labels
+    and the docstring are re-pointed by hand."""
+    import lipolgen as lg                   # env.sh puts it on the path
+    shipped = {lg.ClusterWaveSource.VmcAV18: "av18"}.get(lg.CLUSTER_WAVE_DEFAULT)
+    if DEFAULT_WAVE != shipped:
+        raise RuntimeError("DEFAULT_WAVE = %r is not the shipped cluster wave %r "
+                           "(lipolgen.CLUSTER_WAVE_DEFAULT): re-point the headline, "
+                           "its labels and the docstring by hand (README.md "
+                           "convention 8)" % (DEFAULT_WAVE, lg.CLUSTER_WAVE_DEFAULT))
+    return shipped
+
+
 def run(path=DEEPS, verbose=True):
+    _headline()
     m = measure(path)
     head = m["waves"][DEFAULT_WAVE]["lc"]
     status = "pass" if head["p"] >= P_MIN else "fail"
@@ -461,7 +496,7 @@ def run(path=DEEPS, verbose=True):
                                     chi2_stat_only=w["lc_stat_only"]["chi2"])
         subrows["%s/instant-form" % wv] = _sr(w["instant"], False,
                                               wave=WAVE_LABELS[wv])
-    subrows["hulthen/lc x GlauberFsiWeight"] = _sr(m["lc_times_glauber"], False)
+    subrows["%s/lc x GlauberFsiWeight" % DECLARED_WAVE] = _sr(m["lc_times_glauber"], False)
     tr = m["transverse"]
     subrows["transverse window (recorded)"] = dict(
         status="recorded", in_verdict=False, n_points=tr["n_points"],
@@ -471,22 +506,23 @@ def run(path=DEEPS, verbose=True):
            for k, v in tr["per_ps"].items()})
     report = dict(
         name=NAME,
-        generator="shape chi2/ndf = %.2f/%d (p = %.3g), Hulthen (the declared "
-                  "verdict wave, deuteron_channel(); an option since D6), LC "
-                  "n(k) E_k/(2-alpha), cos_pq <= -0.3; AV18 %.2f/%d, CD-Bonn "
+        generator="shape chi2/ndf = %.2f/%d (p = %.3g), AV18 (the shipped wave "
+                  "since D6, deuteron_channel(source=VmcAV18); the headline under "
+                  "A5), LC n(k) E_k/(2-alpha), cos_pq <= -0.3; Hulthen (the "
+                  "declaration's deuteron_channel(), recorded) %.2f/%d, CD-Bonn "
                   "%.2f/%d" % (head["chi2"], head["ndf"], head["p"],
-                               m["waves"]["av18"]["lc"]["chi2"],
-                               m["waves"]["av18"]["lc"]["ndf"],
+                               m["waves"][DECLARED_WAVE]["lc"]["chi2"],
+                               m["waves"][DECLARED_WAVE]["lc"]["ndf"],
                                m["waves"]["cdbonn"]["lc"]["chi2"],
                                m["waves"]["cdbonn"]["lc"]["ndf"]),
         reference="CLAS Deeps F2N x P(p_s), Klimenko PRC 73 (2006) 035212 "
                   "(60 blocks at Q2 = 1.8/2.8, %d PWIA-window points)"
                   % m["n_points_pwia"],
-        tolerance="p(chi2, ndf) >= %.2f, the declared wave (deuteron_channel(): "
-                  "Hulthen), one free scale per "
+        tolerance="p(chi2, ndf) >= %.2f, on the shipped wave (AV18, A5; the "
+                  "declared Hulthen recorded by the same rule), one free scale per "
                   "(Q2, W*, cos) group" % P_MIN,
         status=status,
-        config=dict(wave=WAVE_LABELS[DEFAULT_WAVE],
+        config=dict(wave=WAVE_LABELS[DEFAULT_WAVE], declared_wave=WAVE_LABELS[DECLARED_WAVE],
                     prescription="LC (Frankfurt-Strikman), coded in harness",
                     pwia_cos_max=PWIA_COS_MAX,
                     transverse_abs_cos=TRANSVERSE_ABS_COS,
@@ -523,7 +559,7 @@ def run(path=DEEPS, verbose=True):
             if "data_over_model_by_ps" in s:
                 print("  %-30s %s" % (name, " ".join(
                     "%.3f" % v for v in s["data_over_model_by_ps"])))
-        print("verdict wave (%s), per (Q2, W*):" % DEFAULT_WAVE)
+        print("headline wave (%s, the shipped default; A5), per (Q2, W*):" % DEFAULT_WAVE)
         for k, v in head["per_q2_w"].items():
             print("  %-16s %7.2f/%-3d p = %.3g" % (k, v["chi2"], v["ndf"], v["p"]))
         print("transverse |cos_pq| < 0.3 (recorded, not asserted), %d points; "
@@ -544,8 +580,9 @@ def run(path=DEEPS, verbose=True):
 
 #: the figure's palette slot and legend name of each wave, and the line
 #: style and legend name of each prescription (the recorded sub-rows)
-PLOT_WAVES = {"hulthen": ("default", "Hulthen (the verdict wave; an option since D6)"),
-              "av18": ("alt", "AV18"), "cdbonn": ("alt2", "CD-Bonn")}
+PLOT_WAVES = {"av18": ("default", "AV18 (shipped; the headline, A5)"),   # A5 (2026-11-03)
+              "hulthen": ("alt", "Hulthen (declared; an option since D6)"),
+              "cdbonn": ("alt2", "CD-Bonn")}
 PLOT_FORMS = {"lc": ("-", "o", "LC n(k) E_k/(2 - alpha) (the verdict's)"),
               "instant-form": ("--", "s", "instant form n(k = p_s) (recorded)"),
               "lc x GlauberFsiWeight": (":", "^", "LC x GlauberFsiWeight (recorded)")}
@@ -593,7 +630,7 @@ def plot(report, out_dir=None):
     ax.legend(handles, labels, loc="upper left", fontsize=7, ncol=2)
     h = subs["%s/lc" % DEFAULT_WAVE]
     status_title(fig, NAME, report["status"],
-                 "backward window cos_pq <= %g: Hulthen LC %.2f/%d (p = %.2g); "
+                 "backward window cos_pq <= %g: AV18 (shipped) LC %.2f/%d (p = %.2g); "
                  "tolerance p >= %g" % (PWIA_COS_MAX, h["chi2"], h["ndf"], h["p"],
                                         P_MIN))
     return save(fig, NAME, out_dir)

@@ -360,16 +360,16 @@ def test_nthreads_changes_no_number(tmp_path):
 # above keeps the number the run records cite.
 
 def test_d6_an_explicit_cluster_wave_off_the_tagged_channels_is_one_line(capsys):
-    """Registry row 11 under D6: `--cluster-wave` of EITHER value on a channel
-    that never reads it is refused in one line, by `make_config` (the value
-    rule of validate() cannot see an explicit request of the default)."""
+    """Registry row 11 under D6 and A17 (2026-11-03): `--cluster-wave hulthen`
+    off the tags is refused in one line by `make_config`; the explicit DEFAULT
+    `vmc` there is accepted and labelled not-read (A17, the one rule)."""
     for wave in ("vmc", "hulthen"):
         for chan in ("inclusive", "coherent"):
+            if wave == "vmc":   # A17 (2026-11-03): was refused under D6
+                assert cli.main(["--channel", chan, "--cluster-wave", wave, "--events", "10", "--quiet"]) == 0; continue
             with pytest.raises(SystemExit) as e:
-                cli.main(["--channel", chan, "--cluster-wave", wave,
-                          "--events", "10", "--quiet"])
-            msg = str(e.value)
-            assert msg.startswith("PipelineConfig: cluster_wave = '%s'" % wave)
+                cli.main(["--channel", chan, "--cluster-wave", wave, "--events", "10", "--quiet"])
+            msg = str(e.value); assert msg.startswith("PipelineConfig: cluster_wave = '%s'" % wave)
             assert "\n" not in msg
 
 
@@ -393,4 +393,29 @@ def test_d6_a_tagged_banner_names_the_wave_and_the_npz_records_it(tmp_path, caps
     assert "cluster wave:" not in capsys.readouterr().out
     meta = json.loads(str(np.load(out, allow_pickle=False)["meta"]))
     assert meta["cluster_wave"] == "not read on channel inclusive"
-    assert meta["knob_provenance"]["cluster_wave"]["status"] == "refused"
+    assert meta["knob_provenance"]["cluster_wave"]["status"] == "not-read"   # A17 (2026-11-03): was "refused"
+
+
+def test_a12_the_fsi_banner_prints_the_clipped_cell_fraction(tmp_path, capsys):
+    """A12 (2026-11-03; DECISIONS.md A12, the supervisor's choice under the
+    author's delegation): every FSI run's banner carries one line with the
+    weight table's clipped cell fraction -- the number `meta` records as
+    `fsi_clipped_grid_fraction` -- and a run without FSI carries no such line."""
+    out = tmp_path / "f.npz"
+    for fsi in ("glauber-cluster", "glauber-nucleon", None):
+        argv = ["--channel", "tagged-7Li-alpha", "--plan", "helicity-flip",
+                "--events", "100", "--seed", "5", "--npz", str(out)]
+        assert cli.main(argv + (["--fsi", fsi] if fsi else [])) == 0
+        text = capsys.readouterr().out
+        lines = [s for s in text.splitlines() if "FSI weight table:" in s]
+        meta = json.loads(str(np.load(out, allow_pickle=False)["meta"]))
+        if fsi is None:
+            assert not lines and "fsi_clipped_grid_fraction" not in meta
+            continue
+        assert len(lines) == 1, lines
+        f = meta["fsi_clipped_grid_fraction"]
+        assert lines[0].strip() == ("FSI weight table: %.2f %% of cells clipped at "
+                                    "w_max = 50 (sigma_XN = 40 mb; meta "
+                                    "fsi_clipped_grid_fraction; an unpriced "
+                                    "systematic, A12)" % (100.0 * f))
+        assert f > 0.0

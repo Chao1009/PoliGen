@@ -716,7 +716,7 @@ the ⁷Li cluster cells clipped at 20 mb, where this phase's measurement is
 11. **A finite bound on `cluster_vmc_mc_sigma`** (F6, §12 V-8). `validate()` now
    refuses a non-finite band, but 1000 σ still builds (the α–d P_D becomes
       0.133). No bound is declared anywhere, and choosing one is a new rule, so it
-   is left to the author.
+   is left to the author. *Decided: A11 (2026-11-03), |σ| ≤ 3, refused beyond by `validate()` (run 2026-11-03 phase P4).*
 12. **One clause, two readings** (added by the fix stage of 2026-11-03,
    physics finding 4 of the run's verification): this phase read a
    harness's "the shipped default" as the configuration its declaration

@@ -1396,7 +1396,7 @@ because one variational walk fixes neither), and the run-level knob is
 
 ```cpp
 cfg.cluster_wave = ClusterWaveSource::VmcAV18;   // the default since D6
-cfg.cluster_vmc_mc_sigma = +1.0;    // or -1.0; 0 (default) is bit for bit
+cfg.cluster_vmc_mc_sigma = +1.0;    // or -1.0; 0 (default) is bit for bit; |sigma| <= 3, refused beyond (A11, 2026-11-03)
 ```
 ```python
 ch = lipolgen._lipolgen.li6_alpha_channel(
@@ -1450,7 +1450,7 @@ since D6 — a tagged and an inclusive row of one programme
 described ⁶Li with wave functions whose α–d vector dilutions differ by **+11.61 %**
 and rank-2 transfers by **+6.58 %** (C5.5; whole nucleus 0.887076 against the pre-A1 0.811228, registry row 10, closed by A1: the inclusive factors are now 0.848 / 0.982576 / P_D 0.0576, so the two default runs differ by +4.6 % (0.887076 / 0.848) and 0 in the rank-2 sector; no CLI knob moves them — the old values are an API route: `lipolgen.li6_ion(LI6_CLUSTER_POLARIZATION_HULTHEN)`, `deuteron_ion(P_D_DEUTERON_SCENARIO)` and `default_inclusive_kernel(…, b1_transfer=LI6_B1_RANK2_TRANSFER_HULTHEN)` as `cfg.kernel`; every inclusive npz carries `meta["li6_cluster_polarization"]` / `["deuteron_p_d"]` / `["li6_b1_rank2_transfer"]` where read, and the banner a line "inclusive polarization factors").  Since
 2026-09-04 `cluster_wave` is **refused** on `--channel inclusive` and `--channel coherent` (since D6 a moved value by `validate()`,
-an explicit `--cluster-wave` of either value by `make_config` / the CLI), where it is never read: accepting it unread was how that
+an explicit `--cluster-wave hulthen` by `make_config` / the CLI; since A17 (2026-11-03) an explicit `vmc`, the default, is accepted and labelled `not-read`, "not read on channel …" in place of the value), where it is never read: accepting a moved value unread was how that
 11.61 % reached someone who had asked for a "VMC ⁶Li" row and got the shipped
 0.811228 with no warning.  Substituting the VMC P_D into
 `LI6_CLUSTER_POLARIZATION` is **not** the fix: it gives 0.905427, 6.8 % *above*
@@ -1701,7 +1701,7 @@ instead.
 
 **What the run records.** Since 2026-09-04 an FSI run's npz `meta` carries
 `fsi`, `fsi_sigma_mb`, `fsi_sigma_cluster_mb`, `fsi_sigma_cluster_el_mb`,
-`fsi_survival`, `fsi_clipped_grid_fraction`, `fsi_formation_ramp` (and the
+`fsi_survival`, `fsi_clipped_grid_fraction` (printed on the banner since A12, 2026-11-03: "FSI weight table: … % of cells clipped at w_max = 50 (sigma_XN = 40 mb; …)", an unpriced systematic, registry row 28), `fsi_formation_ramp` (and the
 four ramp anchors when the ramp ran). Before that the three runs above
 produced **identical `meta` dicts** while their total rate differed by 48 % /
 42 % — which made the mandatory 20–40 mb band unquotable, because the two ends
@@ -2142,7 +2142,7 @@ event, and file by file, in `tests/test_rc_pipeline.cpp` (T6) and
 `python/tests/test_rc.py`. The structural guarantee is that
 `RcModel::fill(Event&) const` takes no `Rng&`. With `--rc off` the npz key
 set and the HepMC3 weight names are **exactly** today's, so an `--rc off`
-file is byte-identical to one written before `rc.hpp` existed.
+file's weight block is the one written before `rc.hpp` existed (byte-identical files until A10, 2026-11-03, whose `lipolgen.*` GenRunInfo attributes record the run's provenance: `docs/HEPMC3_CONVENTION.md`, last section).
 
 **Per channel** (`RcModel::applies()` decides; the run prints why, and
 nothing is ever refused so a channel scan need not special-case `--rc`):
@@ -2615,7 +2615,7 @@ core cannot see):
 * **`read`** — the run consults it: some quantity it computes is a function of
   this knob, so another value would in general give another file.
 * **`not-read`** — nothing the run computes is a function of it, *and a
-  different value is accepted*. The `meta` key then carries the `label`
+  different value is accepted* — or (A17, 2026-11-03) the knob sits AT ITS DEFAULT and its reason says every other value is refused: an explicit default on an unread knob is accepted and labelled, the one rule of `docs/CONVENTIONS.md` "Refuse or label". The `meta` key then carries the `label`
   (`not read on channel coherent-6Li`, `not read by plan tensor-thirds`,
   `not read at rc = off`, …) instead of a value that would mislead.
   **The three route knobs are the one place where the label carries the value
@@ -2631,7 +2631,7 @@ core cannot see):
   `not read on channel inclusive`.
 * **`refused`** — the **axis** is closed on this run: `PipelineConfig.validate()`
   (or the `Pipeline` constructor) throws on any value but the one shown, so a
-  bare value cannot mislead and is kept.
+  bare value cannot mislead and is kept. Since A17 a row reads `refused` at its default only on the axes CONVENTIONS "Refuse or label" lists as not yet carried to the rule.
 
 **Where it shows up.**
 
@@ -2670,7 +2670,7 @@ the two `…` elisions:
          (InclusiveKernel::amplitudes adds helicity * (m/J) * cos(theta_S) *
          A_par and nothing else reads a PolSF).  The three TENSOR plans build
          every category at lam_e = 0, pe = 0 (bookkeeping.cpp: ...) ...
-     not read, at their defaults (44):
+     not read, at their defaults (45):
        not read at fsi = off: fsi_sigma_mb
        not read at rc = off: rc_delta_low_x, rc_delta_high_x, rc_x_low, ...
          ... rc_tail_model, rc_sp_tensor_scale, rc_with_qe_tail, rc_with_tail,
@@ -2679,14 +2679,14 @@ the two `…` elisions:
        not read in FIXED-COUNT mode (events = 200): lumi_pb
        not read in fixed-count mode: poisson, apply_optics_lumi_fraction
        not read on channel inclusive: optics, n_sigma, pot_config,
-         cluster_beta, p_d, triton_sf, tier, inclusive_b1, coherent_t_max, ...
+         cluster_wave, cluster_beta, p_d, triton_sf, tier, inclusive_b1, ...
        not read without --hadronize: coherent_t2, pom_set, pom_rescale
-     refused axes (7), where validate() throws on any other value:
+     refused axes (6), where validate() throws on any other value:
        b1_band_scale, b1_alpha_d_dwave_weight, b1_unpol, r_source,
-       cluster_wave, cluster_vmc_mc_sigma, fsi
+       cluster_vmc_mc_sigma, fsi
 ```
 
-*(69 knobs on the D7 re-run — the page said 68, stale already before D7; 66 knobs and seven refused axes until 2026-09-06, when `--r-source` added
+*(69 knobs on the D7 re-run — the page said 68, stale already before D7; A17 (2026-11-03, re-run 2026-11-06): `cluster_wave` moved from the refused axes (7 → 6) to the not-read defaults (44 → 45), the one rule; 66 knobs and seven refused axes until 2026-09-06, when `--r-source` added
 an eighth and `--pzz-mode` a 68th knob — labelled, not refused, under the
 three tensor plans; re-measured from the command above. The eighth refused
 axis was `rc_m_lepton`, and it came back OUT the same day: `PolradFull` was
@@ -3122,7 +3122,7 @@ objects are process-wide and shared read-only (`make_lhapdf_unpol_sf` /
 `make_lhapdf_pol_sf`); threaded generation on them is bit-identical to
 single-threaded (`tests/test_lhapdf.cpp`). Without either, `validate()`
 refuses the default by name; the core-only path is `toy_config()`. A build
-without the LHAPDF tier therefore refuses every default run and skips the
+without the LHAPDF tier (since A9, 2026-11-03, only an explicit `-DLIPOLGEN_WITH_LHAPDF=OFF`: a missing `lhapdf-config` stops the configure) therefore refuses every default run and skips the
 four `generate_*` examples: the tier is no longer optional for the shipped
 default (`docs/PACKAGING.md` §2.5).
 

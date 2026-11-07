@@ -187,7 +187,7 @@ int main(int argc, char** argv) {
     }
 
     std::unique_ptr<HepMC3Writer> writer;
-    if (!args.out.empty()) writer = std::make_unique<HepMC3Writer>(args.out);
+    if (!args.out.empty()) { writer = std::make_unique<HepMC3Writer>(args.out); writer->set_run_attributes(run_provenance(p, [&] { KnobRunContext c; c.plan_name = args.plan; return c; }())); }  // A10 (2026-11-03): the run's provenance in GenRunInfo
 
     const int nt = 10;
     std::vector<double> hist(nt, 0.0);

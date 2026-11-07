@@ -180,7 +180,7 @@
   "last": "move every pinned gate number, and it is not a uniform improvement on an"
  },
  "docs/USAGE.md:1978-2169": {
-  "sha256": "b14a67160b54f5d7c477d45f7dfb30dc6622b96f5c77133a4817f4de1828ea0c",
+  "sha256": "cb0d59cbd1c89e3f5409dee9cea0ce616d52af024a1a4d7d9c58458ea885a48e",
   "first": "## 5. Far-forward routing",
   "last": "  `rc_tensor_lo`/`rc_tensor_hi`/`rc_tail`. **Every other CLI plan is"
  },

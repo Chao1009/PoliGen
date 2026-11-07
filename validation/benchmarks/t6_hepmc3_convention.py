@@ -135,6 +135,7 @@ harness is a measurement, not a CI gate: the pytests are the gate.
 import contextlib
 import hashlib
 import io
+import json
 import math
 import os
 import re
@@ -153,8 +154,13 @@ DOC = os.path.join(ROOT, "docs", "HEPMC3_CONVENTION.md")
 # 2026-09-27 after decision D1 added the per-nucleon inclusive balance,
 # lines 140-147, and C13/C14 were rescoped to it).  A different sha256 is
 # REPORTED on the row; the clause anchors say whether it matters.
+# A10 (2026-11-03): re-pinned 2026-11-06 after the APPENDED section "Run
+# provenance attributes" (clause C24) and the line-neutral re-wording of
+# line 232, C23's "byte-identical" sentence, which the attributes made false
+# (T15/T15b assert the weight block, which stands).  The digest before A10:
+# 56d3a91a9bdf789b3628f9f1bc52c723887466aea3021e58ae511eb306ba4cd4
 DOC_SHA256_AT_AUTHORING = (
-    "56d3a91a9bdf789b3628f9f1bc52c723887466aea3021e58ae511eb306ba4cd4")
+    "20de1d3b3cbc03a78b92177d8eae71ab4c673a1b1532ee6d89d4033dc4ddad0f")
 
 NAME = "t6_hepmc3_convention"
 N_EVENTS = 100
@@ -280,6 +286,11 @@ CLAUSES = [
      "rc_tensor_lo rc_tensor_hi rc_tail then the _k triples, 3 (1 + N) of them"),
     ("C23", "230-232", (230, "is EMPTY when the run has `--rc off`"),
      "--rc off: no rc_* name, and 1 + N weight values"),
+    # A10 (2026-11-03): the run's physics provenance in GenRunInfo.
+    ("C24", "255-284", (262, "`lipolgen.<key>` holds exactly the string the run's npz `meta[<key>]` holds"),
+     "lipolgen.<key> GenRunInfo attributes: the A10 keys present (the rc ones "
+     "iff --rc), each value the npz meta's of the same run, written before the "
+     "first event, every event sharing the one GenRunInfo"),
 ]
 
 
@@ -374,7 +385,9 @@ def read_file(path):
                 if cs is not None else None,
                 names=list(ri.weight_names) if ri is not None else None,
                 tools=[(t.name, t.version) for t in ri.tools]
-                if ri is not None else None))
+                if ri is not None else None,
+                run_attrs={k: str(v) for k, v in ri.attributes.items()}
+                if ri is not None else None))   # A10 (2026-11-03)
     return raw, events
 
 
@@ -925,10 +938,62 @@ def c23(spec, raw, events, ctx):
     return 1, bad
 
 
+# A10 (2026-11-03): the keys every file carries as "lipolgen.<key>"
+# (docs/HEPMC3_CONVENTION.md, "Run provenance attributes"), and the rc ones.
+A10_PREFIX = "lipolgen."
+A10_KEYS = ("version", "channel", "isotope", "plan", "delta_convention",
+            "cluster_wave", "unpol_sf", "pol_sf", "b1_model", "b1_unpol",
+            "r_source", "unpol_sf_extrapolation", "pol_sf_extrapolation")
+A10_RC_KEYS = ("rc", "rc_tail_model", "rc_c0_shape", "rc_scope")
+
+
+def npz_meta_of(path):
+    """The `meta` of the npz `generate` wrote beside the HepMC3 file."""
+    import numpy as np                                     # noqa: WPS433
+    with np.load(path + ".npz", allow_pickle=False) as z:
+        return json.loads(str(z["meta"]))
+
+
+def c24(spec, raw, events, ctx):
+    meta = ctx.get("npz_meta")
+    if meta is None:
+        raise _Blocked("no npz meta of this run to compare the attributes to")
+    bad = []
+    first_e = next((i for i, s in enumerate(raw) if s.startswith("E ")), len(raw))
+    run_a = [s for s in raw[:first_e]
+             if s.startswith("A ") and s.split()[1].startswith(A10_PREFIX)]
+    attrs0 = (events[0]["run_attrs"] or {}) if events else {}
+    ours = {k[len(A10_PREFIX):]: v for k, v in attrs0.items()
+            if k.startswith(A10_PREFIX)}
+    need = set(A10_KEYS) | (set(A10_RC_KEYS) if spec["rc"] else set())
+    missing = sorted(need - set(ours))
+    if missing:
+        bad.append("missing lipolgen.* attributes %s" % missing)
+    if not spec["rc"] and any(k in ours for k in A10_RC_KEYS):
+        bad.append("rc attributes on an --rc off file")
+    if len(run_a) != len(ours):
+        bad.append("%d lipolgen.* run-level lines before the first event, %d "
+                   "attributes" % (len(run_a), len(ours)))
+    for k, v in sorted(ours.items()):
+        if k not in meta:
+            bad.append("lipolgen.%s has no npz meta key" % k)
+            continue
+        m = meta[k]
+        same = (v == m) if isinstance(m, str) else (float(v) == float(m))
+        if not same:
+            bad.append("lipolgen.%s = %r, the npz meta says %r" % (k, v, m))
+    for e in events:
+        if e["run_attrs"] != events[0]["run_attrs"]:
+            bad.append("event %d: run attributes differ from the first event's"
+                       % e["number"])
+            break
+    return 1, bad
+
+
 CHECKS = dict(C01=c01, C02=c02, C03=c03, C04=c04, C05=c05, C06=c06, C07=c07,
               C08=c08, C09=c09, C10=c10, C11=c11, C12=c12, C13=c13, C14=c14,
               C15=c15, C16=c16, C17=c17, C18=c18, C19=c19, C20=c20, C21=c21,
-              C22=c22, C23=c23)
+              C22=c22, C23=c23, C24=c24)
 
 
 class _Blocked(Exception):
@@ -965,9 +1030,10 @@ def environment():
 
 
 def argv_for(spec, path, n_events=N_EVENTS, seed=SEED):
+    # A10 (2026-11-03): the npz beside the file is C24's reference.
     return (list(spec["argv"]) + ["--config", "1", "--events", str(n_events),
-                                 "--seed", str(seed), "--hepmc", path,
-                                 "--quiet"])
+                                 "--seed", str(seed), "--npz", path + ".npz",
+                                 "--hepmc", path, "--quiet"])
 
 
 def generate(spec, path, n_events=N_EVENTS, seed=SEED):
@@ -1024,7 +1090,8 @@ def measure(n_events=N_EVENTS, seed=SEED, out_dir=None, runs=None):
             t0 = time.perf_counter()
             argv = generate(spec, path, n_events, seed)
             raw, events = read_file(path)
-            rrow.update(argv="lipolgen-run " + " ".join(argv[:-2] + ["<file>", "--quiet"]),
+            ctx["npz_meta"] = npz_meta_of(path)            # A10 (2026-11-03): C24
+            rrow.update(argv="lipolgen-run " + " ".join(argv[:-5] + ["--npz", "<file>.npz", "--hepmc", "<file>", "--quiet"]),
                         n_events=len(events), bytes=os.path.getsize(path),
                         hepmc_version=raw[0].split()[-1] if raw else None)
             for cid, *_ in CLAUSES:

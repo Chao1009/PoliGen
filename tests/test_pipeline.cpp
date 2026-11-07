@@ -1745,7 +1745,7 @@ TEST_CASE("D6: a default tagged run reads the VMC waves, and the knob rows say "
     const Pipeline p(cfg_of(ch, "6Li"), thirds);
     const KnobProvenance r = row(p, "cluster_wave");
     CAPTURE(r.value);
-    CHECK(r.status == KnobStatus::Refused);
+    CHECK(r.status == KnobStatus::NotRead);   // A17 (2026-11-03): was Refused -- the unread default is labelled
     CHECK(r.at_default);
     CHECK(r.value == std::string("not read on channel ") +
                          pipeline_channel_name(ch));
@@ -1788,4 +1788,36 @@ TEST_CASE("D6: the MC band is accepted where the default reads it, refused elsew
                            std::runtime_error);
     }
   }
+}
+
+// A11 (2026-11-03), the supervisor's choice under the author's delegation
+// (docs/open_items/run_2026-11-03/DECISIONS.md): `cluster_vmc_mc_sigma` is "a
+// number of the tables' printed 1-sigma", a statistical band, so |sigma| <= 3,
+// the widest reading of one; beyond it `validate()` refuses, naming the band
+// and the entry.  The edges build; NaN is still refused as non-finite (F6).
+TEST_CASE("A11: cluster_vmc_mc_sigma is bounded at |sigma| <= 3") {
+  auto cfg_at = [](double s) {
+    PipelineConfig c = toy_config();  // D7: the toy NAMED (sf_test_support.hpp)
+    c.channel = PipelineChannel::TaggedLi6Alpha;
+    c.isotope = "6Li";
+    c.n_events = 10;
+    c.cluster_vmc_mc_sigma = s;
+    return c;
+  };
+  const RunPlan thirds = tensor_thirds_plan(0.7, 0.6);
+  for (const double ok : {3.0, -3.0}) {
+    CAPTURE(ok);
+    CHECK_NOTHROW(cfg_at(ok).validate());
+    CHECK_NOTHROW(Pipeline(cfg_at(ok), thirds));
+  }
+  for (const double bad : {3.0000001, -4.0, 1000.0}) {
+    CAPTURE(bad);
+    CHECK_THROWS_WITH_AS(cfg_at(bad).validate(),
+                         doctest::Contains("|sigma| <= 3"), std::runtime_error);
+    CHECK_THROWS_WITH_AS(cfg_at(bad).validate(),
+                         doctest::Contains("A11"), std::runtime_error);
+  }
+  CHECK_THROWS_WITH_AS(cfg_at(std::nan("")).validate(),
+                       doctest::Contains("cluster_vmc_mc_sigma must be finite"),
+                       std::runtime_error);
 }

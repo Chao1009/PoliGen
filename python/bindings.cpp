@@ -399,7 +399,7 @@ void generate_columns(const Pipeline& p, std::uint64_t n, Columns& cols,
 ///     keeps its `qsqmin` private and a custom backend reports nothing, so
 ///     the floor is NOT known and must not be guessed: (NaN, NaN).
 std::pair<double, double> pol_sf_grid_report(const Pipeline& p);  // D7: the polarised twin, defined below the module
-py::dict sf_grid_extras(const Pipeline& p, const KnobProvenance& pol);  // D7: the extrapolation and polarised-grid meta keys, below the module
+py::dict sf_grid_extras(const Pipeline& p, const KnobProvenance& pol);  std::map<std::string, std::string> hepmc_run_attributes(const Pipeline& p, const KnobRunContext& ctx);  // D7: the extrapolation and polarised-grid meta keys, below the module; A10 (2026-11-03): run_provenance + the string keys of sf_grid_extras, below the module
 std::pair<double, double> unpol_sf_grid_report(const Pipeline& p) {
   const double kNan = std::numeric_limits<double>::quiet_NaN();
   const PipelineConfig& cfg = p.config();
@@ -528,7 +528,7 @@ py::dict columns_to_dict(Columns& c, const Pipeline& p, std::uint64_t n,
 #else
   ctx.t2_bound = false;
 #endif
-  const std::vector<KnobProvenance> knobs = p.knob_provenance(ctx);
+  const std::vector<KnobProvenance> knobs = p.knob_provenance(ctx);  const std::map<std::string, std::string> run_prov = run_provenance(p, ctx);  auto pv = [&run_prov](const char* k) { return run_prov.at(k); };  // A10 (2026-11-03): the provenance strings from ONE function, which the HepMC3 GenRunInfo also records
   auto knob = [&knobs](const char* name) -> const KnobProvenance& {
     for (const KnobProvenance& r : knobs)
       if (r.name == name) return r;
@@ -538,9 +538,9 @@ py::dict columns_to_dict(Columns& c, const Pipeline& p, std::uint64_t n,
 
   py::dict meta;
   meta["generator"] = "LiPolGen";
-  meta["version"] = LIPOLGEN_VERSION;
-  meta["channel"] = pipeline_channel_name(p.config().channel);
-  meta["isotope"] = p.config().isotope;
+  meta["version"] = pv("version");
+  meta["channel"] = pv("channel");
+  meta["isotope"] = pv("isotope");
   meta["beam_config"] = p.config().beam_config;
   meta["electron_energy"] = p.beam_config().electron_energy;
   meta["p_per_nucleon"] = p.beam_config().ion_momentum_per_nucleon;
@@ -553,7 +553,7 @@ py::dict columns_to_dict(Columns& c, const Pipeline& p, std::uint64_t n,
   // npz only by reading `category_names` and the pz/pzz/pe/lam_e columns back
   // out.  Written only when the caller supplied one (`cli.main` and `lg.run`
   // both do), so a `Pipeline.generate()` with no context is unchanged.
-  if (!ctx.plan_name.empty()) meta["plan"] = ctx.plan_name;
+  if (run_prov.count("plan")) meta["plan"] = pv("plan");
   meta["n_events"] = n;
   meta["n_events_total"] = p.size();
   meta["sigma_pb"] = p.sigma_pb();
@@ -619,14 +619,14 @@ py::dict columns_to_dict(Columns& c, const Pipeline& p, std::uint64_t n,
   // "the three surfaces read that table and nothing else" forbids: two
   // spellings of one label drift.  The row's status is Read or Refused, never
   // NotRead, so `meta_value()` is its `value` and this is bit-identical.
-  meta["b1_model"] = knob("b1_model").meta_value();
+  meta["b1_model"] = pv("b1_model");
   meta["b1_band_scale"] = p.config().b1_band_scale;
   meta["b1_alpha_d_dwave_weight"] = p.config().b1_alpha_d_dwave_weight;
   // Which unpolarised PDF the b1 convolution folded against.  Same provenance
   // rule and the same unconditional write as the three keys above: "toy" and
   // "mstw" differ by up to a factor 1.85 on Li6ConvolutionB1::b1 and by nothing
   // at all in any other npz key, so without this one they are indistinguishable.
-  meta["b1_unpol"] = knob("b1_unpol").meta_value();
+  meta["b1_unpol"] = pv("b1_unpol");
   // Which R = sigma_L/sigma_T the b1 convolution's numerator AND the kernel
   // that carries its denominator were BOTH built from (`RSource`; CLI
   // --r-source).  Same provenance rule and the same unconditional write:
@@ -636,15 +636,15 @@ py::dict columns_to_dict(Columns& c, const Pipeline& p, std::uint64_t n,
   // without this key the two are indistinguishable files.  The row is Read or
   // Refused at every value but `sigma-lt`, where it is NotRead and this key
   // carries the label -- honest: that run IS bit-identical to the unset one.
-  meta["r_source"] = knob("r_source").meta_value();
+  meta["r_source"] = pv("r_source");
   // D6: the wave a tagged run read ("vmc" / "hulthen"); off the tags the label.
-  meta["cluster_wave"] = knob("cluster_wave").meta_value();
+  meta["cluster_wave"] = pv("cluster_wave");
   // ... and the SENTENCE, on every run and every channel, from the one
   // definition the CLI run banner also prints (`rank2_input_report`): before
   // it a 7Li npz whose tensor sector was 0.0 could not be told from one whose
   // b1 was small.  Then the Delta normalisation a2 carries (D4, constants.hpp).
   meta["rank2_input"] = rank2_input_report(p.config(), p.plan());
-  meta["delta_convention"] = DELTA_CONVENTION;
+  meta["delta_convention"] = pv("delta_convention");
   // Which structure-function backend EVERY kernel of this run actually used
   // (`UnpolSfSource`, `PolSfSource`; CLI --unpol-sf / --pol-sf).  Same
   // provenance rule and the same UNCONDITIONAL write as the b1 keys above,
@@ -655,9 +655,9 @@ py::dict columns_to_dict(Columns& c, const Pipeline& p, std::uint64_t n,
   // selectors are not what produced the numbers (and on a tagged channel the
   // kernel itself is not even read), so say that rather than print a backend
   // name that did not run.
-  meta["unpol_sf"] = p.config().kernel
-                         ? std::string("caller-supplied kernel")
-                         : std::string(unpol_sf_name(p.config().unpol_sf));
+  meta["unpol_sf"] = pv("unpol_sf");  // A10 (2026-11-03): run_provenance --
+                                      // "caller-supplied kernel" or the
+                                      // backend's name, as before
   // ... and the POLARISED one, which has one channel the unpolarised one
   // does not: `CoherentLi6` never evaluates g1 at all (`pol_sf_is_read`), so
   // a coherent run records the "not read on channel ..." LABEL and not a
@@ -675,7 +675,7 @@ py::dict columns_to_dict(Columns& c, const Pipeline& p, std::uint64_t n,
   // `toy` -- on the CLI's own DEFAULT plan -- while this key wrote
   // "nnpdfpol".  Both axes now come from the ONE `knob_provenance` row, which
   // is `pol_sf_is_read(config, plan)`.
-  meta["pol_sf"] = knob("pol_sf").meta_value();
+  meta["pol_sf"] = pv("pol_sf");
   // ... with the reason beside it, on every run and every channel, from the
   // one definition the CLI run banner also prints (`pol_sf_reach_report`) --
   // the `rank2_input` arrangement.  This is the key that makes a coherent
@@ -705,7 +705,7 @@ py::dict columns_to_dict(Columns& c, const Pipeline& p, std::uint64_t n,
   // level worse than the b1 case it was written for, because `fsi_sigma_mb`
   // carries a documented 20-40 mb band that must never be quoted alone.
   if (const GlauberFsiWeight* fw = p.fsi_weight()) {
-    meta["fsi"] = std::string(pipeline_fsi_name(p.config().fsi));
+    meta["fsi"] = pv("fsi");
     meta["fsi_sigma_mb"] = p.config().fsi_sigma_mb;
     // What the weight actually applied, not only what was asked for: the
     // cluster profile and the integrated survival ARE the difference between
@@ -810,7 +810,7 @@ py::dict columns_to_dict(Columns& c, const Pipeline& p, std::uint64_t n,
   // the run has RC on, so an `--rc off` npz is byte-identical to today's and
   // not merely key-compatible with it (T6).
   if (const RcModel* rc = p.rc_model()) {
-    meta["rc"] = rc_mode_name(p.config().rc);
+    meta["rc"] = pv("rc");
     py::list rc_names;
     for (std::size_t i = 0; i < kRcWeightCount; ++i)
       rc_names.append(rc_weight_name(i, 0));
@@ -831,8 +831,8 @@ py::dict columns_to_dict(Columns& c, const Pipeline& p, std::uint64_t n,
     // "vmc-ft" move F_c and F_q TOGETHER and flip the sign of
     // sigma^el_T/sigma^el_U at x = 0.1 (phase_B_numbers.md sec. B1), so
     // without this key the two npz files are indistinguishable in `meta`.
-    meta["rc_c0_shape"] =
-        std::string(c0_shape_name(rc->options().c0_shape));
+    meta["rc_c0_shape"] =  // A17 (2026-11-03): through the table, like rc_tail_model below
+        pv("rc_c0_shape");
     meta["rc_tail_tensor_scale"] = rc->options().tail_tensor_scale;
     meta["rc_qe_suppression"] = rc->options().qe_suppression;
     // The POLARISED quasi-elastic stand-in.  Recorded for the same reason as
@@ -866,10 +866,10 @@ py::dict columns_to_dict(Columns& c, const Pipeline& p, std::uint64_t n,
     // "tensor-all" here would name a variation that did not happen.  Under
     // `transverse-tensor` / `tensor-flip` (theta_S = pi/2) it does run, and
     // the name goes in.
-    meta["rc_scope"] = knob("rc_scope").meta_value();
+    meta["rc_scope"] = pv("rc_scope");
     meta["rc_with_qe_tail"] = rc->options().with_qe_tail;
-    meta["rc_tail_model"] =
-        std::string(rc_tail_model_name(rc->options().tail_model));
+    meta["rc_tail_model"] =  // A17 (2026-11-03): through the table -- the label in place of the value where no tail runs
+        pv("rc_tail_model");
     meta["rc_n_eta"] = rc->options().n_eta;
     meta["rc_tail_max"] = rc->options().tail_max;
     meta["rc_clipped_cell_fraction"] = rc->clipped_cell_fraction();
@@ -1151,7 +1151,7 @@ PYBIND11_MODULE(_lipolgen, m) {
   bind_rc(m);
   bind_coherent(m);
   bind_pipeline(m);
-  bind_io(m);
+  bind_io(m);  m.def("run_provenance", &run_provenance, py::arg("pipeline"), py::arg("context") = KnobRunContext(), "A10 (2026-11-03): the run's physics provenance strings (pipeline.hpp)");  m.def("hepmc_run_attributes", &hepmc_run_attributes, py::arg("pipeline"), py::arg("context") = KnobRunContext(), "A10 (2026-11-03): run_provenance plus the extrapolation keys -- what a HepMC3 file records as lipolgen.<key>");
 
   m.def("hfs_arrays", &hfs_arrays, py::arg("events"),
         py::arg("include_spectators") = false,
@@ -3275,7 +3275,7 @@ static void bind_fsi(py::module_& m) {
       .def_readwrite("sigma_xn_mb", &GlauberFsiOptions::sigma_xn_mb,
                      "sigma_XN [mb].  40 = free hadron; documented BAND "
                      "20-40, band it, never quote one row alone.")
-      .def_readwrite("eps", &GlauberFsiOptions::eps)
+      .def_readwrite("eps", &GlauberFsiOptions::eps).def_readwrite("w_max", &GlauberFsiOptions::w_max)  // A12 (2026-11-03): the weight ceiling the banner names
       .def_readwrite("b_xn", &GlauberFsiOptions::b_xn)
       .def_readwrite("elastic_gain", &GlauberFsiOptions::elastic_gain)
       .def_readwrite("formation_ramp", &GlauberFsiOptions::formation_ramp)
@@ -4911,11 +4911,11 @@ static void bind_pipeline(py::module_& m) {
          "Rebuild this run at an integrated luminosity [pb^-1] and generate\n"
          "every event of it; same columnar dict as generate().")
       .def("write_hepmc", [](const Pipeline& p, const std::string& path,
-                             std::uint64_t n) {
+                             std::uint64_t n, const KnobRunContext& ctx) {
 #if LIPOLGEN_HAVE_HEPMC3
         if (n == 0 || n > p.size()) n = p.size();
-        py::gil_scoped_release unlock;
-        HepMC3Writer w(path);
+        const std::map<std::string, std::string> attrs = hepmc_run_attributes(p, ctx);  py::gil_scoped_release unlock;  // A10 (2026-11-03)
+        HepMC3Writer w(path);  w.set_run_attributes(attrs);
         std::vector<Event> buf;
         for (std::uint64_t i = 0; i < n; i += 2048) {
           const std::uint64_t j = std::min<std::uint64_t>(i + 2048, n);
@@ -4925,11 +4925,11 @@ static void bind_pipeline(py::module_& m) {
         w.close();
         return n;
 #else
-        (void)p; (void)path; (void)n;
+        (void)p; (void)path; (void)n; (void)ctx;
         throw std::runtime_error("LiPolGen was built without HepMC3");
 #endif
-      }, py::arg("path"), py::arg("n") = 0,
-         "Write the first `n` events (0 = all) to a HepMC3 Asciiv3 file.");
+      }, py::arg("path"), py::arg("n") = 0, py::arg("context") = KnobRunContext(),
+         "Write the first `n` events (0 = all) to a HepMC3 Asciiv3 file; A10 (2026-11-03): its GenRunInfo carries hepmc_run_attributes(self, context) as lipolgen.<key>.");
 }
 
 // ---------------------------------------------------------------------- io
@@ -4946,7 +4946,7 @@ static void bind_io(py::module_& m) {
            py::arg("generator_name") = "LiPolGen",
            py::arg("generator_version") = LIPOLGEN_VERSION)
       .def("write", &HepMC3Writer::write, py::arg("event"))
-      .def("close", &HepMC3Writer::close)
+      .def("close", &HepMC3Writer::close).def("set_run_attributes", &HepMC3Writer::set_run_attributes, py::arg("attributes"))  // A10 (2026-11-03)
       .def("__enter__", [](HepMC3Writer& w) { return &w; },
            py::return_value_policy::reference)
       .def("__exit__", [](HepMC3Writer& w, py::object, py::object, py::object) {
@@ -5335,6 +5335,24 @@ py::dict sf_grid_extras(const Pipeline& p, const KnobProvenance& pol) {
   out["pol_sf_grid_q2_min"] = g.first;
   out["pol_sf_below_grid_frac"] = g.second;
   return out;
+}
+
+// A10 (2026-11-03): what a HepMC3 file of this run records as its
+// "lipolgen.<key>" GenRunInfo attributes -- `run_provenance` (the core list
+// the npz `meta` fills its provenance keys from) plus the STRING keys of
+// `sf_grid_extras` (the two `*_sf_extrapolation` keys, which classify an
+// LHAPDF object the core cannot see), each exactly as `meta` carries it.
+std::map<std::string, std::string> hepmc_run_attributes(
+    const Pipeline& p, const KnobRunContext& ctx) {
+  std::map<std::string, std::string> m = run_provenance(p, ctx);
+  for (const KnobProvenance& r : p.knob_provenance(ctx)) {
+    if (r.name != "pol_sf") continue;
+    const py::dict extras = sf_grid_extras(p, r);
+    for (const auto& kv : extras)
+      if (py::isinstance<py::str>(kv.second))
+        m[kv.first.cast<std::string>()] = kv.second.cast<std::string>();
+  }
+  return m;
 }
 
 }  // namespace

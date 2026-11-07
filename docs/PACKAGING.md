@@ -413,8 +413,8 @@ Python module does it at import) or the config is filled explicitly
 (`lipolgen::attach_shipped_sf_backends(cfg)`), both from
 `<lipolgen/lhapdf_sf.hpp>`, linking `LiPolGenLHAPDF`. Otherwise
 `validate()` refuses by name. The core-only path is the toy NAMED,
-`lipolgen::toy_config()`. A build with `-DLIPOLGEN_WITH_LHAPDF=OFF` (or no
-`lhapdf-config`) therefore refuses every default run, skips the four
+`lipolgen::toy_config()`. A build with `-DLIPOLGEN_WITH_LHAPDF=OFF` (A9, 2026-11-03: a missing `lhapdf-config` is no longer a WARNING that switched the tier off but a configure-time FATAL_ERROR naming both cures, `-DLIPOLGEN_DEPS_PREFIX=<prefix>` or that explicit OFF)
+therefore refuses every default run, skips the four
 `generate_*` examples (they include the tier's header), and stops the Python
 suite at session start with return code 3 (`python/tests/conftest.py`;
 `LIPOLGEN_TESTS_ALLOW_MISSING_SETS=1` proceeds for a developer who knows):

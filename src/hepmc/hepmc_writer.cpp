@@ -55,7 +55,7 @@ struct HepMC3Writer::Impl {
   std::shared_ptr<HepMC3::GenRunInfo> run_info;  // built lazily, from event 0
   std::string generator_name;
   std::string generator_version;
-  bool closed = false;
+  bool closed = false;  std::map<std::string, std::string> run_attributes;  bool run_attributes_written = false;  // A10 (2026-11-03)
 
   explicit Impl(const std::string& filename, std::string name, std::string version)
       // No GenRunInfo passed here on purpose: WriterAscii only serializes a
@@ -80,7 +80,7 @@ struct HepMC3Writer::Impl {
     // rc.hpp: APPENDED after the spin block so that "nominal" stays index 0
     // and every existing spin_weight_k keeps its index -- append, never
     // insert (docs/HEPMC3_CONVENTION.md).  `Event::rc_weights` is EMPTY when
-    // the run has `--rc off`, so such a file is byte-identical to today's.
+    // the run has `--rc off`, so such a file's weight block is today's (A10: plus the lipolgen.* run attributes).
     // The block is row-major (n_slot x kRcWeightCount): slot 0 is the event's
     // own pure spin state, slot 1 + k is spin category k.
     const std::size_t n_slot = ev.rc_weights.size() / kRcWeightCount;
@@ -116,7 +116,7 @@ void HepMC3Writer::write(const Event& ev) {
   if (!impl_ || impl_->closed) {
     throw std::runtime_error("HepMC3Writer::write: writer is closed");
   }
-  impl_->ensure_run_info(ev);
+  impl_->ensure_run_info(ev);  if (!impl_->run_attributes_written) { for (const auto& kv : impl_->run_attributes) impl_->run_info->add_attribute("lipolgen." + kv.first, std::make_shared<HepMC3::StringAttribute>(kv.second)); impl_->run_attributes_written = true; }  // A10 (2026-11-03): before the GenRunInfo is first serialized
 
   HepMC3::GenEvent genevt(HepMC3::Units::GEV, HepMC3::Units::MM);
   genevt.set_run_info(impl_->run_info);
@@ -242,3 +242,15 @@ void HepMC3Writer::write(const Event& ev) {
 }
 
 }  // namespace lipolgen
+
+// A10 (2026-11-03): see hepmc_writer.hpp.  Stored here and attached to the
+// GenRunInfo by the first `write`, the moment it is built and serialized.
+void lipolgen::HepMC3Writer::set_run_attributes(
+    const std::map<std::string, std::string>& attributes) {
+  if (!impl_ || impl_->closed || impl_->run_attributes_written) {
+    throw std::runtime_error("HepMC3Writer::set_run_attributes: call it before "
+                             "the first write -- the GenRunInfo is serialized "
+                             "with the first event");
+  }
+  impl_->run_attributes = attributes;
+}

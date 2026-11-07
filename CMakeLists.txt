@@ -105,8 +105,8 @@ if(LIPOLGEN_WITH_LHAPDF)
       set_target_properties(lipolgen_lhapdf PROPERTIES OUTPUT_NAME LiPolGenLHAPDF)
     endif()
   else()
-    message(WARNING "lhapdf-config not found; LHAPDF tier disabled -- the SHIPPED structure-function defaults (D7: CT18NLO / NNPDFpol1.1) live in it, so every DEFAULT run of this build is refused by name; only runs naming --unpol-sf toy --pol-sf toy (C++: lipolgen::toy_config()) work")
-    set(LIPOLGEN_WITH_LHAPDF OFF)
+    message(FATAL_ERROR "lhapdf-config not found (searched PATH and ${LIPOLGEN_DEPS_PREFIX}/bin). The SHIPPED structure-function defaults (D7: CT18NLO / NNPDFpol1.1) live in the LHAPDF tier, so a build without it refuses every DEFAULT run. Either point -DLIPOLGEN_DEPS_PREFIX=<prefix> at an LHAPDF 6 install (or put its lhapdf-config on PATH), or pass -DLIPOLGEN_WITH_LHAPDF=OFF explicitly for the core-only build, in which only runs naming --unpol-sf toy --pol-sf toy (C++: lipolgen::toy_config()) work. (A9, 2026-11-03)")
+    # A9 (2026-11-03): was message(WARNING ...) + set(LIPOLGEN_WITH_LHAPDF OFF), a build whose every default run was refused only at run time
   endif()
 endif()
 

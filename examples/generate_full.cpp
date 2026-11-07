@@ -207,7 +207,7 @@ int main(int argc, char** argv) {
                p.sigma_pb(), static_cast<unsigned long long>(p.size()));
 
     std::unique_ptr<HepMC3Writer> writer;
-    if (!args.out.empty()) writer = std::make_unique<HepMC3Writer>(args.out);
+    if (!args.out.empty()) { writer = std::make_unique<HepMC3Writer>(args.out); writer->set_run_attributes(run_provenance(p, [&] { KnobRunContext c; c.plan_name = args.plan; return c; }())); }  // A10 (2026-11-03): the run's provenance in GenRunInfo
 
     std::uint64_t written = 0, n_tagged = 0, n_taggable = 0;
     double worst_p_rel = 0.0, worst_q = 0.0;

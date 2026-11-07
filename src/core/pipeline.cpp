@@ -512,7 +512,7 @@ void PipelineConfig::validate() const {
   if (cluster_vmc_mc_sigma != 0.0) {
     if (!std::isfinite(cluster_vmc_mc_sigma))  // F6 (2026-10-29): NaN != 0.0 too
       throw std::runtime_error("PipelineConfig: cluster_vmc_mc_sigma must be "
-                               "finite (a number of the tables' printed sigmas)");
+                               "finite (a number of the tables' printed sigmas)");  if (std::fabs(cluster_vmc_mc_sigma) > 3.0) throw std::runtime_error("PipelineConfig: cluster_vmc_mc_sigma = " + fmt_g(cluster_vmc_mc_sigma) + " is outside the band it names -- a number of the tables' printed 1-sigma; |sigma| <= 3, the widest reading of a statistical band (A11, 2026-11-03: 1000 sigma built an alpha-d P_D of 0.133 that prices nothing the tables say)");
     if (cluster_wave != ClusterWaveSource::VmcAV18) {
       throw std::runtime_error("PipelineConfig: cluster_vmc_mc_sigma is the ANL "
           "VMC tables' own Monte Carlo band and needs cluster_wave = VmcAV18 (the "
@@ -2143,7 +2143,7 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
   };
   auto yn = [](bool b) { return std::string(b ? "true" : "false"); };
   const std::string chn = pipeline_channel_name(c.channel);
-  const std::string off_ch = "not read on channel " + chn + ": ";
+  const std::string off_ch = "not read on channel " + chn + ": ";  const std::string kA17 = "; an explicit request of the default is accepted and labelled not-read (A17, docs/CONVENTIONS.md \"Refuse or label\")";  // A17 (2026-11-03): one rule for an explicit DEFAULT on an unread knob
   // Which of `--pz` / `--pzz` / `--rel-lumi-offset` the NAMED plan factory
   // takes.  bookkeeping.hpp's four factories are the whole of it:
   // tensor_thirds_plan(pz, pzz, rel_lumi_offset, ...),
@@ -2805,7 +2805,7 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
                          c.channel == PipelineChannel::TaggedLi7Alpha);
     add("cluster_wave", "--cluster-wave",  // D6: no bare "vmc" off the tags
         tag ? std::string(cluster_wave_name(c.cluster_wave)) : off_ch.substr(0, off_ch.size() - 2),
-        tag ? KnobStatus::Read : KnobStatus::Refused,
+        tag ? KnobStatus::Read : KnobStatus::NotRead,  // A17 (2026-11-03): the unread default is labelled, a moved value refused
         tag ? std::string("the family of radial forms of this channel's "
                           "cluster relative wave -- and, on the 6Li alpha "
                           "tag and the d control, of the embedded deuteron "
@@ -2814,7 +2814,7 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
                "the value is withheld -- the run default (vmc since D6) is read on the tagged "
                "channels only; the inclusive 6Li constants (LI6_CLUSTER_POLARIZATION = 0.848, "
                "the six-body value since A1) and the coherent form factors do not follow it, so "
-               "validate() refuses a moved value and make_config / the CLI an explicit one (C5.5)"),
+               "validate() refuses a moved value (C5.5)" + kA17),
         c.cluster_wave == d.cluster_wave);
     const bool mc_read = vmc && li_tag;
     add("cluster_vmc_mc_sigma", "", fmt_g(c.cluster_vmc_mc_sigma),
@@ -2966,31 +2966,31 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
     auto band_row = [&](const char* name, const char* flag, std::string value,
                         std::string what, bool at_def) {
       add(name, flag, std::move(value),
-          band ? KnobStatus::Read
-               : (on ? KnobStatus::Refused : KnobStatus::NotRead),
+          band ? KnobStatus::Read  // A17 (2026-11-03): the unread DEFAULT is labelled, a moved value refused
+               : (on && !at_def ? KnobStatus::Refused : KnobStatus::NotRead),
           band ? ("BAND knob: " + what)
-          : on  ? ("the band does not apply on channel " + chn +
+          : on  ? ((at_def ? off_ch : std::string()) + "the band does not apply on channel " + chn +
                   " (RcModel::applies() is false, every rc_tensor_* weight is "
                   "exactly 1.0), so this knob would record a systematic as "
                   "PRICED that was never computed -- validate() refuses any "
-                  "value but the default here")
+                  "value but the default here" + (at_def ? kA17 : std::string()))
                 : std::string("not read at rc = off: no RcModel is built"),
           at_def);
     };
-    auto tail_row = [&](const char* name, const char* flag, std::string value,
+    auto tail_scope = [&](bool at_def) { return !at_def ? std::string() : rc_tail_applies(event_channel_of(c.channel), true) ? std::string("not read on this run: ") : off_ch; };  auto tail_row = [&](const char* name, const char* flag, std::string value,
                         std::string what, bool at_def) {
       add(name, flag, std::move(value),
-          tail ? KnobStatus::Read
-               : (on ? KnobStatus::Refused : KnobStatus::NotRead),
+          tail ? KnobStatus::Read  // A17 (2026-11-03): the unread DEFAULT is labelled, a moved value refused
+               : (on && !at_def ? KnobStatus::Refused : KnobStatus::NotRead),
           tail ? ("TAIL knob: " + what)
-          : on  ? ("the radiative tail does not apply on this run (rc_tail == "
+          : on  ? (tail_scope(at_def) + "the radiative tail does not apply on this run (rc_tail == "
                   "1 exactly" +
                   std::string(is_tagged(c.channel)
                                   ? " by construction on channel " + chn
                                   : "") +
                   "), so this knob would record a systematic as PRICED that "
                   "was never computed -- validate() refuses any value but the "
-                  "default here")
+                  "default here" + (at_def ? kA17 : std::string()))
                 : std::string("not read at rc = off: no RcModel is built"),
           at_def);
     };
@@ -3038,7 +3038,7 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
         o.scope == RcScope::TensorRate ? "tensor-rate" : "tensor-all",
         scope_read ? KnobStatus::Read
                    : (band ? KnobStatus::NotRead
-                           : (on ? KnobStatus::Refused
+                           : (on && o.scope != od.scope ? KnobStatus::Refused  // A17 (2026-11-03)
                                  : KnobStatus::NotRead)),
         scope_read
             ? std::string("BAND knob: tensor-all adds the band to the "
@@ -3050,12 +3050,12 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
                   "sits at theta_S = 0 -- measured bit-identical under "
                   "tensor-thirds, and it does move under transverse-tensor "
                   "and tensor-flip")
-        : on   ? std::string("the band does not apply on channel " + chn +
+        : on   ? std::string((o.scope == od.scope ? off_ch : std::string()) + "the band does not apply on channel " + chn +
                             " (RcModel::applies() is false, every rc_tensor_* "
                             "weight is exactly 1.0), so this knob would "
                             "record a systematic as PRICED that was never "
                             "computed -- validate() refuses any value but the "
-                            "default here")
+                            "default here" + (o.scope == od.scope ? kA17 : std::string()))
                : std::string("not read at rc = off: no RcModel is built"),
         o.scope == od.scope);
     tail_row("rc_fq_scale", "--rc-fq-scale", fmt_g(o.fq_scale),
@@ -3085,19 +3085,19 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
                       std::string what, bool at_def) {
       add(name, flag, std::move(value),
           (tail && o.with_qe_tail)
-              ? KnobStatus::Read
-              : (on ? KnobStatus::Refused : KnobStatus::NotRead),
+              ? KnobStatus::Read  // A17 (2026-11-03): the unread DEFAULT on a tail-less run is labelled
+              : (on && !(at_def && !tail) ? KnobStatus::Refused : KnobStatus::NotRead),
           (tail && o.with_qe_tail) ? ("QUASI-ELASTIC TAIL knob: " + what)
           : !on ? std::string("not read at rc = off: no RcModel is built")
           : !tail
-              ? ("the radiative tail does not apply on this run (rc_tail == 1 "
+              ? (tail_scope(at_def) + "the radiative tail does not apply on this run (rc_tail == 1 "
                  "exactly" +
                  std::string(is_tagged(c.channel)
                                  ? " by construction on channel " + chn
                                  : "") +
                  "), so this knob would record a systematic as PRICED that "
                  "was never computed -- validate() refuses any value but the "
-                 "default here")
+                 "default here" + (at_def ? kA17 : std::string()))
               : std::string("rc_options.with_qe_tail = false switches POLRAD "
                             "Eq. (44)'s unpolarised quasi-elastic tail off, "
                             "so sigma^q_U is not computed at all and this "
@@ -3132,25 +3132,25 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
     // criterion stated once at `KnobProvenance`.
     {
       const bool sp = tail && o.tail_model == RcTailModel::TPeakPlusLL;
-      const bool pf = o.tail_model == RcTailModel::PolradFull;
+      const bool pf = o.tail_model == RcTailModel::PolradFull;  const bool sp_def = o.sp_tensor_scale == od.sp_tensor_scale;
       add("rc_sp_tensor_scale", "--rc-sp-tensor-scale",
           fmt_g(o.sp_tensor_scale),
-          sp ? KnobStatus::Read
-             : (on ? KnobStatus::Refused : KnobStatus::NotRead),
+          sp ? KnobStatus::Read  // A17 (2026-11-03): the unread DEFAULT on a tail-less run is labelled
+             : (on && !(sp_def && !tail) ? KnobStatus::Refused : KnobStatus::NotRead),
           sp ? std::string("LEADING-LOG s-/p-PEAK knob: prices the tensor "
                            "fraction of the s-/p-peaks with a BORROWED "
                            "magnitude -- a BOUND WITH NO DERIVATION; 0 is the "
                            "shipped tensor-blind s+p")
           : !on ? std::string("not read at rc = off: no RcModel is built")
           : !tail
-              ? ("the radiative tail does not apply on this run (rc_tail == 1 "
+              ? (tail_scope(sp_def) + "the radiative tail does not apply on this run (rc_tail == 1 "
                  "exactly" +
                  std::string(is_tagged(c.channel)
                                  ? " by construction on channel " + chn
                                  : "") +
                  "), so this knob would record a systematic as PRICED that "
                  "was never computed -- validate() refuses any value but the "
-                 "default here")
+                 "default here" + (sp_def ? kA17 : std::string()))
           : pf ? std::string("rc_options.tail_model = polrad-full needs no "
                              "s/p tensor stand-in: Eq. (18) carries the s- "
                              "and p-peaks inside its own tau_A integral WITH "
@@ -3207,7 +3207,7 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
     {
       const bool ml = tail && o.tail_model == RcTailModel::PolradFull;
       add("rc_m_lepton", "", fmt_g(o.m_lepton),
-          ml ? KnobStatus::Read : (on ? KnobStatus::Refused
+          ml ? KnobStatus::Read : (on && !(!tail && o.m_lepton == od.m_lepton) ? KnobStatus::Refused  // A17 (2026-11-03)
                                       : KnobStatus::NotRead),
           ml ? std::string("the LEPTON MASS of POLRAD Eq. (18): the m^2 of "
                            "C_{1,2}(tau) (Eq. (B.13)), of F_IR = m^2 F_2+ - "
@@ -3217,7 +3217,7 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
           : !tail
               ? (off_ch +
                  "the radiative tail does not apply on this run, so no "
-                 "quadrature reads a lepton mass at all")
+                 "quadrature reads a lepton mass at all" + (o.m_lepton == od.m_lepton ? kA17 : std::string()))
               : std::string("read ONLY by tail_model = polrad-full.  The "
                             "t-peak forms of Eqs. (37)-(39) carry no lepton "
                             "mass and TPeakPlusLL's leading-log radiator "
@@ -4039,6 +4039,51 @@ G1PositivityClip g1_positivity_clip(const Pipeline& p) {
   if (rn) { std::snprintf(buf, sizeof(buf), " A1^n = %.4g", mn); s += buf; }
   c.report = s + ")";
   return c;
+}
+
+}  // namespace lipolgen
+
+namespace lipolgen {
+
+// A10 (2026-11-03): see the declaration in pipeline.hpp.  Every value is the
+// expression `meta` used for its key before A10, moved here so that the npz
+// `meta` (python/bindings.cpp) and the HepMC3 `GenRunInfo` read one source.
+std::map<std::string, std::string> run_provenance(const Pipeline& p,
+                                                  const KnobRunContext& ctx) {
+  const std::vector<KnobProvenance> knobs = p.knob_provenance(ctx);
+  auto label = [&knobs](const char* name) {
+    for (const KnobProvenance& r : knobs)
+      if (r.name == name) return r.meta_value();
+    throw std::runtime_error(std::string("run_provenance: no knob_provenance "
+                                         "row named ") + name);
+  };
+  const PipelineConfig& c = p.config();
+  std::map<std::string, std::string> m;
+  m["version"] = LIPOLGEN_VERSION;
+  m["channel"] = pipeline_channel_name(c.channel);
+  m["isotope"] = c.isotope;
+  if (!ctx.plan_name.empty()) m["plan"] = ctx.plan_name;
+  m["delta_convention"] = DELTA_CONVENTION;
+  m["cluster_wave"] = label("cluster_wave");
+  m["unpol_sf"] = c.kernel ? std::string("caller-supplied kernel")
+                           : std::string(unpol_sf_name(c.unpol_sf));
+  m["pol_sf"] = label("pol_sf");
+  m["b1_model"] = label("b1_model");
+  m["b1_unpol"] = label("b1_unpol");
+  m["r_source"] = label("r_source");
+  if (p.rc_model() != nullptr) {
+    m["rc"] = rc_mode_name(c.rc);
+    m["rc_tail_model"] = label("rc_tail_model");
+    m["rc_c0_shape"] = label("rc_c0_shape");
+    m["rc_scope"] = label("rc_scope");
+  }
+  if (p.fsi_weight() != nullptr) m["fsi"] = pipeline_fsi_name(c.fsi);
+  char buf[64];
+  for (const auto& kv : inclusive_polarization_factors(p).meta()) {
+    std::snprintf(buf, sizeof(buf), "%.17g", kv.second);
+    m[kv.first] = buf;
+  }
+  return m;
 }
 
 }  // namespace lipolgen

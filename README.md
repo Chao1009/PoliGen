@@ -230,7 +230,7 @@ cmake --build build -j8
 ```
 
 CMake options: `LIPOLGEN_WITH_LHAPDF`, `LIPOLGEN_WITH_HEPMC3`,
-`LIPOLGEN_WITH_PYTHIA`, `LIPOLGEN_WITH_PYTHON`, `LIPOLGEN_BUILD_TESTS` (all ON).
+`LIPOLGEN_WITH_PYTHIA`, `LIPOLGEN_WITH_PYTHON`, `LIPOLGEN_BUILD_TESTS` (all ON). Since A9 (2026-11-03) a missing `lhapdf-config` stops the configure with a FATAL_ERROR naming both cures: `-DLIPOLGEN_DEPS_PREFIX=<prefix>` (or `lhapdf-config` on PATH), or an explicit `-DLIPOLGEN_WITH_LHAPDF=OFF` for the core-only build, whose every default run is refused by name.
 Data tables (`data/vmc`) are found via `LIPOLGEN_DATA_DIR` (default: the source tree).
 
 Alternatively, `pip install` the Python package on its own (scikit-build-core;

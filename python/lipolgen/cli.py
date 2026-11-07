@@ -227,9 +227,9 @@ def build_parser():
                         "' is the run default since D6, 2026-10-27 (the ANL "
                         "VMC AV18 tables: --p-d and --cluster-beta are unread, "
                         "bar the 7Li T1 triton); 'hulthen', the analytic "
-                        "pair, the option.  TAGGED CHANNELS ONLY: an explicit "
-                        "value on --channel inclusive / coherent is refused "
-                        "(their 6Li constants follow neither).  On "
+                        "pair, the option.  TAGGED CHANNELS ONLY: on --channel "
+                        "inclusive / coherent 'hulthen' is refused and 'vmc' accepted, "
+                        "labelled not-read (A17; their 6Li constants follow neither).  On "
                         "tagged-alpha vmc also selects the EMBEDDED deuteron "
                         "(AV18 fdeut, P_D = 0.0576).  SIGN NOTE (2026-09-06): the "
                         "tagged S-D interference sign was inverted before that "
@@ -1273,8 +1273,8 @@ def main(argv=None):
     # -- the rule this module already states for `make_plan` below and for the
     # PYTHIA bridge, and which `make_config` was outside of until 2026-09-16.
     # `PipelineConfig::validate()` throws `RuntimeError` (--fsi
-    # glauber-cluster off a tagged channel, --cluster-wave off its channels
-    # (`make_config`), --b1-band-scale off {0,1,2}, --rc-sp-tensor-scale on a
+    # glauber-cluster off a tagged channel, --cluster-wave hulthen off its channels
+    # (`make_config`; A17), --b1-band-scale off {0,1,2}, --rc-sp-tensor-scale on a
     # non-tensor-band --rc, ...), `make_config` itself raises `ValueError`
     # (--config 5), a pybind setter raises `TypeError` (--events -5, --seed -1
     # through the unsigned cast) and `ion_spin` raises `KeyError` (--isotope
@@ -1632,7 +1632,7 @@ def main(argv=None):
             "alone), sigma_X%s = %.1f mb, survival = %.4f"
             % (_l.pipeline_fsi_name(cfg.fsi), fw.sigma_eff_mb(0.0),
                p.tagged_channel.base.spectator,
-               fw.sigma_cluster_mb(fw.sigma_eff_mb(0.0)), fw.survival()))
+               fw.sigma_cluster_mb(fw.sigma_eff_mb(0.0)), fw.survival())); say(fsi_clip_line(fw))  # A12 (2026-11-03)
     if p.rc_model is not None:
         r = p.rc_model
         say("  RC %s: delta(x) = %.4g at x=0.01, %.4g at x=0.1; band %s; "
@@ -1858,14 +1858,28 @@ def main(argv=None):
         t0 = time.time()
         if "events" in cols:
             with _l.HepMC3Writer(opts["hepmc"]) as w:
-                for ev in cols["events"]:
-                    w.write(ev)
+                w.set_run_attributes(_l.hepmc_run_attributes(p, ctx))  # A10 (2026-11-03): the npz meta's strings
+                for ev in cols["events"]: w.write(ev)
         else:
-            p.write_hepmc(opts["hepmc"])
+            p.write_hepmc(opts["hepmc"], context=ctx)  # A10 (2026-11-03): GenRunInfo lipolgen.<key> attributes
         say("  wrote %s (%.1f MB) in %.1f s"
             % (opts["hepmc"], os.path.getsize(opts["hepmc"]) / 1e6,
                time.time() - t0))
     return 0
+
+
+def fsi_clip_line(fw):
+    """A12 (2026-11-03), the supervisor's choice under the author's delegation
+    (docs/open_items/run_2026-11-03/DECISIONS.md): the FSI weight-table
+    ceiling stays at 40 mb, and the share of grid cells clipped at
+    `GlauberFsiOptions.w_max` is printed on EVERY FSI run's banner -- the
+    same number, from the same call, as `meta["fsi_clipped_grid_fraction"]`
+    (python/bindings.cpp) -- because it is an UNPRICED systematic (decision
+    registry row 28); its band is filed with the next FSI design."""
+    return ("  FSI weight table: %.2f %% of cells clipped at w_max = %g "
+            "(sigma_XN = %g mb; meta fsi_clipped_grid_fraction; an unpriced "
+            "systematic, A12)" % (100.0 * fw.clipped_grid_fraction(),
+                                  fw.options.w_max, fw.sigma_eff_mb(0.0)))
 
 
 if __name__ == "__main__":

@@ -823,7 +823,7 @@ struct PipelineConfig {
   ClusterWaveSource cluster_wave = CLUSTER_WAVE_DEFAULT;
   /// Monte Carlo band of the ANL VMC tables, in units of their own printed
   /// 1-sigma error column, fully correlated across k (`li6_alpha_channel`,
-  /// open item C5.2).  0 = the tables bit for bit.  `validate()` REFUSES it
+  /// open item C5.2).  0 = the tables bit for bit; |sigma| <= 3 (A11, 2026-11-03: beyond, `validate()` refuses).  `validate()` REFUSES it
   /// unless the run is a lithium alpha-tag channel on `cluster_wave = VmcAV18`
   /// -- since D6 the DEFAULT lithium alpha tags, where it is READ: the Hulthen
   /// forms and `fdeut.av18` print no MC error, so elsewhere it would not run.
@@ -1242,7 +1242,7 @@ enum class KnobStatus : std::uint8_t {
             ///< file
   NotRead,  ///< nothing the run computes is a function of it; `reason` says
             ///< why, and `meta_value()` writes that reason in place of the
-            ///< bare value
+            ///< bare value; A17 (2026-11-03): also an unread knob AT ITS DEFAULT whose every other value is refused (CONVENTIONS "Refuse or label")
   Refused   ///< the AXIS is closed on this run: `PipelineConfig::validate()`
             ///< (or the `Pipeline` constructor) throws on any value but the
             ///< one shown, so the bare value cannot mislead and is kept
@@ -1821,6 +1821,29 @@ struct G1PositivityClip {
   std::string report;
 };
 G1PositivityClip g1_positivity_clip(const Pipeline& p);
+
+}  // namespace lipolgen
+
+#include <map>
+
+namespace lipolgen {
+
+// A10 (2026-11-03; DECISIONS.md A10, the supervisor's choice under the
+// author's delegation): THE RUN'S PHYSICS PROVENANCE AS STRINGS, ONE LIST.
+// The string-valued `meta` keys that say which physics made a file -- the
+// version, channel, isotope, plan, the Delta convention (D4), the cluster wave
+// (D6), the structure-function backends (D7), the b1 backend and its inputs,
+// the rc mode and tail model (D5), the FSI variant, and the three inclusive
+// polarization factors where read (A1; "%.17g", so they round-trip) -- each
+// value EXACTLY the string `meta` carries, labels included, because
+// python/bindings.cpp fills those `meta` keys FROM this function.  The
+// HepMC3 writer records the same map as `GenRunInfo` string attributes named
+// "lipolgen.<key>" (`HepMC3Writer::set_run_attributes`,
+// docs/HEPMC3_CONVENTION.md "Run provenance attributes").  NOT here: the two
+// `*_sf_extrapolation` keys, which classify an LHAPDF object the core cannot
+// see; the Python module adds them from the same function `meta` uses.
+std::map<std::string, std::string> run_provenance(
+    const Pipeline& p, const KnobRunContext& ctx = KnobRunContext());
 
 }  // namespace lipolgen
 

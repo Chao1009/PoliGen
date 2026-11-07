@@ -600,7 +600,7 @@ def test_c5_2_the_vmc_tables_carry_their_monte_carlo_band():
     with pytest.raises(RuntimeError):
         cfg.validate()
     cfg.cluster_wave = L.ClusterWaveSource.VmcAV18
-    cfg.validate()
+    cfg.validate(); cfg.cluster_vmc_mc_sigma = -3.0; cfg.validate(); cfg.cluster_vmc_mc_sigma = 3.5; pytest.raises(RuntimeError, cfg.validate).match(r"\|sigma\| <= 3.*A11")  # A11 (2026-11-03): |sigma| <= 3
     # ... and since D6 the DEFAULT lithium alpha tags read the band, so a
     # default config accepts it there and still refuses it on the d control.
     for channel, isotope, ok in (("tagged-alpha", "6Li", True),
@@ -729,8 +729,8 @@ def test_c5_5b_one_run_one_deuteron():
 def test_c5_5b_cluster_wave_is_refused_where_it_is_never_read():
     # D6 (2026-10-29 re-take): validate() refuses a value MOVED from the
     # default (VmcAV18) off the tagged channels, and make_config refuses an
-    # EXPLICIT request of either value there -- registry row 11's protection,
-    # which a value rule cannot give once "vmc" is the default.
+    # explicit "hulthen" there; A17 (2026-11-03): the explicit DEFAULT is
+    # accepted (its knob row is not-read, the label in place of the value).
     L = lg._lipolgen
     for channel, isotope, tagged in (("inclusive", "6Li", False),
                                      ("coherent", "6Li", False),
@@ -746,12 +746,12 @@ def test_c5_5b_cluster_wave_is_refused_where_it_is_never_read():
             with pytest.raises(RuntimeError):
                 cfg.validate()
         for wave in ("vmc", "hulthen", L.ClusterWaveSource.VmcAV18):
-            if tagged:
+            if tagged or wave != "hulthen":   # A17 (2026-11-03): the default is accepted off the tags
                 lg.make_config(isotope=isotope, channel=channel, events=10,
                                cluster_wave=wave).validate()
             else:
                 with pytest.raises(RuntimeError, match="^PipelineConfig: "
-                                   "cluster_wave = '(vmc|hulthen)' was asked"):
+                                   "cluster_wave = 'hulthen' was asked"):
                     lg.make_config(isotope=isotope, channel=channel,
                                    events=10, cluster_wave=wave)
 

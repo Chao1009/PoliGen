@@ -393,6 +393,7 @@ def test_t6_measured_row_is_pinned(t6, t6_rep):
         {c: s["status"] for c, s in by.items()}
     assert by["C12"]["n_checked"] == 200 and by["C22"]["files"] == 1
     assert by["C23"]["files"] == 7
+    assert by["C24"]["files"] == 8      # A10 (2026-11-03): every file carries the attributes
     # every record balances to far inside the doc's 1e-9: 700 on status 1
     # alone, the 100 T0 inclusive events with X; no remnant-shaped deficit left
     c13 = rep["conservation"]
@@ -432,10 +433,11 @@ def _tamper(src, dst, fn):
     open(dst, "w").write("\n".join(out) + "\n")
 
 
-def _violations(t6, run, path, cid):
+def _violations(t6, run, path, cid, meta_of=None):
     raw, events = t6.read_file(path)
     ctx = dict(n_events=len(events), version=lg.__version__, charge=None,
-               charge_reason="not needed")
+               charge_reason="not needed",
+               npz_meta=t6.npz_meta_of(meta_of or path))   # A10 (2026-11-03): C24's reference
     return t6.CHECKS[cid](run, raw, events, ctx)[1]
 
 
@@ -482,8 +484,17 @@ def test_t6_checks_can_fail(t6, tmp_path):
         bad = str(tmp_path / (fn.__name__ + ".hepmc"))
         _tamper(path, bad, fn)
         for cid in cids:
-            v = _violations(t6, _TAGGED_T0, bad, cid)
+            v = _violations(t6, _TAGGED_T0, bad, cid, meta_of=path)
             assert v and v[0].startswith("event 0"), (fn.__name__, cid, v)
+    # A10 (2026-11-03): C24 reads the run-level block; a changed value and a
+    # dropped attribute each fail it, against the npz meta of the same run.
+    raw = open(path).read().splitlines()
+    for label, edit in (("value", lambda s: s.replace("A lipolgen.pol_sf ", "A lipolgen.pol_sf x", 1)),
+                        ("dropped", lambda s: "" if s.startswith("A lipolgen.cluster_wave ") else s)):
+        bad = str(tmp_path / ("c24_" + label + ".hepmc"))
+        open(bad, "w").write("\n".join(x for x in map(edit, raw) if x != "") + "\n")
+        v = _violations(t6, _TAGGED_T0, bad, "C24", meta_of=path)
+        assert v and ("pol_sf" in v[0] or "cluster_wave" in v[0]), (label, v)
 
 
 def test_t6_blocked_paths_name_the_environment(t6, monkeypatch):

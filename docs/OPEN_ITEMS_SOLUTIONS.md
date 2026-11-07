@@ -29,9 +29,9 @@ row 20's D11 is PAID**. The follow-on run added exactly **two** rows, both on
 2026-09-15 and neither decided: **row 26** (§B27), the tagged S–D
 interference phase and the `tagged.json` re-pin, *applied — confirm or
 revert* (the re-pin itself was overtaken on 2026-09-23, when `tagged.json` went back to `polligen` in every block after the sibling's own fix); and **row 27** (§B28), the sibling repository's published
-`A_zz^tag` numbers. The registry is **27 rows**, of which **8 are marked
+`A_zz^tag` numbers. The registry is **27 rows** (28 since A12, 2026-11-03: row 28, the FSI weight-table ceiling as an unpriced systematic), of which **8 are marked
 applied and 15 are open**. That run's own one page is
-`run_2026-09-06/SUMMARY.md`. **Board rows 1, 9 and 10 carry 2026-09-23 facts** from the benchmark run (`run_2026-09-23/SUMMARY.md`); no registry label moved and the registry is still 27 rows.
+`run_2026-09-06/SUMMARY.md`. **Board rows 1, 9 and 10 carry 2026-09-23 facts** from the benchmark run (`run_2026-09-23/SUMMARY.md`); no registry label moved and the registry is still 27 rows (28 since A12, 2026-11-03).
 
 **Each item's state is one of five**, and the difference matters more than the
 word "done" did:
@@ -388,7 +388,7 @@ Roman-Pot α-tag selection. Prototype (σ_XN = 40 mb): ≤ 20 % for k ≲ 0.02 G
 input and must be banded (the 20 mb row is arguably realistic at EIC). Use σ_tot
 in the absorptive term and σ_el in the gain term (74 % of α rescatterings destroy
 the tag). Hook: `FsiWeight` interface on `TaggedSampler`, multiplied into
-`Event::weight`; null = today's PWIA bit-for-bit.
+`Event::weight`; null = today's PWIA bit-for-bit. *A12 (2026-11-03), the supervisor's choice under the author's delegation: the weight-table ceiling stays as shipped (w_max = 50 at σ_XN = 40 mb); its clipped cell fraction is printed on every FSI run's banner beside `meta["fsi_clipped_grid_fraction"]` (measured 2026-11-06 on the shipped default: ⁷Li 4.41 % / 9.52 % (cluster / nucleon), ⁶Li 0.70 % / 5.25 %, d control 1.35 % / 1.35 %); an unpriced systematic, registry row 28; its band is filed with the next FSI design.*
 
 **IMPLEMENTED (2026-09-01), measured** (`fsi.hpp` / `fsi.cpp`,
 `TaggedSampler::set_fsi` → `TaggedEvent::weight` → `Event::weight`;
@@ -532,7 +532,7 @@ band produced indistinguishable files.
 `src/core/rc.cpp`; `PipelineConfig::rc` / `--rc {off,tensor-band}` plus
 `--rc-delta-low-x`, `--rc-delta-high-x`, `--rc-fq-scale`,
 `--rc-tail-tensor-scale`, `--rc-qe-suppression`; `docs/USAGE.md` §7b; the raw
-run in `docs/open_items/run_2026-09-02/phase_C_numbers.md`).
+run in `docs/open_items/run_2026-09-02/phase_C_numbers.md`). *A14 (2026-11-03): on the default `polrad-full` tail the quasi-elastic stand-in at scale 1 is 14.5× the band half-width at x = 0.30 and `qe_kf_gev` the smaller knob at x = 0.01 — recorded, nothing re-tuned (`PHYSICS_CHANNELS.md` row 387, registry row 17).*
 
 > **Revised 2026-09-03 after review.** Every tail number below was
 > regenerated: the elastic tail's per-nucleon reduction was **6× too large**
@@ -549,7 +549,7 @@ Three weights per event — `rc_tensor_lo = 1 − δ(x)τ`,
 variation and the tail a background, so neither may touch the Born sample.
 No four-vector moves, no RNG is consumed (`RcModel::fill` takes no `Rng&`),
 and an `--rc off` npz and HepMC3 file are **byte-identical** to what the same
-seed wrote before `rc.hpp` existed. Applies on every channel except coherent
+seed wrote before `rc.hpp` existed (the HepMC3 file until A10, 2026-11-03, added its `lipolgen.*` run attributes; its weight block is unchanged). Applies on every channel except coherent
 ⁶Li (a φ-dependent tensor observable — nothing to cite); the tail is
 identically 1 on the tagged channels, where the tag itself vetoes the elastic
 recoil at x_L = 1. **That last clause is half a kinematic fact.** It is one for

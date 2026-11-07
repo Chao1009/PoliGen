@@ -456,8 +456,8 @@ def make_config(isotope="6Li", config=1, channel="inclusive", events=0,
     anchor's |t| <= 0.30 digitization range rather than by positivity, and
     recorded in the npz meta.  `cluster_wave` is a
     key of `CLUSTER_WAVES` ("vmc", the run default since D6, or "hulthen") or
-    a `ClusterWaveSource`; None keeps `CLUSTER_WAVE_DEFAULT`, and an explicit
-    value on a channel that never reads it raises RuntimeError (registry row 11).
+    a `ClusterWaveSource`; None keeps `CLUSTER_WAVE_DEFAULT`; on a channel that
+    never reads it the default is accepted and labelled (A17), "hulthen" raises.
     `triton_sf` is a key of `TRITON_SFS` ("hulthen", the default, or
     "ciofi-simula") or a `TritonSfChoice` directly; "ciofi-simula" replaces
     the 7Li alpha tag's sequential triton breakup with the three-channel
@@ -875,31 +875,31 @@ def run(isotope="6Li", config=1, channel="inclusive", plan="tensor-thirds",
 
 
 def _cluster_wave_on_tagged_only(cfg, cluster_wave):
-    """D6 (2026-10-27): the EXPLICIT-request guard of registry row 11.
+    """D6 (2026-10-27), A17 (2026-11-03): the explicit-request guard of row 11.
 
     `PipelineConfig.validate()` refuses a `cluster_wave` MOVED FROM the run
-    default off the tagged channels, and since D6 that default
-    (`CLUSTER_WAVE_DEFAULT`, VMC) is exactly what a user asking for a "VMC
-    6Li" inclusive row would type -- so a value rule alone would accept the
-    request and deliver `LI6_CLUSTER_POLARIZATION` (0.848 since A1), the wave
-    unread.  This sees what the config cannot, that the caller NAMED a wave,
-    and refuses EITHER value on a channel that never reads one.  The message
-    starts "PipelineConfig:" like every `validate()` refusal, so the CLI
-    prints it in one line and validation/price_defaults.py classifies it as
-    a refusal.  A C++ caller (or one assigning `cfg.cluster_wave` directly)
-    who sets the default value is indistinguishable from one who did not, as
-    for every knob."""
-    if _lipolgen.is_tagged(cfg.channel):
-        return
+    default off the tagged channels.  Until A17 this guard refused an EXPLICIT
+    request of the default (`vmc`) there too; under A17 (the supervisor's
+    choice under the author's delegation) an explicit DEFAULT on a knob the
+    run never reads is ACCEPTED, its knob row `not-read` with the label in
+    place of the value, so it never reads as a "VMC 6Li" inclusive row.  A
+    NON-default value (`hulthen`) keeps its refusal, with the cause named.
+    The message starts "PipelineConfig:" like every `validate()` refusal, so
+    the CLI prints it in one line and price_defaults.py calls it a refusal
+    (the one rule: docs/CONVENTIONS.md, "Refuse or label")."""
+    if _lipolgen.is_tagged(cfg.channel) or CLUSTER_WAVES.get(
+            cluster_wave, cluster_wave) == _lipolgen.CLUSTER_WAVE_DEFAULT:
+        return                          # A17: the default is accepted, labelled
     name = cluster_wave if isinstance(cluster_wave, str) \
         else _lipolgen.cluster_wave_name(cluster_wave)
     raise RuntimeError(
         "PipelineConfig: cluster_wave = %r was asked for on channel %s, which "
         "never reads a cluster wave -- the inclusive 6Li constants "
         "(LI6_CLUSTER_POLARIZATION = 0.848, the six-body value since A1) "
-        "and the coherent form factors follow neither value (open "
-        "item C5.5, registry row 11, D6).  Drop the cluster wave, or run a "
-        "tagged channel" % (name, _lipolgen.pipeline_channel_name(cfg.channel)))
+        "and the coherent form factors follow neither value (open item C5.5, "
+        "registry row 11, D6; the default is accepted and labelled, A17).  "
+        "Drop the cluster wave, or run a tagged channel"
+        % (name, _lipolgen.pipeline_channel_name(cfg.channel)))
 
 
 def shipped_inclusive_kernel(ion, b1_transfer=None):

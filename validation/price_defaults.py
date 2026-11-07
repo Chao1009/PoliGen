@@ -541,7 +541,7 @@ def family_li6_inclusive(events, seed, log):
         fam["rows"].append(r)
     d3 = dict(default)
     for knob, val, expect in (("r_source", "r1998", "refused"),
-                              ("cluster_wave", "vmc", "refused")):
+                              ("cluster_wave", "vmc", "not-read")):   # A17 (2026-11-03): the explicit default is labelled, no longer refused
         fam["rows"].append(_probe(base_3, knob, val, events, seed, d3,
                                   thirds_extract, expect))
     dtt = dict(default, fingerprint=default.get("fingerprint_tt"))   # F7: as above
@@ -743,7 +743,7 @@ def family_li7_inclusive(events, seed, log):
             del out
     default = fam["rows"][0]
     for knob, val, expect in (("r_source", "r1998", "refused"),
-                              ("cluster_wave", "vmc", "refused"),
+                              ("cluster_wave", "vmc", "not-read"),   # A17 (2026-11-03): was "refused"
                               ("triton_sf", "ciofi-simula", "not-read"),
                               ("eps_b0", EPS_B0_MEASURED, "not-read"),
                               ("f0", F0_BAND[0], "not-read")):
@@ -882,7 +882,7 @@ def family_li6_coherent(events, seed, log):
                 dv["t_exp"], dv["t_max"], dv["slope_b"], dv["t_tag"], TAG_ENVELOPE_PT,
                 dv["rp_n"]))
     for knob, val, expect in (("pol_sf", "toy", "not-read"),   # D7: the option
-                              ("cluster_wave", "vmc", "refused"),
+                              ("cluster_wave", "vmc", "not-read"),   # A17 (2026-11-03): was "refused"
                               ("triton_sf", "ciofi-simula", "not-read"),
                               ("r_source", "r1998", "refused")):
         fam["rows"].append(_probe(base, knob, val, events, seed, default,

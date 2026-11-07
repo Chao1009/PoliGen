@@ -60,7 +60,7 @@ import pytest
 import lipolgen as lg
 from lipolgen import _lipolgen as _l
 
-N = 60
+N = 60;  A17_LABELLED = "an explicit request of the default is accepted and labelled not-read (A17"  # A17 (2026-11-03)
 SEED = 7
 
 NO_LHAPDF = ("needs the LHAPDF tier: --b1-unpol ct18nlo -- and since D7 "
@@ -596,7 +596,7 @@ def test_the_table_matches_the_output_hash(cache, spec, variant):
         # still have other values refused (b1_model = miller on an inclusive
         # deuteron run reaches the rate; cdks is refused because the transfer
         # is 6Li's).
-        assert row.status != _l.KnobStatus.NotRead, (
+        assert row.status != _l.KnobStatus.NotRead or (row.at_default and A17_LABELLED in row.reason), (  # A17 (2026-11-03): an unread DEFAULT is labelled while every other value is refused
             "%s on %s: the run surface REFUSES a non-default value (%s) while "
             "the table calls it `not-read`, which promises the value is "
             "accepted and labelled.  Record the axis as `refused`."
@@ -948,30 +948,57 @@ def test_the_table_matches_the_output_hash_on_the_shipped_tail(cache, spec,
 
 
 @pytest.mark.skipif(not _l.HAVE_LHAPDF, reason=NO_LHAPDF)
-def test_an_explicit_default_on_an_unread_knob_is_handled_three_ways():
-    """Code finding 4 of the 2026-11-03 verification, STATED rather than
-    unified (docs/CONVENTIONS.md, "Refuse or label"): an explicit request for
-    the DEFAULT value of a knob the run never reads is refused by D6, accepted
-    and recorded `refused` by D5, accepted and labelled `not-read` by D7.  This
-    test pins the three behaviours so the sentence cannot go stale silently;
-    unifying them is the author's call."""
+def test_an_explicit_default_on_an_unread_knob_is_handled_one_way():
+    """A17 (2026-11-03), the supervisor's choice under the author's delegation
+    (docs/open_items/run_2026-11-03/DECISIONS.md), replacing the three-ways
+    pin of code finding C4: an explicit request for the DEFAULT value of a
+    knob the run never reads is ACCEPTED and its row is `not-read`, the label
+    in place of the value (docs/CONVENTIONS.md, "Refuse or label"); a
+    NON-default value keeps its refusal.  Three cases -- the D6 wave, the D5
+    tail model (with a band and a tail sub-knob beside it), the D7 selector --
+    and in each the accepted default is BIT-IDENTICAL to the unnamed run
+    (the label moves no number)."""
     plan = lg.tensor_thirds_plan(0.7, 0.6)
-    # D6: --cluster-wave vmc off the tags -- refused by make_config
-    with pytest.raises((RuntimeError, ValueError), match="cluster_wave"):
-        lg.make_config(channel="inclusive", cluster_wave="vmc", events=10)
-    # D5: --rc-tail-model polrad-full where no tail is built -- ACCEPTED, the
-    # row `refused` with the bare value; an explicit t-peak there is refused
-    cfg = lg.make_config(channel="tagged-6Li-alpha", rc="tensor-band",
-                         rc_tail_model="polrad-full", events=10)
-    row = [r for r in _l.Pipeline(cfg, plan).knob_provenance()
-           if r.name == "rc_tail_model"][0]
-    assert row.status == _l.KnobStatus.Refused
-    assert row.value == "polrad-full"
+
+    def one(kw, name):
+        cfg = lg.make_config(events=N, seed=SEED, **kw)
+        p = _l.Pipeline(cfg, plan)
+        cols = p.generate(0, False, 1)
+        rows = {r.name: r for r in p.knob_provenance()}
+        return _hash(p, cols), rows[name], cols["meta"]
+
+    def check(base_kw, explicit, name, label):
+        h0, r0, m0 = one(base_kw, name)
+        h1, r1, m1 = one(dict(base_kw, **explicit), name)
+        assert h1 == h0, (name, "an accepted default moved the file")
+        for r in (r0, r1):
+            assert r.status == _l.KnobStatus.NotRead, (name, r.reason)
+            assert r.at_default and r.label == label, (name, r.label)
+            assert r.meta_value == label
+        return r1, m1
+
+    # D6: --cluster-wave vmc off the tags -- accepted, labelled; hulthen refused
+    r, m = check(dict(channel="inclusive"), dict(cluster_wave="vmc"),
+                 "cluster_wave", "not read on channel inclusive")
+    assert m["cluster_wave"] == "not read on channel inclusive"
+    assert "vmc" not in r.value
+    with pytest.raises(RuntimeError, match="^PipelineConfig: cluster_wave = 'hulthen'"):
+        lg.make_config(channel="inclusive", cluster_wave="hulthen", events=10)
+    # D5: --rc-tail-model polrad-full where no tail is built -- accepted,
+    # labelled, the meta key carrying the label; an explicit t-peak refused
+    tag = dict(channel="tagged-6Li-alpha", rc="tensor-band")
+    r, m = check(tag, dict(rc_tail_model="polrad-full"), "rc_tail_model",
+                 "not read on channel tagged-6Li-alpha")
+    assert m["rc_tail_model"] == "not read on channel tagged-6Li-alpha"
+    assert m["rc_tail_applies"] is False
+    check(tag, dict(rc_fq_scale=1.0), "rc_fq_scale",
+          "not read on channel tagged-6Li-alpha")            # a tail_row knob
+    check(dict(channel="coherent", rc="tensor-band"), dict(rc_delta_low_x=0.30),
+          "rc_delta_low_x", "not read on channel coherent-6Li")  # a band_row knob
     with pytest.raises((RuntimeError, ValueError)):
-        _l.Pipeline(lg.make_config(channel="tagged-6Li-alpha", rc="tensor-band",
-                                   rc_tail_model="t-peak", events=10), plan)
+        _l.Pipeline(lg.make_config(rc_tail_model="t-peak", events=10, **tag), plan)
+    with pytest.raises((RuntimeError, ValueError)):
+        _l.Pipeline(lg.make_config(rc_fq_scale=2.0, events=10, **tag), plan)
     # D7: --pol-sf nnpdfpol on coherent -- accepted, labelled not-read
-    cfg = lg.make_config(channel="coherent", pol_sf="nnpdfpol", events=10)
-    row = [r for r in _l.Pipeline(cfg, plan).knob_provenance()
-           if r.name == "pol_sf"][0]
-    assert row.status == _l.KnobStatus.NotRead
+    check(dict(channel="coherent"), dict(pol_sf="nnpdfpol"), "pol_sf",
+          "not read on channel coherent-6Li")

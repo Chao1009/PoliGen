@@ -1654,5 +1654,96 @@ def _preflight_cluster_wave():
           "(what tagged.json pins; LiPolGen's run default is VMC since D6)")
 
 
+#: A13 (2026-11-03), LiPolGen's run 2026-11-03 decision: the VMC alpha-d port
+#: gate.  Kept here, below main(), so that no line the run records cite moves
+#: (the same reason as README_ADDENDA above).
+LI6_ALPHA_VMC_PORT_RTOL = 1e-8
+LI6_ALPHA_VMC_SCOPE = (
+    "The VECTOR and TENSOR dilutions of the 6Li alpha-d relative motion on "
+    "polligen's ANL VMC tables (tagged.li6_alpha_channel(wave=\"vmc\")), "
+    "against LiPolGen's li6_alpha_channel(source=VmcAV18): the alpha-d "
+    "motion ONLY.  Not covered: the embedded deuteron (polligen keeps the "
+    "scenario P_D = 0.045, i.e. 0.9325, under wave=\"vmc\"; LiPolGen's "
+    "VmcAV18 puts the AV18 deuteron there), 7Li (polligen refuses "
+    "wave=\"vmc\" on 7Li), and every grid table (n_of_kc, struck "
+    "populations, norm, p2 moments, boost_spectator: the VMC waves are "
+    "interpolated tables, so those are not rtol-1e-12 quantities and are "
+    "not dumped).")
+LI6_ALPHA_VMC_RTOL_REASON = (
+    "Declared before the comparison (A13, 2026-11-03): the design measured "
+    "polligen's VMC alpha-d at 5.4e-9 (vector) and 3.2e-9 (tensor) of "
+    "LiPolGen's dilutions -- two interpolations of the same ANL tables -- "
+    "so 1e-8 is a factor 2-3 above the residual: it catches a sign or "
+    "normalisation slip and nothing less.  Never widened after a number is "
+    "seen.")
+
+
+def build_tagged_li6_alpha_vmc():
+    """The REDUCED `channels.li6_alpha_vmc` block of tagged.json (A13): the
+    channel's quantum numbers, the ANL table's own P_D and the two
+    stretched-state dilutions of polligen's TaggedModel at its default grid.
+    Not the full Hulthen-shaped block: `wave_dump` does not apply to the
+    tabulated waves, and a grid-quadrature table would need its own
+    tolerance."""
+    channel = tagged.li6_alpha_channel(wave="vmc")
+    model = tagged.TaggedModel(channel)  # defaults: k_max=1.2, nk=280, nc=96
+    if abs(channel.s_channel - 1.0) > 1e-9:
+        raise SystemExit("polligen's VMC li6_alpha channel has s_channel %r, "
+                         "not 1: no tensor dilution to dump (A13).  Nothing "
+                         "written." % channel.s_channel)
+    return {
+        "label": channel.label, "j_ion": channel.j_ion,
+        "s_struck": channel.s_struck, "s_spec": channel.s_spec,
+        "s_channel": channel.s_channel,
+        "P_D": tagged.li6_vmc_tables()[3],
+        "model": {
+            "vector_dilution": model.vector_dilution(),
+            "tensor_dilution": model.tensor_dilution(),
+        },
+        "port_gate_rtol": LI6_ALPHA_VMC_PORT_RTOL,
+        "port_gate_rtol_reason": LI6_ALPHA_VMC_RTOL_REASON,
+        "scope": LI6_ALPHA_VMC_SCOPE,
+    }
+
+
+_build_tagged_hulthen = build_tagged
+
+
+def build_tagged():  # noqa: F811 -- A13: the Hulthen channels, plus the VMC block
+    """build_tagged() above (the three Hulthen channels, unchanged) plus the
+    A13 `li6_alpha_vmc` block.  main() looks `build_tagged` up when it runs,
+    so it calls this one."""
+    out = _build_tagged_hulthen()
+    out["channels"]["li6_alpha_vmc"] = build_tagged_li6_alpha_vmc()
+    return out
+
+
+README_ADDENDA["tagged.json"] = (
+    "\n\n"
+    "`channels.li6_alpha_vmc` (LiPolGen's decision A13, 2026-11-03,\n"
+    "docs/open_items/run_2026-11-03/DECISIONS.md; the supervisor's choice\n"
+    "under the author's delegation): a REDUCED block for the ANL VMC alpha-d\n"
+    "channel, `tagged.li6_alpha_channel(wave=\"vmc\")` -- `label`, `j_ion`,\n"
+    "`s_struck`, `s_spec`, `s_channel`, `P_D` (the momentum file's printed\n"
+    "S/D split, `tagged.li6_vmc_tables()[3]`) and `model` = {`vector_dilution`,\n"
+    "`tensor_dilution`} of `tagged.TaggedModel(channel)` at its default grid.\n"
+    "No `base`, `waves`, `beam_configs`, grid tables or `boost_spectator`:\n"
+    "the VMC waves are tables (`wave_dump` does not apply) and the channel's\n"
+    "kinematics are `li6_alpha`'s.  The block declares its own tolerance,\n"
+    "`port_gate_rtol` = 1e-8 relative on the two dilutions (a factor 2-3\n"
+    "above the 5.4e-9 / 3.2e-9 the D6 design measured,\n"
+    "docs/open_items/run_2026-10-27/plan_D6_cluster_wave_default.md sec. 4.5),\n"
+    "with its reason and its `scope`: the alpha-d motion only -- not the\n"
+    "embedded deuteron (polligen keeps the scenario 0.9325 under wave=\"vmc\")\n"
+    "and not 7Li (polligen refuses wave=\"vmc\" there).  `P_D` and the\n"
+    "quantum numbers are exact (rtol 1e-12); `label` is polligen's own and\n"
+    "is not compared.  The gates are `tests/test_tagged.cpp` (`kVmcPortRtol`),\n"
+    "`validation/repin_tagged_from_lipolgen.py` and\n"
+    "`python/tests/test_port_gate_li6_vmc.py`, each against LiPolGen's\n"
+    "`li6_alpha_channel(source=VmcAV18)`; the Hulthen gates above skip the\n"
+    "key.  The block is written by `build_tagged_li6_alpha_vmc()`, which\n"
+    "this script's `build_tagged()` adds after the three Hulthen channels.")
+
+
 if __name__ == "__main__":
     main()

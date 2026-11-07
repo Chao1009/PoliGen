@@ -291,6 +291,30 @@ only (the sibling keeps the scenario deuteron and refuses `vmc` on ⁷Li), and
 says so. The dump is ADDITIVE: the diff of `tagged.json` must show the new
 block and nothing else.*
 
+*Supervisor's note, 2026-11-06, after phase P5's first pass.* The in-place
+dump was not additive: run today, the script rewrites 3170 numbers of six
+reference JSONs at the rounding level (≤ 2 ULP in `tagged`, `bookkeeping`,
+`coherent` and `spectator`; ≤ 1.9e−16 absolute in `spin.json`; up to
+9.4e−13 relative in `xsec.json`, against the port gates' rtol 1e−12) and one
+stale manifest string, with the sibling unchanged at 4726812; the likely
+cause is this machine's libc/libpython upgrade of 2026-10-26, not proven
+(`phase_P5_port_gate.md`). The implementer restored every file and stopped,
+as its brief said. Decision: the block lands by splice — HEAD's
+`tagged.json` plus the dumped `li6_alpha_vmc` block byte for byte (the file
+round-trips through the dump's own serialiser, so the diff is the block and
+nothing else, +15/−0), the dump script carries the block so a future dump
+writes it, and no other reference number moves. Why: A13's own requirement
+is that the diff show the new block and nothing else, and the splice is
+exactly that; a re-dump would move 3170 committed numbers under a decision
+that authorises none, and the tables as dumped on 2026-09-23 pass every port
+gate at rtol 1e−12 today. What is accepted and said: a dump run on today's
+machine does not reproduce the committed file byte for byte, so the
+reproducibility of the reference dump (with its 9.4e−13 edge against 1e−12)
+is filed for the author as its own item. The declared 1e−8 stands — written
+at 2026-11-06T21:04:39−06:00 (the machine's local time; 03:04:39 UTC on
+2026-11-07) before the comparison, measured 5.389e−9 (vector) and
+3.196e−9 (tensor).
+
 **A14 — I5's two changed readings are recorded as facts of the default tail,
 nothing re-tuned: the `rc_qe_tensor_scale` stand-in at scale 1 is 14.5× the
 band half-width at x = 0.30 on `polrad-full`, and `qe_kf_gev` is the smaller

@@ -119,7 +119,7 @@ or through `--config-file` — is refused rather than silently resolved).
   phase, so read them off the gates and not off this line.
 - Kernel, ρ-moments, tagged densities, spectator boosts, coherent scenario and
   bookkeeping agree with `polligen` (run 16, tensor sign to the literature
-  convention) at **rtol 1e-12** against `validation/reference/*.json` — every table, `tagged.json` included:
+  convention) at **rtol 1e-12** against `validation/reference/*.json` — every table, `tagged.json` included (except its `li6_alpha_vmc` block, A13 (2026-11-03): the VMC α–d dilutions, gated at a declared 1e−8, measured 5.4e−9 / 3.2e−9):
   from 2026-09-06 to 2026-09-23 its two spin-1 `model` blocks were dumped from **this** library while `polligen`'s
   `tagged._amp2_table` still carried the S–D interference bug fixed below; `polligen` took the same fix (PolarizedLithiumSim
   `1066555`) and the file is `polligen`'s again (`validation/README.md`). (`b1_default_li6.json` there is not a `polligen`

@@ -86,7 +86,7 @@ const TaggedModel& deut_model() {
 const TaggedModel& model_by_key(const std::string& key) {
   if (key == "li6_alpha") return li6_model();
   if (key == "li7_alpha") return li7_model();
-  return deut_model();
+  if (key == "deuteron") return deut_model(); throw std::runtime_error("model_by_key: no Hulthen model for " + key);  // A13 (2026-11-03): no fall-through to the deuteron
 }
 
 /// `np.argmin(np.abs(v - target))`, first index on a tie -- NumPy's rule, and
@@ -160,7 +160,7 @@ TEST_CASE("tagged: channel construction against polligen" *
   REQUIRE(load_tagged(ref));
   CHECK_CLOSE(P_D_LI6, ref["P_D_LI6"].num(), kRtol);
   CHECK_CLOSE(P_D_DEUTERON_SCENARIO, ref["P_D_DEUTERON"].num(), kRtol);  // A1 (2026-11-03): polligen's constants, passed explicitly; the shipped default is 0.0576
-  for (const auto& kv : ref["channels"].obj()) {
+  for (const auto& kv : ref["channels"].obj()) { if (kv.first == "li6_alpha_vmc") continue;  // A13 (2026-11-03): the VMC block has its own case (Hulthen loop)
     const TaggedChannel& ch = model_by_key(kv.first).channel();
     const jsonmin::Value& r = kv.second;
     CAPTURE(kv.first);
@@ -196,7 +196,7 @@ TEST_CASE("tagged: the model grid and its tables against polligen" *
   // The file must be polligen's again, not a LiPolGen self-comparison.
   REQUIRE(ref.has("provenance"));
   CHECK(ref["provenance"].str() == "polligen");
-  for (const auto& kv : ref["channels"].obj()) {
+  for (const auto& kv : ref["channels"].obj()) { if (kv.first == "li6_alpha_vmc") continue;  // A13 (2026-11-03): the VMC block has its own case (Hulthen loop)
     const TaggedModel& model = model_by_key(kv.first);
     const jsonmin::Value& m = kv.second["model"];
     CAPTURE(kv.first);
@@ -279,7 +279,7 @@ TEST_CASE("tagged: boost_spectator against polligen (closed form, rtol 1e-12)" *
           doctest::skip(!tagged_blob_present())) {
   jsonmin::Value ref;
   REQUIRE(load_tagged(ref));
-  for (const auto& kv : ref["channels"].obj()) {
+  for (const auto& kv : ref["channels"].obj()) { if (kv.first == "li6_alpha_vmc") continue;  // A13 (2026-11-03): the VMC block has its own case (Hulthen loop)
     const TaggedChannel& ch = model_by_key(kv.first).channel();
     CAPTURE(kv.first);
     for (const jsonmin::Value& row : kv.second["boost_spectator"].arr()) {
@@ -1789,4 +1789,48 @@ TEST_CASE("A1: the shipped inclusive literals are the tree's own numbers" *
   CHECK(LI6_CLUSTER_POLARIZATION_HULTHEN < LI6_CLUSTER_POLARIZATION);
   CHECK(LI6_CLUSTER_POLARIZATION < hi);
   CHECK_CLOSE(hi, 0.8870761569, 1e-8);
+}
+
+// ------------------------------------------- A13: the VMC alpha-d port gate
+
+namespace {
+/// A13 (2026-11-03): the declared relative tolerance of the VMC alpha-d port
+/// gate -- written before the comparison, a factor 2-3 above the measured
+/// 5.389e-9 (vector) / 3.196e-9 (tensor) residual between polligen's and
+/// LiPolGen's interpolations of the same ANL tables; it catches a sign or
+/// normalisation slip and nothing less, and is never widened.  The file
+/// carries the same number as `channels.li6_alpha_vmc.port_gate_rtol`.
+constexpr double kVmcPortRtol = 1e-8;
+}  // namespace
+
+TEST_CASE("tagged: the VMC alpha-d dilutions against polligen (A13, rtol 1e-8)" *
+          doctest::skip(!tagged_blob_present() || !vmc_data_present())) {
+  // A13 (2026-11-03): `channels.li6_alpha_vmc` is polligen's
+  // `li6_alpha_channel(wave="vmc")`, a REDUCED block (quantum numbers, the ANL
+  // table's P_D, the two stretched-state dilutions).  It covers the alpha-d
+  // motion only: not the embedded deuteron (polligen keeps the scenario
+  // 0.9325) and not 7Li (polligen refuses wave="vmc" there).  The block was
+  // spliced into the committed file byte for byte from the dump of 2026-11-06
+  // (docs/open_items/run_2026-11-03/phase_P5_port_gate.md).
+  jsonmin::Value ref;
+  REQUIRE(load_tagged(ref));
+  REQUIRE(ref["channels"].has("li6_alpha_vmc"));
+  const jsonmin::Value& r = ref["channels"]["li6_alpha_vmc"];
+  CHECK(r["port_gate_rtol"].num() == kVmcPortRtol);
+  const TaggedModel model(li6_alpha_channel(BETA_DEFAULT, P_D_LI6, ClusterWaveSource::VmcAV18));
+  const TaggedChannel& ch = model.channel();
+  CHECK_CLOSE(ch.j_ion, r["j_ion"].num(), kRtol);
+  CHECK_CLOSE(ch.s_struck, r["s_struck"].num(), kRtol);
+  CHECK_CLOSE_AT(ch.s_spec, r["s_spec"].num(), kRtol, 0.0);
+  CHECK_CLOSE(ch.s_channel, r["s_channel"].num(), kRtol);
+  CHECK_CLOSE(VMC_P_D_LI6, r["P_D"].num(), kRtol);   // the table's printed S/D split, both sides
+  CHECK_CLOSE(ch.waves.back().prob, r["P_D"].num(), kRtol);
+  // the label is each code's own ("VMC AV18+UX" here, "VMC alpha-d" there): not compared
+  CHECK_CLOSE(model.vector_dilution(), r["model"]["vector_dilution"].num(), kVmcPortRtol);
+  CHECK_CLOSE(model.tensor_dilution(), r["model"]["tensor_dilution"].num(), kVmcPortRtol);
+  MESSAGE("A13: VMC alpha-d vector rel "
+          << std::fabs(model.vector_dilution() / r["model"]["vector_dilution"].num() - 1.0)
+          << ", tensor rel "
+          << std::fabs(model.tensor_dilution() / r["model"]["tensor_dilution"].num() - 1.0)
+          << " (declared 1e-8)");
 }

@@ -2610,6 +2610,21 @@
     }
    ]
   },
+  "li6_alpha_vmc": {
+   "P_D": 0.019354933183319687,
+   "j_ion": 1.0,
+   "label": "6Li alpha-tag (embedded d, VMC alpha-d)",
+   "model": {
+    "tensor_dilution": 0.9825758754851597,
+    "vector_dilution": 0.970966091698428
+   },
+   "port_gate_rtol": 1e-08,
+   "port_gate_rtol_reason": "Declared before the comparison (A13, 2026-11-03): the design measured polligen's VMC alpha-d at 5.4e-9 (vector) and 3.2e-9 (tensor) of LiPolGen's dilutions -- two interpolations of the same ANL tables -- so 1e-8 is a factor 2-3 above the residual: it catches a sign or normalisation slip and nothing less.  Never widened after a number is seen.",
+   "s_channel": 1.0,
+   "s_spec": 0.0,
+   "s_struck": 1.0,
+   "scope": "The VECTOR and TENSOR dilutions of the 6Li alpha-d relative motion on polligen's ANL VMC tables (tagged.li6_alpha_channel(wave=\"vmc\")), against LiPolGen's li6_alpha_channel(source=VmcAV18): the alpha-d motion ONLY.  Not covered: the embedded deuteron (polligen keeps the scenario P_D = 0.045, i.e. 0.9325, under wave=\"vmc\"; LiPolGen's VmcAV18 puts the AV18 deuteron there), 7Li (polligen refuses wave=\"vmc\" on 7Li), and every grid table (n_of_kc, struck populations, norm, p2 moments, boost_spectator: the VMC waves are interpolated tables, so those are not rtol-1e-12 quantities and are not dumped)."
+  },
   "li7_alpha": {
    "base": {
     "beam_A": 7,

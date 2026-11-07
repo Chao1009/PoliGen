@@ -332,6 +332,32 @@ C4). What changes: `make_config`, the CLI and `validate()` for the wave; the
 D5 knob row; the three-ways test becomes the one-way pin; the CONVENTIONS
 paragraph; USAGE.*
 
+*Supervisor's note, 2026-11-06, after phase P4.* P4 (`4b981b4`) carried the
+rule to the rows its brief named and to the rc rows with the same cause
+(sixteen rows) and left seven reading `refused` at their default on runs
+that do not read them — `kernel`, `b1_model`, `b1_band_scale`,
+`b1_alpha_d_dwave_weight`, `b1_unpol`, `r_source`, `cluster_vmc_mc_sigma`,
+`fsi` off the tags, and the rc sub-pieces another knob closes (`rc_qe_*` at
+`rc_with_qe_tail = false`, `rc_sp_tensor_scale` on `t-peak` and on
+`polrad-full`, `rc_m_lepton` off `polrad-full`) — because carrying it there
+leaves no built table with a `refused` row at all (a refused non-default
+value never builds), which the implementer read as a decision about the
+status itself (`phase_P4_infrastructure.md` §5 item 1). Decision: the rule
+reaches every row. The entry says one rule, and its reason — an
+`at_default` row that says `refused` misreads — is as true of
+`b1_model = miller` on a coherent run as of `rc_tail_model = polrad-full` on
+a tail-less one; two ways of recording one situation is the trap C4 named,
+with the count changed from three to two. What follows, and is accepted:
+every row of a run that built reads `read` or `not-read`; that the axis is
+closed (`validate()` refuses a moved value) lives in the row's reason
+sentence, which ends with the shared A17 sentence; `KnobStatus::Refused`
+stays defined, documented as the status of a row whose value `validate()`
+refuses — a configuration that does not build, so the status never appears
+in a built run's table; `meta` carries the `not read on …` label for these
+rows as it already does for the sixteen; no physics default, constant or
+tolerance moves; every re-taken pin carries `A17 (2026-11-03)`. Phase P4b,
+the same implementer.
+
 The smaller points of run 2026-10-27's list (its "Also open, smaller"
 paragraph: I4 §8 items 1–4, 6, 9; I5 §9 items 1, 3, 4, 7; I6 §9 items 6, 7,
 9, 10; I7 §13 items 4, 5, 8 and §14) are outside this delegation and stand

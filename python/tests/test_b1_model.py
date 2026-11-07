@@ -264,7 +264,7 @@ def test_meta_records_which_b1_made_the_file():
     cfg = _cfg(sf="default")      # D7: a kernel sits beside the shipped selectors
     cfg.kernel = _l.default_inclusive_kernel(_l.li6())
     p = _l.Pipeline(cfg, lg.tensor_thirds_plan(0.0, 0.6))
-    assert p.generate(0, True)["meta"]["b1_model"] == "caller-supplied kernel"
+    assert p.generate(0, True)["meta"]["b1_model"] == "not read with a caller-supplied kernel"  # A17 (2026-11-03): the row's label, was "caller-supplied kernel"
 
 
 # ------------------------------------------------------------------- P2
@@ -935,12 +935,12 @@ def test_meta_records_which_unpol_backend_made_the_file():
     assert meta["b1_unpol"] == "toy"
     # the shipped default says what it is too, so no npz is anonymous
     meta = _pipeline().generate(1, True)["meta"]
-    assert meta["b1_unpol"] == "toy"
+    assert meta["b1_unpol"] == "not read at b1_model = miller"  # A17 (2026-11-03): the row's label, was "toy"
     # ... and a hand-built kernel is not labelled with a flag that did not run
     cfg = _cfg(sf="default")      # D7: a kernel sits beside the shipped selectors
     cfg.kernel = _l.default_inclusive_kernel(_l.li6())
     meta = _l.Pipeline(cfg, plan).generate(1, True)["meta"]
-    assert meta["b1_unpol"] == "caller-supplied kernel"
+    assert meta["b1_unpol"] == "not read with a caller-supplied kernel" # A17 (2026-11-03): the row's label, was "caller-supplied kernel"
 
 
 # ------------------------------------------------------------------- P9
@@ -1265,7 +1265,7 @@ def test_r_source_is_refused_where_it_is_not_read_and_recorded_where_it_is():
     # ... and on a run that does not read it the meta carries the REFUSAL's
     # own value, never a backend name that did not run.
     meta = _l.Pipeline(_cfg("miller"), plan).generate(0, True)["meta"]
-    assert meta["r_source"] == "unset"
+    assert meta["r_source"] == "not read at b1_model = miller"  # A17 (2026-11-03): the row's label, was "unset"
 
 
 def test_r_source_moves_the_unpolarised_rate_unlike_b1_unpol():

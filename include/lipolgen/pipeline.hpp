@@ -1245,7 +1245,7 @@ enum class KnobStatus : std::uint8_t {
             ///< bare value; A17 (2026-11-03): also an unread knob AT ITS DEFAULT whose every other value is refused (CONVENTIONS "Refuse or label")
   Refused   ///< the AXIS is closed on this run: `PipelineConfig::validate()`
             ///< (or the `Pipeline` constructor) throws on any value but the
-            ///< one shown, so the bare value cannot mislead and is kept
+            ///< one shown, so the bare value cannot mislead and is kept; A17 (2026-11-03): it is the status of a row whose value `validate()` refuses, so it does not appear in the table of a run that built (at its default such a row reads NotRead)
 };
 const char* knob_status_name(KnobStatus s);
 
@@ -1270,8 +1270,8 @@ struct KnobProvenance {
   bool at_default = true;   ///< `value` is the shipped default
 
   /// What a `meta` key carries for this row: the bare value where the knob
-  /// RAN or where its axis is refused (so the value is necessarily the
-  /// default), and the LABEL where it did not -- the `pol_sf_unread_label`
+  /// RAN (or, never in a built run since A17 (2026-11-03), where its axis is
+  /// refused), and the LABEL where it did not -- the `pol_sf_unread_label`
   /// rule, applied to every knob at once.
   const std::string& meta_value() const {
     return status == KnobStatus::NotRead ? label : value;

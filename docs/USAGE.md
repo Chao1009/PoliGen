@@ -2631,7 +2631,7 @@ core cannot see):
   `not read on channel inclusive`.
 * **`refused`** — the **axis** is closed on this run: `PipelineConfig.validate()`
   (or the `Pipeline` constructor) throws on any value but the one shown, so a
-  bare value cannot mislead and is kept. Since A17 a row reads `refused` at its default only on the axes CONVENTIONS "Refuse or label" lists as not yet carried to the rule.
+  bare value cannot mislead and is kept. Since A17 (2026-11-03; every row since the supervisor's note of 2026-11-06) such an axis reads `not-read` AT ITS DEFAULT, its reason saying the axis is closed — so `refused` is the status of a value `validate()` refuses, and a run that built has no `refused` row.
 
 **Where it shows up.**
 
@@ -2647,7 +2647,7 @@ core cannot see):
    (values for the ones off their defaults), then every **not-read knob that
    is set away from its default with its reason spelled out** — those are the
    ones that would mislead — then the not-read defaults grouped by their
-   label, then the refused axes. Reasons for the rest are in the file.
+   label, then the refused axes (none on a run that built, since A17 — the line is printed only when there is one). Reasons for the rest are in the file.
 
 `lipolgen-run --events 200 --seed 5 --pol-sf toy` (D7: `nnpdfpol` is the default and was this example's flag until then; re-run 2026-10-29), verbatim except for
 the two `…` elisions:
@@ -2670,7 +2670,9 @@ the two `…` elisions:
          (InclusiveKernel::amplitudes adds helicity * (m/J) * cos(theta_S) *
          A_par and nothing else reads a PolSF).  The three TENSOR plans build
          every category at lam_e = 0, pe = 0 (bookkeeping.cpp: ...) ...
-     not read, at their defaults (45):
+     not read, at their defaults (51):
+       not read at b1_model = miller: b1_band_scale,
+         b1_alpha_d_dwave_weight, b1_unpol, r_source
        not read at fsi = off: fsi_sigma_mb
        not read at rc = off: rc_delta_low_x, rc_delta_high_x, rc_x_low, ...
          ... rc_tail_model, rc_sp_tensor_scale, rc_with_qe_tail, rc_with_tail,
@@ -2679,14 +2681,12 @@ the two `…` elisions:
        not read in FIXED-COUNT mode (events = 200): lumi_pb
        not read in fixed-count mode: poisson, apply_optics_lumi_fraction
        not read on channel inclusive: optics, n_sigma, pot_config,
-         cluster_wave, cluster_beta, p_d, triton_sf, tier, inclusive_b1, ...
+         cluster_wave, cluster_vmc_mc_sigma, cluster_beta, p_d, triton_sf,
+         tier, inclusive_b1, fsi, coherent_t_max, ...
        not read without --hadronize: coherent_t2, pom_set, pom_rescale
-     refused axes (6), where validate() throws on any other value:
-       b1_band_scale, b1_alpha_d_dwave_weight, b1_unpol, r_source,
-       cluster_vmc_mc_sigma, fsi
 ```
 
-*(69 knobs on the D7 re-run — the page said 68, stale already before D7; A17 (2026-11-03, re-run 2026-11-06): `cluster_wave` moved from the refused axes (7 → 6) to the not-read defaults (44 → 45), the one rule; 66 knobs and seven refused axes until 2026-09-06, when `--r-source` added
+*(69 knobs on the D7 re-run — the page said 68, stale already before D7; A17 (2026-11-03, re-run 2026-11-06): `cluster_wave` moved from the refused axes (7 → 6) to the not-read defaults (44 → 45), the one rule; since the supervisor's note of 2026-11-06 the rule reaches every row (re-run that day): 51 not-read defaults and no refused axis, so the banner prints no refused line; 66 knobs and seven refused axes until 2026-09-06, when `--r-source` added
 an eighth and `--pzz-mode` a 68th knob — labelled, not refused, under the
 three tensor plans; re-measured from the command above. The eighth refused
 axis was `rc_m_lepton`, and it came back OUT the same day: `PolradFull` was

@@ -552,8 +552,8 @@ def test_meta_says_so_when_a_caller_supplied_kernel_won():
     cfg = _cfg()
     cfg.kernel = _l.default_inclusive_kernel(_l.li6())
     meta = _l.Pipeline(cfg, _plan()).generate(1, True)["meta"]
-    assert meta["unpol_sf"] == "caller-supplied kernel"
-    assert meta["pol_sf"] == "caller-supplied kernel"
+    assert meta["unpol_sf"] == "not read with a caller-supplied kernel"  # A17 (2026-11-03): the row's label, was "caller-supplied kernel"
+    assert meta["pol_sf"] == "not read with a caller-supplied kernel" # A17 (2026-11-03): the row's label, was "caller-supplied kernel"
     # the grid report cannot see the caller's backend, so it is NaN, not 0
     assert np.isnan(meta["unpol_sf_grid_q2_min"])
     assert np.isnan(meta["unpol_sf_below_grid_frac"])

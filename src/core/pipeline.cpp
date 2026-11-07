@@ -2115,16 +2115,16 @@ double Pipeline::coherent_rate_x_edge() const {
 std::vector<KnobProvenance> Pipeline::knob_provenance(
     const KnobRunContext& ctx) const {
   const PipelineConfig d;          // the shipped defaults, read not retyped
-  const PipelineConfig& c = cfg_;
+  const PipelineConfig& c = cfg_;  const std::string kA17 = "; an explicit request of the default is accepted and labelled not-read (A17, docs/CONVENTIONS.md \"Refuse or label\")";  // A17 (2026-11-03): one rule for an explicit DEFAULT on an unread knob
   std::vector<KnobProvenance> rows;
-  auto add = [&rows](const char* name, const char* flag, std::string value,
+  auto add = [&rows, &kA17](const char* name, const char* flag, std::string value,
                      KnobStatus st, std::string reason, bool at_default) {
     KnobProvenance r;
     r.name = name;
     r.flag = flag;
     r.value = std::move(value);
-    r.status = st;
-    r.reason = std::move(reason);
+    r.status = st;  r.reason = std::move(reason);  // A17 (2026-11-03; the supervisor's note of 2026-11-06): the rule reaches EVERY row --
+    if (st == KnobStatus::Refused && at_default) { r.status = st = KnobStatus::NotRead; if (r.reason.rfind("not read", 0) != 0) r.reason = "not read on this run: " + r.reason; if (r.reason.find(kA17) == std::string::npos) r.reason += kA17; }  // an axis validate() closes reads NotRead AT ITS DEFAULT; a moved value stays Refused (it never builds)
     // THE LABEL IS DERIVED, ONCE, HERE.  Every `NotRead` reason below opens
     // with its scope clause -- "not read on channel X", "not read by plan Y",
     // "not read at Z" -- and then explains; the clause alone is what a `meta`
@@ -2143,7 +2143,7 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
   };
   auto yn = [](bool b) { return std::string(b ? "true" : "false"); };
   const std::string chn = pipeline_channel_name(c.channel);
-  const std::string off_ch = "not read on channel " + chn + ": ";  const std::string kA17 = "; an explicit request of the default is accepted and labelled not-read (A17, docs/CONVENTIONS.md \"Refuse or label\")";  // A17 (2026-11-03): one rule for an explicit DEFAULT on an unread knob
+  const std::string off_ch = "not read on channel " + chn + ": ";  const std::string with_k = "not read with a caller-supplied kernel: ";  // A17 (2026-11-03): kA17 is defined above `add`
   // Which of `--pz` / `--pzz` / `--rel-lumi-offset` the NAMED plan factory
   // takes.  bookkeeping.hpp's four factories are the whole of it:
   // tensor_thirds_plan(pz, pzz, rel_lumi_offset, ...),
@@ -2668,7 +2668,7 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
                : std::string(unpol_sf_name(c.unpol_sf)),
       c.kernel ? KnobStatus::Refused : KnobStatus::Read,
       c.kernel
-          ? std::string("a caller-supplied kernel carries its own f2_source, "
+          ? std::string(with_k + "a caller-supplied kernel carries its own f2_source, "
                         "so the selector is not read: validate() accepts it "
                         "at its default only (D7) and refuses any other value")
           : std::string("-> InclusiveKernel::Options::f2_source on EVERY "
@@ -2686,26 +2686,26 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
         // ONE sentence, from `pol_sf_reach_report` on EVERY branch -- the
         // caller-supplied-kernel one included -- so `meta["pol_sf_reach"]`,
         // this row and the banner cannot say three different things.
-        pol_sf_reach_report(c, plan_),
+        (c.kernel ? with_k : std::string()) + pol_sf_reach_report(c, plan_),  // A17 (2026-11-03): the scope clause first
         c.pol_sf == d.pol_sf);
   }
   {
     const bool no_rank2 = inclusive_rank2_is_empty(c);
     const bool incl = (c.channel == PipelineChannel::Inclusive) && !c.kernel;
-    const bool b1_read = incl && !no_rank2;
+    const bool b1_read = incl && !no_rank2;  const std::string b1_scope = c.kernel ? with_k : !incl ? off_ch : no_rank2 ? ("not read on " + c.isotope + " (no rank-2 input): ") : ("not read at b1_model = " + std::string(b1_model_name(c.b1_model)) + ": ");  // A17 (2026-11-03)
     std::string val = c.kernel ? std::string("caller-supplied kernel")
                       : no_rank2 ? std::string(rank2_none_label())
                                  : std::string(b1_model_name(c.b1_model));
-    // `no_rank2` (7Li inclusive) is REFUSED and not merely NotRead: the value
-    // shown is `rank2_none_label()`, which names no backend and so cannot
-    // mislead, AND `validate()` throws on cdks and li6-convolution there.
-    // `Refused` is the status that says both.
+    // `no_rank2` (7Li inclusive): the value shown is `rank2_none_label()`,
+    // which names no backend, and `validate()` throws on cdks and
+    // li6-convolution there.  Since A17 (2026-11-03) the row is NotRead at its
+    // default, its label "not read on 7Li (no rank-2 input)" in `meta`.
     add("b1_model", "--b1-model", val,
         b1_read ? KnobStatus::Read : KnobStatus::Refused,
         b1_read ? rank2_input_report(c, plan_)
-        : no_rank2 ? rank2_input_report(c, plan_)
+        : no_rank2 ? b1_scope + rank2_input_report(c, plan_)
                    : (c.kernel
-                          ? std::string("the caller's kernel carries the "
+                          ? std::string(b1_scope + "the caller's kernel carries the "
                                         "rank-2 slots; validate() refuses any "
                                         "value but miller beside one")
                           : off_ch +
@@ -2723,7 +2723,7 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
             ? std::string("multiplies the WHOLE b1 of the opt-in backend -- "
                           "the MANDATORY 0/1/2 band of design_D_b1_li6.md "
                           "sec. 4.3")
-            : std::string("the band is deliberately not applied to the "
+            : std::string(b1_scope + "the band is deliberately not applied to the "
                           "published Miller numbers and does not exist off "
                           "the inclusive 6Li rank-2 path, so validate() "
                           "refuses any value but 1.0 here rather than let "
@@ -2735,7 +2735,7 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
         conv ? KnobStatus::Read : KnobStatus::Refused,
         conv ? std::string("Li6ConvolutionOptions::w_alpha_d_dwave -- terms "
                            "(2d) and (2a) together, one physical effect")
-             : std::string("only the li6-convolution branch reads it (miller "
+             : std::string(b1_scope + "only the li6-convolution branch reads it (miller "
                            "is a ratio model, cdks a digitized column), so "
                            "validate() refuses any value but 1.0 here"),
         c.b1_alpha_d_dwave_weight == d.b1_alpha_d_dwave_weight);
@@ -2747,7 +2747,7 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
         conv ? std::string("the UNPOLARISED F1 the alpha-d convolution folds "
                            "against (Li6ConvolutionOptions::unpol); mstw is "
                            "the configuration the A = 2 gate passes on")
-             : std::string("read ONLY by b1_model = li6-convolution, so "
+             : std::string(b1_scope + "read ONLY by b1_model = li6-convolution, so "
                            "validate() refuses any value but toy here"),
         c.b1_unpol == d.b1_unpol);
     // `--r-source`, the ONE R hook into BOTH halves of the tensor weight.
@@ -2790,7 +2790,7 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
                              "Options::r_func, its denominator), so the "
                              "ratio's two halves are the same choice; unset "
                              "installs neither and is today bit for bit")
-               : std::string("read ONLY by b1_model = li6-convolution (miller "
+               : std::string(b1_scope + "read ONLY by b1_model = li6-convolution (miller "
                              "is a ratio model with no F1 of its own, cdks a "
                              "digitized column), so validate() refuses any "
                              "value but unset here"),
@@ -2823,7 +2823,7 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
                               "fully correlated across k (open item C5.2); "
                               "+-1 sigma is 0.02 % on the tagged tensor "
                               "dilution; READ on the default lithium tags (D6)")
-                : std::string("only li6_ad1.momentum and li7_at3.momentum "
+                : std::string((!li_tag ? off_ch : "not read at cluster_wave = " + std::string(cluster_wave_name(c.cluster_wave)) + ": ") + "only li6_ad1.momentum and li7_at3.momentum "
                               "print MC errors -- the analytic Hulthen forms "
                               "and fdeut.av18 print none -- so validate() "
                               "refuses any value but 0 here"),
@@ -3098,7 +3098,7 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
                  "), so this knob would record a systematic as PRICED that "
                  "was never computed -- validate() refuses any value but the "
                  "default here" + (at_def ? kA17 : std::string()))
-              : std::string("rc_options.with_qe_tail = false switches POLRAD "
+              : std::string("not read at rc_with_qe_tail = false: rc_options.with_qe_tail = false switches POLRAD "
                             "Eq. (44)'s unpolarised quasi-elastic tail off, "
                             "so sigma^q_U is not computed at all and this "
                             "knob scales nothing -- validate() refuses any "
@@ -3151,14 +3151,14 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
                  "), so this knob would record a systematic as PRICED that "
                  "was never computed -- validate() refuses any value but the "
                  "default here" + (sp_def ? kA17 : std::string()))
-          : pf ? std::string("rc_options.tail_model = polrad-full needs no "
+          : pf ? std::string("not read at rc_tail_model = polrad-full: rc_options.tail_model = polrad-full needs no "
                              "s/p tensor stand-in: Eq. (18) carries the s- "
                              "and p-peaks inside its own tau_A integral WITH "
                              "their Eq. (A.4) tensor content, so this knob "
                              "would double-count a term that RAN -- "
                              "validate() refuses any value but the default "
                              "here.  The OPPOSITE reason to the t-peak one")
-              : std::string("rc_options.tail_model = t-peak computes no "
+              : std::string("not read at rc_tail_model = t-peak: rc_options.tail_model = t-peak computes no "
                             "leading-log s-/p-peaks at all (the u_sp table is "
                             "identically zero), so this knob scales nothing "
                             "-- validate() refuses any value but the default "
@@ -3218,7 +3218,7 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
               ? (off_ch +
                  "the radiative tail does not apply on this run, so no "
                  "quadrature reads a lepton mass at all" + (o.m_lepton == od.m_lepton ? kA17 : std::string()))
-              : std::string("read ONLY by tail_model = polrad-full.  The "
+              : std::string("not read at rc_tail_model = " + std::string(rc_tail_model_name(o.tail_model)) + ": read ONLY by tail_model = polrad-full.  The "
                             "t-peak forms of Eqs. (37)-(39) carry no lepton "
                             "mass and TPeakPlusLL's leading-log radiator "
                             "takes M_ELECTRON from constants.hpp directly, "
@@ -4065,8 +4065,8 @@ std::map<std::string, std::string> run_provenance(const Pipeline& p,
   if (!ctx.plan_name.empty()) m["plan"] = ctx.plan_name;
   m["delta_convention"] = DELTA_CONVENTION;
   m["cluster_wave"] = label("cluster_wave");
-  m["unpol_sf"] = c.kernel ? std::string("caller-supplied kernel")
-                           : std::string(unpol_sf_name(c.unpol_sf));
+  m["unpol_sf"] = label("unpol_sf");  // A17 (2026-11-03): the backend's name,
+                                      // or the label beside a caller's kernel
   m["pol_sf"] = label("pol_sf");
   m["b1_model"] = label("b1_model");
   m["b1_unpol"] = label("b1_unpol");

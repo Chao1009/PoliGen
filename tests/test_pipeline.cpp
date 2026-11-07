@@ -1725,7 +1725,7 @@ TEST_CASE("D6: a default tagged run reads the VMC waves, and the knob rows say "
   // the d control, the default: the AV18 deuteron; no MC band to read.
   const Pipeline dp(cfg_of(PipelineChannel::TaggedDeuteronP, "d"), thirds);
   CHECK(dp.tagged_channel()->waves[1].prob == deuteron_av18_p_d());
-  CHECK(row(dp, "cluster_vmc_mc_sigma").status == KnobStatus::Refused);
+  CHECK(row(dp, "cluster_vmc_mc_sigma").status == KnobStatus::NotRead);   // A17 (2026-11-03): was Refused -- an unread default is labelled
   CHECK(row(dp, "cluster_beta").status == KnobStatus::NotRead);
 
   // the Hulthen option: beta and p_d are read again on the 6Li alpha tag.
@@ -1736,7 +1736,7 @@ TEST_CASE("D6: a default tagged run reads the VMC waves, and the knob rows say "
   CHECK_FALSE(row(li6h, "cluster_wave").at_default);
   CHECK(row(li6h, "cluster_beta").status == KnobStatus::Read);
   CHECK(row(li6h, "p_d").status == KnobStatus::Read);
-  CHECK(row(li6h, "cluster_vmc_mc_sigma").status == KnobStatus::Refused);
+  CHECK(row(li6h, "cluster_vmc_mc_sigma").status == KnobStatus::NotRead);   // A17 (2026-11-03): was Refused -- "not read at cluster_wave = hulthen"
 
   // OFF the tagged channels the row withholds the value: a default inclusive
   // or coherent file must not read as a "VMC 6Li" one (registry row 11).

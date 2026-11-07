@@ -617,8 +617,8 @@ py::dict columns_to_dict(Columns& c, const Pipeline& p, std::uint64_t n,
   // the backend name -- used to be typed here AND in the `b1_model` row of
   // `Pipeline::knob_provenance`, which is the one thing CONVENTIONS.md's
   // "the three surfaces read that table and nothing else" forbids: two
-  // spellings of one label drift.  The row's status is Read or Refused, never
-  // NotRead, so `meta_value()` is its `value` and this is bit-identical.
+  // spellings of one label drift.  A17 (2026-11-03): where the row is NotRead
+  // (off the inclusive rank-2 path) `meta` carries its label, as for pol_sf.
   meta["b1_model"] = pv("b1_model");
   meta["b1_band_scale"] = p.config().b1_band_scale;
   meta["b1_alpha_d_dwave_weight"] = p.config().b1_alpha_d_dwave_weight;
@@ -633,9 +633,9 @@ py::dict columns_to_dict(Columns& c, const Pipeline& p, std::uint64_t n,
   // "unset" and "r1998" differ by -0.6847 % in sigma_pb and by up to
   // +26.4 % in the tensor weight at the standard points (y = 0.5, Q2 = 2.5,
   // x = 0.10; docs/open_items/run_2026-09-06/phase_A_numbers.md sec. A1), so
-  // without this key the two are indistinguishable files.  The row is Read or
-  // Refused at every value but `sigma-lt`, where it is NotRead and this key
-  // carries the label -- honest: that run IS bit-identical to the unset one.
+  // without this key the two are indistinguishable files.  The row is Read
+  // where read and NotRead elsewhere (A17, 2026-11-03: unset off the
+  // li6-convolution path too); NotRead means this key carries the label.
   meta["r_source"] = pv("r_source");
   // D6: the wave a tagged run read ("vmc" / "hulthen"); off the tags the label.
   meta["cluster_wave"] = pv("cluster_wave");
@@ -656,8 +656,8 @@ py::dict columns_to_dict(Columns& c, const Pipeline& p, std::uint64_t n,
   // kernel itself is not even read), so say that rather than print a backend
   // name that did not run.
   meta["unpol_sf"] = pv("unpol_sf");  // A10 (2026-11-03): run_provenance --
-                                      // "caller-supplied kernel" or the
-                                      // backend's name, as before
+                                      // the backend's name, or (A17) the
+                                      // label beside a caller-supplied kernel
   // ... and the POLARISED one, which has one channel the unpolarised one
   // does not: `CoherentLi6` never evaluates g1 at all (`pol_sf_is_read`), so
   // a coherent run records the "not read on channel ..." LABEL and not a

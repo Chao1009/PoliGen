@@ -254,7 +254,7 @@ No other row of the report moved.
    `polrad-full`). Carrying the rule to them would leave the table no
    `refused` row at all (a refused non-default never builds), which is a
    decision about the status itself; CONVENTIONS names them. For the
-   supervisor.
+   supervisor. Decided 2026-11-06: the rule reaches every row — §6.
 2. **A10's C++ examples without a Pipeline.** generate_inclusive,
    write_hepmc_example and hadronize_example write no `lipolgen.*` attribute;
    the C++ examples that do write them lack the two `*_sf_extrapolation` keys
@@ -265,3 +265,119 @@ No other row of the report moved.
    open.
 4. The A12 band on the ceiling stays filed with the next FSI design
    (registry row 28).
+
+## 6. P4b (2026-11-06): A17 carried to every row
+
+Decision: the supervisor's dated note of 2026-11-06 under A17 in
+`DECISIONS.md` (the supervisor's choice under the author's delegation):
+the rule reaches every row. Worker P4, on `4b981b4` (P4 committed); this
+part uncommitted. Scratch: `run_1103/p4/p4b/` (`pre/` = the committed P4
+outputs, `post/`, `ab_compare.txt`, `usage_knob_example.log`,
+`price_defaults.json` / `.log`, `final_*.log`, `report*.log`, `pixdiff.txt`).
+
+### 6.0 What changed
+
+`Pipeline::knob_provenance`'s one `add` now turns a row that would read
+`Refused` AT ITS DEFAULT into `NotRead`: its reason opens with a scope clause
+(a fallback "not read on this run: " where a reason had none), keeps its
+sentence on why the axis is closed and ends with the shared `kA17` sentence
+(moved above `add`); a moved value stays `Refused` (it never builds) and
+`validate()` is unchanged. The rows the P4 record's §5 item 1 named got
+their own scope clauses: "not read with a caller-supplied kernel" (`unpol_sf`,
+`pol_sf`, the b1 rows beside a caller's kernel); `b1_scope` for `b1_model`,
+`b1_band_scale`, `b1_alpha_d_dwave_weight`, `b1_unpol`, `r_source` ("not read
+on channel X" off the inclusive channel, "not read on 7Li (no rank-2 input)",
+"not read at b1_model = miller" / "= cdks"); `cluster_vmc_mc_sigma` ("not read
+on channel X" or "not read at cluster_wave = hulthen"); `kernel` and `fsi`
+were channel-scoped already; "not read at rc_with_qe_tail = false" (the
+quasi-elastic rows), "not read at rc_tail_model = t-peak / polrad-full"
+(`rc_sp_tensor_scale`, `rc_m_lepton`). The 7Li value keeps
+`rank2_none_label()`; its label, "not read on 7Li (no rank-2 input)", is what
+`meta` carries. `run_provenance`'s `unpol_sf` now goes through the table.
+`KnobStatus::Refused`'s doc gains the dated sentence (the status of a value
+`validate()` refuses, so absent from a built run's table) and the
+`meta_value()` comment is made true; the enum value stays. CONVENTIONS
+"Refuse or label", USAGE (the `refused` bullet, the example banner and its
+notes), PHYSICS_CHANNELS row 197 and registry row 11 say so. Nothing else
+moved: on every built run checked (eight configurations by script, the 22 CLI
+runs and 6 examples below) no row reads `refused`.
+
+### 6.1 Every label that moved, before → after
+
+`meta` values (bare value → label), from the A/B below:
+
+| channel (runs) | `b1_model` | `b1_unpol` | `r_source` |
+|---|---|---|---|
+| coherent (5 runs, incl. `--rc tensor-band`, `--cluster-wave vmc`) | miller → "not read on channel coherent-6Li" | toy → same | unset → same |
+| tagged-6Li-alpha (6, incl. rc and FSI) | miller → "not read on channel tagged-6Li-alpha" | toy → same | unset → same |
+| tagged-7Li-alpha (3) | miller → "not read on channel tagged-7Li-alpha" | toy → same | unset → same |
+| tagged-d-p (3) | miller → "not read on channel tagged-d-p" | toy → same | unset → same |
+| inclusive 6Li, d (5) | miller (read; unchanged) | toy → "not read at b1_model = miller" | unset → same |
+| inclusive 7Li (1) | "none (spin 3/2: no rank-2 input)" → "not read on 7Li (no rank-2 input)" | same | same |
+
+Beside a caller-supplied kernel (tests, not the A/B): `unpol_sf`, `pol_sf`,
+`b1_model`, `b1_unpol` "caller-supplied kernel" → "not read with a
+caller-supplied kernel". Knob rows `refused` → `not-read` at their default:
+inclusive `b1_band_scale`, `b1_alpha_d_dwave_weight`, `b1_unpol`, `r_source`,
+`cluster_vmc_mc_sigma`, `fsi` (+ `b1_model` on 7Li, + `rc_sp_tensor_scale` on
+the inclusive `--rc` run); coherent the same seven with `b1_model`; the tags
+`kernel` and the five b1 rows (+ `cluster_vmc_mc_sigma` on d-p). USAGE
+example banner (`lipolgen-run --events 200 --seed 5 --pol-sf toy`, re-run):
+not-read defaults 45 → 51, no "refused axes" line (the CLI prints it only
+when a refused row exists, which no built run now has).
+
+Pins re-taken with `A17 (2026-11-03)` comments: tests/test_pipeline.cpp (two
+`cluster_vmc_mc_sigma` rows `Refused` → `NotRead`); python/tests/test_li7_rank2.py
+(the 7Li label, five assertions; the tagged-7Li-alpha label; the
+caller-kernel label; the row's value still `rank2_none_label()`, asserted);
+test_b1_model.py (four: the caller-kernel `b1_model` and `b1_unpol`, the
+miller-path `b1_unpol` and `r_source`); test_sf_backend.py (two: `unpol_sf`,
+`pol_sf` beside a caller's kernel). No check was loosened; the matrix gate
+of test_knob_provenance needed no change (its A17 branch already demands the
+default and the A17 sentence) and passed.
+
+### 6.2 What was verified and how
+
+Same 22 CLI runs and 6 examples as §2, pre = the committed P4 outputs:
+every npz array byte-identical; `meta` moved only as in §6.1; every HepMC3
+file differs only in the `A lipolgen.b1_model` / `b1_unpol` / `r_source`
+lines, whose values are those labels; generate_inclusive,
+write_hepmc_example and hadronize_example identical. `validation/price_defaults.py`
+run once (`price_defaults.json`, 6 m 22 s): its `r_source = r1998` probes
+(li6-incl, li7-incl, li7-tag, li6-tag, li6-coh) are still `refused` with
+`validate()`'s message — a non-default value; the `cluster_wave = vmc`
+probes `not-read`, bit-identical; no classification moved.
+
+### 6.3 Files
+
+src/core/pipeline.cpp, include/lipolgen/pipeline.hpp, python/bindings.cpp
+(line-neutral); tests/test_pipeline.cpp, python/tests/test_li7_rank2.py,
+test_b1_model.py, test_sf_backend.py; docs/CONVENTIONS.md, docs/USAGE.md
+(8 / 8 lines), docs/PHYSICS_CHANNELS.md, docs/open_items/run_2026-09-03/STATUS.md
+(row 11), this record, STATUS.md; docs/benchmarking/REPORT.json / REPORT.md
+regenerated (date, revision, runtimes only).
+
+### 6.4 Gates (final tree), tallies and wall times
+
+| gate | result | wall |
+|---|---|---|
+| `cmake --build build -j2` | 0 warnings, 0 errors | 1 m 39 s (last no-op 0 s) |
+| `./build/lipolgen_tests` | 434 / 434 test cases, 17 244 583 assertions | 6 m 59 s |
+| pytest, full, as three disjoint runs over `python/tests/test_*.py` (14 / 14 / 15 files) | 358 passed, 3 skipped; 838 passed, 152 skipped; 323 passed — together the full pytest: **1519 passed, 155 skipped, 0 failed** | 2 m 49 s + 12 m 02 s + 3 m 02 s |
+| bench subset (`LIPOLGEN_BENCH=1 -k bench`) | 368 passed, 1 skipped, 0 failed | 6 m 33 s |
+| strict citation gate | 1243 / 95 / 7 / **0 broken** / 24 (SPIN32 19 / 115 / 0 / 0 / 10; PYTHIA_BRIDGE 0 / 0 / 8 / 0) | 2 s |
+| `--records-only` | 1432 citations in 86 records, **0 broken** | 2 s |
+| `--audit-ranges` | 209 range citations, 0 REFUSED | 2 s |
+| `check_spdx_headers.py` | 136 files, all carry the line | <1 s |
+| test_doc_link_gate.py | 112 passed | 25 s |
+| `make_report.py --all --plots --out-dir docs/benchmarking --compare REPORT_4b981b4.json` | 15 pass / 8 fail / 0 blocked; **0 changes**; 19 figures differed by the footer stamp alone (pixel bbox in the bottom 2 %), restored | 1 m 38 s |
+| `make_report.py --check` | OK | 1 m 26 s |
+
+Before these, a targeted run (test_knob_provenance, test_b1_model,
+test_li7_rank2, test_sf_backend; 3 failed / 663 passed / 151 skipped, 11 m 06 s)
+found the three caller-kernel pins listed in §6.1, re-taken.
+
+### 6.5 Open points
+
+None new. `rank2_input` and `pol_sf_reach` beside a caller's kernel keep their
+own sentences (not knob values); the A10 open point (§5 item 2) stands.

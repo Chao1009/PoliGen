@@ -814,7 +814,7 @@ def _require_sd_phase(key, model_block):
             "docs/benchmarking/07_cw_sign_investigation.md." % (key, p2_m0))
 
 
-def build_tagged():
+def _build_tagged_hulthen():  # V-CODE-7 (2026-11-10): named `build_tagged()` until the A13 wrapper below redefined that name; renamed so one name is one function
     channels = {
         "li6_alpha": tagged.li6_alpha_channel(),
         "li7_alpha": tagged.li7_alpha_channel(),
@@ -1706,11 +1706,11 @@ def build_tagged_li6_alpha_vmc():
     }
 
 
-_build_tagged_hulthen = build_tagged
+# V-CODE-7 (2026-11-10): the three Hulthen channels are `_build_tagged_hulthen()` above.
 
 
-def build_tagged():  # noqa: F811 -- A13: the Hulthen channels, plus the VMC block
-    """build_tagged() above (the three Hulthen channels, unchanged) plus the
+def build_tagged():  # A13: the Hulthen channels, plus the VMC block (V-CODE-7 (2026-11-10): no longer redefines a name)
+    """_build_tagged_hulthen() above (the three Hulthen channels, unchanged) plus the
     A13 `li6_alpha_vmc` block.  main() looks `build_tagged` up when it runs,
     so it calls this one."""
     out = _build_tagged_hulthen()

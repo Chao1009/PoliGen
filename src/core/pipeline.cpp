@@ -512,7 +512,7 @@ void PipelineConfig::validate() const {
   if (cluster_vmc_mc_sigma != 0.0) {
     if (!std::isfinite(cluster_vmc_mc_sigma))  // F6 (2026-10-29): NaN != 0.0 too
       throw std::runtime_error("PipelineConfig: cluster_vmc_mc_sigma must be "
-                               "finite (a number of the tables' printed sigmas)");  if (std::fabs(cluster_vmc_mc_sigma) > 3.0) throw std::runtime_error("PipelineConfig: cluster_vmc_mc_sigma = " + fmt_g(cluster_vmc_mc_sigma) + " is outside the band it names -- a number of the tables' printed 1-sigma; |sigma| <= 3, the widest reading of a statistical band (A11, 2026-11-03: 1000 sigma built an alpha-d P_D of 0.133 that prices nothing the tables say)");
+                               "finite (a number of the tables' printed sigmas)");  if (std::fabs(cluster_vmc_mc_sigma) > 3.0) throw std::runtime_error("PipelineConfig: cluster_vmc_mc_sigma = " + /* V-PHYSICS-8 (2026-11-10): the shortest round-trip digits, so 3.0000001 never prints as the bound */ [](double v) { char b[40]; for (int p = 6; p <= 17; ++p) { std::snprintf(b, sizeof(b), "%.*g", p, v); if (std::stod(std::string(b)) == v) break; } return std::string(b); }(cluster_vmc_mc_sigma) + " is outside the band it names -- a number of the tables' printed 1-sigma; |sigma| <= 3, the widest reading of a statistical band (A11, 2026-11-03: 1000 sigma built an alpha-d P_D of 0.133 that prices nothing the tables say)");
     if (cluster_wave != ClusterWaveSource::VmcAV18) {
       throw std::runtime_error("PipelineConfig: cluster_vmc_mc_sigma is the ANL "
           "VMC tables' own Monte Carlo band and needs cluster_wave = VmcAV18 (the "
@@ -1198,7 +1198,7 @@ std::shared_ptr<const InclusiveKernel> default_inclusive_kernel(
       // polligen gates' 0.921947) gets its own object, kept alive by value
       // capture.  `band_scale` is NOT applied: Miller's are the published.
       static const auto li6_b1 = std::make_shared<Li6B1>(std::make_shared<MillerB1>());
-      const auto b = std::make_shared<const Li6B1>(std::make_shared<MillerB1>(), b1_transfer);
+      const auto b = b1_transfer == LI6_B1_RANK2_TRANSFER ? std::shared_ptr<const Li6B1>() : std::make_shared<const Li6B1>(std::make_shared<MillerB1>(), b1_transfer);  // V-CODE-7 (2026-11-10): built only where it is read
       if (b1_transfer == LI6_B1_RANK2_TRANSFER) opt.b1_func = li6_b1->b1_func();
       else opt.b1_func = [b](double x, double q2, double f1) { return b->b1(x, q2, f1); };
     } else if (model == B1Model::Cdks) {
@@ -4041,9 +4041,9 @@ G1PositivityClip g1_positivity_clip(const Pipeline& p) {
   return c;
 }
 
-}  // namespace lipolgen
+// V-CODE-7 (2026-11-10): one `namespace lipolgen` block (it was closed and
 
-namespace lipolgen {
+// re-opened here).
 
 // A10 (2026-11-03): see the declaration in pipeline.hpp.  Every value is the
 // expression `meta` used for its key before A10, moved here so that the npz

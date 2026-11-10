@@ -257,7 +257,7 @@ of 339 and 338.
 3. **The time zone in `DECISIONS.md`.** The supervisor's note under A13
    says the tolerance was written "at 21:04:39 UTC". `DECLARED.txt`
    records 2026-11-06T21:04:39−06:00, which is local time (CST). It was
-   left unedited, as instructed.
+   left unedited, as instructed. *V-PHYSICS-6 (2026-11-10): resolved before commit — the committed note under A13 carries the local time and its UTC equivalent ("2026-11-06T21:04:39−06:00 (the machine's local time; 03:04:39 UTC on 2026-11-07)"); the "UTC" wording never reached the tree, so this item is closed.*
 4. **Run 2's pytest list** does not fit in one 590 s call on this machine:
    `test_knob_provenance.py` alone takes about 9 min 45 s. Later phases
    should split it by node id, which `run_ids.py` in this phase's scratch

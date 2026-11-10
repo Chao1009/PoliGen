@@ -65,7 +65,7 @@ double nucleus_mass(const std::string& name, int a, int z);
 // IT IS NOT CLOSED BY SUBSTITUTION, AND THAT IS THE POINT.  Feeding
 // `VMC_P_D_LI6` into the product below gives 0.905427, which is 6.8 % ABOVE
 // the one ab initio number for this very observable (Wiringa PRC 89:024305
-// Table I, 0.848 -- see `LI6()` in beams.cpp), while the shipped 0.811228 is
+// Table I, 0.848 -- see `LI6()` in beams.cpp), while the pre-A1 shipped 0.811228 (V-PHYSICS-2, 2026-11-10: the inclusive default until A1, now `LI6_CLUSTER_POLARIZATION_HULTHEN`) is
 // 4.3 % BELOW it.  Adding the AV18 deuteron's own P_D too (`deuteron_av18_p_d`
 // = 0.057600, open item C5.4) gives 0.887076, still 4.6 % above.  So the
 // product 1 - 1.5 P_D x 1 - 1.5 P_D spans 0.811 .. 0.905 depending on which
@@ -82,7 +82,7 @@ double nucleus_mass(const std::string& name, int a, int z);
 // between two RUNS and is left standing.  Inside ONE `--cluster-wave vmc`
 // tagged-alpha run there was a SECOND, smaller and strictly wrong split: the
 // alpha-d relative motion came from the ANL VMC AV18+UX overlap while the
-// EMBEDDED deuteron stayed on `P_D_DEUTERON` = 0.045 in both places a run reads
+// EMBEDDED deuteron stayed on `P_D_DEUTERON` = 0.045 (V-CODE-6 (2026-11-10): named `P_D_DEUTERON_SCENARIO` since A1 (2026-11-03); `P_D_DEUTERON` is AV18's 0.0576) in both places a run reads
 // it, so every polarized tagged-alpha observable was 2.069 % high against the
 // AV18 deuteron of that same Hamiltonian.  That one is fixed: `DEUTERON_AV18()`
 // and `BreakupOptions::source` (tagged.hpp, breakup.hpp) follow the flag, and

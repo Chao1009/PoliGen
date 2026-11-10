@@ -241,7 +241,7 @@ Every generated file records what made it: `meta["b1_model"]`,
 `meta["b1_band_scale"]` and `meta["b1_alpha_d_dwave_weight"]` are in the npz /
 HFS metadata unconditionally, so three otherwise identical runs are not
 indistinguishable. A caller-supplied `cfg.kernel` is labelled
-`"caller-supplied kernel"` rather than with a flag that did not run.
+`"caller-supplied kernel"` rather than with a flag that did not run (V-CODE-1 (2026-11-10), A17 (2026-11-03): since A17 the label reads `"not read with a caller-supplied kernel"`, in `meta["unpol_sf"]`, `["pol_sf"]` and `["b1_model"]` alike).
 
 ### Where the model is legal, and why
 
@@ -1059,7 +1059,7 @@ measured fraction.
 |---|---|
 | a named backend with an empty object slot (`mstw`, `Custom`; `ct18nlo` / `nnpdfpol` only where no LHAPDF filler is installed — the tier attaches them lazily since D7, §10) | the core library links neither the PYTHIA nor the LHAPDF tier and cannot build the backend; falling back to the toy would put the toy's numbers under a label that says otherwise. The message **names the missing tier** (and, for a grid, the set and the toy escape), and the CLI refuses one layer earlier still (`require_unpol_sf_tier` / `require_pol_sf_tier`) |
 | `toy` with an object attached | the provenance and the realisation drifted — the attached backend would be silently dropped. Assigning `config.unpol_sf_obj` from Python sets `Custom` for you |
-| either selector OFF ITS SHIPPED DEFAULT together with a caller-supplied `PipelineConfig::kernel` (D7: at `ct18nlo` / `nnpdfpol` it is accepted, `meta` saying "caller-supplied kernel"; `toy` beside a kernel is refused) | the kernel wins on the inclusive branch and is not read at all on a tagged one; `meta` would record a backend that did not run |
+| either selector OFF ITS SHIPPED DEFAULT together with a caller-supplied `PipelineConfig::kernel` (D7: at `ct18nlo` / `nnpdfpol` it is accepted, `meta` saying "caller-supplied kernel" — since A17 (2026-11-03) "not read with a caller-supplied kernel", V-CODE-1 (2026-11-10); `toy` beside a kernel is refused) | the kernel wins on the inclusive branch and is not read at all on a tagged one; `meta` would record a backend that did not run |
 | a directly set `struck.f2_source` / `struck.g1_model` with the matching selector anything but `Custom` (D7: not only `toy`) | a C++ caller may put an object straight into the tagged kernel's slots (`Pipeline` fills them only when empty, the `breakup.triton_sf` arrangement), but `meta` would then record the selector for a run made on something else (measured: `ct18nlo` over the toy's 591846.17 pb). Name the selector `Custom` alongside |
 | a caller-supplied `PipelineConfig::kernel` on a **tagged** channel, with or without a selector | the tagged channels draw from the **struck-cluster** sampler and never read that field, while `meta["unpol_sf"]`, `["pol_sf"]` and `["b1_model"]` all wrote `"caller-supplied kernel"`. Measured: a `tagged-6Li-alpha` config carrying an `InclusiveKernel` built on CT18NLO ran at F2A(0.3, 10) = 0.3691149345, the **toy** value. Still accepted on `inclusive` **and `coherent`**, which do read it |
 | a `PythiaBridge` whose `options.f2_source` is not the config's own `unpol_sf_obj` (`set_pythia_hadronizer`) | the T2 struck-nucleon species draw would be on a backend `meta["unpol_sf"]` does not name — up to 24 % on F₂ⁿ/F₂ᵖ. Identity, not equality: hand the bridge `config.unpol_sf_obj` before constructing it, which `lipolgen-run` and `lipolgen.run` do |
@@ -3056,7 +3056,7 @@ VECTOR (P_e P_z D(y) A₁) and RANK-2 parts, and computes the `--x-max` below
 which the run builds. Measured on the 66 isotope × configuration × channel ×
 plan runs at x_max 1.0: the toy refuses none; the default refused six (D7, 2026-10-29), all
 `helicity-flip` at the CLI's P_e 0.7, all at x = 0.955, all cured by
-`--x-max 0.95` — **since A3 (2026-11-03) only the d inclusive configs 0 and 1 are refused** (re-measured 2026-11-06: the rank-2 term on top of the vector one at the clipped A₁ = 0.9136; worst cell 1 + w_avg −0.2275 / −0.1410, rank-2 −0.5911 / −0.7607), the other four build:
+`--x-max 0.95` — **since A3 (2026-11-03) only the d inclusive configs 0 and 1 are refused** (re-measured 2026-11-06: the rank-2 term on top of the vector one at the clipped A₁ = 0.9136; worst cell 1 + w_avg −0.2275 / −0.1410, rank-2 −0.5911 / −0.7607), the other four build *(V-CODE-5 (2026-11-10): the table below is D7's, 2026-10-29, before A1 and A3 — none of its numbers is today's; today `--isotope d --channel inclusive --config 0|1 --plan helicity-flip --events 200 --seed 1234` exit 1 at the first refused cell x = 0.955, Q² = 534.5 / 1536, 1 + w_avg = −0.05837 / −0.02078, and config 2, `tagged-d-p` configs 0 / 1 and `tagged-6Li-alpha` config 0 exit 0, as `docs/open_items/run_2026-11-03/phase_P2_positivity.md` §1 records)*:
 
 | run | cell Q² | 1 + w_avg | vector part (A₁) | rank-2 part |
 |---|---|---|---|---|
@@ -3077,7 +3077,7 @@ Three more recipes change at the default:
 
 * **the mandatory b₁ band's ×2 row** (`--b1-band-scale 2` on `cdks` or
   `li6-convolution`) is refused at `--x-max` 0.95 and 0.9 — cell x = 0.871,
-  the rank-2 term alone (1 + w_avg = −0.008234 on `cdks`) — and builds at
+  the rank-2 term alone (1 + w_avg = −0.008234 on `cdks`, D7's number at Q² = 186; V-CODE-3 (2026-11-10): since A1 (2026-11-03) −0.01927 at Q² = 150.6, measured `lipolgen-run --b1-model cdks --b1-band-scale 2 --x-max 0.95|0.9 --events 100` exit 1, 0.85 exit 0) — and builds at
   **0.85**; the toy builds it at 0.95. Run 0 / 1 / 2 at 0.85;
 * **`--b1-model li6-convolution` must name `--b1-unpol`**: `toy` there means
   "the kernel's own `UnpolSF`", now CT18NLO, so `validate()` refuses it and
@@ -3091,7 +3091,7 @@ Three more recipes change at the default:
 
 **The configuration rules that came with it.** A caller-supplied
 `PipelineConfig::kernel` is accepted beside the selectors only at their
-SHIPPED values (`meta` then says "caller-supplied kernel") and refused at any
+SHIPPED values (`meta` then says "caller-supplied kernel"; since A17 (2026-11-03) "not read with a caller-supplied kernel", V-CODE-1 (2026-11-10)) and refused at any
 other, `toy` included, with a message naming both; `struck.f2_source` /
 `struck.g1_model` set by hand need the selector `Custom` (any other value is
 refused — a `ct18nlo` label over a toy struck slot ran at the toy's

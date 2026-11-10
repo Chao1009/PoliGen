@@ -55,14 +55,14 @@ class FsiWeight;
 // in `beams.hpp` (included above), which is where `polli_fastsim.beams` keeps
 // them and where `polligen.tagged` re-exports them from: on the HULTHEN wave
 // (the run default until D6, an option since) the inclusive effective
-// polarization of 6Li (`LI6_CLUSTER_POLARIZATION`, two dilutions multiplied) and
+// polarization of 6Li (`LI6_CLUSTER_POLARIZATION`, two dilutions multiplied -- named `LI6_CLUSTER_POLARIZATION_HULTHEN` since A1 (2026-11-03), V-CODE-6 (2026-11-10)) and
 // the tagged S/D interference below are the same wave function seen in two experiments
 // and agree to 7.84e-6 (0.869950 closed form against the model's
 // 0.8699431789; it was 1.22e-5 before the 2026-09-06 S-D sign fix moved the
-// quadrature residual).  The names, values and meanings are unchanged.
+// quadrature residual).  The names, values and meanings are unchanged (V-CODE-6 (2026-11-10): until A1 (2026-11-03); since A1 the inclusive default is the six-body 0.848, the product is `LI6_CLUSTER_POLARIZATION_HULTHEN`, `P_D_DEUTERON` is AV18's 0.0576 and the Hulthen deuteron's 0.045 is `P_D_DEUTERON_SCENARIO`).
 //
 // UNDER `ClusterWaveSource::VmcAV18` -- THE RUN DEFAULT SINCE D6 (2026-10-27)
-// -- THEY DRIFT APART, by +11.61 % in the alpha-d vector sector and +6.58 % in
+// -- THEY DRIFT APART (V-CODE-6 (2026-11-10): until A1 (2026-11-03); since A1 the two default runs differ by +4.6 % vector and 0 rank-2), by +11.61 % in the alpha-d vector sector and +6.58 % in
 // the rank-2 one (open item C5.5, measured 2026-09-04): the tagged channel
 // takes the ANL VMC alpha-d overlap at `VMC_P_D_LI6` = 0.019355 and the
 // inclusive constants do not follow, so the two DEFAULT 6Li runs now differ --
@@ -169,7 +169,7 @@ const Ion& NEUTRON_TARGET();
 /// WHAT IT IS NOT.  The deuteron INSIDE 6Li is not the free deuteron -- it is
 /// off shell and compressed, and its P_D is not exactly the free one.  Using
 /// the free AV18 table for it is the same approximation the Hulthen option
-/// makes with `P_D_DEUTERON`, taken at the right Hamiltonian instead of at a
+/// makes with `P_D_DEUTERON_SCENARIO` (V-CODE-6 (2026-11-10): `P_D_DEUTERON` until A1 (2026-11-03)), taken at the right Hamiltonian instead of at a
 /// chosen number; it is not a six-body result.  The ab initio whole-nucleus
 /// answer for this observable is `LI6_POLARIZATION_VMC_SIX_BODY` = 0.848
 /// (beams.hpp) and neither reading reproduces it -- see C5.5.

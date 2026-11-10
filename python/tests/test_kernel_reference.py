@@ -61,7 +61,7 @@ def _kernel_6li_tensor_gamma():
     opt.b4_func = lambda x, q2, f1: -0.02 * f1
     opt.tensor_gamma = True
     opt.target_mass = False
-    return lg.InclusiveKernel(lg.li6_ion(lg.LI6_CLUSTER_POLARIZATION_HULTHEN), opt)  # A1: polligen's, explicitly
+    return lg.InclusiveKernel(lg.li6_ion(lg.LI6_CLUSTER_POLARIZATION_HULTHEN), opt)  # A1 (2026-11-03): polligen's, explicitly
 
 
 #: the tree's cos 2phi coefficient in units of -(1-y)/y^2: Jaffe-Manohar's,
@@ -117,7 +117,7 @@ def test_constants_match_the_reference(xsec_ref):
     assert lg.LI6_CLUSTER_POLARIZATION_HULTHEN == pytest.approx(  # A1 (2026-11-03): polligen's constants, passed explicitly; the shipped default is 0.848
         c["LI6_CLUSTER_POLARIZATION"], rel=RTOL)
     for name, row in c["ions"].items():
-        ion = _polligen_ion(name)   # A1: polligen's 6Li 0.811228 / d 0.9325, explicitly
+        ion = _polligen_ion(name)   # A1 (2026-11-03): polligen's 6Li 0.811228 / d 0.9325, explicitly
         assert ion.eff_pol_p == pytest.approx(row["eff_pol_p"], rel=RTOL)
         assert ion.eff_pol_n == pytest.approx(row["eff_pol_n"], rel=RTOL)
     for name, row in c["ions"].items():

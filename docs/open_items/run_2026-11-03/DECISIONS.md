@@ -103,6 +103,15 @@ configurations 0 and 1 at the default), each a rank-2 one on the
 class-level toy b₁ — the bare deuteron reading the ⁶Li transfer, item (2)
 above, now the author's most consequential open item of this run.*
 
+*Clarification, 2026-11-10, after verification (finding PHYSICS-7).* The
+correction above says the x_max 0.95 helpers were removed "(pins re-taken
+with `A3 (2026-11-03)` comments, never loosened)". Read as written that is
+wrong: NO pin moved when the helpers were removed (`phase_P2_positivity.md`
+§1 and §5 item 1, the P2 board row). The pins P2 re-took under A3 — the t5
+closure cross sections, `ScaledG1(3.0)` → `ScaledG1(1.5)`, the tagged-d-p
+refusal tests — are other pins, moved by the clip, not by the helpers'
+removal.
+
 **A2 — EPPS21 and R1998 stay options; the shipped default stays the
 free-nucleon CT18NLO with the toy R (`r_sigma_lt`).** *Why: EPPS21's Li6
 ratio parametrizes the inclusive nuclear modification — shadowing, EMC,
@@ -195,6 +204,27 @@ harness allows it, otherwise in the README row, and convention 8 names
 this one exception. (5) Deeps' Glauber and transverse-window sub-rows carry
 no status and stay on the declared wave as records. Report tally after
 (1)–(4): 15 pass / 8 fail, the one move labelled as the rule's.*
+
+*Supervisor's clarification, 2026-11-10, after verification (findings
+PHYSICS-3 and PHYSICS-4).* (1) HERMES b₁ (row 3): the headline `miller_shipped`
+is `MillerB1` as the `--b1-model miller` backend names it, on the shipped F₁ᵈ
+and R. A DEFAULT inclusive deuteron run does not carry that b₁: its kernel's
+b₁ is (2/6) × `LI6_B1_RANK2_TRANSFER` × MillerB1 = 0.32753 × MillerB1 — the
+⁶Li α–d mapping applied to a bare deuteron (`phase_P3_report_rules.md` §5
+item 1; the harness's A5 NOTE) — on which χ²(b₁)/6 = 14.56, recorded. So row
+3 is convention 8's opt-in clause (the row's object is the b₁ model, headlined
+in its shipped form), not its default-run clause, and the deviation is named
+in `validation/benchmarks/README.md` row 3 and convention 8 (phase F). The
+status is FAIL either way; nothing moves. The mapping itself stays the
+author's item (SUMMARY). (2) NMC ⁶Li/d (row 4, and every T3 row on
+`Epps21Ratio`): the inclusive rate applies NO F₂ ratio (A2: "no pipeline path
+applies it today"; the generator's own F₂(⁶Li)/F₂(d) is exactly 1), and
+`EMC_BASELINE_DEFAULT = Epps21` is the baseline of the polarized-EMC valence
+transfer. Row 4's headline on EPPS21 is therefore convention 8's opt-in clause
+again — the row's object is the EMC ratio and EPPS21 is its shipped form as an
+option — not an unnamed exception; convention 8 names it so, and P3 §1.2's
+label "the shipped EMC baseline" is corrected by a dated line (the shipped
+ratio-1 χ², 7.815/4 and 24.858/15, is the recorded sub-row). No status moves.
 
 **A6 — V6 leaves the TIGHT edge of `t5_delta_moment_bound`, recorded as the
 pre-D4 reading.** *Why: V6 is "every M₂ in DS16's normalisation is 2 M₂",
@@ -314,6 +344,12 @@ is filed for the author as its own item. The declared 1e−8 stands — written
 at 2026-11-06T21:04:39−06:00 (the machine's local time; 03:04:39 UTC on
 2026-11-07) before the comparison, measured 5.389e−9 (vector) and
 3.196e−9 (tensor).
+
+*Qualifier, 2026-11-10, after verification (finding PHYSICS-5).* "Up to
+9.4e−13 relative in `xsec.json`" holds among values above 1e−6
+(`phase_P5_port_gate.md` §1); near-zero cancellation residues of order
+1e−19 move by up to 3.8 relative, 1.4e−9 absolute at most. The port gates'
+rtol 1e−12 comparison is of the former kind.
 
 **A14 — I5's two changed readings are recorded as facts of the default tail,
 nothing re-tuned: the `rc_qe_tensor_scale` stand-in at scale 1 is 14.5× the

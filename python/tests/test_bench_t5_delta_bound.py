@@ -347,17 +347,17 @@ def test_row_passes_and_the_headline_is_pinned(rep, mod):
     assert toy["bound"] == pytest.approx([1.923918422e-3, 1.634960182e-3, 1.469226856e-3],
                                          rel=1e-7)  # A1 (2026-11-03): P_eff 0.848/3 (1.921562687e-3 ...)
     assert toy["saturation"] == pytest.approx([0.07590555381, 0.09062451752, 0.1021857592],
-                                              rel=1e-7)  # D7 (toy: 0.06444479771 ...); A1 (0.07599861005 ...)
+                                              rel=1e-7)  # D7 (toy: 0.06444479771 ...); A1 (2026-11-03) (0.07599861005 ...)
     assert toy["saturation_v6"] == pytest.approx([0.1518111076, 0.181249035,
-                                                  0.2043715183], rel=1e-7)  # D7; A1 re-taken
+                                                  0.2043715183], rel=1e-7)  # D7; A1 (2026-11-03) re-taken
     assert toy["saturation_tight"] == pytest.approx([0.1603368518, 0.1904168252, 0.2140649675], rel=1e-7) and toy["saturation_tight"] == pytest.approx([abs(m) / b["B_tight"] for m, b in zip(toy["m2"], rep["bound_detail"])], rel=1e-15)  # A6 (2026-11-03): TIGHT = V1 + V2(-), no V6 (D7: 0.3206737036 / 0.3808336503 / 0.428129935 with it)
-    assert toy["saturation_tight_v6"] == pytest.approx([0.3206737036, 0.3808336503, 0.428129935], rel=1e-7) and toy["saturation_tight_v6"] == pytest.approx([mod.PRE_D4_OVER_JM * t for t in toy["saturation_tight"]], rel=1e-15)  # A6: the pre-A6 edge (V6's x2), recorded
+    assert toy["saturation_tight_v6"] == pytest.approx([0.3206737036, 0.3808336503, 0.428129935], rel=1e-7) and toy["saturation_tight_v6"] == pytest.approx([mod.PRE_D4_OVER_JM * t for t in toy["saturation_tight"]], rel=1e-15)  # A6 (2026-11-03): the pre-A6 edge (V6's x2), recorded
     assert toy["saturation_loose"] == pytest.approx([0.03065071918, 0.03656594576,
-                                                     0.04121259509], rel=1e-7)  # D7; A1 re-taken
+                                                     0.04121259509], rel=1e-7)  # D7; A1 (2026-11-03) re-taken
     assert toy["f1ll_critical"] == pytest.approx([-1.901893184, -1.867180292,
-                                                  -1.840962823], rel=1e-7)  # D7; A1 re-taken
+                                                  -1.840962823], rel=1e-7)  # D7; A1 (2026-11-03) re-taken
     assert toy["f1ll_critical_v6"] == pytest.approx([-1.74567078, -1.681104995,
-                                                     -1.631431525], rel=1e-7)  # D7; A1 re-taken
+                                                     -1.631431525], rel=1e-7)  # D7; A1 (2026-11-03) re-taken
     assert len(toy["m2_numerical_error"]) == 3 and all(math.isfinite(e) and e >= 0 for e in toy["m2_numerical_error"]) and _toy_m2_errors_below(mod, 1e-15) and toy["m2_error_bound"] == pytest.approx([mod.QUAD_REL_TOL * abs(m) for m in toy["m2"]], rel=1e-15) and all(e <= b for e, b in zip(toy["m2_numerical_error"], toy["m2_error_bound"]))  # D7/F7: the toy integrand's 1e-15 stays; A7 (2026-11-03): the grid row's pass bound is the declared QUAD_REL_TOL x |M2| (chosen after the errors, 2.2-3.7e-10 relative, were seen)
     assert all(t < 1e-12 for t in toy["m2_tail_x_lo"])
 
@@ -425,7 +425,7 @@ def test_bound_pieces_and_closed_forms(rep, mod):
     assert [b["B_loose"] for b in rep["bound_detail"]] == pytest.approx(
         [4.76452420123e-3, 4.05206195375e-3, 3.64291695969e-3], rel=1e-7)  # A1 (2026-11-03)
     assert [b["B_peff_naive"] / b["B"] - 1.0 for b in rep["bound_detail"]] == pytest.approx(
-        [5.061e-3, 4.649e-3, 4.414e-3], abs=5e-6)  # A1: was 6.293e-3 / 5.780e-3 / 5.488e-3
+        [5.061e-3, 4.649e-3, 4.414e-3], abs=5e-6)  # A1 (2026-11-03): was 6.293e-3 / 5.780e-3 / 5.488e-3
 
 
 def test_bound_side_subrow_carries_the_pieces(rep):
@@ -459,25 +459,25 @@ def test_letter_models_recorded_with_their_own_status(rep):
     assert a["saturation"] == pytest.approx([0.7138102031, 0.6979379484, 0.7012628009],
                                             rel=1e-7)  # A1 (2026-11-03): the bound's P_eff 0.848/3
     assert b["saturation"] == pytest.approx([0.7371109382, 0.6945561752, 0.6736054839],
-                                            rel=1e-7)  # A1 re-taken
+                                            rel=1e-7)  # A1 (2026-11-03) re-taken
     assert a["saturation_v6"] == pytest.approx([1.427620406, 1.395875897, 1.402525602],
-                                               rel=1e-7)  # A1 re-taken
+                                               rel=1e-7)  # A1 (2026-11-03) re-taken
     assert b["saturation_v6"] == pytest.approx([1.474221876, 1.38911235, 1.347210968],
-                                               rel=1e-7)  # A1 re-taken
+                                               rel=1e-7)  # A1 (2026-11-03) re-taken
     assert a["saturation_tight"] == pytest.approx([1.507795873, 1.466480947, 1.469048133],
                                                   rel=1e-7)  # A6 (2026-11-03): no V6 (3.015591746 ... with it; D7: EPPS21 frozen below x = 1e-7)
     assert a["saturation_loose"] == pytest.approx([0.2882370918, 0.2816098983,
-                                                   0.2828266884], rel=1e-7)  # A1 re-taken
+                                                   0.2828266884], rel=1e-7)  # A1 (2026-11-03) re-taken
     assert a["f1ll_critical"] == pytest.approx([-0.5890116819, -0.6202105959,
-                                                -0.6125588706], rel=1e-7)  # A1 re-taken
+                                                -0.6125588706], rel=1e-7)  # A1 (2026-11-03) re-taken
     # under V6 the scenario needs the 6Li gluons tensor-polarized at
     # f1LL^g >~ +0.8 f1^g, short of CvDM17 (35)'s f1LL <= f1
     assert a["f1ll_critical_v6"] == pytest.approx([0.8800922235, 0.8128343977,
-                                                   0.8253763802], rel=1e-7)  # A1 re-taken
+                                                   0.8253763802], rel=1e-7)  # A1 (2026-11-03) re-taken
     assert b["f1ll_critical_v6"] == pytest.approx([0.9760034355, 0.7989471083,
-                                                   0.7119540482], rel=1e-7)  # A1 re-taken
+                                                   0.7119540482], rel=1e-7)  # A1 (2026-11-03) re-taken
     assert a["saturation_model_lo_alpha_s"] == pytest.approx(
-        [0.815845048, 0.7993764048, 0.8017551123], rel=1e-7)  # A1 re-taken
+        [0.815845048, 0.7993764048, 0.8017551123], rel=1e-7)  # A1 (2026-11-03) re-taken
     # moment_B's moment is dilution * C_BAG * alpha_s in closed form
     for m2, bd in zip(b["m2"], rep["bound_detail"]):
         assert m2 == pytest.approx(lg.C_BAG * bd["alpha_s"] / 3.0, rel=1e-12)
@@ -498,8 +498,8 @@ def test_helicity_positivity_subrow(rep):
     assert p["status"] == "pass" and p["in_verdict"] is True
     assert (p["n_points"], p["n_rates"]) == (567, 1701)
     assert p["w_min"] == pytest.approx(0.9078057355, rel=1e-9)  # D7 (toy 0.9493997990); A1 (2026-11-03): b1 x1.06576 (0.9134944997)
-    assert p["a_t_min"] == pytest.approx(-0.1843884338, rel=1e-8)  # D7 (toy -0.1012003069); A1 (-0.1730109054)
-    assert p["a_t_max"] == pytest.approx(0.09219426454, rel=1e-8)  # D7 (toy 0.05060020096); A1 (0.08650550033)
+    assert p["a_t_min"] == pytest.approx(-0.1843884338, rel=1e-8)  # D7 (toy -0.1012003069); A1 (2026-11-03) (-0.1730109054)
+    assert p["a_t_max"] == pytest.approx(0.09219426454, rel=1e-8)  # D7 (toy 0.05060020096); A1 (2026-11-03) (0.08650550033)
     assert p["w_min_at"] == "x=0.9 Q2=10 y=0.95 theta_S=90 phi'=90 m=+0"  # D7 (toy: Q2=2)
     assert -2.0 <= p["a_t_min"] <= p["a_t_max"] <= 1.0
 
@@ -593,13 +593,13 @@ def test_report_line(mod, capsys):
     subs = [l for l in out if l.startswith("SUBROW |")]
     assert len(rows) == 1 and len(subs) == 7
     assert subs[-1].startswith("SUBROW | t5_delta_moment_bound[bound_side[central]] | "
-                               "B = 1.923918e-03 / 1.634960e-03 / 1.469227e-03")  # A1
+                               "B = 1.923918e-03 / 1.634960e-03 / 1.469227e-03")  # A1 (2026-11-03)
     assert "PASS centrally (A7" in subs[2] and "FAIL under V6 (the pre-D4 kernel" in subs[2]  # D4
     assert rows[0].startswith("REPORT | t5_delta_moment_bound | shipped toy_delta_gluon (scale 0.01) "
                               "per nucleon, 6Li: M2 = int x Delta dx = 1.4604e-04 / 1.4817e-04 / "
                               "1.5013e-04 at Q2 = 2 / 5 / 10 GeV2, |M2|/B = 0.0759 / 0.0906 / 0.1022 "
                               "(Jaffe-Manohar Delta, the kernel's since D4; V6, the pre-D4 kernel / "
-                              "the letter as printed, x2: 0.1518 / 0.1812 / 0.2044);")  # D7; A1
+                              "the letter as printed, x2: 0.1518 / 0.1812 / 0.2044);")  # D7; A1 (2026-11-03)
     assert rows[0].endswith("| PASS")
     assert "np.float64" not in "\n".join(out)
     assert r["runtime_s"] < 30.0

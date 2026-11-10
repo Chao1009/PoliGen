@@ -1428,7 +1428,7 @@ def main(argv=None):
         # 0.3820 (ToyF2 + nnpdfpol), so 1 + w_avg = -0.02414.  D7 makes SIX
         # helicity-flip runs and two band / b1 recipes refuse at their defaults
         # (USAGE sec. 10); `--x-max` cures each, and the message computes how
-        # far.  It is NOT clamped: a positivity clamp is a physics change.
+        # far.  It is NOT clamped: a positivity clamp is a physics change.  V-CODE-5 (2026-11-10): since A3 (2026-11-03) g1, not W, is clipped to |g1| <= F1 per nucleon; two of the six (`--isotope d --channel inclusive` configs 0 / 1) still refuse, the rank-2 term on top.
         raise SystemExit(str(e))
     t_setup = time.time() - t0
     # THE RUN CONTEXT of the knob-provenance table: what the core cannot see.

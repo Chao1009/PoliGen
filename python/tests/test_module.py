@@ -45,16 +45,16 @@ def test_constants_have_one_definition():
     # inclusive eff_pol slots are a third of it each (plans/04 #6)
     assert lg.P_D_LI6 == 0.0867
     assert lg.P_D_DEUTERON == 0.0576 and lg.P_D_DEUTERON_SCENARIO == 0.045   # A1 (2026-11-03)
-    assert lg.LI6_CLUSTER_POLARIZATION_HULTHEN == (   # A1: the pre-A1 constant, named
+    assert lg.LI6_CLUSTER_POLARIZATION_HULTHEN == (   # A1 (2026-11-03): the pre-A1 constant, named
         (1.0 - 1.5 * lg.P_D_LI6) * (1.0 - 1.5 * lg.P_D_DEUTERON_SCENARIO))
-    assert lg.LI6_CLUSTER_POLARIZATION == lg.LI6_POLARIZATION_VMC_SIX_BODY == 0.848   # A1: was 0.81123
+    assert lg.LI6_CLUSTER_POLARIZATION == lg.LI6_POLARIZATION_VMC_SIX_BODY == 0.848   # A1 (2026-11-03): was 0.81123
     li6 = lg.li6()
     assert li6.Z * li6.eff_pol_p == pytest.approx(
         lg.LI6_CLUSTER_POLARIZATION, rel=1e-15)
     assert li6.N * li6.eff_pol_n == pytest.approx(
         lg.LI6_CLUSTER_POLARIZATION, rel=1e-15)
-    assert lg.deuteron().eff_pol_p == 1.0 - 1.5 * lg.P_D_DEUTERON   # A1: 0.9136
-    # the retired Cloet convention stays reachable; 1.233x the Hulthen reading (A1: 1.179x the default)
+    assert lg.deuteron().eff_pol_p == 1.0 - 1.5 * lg.P_D_DEUTERON   # A1 (2026-11-03): 0.9136
+    # the retired Cloet convention stays reachable; 1.233x the Hulthen reading (A1 (2026-11-03): 1.179x the default)
     assert lg.LI6_NAIVE_ONE_THIRD == 1.0 / 3.0
     assert lg.LI6_NAIVE_ONE_THIRD / (lg.LI6_CLUSTER_POLARIZATION_HULTHEN / 3.0) == \
         pytest.approx(1.233, abs=5e-4)
@@ -619,7 +619,7 @@ def test_c5_2_the_vmc_tables_carry_their_monte_carlo_band():
 def test_c5_4_the_deuteron_control_on_av18():
     L = lg._lipolgen
     assert L.deuteron_av18_p_d() == pytest.approx(0.0575998919874, rel=1e-9)
-    assert L.deuteron_av18_p_d() / lg.P_D_DEUTERON_SCENARIO == pytest.approx(  # A1: named
+    assert L.deuteron_av18_p_d() / lg.P_D_DEUTERON_SCENARIO == pytest.approx(  # A1 (2026-11-03): named
         1.28, rel=1e-4)
     h = L.TaggedModel(L.deuteron_channel())
     v = L.TaggedModel(L.deuteron_channel(source=L.ClusterWaveSource.VmcAV18))
@@ -660,7 +660,7 @@ def test_c5_5_the_inclusive_tagged_drift_and_why_substitution_is_not_the_fix():
     # substitution is NOT the fix: it moves AWAY from the ab initio anchor
     ab = lg.LI6_POLARIZATION_VMC_SIX_BODY
     assert lg.LI6_CLUSTER_POLARIZATION_HULTHEN / ab - 1.0 == pytest.approx(
-        -0.04336, rel=1e-3)   # A1: the Hulthen reading; the default IS ab
+        -0.04336, rel=1e-3)   # A1 (2026-11-03): the Hulthen reading; the default IS ab
     assert lg.LI6_CLUSTER_POLARIZATION_VMC / ab - 1.0 == pytest.approx(
         +0.06772, rel=1e-3)
     both = lg.li6_cluster_polarization(lg.VMC_P_D_LI6, L.deuteron_av18_p_d())

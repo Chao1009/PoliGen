@@ -58,7 +58,7 @@ AZZ = -6.599826308749011e-04              # thirds estimator; A1 (2026-11-03): x
 A2 = (-6.520807683198287e-04,             # cos 2phi' amplitude per unit P_zz,
       -5.317366976891354e-04,             # S1..S4 -- F2 cancels per cell, so
       -7.145237489847445e-04,             # they move only through the cells'
-      -6.633554244821122e-04)             # cross-section weights (A1 re-taken)
+      -6.633554244821122e-04)             # cross-section weights (A1 (2026-11-03) re-taken)
 
 
 def test_price_defaults_li6_inclusive_runs_returns_table_and_png(tmp_path):

@@ -125,10 +125,10 @@ def test_sr_rule3_deuteron_is_per_nucleus(sr_mod):
     assert d.eff_pol_p == d.eff_pol_n == pytest.approx(1.0 - 1.5 * 0.0576, abs=1e-15)   # A1 (2026-11-03)
     for x, q2 in ((1e-5, 2.0), (1e-3, 5.0), (0.05, 5.0), (0.3, 10.0), (0.8, 5.0)):
         g1d = toy.g1_nucleus(d, x, q2)
-        assert g1d == pytest.approx(0.9136 * (toy.g1p(x, q2) + toy.g1n(x, q2)),   # A1: was 0.9325
+        assert g1d == pytest.approx(0.9136 * (toy.g1p(x, q2) + toy.g1n(x, q2)),   # A1 (2026-11-03): was 0.9325
                                     rel=1e-14)
         g2d = lg.g2_ww(lambda xx, qq: toy.g1_nucleus(d, xx, qq), x, q2)
-        assert g2d == pytest.approx(0.9136 * (toy.g2p(x, q2) + toy.g2n(x, q2)),   # A1: was 0.9325
+        assert g2d == pytest.approx(0.9136 * (toy.g2p(x, q2) + toy.g2n(x, q2)),   # A1 (2026-11-03): was 0.9325
                                     rel=1e-12, abs=1e-15)
         assert lg.g2_ww(toy.g1p, x, q2) == toy.g2p(x, q2)
         assert lg.g2_ww(toy.g1n, x, q2) == toy.g2n(x, q2)
@@ -162,7 +162,7 @@ def test_sr_bc_closure_is_linear_in_g1(sr_rep):
         for rp, rn, rd in zip(c[("p", q2)]["rows"], c[("n", q2)]["rows"],
                               c[("d", q2)]["rows"]):
             assert rd["truncation"] == pytest.approx(
-                0.9136 * (rp["truncation"] + rn["truncation"]), rel=1e-8)   # A1: was 0.9325
+                0.9136 * (rp["truncation"] + rn["truncation"]), rel=1e-8)   # A1 (2026-11-03): was 0.9325
 
 
 def test_sr_bc_closure_is_not_tuned_to_96_points(sr_mod):
@@ -339,10 +339,10 @@ def test_wu_row_passes_and_verdict_follows(wu_rep, wu_mod):
     # On the toy (until D7): N = (3032577, 2987706), sigma_u 89.193441, sigma_w
     # 89.167357, err_w 0.051588, pull 0.359, sigma_cat 89.167123, unpol 87.873873.
     assert (wu_rep["n_unweighted"], wu_rep["n_weighted"]) == (2714846, 2669772)  # A1 (2026-11-03): was 2712940
-    assert wu_rep["sigma_u"] == pytest.approx(79.848412, rel=1e-8)   # A1: was 79.792353
+    assert wu_rep["sigma_u"] == pytest.approx(79.848412, rel=1e-8)   # A1 (2026-11-03): was 79.792353
     assert wu_rep["sigma_w"] == pytest.approx(79.823731, rel=1e-8)   # A1: was 79.767651; A3 (2026-11-03): 79.823733 -> 79.823731, the WW g2 integral reads the clipped g1 above x ~ 0.83
-    assert wu_rep["err_w"] == pytest.approx(0.0488548, rel=1e-5)     # A1: was 0.0488204
-    assert wu_rep["pull"] == pytest.approx(0.359, abs=2e-3)          # A1: 0.3586
+    assert wu_rep["err_w"] == pytest.approx(0.0488548, rel=1e-5)     # A1 (2026-11-03): was 0.0488204
+    assert wu_rep["pull"] == pytest.approx(0.359, abs=2e-3)          # A1 (2026-11-03): 0.3586
     assert wu_rep["sigma_cat_pb"] == pytest.approx(79.823529, rel=1e-8)   # A1: was 79.767466; A3 (2026-11-03): was 79.823531, same reason
     assert wu_rep["sigma_unpol_pb"] == pytest.approx(78.522871, rel=1e-8)
 
@@ -351,9 +351,9 @@ def test_wu_sensitivity_is_as_stated(wu_rep):
     """The window was chosen so that the closure can FAIL: the exact
     polarized shift is +1.66 % and a no-op Mode W would pull ~ +19.4 (A1,
     2026-11-03; +1.59 % / +18.61 on D7's grids before A1, +1.47 % / +18.29 on the toy)."""
-    assert wu_rep["rate_shift"] == pytest.approx(1.65641e-2, abs=5e-7)   # D7; A1: was 1.58501e-2
+    assert wu_rep["rate_shift"] == pytest.approx(1.65641e-2, abs=5e-7)   # D7; A1 (2026-11-03): was 1.58501e-2
     assert wu_rep["null_pull"] > 10.0
-    assert wu_rep["null_pull"] == pytest.approx(19.42, abs=0.02)         # D7; A1: was 18.61
+    assert wu_rep["null_pull"] == pytest.approx(19.42, abs=0.02)         # D7; A1 (2026-11-03): was 18.61
 
 
 def test_wu_compare_catches_mutated_weights(wu_rep, wu_mod):

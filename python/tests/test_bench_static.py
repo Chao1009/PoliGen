@@ -193,10 +193,10 @@ def test_deuteron_static_verdict_follows_the_numbers(dmod, ds):
         assert m["eta_status"] == ("pass" if abs(m["eta_pull"]) <= 2.0 else "fail")
     assert ds["declared_status"] == ("pass" if all(m["eta_status"] == "pass"   # A5 (2026-11-03): recorded
                                                    for m in ds["models"].values()) else "fail")
-    assert (dmod.HEADLINE_MODEL, ds["headline"]) == ("av18", "av18")             # A5
-    assert ds["status"] == ds["models"]["av18"]["eta_status"] == "pass"          # A5: FAIL -> PASS by the rule
-    assert [n for n, m in ds["models"].items() if m["in_verdict"]] == ["av18"]   # A5
-    sub = ds["subrows"]["all waves (the declared rule, recorded)"]               # A5
+    assert (dmod.HEADLINE_MODEL, ds["headline"]) == ("av18", "av18")             # A5 (2026-11-03)
+    assert ds["status"] == ds["models"]["av18"]["eta_status"] == "pass"          # A5 (2026-11-03): FAIL -> PASS by the rule
+    assert [n for n, m in ds["models"].items() if m["in_verdict"]] == ["av18"]   # A5 (2026-11-03)
+    sub = ds["subrows"]["all waves (the declared rule, recorded)"]               # A5 (2026-11-03)
     assert (sub["status"], sub["in_verdict"], sub["failing"]) == ("fail", False, "hulthen +17.2 sigma")
     # measured: CD-Bonn and AV18 inside, the Hulthen pair (the default until
     # D6, an option since) far outside
@@ -295,7 +295,7 @@ def test_deuteron_static_report_line(dmod, capsys):
                               "(-0.07 sigma), av18 0.025045 (-1.39 sigma), hulthen "
                               "0.032478 (+17.20 sigma)")   # A5 (2026-11-03)
     assert rows[0].endswith("| PASS on the shipped wave (A5); the declared all-waves rule "
-                            "FAIL (hulthen eta +17.2 sigma), recorded")   # A5: FAIL (recorded ...) until then
+                            "FAIL (hulthen eta +17.2 sigma), recorded")   # A5 (2026-11-03): FAIL (recorded ...) until then
     assert "np.float64" not in "\n".join(out)
     assert rep["runtime_s"] < 30.0
 

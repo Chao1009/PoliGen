@@ -104,7 +104,7 @@ F₂/(2x(1 + r_sigma_lt)) at all six HERMES bins); `EMC_BASELINE_DEFAULT = Epps2
 | `t2_deuteron_static` | all three waves (FAIL, Hulthén +17.2σ) | AV18 η −1.39σ | **FAIL → PASS, by the rule** | applied (§1.2.2) |
 | `t2_hermes_b1_table2` | `cdks_conv_mstw` 22.26/6 | `miller_shipped` 5.26/6 | FAIL → FAIL | applied (§1.2.3) |
 | `t2_boeglin_nk` | Hulthén 21.98/21 (hashed block) | unchanged: the named exception; AV18 11.54/21 (p = 0.951) is the sub-row `nk[av18]`, already computed in `run()` outside the block | PASS → PASS | dated A5 addendum in the docstring outside the block; no number moved |
-| T3 ×5 | shipped `HoSpin1FF`; `Epps21Ratio` = the shipped EMC baseline | the same | unchanged | none (recorded: the inclusive kernels' own F₂(⁶Li)/F₂(d) is exactly 1; on it NMC gives 7.82/4, p = 0.099, and 24.86/15, p = 0.052 — PASS too; `a5_survey.json`) |
+| T3 ×5 | shipped `HoSpin1FF`; `Epps21Ratio` = the shipped EMC baseline *(V-PHYSICS-4 (2026-11-10), the supervisor's clarification of 2026-11-10 under A5: corrected — `EMC_BASELINE_DEFAULT = Epps21` is the baseline of the polarized-EMC valence transfer, and the inclusive rate applies no F₂ ratio; EPPS21 is the EMC ratio's shipped option form, so these rows are convention 8's opt-in clause, the ratio-1 χ² beside it the recorded sub-row)* | the same | unchanged | none (recorded: the inclusive kernels' own F₂(⁶Li)/F₂(d) is exactly 1; on it NMC gives 7.82/4, p = 0.099, and 24.86/15, p = 0.052 — PASS too; `a5_survey.json`) |
 | T4 ×2, T5 ×5, T6 | shipped / identities / CLI defaults | the same | unchanged | none |
 
 Before the note, the survey measured BONuS on the literal shipped run (`--fsi

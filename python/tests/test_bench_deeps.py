@@ -202,7 +202,7 @@ def test_measured_values_pinned(rep):
     # A5 (2026-11-03): the headline wave's (AV18), measured 2026-09-27, unmoved
     assert m["waves"]["av18"]["lc"]["data_over_model_by_ps"] == pytest.approx(
         [1.140, 1.196, 1.174, 1.035, 0.641], abs=2e-3)
-    assert rep["generator"].startswith("shape chi2/ndf = 579.12/187 (p = 1.11e-41), AV18")  # A5
+    assert rep["generator"].startswith("shape chi2/ndf = 579.12/187 (p = 1.11e-41), AV18")  # A5 (2026-11-03)
 
 
 def test_transverse_window_recorded_not_asserted(rep):

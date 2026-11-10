@@ -1816,7 +1816,7 @@ TEST_CASE("A11: cluster_vmc_mc_sigma is bounded at |sigma| <= 3") {
                          doctest::Contains("|sigma| <= 3"), std::runtime_error);
     CHECK_THROWS_WITH_AS(cfg_at(bad).validate(),
                          doctest::Contains("A11"), std::runtime_error);
-  }
+  }  CHECK_THROWS_WITH_AS(cfg_at(3.0000001).validate(), doctest::Contains("cluster_vmc_mc_sigma = 3.0000001 is outside"), std::runtime_error);  // V-PHYSICS-8 (2026-11-10): the refused value printed in full
   CHECK_THROWS_WITH_AS(cfg_at(std::nan("")).validate(),
                        doctest::Contains("cluster_vmc_mc_sigma must be finite"),
                        std::runtime_error);

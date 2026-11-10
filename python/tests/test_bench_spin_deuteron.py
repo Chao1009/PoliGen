@@ -234,9 +234,9 @@ def test_hermes_report_row(hermes_rep):
     assert hermes.HEADLINE == hermes_rep["headline"] == "miller_shipped"
     h = hermes_rep["configs"]["miller_shipped"]
     assert (h["status"], h["within_b1"], h["within_azz"]) == ("fail", 4, 3)
-    assert h["chi2_azz_mstw_r1990"] == pytest.approx(5.550, rel=1e-3)   # A5: recorded
+    assert h["chi2_azz_mstw_r1990"] == pytest.approx(5.550, rel=1e-3)   # A5 (2026-11-03): recorded
     assert h["within_azz_mstw_r1990"] == 4
-    for p in hermes_rep["per_bin"]:                 # A5: the shipped kernel's own F1 is
+    for p in hermes_rep["per_bin"]:                 # A5 (2026-11-03): the shipped kernel's own F1 is
         assert p["f1d_shipped_kernel"] == pytest.approx(   # F2/(2x(1 + r_sigma_lt))
             p["f2d_shipped"] / (2.0 * p["x"] * (1.0 + p["r_shipped"])), rel=1e-12)
     assert set(hermes_rep["configs"]) == set(hermes.CONFIGS)

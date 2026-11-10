@@ -330,17 +330,17 @@ def test_g1d_theory_is_g1_nucleus_over_two_with_the_d_state_factor(g1_mod, g1):
     for x, q2 in _PTS:
         iso = 0.5 * (toy.g1p(x, q2) + toy.g1n(x, q2))
         tree = g1_mod.g1d_tree(toy, d, x, q2)
-        assert tree == pytest.approx(0.9136 * iso, rel=1e-14)   # A1: was 0.9325
+        assert tree == pytest.approx(0.9136 * iso, rel=1e-14)   # A1 (2026-11-03): was 0.9325
         assert tree == kern.tables(x, q2).g1
         assert g1_mod.g1d_no_dstate(toy, x, q2) == iso
     assert g1["dstate"]["p_d"] == 0.0576   # A1 (2026-11-03): was 0.045
-    assert g1["dstate"]["factor"] == pytest.approx(0.9136, abs=1e-15)   # A1: was 0.9325
+    assert g1["dstate"]["factor"] == pytest.approx(0.9136, abs=1e-15)   # A1 (2026-11-03): was 0.9325
     assert g1["dstate"]["vector_dilution_of_p_d"] == g1["dstate"]["factor"]
     assert g1["configs"]["toy"]["kernel_max_rel_diff"] == 0.0
-    # the no-D-state variant is exactly the tree theory / 0.9136, per point (A1)
+    # the no-D-state variant is exactly the tree theory / 0.9136, per point (A1 (2026-11-03))
     e = g1["configs"]["toy"]["experiments"]["compass"]
     for t, t0 in zip(e["theory"], e["theory_no_dstate"]):
-        assert t == pytest.approx(0.9136 * t0, rel=1e-14)   # A1: was 0.9325
+        assert t == pytest.approx(0.9136 * t0, rel=1e-14)   # A1 (2026-11-03): was 0.9325
 
 
 def test_g1d_theory_mstw_is_the_kernels(g1_mod, g1):
@@ -350,7 +350,7 @@ def test_g1d_theory_mstw_is_the_kernels(g1_mod, g1):
     d, pol = lg.deuteron(), lg.ToyG1(m)
     for x, q2 in _PTS[1:]:
         assert g1_mod.g1d_tree(pol, d, x, q2) == pytest.approx(
-            0.9136 * 0.5 * (pol.g1p(x, q2) + pol.g1n(x, q2)), rel=1e-14)   # A1: was 0.9325
+            0.9136 * 0.5 * (pol.g1p(x, q2) + pol.g1n(x, q2)), rel=1e-14)   # A1 (2026-11-03): was 0.9325
 
 
 # ------------------------------------------------- the numbers, independently
@@ -564,7 +564,7 @@ def _check_g1(c, table):
 def test_g1d_pinned_toy(g1):
     c = g1["configs"]["toy"]
     _check_g1(c, _G1_TOY)
-    assert (c["world_chi2"], c["world_ndf"]) == (pytest.approx(228.32020, rel=1e-6), 58)  # A1: was 232.16009
+    assert (c["world_chi2"], c["world_ndf"]) == (pytest.approx(228.32020, rel=1e-6), 58)  # A1 (2026-11-03): was 232.16009
     # the scout's diagnosis: COMPASS's x < 0.01 points drive the toy's chi2
     e = c["experiments"]["compass"]
     assert e["theory"][0] == pytest.approx(-0.94325, abs=5e-5)   # A1 (2026-11-03): was -0.96277

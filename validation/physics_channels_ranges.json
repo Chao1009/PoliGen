@@ -175,7 +175,7 @@
   "last": "`docs/OPEN_ITEMS_SOLUTIONS.md` §12–13 and `docs/open_items/engineering.md` §C)."
  },
  "docs/USAGE.md:163-533": {
-  "sha256": "a56130737cf753455a3eb8541cf84920080bc3bcd870c499a0e2d50f964c8090",
+  "sha256": "59b8d977b6ea59e9da7d33a042b74befec44430f421f767865893e2336be1bad",
   "first": "X (pdg 92). The balance is **per-nucleon**, `k + P_N = k' + X`, exactly as",
   "last": "move every pinned gate number, and it is not a uniform improvement on an"
  },
@@ -505,9 +505,9 @@
   "last": "/// conditioned on m_S; then the lab boost and the far-forward route."
  },
  "include/lipolgen/tagged.hpp:54-62": {
-  "sha256": "5bab96881095cb23530ae85ed718a20b9036ad2665e2d5ee363da85a1bb823b6",
+  "sha256": "58ac781d1bb4599733cb757537a36d9ffafad80eddce38484b103723b0c86eeb",
   "first": "// P_D_LI6 and P_D_DEUTERON are NOT defined here.  Since 2026-08-29 they live",
-  "last": "// quadrature residual).  The names, values and meanings are unchanged."
+  "last": "// quadrature residual).  The names, values and meanings are unchanged (V-CODE-6 (2026-11-10): unti…"
  },
  "include/lipolgen/xsec.hpp:121-128": {
   "sha256": "d26a7929edca447a3fe0923d4ce5803dd0e2ec99c95abd00d76717f241c889b5",

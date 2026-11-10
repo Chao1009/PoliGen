@@ -138,7 +138,7 @@ knobs recorded nowhere at all
   the flag (`DEUTERON_AV18()`, `BreakupOptions::source`), that path (opt-in then, the default since D6) moved
   by −2.027 %, the Hulthén path is bit for bit, and a `vmc` run's
   whole-nucleus reading is one Hamiltonian's: 0.887076.  `cluster_wave` is also
-  **refused** on `Inclusive` and `CoherentLi6` (since D6 a moved value by `validate()`, an explicit one by `make_config` / the CLI), where it is
+  **refused** on `Inclusive` and `CoherentLi6` (since D6 a moved value by `validate()`, an explicit one by `make_config` / the CLI; V-PHYSICS-1 (2026-11-10), A17 (2026-11-03): since A17 only a moved value, an explicit `hulthen`, is refused — an explicit `vmc`, the default, is accepted and labelled `not-read`, "Refuse or label" above), where it is
   never read — accepting it unread was how the 11.61 % above reached a user
   who thought they had asked for a VMC ⁶Li (**T27**, and the pipeline test).
   The deuteron slot carried (pre-A1) `DEUTERON_VECTOR_POLARIZATION =

@@ -92,7 +92,7 @@ def _plan():
 #: the shipped default (CT18NLO / NNPDFpol1.1, frozen), 2026-10-29
 SIGMA_TOY = {"inclusive": 591846.168878409, "coherent": 12476.025113185518,   # A1 (2026-11-03): incl. -1 ulp (b1)
              "tagged-6Li-alpha": 591846.1688784088}
-SIGMA_D7 = {"inclusive": 496334.15595404804, "coherent": 9424.476321023749,   # A1: incl. -1 ulp (b1)
+SIGMA_D7 = {"inclusive": 496334.15595404804, "coherent": 9424.476321023749,   # A1 (2026-11-03): incl. -1 ulp (b1)
             "tagged-6Li-alpha": 496334.15595404874}
 
 

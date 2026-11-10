@@ -1497,7 +1497,7 @@ TEST_CASE("b1_nuclear T6: the no-smearing limit IS b1_li6_from_deuteron") {
                   1e-12);
     }
   }
-  // ... and at P_D = P_D_LI6 the weight equals the Hulthen transfer (A1: the
+  // ... and at P_D = P_D_LI6 the weight equals the Hulthen transfer (A1 (2026-11-03): the
   // pre-A1 default); at VMC_P_D_LI6 it is the default since A1, 0.982576.
   CHECK_CLOSE(1.0 - 0.9 * P_D_LI6, LI6_B1_RANK2_TRANSFER_HULTHEN, 1e-4);  // A1 (2026-11-03): the Hulthen value, named
   CHECK_CLOSE(1.0 - 0.9 * VMC_P_D_LI6, LI6_B1_RANK2_TRANSFER, 1e-4);   // A1 (2026-11-03)
@@ -1848,7 +1848,7 @@ TEST_CASE("b1_nuclear T15: the struck-alpha term is real") {
 // Regenerate with `python3 validation/dump_b1_default_li6.py` -- and only
 // when a default is deliberately changed.
 
-TEST_CASE("b1_nuclear T9: default_inclusive_kernel(LI6()) is unchanged") {
+TEST_CASE("b1_nuclear T9: default_inclusive_kernel at the pre-A1 constants, passed explicitly, is unchanged") {  // V-CODE-7 (2026-11-10): renamed; it read "default_inclusive_kernel(LI6()) is unchanged" before A1 (2026-11-03) passed the old values
   jsonmin::Value doc;
   const std::string path =
       std::string(LIPOLGEN_REFERENCE_DIR) + "/b1_default_li6.json";

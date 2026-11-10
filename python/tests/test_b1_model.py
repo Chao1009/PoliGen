@@ -49,7 +49,7 @@ N = 400
 SEED = 7
 
 # The CDKS camp's b1_d is a Q2 = 2.5 DIGITIZATION with no Q2 evolution, and in
-# the topmost cell of the default window (x = 0.954993) its b1/F1 reaches 51.87 (A1; 48.67 before)
+# the topmost cell of the default window (x = 0.954993) its b1/F1 reaches 51.87 (A1 (2026-11-03); 48.67 before)
 # for `cdks` and 42.85 for `li6-convolution` on the shipped CT18NLO F1 (D7,
 # 2026-10-29; 6.52 / 5.91 on the toy) -- past where 1 + w_avg stays positive,
 # so `InclusiveSampler` refuses the run.  Both opt-in backends need a window

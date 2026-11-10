@@ -1822,11 +1822,11 @@ struct G1PositivityClip {
 };
 G1PositivityClip g1_positivity_clip(const Pipeline& p);
 
-}  // namespace lipolgen
+// V-CODE-7 (2026-11-10): one `namespace lipolgen` block -- the namespace is
 
-#include <map>
+// no longer closed and re-opened here, and <map> comes from the include list
 
-namespace lipolgen {
+// above.
 
 // A10 (2026-11-03; DECISIONS.md A10, the supervisor's choice under the
 // author's delegation): THE RUN'S PHYSICS PROVENANCE AS STRINGS, ONE LIST.

@@ -504,7 +504,7 @@ TEST_CASE("tagged: 6Li embedded-deuteron dilutions") {
   CHECK_CLOSE_AT(t, 1.0 - 0.9 * P_D_LI6, 0.0, 1e-4);
   CHECK_CLOSE_AT(LI6_B1_LEGACY_TRANSFER, v, 0.0, 2e-3);
   // deuteron control: the standard 1 - (3/2) w_D
-  CHECK_CLOSE_AT(deut_model().vector_dilution(), 1.0 - 1.5 * P_D_DEUTERON_SCENARIO,  // A1: named
+  CHECK_CLOSE_AT(deut_model().vector_dilution(), 1.0 - 1.5 * P_D_DEUTERON_SCENARIO,  // A1 (2026-11-03): named
                  0.0, 1e-3);
 }
 
@@ -1622,7 +1622,7 @@ TEST_CASE("T26 the alpha-d normalisation spread, and the inclusive drift" *
   CHECK_CLOSE(hul.vector_dilution(), ALPHA_D_VECTOR_POLARIZATION, 2e-5);
   CHECK_CLOSE(LI6_CLUSTER_POLARIZATION_HULTHEN,   // A1 (2026-11-03): the pre-A1 constant, named
               li6_cluster_polarization(P_D_LI6, P_D_DEUTERON_SCENARIO), 1e-15);
-  // Under VmcAV18 they DRIFT: +11.61 % vector, +6.58 % rank-2 (A1: against the Hulthen values).
+  // Under VmcAV18 they DRIFT: +11.61 % vector, +6.58 % rank-2 (A1 (2026-11-03): against the Hulthen values).
   CHECK_CLOSE(m14.vector_dilution() / hul.vector_dilution() - 1.0, 0.116131,
               1e-4);
   CHECK_CLOSE(m14.tensor_dilution() / LI6_B1_RANK2_TRANSFER_HULTHEN - 1.0, 0.065762,
@@ -1642,7 +1642,7 @@ TEST_CASE("T26 the alpha-d normalisation spread, and the inclusive drift" *
   CHECK_CLOSE(both, 0.8870761569, 1e-8);
   CHECK_CLOSE(both / LI6_POLARIZATION_VMC_SIX_BODY - 1.0, +0.04608, 1e-3);
   CHECK(std::fabs(LI6_CLUSTER_POLARIZATION_HULTHEN / LI6_POLARIZATION_VMC_SIX_BODY
-                  - 1.0)   // A1: named; the default IS 0.848 now
+                  - 1.0)   // A1 (2026-11-03): named; the default IS 0.848 now
         < std::fabs(LI6_CLUSTER_POLARIZATION_VMC
                         / LI6_POLARIZATION_VMC_SIX_BODY - 1.0));
 }
@@ -1688,7 +1688,7 @@ TEST_CASE("T27 the embedded deuteron follows --cluster-wave" *
   // --- THE SIZE THAT WAS WRONG.  2.0687 %, and it is EXACT rather than
   // approximate: g1A = Z P_p g1p + N P_n g1n is linear in the effective
   // polarization, so the whole polarized sector carried one factor.
-  const double was_high = DEUTERON_SCENARIO().eff_pol_p / v.dis_target.eff_pol_p;  // A1: named
+  const double was_high = DEUTERON_SCENARIO().eff_pol_p / v.dis_target.eff_pol_p;  // A1 (2026-11-03): named
   CHECK_CLOSE(was_high - 1.0, 0.0206872095, 1e-8);
   const InclusiveKernel k_now(v.dis_target);
   const InclusiveKernel k_before(DEUTERON_SCENARIO());   // A1 (2026-11-03): the pre-A1 DEUTERON()
@@ -1737,7 +1737,7 @@ TEST_CASE("T27 the embedded deuteron follows --cluster-wave" *
   CHECK_CLOSE(mv.vector_dilution() * v.dis_target.eff_pol_p
                   / LI6_CLUSTER_POLARIZATION_VMC - 1.0,
               -0.020270, 2e-3);
-  // the Hulthen run's own reading is `LI6_CLUSTER_POLARIZATION_HULTHEN` (A1: the pre-A1 constant)
+  // the Hulthen run's own reading is `LI6_CLUSTER_POLARIZATION_HULTHEN` (A1 (2026-11-03): the pre-A1 constant)
   const TaggedModel mh(h);
   CHECK_CLOSE(mh.vector_dilution() * h.dis_target.eff_pol_p,
               LI6_CLUSTER_POLARIZATION_HULTHEN, 2e-5);
@@ -1791,7 +1791,7 @@ TEST_CASE("A1: the shipped inclusive literals are the tree's own numbers" *
   CHECK_CLOSE(hi, 0.8870761569, 1e-8);
 }
 
-// ------------------------------------------- A13: the VMC alpha-d port gate
+// ------------------------------------------- A13 (2026-11-03): the VMC alpha-d port gate
 
 namespace {
 /// A13 (2026-11-03): the declared relative tolerance of the VMC alpha-d port

@@ -279,7 +279,7 @@ def test_weight_variation_is_converged_in_its_table(tree):
     fine18 = lg.GlauberFsiWeight(tree.models["av18"], opt)
     assert [abs(v(fine18, ps) - v(tree.fsi["av18-40mb"], ps))
             for ps in (0.078, 0.093, 0.11, 0.135)] == pytest.approx(
-        [3.119e-4, 1.072e-4, 5.465e-4, 8.291e-4], abs=2e-7)   # A5: recorded, not asserted < 5e-4
+        [3.119e-4, 1.072e-4, 5.465e-4, 8.291e-4], abs=2e-7)   # A5 (2026-11-03): recorded, not asserted < 5e-4
 
 
 def test_bin_averaging_moves_the_variation_by_under_two_percent(tree):
@@ -305,7 +305,7 @@ def test_bin_averaging_moves_the_variation_by_under_two_percent(tree):
     moved = [v([sum(w18(lo + (hi - lo) * (i + 0.5) / 10, c - 0.1 + 0.02 * (j + 0.5))
                     for i in range(10) for j in range(10)) / 100.0 for c in cs])
              / v([w18(lab, c) for c in cs]) - 1.0 for lab, (lo, hi) in bins.items()]
-    assert moved == pytest.approx([-0.03226, -0.01522, 0.00824, -0.00300], abs=2e-5)  # A5: recorded
+    assert moved == pytest.approx([-0.03226, -0.01522, 0.00824, -0.00300], abs=2e-5)  # A5 (2026-11-03): recorded
 
 
 def test_density_is_the_trees_own_n_of_k(tree):
@@ -348,7 +348,7 @@ def test_report_row_shape(rep):
     assert rep["name"] == NAME and rep["status"] in ("pass", "fail", "blocked")
     assert [k for k, s in rep["subrows"].items() if s["in_verdict"]] == [
         "4GeV/av18-40mb", "5GeV/av18-40mb"]   # A5 (2026-11-03): hulthen-40mb until then
-    assert (bonus.DEFAULT_CONFIG, bonus.DECLARED_CONFIG) == ("av18-40mb", "hulthen-40mb")  # A5
+    assert (bonus.DEFAULT_CONFIG, bonus.DECLARED_CONFIG) == ("av18-40mb", "hulthen-40mb")  # A5 (2026-11-03)
     assert rep["history"]["blocked_2026_09_23"] == bonus.BLOCKED_REASON
 
 
@@ -435,8 +435,8 @@ def test_measured_values_pinned_a_recorded_fail(rep):
 def test_forward_rise_recorded_not_asserted(rep):
     sub = rep["subrows"]["forward rise [hulthen-40mb, declared] (recorded)"]   # A5 (2026-11-03)
     assert sub["status"] == "recorded" and sub["in_verdict"] is False
-    fwd = rep["measured"]["forward_declared"]      # A5: the declared Hulthen's, unchanged
-    av = rep["measured"]["forward"]                # A5: the headline's (AV18)
+    fwd = rep["measured"]["forward_declared"]      # A5 (2026-11-03): the declared Hulthen's, unchanged
+    av = rep["measured"]["forward"]                # A5 (2026-11-03): the headline's (AV18)
     assert rep["subrows"]["forward rise (recorded)"]["status"] == "recorded"
     for v, rt in zip(av.values(), [0.9904, 0.9835, 0.9733, 0.9521] * 2):
         assert v["rho_tree_min"] == pytest.approx(rt, abs=1e-4)
@@ -457,7 +457,7 @@ def test_prescription_and_f2n_f2p_recorded(rep):
     assert av["max_dev_by_ps"] == pytest.approx([0.0151, 0.0484, 0.0598, 0.0559], abs=1e-4)
     assert av["ends_ratio_by_ps"] == pytest.approx([1.0298, 1.0977, 1.1211, 1.1118], abs=1e-4)
     assert av["weight_ends_ratio_by_ps"] == pytest.approx([1.0735, 1.1161, 1.1851, 1.3376], abs=1e-4)
-    pr = rep["subrows"]["PWIA prescription instant/LC [hulthen-40mb, declared] (recorded, not FSI)"]  # A5
+    pr = rep["subrows"]["PWIA prescription instant/LC [hulthen-40mb, declared] (recorded, not FSI)"]  # A5 (2026-11-03)
     assert pr["status"] == "recorded" and pr["in_verdict"] is False
     assert pr["max_dev_by_ps"] == pytest.approx([0.0227, 0.0309, 0.0409, 0.0571],
                                                 abs=1e-4)
@@ -498,7 +498,7 @@ def test_report_normalises_for_make_report(rep):
     assert row["status"] == "fail" and not row["notes"]
     names = [s["name"] for s in row["subrows"]]
     assert names[:2] == ["4GeV/av18-40mb", "5GeV/av18-40mb"]   # A5 (2026-11-03)
-    assert len(names) == 16      # A5: + the headline's stat+syst (2), forward, prescription (12 until then)
+    assert len(names) == 16      # A5 (2026-11-03): + the headline's stat+syst (2), forward, prescription (12 until then)
     verdict = [s["name"] for s in row["subrows"] if s.get("in_verdict")]
     assert verdict == names[:2]
     line = _report.report_line(rep["name"], rep["generator"], rep["reference"],

@@ -113,13 +113,13 @@ TEST_CASE("the 6Li slot is the cluster wave function, nothing hard-coded") {
   // from a transcribed 0.81 (author decision 2026-08-29, plans/04 #6).
   CHECK(P_D_LI6 == 0.0867);
   CHECK(P_D_DEUTERON_SCENARIO == 0.045);   // A1 (2026-11-03): the scenario, named
-  CHECK(LI6_CLUSTER_POLARIZATION_HULTHEN   // A1: the pre-A1 constant, bit for bit
+  CHECK(LI6_CLUSTER_POLARIZATION_HULTHEN   // A1 (2026-11-03): the pre-A1 constant, bit for bit
         == (1.0 - 1.5 * P_D_LI6) * (1.0 - 1.5 * P_D_DEUTERON_SCENARIO));
   // the SCENARIO deuteron carries the same expression, bit for bit, which is
-  // what makes the Hulthen per-nucleon g1 ratio below exact (A1: re-pointed)
+  // what makes the Hulthen per-nucleon g1 ratio below exact (A1 (2026-11-03): re-pointed)
   CHECK(DEUTERON_SCENARIO().eff_pol_p == 1.0 - 1.5 * P_D_DEUTERON_SCENARIO);
   CHECK(DEUTERON().eff_pol_n == DEUTERON().eff_pol_p);
-  // Hulthen per-nucleon g1(6Li)/g1(d) = (1 - 1.5 P_D_LI6)/3 = 0.290 (A1: the
+  // Hulthen per-nucleon g1(6Li)/g1(d) = (1 - 1.5 P_D_LI6)/3 = 0.290 (A1 (2026-11-03): the
   // explicit pre-A1 ions; the defaults' ratio is pinned at the end of the file)
   const double ratio = li6_ion(LI6_CLUSTER_POLARIZATION_HULTHEN).eff_pol_p / DEUTERON_SCENARIO().eff_pol_p;
   CHECK_CLOSE(ratio, (1.0 - 1.5 * P_D_LI6) / 3.0, 1e-15);

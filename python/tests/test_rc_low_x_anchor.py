@@ -70,7 +70,7 @@ HALF_WIDTH = {   # A1 (2026-11-03): x1.0657619 with A_zz (the b1 transfer); pre-
 # corrected the x = 0.01 / 0.10 entries; 0.063 and 0.16 are new here).  D7
 # (2026-10-29): both tables were measured on ToyF2 / ToyG1, the shipped default
 # until D7, so A2 NAMES the toy pair (`toy=True`); on the shipped CT18NLO /
-# NNPDFpol1.1 the four A_zz are -5.461032e-04, -1.371520e-03, -1.482635e-03, -1.132529e-03 (A1;
+# NNPDFpol1.1 the four A_zz are -5.461032e-04, -1.371520e-03, -1.482635e-03, -1.132529e-03 (A1 (2026-11-03);
 # -5.124064e-04, -1.286892e-03, -1.391150e-03, -1.062647e-03 before) -- delta(x) is backend-free.
 AZZ = (-4.826027490039e-04, -1.403367897793e-03,   # A1 (2026-11-03): x1.0657619 (pre-A1
        -1.629468420059e-03, -1.364665943009e-03)   # -4.528241648849e-04 -1.316774298646e-03 ...)

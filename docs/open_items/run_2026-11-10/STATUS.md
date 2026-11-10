@@ -10,8 +10,8 @@ Branch `claude/run-2026-10-26`, on top of `b3f8858`.
 
 | phase | items | state | commit | what | record |
 |---|---|---|---|---|---|
-| A — the decisions recorded | J1–J9 | DONE | (this commit) | the author's words quoted; nine entries, each with its reason, what moves and what does not | `DECISIONS.md` |
-| P1 — the re-dump | J2 | TODO | | the reference tables as one dump run writes them today; every port gate at its present tolerance | `phase_P1_redump.md` |
+| A — the decisions recorded | J1–J9 | DONE | `dd7f4d4` | the author's words quoted; nine entries, each with its reason, what moves and what does not | `DECISIONS.md` |
+| P1 — the re-dump | J2 | DONE | (next commit) | one dump run in place: 3170 numbers in six JSONs + the stale manifest string, a second run byte-identical; the 9.4e−13 traced to a one-ULP arccos change of the magic-angle input; every gate green at its present tolerance (435/435, 1523/155, bench 368/1), xsec headroom 0.056 → 0.0022 of the 1e−12 | `phase_P1_redump.md` |
 | P2 — the deuteron's b₁ slot | J1 | TODO | | `MillerB1` unmapped on the inclusive deuteron; the exposure of the toy's high-x behaviour measured, its treatment decided by a dated note | `phase_P2_deuteron_b1.md` |
 | P3 — harness rows | J3, J4, J7 | TODO | | the BONuS robustness pin; the HERMES in-grid sub-row; one exit code for an unusable verdict set | `phase_P3_harness_rows.md` |
 | P4 — provenance | J5, J6 | TODO | | the clip share's bracket; a HepMC3 file states its provenance or its absence; the extrapolation keys in the one list | `phase_P4_provenance.md` |

@@ -18,9 +18,9 @@ under the supervising session. Branch `claude/run-2026-10-26`, on top of
 | P4b — A17 carried to every row | A17 (the supervisor's note of 2026-11-06) | DONE | `b591880` | every row of a built run reads `read` or `not-read`: the seven rows P4 left (`kernel`, the b1 rows, `r_source`, `cluster_vmc_mc_sigma`, `fsi` off the tags, the rc sub-pieces another knob closes) NotRead at their default with a scope clause and the shared A17 sentence, a moved value still refused, `validate()` unchanged; label-only (every npz array byte-identical; `meta` `b1_model` / `b1_unpol` / `r_source` to labels per channel, HepMC3 only those attribute lines); 434/434 C++, 1519 passed / 155 skipped pytest, bench 368/1, report 15/8/0 with 0 changes | `phase_P4_infrastructure.md` §6 |
 | P5 — the VMC port-gate block | A13 | DONE | `888ca3b` | landed by splice (the supervisor's note under A13): `tagged.json` = HEAD + the dumped `li6_alpha_vmc` block byte for byte (+15/−0, no other reference byte), `validation/README.md` +24/−0 = the dump's paragraph, the dump script carries the block; gates at the declared `kVmcPortRtol` = 1e−8 in `test_tagged.cpp`, `repin_tagged_from_lipolgen.py` and `test_port_gate_li6_vmc.py`, measured 5.389e−9 / 3.196e−9; 435/435 C++, 1523 passed / 155 skipped pytest; the dump's non-reproducibility on today's machine filed for the author | `phase_P5_port_gate.md` |
 | P6 — the throughput | A16 | DONE | `5372f2d` | the three examples re-run on the idle machine with the 2026-10-30 recipe (`--out ""`, 200 k events, fresh process, median of 3), raw log kept in the record: inclusive **0.540**, tagged ⁶Li α **0.331**, coherent **1.071 M ev/s** (2026-10-30 under load, no log: 0.65 / 0.36 / 1.08, ×0.83 / ×0.92 / ×0.99); the inclusive change attributed by an out-of-tree A/B of the pre-P2 commit against HEAD (record §2); USAGE §8 gains a dated clause on the same line, the old numbers kept as history | `phase_P6_throughput.md` |
-| V — verification | all | DONE | (next commit) | two adversarial lenses over `5372f2d` (physics and honesty; code and regression): 19 findings (8 MAJOR, 11 MINOR, no BLOCKER), 27 verdicts (21 confirmed, 5 partly, 1 refuted: PHYSICS-2 disputed) | `phase_V_verification.md` |
-| F — fixes | all | DONE | (next commit) | 15 applied (stale sentences dated line-neutrally, the A11 message prints 3.0000001, 71 re-pin comments dated, the dump script's shadowing removed), PHYSICS-2 applied in part / refuted in part (history-marked), PHYSICS-5 / 7 applied by the supervisor, CODE-8 recorded as adequate; no default, constant, tolerance or reference number moved; two cited blocks re-recorded; 435/435 C++, 1523 passed / 155 skipped pytest, bench 368/1/0; report not regenerated | `phase_V_verification.md` |
-| S — summary | | TODO | | the one page | `SUMMARY.md` |
+| V — verification | all | DONE | `34215c4` | two adversarial lenses over `5372f2d` (physics and honesty; code and regression): 19 findings (8 MAJOR, 11 MINOR, no BLOCKER), 27 verdicts (21 confirmed, 5 partly, 1 refuted: PHYSICS-2 disputed) | `phase_V_verification.md` |
+| F — fixes | all | DONE | `34215c4` | 15 applied (stale sentences dated line-neutrally, the A11 message prints 3.0000001, 71 re-pin comments dated, the dump script's shadowing removed), PHYSICS-2 applied in part / refuted in part (history-marked), PHYSICS-5 / 7 applied by the supervisor, CODE-8 recorded as adequate; no default, constant, tolerance or reference number moved; two cited blocks re-recorded; 435/435 C++, 1523 passed / 155 skipped pytest, bench 368/1/0; report not regenerated | `phase_V_verification.md` |
+| S — summary | | DONE | (this commit) | the one page: every choice the supervisor's under the delegation, what moved and what it measured, the report 15 / 8 / 0, V/F, nine items for the author | `SUMMARY.md` |
 
 Ground rules of the run: a default moves only under an entry of
 `DECISIONS.md`; every number that depends on a moved default is re-taken
@@ -31,3 +31,17 @@ untouched except A13's additive block; `docs/HEPMC3_CONVENTION.md` edited by
 A10 only, T6 re-pinned; the hashed design blocks never edited; the sibling
 repository read-only; nothing published or sent; every phase committed and
 pushed on its own.
+
+## For the author
+
+Exposed by the run, not decided (the reasons and numbers in `SUMMARY.md`):
+
+1. The bare deuteron's inclusive b₁ reads the ⁶Li rank-2 transfer: 0.32753 × MillerB1 (HERMES χ²(b₁)/6 14.56 against 5.26); it drives the two surviving deuteron top-cell refusals. Recommendation: a deuteron b₁ slot of its own, then the toy b₁'s high-x behaviour.
+2. The reference dump is no longer byte-reproducible on this machine (3170 numbers at ≤ 2 ULP, `xsec.json` up to 9.4e−13 relative among values above 1e−6 against rtol 1e−12; the 2026-10-26 libc/libpython upgrade the likely, unproven cause); A13 landed by splice; the stale manifest string.
+3. BONuS on the AV18 weight: the header CHECKs miss (recorded, no verdict flips).
+4. HERMES low-x bins on the frozen CT18NLO edge.
+5. The meta clip share counts cell centres only.
+6. A10: three C++ examples without a `Pipeline` write no attributes; the C++ examples lack the two `*_sf_extrapolation` keys.
+7. A8: `t5_delta_moment_bound` exits 0 for a present-but-wrong set version.
+8. The LO development item of run 2026-10-27 stands; EPPS21 stays an option the inclusive rate does not apply.
+9. Throughput recipe: 200 k-event runs read the inclusive rate 10 % low; use 2 M events next time.

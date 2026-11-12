@@ -340,6 +340,37 @@ def test_r1990_typo_guard():
     assert r(0.3, 3.0) == pytest.approx(0.18698, abs=1e-4)
 
 
+def test_hermes_in_grid_subrow_recorded(hermes_rep):
+    """J4 (2026-11-10; decision J4, the supervisor's choice under the
+    author's delegation): one RECORDED sub-row beside the six-bin headline --
+    the headline model on the bins whose <Q2> is at or above the shipped
+    CT18NLO grid's own Q2 floor (read from the library object, never typed
+    in the harness), chosen after the values were seen, no verdict.  The
+    headline (all six bins, its rule, its status) does not move."""
+    import lipolgen._lipolgen as _l
+    floor = _l.make_lhapdf_unpol_sf(_l.UNPOL_SF_DEFAULT).q2_min
+    assert floor == pytest.approx(1.677025, abs=1e-6)     # CT18NLO's QMin 1.295 GeV, squared
+    g = hermes_rep["subrows"][hermes.INGRID_SUBROW]
+    assert list(hermes_rep["subrows"]) == [hermes.INGRID_SUBROW]
+    assert (g["status"], g["in_verdict"]) == ("recorded", False)
+    assert "chosen after the values were seen (J4" in g["label"] and "no verdict" in g["label"]
+    assert g["q2_grid_floor"] == floor
+    assert [p["q2"] for p in hermes_rep["per_bin"] if p["below_grid_floor"]] == [0.51, 1.06, 1.65]
+    assert all(p["f2d_frozen_at_floor"] for p in hermes_rep["per_bin"] if p["below_grid_floor"])
+    assert (g["n_bins"], g["ndf"], g["x_in_grid"]) == (3, 3, [0.128, 0.248, 0.452])
+    assert g["chi2_b1"] == pytest.approx(1.894165, rel=1e-5)        # J4 (2026-11-10): measured
+    assert g["chi2_azz"] == pytest.approx(1.177693, rel=1e-5)       # J4 (2026-11-10): measured
+    assert (g["within_b1"], g["within_azz"]) == (2, 3)
+    assert [p["f1d_shipped_over_implied"] for p in hermes_rep["per_bin"]] == pytest.approx(
+        [1.760666, 1.413382, 1.338407, 1.275881, 1.137313, 0.899293], abs=2e-6)
+    assert g["bins_below_floor"] == ("x = 0.012, <Q2> = 0.51 GeV2; x = 0.032, <Q2> = 1.06 GeV2; "
+                                     "x = 0.063, <Q2> = 1.65 GeV2")
+    # the headline is untouched: all six bins, FAIL
+    h = hermes_rep["configs"][hermes.HEADLINE]
+    assert (h["ndf"], h["status"], hermes_rep["status"]) == (6, "fail", "fail")
+    assert h["chi2_b1"] == pytest.approx(5.262, rel=1e-3)
+
+
 # ------------------------------------------------------------------ row 10
 
 def test_bonus_files_are_the_vendored_ones(tmp_path):

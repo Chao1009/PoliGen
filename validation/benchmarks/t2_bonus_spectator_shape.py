@@ -257,6 +257,20 @@ convergence |dv| is 3.1e-4 / 1.1e-4 / 5.5e-4 / 8.3e-4 over the four p_s
 bins (above 5e-4 at the last two) and bin averaging moves v by -3.2 / -1.5
 / +0.8 / -0.3 % (above 2 % at p_s = 0.078) -- RECORDED, not tuned; no
 block's verdict flips under either deviation (0 of 28, checked 2026-11-06).
+J3 NOTE (2026-11-10; decision J3 of docs/open_items/run_2026-11-10/
+DECISIONS.md -- the supervisor's choice under the author's delegation, not
+the author's words; applied 2026-11-12, phase P3).  The CHECK thresholds
+(|dv| < 5e-4, bin averaging < 2 %), the shipped 161 x 161 table, the
+headline and the row's status do not move; the 2026-11-06 hand check is now
+a pinned, bench-gated test: python/tests/test_bench_bonus.py::
+test_no_headline_block_verdict_flips_under_the_finer_table_or_bin_averaging
+recomputes each of the 28 verdict blocks (verdict_blocks()) with this
+harness's own judge_block() on the headline AV18 40 mb weight, (i) on the
+321 x 321 table on [0, 0.6] GeV (Tree.weight(..., fsi=<that weight>)) and
+(ii) averaged uniformly over each p_s bin and each cos bin, and asserts that
+no block's verdict differs from the headline's: 0 of 28 flip under either
+(measured 2026-11-12; the closest block, 4 GeV Q2 = 3.38 W* = 2.03 p_s =
+0.135, v/delta 1.027 -> 1.033 / 1.024, stays a fail).
 
 THE THREE NORMALISATION RULES (BENCHMARK_PLAN.md sec. 8), for THIS row:
   1. b1 normalisations -- NOT APPLICABLE (unpolarized; the weight is spin
@@ -546,6 +560,10 @@ def forward(b):
     return [r for r in b["rows"] if r[0] > FORWARD_COS_GT]
 
 
+def verdict_blocks(doc):  # J3 (2026-11-10): rule (a)'s verdict blocks, in the harness's order
+    return [b for b in blocks(doc) if in_dis_window(b) and len(backward(b)) >= MIN_BACKWARD_POINTS]
+
+
 def census(doc):
     """The block counts the header states, recomputed on every run."""
     bl = blocks(doc)
@@ -689,12 +707,12 @@ class Tree:
     def x_star(self, w, q2):
         return q2 / (w * w - self.m ** 2 + q2)
 
-    def weight(self, config, ps, c, w, q2):
+    def weight(self, config, ps, c, w, q2, fsi=None):
         """GlauberFsiWeight.weight at the spectator (k = p_s, cos theta_k =
         cos theta_pq) of a BONuS bin; (w, q2, x) reach it only through the
-        formation ramp, which is off."""
+        formation ramp, which is off.  `fsi` (J3, 2026-11-10): a variant weight object in place of config's."""
         lg = self.lg
-        return self.fsi[config].weight(lg.FsiKinematics(
+        return (self.fsi[config] if fsi is None else fsi).weight(lg.FsiKinematics(
             k=ps, cos_theta_k=c, phi_k=0.0, w=w, q2=q2,
             x=self.x_star(w, q2), spectator_z=1, spectator_a=1,
             channel=lg.Channel.TaggedDeuteronP))
@@ -868,8 +886,7 @@ def prescription_record(tree, ps_values, wave="av18", config=None):  # A5 (2026-
 def measure(path=BONUS):
     doc = load_bonus(path)
     cen = census(doc)
-    bl = [b for b in blocks(doc) if in_dis_window(b)
-          and len(backward(b)) >= MIN_BACKWARD_POINTS]
+    bl = verdict_blocks(doc)   # J3 (2026-11-10): the one selection, which the robustness pin reads too
     tree = Tree()
     judged = {}
     for name in CONFIGS:

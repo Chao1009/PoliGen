@@ -116,7 +116,7 @@ first; the second pass's findings on A1 and A7 are under SECOND PASS).
       sum e_q^2 x(q + qbar) reproduces LhapdfSF('CT18NLO').f2p, and its
       3-flavour g1 LhapdfG1.g1p, at six points each (|rel| <= 1e-12, else
       the harness is broken: exit 2); the set files' sha256 must equal the
-      vendored record (else BLOCKED, environment: a different set version).
+      vendored record (else exit 2, blocked (environment): J7, 2026-11-10).
   A5  g1^g = P_eff * Delta g, Delta g = NNPDFpol11_100 member 0 (the replica
       average) per nucleon, P_eff = (Z eff_pol_p + N eff_pol_n)/A of the
       tree's li6() = 0.2827 (0.848/3 since A1, 2026-11-03; 0.2704 = 0.81123/3 before; the convention
@@ -277,17 +277,17 @@ Run:  source env.sh && python3 validation/benchmarks/t5_delta_moment_bound.py [-
 
 Exit status (validation/benchmarks/README.md): 0 when the harness ran and
 printed its REPORT row -- pass, recorded fail and blocked alike (BLOCKED,
-with an `environment:` reason, when PYTHIA's python module or its LHAPDF6
-plugin is missing or cannot load a set, or a set's member file is missing
-or a set file is not the vendored version); 2 when the harness itself is
-broken (a missing or altered vendored file, lipolgen missing, a failed
-same-grid guard, an unconverged integral, any exception) -- and when one of
-the two sets is not installed where LHAPDF searches: the row's only
-configuration needs both, so it raises LHAPDF's own "Info file not found for
-PDF set" message and the report records it as blocked (environment), as row
-4 (README convention 6; a BLOCKED row with exit 0 until phase F of run
-2026-10-26).  A harness is a measurement, not a CI gate: the pytests are the
-gate.
+with an `environment:` reason, when the LHAPDF tier is off, PYTHIA's python
+module or its LHAPDF6 plugin is missing, or PYTHIA cannot load a set); 2
+when the harness itself is broken (a missing or altered vendored file,
+lipolgen missing, a failed same-grid guard, an unconverged integral, any
+exception) -- and when a set is not usable as measured: not installed where
+LHAPDF searches (LHAPDF's own "Info file not found for PDF set" message), or
+installed with its member file absent or its .info / member file not the
+vendored sha256 (J7, 2026-11-10: the same exit, a sentence naming the set,
+the directory and what differs; a BLOCKED row with exit 0 until then).  The
+report records each as blocked (environment), as row 4 (README convention
+6).  A harness is a measurement, not a CI gate: the pytests are the gate.
 """
 
 import hashlib
@@ -348,10 +348,10 @@ P_EFF_NAIVE = 1.0 / 3.0
 
 
 class EnvironmentBlocked(Exception):
-    """The environment cannot run this row (a missing module or plugin, a
-    set's missing member file, or a set that is not the vendored version) --
-    a BLOCKED row, exit 0.  A set that is not installed at all is not this:
-    check_set raises LHAPDF's own message (exit 2, blocked (environment))."""
+    """The environment cannot run this row (the LHAPDF tier off, a missing
+    module or plugin, PYTHIA refusing a set) -- a BLOCKED row, exit 0.  A set
+    not installed, or installed but not as vendored (J7, 2026-11-10), is not
+    this: check_set raises (exit 2, blocked (environment))."""
 
 
 # ---------------------------------------------------------------- reference
@@ -425,25 +425,25 @@ def lhapdf_dirs():
 
 def check_set(entry):
     """The set's .info and member file as LHAPDF would find them, each sha256
-    against the vendored record -- EnvironmentBlocked (a BLOCKED row) if the
-    member file is absent or either file differs; RuntimeError with LHAPDF's
-    own message if the set is not installed (exit 2, blocked (environment))."""
+    against the vendored record -- RuntimeError (exit 2, blocked (environment))
+    if the member file is absent or either file differs (J7, 2026-11-10), and
+    with LHAPDF's own message if the set is not installed (the same outcome)."""
     dirs = lhapdf_dirs()
     for d in dirs:
         info = os.path.join(d, entry["name"], entry["name"] + ".info")
         dat = os.path.join(d, entry["name"], entry["member_file"])
         if os.path.isfile(info):
-            if not os.path.isfile(dat):
-                raise EnvironmentBlocked("environment: LHAPDF set %s member file %s "
-                                         "not installed" % (entry["name"], dat))
+            if not os.path.isfile(dat):  # J7 (2026-11-10): exit 2, as a set not installed
+                raise RuntimeError("environment: LHAPDF set %s at %s is installed but not usable as "
+                                   "vendored: member file %s absent" % (entry["name"], d, entry["member_file"]))
             got = (sha256_file(info), sha256_file(dat))
             want = (entry["info_sha256"], entry["member_file_sha256"])
-            if got != want:
-                raise EnvironmentBlocked(
-                    "environment: LHAPDF set %s at %s is not the version this row "
-                    "was measured with (sha256 info %s / member %s, vendored %s / %s)"
-                    % (entry["name"], d, got[0][:12], got[1][:12], want[0][:12],
-                       want[1][:12]))
+            if got != want:  # J7 (2026-11-10): exit 2, as a set not installed
+                raise RuntimeError(
+                    "environment: LHAPDF set %s at %s is installed but not usable as vendored: %s not the "
+                    "version this row was measured with (sha256 info %s / member %s, vendored %s / %s)"
+                    % (entry["name"], d, " and ".join(w for w, a, b in zip((".info", "member file " + entry[
+                        "member_file"]), got, want) if a != b), got[0][:12], got[1][:12], want[0][:12], want[1][:12]))
             return dict(dir=d, info_sha256=got[0], member_sha256=got[1])
     # A set that is not installed is the environment, not a measurement: the
     # row's only configuration needs it, so LHAPDF's own message, uncaught --
@@ -1042,6 +1042,20 @@ V6_LABEL = "the pre-D4 kernel / the letter as printed, x2"
 # above it; A7 makes it the row's stated bound.  The bound was chosen AFTER
 # the errors were seen (D7: 3.3e-14 / 4.9e-14 / 5.5e-14, 2-4e-10 relative).
 # The 1e-15 absolute pin stays on the toy's analytic integrand (the pytest).
+#
+# J7 (2026-11-10; decision J7 of docs/open_items/run_2026-11-10/DECISIONS.md,
+# the SUPERVISOR's choice under the author's delegation, not the author's
+# words; applied 2026-11-12, phase P3).  A verdict set that is installed but
+# whose .info or member file differs from the vendored sha256, or whose member
+# file is absent, is treated exactly as a set that is not installed: check_set
+# raises a RuntimeError ("environment: LHAPDF set <name> at <dir> is installed
+# but not usable as vendored: <what differs>"), main() exits 2 and
+# make_report records 'blocked (environment)' with that sentence as the
+# reason (_report.LHAPDF_NOT_AS_VENDORED).  Until J7 both were a BLOCKED row
+# with exit 0 -- two outcomes for one situation (A8's reason: a harness whose
+# verdict cannot be computed is broken in that environment).  The tier-off,
+# module-missing and PYTHIA-refused branches keep their BLOCKED row, exit 0
+# (README convention 6 as written).  The row with the right sets: unchanged.
 
 
 def main(argv=None):

@@ -19,7 +19,7 @@ reading but the loose edge); that is RECORDED and pinned as recorded, never
 "fixed".  Nothing here needs the network.  The numbers need PYTHIA's python
 module, its LHAPDF6 plugin and the two LHAPDF sets: without the module or the
 plugin the row is BLOCKED; without a set the harness raises LHAPDF's own
-"Info file not found for PDF set" message, exits 2 and the report records
+"Info file not found for PDF set" message (a set present but not as vendored: its own sentence, J7 2026-11-10), exits 2 and the report records
 blocked (environment), as row 4 (README convention 6; since phase F of run
 2026-10-26).  Either way the tests that read numbers skip, naming the reason.
 """
@@ -533,20 +533,98 @@ def test_verdict_follows_the_numbers(mod, rep):
             2.0 * abs(m), rel=1e-12)
 
 
-def test_a_set_of_another_version_is_a_blocked_row(mod, monkeypatch, capsys):
-    """A set present in another version (or without its member file) is a
-    BLOCKED row with an environment: reason, exit 0 -- the row ran and says
-    why it cannot measure."""
-    def other_version(entry):
-        raise mod.EnvironmentBlocked("environment: LHAPDF set %s at /x is not the "
-                                     "version this row was measured with (test)"
-                                     % entry["name"])
-    monkeypatch.setattr(mod, "check_set", other_version)
+def test_a_tier_or_module_that_is_missing_is_still_a_blocked_row(mod, monkeypatch, capsys):
+    """The tier-off / module-missing / PYTHIA-refused branches (EnvironmentBlocked)
+    keep their BLOCKED row with an environment: reason, exit 0 -- README
+    convention 6 as written (J7, 2026-11-10, leaves them; until J7 this test
+    faked a set of another version here, which now exits 2: below)."""
+    def no_module(body):
+        raise mod.EnvironmentBlocked("environment: PYTHIA 8's python module (pythia8) "
+                                     "is not importable: (test)")
+    monkeypatch.setattr(mod, "load_sets", no_module)
     r = mod.run(verbose=True)
-    assert r["status"] == "blocked" and r["reason"].startswith("environment: LHAPDF set "
-                                                                "CT18NLO")
+    assert r["status"] == "blocked" and r["reason"].startswith("environment: PYTHIA 8's")
     out = capsys.readouterr().out.splitlines()
     assert [l for l in out if l.startswith("REPORT |")][0].endswith("| BLOCKED")
+    assert mod.main([]) == 0
+
+
+#: J7 (2026-11-10): the sentence a set present but not usable as vendored raises
+_NOT_AS_VENDORED = "is installed but not usable as vendored"
+
+
+def _scratch_sets(mod, tmp_path, change=None, drop=None):
+    """J7 (2026-11-10): an LHAPDF directory in tmp_path holding COPIES of the two
+    verdict sets' .info and member files as installed (the installed sets are
+    only read), with `change` = (set name, '.info' or 'member') given ONE byte
+    changed (its first, case-flipped) and `drop` = a set name whose member file
+    is left out.  Skips, naming the reason, unless the right sets are installed."""
+    body = mod.load_reference()
+    try:
+        recs = {e["name"]: mod.check_set(e) for e in body["pdf_sets"]}
+    except RuntimeError as exc:
+        pytest.skip("environment: %s" % str(exc).splitlines()[0])
+    root = tmp_path / "lhapdf"
+    for e in body["pdf_sets"]:
+        src = os.path.join(recs[e["name"]]["dir"], e["name"])
+        dst = root / e["name"]
+        dst.mkdir(parents=True)
+        for kind, fname in ((".info", e["name"] + ".info"), ("member", e["member_file"])):
+            if kind == "member" and e["name"] == drop:
+                continue
+            raw = open(os.path.join(src, fname), "rb").read()
+            if change == (e["name"], kind):
+                raw = raw[:1].swapcase() + raw[1:]
+                assert raw[:1].isalpha()
+            (dst / fname).write_bytes(raw)
+    return str(root)
+
+
+def _unusable_set_exits_2(mod, monkeypatch, root, expect):
+    """run() raises the sentence, main() and the script exit 2 with no REPORT
+    row, and make_report records blocked (environment) with it as the reason."""
+    monkeypatch.setenv("LHAPDF_DATA_PATH", root + "::")
+    monkeypatch.delenv("LHAPATH", raising=False)
+    assert mod.lhapdf_dirs() == [root]
+    with pytest.raises(RuntimeError) as exc:
+        mod.run(verbose=False)
+    msg = str(exc.value)
+    assert msg.startswith(expect) and _NOT_AS_VENDORED in msg, msg
+    rp = _load("_report")
+    assert rp.LHAPDF_NOT_AS_VENDORED == _NOT_AS_VENDORED
+    assert rp.classify_exception(exc.value) == (rp.ENV_BLOCKED, msg)
+    assert mod.main([]) == 2
+    p = _run_harness(os.path.join(_BENCH, _NAME + ".py"))
+    assert p.returncode == 2 and "REPORT |" not in p.stdout and msg in p.stderr
+    row = _load("make_report").run_harness(os.path.join(_BENCH, _NAME + ".py"), False)
+    assert (row["status"], row["reason"]) == (rp.ENV_BLOCKED, msg)
+    return msg
+
+
+def test_a_set_of_another_version_exits_2_blocked_by_the_environment(mod, monkeypatch, tmp_path):
+    """J7 (2026-11-10; decision J7, the supervisor's choice under the author's
+    delegation): a verdict set installed with its .info, or its member file,
+    not the vendored sha256 is treated as a set that is not installed -- exit
+    2, blocked (environment), the reason naming the set, the directory and
+    what differs (a BLOCKED row with exit 0 until J7)."""
+    root = _scratch_sets(mod, tmp_path / "info", change=("CT18NLO", ".info"))
+    root2 = _scratch_sets(mod, tmp_path / "member", change=("NNPDFpol11_100", "member"))
+    msg = _unusable_set_exits_2(mod, monkeypatch, root,
+                                "environment: LHAPDF set CT18NLO at %s %s: .info not the "
+                                "version this row was measured with" % (root, _NOT_AS_VENDORED))
+    assert "vendored be60232d8e6c / 375db856d2f8)" in msg
+    _unusable_set_exits_2(mod, monkeypatch, root2,
+                          "environment: LHAPDF set NNPDFpol11_100 at %s %s: member file "
+                          "NNPDFpol11_100_0000.dat not the version" % (root2, _NOT_AS_VENDORED))
+
+
+def test_a_set_without_its_member_file_exits_2_blocked_by_the_environment(mod, monkeypatch, tmp_path):
+    """J7 (2026-11-10): a verdict set whose .info is installed but whose member
+    file is absent -- exit 2, blocked (environment), as a set not installed."""
+    root = _scratch_sets(mod, tmp_path, drop="CT18NLO")
+    _unusable_set_exits_2(mod, monkeypatch, root,
+                          "environment: LHAPDF set CT18NLO at %s %s: member file "
+                          "CT18NLO_0000.dat absent" % (root, _NOT_AS_VENDORED))
 
 
 def test_a_missing_set_is_blocked_by_the_environment(mod, monkeypatch, tmp_path):

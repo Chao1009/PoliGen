@@ -47,7 +47,7 @@ REPORT_STATUSES = HARNESS_STATUSES + (ENV_BLOCKED, ERROR, SKIPPED_OPT_IN)
 
 #: LHAPDF's message when a set is not installed; an exception carrying it is
 #: an environment fact, not a broken harness
-LHAPDF_MISSING = "Info file not found for PDF set"; LHAPDF_CONF_MISSING = "lhapdf.conf was not found"  # the pre-flight's sentence, 2026-11-03
+LHAPDF_MISSING = "Info file not found for PDF set"; LHAPDF_CONF_MISSING = "lhapdf.conf was not found"; LHAPDF_NOT_AS_VENDORED = "is installed but not usable as vendored"  # the pre-flight's sentence, 2026-11-03; J7 (2026-11-10): a harness's sentence for a set present with its member file absent or not the vendored sha256 -- blocked (environment), the sentence itself the reason
 _LHAPDF_SET = re.compile(r"(?:Info file not found for PDF set|LHAPDF cannot open the set|LHAPDF set) '?([^'\s]+)'?")
 
 #: significant digits kept for numbers written into REPORT.json
@@ -206,8 +206,10 @@ def first_line(exc):
 def classify_exception(exc):
     """(status, reason) for an exception raised by importing or running a
     harness.  A missing LHAPDF set is `blocked (environment)` with the
-    harness convention's reason text; anything else is `error` with the
+    harness convention's reason text (J7: one present but not as vendored too, with the harness's sentence); anything else is `error` with the
     exception's type and FIRST line."""
+    if LHAPDF_NOT_AS_VENDORED in str(exc) and str(exc).startswith("environment: LHAPDF set "):  # J7 (2026-11-10)
+        return ENV_BLOCKED, first_line(exc)
     missing = lhapdf_missing_set(exc)
     if missing is not None:
         return ENV_BLOCKED, ("environment: LHAPDF set %s not installed" if LHAPDF_MISSING in str(exc) else "environment: LHAPDF set %s present, lhapdf.conf was not found") % missing

@@ -17,7 +17,7 @@ OWN child process by default, so that a crash -- an exception, a
 and nothing else:
   * an exception whose message says an LHAPDF set is missing ("Info file not
     found for PDF set ...") -> status `blocked (environment)`, reason
-    "environment: LHAPDF set <name> not installed";
+    "environment: LHAPDF set <name> not installed" (J7, 2026-11-10: a set "installed but not usable as vendored" -> the same status, the message's first line as reason);
   * any other exception, or a child that dies or times out -> status
     `error`, reason = the exception's type and FIRST line (the traceback
     goes to this script's stderr, not into the report);

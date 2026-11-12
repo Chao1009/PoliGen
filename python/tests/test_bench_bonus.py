@@ -565,3 +565,86 @@ def test_plot_writes_a_png(rep, tmp_path):
     assert list(fs["blocks"]) == ["4GeV/W*=2.03", "4GeV/W*=2.44",
                                   "5GeV/W*=2.03", "5GeV/W*=2.44"]
     assert list(fs["lines"]) == list(bonus.CONFIGS)
+
+
+# ------------------------------------------------------------ J3 (2026-11-10)
+
+#: J3 (2026-11-10): the bins the header names -- p_s = 70-85, 85-100,
+#: 100-120, 120-150 MeV/c (GeV/c here) and ten even cos theta_pq bins over
+#: [-1, 1], i.e. a half-width 0.1 about each cos label
+J3_PS_BINS = {0.078: (0.070, 0.085), 0.093: (0.085, 0.100),
+              0.11: (0.100, 0.120), 0.135: (0.120, 0.150)}
+J3_COS_HALF_WIDTH = 0.1
+#: (i)'s table: the header's CHECK table, 321 x 321 on [0, 0.6] GeV
+J3_FINE_N, J3_FINE_K_MAX = 321, 0.6
+#: (ii)'s uniform average: midpoints of an n x n split of (p_s bin) x (cos bin)
+J3_AVG_N = 10
+
+
+@pytest.mark.bench_expensive
+def test_no_headline_block_verdict_flips_under_the_finer_table_or_bin_averaging(rep):
+    """J3 (2026-11-10; decision J3 of docs/open_items/run_2026-11-10/
+    DECISIONS.md -- the supervisor's choice under the author's delegation).
+    The AV18 headline weight misses the header's two CHECKS (table
+    convergence |dv| 5.5e-4 / 8.3e-4 > 5e-4; bin averaging -3.2 % > 2 %;
+    recorded in the two tests above, thresholds not moved).  This pins that
+    no verdict depends on either miss.
+
+    DECLARED BEFORE THIS TEST WAS FIRST RUN -- what 'a block's verdict' is:
+    the harness's OWN rule, nothing re-written here: for each block of
+    `verdict_blocks(doc)` (rule (a): the 28 DIS-window blocks with >= 2
+    measured backward bins, in the harness's order), `judge_block(b, wfun)
+    ["passed"]` (rules (b)-(d): v <= delta, stat errors), with wfun the
+    headline configuration's weight `Tree.weight(DEFAULT_CONFIG, p_s, c, W*,
+    Q2)` -- AV18 at the shipped 40 mb -- and ONLY that weight varied:
+      (i)  the same model and options on a 321 x 321 (k_z, k_T) table on
+           [0, 0.6] GeV (passed as `Tree.weight(..., fsi=<that weight>)`);
+      (ii) the shipped weight averaged uniformly over the block's p_s bin and
+           each cos bin (the midpoints of a 10 x 10 split), as the header's
+           CHECK and the test above average it.
+    Asserted: 28 verdict blocks (12 at 4 GeV, 16 at 5 GeV); the recomputed
+    shipped verdicts are the report's; under (i) and under (ii) the number
+    of blocks whose verdict differs from the headline's is 0 (0 of 28 at
+    the hand check of 2026-11-06, run 2026-11-03 phase P3 sec. 1.2.1).  A
+    flip is a recorded finding for the author, never a reason to move a
+    threshold.  Bench-gated by J3 (it costs a few seconds)."""
+    doc = bonus.load_bonus()
+    bl = bonus.verdict_blocks(doc)
+    assert len(bl) == 28
+    assert [sum(1 for b in bl if b["beam"] == beam) for beam in ("4GeV", "5GeV")] == [12, 16]
+    t = bonus.Tree()
+    cfg = bonus.DEFAULT_CONFIG
+    wave, sigma, _ = bonus.CONFIGS[cfg]
+    assert (cfg, wave, sigma) == ("av18-40mb", "av18", 40.0)
+
+    def verdicts(wfun_of_block):
+        return [bonus.judge_block(b, wfun_of_block(b))["passed"] for b in bl]
+
+    head = verdicts(lambda b: lambda c: t.weight(cfg, b["ps"], c, b["w_star"], b["q2"]))
+    reported = rep["measured"]["judged"][cfg]
+    assert [(j["beam"], j["q2"], j["w_star"], j["ps"]) for j in reported] == [
+        (b["beam"], b["q2"], b["w_star"], b["ps"]) for b in bl]
+    assert head == [j["passed"] for j in reported]
+
+    opt = lg.GlauberFsiOptions()
+    opt.sigma_xn_mb = sigma
+    opt.n_kz = opt.n_kt = J3_FINE_N
+    opt.k_max = J3_FINE_K_MAX
+    fine = lg.GlauberFsiWeight(t.models[wave], opt)
+    on_fine = verdicts(lambda b: lambda c: t.weight(cfg, b["ps"], c, b["w_star"], b["q2"],
+                                                    fsi=fine))
+
+    def averaged(b):
+        lo, hi = J3_PS_BINS[b["ps"]]
+        n = J3_AVG_N
+        return lambda c: sum(
+            t.weight(cfg, lo + (hi - lo) * (i + 0.5) / n,
+                     c - J3_COS_HALF_WIDTH + 2.0 * J3_COS_HALF_WIDTH * (j + 0.5) / n,
+                     b["w_star"], b["q2"])
+            for i in range(n) for j in range(n)) / float(n * n)
+    on_avg = verdicts(averaged)
+
+    flips = {name: [(b["beam"], b["q2"], b["w_star"], b["ps"])
+                    for b, h, v in zip(bl, head, var) if h != v]
+             for name, var in (("321x321", on_fine), ("bin-averaged", on_avg))}
+    assert flips == {"321x321": [], "bin-averaged": []}, flips

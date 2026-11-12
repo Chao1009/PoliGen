@@ -190,8 +190,30 @@ def build_models():
 # shipped F1^d -- the headline's own numbers.  The 0.32753 x MillerB1() reading
 # (chi2(b1)/6 = 14.56, 2/6; A_zz 15.68/6 on the shipped F1^d) is history.  This
 # harness never read the kernel's b1, so no number of this row moved.
+#
+# J4 NOTE (decision J4 of 2026-11-10, docs/open_items/run_2026-11-10/DECISIONS.md --
+# the SUPERVISOR's choice under the author's delegation, not the author's words;
+# applied 2026-11-12, record phase_P3_harness_rows.md).  The headline keeps all six
+# bins, its rule and its status.  Beside it, ONE RECORDED sub-row (INGRID_SUBROW):
+# the headline model's chi2(b1) and chi2(A_zz) (A_zz on the shipped F1^d, as the
+# headline) on the bins whose <Q2> is at or above the shipped unpolarised grid's
+# OWN Q2 floor -- read from the process's one shared CT18NLO object, the one
+# `shipped_inclusive_kernel` hands the kernel (`make_lhapdf_unpol_sf(
+# UNPOL_SF_DEFAULT).q2_min`), never typed.  CHOSEN AFTER THE VALUES WERE SEEN: a
+# diagnostic, no verdict.  Below the floor D7 freezes F2 at the edge (the
+# author's decision, not re-opened): the shipped F2^d there equals its value at
+# the floor exactly (checked per bin, `f2d_frozen_at_floor`), so the b1 <-> A_zz
+# conversion uses an F1^d that is not the measured one.  Measured 2026-11-12:
+# floor 1.677025; below it the bins <Q2> = 0.51, 1.06, 1.65 (x = 0.012, 0.032,
+# 0.063), shipped F1^d / the F1^d HERMES's own b1 and A_zz columns imply = 1.761 /
+# 1.413 / 1.338; on the three in-grid bins chi2(b1)/3 = 1.894 (2/3 within) and
+# chi2(A_zz)/3 = 1.178 (3/3 within).
 #: the headline: the shipped b1 (A5, 2026-11-03; "cdks_conv_mstw" until then)
 HEADLINE = "miller_shipped"
+#: J4 (2026-11-10): the recorded in-grid sub-row's name (a diagnostic, no verdict)
+INGRID_SUBROW = "miller_shipped[in-grid: <Q2> >= the shipped grid's Q2 floor] (J4, recorded)"
+INGRID_LABEL = ("chosen after the values were seen (J4, 2026-11-10, the supervisor's "
+                "choice under the author's delegation): a diagnostic, no verdict")
 
 
 def measure():
@@ -202,6 +224,8 @@ def measure():
     miller_undo = 1.0 / _l.B1_MILLER_TABLE_TO_PER_NUCLEON
     import lipolgen as lg  # noqa: WPS433
     shipped = lg.shipped_inclusive_kernel(lg.deuteron())   # A5: the shipped F2^d and R
+    # J4 (2026-11-10): the shipped grid's own Q2 floor, from the one shared object the kernel holds
+    q2_floor = _l.make_lhapdf_unpol_sf(_l.UNPOL_SF_DEFAULT).q2_min
     per_bin = []
     for r in rows:
         x, q2 = r["x"], r["q2"]
@@ -227,8 +251,34 @@ def measure():
             f2d_shipped=t.f2, r_shipped=r_sh, f1d_shipped=f1d_sh,
             f1d_shipped_kernel=t.f1,
             azz_shipped={k: -(2.0 / 3.0) * v / f1d_sh for k, v in b.items()},
+            q2_grid_floor=q2_floor, below_grid_floor=q2 < q2_floor,           # J4 (2026-11-10)
+            f2d_frozen_at_floor=(q2 < q2_floor and t.f2 == shipped.tables(x, q2_floor).f2),
+            f1d_shipped_over_implied=f1d_sh / r["f1_implied"],
         ))
     return per_bin, blocked, f2_name
+
+
+def ingrid_subrow(per_bin, name=HEADLINE):
+    """J4 (2026-11-10): the headline model on the bins at or above the shipped
+    grid's Q2 floor -- RECORDED, chosen after the values were seen, no verdict."""
+    ing = [p for p in per_bin if not p["below_grid_floor"]]
+    below = [p for p in per_bin if p["below_grid_floor"]]
+    cb, wb = chi2_of(ing, name, "b1")
+    ca, wa = chi2_of(ing, name, "azz", key="azz_shipped")
+    return dict(
+        status="recorded", in_verdict=False, label=INGRID_LABEL,
+        q2_grid_floor=per_bin[0]["q2_grid_floor"], unpol_sf="CT18NLO (UNPOL_SF_DEFAULT)",
+        n_bins=len(ing), ndf=len(ing), chi2_b1=cb, within_b1=wb, chi2_azz=ca,
+        within_azz=wa, azz_f1d="shipped, as the headline's",
+        x_in_grid=[p["x"] for p in ing],
+        bins_below_floor="; ".join("x = %g, <Q2> = %g GeV2" % (p["x"], p["q2"])
+                                   for p in below),
+        frozen_edge=("below the floor the shipped F2^d is the floor's (D7, frozen; "
+                     "checked bin by bin: %s); shipped F1^d / the F1^d HERMES's own b1 "
+                     "and A_zz columns imply = %s there, %s on the in-grid bins" % (
+                         "all" if all(p["f2d_frozen_at_floor"] for p in below) else "NOT all",
+                         " / ".join("%.3f" % p["f1d_shipped_over_implied"] for p in below),
+                         " / ".join("%.3f" % p["f1d_shipped_over_implied"] for p in ing))))
 
 
 def chi2_of(per_bin, name, obs, key=None):
@@ -281,6 +331,7 @@ def run(verbose=True):
         tolerance="per bin sqrt(stat^2+syst^2)",
         status=h["status"], headline=head, configs=configs,
         per_bin=per_bin, f2_source=f2_name,
+        subrows={INGRID_SUBROW: ingrid_subrow(per_bin)},     # J4 (2026-11-10): recorded
     )
     if verbose:
         print("F1^d rebuilt as HERMES did, with F2 = (F2p+F2n)/2 from %s and "
@@ -316,6 +367,13 @@ def run(verbose=True):
                       NAME, n, c["chi2_b1"], c["ndf"], c["within_b1"],
                       c["chi2_azz"], c["ndf"], c["within_azz"],
                       c["chi2_azz_r1998"], c["status"].upper()))
+        g = report["subrows"][INGRID_SUBROW]                  # J4 (2026-11-10)
+        print("J4 in-grid sub-row, %s, %s: <Q2> >= %.6g GeV2 (%d bins): chi2/ndf b1 = "
+              "%.3f/%d (%d within), A_zz = %.3f/%d (%d within, shipped F1^d); below the "
+              "floor: %s; %s" % (HEADLINE, g["label"], g["q2_grid_floor"], g["n_bins"],
+                                 g["chi2_b1"], g["ndf"], g["within_b1"], g["chi2_azz"],
+                                 g["ndf"], g["within_azz"], g["bins_below_floor"],
+                                 g["frozen_edge"]))
     return report
 
 
@@ -352,6 +410,12 @@ def plot(report, out_dir=None):
     ax.errorbar(xs, [p["x"] * p["data"]["b1"] for p in bins],
                 yerr=[p["x"] * p["data"]["b1_err"] for p in bins],
                 **style_series("reference", label="HERMES 2005 Table II (stat (+) syst)"))
+    lo_q2 = [p for p in bins if p.get("below_grid_floor")]   # J4 (2026-11-10): the frozen edge
+    if lo_q2:
+        ax.plot([p["x"] for p in lo_q2], [p["x"] * p["data"]["b1"] for p in lo_q2], "s",
+                markersize=11, markerfacecolor="none", markeredgecolor=MUTED, zorder=6,
+                label="<Q2> below the shipped grid's floor %.3g GeV2 (F2 frozen, D7; J4)"
+                % lo_q2[0]["q2_grid_floor"])
     for k, (n, (slot, mk, label)) in enumerate(PLOT_SLOTS.items()):
         c = configs[n]
         if c["status"] == "blocked":

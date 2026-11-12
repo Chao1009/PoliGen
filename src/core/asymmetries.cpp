@@ -88,7 +88,7 @@ double azz(double b1, double f1, double f2, double x, double y,
 }
 
 double a_cos2phi(double delta, double f1, double f2, double x, double y) {
-  return -(1.0 - y) / (y * y) * delta / phi_averaged_density(f1, f2, x, y);
+  return -(1.0 - y) / (y * y) * delta * DELTA_COS2PHI_NORM / phi_averaged_density(f1, f2, x, y);
 }
 
 double err_a_parallel(double n, double pe, double pz) {

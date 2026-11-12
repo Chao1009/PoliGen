@@ -25,12 +25,12 @@
 ///
 /// FOUR CONDITIONS, none of them optional reading.  (1) THE LIFT IS ABOUT A
 /// CONFIGURATION, NOT ABOUT A BUILD.  The gate passes for the MSTW2008 LO
-/// nucleon input at CDKS Eq. (21)'s delta-function; the SHIPPED DEFAULT
+/// nucleon input at CDKS Eq. (21)'s delta-function; `--b1-unpol`'s DEFAULT
 /// unpolarised backend, `ToyF2`, gives 0.440 on the same clause -- OUTSIDE
 /// the [0.5, 2] acceptance window.  So: quote numbers made with the
 /// unpolarised-backend selector set to `mstw` (`PipelineConfig::b1_unpol`,
 /// CLI `--b1-unpol mstw`, which reaches `Li6ConvolutionOptions::unpol`
-/// through `default_inclusive_kernel`); the default toy backend is outside
+/// through `default_inclusive_kernel`); the toy backend (its default) is outside
 /// the gate's acceptance window and ITS NUMBERS ARE NOT COVERED BY THE LIFT.
 /// The two are not a rescaling of each other: on the shipped observable
 /// `Li6ConvolutionB1::b1(x, 2.5)` mstw/toy is 1.848 / 1.276 / 0.817 at

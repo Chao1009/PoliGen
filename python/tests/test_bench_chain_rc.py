@@ -1,24 +1,25 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Benchmark harness group CHAIN AND RADIATIVE (run 2026-09-23, phase B3).
+"""Benchmark harness group CHAIN AND RADIATIVE (run 2026-09-23, phase B3;
+re-wired by run 2026-10-26, phase B3).
 
-T4 row 7 of docs/benchmarking/BENCHMARK_PLAN.md: DJANGOH's Rad/noRad
-four-bin table (`validation/benchmarks/t4_djangoh_rad_noRad.py`, reference
-vendored in `validation/benchmarks/data/djangoh_rad_norad_ep18x275.json`).
+T4 row 7 of docs/benchmarking/BENCHMARK_PLAN.md: DJANGOH and LiPolGen's
+radiative tail (`validation/benchmarks/t4_djangoh_rad_noRad.py`).  Since
+2026-10-26 the row's PRIMARY comparison is DJANGOH's isolated elastic
+radiative tail (`data/djangoh_eltail_ep18x275.json`), pinned in
+test_bench_djangoh_eltail.py.  THIS file keeps the guards of the ePIC
+Rad/noRad four-bin table (`data/djangoh_rad_norad_ep18x275.json`), which is
+now the row's RECORDED HISTORY: the ePIC samples ran with the elastic
+radiative tail switched off (IEL2 = IEL31 = IEL32 = IEL33 = 0) and with a
+hadronic W_h >= 3 GeV cut that excludes the tail whatever IEL is, so the
+table shares no O(alpha) term with LiPolGen's `rc_tail` and is reported as
+recorded sub-rows, never as the verdict.  The 2026-09-23 numbers
+(docs/open_items/run_2026-09-23/phase_B3_chain_rc.md sec. 1) are pinned on
+the history rows so that a move in the proton tail (or in the vendored
+table) fails a test instead of silently rotting the record.  The vendored
+table's sha256 is re-checked on every read (one flipped byte is refused).
 
-The row is BLOCKED, and these tests pin WHY as well as WHAT: the ePIC DJANGOH
-samples ran with the elastic radiative tail switched off (IEL2 = IEL31 =
-IEL32 = IEL33 = 0), and the elastic tail is the only O(alpha) term LiPolGen's
-`rc_tail` computes -- so the two share no term and no tolerance exists.  The
-samples' hadronic W_h >= 3 GeV cut excludes that tail as well (W_h = M_p in
-ep -> e p gamma) whatever the IEL flags are, so the row unblocks only with a
-DJANGOH run at IEL31..33 != 0 AND WMIN <= M_p.  The
-measured numbers are pinned so that a move in the proton tail (or in the
-vendored table) fails a test instead of silently rotting the record
-docs/open_items/run_2026-09-23/phase_B3_chain_rc.md.  The vendored table's
-sha256 is re-checked on every read (one flipped byte is refused).
-
-The full row (both tail models, 17.3-19.6 s measured 2026-09-23) runs always: it is under the 30 s
-threshold of BENCHMARK_PLAN.md sec. 3 / the run's ground rules.
+The full row (both tail models, 22-26 s measured 2026-10-26) runs always: it
+is under the 30 s threshold of BENCHMARK_PLAN.md sec. 3.
 """
 
 import importlib.util
@@ -103,33 +104,34 @@ def test_djangoh_reference_is_vendored_with_provenance(dj, tmp_path):
     assert "hadronic final-state mass" in doc["run_settings"]["kinem_cuts"]
 
 
-def test_djangoh_row_is_blocked_and_prints_both_sides(dj, dj_row, capsys):
+def test_djangoh_epic_table_is_recorded_history_beside_the_tail(dj, dj_row,
+                                                                capsys):
+    """The ePIC Rad/noRad table is no longer the verdict: it is four
+    RECORDED history sub-rows, with the reason it cannot be a comparison."""
     row = dj_row
     assert row["name"] == "t4_djangoh_rad_noRad"
-    assert row["status"] == "blocked"
-    assert "IEL2=IEL31=IEL32=IEL33=0" in row["reason"]
-    # the unblock recipe names the W_h cut, not the IEL flags alone
-    assert "W_h >= 3 GeV cut also excludes the elastic tail" in row["reason"]
-    assert "IEL31..33 != 0 AND WMIN <= M_p" in row["reason"]
-    assert "none definable" in row["tolerance"]
-    assert set(row["generator_value"]) == {"t-peak", "polrad-full"}
-    for tm, vals in row["generator_value"].items():
+    hist = [s for s in row["subrows"] if s["name"].startswith("history_epic[")]
+    assert len(hist) == 4
+    for s in hist:
+        assert s["status"] == "recorded" and s["in_verdict"] is False
+        assert "elastic tail OFF and W_h >= 3 GeV" in s["reason"]
+        assert "disjoint pieces, no tolerance" in s["reason"]
+    h = row["history"]
+    assert set(h["lipolgen_ratio"]) == {"t-peak", "polrad-full"}
+    for tm, vals in h["lipolgen_ratio"].items():
         assert len(vals) == 4
-        # the one thing that CAN fail: a tail is non-negative and finite
+        # the one thing that CAN fail on the history: a tail is >= 0, finite
         assert all(math.isfinite(v) and v >= 1.0 for v in vals), tm
-        # plain floats, so the ROW line prints numbers, not np.float64(...)
         assert all(type(v) is float for v in vals), tm
-    # A tail can never exceed... nothing: the two share no term.  What IS a
-    # measured fact (2026-09-23) is that on this window the proton elastic
-    # tail is 9-37 % of DJANGOH's inelastic excess -- never more.
-    for d in row["detail"]:
-        for tm in ("t-peak", "polrad-full"):
-            assert 0.0 < d[tm + ":excess_over_djangoh_excess"] < 0.4
-    dj.print_row(row, dj.TAIL_MODELS)
+        # measured 2026-09-23 and again 2026-10-26: on this window the proton
+        # elastic tail is 9-37 % of DJANGOH's inelastic excess -- never more
+        for v, e in zip(vals, h["epic_ratio"]):
+            assert 0.0 < (v - 1.0) / (e - 1.0) < 0.4
+    dj.print_row(row)
     out = capsys.readouterr().out
-    assert "ROW | t4_djangoh_rad_noRad" in out and "BLOCKED" in out
+    assert "REPORT | t4_djangoh_rad_noRad |" in out
     assert "np.float64" not in out
-    assert "'t-peak': [1.01616918, 1.01317215, 1.01497026, 1.0206861]" in out
+    assert out.count("[history_epic[") == 4
 
 
 def test_djangoh_harness_exits_2_without_numpy(tmp_path):
@@ -150,21 +152,22 @@ def test_djangoh_harness_exits_2_without_numpy(tmp_path):
 
 
 def test_djangoh_row_numbers_are_the_recorded_ones(dj_row):
-    """The numbers of phase_B3_chain_rc.md sec. 1, at the harness's own
-    quadrature (converged to <= 1.5e-5 absolute; see `convergence`)."""
-    got = dj_row["generator_value"]
+    """The numbers of phase_B3_chain_rc.md sec. 1, now the row's history
+    (the W_l^2 >= 9 window, the harness's own quadrature, converged to
+    <= 1.5e-5 absolute on 2026-09-23)."""
+    h = dj_row["history"]
     want = {
         "t-peak": (1.01616918, 1.01317215, 1.01497026, 1.02068610),
         "polrad-full": (1.02709574, 1.01507182, 1.01513763, 1.02075698),
     }
     for tm, vals in want.items():
-        for g, w in zip(got[tm], vals):
+        for g, w in zip(h["lipolgen_ratio"][tm], vals):
             assert g == pytest.approx(w, rel=2e-7), tm
-    assert dj_row["reference_value"] == pytest.approx(
+    assert h["epic_ratio"] == pytest.approx(
         [1.07245359, 1.08940691, 1.16062561, 1.2279651], rel=1e-8)
-    # The Q^2 TREND of (ratio - 1): DJANGOH rises, the proton tail is flat to
-    # within +-0.04 in d ln / d ln Q^2 -- different pieces, different trends.
-    tr = dj_row["trend_dlnexcess_dlnQ2"]
+    # The Q^2 TREND of (ratio - 1): DJANGOH's inelastic excess rises, the
+    # proton tail is flat to within +-0.04 in d ln / d ln Q^2.
+    tr = h["trend_dlnexcess_dlnQ2"]
     assert tr["djangoh"] == pytest.approx(0.1748, abs=5e-4)
     assert abs(tr["t-peak"]) < 0.05 and abs(tr["polrad-full"]) < 0.05
     # The window the numbers belong to.

@@ -58,12 +58,17 @@ SECTION7 = (
       "data/vmc/**"), (), ("T2", "T3"), None),
     (("breakup.*", "spectator.*", "fsi.*", "triton_sf.*"), (),
      ("T3-cluster", "T4-tagged"), None),
+    (("fsi.*",), (), ("T2",),
+     "rows 10 and 11 evaluate GlauberFsiWeight on the deuteron control "
+     "(2026-10-26)"),
     (("coherent.*", "pythia_bridge.*"), ("the Pomeron tier",),
      ("T4-inclusive", "T4-VM", "T6"),
      "the Pomeron tier is the gamma*-Pomeron code in pythia_bridge.* "
      "(docs/PYTHIA_BRIDGE.md sec. 12), covered by this entry's glob"),
-    (("rc.*",), (), ("T4-RC", "T2"),
-     "HERMES b1 was RC-corrected -- the comparison states what RC it assumes"),
+    (("rc.*",), (), ("T4-RC", "T2", "T3"),
+     "HERMES b1 was RC-corrected -- the comparison states what RC it assumes; "
+     "T3 since 2026-10-26: HoSpin1FF lives in rc.* and rows 5, 6, 15 and "
+     "t3_li6_rms_devries evaluate it"),
     (("spin.*", "bookkeeping.*", "sampler.*", "rng.*"), (), ("T5",),
      "and T1 #1: plan row 1 (t5_epios_source_modes, tier T5/T1), already a "
      "t5_ harness"),

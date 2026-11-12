@@ -2,7 +2,7 @@
 """The 6Li b1 tables as a BAND over --b1-unpol x --unpol-sf.
 
 `run_2026-09-02/phase_D_numbers.md` published the four-term 6Li convolution
-tables on the DEFAULT `ToyF2` unpolarised input, and
+tables on the `ToyF2` unpolarised input (the default then), and
 `docs/OPEN_ITEMS_SOLUTIONS.md` sec. 10 has said since 2026-09-03 that they
 "must be REGENERATED under --b1-unpol mstw before they are quoted as
 physics".  They were regenerated on 2026-09-06 as the band over BOTH
@@ -28,7 +28,7 @@ WHAT THIS FILE GATES:
       (scale 2 == 2 x scale 1 as doubles), and 0 is exactly 0.
 
 NOTHING HERE IS A DEFAULT.  `Li6ConvolutionOptions.unpol = None` is the
-shipped default and resolves to `ToyF2`; every non-`toy` row is opt-in and
+class-level null and resolves to `ToyF2` (D7: not the run's default); every non-`toy` row is opt-in and
 skips loudly in a build without the matching optional tier, exactly as the
 A = 2 gate's own MSTW rows do.
 

@@ -1,7 +1,7 @@
 {
  "could_not_call": [
   {
-   "reason": "s_channel=0.5 != 1: tensor_dilution raises ValueError by design (tagged.py:299-302)",
+   "reason": "s_channel=0.5 != 1: tensor_dilution raises ValueError by design (tagged.py:849-852)",
    "what": "TaggedModel.tensor_dilution channel=7Li alpha-tag (quasi-free t)"
   },
   {

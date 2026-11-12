@@ -13,7 +13,7 @@
 #include "doctest.h"
 
 #include "lipolgen/breakup.hpp"
-#include "lipolgen/pipeline.hpp"
+#include "sf_test_support.hpp"  // D7: pipeline.hpp and the toy_config() rule
 
 using namespace lipolgen;
 
@@ -38,7 +38,7 @@ double mean(const std::vector<double>& v) {
 Vec4 at_rest(double m) { return {m, 0.0, 0.0, 0.0}; }
 
 PipelineConfig tagged_cfg(PipelineChannel ch, std::uint64_t n) {
-  PipelineConfig cfg;
+  PipelineConfig cfg = toy_config();  // D7: the toy NAMED (sf_test_support.hpp)
   cfg.channel = ch;
   cfg.isotope = channel_isotope(ch);
   cfg.beam_config = 1;
@@ -135,10 +135,10 @@ TEST_CASE("breakup: the deuteron partner reproduces the S-wave marginal at "
 
 TEST_CASE("breakup: the deuteron's struck nucleon carries the D-state-diluted "
           "polarization (1 - 3/2 P_D) m_S") {
-  BreakupOptions bo;                       // P_D = P_D_DEUTERON = 0.045
+  BreakupOptions bo;                       // P_D = P_D_DEUTERON_SCENARIO = 0.045
   ClusterBreakup br(bo);
   const double m_d = nuclear_mass(1, 2);
-  const double want = 1.0 - 1.5 * P_D_DEUTERON;
+  const double want = 1.0 - 1.5 * P_D_DEUTERON_SCENARIO;  // A1 (2026-11-03): the Hulthen default's P_D, named
 
   for (double m_s : {1.0, 0.0, -1.0}) {
     Rng rng(kSeed, 2, 0, static_cast<std::uint64_t>(m_s + 2.0));
@@ -413,8 +413,8 @@ TEST_CASE("T1 pipeline: T0 is unchanged by the tier switch, and T1 adds only "
   // fixed, so the two tiers give the SAME T0 record -- except at an index
   // where T1's own timelike-X rejection fires and T0's does not.  X shrinks
   // from k + P_X - k' to the per-nucleon k + p_N - k', so a draw that was
-  // fine at T0 can leave a spacelike remainder here; measured 0.024 % of
-  // 6Li-alpha draws (0.022 % 7Li-alpha, 0.004 % d control) over 50 k events.
+  // fine at T0 can leave a spacelike remainder: 0.038 % of 6Li-alpha draws (0.022 % 7Li,
+  // 0.002 % d) over 50 k, on Hulthen; D6 (2026-10-29) on VMC: 0.054 / 0.014 / 0.006 %.
   std::size_t n_redrawn = 0;
   for (std::uint64_t i = 0; i < 2000; ++i) {
     const Event a = p0.event(i), b = p1.event(i);
@@ -470,7 +470,7 @@ TEST_CASE("T1 pipeline: determinism -- same index, same record, any order") {
 
 TEST_CASE("T1 pipeline: kin.cell is the sampler's own accepted-cell index") {
   // Inclusive: the ION-level sampler.
-  PipelineConfig ci;
+  PipelineConfig ci = toy_config();  // D7: the toy NAMED (sf_test_support.hpp)
   ci.channel = PipelineChannel::Inclusive;
   ci.isotope = "6Li";
   ci.beam_config = 1;

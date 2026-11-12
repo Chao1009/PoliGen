@@ -10,7 +10,7 @@
 #include "lipolgen/event.hpp"
 #include <memory>
 #include <string>
-
+#include <map>
 // Defined PUBLIC on the lipolgen_core CMake target from project()'s VERSION
 // (CMakeLists.txt) -- the fallback below only matters for a translation
 // unit that includes this header without linking lipolgen_core at all.
@@ -47,6 +47,17 @@ class HepMC3Writer {
   // Flushes and closes the underlying file. Safe to call more than once;
   // the destructor also closes if this was not called.
   void close();
+
+  // A10 (2026-11-03; docs/open_items/run_2026-11-03/DECISIONS.md A10, the
+  // supervisor's choice under the author's delegation): the run's physics
+  // provenance, written into the file's one GenRunInfo as string attributes
+  // named "lipolgen.<key>" with the values exactly as given -- pass
+  // `run_provenance(pipeline, ctx)` (pipeline.hpp), the map the npz `meta`
+  // reads its provenance keys from, so a file and its npz say the same thing
+  // (docs/HEPMC3_CONVENTION.md, "Run provenance attributes").  Must be called
+  // before the first `write`, which is when the GenRunInfo is serialized;
+  // throws otherwise.  Not calling it writes no such attribute at all.
+  void set_run_attributes(const std::map<std::string, std::string>& attributes);
 
  private:
   struct Impl;

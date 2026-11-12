@@ -45,14 +45,14 @@
   "last": "  with P_zz = n₊ + n₋ − 2n₀, i.e. b₁ > 0 means the m = 0 state has the LARGER"
  },
  "docs/CONVENTIONS.md:75-83": {
-  "sha256": "1b166ad4f0c88cddcba9ddc2ceb9837551053a507342efe3b0cfcec635c9ec0c",
+  "sha256": "1e2b3242439e6045b3c770b0b71a5ebd8edbbdab08fa9b3ee905e663e8025128",
   "first": "- **Tensor-sector sign.** `TENSOR_LL_SIGN = -1.0` since 2026-08-29 (author",
-  "last": "  Hoodbhoy–Jaffe–Manohar — until that date, and setting the constant back is"
+  "last": "  long called Hoodbhoy–Jaffe–Manohar's — until that date, and setting it back is"
  },
  "docs/CONVENTIONS.md:81-83": {
-  "sha256": "abd9e0def648ed6f82a92450db445ba4de1eb856735b8a61fc51f3a1f930f0ee",
+  "sha256": "5256263163ce257d9e40fdf5cd7c7837695f72fb76ea8921ee585a0fe4ec3faf",
   "first": "  with P_zz = n₊ + n₋ − 2n₀, i.e. b₁ > 0 means the m = 0 state has the LARGER",
-  "last": "  Hoodbhoy–Jaffe–Manohar — until that date, and setting the constant back is"
+  "last": "  long called Hoodbhoy–Jaffe–Manohar's — until that date, and setting it back is"
  },
  "docs/DEVELOPMENT_PLAN.md:61-65": {
   "sha256": "c243793dc9e98775b80cedbb46f12d5fbfafc754a9c24881a6e59a2a95bd4eaf",
@@ -170,17 +170,17 @@
   "last": "old record and prints its honest residual: 0.186 relative, charge wrong by 1."
  },
  "docs/USAGE.md:11-66": {
-  "sha256": "15c41ca77d418168a97bc71ad6b045f5f7c0c61a4e5013fcb4c7db06da0bc184",
+  "sha256": "71836b4cd282910f61b3b59ed424084cd4e4972b9ce8a684aa3b6a1c3e5edd94",
   "first": "### Installing the Python package with pip",
   "last": "`docs/OPEN_ITEMS_SOLUTIONS.md` §12–13 and `docs/open_items/engineering.md` §C)."
  },
  "docs/USAGE.md:163-533": {
-  "sha256": "cdf7e29d8b94889b3de959c204d6697b2281510c6aa893259486a0281c1a8b0d",
+  "sha256": "59b8d977b6ea59e9da7d33a042b74befec44430f421f767865893e2336be1bad",
   "first": "X (pdg 92). The balance is **per-nucleon**, `k + P_N = k' + X`, exactly as",
   "last": "move every pinned gate number, and it is not a uniform improvement on an"
  },
  "docs/USAGE.md:1978-2169": {
-  "sha256": "90a7c095fadc0dee726f4abe18f015cbe6f0854a37ea71d93e4fac3e9aa7eeef",
+  "sha256": "cb0d59cbd1c89e3f5409dee9cea0ce616d52af024a1a4d7d9c58458ea885a48e",
   "first": "## 5. Far-forward routing",
   "last": "  `rc_tensor_lo`/`rc_tensor_hi`/`rc_tail`. **Every other CLI plan is"
  },
@@ -265,7 +265,7 @@
   "last": "                        double q2, const RFunc& r_func = nullptr);"
  },
  "include/lipolgen/asymmetries.hpp:9-21": {
-  "sha256": "cb098ca1b4e5ce721cbd5e80302516ee481cbadb6b1c4e5609a034de25ad3978",
+  "sha256": "73d0773541a99df0a2476488f7b9fceeabdbe214ca57e987594fdd647b6a7c13",
   "first": "/// Spin-1 master formula (unpolarized e, target spin at angle theta_m,",
   "last": "/// opposite sign of b1 to the b1 every published number is quoted in."
  },
@@ -275,9 +275,9 @@
   "last": "double nucleus_mass(const std::string& name, int a, int z);"
  },
  "include/lipolgen/beams.hpp:99-100": {
-  "sha256": "1508e0fa708220555dce35155c4f7f25c741daf23a359d218329f391dbce713e",
+  "sha256": "520d94762137a3bcdb484d5958911c93c7fdb49eddd3e40bdbb3a469b475a461",
   "first": "inline constexpr double P_D_LI6 = 0.0867;",
-  "last": "/// The deuteron's own D-state probability (AV18-like)."
+  "last": "inline constexpr double P_D_DEUTERON_SCENARIO = 0.045;  ///< the pre-A1 \"AV18-like\" scenario (notes…"
  },
  "include/lipolgen/bookkeeping.hpp:133-154": {
   "sha256": "14ba8dc8ef35317649d034093c0dd52e80805a09901c9100ed91abbfee877336",
@@ -505,9 +505,9 @@
   "last": "/// conditioned on m_S; then the lab boost and the far-forward route."
  },
  "include/lipolgen/tagged.hpp:54-62": {
-  "sha256": "b4fa8b5f608a91a59fef65f8522ca3469f768d0a2f49967afb7afc74d5e3a524",
+  "sha256": "58ac781d1bb4599733cb757537a36d9ffafad80eddce38484b103723b0c86eeb",
   "first": "// P_D_LI6 and P_D_DEUTERON are NOT defined here.  Since 2026-08-29 they live",
-  "last": "// quadrature residual).  The names, values and meanings are unchanged."
+  "last": "// quadrature residual).  The names, values and meanings are unchanged (V-CODE-6 (2026-11-10): unti…"
  },
  "include/lipolgen/xsec.hpp:121-128": {
   "sha256": "d26a7929edca447a3fe0923d4ce5803dd0e2ec99c95abd00d76717f241c889b5",
@@ -515,9 +515,9 @@
   "last": "};"
  },
  "include/lipolgen/xsec.hpp:13-21": {
-  "sha256": "299a10db3d7fc96530c7bc495ec0324685df4e32d46a49546e08e6f5c9403d54",
+  "sha256": "ddb2d79216026720289b5412786800bd5b7a88e5bf586ce4c85cb44361955765",
   "first": "///   dsigma/(dx dQ2 dphi) = sigma_unpol(x,Q2)/(2 pi) * W(phi')",
-  "last": "///   a_2   = -(1-y)/y^2 * c_eff(m) sin^2(theta_S) * Delta/D_phi [gluonometry]"
+  "last": "///   a_2   = -(1/2)(1-y)/y^2 * c_eff(m) sin^2(theta_S) * Delta/D_phi [JM, D4]"
  },
  "include/lipolgen/xsec.hpp:131-145": {
   "sha256": "826a3b872d845daa19ffdaaeeacf3c97b2a22179a3b18299ef827ac7014345db",
@@ -540,12 +540,12 @@
   "last": "/// bias is measured by re-running an extraction at g2_scale = 0 and 1.5"
  },
  "include/lipolgen/xsec.hpp:197-233": {
-  "sha256": "b796c962968617edb80b713bd43023226fcdcdf8977c70246a4fe815f488b547",
+  "sha256": "dfb444e635d77564d0cb37f60116aad687c9d01e92eea99309729f2838afdab3",
   "first": "  struct Options {",
   "last": "    int g2_npts = 96;"
  },
  "include/lipolgen/xsec.hpp:204-217": {
-  "sha256": "e076e7db3dcf2b0bea6178e7d01640c0dd4f250d85bd4e2d30c72d842aa2f61f",
+  "sha256": "69d916bc6709e43fe1ed3470ddcb36e5564019a0dc869e224631e08b0c519808",
   "first": "    /// `tensor_gamma` (DEFAULT FALSE) selects the tensor b-sector kernel:",
   "last": "    bool tensor_gamma = false;"
  },
@@ -560,9 +560,9 @@
   "last": "    double g2_scale = 1.0;"
  },
  "include/lipolgen/xsec.hpp:23-29": {
-  "sha256": "b830b8078aecd0e592fb014b3ef06565e79916774263925a50d35fa8eea325bc",
+  "sha256": "b7ad2e025dfd4764ccff06469962f73abf5e84b66ec111f7c4aa91dba3319bbd",
   "first": "/// RANK-2 GEOMETRY.  Cosyn et al. (arXiv:2410.12764) Eq. (9) writes the",
-  "last": "/// digit for digit."
+  "last": "/// (Hoodbhoy-Jaffe-Manohar's b-sector, asymmetries.hpp) digit for digit."
  },
  "include/lipolgen/xsec.hpp:24-26": {
   "sha256": "8f99a0d95ab968b28adc18a2b6147f0a98a5d4f9ad6ca6a6b07daf50de12c8bf",
@@ -929,7 +929,7 @@
   "last": "}"
  },
  "src/core/xsec.cpp:260-284": {
-  "sha256": "ce54a899f88f4dc93549d64c4890fcdcfec1a20323f6b0e45ea819eaabe729a4",
+  "sha256": "6728ef0bbda6df7bd12f044d9821afff8c3824f53904b65034af43fc56843a4f",
   "first": "  if (j >= 1.0 - 1e-9 && j_ion >= 1.0 - 1e-9) {",
   "last": "  }"
  },
@@ -937,11 +937,6 @@
   "sha256": "e97b5246b719dceed17aff7596918084016274d5279e80e4105ed8b68cc0d99b",
   "line": "    if (tensor_gamma_) {",
   "name": "tensor_gamma_"
- },
- "src/core/xsec.cpp:266": {
-  "sha256": "3f5c5443c61994b443e556c40510c021c51dfffa50f8736b2bc6eda02471236a",
-  "line": "      out.a2 = out.a2 + h.h2;",
-  "name": "a2"
  },
  "src/core/xsec.cpp:268-272": {
   "sha256": "0976fba3416ff6a704e04590e8e0c829ceffcff5b4f3c7e1c61ddf2001dc04d3",
@@ -1004,7 +999,7 @@
   "name": "Pomeron"
  },
  "tests/test_pipeline.cpp:608-634": {
-  "sha256": "55514592a62083495213b6f5120dbcb273c8b9c2b7f8e5cc0802af0fea29e804",
+  "sha256": "69cb87ebfb3533e427dc357edf7ddaad4cf61218c238e185eef2d0b0971a7123",
   "first": "TEST_CASE(\"pipeline: 7Li generated events give <P2(cos theta_k)> = -T/5\") {",
   "last": "    CHECK(std::fabs(got + t / 5.0) < 4.0 * err);"
  },

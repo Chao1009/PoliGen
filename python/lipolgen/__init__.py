@@ -95,13 +95,13 @@ OPTICS = {
     "tagging-legacy": _lipolgen.OpticsChoice.TaggingLegacyLevers,
 }
 
-#: cluster radial-form families.  "hulthen" is the DEFAULT and is
-#: bit-compatible with every published number; "vmc" swaps in the ANL VMC
-#: tables (see docs/CONVENTIONS.md and docs/open_items/vmc_reconciliation.md)
-#: and then ignores `cluster_beta` and `p_d` on the lithium alpha tags.
-#: It is read on the TAGGED channels only and `PipelineConfig.validate`
-#: refuses it elsewhere; on the 6Li alpha tag it selects the embedded
-#: deuteron as well as the alpha-d relative motion (C5.5b).
+#: cluster radial-form families.  "vmc" -- the ANL VMC tables (docs/CONVENTIONS.md,
+#: docs/open_items/vmc_reconciliation.md), which ignore `cluster_beta` (bar the
+#: 7Li T1 triton breakup) and `p_d` -- is the RUN default since D6
+#: (`CLUSTER_WAVE_DEFAULT`, cluster.hpp); "hulthen", the analytic pair, the option.
+#: It is read on the TAGGED channels only: `make_config` refuses an explicit
+#: value elsewhere and `PipelineConfig.validate` a moved one; on the 6Li alpha
+#: tag it selects the embedded deuteron as well as the alpha-d motion (C5.5b).
 CLUSTER_WAVES = {
     "hulthen": _lipolgen.ClusterWaveSource.Hulthen,
     "vmc": _lipolgen.ClusterWaveSource.VmcAV18,
@@ -173,14 +173,14 @@ B1_MODELS = {
 
 #: `--b1-unpol` -- which UNPOLARISED structure-function backend the
 #: "li6-convolution" b1 folds its own F1 against
-#: (`Li6ConvolutionOptions.unpol`).  "toy" is the DEFAULT and is bit for bit
-#: what every published number was made with: the inclusive kernel's own
-#: `ToyF2`, handed to the convolution as ONE shared object.  "mstw" is
+#: (`Li6ConvolutionOptions.unpol`).  "toy" stays the DEFAULT (D7 left it): the
+#: inclusive kernel's own UnpolSF, handed to the convolution as ONE shared
+#: object -- `ToyF2` on the toy pair, and NAMED under ct18nlo.  "mstw" is
 #: MSTW2008 LO over PYTHIA 8's own pdfdata grid -- the PDF CDKS computed their
 #: b1_d with, and the one the A = 2 gate passes on (G3b 0.843 against 0.440 on
 #: the toy) -- and needs the optional PYTHIA tier.  "ct18nlo" is the phase-D
-#: stand-in, kept selectable so the systematic can be quoted rather than
-#: remembered, and needs the optional LHAPDF tier.
+#: stand-in and since D7 the shipped `--unpol-sf`'s own cached object (so the
+#: two F1s are ONE object again); it needs the LHAPDF tier.
 #:
 #: MEASURED on the shipped observable `Li6ConvolutionB1.b1(x, 2.5)`:
 #: mstw/toy = 1.847766 / 1.275961 / 0.816971 and ct18nlo/toy = 2.221302 /
@@ -188,12 +188,12 @@ B1_MODELS = {
 #: monotone, so it is a shape change and not a normalisation.
 #:
 #: It reaches the b1 and NOTHING else.  The kernel's own `f2_source` is set
-#: by a SEPARATE flag, `--unpol-sf` (`UNPOL_SF` below), and at its shipped
-#: default "toy" it is `ToyF2` on every `--b1-unpol` setting -- which is what
+#: by a SEPARATE flag, `--unpol-sf` (`UNPOL_SF` below), and at any ONE
+#: `--unpol-sf` (ct18nlo since D7) it is one object on every setting -- which is what
 #: keeps the SPIN-BLIND cell cross section (`InclusiveSampler.cell_xsec_pb`)
 #: bit for bit under THIS flag, with only the tensor shift moving.  With
 #: `unpol_sf` set to anything else the rate moves too, but it moves because
-#: of that flag; `validate()` refuses `b1_unpol="toy"` there, because "toy"
+#: of that flag; `validate()` refuses `b1_unpol="toy"` there (D7: on the shipped ct18nlo), because "toy"
 #: means "the kernel's own UnpolSF, shared" and that object would no longer
 #: be `ToyF2`.  Read only by "li6-convolution"; `validate()` refuses it
 #: on the other two models rather than let `meta["b1_unpol"]` record a PDF
@@ -226,14 +226,14 @@ B1_UNPOL = {
 #: and 0.9): it is the wiring's own test, not a physics variation, and
 #: `knob_provenance` labels it `not-read` for exactly that reason.  "r1998" installs the A = 2 gate's R in both.
 #:
-#: MEASURED at y = 0.5, Q2 = 2.5 (docs/open_items/run_2026-09-06/
+#: MEASURED on the toy SFs at y = 0.5, Q2 = 2.5 (docs/open_items/run_2026-09-06/
 #: phase_A_numbers.md sec. A1), against "unset": the tensor weight K/D_phi --
 #: and A_zz, which is -(2/3) of it -- moves -3.84 % / +26.40 % / +3.35 % at
 #: x = 0.05 / 0.10 / 0.30, and the cos 2phi amplitude, whose numerator
 #: carries no R at all, moves -8.33 % / -6.73 % / -3.14 % there.  Unlike
-#: `--b1-unpol` this one moves the UNPOLARISED rate too (sigma_pb -0.6847 %
+#: `--b1-unpol` this one moves the UNPOLARISED rate too (sigma_pb -0.6847 % on the toy SFs, -0.59899 % on the shipped ct18nlo with b1_unpol ct18nlo,
 #: on a 2000-event 6Li run at x_max 0.95), because the kernel's `r_func`
-#: reaches F1, F_L, D(y) and `ToyG1`.
+#: reaches F1, F_L, D(y) and, under pol_sf="toy", `ToyG1`.
 #:
 #: Read only by "li6-convolution"; `validate()` refuses it on the other two
 #: models rather than let `meta["r_source"]` record an R that never touched
@@ -251,15 +251,15 @@ R_SOURCE = {
 #: injection point the tagged channels did not have at all before 2026-09-04
 #: -- `PipelineConfig.kernel` is read on the non-tagged branch alone.
 #:
-#: "toy" is the DEFAULT and is bit for bit what every published number was
-#: made with: `ToyF2`, which `sf.hpp` labels TOY and anchors BY EYE
-#: ("adequate for phase-space maps and factor-1.5 rate estimates ONLY").
-#: "mstw" is MSTW2008 LO over PYTHIA 8's own pdfdata grid (optional PYTHIA
-#: tier); "ct18nlo" is `LhapdfSF("CT18NLO", 0)` (optional LHAPDF tier).
+#: "ct18nlo" is THE DEFAULT since D7 (2026-10-27; `UNPOL_SF_DEFAULT`):
+#: `LhapdfSF("CT18NLO", 0)`, LO, the FREE nucleon (no EPPS21), frozen below its grid, LHAPDF tier.  "toy" --
+#: the default until then, bit for bit every pre-D7 number -- is `ToyF2`,
+#: which `sf.hpp` labels TOY and anchors BY EYE ("factor-1.5 rate estimates
+#: ONLY").  "mstw" is MSTW2008 LO over PYTHIA 8's own pdfdata grid (PYTHIA tier).
 #:
 #: MEASURED, 6Li inclusive at config 1 over the shipped window: the summed
-#: accepted cell cross section is 591846.2 pb (toy), 472571.9 (ct18nlo,
-#: x0.7985), 469556.5 (mstw, x0.7934).  It is a shape change, not a
+#: accepted cell cross section is 591846.2 pb (toy), 496334.2 (ct18nlo frozen,
+#: x0.8386), 469556.5 (mstw, x0.7934).  It is a shape change, not a
 #: normalisation: F2p at Q2 = 10 moves x0.9215 / x1.1095 / x1.3709 / x1.2641
 #: (ct18nlo) and x0.8154 / x1.0133 / x1.3649 / x1.4479 (mstw) at
 #: x = 0.01 / 0.10 / 0.30 / 0.50, and the toy's F2n/F2p -- the straight line
@@ -267,15 +267,15 @@ R_SOURCE = {
 #: 0.9625 / 0.8500 / 0.6250 at x = 0.05 / 0.20 / 0.50 against CT18NLO's
 #: 0.9218 / 0.7219 / 0.5035.
 #:
-#: READ THE GRID CLAUSE for "ct18nlo": CT18NLO's grid starts at Q2 = 1.677
-#: and the shipped window's accepted cells start at 1.054, so 36.18 % of a
-#: CT18NLO run's own accepted cell cross section (42.33 % of the toy run's)
-#: sits below the grid, where LHAPDF keeps evolving downward instead of
-#: freezing.  It is not refused -- that would make the flag unusable on the
-#: shipped scenario -- but it is printed at the banner and recorded in
-#: `meta["unpol_sf_below_grid_frac"]` on every run.
+#: THE GRID CLAUSE for "ct18nlo": CT18NLO's grid starts at Q2 = 1.677 and
+#: the shipped window's accepted cells start at 1.054, so 39.23 % of the
+#: default run's own accepted cell cross section (42.33 % of the toy run's)
+#: sits below the grid, where the tier FREEZES it at the edge since D7 (LHAPDF
+#: `nearest`, set on the object; it kept evolving downward before).  Not
+#: refused -- that would make the default unusable on its own scenario -- but
+#: printed at the banner and recorded in `meta["unpol_sf_below_grid_frac"]`.
 #:
-#: NOT ORTHOGONAL TO `POL_SF`: `InclusiveKernel` builds its default `ToyG1`
+#: NOT ORTHOGONAL TO `POL_SF`: `InclusiveKernel` builds its null-branch `ToyG1`
 #: on its own base `UnpolSF`, so this flag alone moves g1 as well and
 #: A1 = g1/F1 moves 5-8 %.  `pol_sf="toy"` does not mean "g1 unchanged".
 #: `UnpolSfSource.Custom` is not here on purpose: it names an object, so it
@@ -296,11 +296,11 @@ UNPOL_SF = {
 #: is the CLI's own default and builds every category at lam_e = 0, so at the
 #: defaults `--pol-sf` is read on NO channel.  It is LABELLED there, not
 #: refused and not credited (`pol_sf_is_read(config, plan)`, and the `pol_sf`
-#: row of `Pipeline.knob_provenance`).  "toy"
-#: is the DEFAULT and is bit for bit: `ToyG1` on the kernel's own `UnpolSF`
-#: and `r_func`.  "nnpdfpol" is `LhapdfG1("NNPDFpol11_100", 0)` -- already
-#: `LhapdfG1`'s own declared default, and the ONLY polarised set installed in
-#: this tree's LHAPDF store, so there is no second row to offer.
+#: row of `Pipeline.knob_provenance`).  "nnpdfpol"
+#: is THE DEFAULT since D7 (`POL_SF_DEFAULT`): `LhapdfG1("NNPDFpol11_100", 0)`,
+#: LO, frozen below Q2 = 1 -- `LhapdfG1`'s own declared default and the ONLY
+#: polarised set in this tree's store.  "toy" (the default until D7) is
+#: `ToyG1` on the kernel's own `UnpolSF` and `r_func`.
 #:
 #: MEASURED on 6Li per-nucleon g1A (A_par tracks it to better than 0.1 % at
 #: y = 0.5): nnpdfpol/toy = 0.6691 / 0.6761 / 1.1139 / 1.3491 / 1.2982 /
@@ -313,10 +313,10 @@ UNPOL_SF = {
 #: POSITIVE above it, while NNPDFpol1.1's g1n stays negative to x ~ 0.6:
 #: g1n(x, 10) is -0.0801 / -0.0114 / +0.00521 / +0.00779 (toy) against
 #: -0.1365 / -0.0608 / -0.02740 / -0.00037 (nnpdfpol) at
-#: x = 0.10 / 0.20 / 0.30 / 0.50.  The shipped toy g1n has the WRONG SIGN
-#: over roughly 0.25 < x < 0.6.  On isoscalar 6Li the proton term dominates
-#: and this mostly hides; on a neutron-tagged run (d + p tagging, whose
-#: `dis_target` is NEUTRON_TARGET) it does not.
+#: x = 0.10 / 0.20 / 0.30 / 0.50.  The toy g1n (shipped until D7) has the WRONG
+#: SIGN over roughly 0.25 < x < 0.6.  On isoscalar 6Li the proton term dominates
+#: and this mostly hides; on a struck-neutron run (tagged-d-p, the proton
+#: tagged; `dis_target` NEUTRON_TARGET) it does not.
 POL_SF = {
     "toy": _lipolgen.PolSfSource.Toy,
     "nnpdfpol": _lipolgen.PolSfSource.NnpdfPol,
@@ -334,11 +334,11 @@ POL_SF = {
 #: two edges) and exponentially continued above q = 3 fm^-1, so it has NO C0
 #: zero at any q.
 #:
-#: MEASURED on `(1/6) sigma^el_T / sigma^el_U` at Q^2 = 5 GeV^2:
-#: ho/vmc-ft = -5.0943e-4 / -5.4705e-4 at x = 0.01, +1.5595e-4 / -4.0702e-5 at
-#: x = 0.10 and +1.3287e-2 / +1.5556e-2 at x = 0.30 -- i.e. the SIGN at
-#: x = 0.10 is a band edge, not a result (phase_B_numbers.md sec. B1).
-#: RUN BOTH.
+#: MEASURED on `(1/6) sigma^el_T / sigma^el_U` at Q^2 = 5 GeV^2, ho/vmc-ft, on the
+#: DEFAULT polrad-full tail (D5): -5.1540e-4 / -5.5461e-4 at x = 0.01, +4.4562e-5
+#: / -1.6369e-4 at x = 0.10, +1.0947e-2 / +1.1293e-2 at x = 0.30; on t-peak -5.0943e-4
+#: / -5.4705e-4, +1.5595e-4 / -4.0702e-5, +1.3287e-2 / +1.5556e-2 -- the SIGN at
+#: x = 0.10 is a band edge on both, not a result (phase_B_numbers.md B1).  RUN BOTH.
 RC_C0_SHAPES = {
     "ho": _lipolgen.C0Shape.Ho,
     "vmc-ft": _lipolgen.C0Shape.VmcFt,
@@ -348,10 +348,10 @@ RC_C0_SHAPES = {
 #: (`RcTailModel.PolradFull` was refused by `PipelineConfig.validate` and
 #: absent from this table until 2026-09-06; it is implemented now.)
 #:
-#: "t-peak" is the DEFAULT and is bit for bit every published number: POLRAD
-#: Eqs. (37)-(39), (43), the t-peak ALONE, and therefore a LOWER BOUND on the
-#: dilution.  "t-peak+ll" adds the leading-log s- and p-peaks of the same two
-#: unpolarised observables.
+#: "polrad-full" is the DEFAULT since 2026-10-27 (D5).  "t-peak", the default
+#: until then (every unlabelled RC-tail number published before it), is POLRAD
+#: Eqs. (37)-(39), (43), the t-peak ALONE: a LOWER BOUND.  "t-peak+ll" adds the
+#: leading-log s- and p-peaks of the same two unpolarised observables.
 #:
 #: IT IS A STATED MODEL, NOT A CONTROLLED EXPANSION.  The t-peak is an eta_A
 #: quadrature; the s-/p-peaks are a single-z collinear leading log.  Their sum
@@ -369,13 +369,13 @@ RC_C0_SHAPES = {
 #:
 #: "polrad-full" is POLRAD Eq. (18) + Appendix B + Eq. (A.4): ONE exact tau_A
 #: quadrature that contains all three peaks, with the s-/p-peaks' OWN tensor
-#: content -- the thing "t-peak+ll" has to bound and cannot compute.  It is
-#: NOT the default and NOT validated against any external exact tail (no
-#: Mo-Tsai number is in this tree): what is checked is its x_A -> 0 reduction
-#: to Eq. (38), unpolarised AND tensor, its Q_N = 0 Rosenbluth limit, and its
-#: agreement with the leading-log fallback where the s-/p-peaks are alive.
-#: It costs ~10 s of table build and needs n_eta >= 64 and a `long double`
-#: wider than `double`; both are refused, not degraded.
+#: content -- the thing "t-peak+ll" has to bound and cannot compute.  Its
+#: PROTON slot is checked against DJANGOH 4.6.21's exact O(alpha) tail (row 7,
+#: 2026-10-26); no Mo-Tsai number is in this tree, and the coherent slot is
+#: checked by its x_A -> 0 reduction to Eq. (38), its Q_N = 0 Rosenbluth limit
+#: and the leading-log fallback where the s-/p-peaks are alive.  It costs
+#: ~12 s of table build per run (uncached) and needs n_eta >= 64 and a `long
+#: double` wider than `double` (not MSVC / Apple arm64); refused, not degraded.
 RC_TAIL_MODELS = {
     "t-peak": _lipolgen.RcTailModel.TPeak,
     "t-peak+ll": _lipolgen.RcTailModel.TPeakPlusLL,
@@ -455,9 +455,9 @@ def make_config(isotope="6Li", config=1, channel="inclusive", events=0,
     `CoherentScenario` field): 0.2 by default, kept there by the Mantysaari
     anchor's |t| <= 0.30 digitization range rather than by positivity, and
     recorded in the npz meta.  `cluster_wave` is a
-    key of `CLUSTER_WAVES` ("hulthen", the default, or "vmc") or a
-    `ClusterWaveSource` directly; "vmc" replaces the lithium alpha-tag radial
-    forms with the ANL VMC tables and then ignores `cluster_beta` / `p_d`.
+    key of `CLUSTER_WAVES` ("vmc", the run default since D6, or "hulthen") or
+    a `ClusterWaveSource`; None keeps `CLUSTER_WAVE_DEFAULT`; on a channel that
+    never reads it the default is accepted and labelled (A17), "hulthen" raises.
     `triton_sf` is a key of `TRITON_SFS` ("hulthen", the default, or
     "ciofi-simula") or a `TritonSfChoice` directly; "ciofi-simula" replaces
     the 7Li alpha tag's sequential triton breakup with the three-channel
@@ -501,24 +501,24 @@ def make_config(isotope="6Li", config=1, channel="inclusive", events=0,
     the optional PYTHIA tier and raises RuntimeError naming it (or naming the
     missing grid file) in a build that has none -- it is never silently
     replaced by the toy.  It is read only by "li6-convolution" and moves b1
-    only: AT `unpol_sf="toy"` the spin-blind cell cross section is
+    only: at any one `unpol_sf` the spin-blind cell cross section is
     bit-identical across its settings, while the tensor-weighted per-category
-    cross sections are not.
-    `unpol_sf` is a key of `UNPOL_SF` ("toy", the default, "mstw" or
-    "ct18nlo") and `pol_sf` a key of `POL_SF` ("toy", the default, or
-    "nnpdfpol"), or the matching enum directly: the structure-function
+    cross sections are not.  Under the shipped ct18nlo "li6-convolution" NAMES it.
+    `unpol_sf` is a key of `UNPOL_SF` ("ct18nlo", the default since D7, "mstw"
+    or "toy") and `pol_sf` a key of `POL_SF` ("nnpdfpol", the default since
+    D7, or "toy"), or the matching enum directly: the structure-function
     backends of the kernels the run builds.  THEY DO NOT HAVE THE SAME REACH.
     `unpol_sf` reaches EVERY kernel -- inclusive, coherent and tagged -- on
     every plan.  `pol_sf` reaches the inclusive and tagged kernels only where
     the fill also carries lam_e * P_e != 0, and the coherent channel not at
     all: under "tensor-thirds", this function's own default plan, it is read
     on no channel and the run records the LABEL rather than the backend name
-    (`pol_sf_is_read`).  Both default to the toy backends and are then bit for
-    bit.  A
-    named backend needs its optional tier and raises RuntimeError naming the
-    missing one; it is never silently replaced by the toy, which is x0.80 on
+    (`pol_sf_is_read`).  None (the default) means the SHIPPED grids, which
+    attach when the Pipeline is built (D7; no grid is loaded here).  A
+    named backend needs its tier and raises RuntimeError naming the missing
+    one (or set); it is never silently replaced by the toy, which is x1.19 on
     the 6Li rate and has the WRONG SIGN on g1n over 0.25 < x < 0.6.  They are
-    NOT orthogonal -- `unpol_sf` alone moves g1 through the default `ToyG1`,
+    NOT orthogonal -- `unpol_sf` alone moves g1 through the toy's `ToyG1`,
     so state both next to any number.  `unpol_sf` is a separate choice from
     `b1_unpol` (that one is the deuteron F1 inside CDKS Eq. (22), a
     CDKS-comparability choice); `validate()` refuses the one combination that
@@ -553,8 +553,8 @@ def make_config(isotope="6Li", config=1, channel="inclusive", events=0,
     if p_d is not None:
         cfg.p_d = float(p_d)
     if cluster_wave is not None:
-        cfg.cluster_wave = CLUSTER_WAVES[cluster_wave] \
-            if cluster_wave in CLUSTER_WAVES else cluster_wave
+        _cluster_wave_on_tagged_only(cfg, cluster_wave)     # D6 (2026-10-27)
+        cfg.cluster_wave = CLUSTER_WAVES.get(cluster_wave, cluster_wave)
     if triton_sf is not None:
         if isinstance(triton_sf, str):
             if triton_sf not in TRITON_SFS:
@@ -665,23 +665,23 @@ def make_config(isotope="6Li", config=1, channel="inclusive", events=0,
         # functions live in the CORE (`sf.hpp`), so there is no optional tier
         # to build and no provenance/realisation pair to keep together.
         cfg.r_source = r_source
-    if unpol_sf is not None:
-        if isinstance(unpol_sf, str):
-            if unpol_sf not in UNPOL_SF:
-                raise ValueError("unknown unpol_sf %r; know %s"
-                                 % (unpol_sf, ", ".join(sorted(UNPOL_SF))))
-            unpol_sf = UNPOL_SF[unpol_sf]
-        # NOT a plain assignment, for the `set_b1_unpol` reason above: the
-        # enum is the provenance and the object the realisation, and only
-        # this layer can see the optional tiers.
-        _lipolgen.set_unpol_sf(cfg, unpol_sf)
-    if pol_sf is not None:
-        if isinstance(pol_sf, str):
-            if pol_sf not in POL_SF:
-                raise ValueError("unknown pol_sf %r; know %s"
-                                 % (pol_sf, ", ".join(sorted(POL_SF))))
-            pol_sf = POL_SF[pol_sf]
-        _lipolgen.set_pol_sf(cfg, pol_sf)
+    unpol_sf = _lipolgen.UNPOL_SF_DEFAULT if unpol_sf is None else unpol_sf  # D7
+    if isinstance(unpol_sf, str):
+        if unpol_sf not in UNPOL_SF:
+            raise ValueError("unknown unpol_sf %r; know %s"
+                             % (unpol_sf, ", ".join(sorted(UNPOL_SF))))
+        unpol_sf = UNPOL_SF[unpol_sf]
+    # NOT a plain assignment (the `set_b1_unpol` reason above), and ALWAYS
+    # made since D7 (2026-10-27): the default is pre-flighted -- and refused by
+    # name without the tier -- like a named backend; the grid attaches lazily.
+    _lipolgen.set_unpol_sf(cfg, unpol_sf)
+    pol_sf = _lipolgen.POL_SF_DEFAULT if pol_sf is None else pol_sf  # D7
+    if isinstance(pol_sf, str):
+        if pol_sf not in POL_SF:
+            raise ValueError("unknown pol_sf %r; know %s"
+                             % (pol_sf, ", ".join(sorted(POL_SF))))
+        pol_sf = POL_SF[pol_sf]
+    _lipolgen.set_pol_sf(cfg, pol_sf)
     if inclusive_b1 is not None:
         struck = cfg.struck
         struck.inclusive_b1 = bool(inclusive_b1)
@@ -747,8 +747,8 @@ def make_plan(name="tensor-thirds", j=1.0, pz=0.7, pzz=0.6, pe=0.7,
             "default_inclusive_kernel fills a rank-2 slot for spin 1 only, "
             "so b1_32 = b2_32 = delta_32 = 0 and a T = +1 against T = -1 "
             "contrast comes back as the SAME double (measured at the "
-            "default 7Li beam config 1 and scenario: 590952.42641509 pb for "
-            "BOTH categories, and the asymmetry exactly 0.0).  Build the two-category T contrast by hand if you "
+            "default 7Li beam config 1 and scenario: 494062.76099942 pb for "
+            "BOTH categories on the shipped CT18NLO since D7 -- 590952.42641509 on the toy -- and the asymmetry exactly 0.0).  Build the two-category T contrast by hand if you "
             "want the zero on the record, use --isotope 6Li for an inclusive "
             "tensor programme, or run --channel tagged-7Li-alpha, whose "
             "alpha-t alignment IS carried (in the event weight, gated at "
@@ -832,16 +832,16 @@ def run(isotope="6Li", config=1, channel="inclusive", plan="tensor-thirds",
         # because the bridge is built out here.  Left unset it would keep
         # drawing from `ToyF2` while T0 and T1 moved to the selected backend,
         # and the toy's F2n/F2p is up to 24 % away from CT18NLO's at x = 0.5.
-        # None (the `unpol_sf="toy"` default) leaves the bridge's own ToyF2 in
-        # place, so this is bit for bit on a default run.  An explicit
+        # Since D7 that object is the lazily attached CT18NLO, filled first (on
+        # `unpol_sf="toy"` it stays None, the bridge's own ToyF2).  An explicit
         # `pythia_options={"f2_source": ...}` still wins HERE, and then
         # `set_pythia_hadronizer` refuses it unless it is the config's own
         # object: a bridge on a backend `meta["unpol_sf"]` does not name would
         # draw its T2 species from one fit while the rate came from another
         # (up to 24 % on F2n/F2p).  Pass `unpol_sf=` instead of overriding
         # this one field.
-        if opts.f2_source is None:
-            opts.f2_source = cfg.unpol_sf_obj
+        if opts.f2_source is None:      # D7: the shipped grid attaches lazily, so first
+            _lipolgen.fill_grid_sf_backends(cfg); opts.f2_source = cfg.unpol_sf_obj
         bridge = _lipolgen.PythiaBridge(beams, opts)
         _lipolgen.set_pythia_hadronizer(cfg, bridge)
         nthreads = 1               # PythiaBridge is not re-entrant
@@ -872,3 +872,54 @@ def run(isotope="6Li", config=1, channel="inclusive", plan="tensor-thirds",
     if bridge is not None:
         out["bridge"] = bridge
     return out
+
+
+def _cluster_wave_on_tagged_only(cfg, cluster_wave):
+    """D6 (2026-10-27), A17 (2026-11-03): the explicit-request guard of row 11.
+
+    `PipelineConfig.validate()` refuses a `cluster_wave` MOVED FROM the run
+    default off the tagged channels.  Until A17 this guard refused an EXPLICIT
+    request of the default (`vmc`) there too; under A17 (the supervisor's
+    choice under the author's delegation) an explicit DEFAULT on a knob the
+    run never reads is ACCEPTED, its knob row `not-read` with the label in
+    place of the value, so it never reads as a "VMC 6Li" inclusive row.  A
+    NON-default value (`hulthen`) keeps its refusal, with the cause named.
+    The message starts "PipelineConfig:" like every `validate()` refusal, so
+    the CLI prints it in one line and price_defaults.py calls it a refusal
+    (the one rule: docs/CONVENTIONS.md, "Refuse or label")."""
+    if _lipolgen.is_tagged(cfg.channel) or CLUSTER_WAVES.get(
+            cluster_wave, cluster_wave) == _lipolgen.CLUSTER_WAVE_DEFAULT:
+        return                          # A17: the default is accepted, labelled
+    name = cluster_wave if isinstance(cluster_wave, str) \
+        else _lipolgen.cluster_wave_name(cluster_wave)
+    raise RuntimeError(
+        "PipelineConfig: cluster_wave = %r was asked for on channel %s, which "
+        "never reads a cluster wave -- the inclusive 6Li constants "
+        "(LI6_CLUSTER_POLARIZATION = 0.848, the six-body value since A1) "
+        "and the coherent form factors follow neither value (open item C5.5, "
+        "registry row 11, D6; the default is accepted and labelled, A17).  "
+        "Drop the cluster wave, or run a tagged channel"
+        % (name, _lipolgen.pipeline_channel_name(cfg.channel)))
+
+
+def shipped_inclusive_kernel(ion, b1_transfer=None):
+    """D7 (2026-10-27): the INCLUSIVE kernel a default run builds for `ion`.
+
+    `default_inclusive_kernel(ion)` -- one argument -- is the CLASS-LEVEL TOY
+    (`ToyF2` / `ToyG1`), which `validation/reference/b1_default_li6.json` and
+    the polligen port gate pin at rtol 1e-12 and which D7 leaves alone.  The
+    run's default is that same Miller b1 and 1e-2 Delta on the SHIPPED grids:
+    `default_inclusive_kernel(ion, unpol_sf=<CT18NLO>, pol_sf=<NNPDFpol11_100>)`
+    with the process's shared, frozen objects -- exactly what
+    `Pipeline(make_config(isotope=...), plan).dis_sampler.kernel` holds.  Needs
+    the LHAPDF tier and both sets (the pre-flight's message otherwise).
+
+    A1 (2026-11-03): `b1_transfer` (None = LI6_B1_RANK2_TRANSFER = 0.982576)
+    is the 6Li rank-2 transfer; LI6_B1_RANK2_TRANSFER_HULTHEN is the pre-A1 0.921947.  J1 (2026-11-10): the deuteron's slot is MillerB1 itself and reads no transfer, so a moved value on deuteron() RAISES.
+    The vector factors are the ION's: li6_ion(...) / deuteron_ion(...)."""
+    return _lipolgen.default_inclusive_kernel(
+        ion,
+        unpol_sf=_lipolgen.make_lhapdf_unpol_sf(_lipolgen.UNPOL_SF_DEFAULT),
+        pol_sf=_lipolgen.make_lhapdf_pol_sf(_lipolgen.POL_SF_DEFAULT),
+        b1_transfer=(_lipolgen.LI6_B1_RANK2_TRANSFER if b1_transfer is None
+                     else b1_transfer))

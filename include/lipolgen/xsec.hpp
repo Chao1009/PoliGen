@@ -18,18 +18,18 @@
 ///   w_avg = t_geo(m, theta_S) * K / D_phi                    [tensor, J>=1]
 ///         + lam_e P_e (m/J) cos(theta_S) * A_par(x,y)        [vector-L]
 ///   a_1   = lam_e P_e (m/J) sin(theta_S) * A_perp(x,y)       [vector-T, gT]
-///   a_2   = -(1-y)/y^2 * c_eff(m) sin^2(theta_S) * Delta/D_phi [gluonometry]
+///   a_2   = -(1/2)(1-y)/y^2 * c_eff(m) sin^2(theta_S) * Delta/D_phi [JM, D4]
 ///
 /// RANK-2 GEOMETRY.  Cosyn et al. (arXiv:2410.12764) Eq. (9) writes the
 /// alignment tensor of any spin-J state as t_ij = (Q_NN/2)(3 n_i n_j - d_ij)
 /// with the single scalar Q_NN(m) = [3 m^2 - J(J+1)]/3, so
 ///   t_geo = Q_NN P_2(cos theta_S)   and   c_eff = 3 Q_NN
 /// is ONE geometry for both spins.  For J = 1, Q_NN = c_m/3 with
-/// c_m = 3m^2 - 2, which reproduces the Hoodbhoy-Jaffe-Manohar transcription
-/// digit for digit.
+/// c_m = 3m^2 - 2, the (1, -2, 1) pattern of the spin-1 master formula
+/// (Hoodbhoy-Jaffe-Manohar's b-sector, asymmetries.hpp) digit for digit.
 ///
 /// The b1/b2 (tensor RATE) sign is the single constant `TENSOR_LL_SIGN`; the
-/// Delta sector does not depend on it.
+/// Delta sector does not depend on it (its normalisation: DELTA_COS2PHI_NORM).
 
 #include <memory>
 #include <utility>
@@ -177,7 +177,7 @@ double density_min(double a1n, double a2n);
 ///
 /// `r_func` is threaded to ALL FOUR places the kernel needs R -- F1 in
 /// `NuclearF2::f1a`, F_L in `dsigma_dx_dq2`, D(y) in `depolarization_d`, and
-/// the g1/F1 of the default `ToyG1` -- so one argument moves R consistently.
+/// the g1/F1 of the null-branch `ToyG1` -- so one argument moves R consistently.
 /// An EXPLICIT `g1_model` keeps whatever R it was built with.
 ///
 /// `target_mass` (DEFAULT TRUE since 2026-08-29, matching `xsec.py`'s own
@@ -195,8 +195,8 @@ double density_min(double a1n, double a2n);
 class InclusiveKernel {
  public:
   struct Options {
-    std::shared_ptr<const UnpolSF> f2_source;   ///< default: ToyF2
-    std::shared_ptr<const PolSF> g1_model;      ///< default: ToyG1 on f2_source
+    std::shared_ptr<const UnpolSF> f2_source;   ///< null: ToyF2 (class level; D7 runs pass CT18NLO)
+    std::shared_ptr<const PolSF> g1_model;      ///< null: ToyG1 on f2_source (D7 runs: NNPDFpol1.1)
     SFFunc3 b1_func, b2_func, delta_func;       ///< spin-1 rank-2 slots
     /// Higher-twist tensor slots b3, b4 of Cosyn Eqs. (17); both default to
     /// empty -> zero, and only the `tensor_gamma` path reads them.
@@ -210,10 +210,10 @@ class InclusiveKernel {
     /// It is off by default because the O(gamma^2) leakage of the rate sector
     /// into cos 2phi is carried as a SYSTEMATIC of the Delta extraction rather
     /// than as a correction the extraction subtracts (at most 0.109 % of the
-    /// published amplitude, and model-dependent through the unmeasured b3,
-    /// b4), and because switching it on would silently move every published
-    /// tensor number by O(gamma^2) with nothing on the analysis side to meet
-    /// it.
+    /// letter's printed amplitude, 0.22 % of the same Delta's since D4; model-
+    /// dependent through the unmeasured b3, b4), and because switching it on
+    /// would silently move every published tensor number by O(gamma^2) with
+    /// nothing on the analysis side to meet it.
     bool tensor_gamma = false;
     /// Spin-3/2 rank-2 slots.  They take the HJM/Cosyn-sign b1 (the same
     /// F1^(m) = F1 - Q_NN b1 relation `TENSOR_LL_SIGN` pins for spin 1), which
@@ -231,13 +231,13 @@ class InclusiveKernel {
     RFunc r_func;
     bool target_mass = true;
     int g2_npts = 96;
-  };
+    bool confine_spin1_rank2 = false;  };  // J1 note (2026-11-12; the supervisor's note under J1, docs/open_items/run_2026-11-10/DECISIONS.md): DEFAULT OFF.  On, a SPIN-1 kernel confines its final b1 per nucleon to the leading-order spin-1 positivity domain, b1 <- min(max(b1, -(3/2) F1), 3 (F1 - |g1|)) with its OWN F1 and g1 at the same (x, Q2) (`tables`), b2 kept in step; an empty window (3 (F1 - |g1|) < -(3/2) F1) or F1 <= 0 leaves b1 alone.  b3, b4, Delta untouched.  `default_inclusive_kernel` sets it on the deuteron only; a non-spin-1 ion with it set throws.
 
   explicit InclusiveKernel(Ion ion);
   InclusiveKernel(Ion ion, Options options);
 
   const Ion& ion() const { return ion_; }
-  bool target_mass() const { return target_mass_; }
+  bool target_mass() const { return target_mass_; }  bool confine_spin1_rank2() const { return confine_rank2_; }  double unconfined_b1(double x, double q2, double f1) const { return b1_func_ ? b1_func_(x, q2, f1) : 0.0; }  // J1 note (2026-11-12): the option, and the b1 slot BEFORE the confinement (what `b1_rank2_confinement` tests)
   bool tensor_gamma() const { return tensor_gamma_; }
   double g2_scale() const { return g2_scale_; }
 
@@ -352,7 +352,7 @@ class InclusiveKernel {
   static double positivity_margin(const Amplitudes& a);
 
   const NuclearF2& nuclear_f2() const { return nf2_; }
-  const PolSF& g1_model() const { return *g1_model_; }
+  const PolSF& g1_model() const { return *g1_model_; }  ///< A3 (2026-11-03): a `PositivityClippedG1` around the backend
 
  private:
   double g1a(double x, double q2) const;
@@ -368,7 +368,7 @@ class InclusiveKernel {
   double g2_scale_;
   bool target_mass_;
   bool tensor_gamma_;
-  int g2_npts_;
+  int g2_npts_;  bool confine_rank2_ = false;  // J1 note (2026-11-12): Options::confine_spin1_rank2
 };
 
 }  // namespace lipolgen

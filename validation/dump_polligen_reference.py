@@ -814,7 +814,7 @@ def _require_sd_phase(key, model_block):
             "docs/benchmarking/07_cw_sign_investigation.md." % (key, p2_m0))
 
 
-def build_tagged():
+def _build_tagged_hulthen():  # V-CODE-7 (2026-11-10): named `build_tagged()` until the A13 wrapper below redefined that name; renamed so one name is one function
     channels = {
         "li6_alpha": tagged.li6_alpha_channel(),
         "li7_alpha": tagged.li7_alpha_channel(),
@@ -1477,7 +1477,7 @@ def render_readme():
         "it does not modify anything there.\n\n"
     )
     for title, text in README_SECTIONS:
-        parts.append("## %s\n\n%s\n\n" % (title, text))
+        parts.append("## %s\n\n%s%s\n\n" % (title, text, README_ADDENDA.get(title, "")))
     parts.append("## b1_default_li6.json\n\n%s\n\n" % B1_DEFAULT_LI6_README)
     if MISSING:
         parts.append("## Functions this script could not call\n\n")
@@ -1491,7 +1491,10 @@ def main():
     _preflight_sd_phase()
 
     # Build and render EVERY document before anything is written, then write
-    # them all or none (write_all_atomically; review 2026-09-26).
+    # them all or none (write_all_atomically; review 2026-09-26) -- after the
+    # D4 and D6 preflights (defined below main(), with the README's addendum).
+    _preflight_delta_convention()
+    _preflight_cluster_wave()
     tables = [
         ("spin.json", build_spin),
         ("xsec.json", build_xsec),
@@ -1552,6 +1555,194 @@ def main():
             print("  - %s: %s" % (w, r))
     else:
         print("\nEvery targeted function was called successfully.")
+
+
+def _preflight_delta_convention():
+    """LiPolGen's decision D4 (2026-10-27): its port gates compare LiPolGen's
+    cos 2phi coefficient -- Jaffe-Manohar's, -(1/2)(1-y)/y^2 per unit Delta --
+    with polligen's THROUGH the coefficient they read off xsec.json
+    (tests/test_reference.cpp, python/tests/test_kernel_reference.py), so the
+    file must carry one coefficient they know.  Run BEFORE any file is
+    written: measures polligen's `asymmetries.a_cos2phi` AND its kernel's a2
+    (m = +1, theta_S = 90 deg) in units of -(1-y)/y^2 Delta/D_phi at one
+    point, prints the value, and REFUSES unless both are 1 (the LOI's
+    Eq. (9), which polligen carries until the sibling changes) or both are 1/2
+    (Jaffe-Manohar).  It refuses nothing else: this script has no
+    --accept-changed-numbers guard (that is dump_b1_default_li6.py's), so a
+    re-dump rewrites all seven tables with whatever moved -- read the diff."""
+    x, q2, y = 0.1, 5.0, 0.5
+    kern = xsec.InclusiveKernel(beams.LI6,
+                                delta_func=lambda xx, qq, f1: 1e-2 * f1,
+                                target_mass=False)
+    t = kern.tables(np.array([x]), np.array([q2]), with_g2=True)
+    f1, f2, delta = (float(t[k][0]) for k in ("f1", "f2", "delta"))
+    unit = -(1.0 - y) / (y * y) * delta / (f1 + (1.0 - y) / (x * y * y) * f2)
+    c_asym = float(np.asarray(asym.a_cos2phi(delta, f1, f2, x, y))) / unit
+    state = xsec.EventSpinState(0, 0.0, beams.LI6.spin, 1.0,
+                                theta_s=math.pi / 2, phi_s=0.0)
+    a2 = kern.amplitudes(t, np.array([x]), np.array([q2]), q2 / (x * y), state,
+                         with_perp=True)[2]
+    c_kern = float(np.asarray(a2)[0]) / unit
+    for c0, label in ((1.0, "1 (the LOI's Eq. (9); LiPolGen's gates rescale "
+                            "it to Jaffe-Manohar's 1/2)"),
+                      (0.5, "1/2 (Jaffe-Manohar, LiPolGen's own since D4: "
+                            "its gates compare plainly)")):
+        if abs(c_asym - c0) <= 1e-12 and abs(c_kern - c0) <= 1e-12:
+            print("polligen's cos 2phi coefficient: %s x -(1-y)/y^2 per unit "
+                  "Delta" % label)
+            return
+    raise SystemExit(
+        "polligen's cos 2phi coefficient is %r (asymmetries.a_cos2phi) and %r "
+        "(the kernel's a2) x -(1-y)/y^2 per unit Delta: not both the LOI's "
+        "Eq. (9) (1) or both Jaffe-Manohar's (1/2), so LiPolGen's port gates "
+        "cannot read it (D4, 2026-10-27).  Nothing written." % (c_asym, c_kern))
+
+
+#: README.md text appended to a section after its README_SECTIONS text (kept
+#: here, below main(), so that no line the run records cite moves).
+README_ADDENDA = {"xsec.json": (
+    "\n\n"
+    "The cos 2phi coefficient (LiPolGen's decision D4, 2026-10-27,\n"
+    "docs/open_items/run_2026-10-27/DECISIONS.md): `a_cos2phi`, every `a2`\n"
+    "and the theta_S != 0 `dsigma` rows carry POLLIGEN's coefficient,\n"
+    "-(1-y)/y^2 per unit Delta for m = +-1 at 90 deg (the JLab LOI's Eq. (9)),\n"
+    "while LiPolGen's is Jaffe-Manohar's, -(1/2)(1-y)/y^2.  The gates\n"
+    "(`tests/test_reference.cpp`, `python/tests/test_kernel_reference.py`)\n"
+    "read the coefficient off this file's own numbers and compare LiPolGen's\n"
+    "against the literal 1/2 through it; every Delta-free number keeps the\n"
+    "plain rtol 1e-12.  `_preflight_delta_convention()` makes the dump refuse,\n"
+    "before anything is written, a polligen whose coefficient is neither 1\n"
+    "nor 1/2 of -(1-y)/y^2 (or differs between `a_cos2phi` and the kernel),\n"
+    "and prints which it is.  There is no `--accept-changed-numbers` guard in\n"
+    "this script (that is `dump_b1_default_li6.py`'s): a re-dump rewrites all\n"
+    "seven tables with whatever moved, so read the diff.")}
+
+
+def _preflight_cluster_wave():
+    """LiPolGen's decision D6 (2026-10-27): its RUN default is the ANL VMC
+    cluster waves, while `tagged.json` pins its channel FACTORIES, whose own
+    argument default stays the analytic (Hulthen) family -- that is what the
+    rtol-1e-12 port gates in tests/test_tagged.cpp compare, BY NAME.  So the
+    file must be polligen's Hulthen family.  `build_tagged()` reads polligen's
+    DEFAULT channels, so a sibling-side flip of those defaults to its VMC
+    tables would re-pin VMC numbers against LiPolGen's Hulthen factories under
+    the same file name.  Run BEFORE any file is written: REFUSES unless each
+    default channel is the analytic family (plain `Wave`s, no table) and,
+    where polligen has the switch, equal to its explicit `wave="hulthen"`
+    build."""
+    def sig(ch):
+        return (ch.label, tuple((type(w).__name__, w.l, float(w.prob),
+                                 float(getattr(w, "beta", float("nan"))))
+                                for w in ch.waves))
+    pairs = [("li6_alpha", tagged.li6_alpha_channel,
+              lambda: tagged.li6_alpha_channel(wave="hulthen")),
+             ("li7_alpha", tagged.li7_alpha_channel,
+              lambda: tagged.li7_alpha_channel(wave="hulthen")),
+             ("deuteron", tagged.deuteron_channel, None)]
+    for key, default, hulthen in pairs:
+        d = default()
+        kinds = {type(w).__name__ for w in d.waves}
+        if kinds != {"Wave"} or (hulthen is not None and sig(d) != sig(hulthen())):
+            raise SystemExit(
+                "polligen's default %s channel is %r: not its analytic Hulthen "
+                "family, which tagged.json pins against LiPolGen's channel "
+                "factories (D6, 2026-10-27; the RUN default there is VMC, the "
+                "factories' own default is not).  Dump the Hulthen channels by "
+                "name, or re-declare the port gate.  Nothing written."
+                % (key, sig(d)))
+    print("polligen's default tagged channels: the analytic Hulthen family "
+          "(what tagged.json pins; LiPolGen's run default is VMC since D6)")
+
+
+#: A13 (2026-11-03), LiPolGen's run 2026-11-03 decision: the VMC alpha-d port
+#: gate.  Kept here, below main(), so that no line the run records cite moves
+#: (the same reason as README_ADDENDA above).
+LI6_ALPHA_VMC_PORT_RTOL = 1e-8
+LI6_ALPHA_VMC_SCOPE = (
+    "The VECTOR and TENSOR dilutions of the 6Li alpha-d relative motion on "
+    "polligen's ANL VMC tables (tagged.li6_alpha_channel(wave=\"vmc\")), "
+    "against LiPolGen's li6_alpha_channel(source=VmcAV18): the alpha-d "
+    "motion ONLY.  Not covered: the embedded deuteron (polligen keeps the "
+    "scenario P_D = 0.045, i.e. 0.9325, under wave=\"vmc\"; LiPolGen's "
+    "VmcAV18 puts the AV18 deuteron there), 7Li (polligen refuses "
+    "wave=\"vmc\" on 7Li), and every grid table (n_of_kc, struck "
+    "populations, norm, p2 moments, boost_spectator: the VMC waves are "
+    "interpolated tables, so those are not rtol-1e-12 quantities and are "
+    "not dumped).")
+LI6_ALPHA_VMC_RTOL_REASON = (
+    "Declared before the comparison (A13, 2026-11-03): the design measured "
+    "polligen's VMC alpha-d at 5.4e-9 (vector) and 3.2e-9 (tensor) of "
+    "LiPolGen's dilutions -- two interpolations of the same ANL tables -- "
+    "so 1e-8 is a factor 2-3 above the residual: it catches a sign or "
+    "normalisation slip and nothing less.  Never widened after a number is "
+    "seen.")
+
+
+def build_tagged_li6_alpha_vmc():
+    """The REDUCED `channels.li6_alpha_vmc` block of tagged.json (A13): the
+    channel's quantum numbers, the ANL table's own P_D and the two
+    stretched-state dilutions of polligen's TaggedModel at its default grid.
+    Not the full Hulthen-shaped block: `wave_dump` does not apply to the
+    tabulated waves, and a grid-quadrature table would need its own
+    tolerance."""
+    channel = tagged.li6_alpha_channel(wave="vmc")
+    model = tagged.TaggedModel(channel)  # defaults: k_max=1.2, nk=280, nc=96
+    if abs(channel.s_channel - 1.0) > 1e-9:
+        raise SystemExit("polligen's VMC li6_alpha channel has s_channel %r, "
+                         "not 1: no tensor dilution to dump (A13).  Nothing "
+                         "written." % channel.s_channel)
+    return {
+        "label": channel.label, "j_ion": channel.j_ion,
+        "s_struck": channel.s_struck, "s_spec": channel.s_spec,
+        "s_channel": channel.s_channel,
+        "P_D": tagged.li6_vmc_tables()[3],
+        "model": {
+            "vector_dilution": model.vector_dilution(),
+            "tensor_dilution": model.tensor_dilution(),
+        },
+        "port_gate_rtol": LI6_ALPHA_VMC_PORT_RTOL,
+        "port_gate_rtol_reason": LI6_ALPHA_VMC_RTOL_REASON,
+        "scope": LI6_ALPHA_VMC_SCOPE,
+    }
+
+
+# V-CODE-7 (2026-11-10): the three Hulthen channels are `_build_tagged_hulthen()` above.
+
+
+def build_tagged():  # A13: the Hulthen channels, plus the VMC block (V-CODE-7 (2026-11-10): no longer redefines a name)
+    """_build_tagged_hulthen() above (the three Hulthen channels, unchanged) plus the
+    A13 `li6_alpha_vmc` block.  main() looks `build_tagged` up when it runs,
+    so it calls this one."""
+    out = _build_tagged_hulthen()
+    out["channels"]["li6_alpha_vmc"] = build_tagged_li6_alpha_vmc()
+    return out
+
+
+README_ADDENDA["tagged.json"] = (
+    "\n\n"
+    "`channels.li6_alpha_vmc` (LiPolGen's decision A13, 2026-11-03,\n"
+    "docs/open_items/run_2026-11-03/DECISIONS.md; the supervisor's choice\n"
+    "under the author's delegation): a REDUCED block for the ANL VMC alpha-d\n"
+    "channel, `tagged.li6_alpha_channel(wave=\"vmc\")` -- `label`, `j_ion`,\n"
+    "`s_struck`, `s_spec`, `s_channel`, `P_D` (the momentum file's printed\n"
+    "S/D split, `tagged.li6_vmc_tables()[3]`) and `model` = {`vector_dilution`,\n"
+    "`tensor_dilution`} of `tagged.TaggedModel(channel)` at its default grid.\n"
+    "No `base`, `waves`, `beam_configs`, grid tables or `boost_spectator`:\n"
+    "the VMC waves are tables (`wave_dump` does not apply) and the channel's\n"
+    "kinematics are `li6_alpha`'s.  The block declares its own tolerance,\n"
+    "`port_gate_rtol` = 1e-8 relative on the two dilutions (a factor 2-3\n"
+    "above the 5.4e-9 / 3.2e-9 the D6 design measured,\n"
+    "docs/open_items/run_2026-10-27/plan_D6_cluster_wave_default.md sec. 4.5),\n"
+    "with its reason and its `scope`: the alpha-d motion only -- not the\n"
+    "embedded deuteron (polligen keeps the scenario 0.9325 under wave=\"vmc\")\n"
+    "and not 7Li (polligen refuses wave=\"vmc\" there).  `P_D` and the\n"
+    "quantum numbers are exact (rtol 1e-12); `label` is polligen's own and\n"
+    "is not compared.  The gates are `tests/test_tagged.cpp` (`kVmcPortRtol`),\n"
+    "`validation/repin_tagged_from_lipolgen.py` and\n"
+    "`python/tests/test_port_gate_li6_vmc.py`, each against LiPolGen's\n"
+    "`li6_alpha_channel(source=VmcAV18)`; the Hulthen gates above skip the\n"
+    "key.  The block is written by `build_tagged_li6_alpha_vmc()`, which\n"
+    "this script's `build_tagged()` adds after the three Hulthen channels.")
 
 
 if __name__ == "__main__":

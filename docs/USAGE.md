@@ -1,7 +1,7 @@
 # LiPolGen — the C++ API in two pages
 
 Everything below is `namespace lipolgen`, C++17, header `<lipolgen/pipeline.hpp>`,
-link `LiPolGenCore` (+ `LiPolGenHepMC` if you write HepMC3).
+link `LiPolGenCore` + `LiPolGenLHAPDF` (the shipped structure functions since D7, §10; + `LiPolGenHepMC` for HepMC3).
 
 ```bash
 source env.sh
@@ -23,7 +23,7 @@ LIPOLGEN_DEPS_PREFIX=/path/to/deps/install pip install -e /path/to/LiPolGen
 can also be passed as `--config-settings=cmake.define.LIPOLGEN_DEPS_PREFIX=...`;
 the environment variable is a convenience CMakeLists.txt reads itself when
 the CMake cache variable is not already set. Two of the three dependencies
-still need their own data at run time even once the module is installed —
+still need their own data at run time even once the module is installed (since D7 every DEFAULT run needs the CT18NLO and NNPDFpol11_100 sets, §10) —
 export these the same way `env.sh` does, since `pip install` does not:
 
 ```bash
@@ -138,16 +138,16 @@ of the YR optics — 1 116 408 against 7 612 479 in the gate — while
 ## 2. Inclusive
 
 ```cpp
-#include "lipolgen/pipeline.hpp"
+#include "lipolgen/lhapdf_sf.hpp"         // D7: the shipped SFs (it includes pipeline.hpp)
 using namespace lipolgen;
 
-PipelineConfig cfg;                       // defaults: 6Li, config 1, generator window
+PipelineConfig cfg; install_lhapdf_sf_filler();  // defaults: 6Li, config 1, window; D7 grids, §10
 cfg.channel  = PipelineChannel::Inclusive;
 cfg.isotope  = "6Li";
 cfg.lumi_pb  = 2.0;                       // or cfg.n_events = 1'000'000;
 cfg.seed     = 20260713;
 // cfg.kernel = my_kernel;                // default: Miller b1 through the 6Li
-                                          // rank-2 transfer + 1e-2 toy Delta,
+                                          // rank-2 transfer + 1e-2 toy Delta (Jaffe-Manohar normalised since D4),
                                           // and target_mass ON (xsec.py's own
                                           // default since 2026-08-29)
 Pipeline p(cfg, tensor_thirds_plan(0.7, 0.6));
@@ -159,7 +159,7 @@ p.for_each([](const Event& ev) {
 });
 ```
 
-Record: beam e⁻, beam ion, e′, struck nucleon (status 3), γ\* (status 3),
+The cos 2φ term carries Jaffe–Manohar's normalisation of Δ since 2026-10-27 (decision D4; `docs/CONVENTIONS.md`, "Δ normalisation"): on a tilted fill its Δ-induced amplitude is half the pre-D4 one for the same Δ.  The `meta` of `Pipeline.generate()` names the convention in `meta["delta_convention"]`, and so does every .npz the CLI writes (whose run banner prints the same string); a HepMC3 file, which is what the C++ examples write, carries no record of it.  Since A3 (2026-11-03) every kernel clips g₁ to ±F₁ per nucleon (`PositivityClippedG1`, bit for bit where it does not bind) and `meta["g1_clipped_rate_fraction"]` records the share of the run's rate where it binds (NaN where g₁ is not read); the banner prints it as "g1 positivity clip (A3, |g1| <= F1 per nucleon): binds on … % of the rate (max unclipped A1^p = …, A1^n = …)".  **J1 note (2026-11-12, the supervisor's note under J1):** on the inclusive DEUTERON the kernel's rank-2 slot is confined to the leading-order spin-1 positivity domain, per nucleon b₁ ← min(max(b₁, −(3/2)F₁), 3(F₁ − |g₁|)) with the kernel's own F₁ and g₁ (b₂ in step; `InclusiveKernel::Options::confine_spin1_rank2`, off on a kernel a caller builds, on in `default_inclusive_kernel`'s deuteron branch only); `meta["b1_clipped_rate_fraction"]` is the share of the run's spin-blind cell rate (the weights g₁'s share uses) in the cells where it binds at the cell centre, written on inclusive deuteron runs ONLY — **its absence means the confinement is not applied** (⁶Li, ⁷Li, tagged, coherent, a caller kernel) — and the banner prints "b1 spin-1 domain (J1 note 2026-11-12, …): binds on … % of the rate, N cell(s) (… upper, … lower; max unconfined b1/F1 = … at x = …, Q2 = …)"; on the default deuteron window it binds on 4.792e−7 / 3.871e−7 / 3.536e−7 of the rate (configs 0 / 1 / 2; 40 / 59 / 59 cells on the x = 0.871 and 0.955 rows, all on the upper half).  Since g₁ then enters the rank-2 slot, `--pol-sf` is READ on every inclusive deuteron run, the tensor plans included.  Record: beam e⁻, beam ion, e′, struck nucleon (status 3), γ\* (status 3),
 X (pdg 92). The balance is **per-nucleon**, `k + P_N = k' + X`, exactly as
 `generator.hpp` defines it — the (A−1) remnant is not written, so the
 whole-nucleus balance and the total charge are deliberately open here. This path
@@ -179,7 +179,7 @@ choice, not a fact:
 
 | `--b1-model` | `B1Model` | what it is |
 |---|---|---|
-| `miller` (default) | `B1Model::Miller` | `Li6B1(MillerB1)` through `LI6_B1_RANK2_TRANSFER` and `LI6_B1_PER_NUCLEON` (2/6). **Bit-for-bit what every published inclusive tensor number was made with**, and pinned at rtol 1e-12 by the **self-pin** `validation/reference/b1_default_li6.json` (this library's own C++ output — a regression guard, not a reference) (`tests/test_b1_nuclear.cpp` T9). This IS the run PLAN's "toy": today's default `b1_func` is `Li6B1(MillerB1)`, which is what `toy_b1` reaches. |
+| `miller` (default) | `B1Model::Miller` | `Li6B1(MillerB1)` through `LI6_B1_RANK2_TRANSFER` and `LI6_B1_PER_NUCLEON` (2/6). **Bit-for-bit what every published inclusive tensor number was made with** up to the transfer, which A1 (2026-11-03) moved 0.921947 → 0.982576 (×1.06576), and pinned at rtol 1e-12, at the pre-A1 transfer passed explicitly, by the **self-pin** `validation/reference/b1_default_li6.json` (this library's own C++ output — a regression guard, not a reference) (`tests/test_b1_nuclear.cpp` T9). This IS the run PLAN's "toy": today's default `b1_func` is `Li6B1(MillerB1)`, which is what `toy_b1` reaches. |
 | `cdks` | `B1Model::Cdks` | the same ⁶Li rank-2 transfer on the **other camp** for b₁ᵈ — the digitized Cosyn–Dong–Kumano–Sargsian PRD **95** (2017) 074036 Fig. 4 column. \|b₁\| is **two orders of magnitude smaller below x ≈ 0.1 and comparable to or larger than Miller's above it**: peak \|x·b₁\| **3.34e−4** against Miller's 4.27e−4 over x ∈ [0.02, 0.95] at Q² = 2.5, and at x = 0.3 it is **8× larger** with the opposite sign (∫b₁ dx **1.39e−4** against 9.1e−4). Different sign structure throughout. **These numbers DOUBLED on 2026-09-03**: `b1_convolution()` stopped applying `B1_PER_DEUTERON_TO_PER_NUCLEON` to a column that CDKS Eq. (10) and the text under their Eq. (16) say is already per nucleon (§2a "The two b₁ camps are not per the same thing"). |
 | `li6-convolution` | `B1Model::Li6Convolution` | `Li6ConvolutionB1` (`b1_nuclear.hpp`): the **four-term α–d convolution** of `docs/open_items/run_2026-09-02/design_D_b1_li6.md`. |
 
@@ -222,11 +222,11 @@ The sharp form of the question is *"does Miller's Eq. (20) evaluate to
 set (his ref [29], model 1) that this tree does not have.
 
 ```cpp
-PipelineConfig cfg;
+PipelineConfig cfg; attach_shipped_sf_backends(cfg);   // D7 (§10)
 cfg.channel  = PipelineChannel::Inclusive;
 cfg.isotope  = "6Li";                      // 6Li ONLY for li6-convolution
 cfg.n_events = 1000000;
-cfg.b1_model = B1Model::Li6Convolution;
+cfg.b1_model = B1Model::Li6Convolution; cfg.b1_unpol = B1UnpolSource::Ct18Nlo; cfg.b1_unpol_sf = cfg.unpol_sf_obj;  // D7: NAMED
 cfg.b1_band_scale = 1.0;                   // run 0, 1 and 2 -- see below
 cfg.b1_alpha_d_dwave_weight = 1.0;         // terms (2d)+(2a) knob
 cfg.scenario.x_max = 0.95;                 // needed; see "the top x cell"
@@ -234,14 +234,14 @@ cfg.scenario.x_max = 0.95;                 // needed; see "the top x cell"
 
 ```
 lipolgen-run --channel inclusive --isotope 6Li --events 1000000 \
-             --b1-model li6-convolution --b1-band-scale 1 --x-max 0.95
+             --b1-model li6-convolution --b1-unpol ct18nlo --b1-band-scale 1 --x-max 0.95
 ```
 
 Every generated file records what made it: `meta["b1_model"]`,
 `meta["b1_band_scale"]` and `meta["b1_alpha_d_dwave_weight"]` are in the npz /
 HFS metadata unconditionally, so three otherwise identical runs are not
 indistinguishable. A caller-supplied `cfg.kernel` is labelled
-`"caller-supplied kernel"` rather than with a flag that did not run.
+`"caller-supplied kernel"` rather than with a flag that did not run (V-CODE-1 (2026-11-10), A17 (2026-11-03): since A17 the label reads `"not read with a caller-supplied kernel"`, in `meta["unpol_sf"]`, `["pol_sf"]` and `["b1_model"]` alike).
 
 ### Where the model is legal, and why
 
@@ -292,7 +292,7 @@ fit, because that is what CDKS used and the A = 2 gate exists to reproduce
 (`OPEN_ITEMS_SOLUTIONS.md` §10, condition 4). What decides it is that the
 observable is a *ratio*: the tensor weight is K/D_φ with K ∋ b₁ and D_φ ∋ F₁,
 and the F₁ in the denominator is `InclusiveKernel`'s, built from the shared
-`ToyF2` with **its** R — which is `r_sigma_lt`, because nothing sets it. Give
+unpolarised backend (CT18NLO since D7, `ToyF2` before) with **its** R — `r_sigma_lt`, because nothing sets it. Give
 `Li6ConvolutionOptions` a different R and the (1 + R) in the numerator no
 longer cancels the one in the denominator: at Q² = 2.5 the mismatch factor
 (1 + r1998)/(1 + r_sigma_lt) is 1.088 at x = 0.1 and 1.039 at x = 0.3 — the
@@ -406,7 +406,7 @@ is `DeuteronConvolutionB1`'s default:
 
 1. **It is conditional on the CONFIGURATION, not on the build.** The gate
    passes for the **MSTW2008 LO** nucleon input at CDKS Eq. (21)'s δ-function.
-   The **shipped default** unpolarised backend — the library `ToyF2` — gives
+   `--b1-unpol`'s **default** unpolarised backend — the library `ToyF2` — gives
    ratio **0.440** on the same clause, *outside* the [0.5, 2] window. MSTW is
    checklist item 4 and the dominant term of the design's own residual budget,
    so reading G3b off `ToyF2` reads it *before* the checklist. Since
@@ -414,7 +414,7 @@ is `DeuteronConvolutionB1`'s default:
    `--b1-unpol mstw` (below) puts `MstwSF` into
    `Li6ConvolutionOptions::unpol` through the pipeline's own
    `default_inclusive_kernel`. So the rule is **quote numbers made with
-   `--b1-unpol mstw`; the default `toy` backend sits outside the gate's
+   `--b1-unpol mstw`; the `toy` backend (its default) sits outside the gate's
    acceptance window and its numbers are not covered by the lift.** They
    cannot be rescaled into covered ones either — the gap is a shape change,
    mstw/toy = **1.848 / 1.276 / 0.817** at x = 0.10 / 0.30 / 0.50, up to a
@@ -545,9 +545,9 @@ construction:
 
 | value | backend | needs |
 |---|---|---|
-| `toy` (**default**) | the inclusive kernel's own `ToyF2`, handed to the convolution as **one shared object** — bit for bit what every published number was made with | — |
+| `toy` (**default**) | the inclusive kernel's own `UnpolSF`, handed to the convolution as **one shared object** — `ToyF2` on the toy pair; under the shipped CT18NLO (D7) `li6-convolution` must NAME a backend instead (§10) | — |
 | `mstw` | `MstwSF()` — MSTW2008 LO over PYTHIA's `pdfdata` grid, the PDF CDKS computed their b₁ᵈ with | the optional PYTHIA tier |
-| `ct18nlo` | `LhapdfSF("CT18NLO", 0)` — the phase-D stand-in, kept selectable so the PDF systematic can be quoted rather than remembered | the optional LHAPDF tier |
+| `ct18nlo` | `LhapdfSF("CT18NLO", 0)` — the phase-D stand-in; since D7 the shipped `--unpol-sf`'s own cached object, so the two F₁ are ONE object again | the LHAPDF tier |
 
 Measured on the shipped observable `Li6ConvolutionB1::b1(x, 2.5)` (2026-09-04):
 
@@ -564,15 +564,15 @@ in the ⁶Li observable and not a normalisation the 100 % band would absorb.
 `Li6ConvolutionOptions::unpol` and nothing else. `InclusiveKernel`'s own
 `f2_source` — the F₁ of the unpolarised rate, and so the D_φ denominator of
 the tensor weight — is set by a **separate** flag, `--unpol-sf` (§2b), and at
-its shipped default `toy` it is `ToyF2` on every `--b1-unpol` setting, so the
+any ONE `--unpol-sf` (CT18NLO since D7) it is one object on every `--b1-unpol` setting, so the
 **spin-blind rate is bit for bit** under *this* flag (`InclusiveSampler::cell_xsec_pb` is
 array-identical, the same invariant the 100 % band satisfies) and what moves
 is the tensor shift alone. Measured end to end on a ⁶Li inclusive
-tensor-thirds run (seed 7, `--x-max 0.95`, default grid): the azz0 − azz±
+tensor-thirds run (seed 7, `--x-max 0.95`, default grid, `--unpol-sf toy`, the default then): the azz0 − azz±
 cross-section split goes from **12.6037 pb** on `toy` to **10.6743 pb** on
 `mstw`, a factor **0.8469**; `sigma_per_category_pb` and `sigma_pb` carry
 that shift and are therefore not bit-identical. The consequence of the narrow
-scope is that with anything but `toy` the numerator's F₁ and the denominator's
+scope is that with anything but `toy` (or, since D7, `ct18nlo` under the shipped `--unpol-sf`) the numerator's F₁ and the denominator's
 F₁ are no longer the same object, so the partial cancellation the `r_func`
 default relies on is gone. Say which backend a plot used.
 
@@ -588,7 +588,7 @@ ambiguity the two flags create: `default_inclusive_kernel` folds the
 convolution against the *kernel's* own `f2_source` when `b1_unpol` is null, so
 under `--unpol-sf ct18nlo` a `--b1-unpol toy` would quietly mean CT18NLO while
 `meta["b1_unpol"]` still wrote `"toy"`. `PipelineConfig::validate()` throws on
-exactly that combination and asks for the b₁ backend to be named.
+exactly that combination — since D7 the SHIPPED one (§10) — and asks for the b₁ backend to be named.
 
 **It is never silently downgraded.** Selecting `mstw` in a build with no
 PYTHIA tier, or with no `mstw2008lo.00.dat` on disk, raises at configuration
@@ -620,16 +620,16 @@ cfg = lipolgen.make_config(b1_model="li6-convolution", b1_unpol="mstw",
 
 Both opt-in backends carry the CDKS camp's b₁ᵈ, which is a **Q² = 2.5
 digitization with no Q² evolution**. In the topmost cell of the default window
-(x = 0.954993) F₁ has fallen far enough that b₁/F₁ reaches **6.52** for `cdks`
-and **5.91** for `li6-convolution` — past where the phi-averaged density 1 + w_avg
+(x = 0.954993) F₁ has fallen far enough that b₁/F₁ reaches **51.87** for `cdks` (A1, 2026-11-03: the 6Li transfer ×1.06576; 48.67 before)
+and **42.85** for `li6-convolution` on the shipped CT18NLO F₁ (D7; **6.52** / **5.91** on the toy) — past where the phi-averaged density 1 + w_avg
 stays positive, and `InclusiveSampler` refuses the run with *"negative
 phi-averaged density"*. Use `--x-max 0.95` (or `cfg.scenario.x_max = 0.95`).
 `lipolgen-run` now checks this **before** building the pipeline and says which
 flag fixes it, rather than letting that message — which names neither `--x-max`
 nor the CDKS table — come out of the sampler three frames down.
-`miller`'s b₁ is a ratio model (0.145 at the same point) and does not need it.
+`miller`'s b₁ is a ratio model (1.156 at the same point since A1, 1.085 before; 0.145 on the toy) and does not need it under `tensor-thirds` — from A1 until A3 the default inclusive ⁶Li `--plan helicity-flip` (P_z 0.7, P_e 0.7) was refused at that cell (1 + w_avg = −0.0185: vector −0.2578, rank-2 −0.7607); A3's |g₁| ≤ F₁ clip (2026-11-03; the nucleon A₁ⁿ there is 4.4 unclipped) takes the vector part to −0.1183 and it builds at 1.0 (worst cell +0.1210, measured 2026-11-06).
 Those three figures are MEASURED off the shipped kernel (re-measured
-2026-09-16) and are defined once, in `python/lipolgen/cli.py`'s
+2026-09-16, and 2026-10-29 for D7 — CT18NLO's F₁ is ×0.134 of ToyF2's there) and are defined once, in `python/lipolgen/cli.py`'s
 `B1_TOP_CELL_B1_OVER_F1`, which the `--x-max` help and the `--b1-model`
 refusal both format their sentence from. Until 2026-09-16 this page said
 6.6 / 5.6, that help said 6.6 / 5.6, the refusal said 3.3 / 5.6 and
@@ -717,7 +717,7 @@ on 2026-09-03 — but the lift is a statement about a *configuration*, and the
 naming the two small knobs and omitting the unpolarised backend named the
 wrong things.
 
-1. Every row was made with the **default `ToyF2`** unpolarised input. That
+1. Every row was made with the **`ToyF2`** unpolarised input (the default until D7). That
    configuration's own G3b is **0.440** — *outside* the [0.5, 2] acceptance
    window the lift was read off. Nothing that fails the gate's own magnitude
    clause is covered by a lift granted on a row that passes it.
@@ -743,25 +743,25 @@ not a single name**, and that the two bands must both be quoted.
 ## 2b. Structure-function backends for **every** channel — `--unpol-sf` / `--pol-sf`
 
 ```
-lipolgen-run --channel inclusive        --unpol-sf ct18nlo --pol-sf nnpdfpol
-lipolgen-run --channel tagged-6Li-alpha --unpol-sf ct18nlo
+lipolgen-run --channel inclusive        # D7: CT18NLO / NNPDFpol1.1 BY DEFAULT
+lipolgen-run --channel tagged-6Li-alpha --unpol-sf toy --pol-sf toy   # the pre-D7 toys
 ```
 
 ```python
 cfg = lipolgen.make_config(channel="tagged-6Li-alpha", events=100_000,
-                           unpol_sf="ct18nlo", pol_sf="nnpdfpol")
+                           unpol_sf="toy", pol_sf="toy")    # D7: the toys NAMED
 ```
 
 **What they are.** `--unpol-sf {toy,mstw,ct18nlo}` chooses the unpolarised
 backend that supplies F₂ — and through it F₁, F_L and the whole unpolarised
 rate — and `--pol-sf {toy,nnpdfpol}` the polarised backend that supplies g₁,
-and through the Wandzura–Wilczek relation g₂. Both default to the toy backends
-and are then **bit for bit** what every published number was made with.
+and through the Wandzura–Wilczek relation g₂. Since D7 (2026-10-27) they default to `ct18nlo` / `nnpdfpol`
+(LO, frozen at the grid edges, §10); `toy` / `toy`, named, is the pre-D7 default **bit for bit**.
 
 **They do not have the same reach, and the run says so.** `--unpol-sf` reaches
 **every kernel the pipeline builds**: the inclusive kernel, the coherent
 channel (which owns no structure function of its own and rides the inclusive
-cell cross sections — ×0.705841 on the shipped ⁶Li `ct18nlo` coherent run),
+cell cross sections — ×0.755407 against the toy on the shipped (D7) ⁶Li coherent run),
 and the tagged struck-cluster kernel — `read` on every channel and every plan
 in the knob-provenance table. `--pol-sf` reaches the inclusive and the tagged
 kernels **only where the fill also carries `lam_e · P_e ≠ 0`**, and not the
@@ -779,10 +779,10 @@ field on the non-tagged branch alone; §7 below). `sf.hpp` labels both
 defaults **TOY** and anchors `ToyF2` *by eye* — "adequate for phase-space maps
 and factor-1.5 rate estimates ONLY".
 
-### What the toy has been costing, measured
+### What the toy costs against the grids, measured (re-taken for D7)
 
 ⁶Li, `default_configs("6Li")[1]` (e 10 GeV × ⁶Li 99.5 GeV/u), the shipped
-window, run through the pipeline on 2026-09-04. σ is the accepted cross
+window, run through the pipeline on 2026-09-04; re-taken 2026-10-29 for D7 (CT18NLO frozen below its grid, the tagged rows on D6's VMC wave). σ is the accepted cross
 section `sigma_pb()`; A_zz is the canonical thirds estimator on
 `tensor_thirds_plan(0, 0.6)`'s per-category cross sections divided by P_zz;
 A_∥ is `(σ₊ − σ₋)/(σ₊ + σ₋)/(P_e P_z)` on `helicity_flip_plan(1, 0.7, 0.7)`.
@@ -790,19 +790,19 @@ A_∥ is `(σ₊ − σ₋)/(σ₊ + σ₋)/(P_e P_z)` on `helicity_flip_plan(1,
 was printed at `--x-max 0.95` until 2026-09-05, in rows whose σ and A_∥ were at
 1.0, so one row carried two windows (at 0.95 the three A_zz are
 −5.193192e−4 / −6.503956e−4 / −6.545724e−4, and both ratios are unchanged to
-six digits, which is what hid it).
+six digits, which is what hid it).  The inclusive rows below are PRE-A1 (A1, 2026-11-03: inclusive ⁶Li A_zz ×1.06576 and A_∥ ×1.04533 on every backend, so every ratio stands; the tagged rows do not move).
 
 | channel | backend | σ [pb] | ratio | A_zz | ratio | A_∥ | ratio |
 |---|---|---|---|---|---|---|---|
-| inclusive | `toy` | 591846.2 | 1 | −5.193231e−4 | 1 | −1.171716e−3 | 1 |
-| inclusive | `--unpol-sf ct18nlo` | 472571.9 | **0.79847** | −6.503970e−4 | **1.25239** | −9.668880e−4 | 0.82519 |
-| inclusive | `--unpol-sf mstw` | 469556.5 | **0.79338** | −6.545739e−4 | **1.26044** | −1.057030e−3 | 0.90212 |
-| inclusive | `--pol-sf nnpdfpol` | 591846.2 | 1 (exactly) | −5.193231e−4 | 1 (exactly) | −1.270806e−4 | **0.10846** |
-| inclusive | both | 472571.9 | 0.79847 | −6.503970e−4 | 1.25239 | −1.591593e−4 | 0.13583 |
-| tagged-6Li-α | `toy` | 591846.2 | 1 | **0 exactly** | — | −3.514730e−3 | 1 |
-| tagged-6Li-α | `--unpol-sf ct18nlo` | 472571.9 | **0.79847** | **0 exactly** | — | −2.900243e−3 | 0.82517 |
-| tagged-6Li-α | `--unpol-sf mstw` | 469556.5 | **0.79338** | **−1.3774e−16** (qual. 1) | — | −3.170626e−3 | 0.90210 |
-| tagged-6Li-α | `--pol-sf nnpdfpol` | 591846.2 | 1 (exactly) | **0 exactly** | — | −3.811967e−4 | **0.10846** |
+| inclusive | `toy` / `toy` (the pre-D7 default) | 591846.2 | 1 | −5.193231e−4 | 1 | −1.171716e−3 | 1 |
+| inclusive | `--unpol-sf ct18nlo --pol-sf toy` | 496334.2 | **0.83862** | −6.192590e−4 | **1.19243** | −9.848331e−4 | 0.84051 |
+| inclusive | `--unpol-sf mstw --pol-sf toy` | 469556.5 | **0.79338** | −6.545739e−4 | **1.26044** | −1.057030e−3 | 0.90212 |
+| inclusive | `--unpol-sf toy --pol-sf nnpdfpol` | 591846.2 | 1 (exactly) | −5.193231e−4 | 1 (exactly) | −1.270806e−4 | **0.10846** |
+| inclusive | **both — the D7 default** | 496334.2 | 0.83862 | −6.192590e−4 | 1.19243 | −1.515385e−4 | 0.12933 |
+| tagged-6Li-α | `toy` / `toy` | 591846.2 | 1 | 0 by construction (+2.2e−16) | — | −3.843389e−3 | 1 |
+| tagged-6Li-α | `ct18nlo` / `toy` (both: A_∥ −4.970570e−4, ×0.12933) | 496334.2 | **0.83862** | 0 by construction (−1.3e−16) | — | −3.230323e−3 | 0.84049 |
+| tagged-6Li-α | `mstw` / `toy` | 469556.5 | **0.79338** | 0 by construction (+1.4e−16) | — | −3.467109e−3 | 0.90210 |
+| tagged-6Li-α | `toy` / `nnpdfpol` | 591846.2 | 1 (exactly) | 0 by construction (+2.2e−16) | — | −4.168421e−4 | **0.10846** |
 
 Read the three qualifications with the table.
 
@@ -812,8 +812,8 @@ Read the three qualifications with the table.
    (`--inclusive-b1` is off, because on a tagged channel the α–d density is
    already in the event weight), so the *total* per-category cross sections
    carry no tensor term at all. On `toy`, `ct18nlo` and `nnpdfpol` the three
-   totals are then **equal to the last bit** and the thirds estimator returns
-   **0.0 exactly**. On `mstw` they are not: measured 2026-09-05 on
+   totals were **equal to the last bit** on the Hulthén wave (**0.0 exactly**;
+   on D6's VMC wave every backend gives a ±2e−16 round-off zero, D7 re-take). On `mstw` they were not: measured 2026-09-05 on
    `tensor_thirds_plan(0, 0.6)`'s `sigma_per_category_pb()`, they are
    469556.45134814945 / 469556.45134814945 / 469556.4513481495 — σ₀ is **one
    ULP** (5.82e−11 pb) above σ_±, so A_zz comes back **−1.3774e−16** rather
@@ -824,8 +824,8 @@ Read the three qualifications with the table.
    measured. The tagged tensor signal lives in the
    spectator-momentum-differential rate, not in σ_tot. Turn the inclusive b₁
    on (`--inclusive-b1 --x-max 0.95`) and it moves by the same factors the
-   inclusive channel does: A_zz = −1.557969e−3 (`toy`) → −1.951190e−3
-   (`ct18nlo`, ×1.25239) → −1.963721e−3 (`mstw`, ×1.26044).
+   inclusive channel does (D7 re-take, VMC wave): A_zz = −1.660420e−3 (`toy`) → −1.979943e−3
+   (`ct18nlo`, the default, ×1.19243) → −2.092855e−3 (`mstw`, ×1.26044); Hulthén toy −1.557969e−3.
    **`--inclusive-b1` and a TILTED plan are refused together on
    `tagged-6Li-alpha`** (since 2026-09-16): the struck cluster's |S_c m_S⟩ is
    evaluated with its quantization axis along the **beam** whatever the ion
@@ -853,7 +853,7 @@ Read the three qualifications with the table.
    shipped tilted plans (which carry P_e = 0) are bit-identical.
    **Why `--x-max 0.95` is in that command line** (measured 2026-09-05, and it
    was prescribed here without a reason until then): with `--inclusive-b1` on
-   a tagged channel *and* a non-toy unpolarised backend, the shipped window's
+   a tagged channel *and* a non-toy unpolarised backend (since D7 the default), the shipped window's
    top cell (x = 0.955, Q² = 167.3) gives **1 + w_avg = −0.1302** on
    `ct18nlo` and **−0.03496** on `mstw`, and `InclusiveSampler`'s
    configuration-time positivity check refuses the run by name — the same
@@ -872,7 +872,7 @@ Read the three qualifications with the table.
    ratio**, because the bands partly cancel. Quote the band, not the ×0.108,
    unless the window is the observable.
 3. **The two selectors are NOT orthogonal.** `InclusiveKernel` builds its
-   default `ToyG1` on its *own* base `UnpolSF`, so `--unpol-sf` alone moves
+   null-branch `ToyG1` on its *own* base `UnpolSF`, so `--unpol-sf` alone moves
    g₁ as well: at `--pol-sf toy`, `--unpol-sf ct18nlo` moves ⁶Li F₁ by
    ×0.9942 / ×1.0711 / ×1.2038 / ×1.0014 and g₁ by ×1.0544 / ×1.1346 /
    ×1.3050 / ×1.0551 at x = 0.05 / 0.10 / 0.30 / 0.50, so A₁ = g₁/F₁ moves
@@ -947,13 +947,13 @@ Measured at Q² = 10:
 | 0.50 | +0.00778817 | −0.000370697 | −0.0476 |
 | 0.70 | +0.00247092 | +0.00221761 | 0.8975 |
 
-So **the shipped toy g₁ⁿ has the wrong sign over roughly 0.25 < x < 0.6.** On
+So **the toy g₁ⁿ (shipped until D7) has the wrong sign over roughly 0.25 < x < 0.6.** On
 isoscalar ⁶Li the proton term dominates the sum and this mostly hides; on a
-**neutron-tagged** run (`--channel tagged-d-p`, whose `dis_target` is
+**struck-neutron** run (`--channel tagged-d-p`, proton-tagged, whose `dis_target` is
 `NEUTRON_TARGET`) it does not. That is the single strongest reason `--pol-sf`
 exists.
 
-#### …and on that channel the pair needs `--x-max 0.95`
+#### …and on that channel the pair needed `--x-max 0.95` (until A3)
 
 ```
 lipolgen-run --isotope d --channel tagged-d-p --plan helicity-flip \
@@ -961,8 +961,8 @@ lipolgen-run --isotope d --channel tagged-d-p --plan helicity-flip \
              --x-max 0.95
 ```
 
-Without `--x-max 0.95` that command — the A_∥ measurement on a free neutron,
-at the CLI's own default `--pe 0.7` — is **refused at configuration time**,
+Until A3 (2026-11-03), without `--x-max 0.95` that command — the A_∥ measurement on a free neutron,
+at the CLI's own default `--pe 0.7` — was **refused at configuration time**,
 before an event is drawn. It is not a bug in either backend; it is what the
 two of them do together at the top of the shipped window. Measured on
 2026-09-05 in the cell the sampler names, x = 0.954993, Q² = 1119.1, on the
@@ -983,8 +983,8 @@ phi-averaged density 1 + w_avg is then negative and `InclusiveSampler` refuses
 the run rather than draw max(W, 0), which would dilute the modulation *and*
 skew the (x, Q²) mixture.
 
-There is **no clamp**, and there will not be one: clamping g₁ or the density
-is a physics change, and a silent one. What the refusal does instead is name
+There is **no clamp of the density** (max(W, 0) would be a silent physics change);
+g₁ itself IS clipped to ±F₁ per nucleon since A3 (2026-11-03), visibly (meta, banner). What the refusal does instead is name
 the cell, the A₁ that made it negative, and the cure —
 
 ```
@@ -1001,16 +1001,16 @@ error, not a traceback** (the `PythiaBridge` rule: show the message the model
 wrote). `--pe 0` also removes it, because w_avg scales with P_e·P_z; so does
 either backend alone. It is the same class of refusal `--b1-model
 cdks|li6-convolution` already carries in the *tensor* sector (§2a, "The top x
-cell"), in the vector sector and on a different channel.
+cell"), in the vector sector and on a different channel. **Since A3 (2026-11-03) this pair builds at x_max 1.0** (g₁ⁿ clipped to F₁ⁿ; `meta["g1_clipped_rate_fraction"]` 2.09e−7 at config 1; the banner prints it). **The refusal was the visible half** (stated 2026-11-03, the run's verification): at LO the shipped pair breaks |A₁| ≤ 1 from x ≳ 0.83 on the free neutron and from x ≳ 0.87 on the deuteron and the proton (A₁ⁿ 1.46 at x = 0.871, Q² = 10), so `--x-max 0.95` prevented the refusal but **not the violation**: the x = 0.871 cell generated with |A₁| > 1 on `tagged-d-p` and the inclusive deuteron until A3 clipped g₁ (the NLO coefficient functions stay the LO development item, `docs/open_items/run_2026-10-27/DECISIONS.md` D7).
 
-### The grid clause — `--unpol-sf ct18nlo` runs a third of the window off-grid
+### The grid clause — the shipped `ct18nlo` runs 39 % of the window on its FROZEN edge
 
 CT18NLO's grid starts at Q = 1.295 GeV, i.e. **Q² = 1.677**, and the shipped
-⁶Li window's accepted cells start at Q² = 1.054. Below its grid LHAPDF does
-**not** freeze — it continues the evolution downward and F₂ᵖ falls fast (at
-x = 3e−4 it is a factor **2.34** below the toy at Q² = 0.7, and 1.70 below at
-Q² = 1.0). Measured on the shipped window: **36.18 %** of a CT18NLO
-**inclusive** run's own accepted rate (42.33 % of the *toy* run's) sits below
+⁶Li window's accepted cells start at Q² = 1.054. Below its grid the tier
+**freezes** it since D7 (LHAPDF `nearest`, set on the object — the letter's `--pdf grid` chain freezes only Q², at Q₀, §10); before D7
+LHAPDF continued the evolution downward and F₂ᵖ fell fast (at x = 3e−4 a
+factor **2.34** below the toy at Q² = 0.7). Measured on the shipped window:
+**39.23 %** of the default **inclusive** run's own accepted rate (36.18 % continued, pre-D7; 42.33 % of the *toy* run's) sits below
 that floor.
 
 **The fraction is per channel.** Its denominator is
@@ -1018,14 +1018,14 @@ that floor.
 coherent channel that is σ_cell·f_coh(x) over the cells that admit a
 diffractive mass, not the inclusive cells. `f_coh` falls by a factor ≈26
 across the window, so the reweighting is large: measured 2026-09-05 on
-`--channel coherent --unpol-sf ct18nlo` at config 1, **44.746 %** of the
+`--channel coherent --unpol-sf ct18nlo` at config 1, **44.746 %** (D7, frozen: **48.37 %**, of 9424.476321 pb) of the
 coherent rate is below the floor against 36.179 % of the inclusive cells it
-rides on, and those coherent weights sum to 8806.096207 pb, which is that
+rides on, and those coherent weights sum to 8806.096207 pb (continued), which is that
 run's `sigma_pb()` exactly. Until 2026-09-05 a coherent run recorded 36.18 %,
 a quantified `meta` key that did not describe the run it was attached to.
 
-It is **not refused** — refusing would make the flag unusable on the shipped
-scenario — but it is never silent either:
+It is **not refused** — refusing would make the default unusable on its own
+scenario — but it is never silent either (and `meta["unpol_sf_extrapolation"]` = `nearest`):
 
 * the run banner prints the floor and the fraction on every run;
 * `meta["unpol_sf_grid_q2_min"]` and `meta["unpol_sf_below_grid_frac"]` carry
@@ -1047,7 +1047,7 @@ command line — so moving the window off the extrapolation means raising
 `Scenario::q2_min` from Python (`sc = cfg.scenario; sc.q2_min = 1.7;
 cfg.scenario = sc`), and it costs rate: on the shipped ⁶Li `ct18nlo` run
 q2_min 0.7 → 1.7 takes the below-grid fraction to exactly **0** and σ from
-472571.9 pb to **301599.8 pb** (×0.638). MSTW's own grid
+496334.2 pb (frozen; 472571.9 continued) to **301599.8 pb** (×0.6077). MSTW's own grid
 boundary has **not** been characterised the way CT18NLO's has; its below-grid
 F₂ᵖ was probed at two points (0.492 and 0.550 at x = 3e−4, Q² = 0.7 and 1.0
 against the toy's 0.681) and looked milder, which is an observation and not a
@@ -1057,13 +1057,13 @@ measured fraction.
 
 | refusal | reason |
 |---|---|
-| a named backend with an empty object slot (`mstw`, `ct18nlo`, `nnpdfpol`, `Custom`) | the core library links neither the PYTHIA nor the LHAPDF tier and cannot build the backend; falling back to the toy would put the toy's numbers under a label that says otherwise. The message **names the missing tier**, and the CLI refuses one layer earlier still (`require_unpol_sf_tier` / `require_pol_sf_tier`) |
+| a named backend with an empty object slot (`mstw`, `Custom`; `ct18nlo` / `nnpdfpol` only where no LHAPDF filler is installed — the tier attaches them lazily since D7, §10) | the core library links neither the PYTHIA nor the LHAPDF tier and cannot build the backend; falling back to the toy would put the toy's numbers under a label that says otherwise. The message **names the missing tier** (and, for a grid, the set and the toy escape), and the CLI refuses one layer earlier still (`require_unpol_sf_tier` / `require_pol_sf_tier`) |
 | `toy` with an object attached | the provenance and the realisation drifted — the attached backend would be silently dropped. Assigning `config.unpol_sf_obj` from Python sets `Custom` for you |
-| either selector together with a caller-supplied `PipelineConfig::kernel` | the kernel wins on the inclusive branch and is not read at all on a tagged one; `meta` would record a backend that did not run |
-| a directly set `struck.f2_source` / `struck.g1_model` with the matching selector still at `toy` | a C++ caller may put an object straight into the tagged kernel's slots (`Pipeline` fills them only when empty, the `breakup.triton_sf` arrangement), but `meta` would then record `"toy"` for a run made on something else. Name the selector `Custom` alongside |
+| either selector OFF ITS SHIPPED DEFAULT together with a caller-supplied `PipelineConfig::kernel` (D7: at `ct18nlo` / `nnpdfpol` it is accepted, `meta` saying "caller-supplied kernel" — since A17 (2026-11-03) "not read with a caller-supplied kernel", V-CODE-1 (2026-11-10); `toy` beside a kernel is refused) | the kernel wins on the inclusive branch and is not read at all on a tagged one; `meta` would record a backend that did not run |
+| a directly set `struck.f2_source` / `struck.g1_model` with the matching selector anything but `Custom` (D7: not only `toy`) | a C++ caller may put an object straight into the tagged kernel's slots (`Pipeline` fills them only when empty, the `breakup.triton_sf` arrangement), but `meta` would then record the selector for a run made on something else (measured: `ct18nlo` over the toy's 591846.17 pb). Name the selector `Custom` alongside |
 | a caller-supplied `PipelineConfig::kernel` on a **tagged** channel, with or without a selector | the tagged channels draw from the **struck-cluster** sampler and never read that field, while `meta["unpol_sf"]`, `["pol_sf"]` and `["b1_model"]` all wrote `"caller-supplied kernel"`. Measured: a `tagged-6Li-alpha` config carrying an `InclusiveKernel` built on CT18NLO ran at F2A(0.3, 10) = 0.3691149345, the **toy** value. Still accepted on `inclusive` **and `coherent`**, which do read it |
 | a `PythiaBridge` whose `options.f2_source` is not the config's own `unpol_sf_obj` (`set_pythia_hadronizer`) | the T2 struck-nucleon species draw would be on a backend `meta["unpol_sf"]` does not name — up to 24 % on F₂ⁿ/F₂ᵖ. Identity, not equality: hand the bridge `config.unpol_sf_obj` before constructing it, which `lipolgen-run` and `lipolgen.run` do |
-| `--b1-unpol toy` under a non-toy `--unpol-sf`, on `--b1-model li6-convolution` | `toy` there means "the kernel's own `UnpolSF`, shared as one object", and that object is no longer `ToyF2` — so `meta["b1_unpol"]` would record `"toy"` for a b₁ folded against CT18NLO. Name the b₁ backend explicitly (§2a) |
+| `--b1-unpol toy` under a non-toy `--unpol-sf` — since D7 the SHIPPED one — on `--b1-model li6-convolution` | `toy` there means "the kernel's own `UnpolSF`, shared as one object", and that object is no longer `ToyF2` — so `meta["b1_unpol"]` would record `"toy"` for a b₁ folded against CT18NLO. Name the b₁ backend explicitly (`--b1-unpol ct18nlo`, `mstw`, or `--unpol-sf toy`; §2a, §10) |
 
 What is **not** refused: either selector on a **tagged** or the **coherent**
 channel. Unlike `--b1-model` — which `validate()` refuses off the inclusive
@@ -1077,11 +1077,11 @@ backend. A rule that depends on the run PLAN could not be refused in any case
 — `validate()` has no plan. See "`--pol-sf` does not run on the coherent
 channel, nor under an unpolarised-beam plan" above.
 
-Also not refused: the neutron-tagged `ct18nlo`/`mstw` + `nnpdfpol` pair. That
+Also not refused: the struck-neutron (`tagged-d-p`) `ct18nlo`/`mstw` + `nnpdfpol` pair. That
 one is refused by the **sampler**, not by `validate()`, and only where it
 actually fails — the acceptance window's top cell — with the cell and
-`--x-max` in the message. See "…and on that channel the pair needs
-`--x-max 0.95`" above.
+`--x-max` in the message (until A3, 2026-11-03; it builds since). See "…and on that channel the pair needed
+`--x-max 0.95` (until A3)" above.
 
 ### Scope, and the three things this does not cover
 
@@ -1120,7 +1120,7 @@ sections read the same object — so all three follow the selector for free and
 must not grow knobs of their own. The **T2 PYTHIA bridge** is the one consumer
 outside the `Pipeline`'s reach: `lipolgen-run` builds the bridge itself, so it
 now hands `PythiaBridgeOptions::f2_source` the same object it gave the kernel.
-Without that a `--hadronize --unpol-sf ct18nlo` run would draw its T2 species
+Without that a `--hadronize` run on the default (CT18NLO since D7) would draw its T2 species
 from `ToyF2` while its rate came from CT18NLO, and the toy's F₂ⁿ/F₂ᵖ — the
 straight line clip(1 − 0.75x, 0.25, 1) — is 0.9625 / 0.8500 / 0.6250 at
 x = 0.05 / 0.20 / 0.50 against CT18NLO's 0.9218 / 0.7219 / 0.5035, i.e. up to
@@ -1159,7 +1159,7 @@ a ⁷Li inclusive run the tensor term of the φ-averaged rate, the cos 2φ
 amplitude and A_zz are all identically zero. Measured on the honest ⁷Li A_zz
 plan (pure |m| = 3/2, T = +1, against pure |m| = ½, T = −1; 60 000 events,
 seed 11, config 1): the two per-category cross sections come back as **the same
-double**, 590952.42641509 pb, and the asymmetry is **exactly 0.0**. There is no
+double**, 590952.42641509 pb (toy SFs; 494062.76099942 on the shipped grids since D7), and the asymmetry is **exactly 0.0**. There is no
 "small" here — the structure functions are absent, not suppressed.
 
 **And that is why the ⁷Li fill's alignment reaches nothing.** Measured
@@ -1311,30 +1311,30 @@ inclusive b₁ double-counts the tagged tensor asymmetry
 for the k-integrated **rate** identity
 `Azz(σ₊₁, σ₀, σ₋₁) = tensor_dilution × ⟨Azz⟩_σ`.
 
-### Cluster radial forms: Hulthen (default) or the ANL VMC tables
+### Cluster radial forms: the ANL VMC tables (default since D6) or Hulthén
 
 ```cpp
-cfg.cluster_wave = ClusterWaveSource::VmcAV18;   // default: Hulthen
+cfg.cluster_wave = ClusterWaveSource::Hulthen;   // the option; default VmcAV18 (D6)
 ```
 ```bash
-python -m lipolgen.cli --channel tagged-alpha --cluster-wave vmc --events 400000
+python -m lipolgen.cli --channel tagged-alpha --cluster-wave hulthen --events 400000
 ```
 ```python
 cfg = lipolgen.make_config(channel="tagged-alpha", events=400000,
-                           cluster_wave="vmc")     # or "hulthen" (default)
+                           cluster_wave="hulthen")  # or "vmc", the default since D6
 ```
 
-`Hulthen` is the two-parameter analytic family (`--cluster-beta`, `--p-d`) and
-stays the default, so every published number is unchanged bit-for-bit.
-`VmcAV18` swaps in the tabulated ANL variational-Monte-Carlo cluster wave
-functions for the two **lithium alpha tags** — magnitudes from
-`data/vmc/momenta/`, the S–D relative sign from `data/vmc/li6_alpha_d/li6.ad`
-— and then **ignores `cluster_beta` and `p_d`**: the shape is the table's, and
-P_D(⁶Li) is a property of the wave function (1.935 %, against the 8.67 %
-scenario placeholder).  Data
-files are found at `$LIPOLGEN_DATA_DIR`, else the compiled-in
-`${CMAKE_SOURCE_DIR}/data`; the tables are zero past 5 fm⁻¹ = 0.9866 GeV, so
-no spectator is drawn beyond that.
+**Since D6 (2026-10-27) `VmcAV18` is the shipped default** (`CLUSTER_WAVE_DEFAULT`,
+`cluster.hpp`): the tabulated ANL variational-Monte-Carlo cluster wave functions
+for the two **lithium alpha tags** — magnitudes from `data/vmc/momenta/`, the
+S–D relative sign from `data/vmc/li6_alpha_d/li6.ad` — which **ignore
+`cluster_beta` and `p_d`** (bar `--cluster-beta` on the ⁷Li T1 triton breakup): the
+shape is the table's, and P_D(⁶Li) is the wave function's (1.935 %, against the
+8.67 % of the analytic pair).  `Hulthen` — the two-parameter analytic family
+(`--cluster-beta`, `--p-d`) and the channel FACTORIES' own default — is the option;
+a `--cluster-wave hulthen` run is bit for bit the pre-D6 default run.  Data files are found at
+`$LIPOLGEN_DATA_DIR`, else the compiled-in `${CMAKE_SOURCE_DIR}/data` (an installed library finds it only while
+that tree exists); the tables are zero past 5 fm⁻¹ = 0.9866 GeV, so no spectator is drawn beyond that.
 
 **Since 2026-09-04 the flag also reaches the deuteron control channel** (open
 item C5.4).  It used to be **silently ignored** there — the comment said "there
@@ -1342,12 +1342,12 @@ is no VMC d → p+n cluster table, the deuteron IS the cluster", which is true o
 the `momenta/` files and false of `data/vmc/deuteron/fdeut.av18`, whose u(k)
 and w(k) *are* the p–n relative S and D waves.  `--cluster-wave vmc` now builds
 the control from that table at its own P_D = **0.057600**
-(`deuteron_av18_p_d()`, +28 % over the scenario `P_D_DEUTERON` = 0.045):
+(`deuteron_av18_p_d()`, +28 % over the scenario `P_D_DEUTERON_SCENARIO` = 0.045 — A1 (2026-11-03): `P_D_DEUTERON` is this 0.0576 now):
 
 | deuteron control | P_D | `vector_dilution` | `tensor_dilution` |
 |---|---|---|---|
-| Hulthén (default, bit for bit) | 0.045 | 0.932496109 | 0.959488878 |
-| AV18 `fdeut` | 0.0575998920 | 0.913595979 | 0.948146339 |
+| Hulthén (the option; the default until D6) | 0.045 | 0.932496109 | 0.959488878 |
+| AV18 `fdeut` (the default since D6) | 0.0575998920 | 0.913595979 | 0.948146339 |
 | change | +28.00 % | **−2.03 %** | **−1.18 %** |
 
 *(The four dilutions were re-measured on the fixed library 2026-09-06 and moved
@@ -1375,10 +1375,10 @@ tagged sector's S–D interference sign was therefore inverted, against
 Cosyn–Weiss II Eq. (6.12) (`src/core/tagged.cpp` `build_amp2`, one
 `(-1)^floor(L/2)`; `docs/benchmarking/07_cw_sign_investigation.md`).  `rad_[2]`
 and `Wave::psi()` are **not** negated, so ψ₂ = +W remains the stored convention
-this paragraph is about.  Hulthén stays the default because the control's job is to be the
-Cosyn–Weiss tagged limit of the same analytic family the ⁶Li channel is built
-from, and because `fdeut.av18` prints no MC errors (so the AV18 row carries no
-band of its own).
+this paragraph is about.  Hulthén stayed the default until D6 because the control's job is to be the
+Cosyn–Weiss tagged limit of the same family the ⁶Li channel is built from — which since
+D6 (registry row 9) is the AV18/VMC one, so the control follows it; `fdeut.av18` prints no
+MC errors, so the default control carries no band of its own.
 
 That rationale — *switching only one thing would make the control and the
 channel it controls two different wave-function families* — is what §C5.5b
@@ -1395,8 +1395,8 @@ band at all.  `VmcRadial` now carries `dpsi()`, `shifted_by_sigma(n)` and
 because one variational walk fixes neither), and the run-level knob is
 
 ```cpp
-cfg.cluster_wave = ClusterWaveSource::VmcAV18;
-cfg.cluster_vmc_mc_sigma = +1.0;    // or -1.0; 0 (default) is bit for bit
+cfg.cluster_wave = ClusterWaveSource::VmcAV18;   // the default since D6
+cfg.cluster_vmc_mc_sigma = +1.0;    // or -1.0; 0 (default) is bit for bit; |sigma| <= 3, refused beyond (A11, 2026-11-03)
 ```
 ```python
 ch = lipolgen._lipolgen.li6_alpha_channel(
@@ -1405,8 +1405,8 @@ ch = lipolgen._lipolgen.li6_alpha_channel(
 
 It shifts every point of both waves by the same n·σ (fully correlated — the
 conservative envelope) and moves P_D by the ratio the shifted norms imply.
-`validate()` **refuses** it off a lithium α-tag channel or on `Hulthen`, by the
-same rule the b₁ band scales are refused under: a knob that did not run may not
+`validate()` **refuses** it off a lithium α-tag channel or on `Hulthen` (it is READ on a
+default lithium α-tag run since D6), by the b₁ band scales' rule: a knob that did not run may not
 be recorded as if it had.  Measured, it is small: **0.47 % / 1.62 %**
 (correlated) on the S/D norms, **1.1 %** on P_D per σ, and **0.02 %** on the
 tagged `tensor_dilution` — against 6.6 % for the Hulthén → VMC choice itself.
@@ -1432,7 +1432,7 @@ Both now follow it (`DEUTERON_AV18()`; `BreakupOptions::source`).
 | **now** | **0.913600** (AV18 `fdeut`) | **0.887076** (both AV18) |
 | change | **−2.027 %** | −2.027 % |
 
-The Hulthén default is untouched, bit for bit.  ⁷Li deliberately does **not**
+The Hulthén path (the default then, the option since D6) is untouched, bit for bit.  ⁷Li deliberately does **not**
 move: there is no AV18 A = 3 wave function in this tree, so on the α–t channel
 the flag selects the relative motion alone.
 
@@ -1442,25 +1442,25 @@ column — unpolarised and plan-independent — moves on this flag as well.
 Measured on `--cluster-wave vmc --events 400 --seed 4242` (tagged-6Li-alpha,
 `tensor-thirds`) against the same command on the pre-fix build: **378 of 400
 events** differ, ⟨p² − M²⟩ **−0.0567 → −0.0599 GeV²**, σ ×1.54; `k`, `weight`
-and every other T0 column are bit-identical, and the Hulthén default is
+and every other T0 column are bit-identical, and the Hulthén path is
 untouched there too.
 
-**And the inclusive constants do NOT follow the flag.** Under
-`--cluster-wave vmc` a tagged row and an inclusive row of the same programme
-describe ⁶Li with wave functions whose vector dilutions differ by **+11.61 %**
-and whose rank-2 transfers differ by **+6.58 %** (open item C5.5).  Since
-2026-09-04 `validate()` **refuses** `cluster_wave` on `--channel inclusive` and
-`--channel coherent`, where it is never read: accepting it unread was how that
+**And the inclusive constants do NOT follow the flag.** Until A1 (2026-11-03) — under `vmc`, the DEFAULT
+since D6 — a tagged and an inclusive row of one programme
+described ⁶Li with wave functions whose α–d vector dilutions differ by **+11.61 %**
+and rank-2 transfers by **+6.58 %** (C5.5; whole nucleus 0.887076 against the pre-A1 0.811228, registry row 10, closed by A1: the inclusive factors are now 0.848 / 0.982576 / P_D 0.0576, so the two default runs differ by +4.6 % (0.887076 / 0.848) and 0 in the rank-2 sector; no CLI knob moves them — the old values are an API route: `lipolgen.li6_ion(LI6_CLUSTER_POLARIZATION_HULTHEN)`, `deuteron_ion(P_D_DEUTERON_SCENARIO)` and `default_inclusive_kernel(…, b1_transfer=LI6_B1_RANK2_TRANSFER_HULTHEN)` as `cfg.kernel`; every inclusive npz carries `meta["li6_cluster_polarization"]` / `["deuteron_p_d"]` / `["li6_b1_rank2_transfer"]` where read, and the banner a line "inclusive polarization factors").  Since
+2026-09-04 `cluster_wave` is **refused** on `--channel inclusive` and `--channel coherent` (since D6 a moved value by `validate()`,
+an explicit `--cluster-wave hulthen` by `make_config` / the CLI; since A17 (2026-11-03) an explicit `vmc`, the default, is accepted and labelled `not-read`, "not read on channel …" in place of the value), where it is never read: accepting a moved value unread was how that
 11.61 % reached someone who had asked for a "VMC ⁶Li" row and got the shipped
 0.811228 with no warning.  Substituting the VMC P_D into
 `LI6_CLUSTER_POLARIZATION` is **not** the fix: it gives 0.905427, 6.8 % *above*
-the ab-initio six-body VMC 0.848, where the shipped 0.811228 is 4.3 % below it.
-**Quote no inclusive ⁶Li polarization without the band 0.81 … 0.91.**
+the ab-initio six-body VMC 0.848, where the pre-A1 0.811228 is 4.3 % below it; A1 ships 0.848 itself.
+**Quote no inclusive ⁶Li polarization without the band 0.811 … 0.887 around 0.848** (the two cluster readings; the ab initio value is the default; pre-A1 "0.81 … 0.91").
 
 What it changes (40 k events, 10 × 99.5 GeV/u; full tables and the derivation
 in `docs/open_items/vmc_reconciliation.md`):
 
-| | Hulthen β = 0.30 | VMC AV18 |
+| | Hulthen β = 0.30 (the option) | VMC AV18 (the default since D6) |
 |---|---|---|
 | ⁶Li ⟨k⟩ / P(k>0.2) / P(k>0.45) | 0.1219 / 0.1476 / 0.0157 | 0.1225 / 0.2410 / 0.0019 |
 | ⁷Li ⟨k⟩ / P(k>0.3) / P(k>0.45) | 0.2893 / 0.3527 / 0.1555 | 0.1864 / 0.2111 / 0.0114 |
@@ -1533,9 +1533,9 @@ regenerated rather than annotated.  For what a single tensor-polarised fill
 does (up to −24.5 % at the CLI's own default fill), see the correction box
 above and `docs/open_items/vmc_reconciliation.md`.
 
-The cluster-wave systematic is quoted as the difference between a
-`--cluster-wave hulthen` run and a `--cluster-wave vmc` run; the Hulthén β
-band is retired as a systematic (the `--cluster-beta` knob stays).
+The cluster-wave systematic is quoted as the difference between a `--cluster-wave hulthen` run and a default (`vmc`) run — a
+difference of models, not a band around the default: the Hulthén α–d pair's asymptotic D/S ratio is +0.0701, the opposite sign to
+George–Knutson's −0.025 ± 0.012 and the VMC −0.0482 (D6, 2026-10-29); the Hulthén β band is retired as a systematic (the knob stays).
 
 Reach the tables directly when you want them: `VmcRadial`,
 `vmc_from_overlap_k`, `vmc_from_overlap_r` (a Fourier–Bessel transform of an
@@ -1556,7 +1556,7 @@ momentum from the cluster's own wave function and writes
 
 | channel | struck cluster | partners | model |
 |---|---|---|---|
-| ⁶Li α | embedded d | 1 nucleon | S + D Hulthén at `P_D_DEUTERON`, the m_S-dependent \|A_{m_sc}\|²; species `F2p : F2n`; nucleon spins from the pair CG factor, so ⟨P_N⟩ = (1 − 3/2 P_D) m_S |
+| ⁶Li α | embedded d | 1 nucleon | the run's deuteron — the AV18 `fdeut` (P_D = 0.057600) by default since D6, the S + D Hulthén at `P_D_DEUTERON_SCENARIO` (0.045) on `--cluster-wave hulthen` — the m_S-dependent \|A_{m_sc}\|²; species `F2p : F2n`; nucleon spins from the pair CG factor, so ⟨P_N⟩ = (1 − 3/2 P_D) m_S |
 | ⁷Li α | quasi-free t | d, or two n | sequential two-body at the AME2020 S_n(³H) = 6.2572 MeV / S(p+n+n) = 8.4818 MeV, nn split at 1/\|a_nn\| = 10.44 MeV — **crude and flagged** (plans/05 5.D) |
 | d control | already a nucleon | none | relabelled only |
 
@@ -1575,7 +1575,7 @@ Set `cfg.tier = Tier::T0` for the pre-T1 record
 (`k + P_ion = k' + p_spec + X`, `X = k + P_X − k'`, no partners, no struck
 nucleon), which is what every tagged number published before this tier was
 made with — every T0 quantity is bit-identical between the two apart from the
-0.02 % of draws T1's own timelike-X rejection redraws.
+0.002–0.064 % of draws T1's own timelike-X rejection redraws (50 k events, re-measured 2026-10-29: 0.064 / 0.014 / 0.006 % of ⁶Li α / ⁷Li α / d–p draws on the D7 default, VMC waves; 0.054 / 0.014 / 0.006 % on the toy SFs; 0.038 / 0.022 / 0.002 % on `--cluster-wave hulthen`).
 
 Naming the struck nucleon is also what makes the **T2 chain conserve with no
 caller-side hook** (§6, `docs/T2_CHAIN.md` §1a).
@@ -1664,8 +1664,8 @@ Three rules, from the header, in order of importance:
 
 The run summary logs the survival probability (∫w dΓ/∫dΓ, what
 `weight_normalised` divides by — the distortion is ~73 % absorptive, so it is
-well below 1 and that is physical): 0.520 at 40 mb, 0.671 at 20 mb on the
-⁶Li α tag (S+D). `glauber-cluster` (the default variant) shadows the X–α
+well below 1 and that is physical): 0.797 at 40 mb, 0.864 at 20 mb on the default (VMC, D6) ⁶Li α tag,
+0.520 / 0.671 on `--cluster-wave hulthen` (S+D). `glauber-cluster` (the default variant) shadows the X–α
 cross section over the α's own Gaussian profile — σ_Xα = 131.0 mb at
 σ_XN = 40, B_α = 27.2 GeV⁻², σ_el/σ_tot = 0.269 vs the measured α-p 0.258 —
 while `glauber-nucleon` is the **unshadowed A·σ_XN = 160 mb single-scattering
@@ -1676,23 +1676,23 @@ term feeds strength back into the tag; `fsi.hpp` header, pinned in
 `weight` column with no further wiring; `Pipeline::fsi_weight()` exposes the
 model (`survival()`, `sigma_eff_mb`, the profile) for printing.
 
-**The two variants are NOT one** — measured 2026-09-04 (D3), because the
-open-items inventory said they were. On ONE event stream reweighted three
+**The two variants are NOT one** — measured 2026-09-04 (D3), because the open-items inventory said they were; re-measured
+2026-10-29 with the wave NAMED (D6 made VMC the default; toy SFs — on D7's grids vmc's Σw is 15989.24 / 16428.58, Σw/Σw_off 0.799462 / 0.821429, the rest unchanged to its digits). On ONE event stream reweighted three
 ways (`--channel tagged-6Li-alpha --events 20000 --seed 1234`, plan
 `tensor-thirds` at P_z = 0.7 / P_zz = 0.6 / P_e = 0.7, at the default
 σ_XN = 40 mb — one stream at one end of the mandatory 20–40 mb band; the
 columns `k`, `cos_theta_k`, `phi_k`, `x`, `q2` bit-identical across the three
-files):
+files), **vmc (the default) / hulthen**:
 
 | | `off` | `glauber-cluster` | `glauber-nucleon` |
 |---|---|---|---|
-| Σ weight (20 000 events) | 20000.0 | 10419.07 | 11632.10 |
-| Σw/Σw_off (the sample mean weight) | 1 | 0.520954 | 0.581605 |
-| `survival()` — the model's own grid-integrated one, `meta["fsi_survival"]` | 1 | 0.520239 | 0.582899 |
-| per-event weight, min … max | 1 | 0.0208 … 1.4043 | 0.2139 … 6.9523 |
+| Σ weight (20 000 events) | 20000.0 | 15989.35 / 10403.75 | 16428.71 / 11584.83 |
+| Σw/Σw_off (the sample mean weight) | 1 | 0.799467 / 0.520188 | 0.821436 / 0.579241 |
+| `survival()` — the model's own grid-integrated one, `meta["fsi_survival"]` | 1 | 0.797094 / 0.520239 | 0.819119 / 0.582899 |
+| per-event weight, min … max | 1 | 0.0681 … 37.92 / 0.0181 … 1.4138 | 0.2026 … 50.0 (the `w_max` ceiling, 2 events) / 0.2124 … 6.9625 |
 
-Per event, w_nucleon/w_cluster has median 0.897 and reaches **68.52**, and
-**99.50 % of the events differ by more than 1 %**. Different by construction,
+Per event, w_nucleon/w_cluster has median 0.991 / 0.897 and reaches **10.14 / 69.89**, and **64.5 % / 99.4 % of the events differ by more than 1 %** (the
+2026-09-04 Hulthén sample, before the S–D fix: Σw 10419.07 / 11632.10, 68.52, 99.50 %); on the default the weight table clips at w_max = 50 on 0.70 % / 5.25 % of its cells (0 on Hulthén). Different by construction,
 not by parameter choice: the algebraic identity that *does* hold (the Ciofi
 degli Atti–Kaptari per-nucleon product on an uncorrelated density collapses
 onto the cluster form) is about a code path this library does not have, which
@@ -1701,7 +1701,7 @@ instead.
 
 **What the run records.** Since 2026-09-04 an FSI run's npz `meta` carries
 `fsi`, `fsi_sigma_mb`, `fsi_sigma_cluster_mb`, `fsi_sigma_cluster_el_mb`,
-`fsi_survival`, `fsi_clipped_grid_fraction`, `fsi_formation_ramp` (and the
+`fsi_survival`, `fsi_clipped_grid_fraction` (printed on the banner since A12, 2026-11-03: "FSI weight table: … % of cells clipped at w_max = 50 (sigma_XN = 40 mb; …)", an unpriced systematic, registry row 28), `fsi_formation_ramp` (and the
 four ramp anchors when the ramp ran). Before that the three runs above
 produced **identical `meta` dicts** while their total rate differed by 48 % /
 42 % — which made the mandatory 20–40 mb band unquotable, because the two ends
@@ -1992,11 +1992,11 @@ bool  seen = rp_tagged(ev, tag, p.pot_config()); // main window + near-beam tail
 levers everywhere — the way every tagging number published before 2026-08-29 was
 made. `OpticsChoice::Custom` uses `PipelineConfig::optics` verbatim.
 
-Measured ⁶Li α tag at 10 × 99.5 GeV/u (400 k events): **0.0248** at the Yellow
-Report high-acceptance optics, **0.3046** at the tagging optics with the legacy
-levers, **0.2547** with the per-configuration levers — against the Python's
-0.0247 / 0.3061 / 0.2545. The ⁷Li α tag is optics-blind at 0.966 / 0.974 / 0.979
-(YR) against 0.981 / 0.993 / 0.994 (tagging).
+Measured ⁶Li α tag at 10 × 99.5 GeV/u (400 k events, `--cluster-wave hulthen`, the Python's wave): **0.0249** at the Yellow
+Report high-acceptance optics, **0.3051** at the tagging optics with the legacy
+levers, **0.2543** with the per-configuration levers — against the Python's
+0.0247 / 0.3061 / 0.2545; on the default VMC waves (D6) 0.0334 / 0.2874 / 0.2486 (D7 grids: 0.0334375 / 0.287445 / 0.2486425, toy 0.248635). The ⁷Li α tag is optics-blind at 0.966 / 0.974 / 0.979
+(YR) against 0.981 / 0.993 / 0.994 (tagging) on Hulthén, 0.998 / 0.998 / 0.998 against 0.9996 / 0.9994 / 0.9995 on the default.
 
 ## 6. HepMC3, and handing events to the T2 (PYTHIA) tier
 
@@ -2142,7 +2142,7 @@ event, and file by file, in `tests/test_rc_pipeline.cpp` (T6) and
 `python/tests/test_rc.py`. The structural guarantee is that
 `RcModel::fill(Event&) const` takes no `Rng&`. With `--rc off` the npz key
 set and the HepMC3 weight names are **exactly** today's, so an `--rc off`
-file is byte-identical to one written before `rc.hpp` existed.
+file's weight block is the one written before `rc.hpp` existed (byte-identical files until A10, 2026-11-03, whose `lipolgen.*` GenRunInfo attributes record the run's provenance: `docs/HEPMC3_CONVENTION.md`, last section).
 
 **Per channel** (`RcModel::applies()` decides; the run prints why, and
 nothing is ever refused so a channel scan need not special-case `--rc`):
@@ -2209,8 +2209,8 @@ nothing is ever refused so a channel scan need not special-case `--rc`):
 >   nucleon knocked out of the **α** destroys the α and *is* vetoed).
 >
 > The omitted dilution is therefore of the **same order as the inclusive
-> quasi-elastic one** — 22 % / 73 % / 99.9 % of the inclusive tail at
-> x = 0.01 / 0.10 / 0.30 — not a negligible one. That is an
+> quasi-elastic one** — 39 % / 99.8 % / 100 % of the default inclusive tail at
+> x = 0.01 / 0.10 / 0.30, Q² = 5 (22 / 73 / 99.9 % of the `t-peak` one) — not a negligible one. That is an
 > **order-of-magnitude argument, not a computed number**; pricing it needs a
 > **tagged** Born denominator and the tag acceptance folded into Eq. (44), plus
 > the **cluster-elastic** `e + A → e' + γ + d + α` that Eq. (44)'s free-nucleon
@@ -2226,9 +2226,9 @@ nothing is ever refused so a channel scan need not special-case `--rc`):
   Unclamped, a 20 k-event tagged-alpha run published `rc_tensor_hi` down to
   **−1.79** (⁷Li: **−8.35**), i.e. **negative weights in the npz**.
   `RcOptions::band_tau_max` (default 1.0) holds every published edge inside
-  `[1 − δ, 1 + δ]`; the clipped fraction is **1.2 % of ⁶Li tagged-alpha
-  events and 2.6 % of ⁷Li** (re-measured 2026-09-15; the ⁶Li 0.6 % predates
-  the S–D fix `a7b3d18`), is printed by the run and lands in
+  `[1 − δ, 1 + δ]`; the clipped fraction is **0.080 % of ⁶Li tagged-alpha events and 2.540 % of ⁷Li on the D7 default (VMC waves; 2.535 % on the toy SFs)**
+  (D6; **1.2250 % / 2.600 %** on `--cluster-wave hulthen`, re-measured 2026-09-15 — 20 k events, seed 1 / seed 11, the P_z = 0 fills
+  of the suites, toy SFs, re-confirmed 2026-10-29; the ⁶Li 0.6 % predates the S–D fix `a7b3d18`), is printed by the run and lands in
   `meta["rc_clipped_band_event_fraction"]` and per event in
   `Event.rc_clipped`. `n_M → 0` is exactly where "rescale the tensor part by
   δ" stops meaning anything, so the clamp is a **choice**, not a fix.
@@ -2239,32 +2239,32 @@ quote the lo/hi envelope on `A_zz`:
 
 | knob | rows to run | what it prices |
 |---|---|---|
-| `--rc-delta-low-x` | **0.19 and 0.30** (and, since 2026-09-06, **0.266 and 0.113** as priced alternatives) | 0.30 is the conservative end of Gakh–Shekhovtsova's 10–30 %; 0.19 is the residual HERMES actually achieved at its lowest-x bin. **Which way the default errs:** the 0.30 is that paper's panel value **carried upward in x**, and **0.113 is what the panel reads at x = 0.00966, the x nearest the 0.01 anchor** (0.266 at its own bottom, x = 0.00226) — the shipped anchor is **×2.65** that reading. Priced, not adopted (registry row 17, `open_items/run_2026-09-06/phase_A_numbers.md` §A2): band half-width on A_zz at Q² = 5, P_zz = +1, ⁶Li config 1 = **1.358472e−04 / 1.204512e−04 / 5.116913e−05** at x = 0.01, **1.459067e−04 / 1.308566e−04 / 6.313127e−05** at x = 0.063 (where the band peaks on all three), **9.680016e−05 / 8.798804e−05 / 4.833349e−05** at x = 0.10 and **1.920691e−05** at x = 0.16 on all three — the high anchor pins x ≥ 0.16, so the whole choice lives below it. It moves **two columns and two of the 60 `meta` keys** (`rc_delta_low_x` and the `knob_provenance` row that records it) and **not** the tagged band's clipped-event fraction (245 of 20 000 = 1.2250 % on all three, seed 1 — re-measured 2026-09-15; 124 = 0.62 % predates the S–D fix `a7b3d18`: `clamp_tau` clips \|τ\| and δ never enters it) |
+| `--rc-delta-low-x` | **0.19 and 0.30** (and, since 2026-09-06, **0.266 and 0.113** as priced alternatives) | 0.30 is the conservative end of Gakh–Shekhovtsova's 10–30 %; 0.19 is the residual HERMES actually achieved at its lowest-x bin. **Which way the default errs:** the 0.30 is that paper's panel value **carried upward in x**, and **0.113 is what the panel reads at x = 0.00966, the x nearest the 0.01 anchor** (0.266 at its own bottom, x = 0.00226) — the shipped anchor is **×2.65** that reading. Priced, not adopted (registry row 17, `open_items/run_2026-09-06/phase_A_numbers.md` §A2): band half-width on A_zz at Q² = 5, P_zz = +1, ⁶Li config 1 = **1.358472e−04 / 1.204512e−04 / 5.116913e−05** at x = 0.01, **1.459067e−04 / 1.308566e−04 / 6.313127e−05** at x = 0.063 (where the band peaks on all three), **9.680016e−05 / 8.798804e−05 / 4.833349e−05** at x = 0.10 and **1.920691e−05** at x = 0.16 on all three — the high anchor pins x ≥ 0.16, so the whole choice lives below it. It moves **two columns and two of the 60 `meta` keys** (`rc_delta_low_x` and the `knob_provenance` row that records it) and **not** the tagged band's clipped-event fraction (245 of 20 000 = 1.2250 % on all three, seed 1, on `--cluster-wave hulthen` — re-measured 2026-09-15; 16 = 0.080 % on the default VMC waves since D6; 124 = 0.62 % predates the S–D fix `a7b3d18`: `clamp_tau` clips \|τ\| and δ never enters it) |
 | `--rc-a-transfer-frac` | **0 (default), 0.5, 1** | the **A = 2 → A = 6 TRANSFER** of the band. Every number δ(x) interpolates between is a **deuteron** number — HERMES's measured low-x residual, Gakh–Shekhovtsova's 10–30 % (itself a Q² = 0.1 GeV² figure — the only panel of its Fig. 2 inside the x ∼ 10⁻³–10⁻² the sentence quotes it for), E12-13-011's 1.5 % — and **no A > 2 tensor RC calculation exists at all**, so the default band silently assumes the deuteron *fractional* RC transfers to ⁶Li exactly. This adds `f·δ(x)` in quadrature: `δ_eff = δ√(1+f²)`, i.e. the band widens by **1× / 1.118× / 1.414×**. Half-widths on A_zz at x = 0.01, Q² = 5: **1.358e−04 / 1.519e−04 / 1.921e−04**. It moves the **band only** — not `rc_tail`, not τ — and **no measurement prefers any value**: it is a price tag, not a correction. `meta["rc_a_transfer_frac"]` records it |
-| `--rc-fq-scale` | **0, 1, 2** | ±100 % on the ⁶Li quadrupole form factor. σ^el_T is **quadratic** in it, so this band must be **RUN, never rescaled** from one row — the two edges are not symmetric about the nominal, and at `x = 0.01, Q² = 5` they even bracket a **sign change** of ΔA_zz |
+| `--rc-fq-scale` | **0, 1, 2** | ±100 % on the ⁶Li quadrupole form factor. σ^el_T is **quadratic** in it, so this band must be **RUN, never rescaled** from one row — the two edges are not symmetric about the nominal, and at `x = 0.01, Q² = 5` they even bracket a **sign change** of ΔA_zz — on both tail models (+2.255e−07 → −5.786e−07 on `t-peak`, +2.908e−07 → −5.257e−07 on the default `polrad-full`, re-measured 2026-10-29) |
 | `--rc-tail-tensor-scale` | **0.5, 1, 2** | the η·F_m² tensor sector, which `--rc-fq-scale` does **not** span |
-| `--rc-c0-shape` | **`ho` and `vmc-ft`** | the ⁶Li **C0 (monopole) SHAPE**, shared by F_c and F_q. `ho` is the unfitted harmonic oscillator every published number was made with; `vmc-ft` is the j₀ transform of the committed ANL VMC point-proton density, r-rescaled so that **⟨r²⟩_point, F_c(0) = 3 and F_q(0) = −65.914 are identical on the two edges** (T11 gates all three on both). It is a *shape*, not a multiplier: it cannot be rescaled out of one run, and no two-parameter oscillator can be refitted to reach the other edge while holding ⟨r²⟩. It **flips the sign of the tensor fraction of the elastic tail at x = 0.1** — see the box below. Cost: `RcModel` construction 0.11 s → 1.29 s |
-| `--rc-tail-model` | **`t-peak`, `t-peak+ll` and `polrad-full`** | **WHICH PEAKS OF THE TAIL ARE IN IT.** `polrad-full` (2026-09-06) is POLRAD **Eq. (18) + Appendix B + Eq. (A.4)** — ONE exact τ_A quadrature with all three peaks **and** the s-/p-peaks' own Eq. (A.4) tensor content, so `--rc-sp-tensor-scale` is refused on it (the term RAN). **It is NOT inside the t-peak pair**: between the two edges on **1725 of 3051** accepted cells (56.5 %), covering a median **0.6555** of the gap **over the 3027 cells whose gap is nonzero** (0.6620 over all 3051; the other 24 have `t-peak+ll` = `t-peak` exactly, so no fraction), with the **ratio of the σ-weighted mean shifts** at **0.428** — a ratio of means, **not** a σ-weighted (still less an event-weighted) mean of the per-cell fractions, which is **6.483** — and **above both** in the Q² ≥ 20, y ≤ 0.9 window. Whole-run mean `rc_tail` (200 k, seed 1234) **at the default fill P_z = 0.7**: **1.021778527 / 1.040274188 / 1.029702912**; at **P_z = 0** (the plan both test suites use) **1.021836305 / 1.040368933 / 1.029775347** on the same build. Still **not** checked against [MT69] or any external exact tail — only POLRAD-internally (`Eq. (18)/Eq. (38) → 1` as `x_A → 0`, 1.00230 unpolarised / 1.00313 tensor at x_A = 0.003) and against the leading log. Costs ~10 s of table build and needs `n_eta ≥ 64`. `t-peak` is the default and the **lower** edge: POLRAD Eqs. (37)–(39), (43), one peak of a three-peak object. `t-peak+ll` adds the leading-log s- and p-peaks and is the **upper** edge. Their sum is a **stated model of mixed approximation orders** (an η_A quadrature plus a single-z leading log), good to ~5–10 %, with an uncancelled soft `1/(1−z)` as `y → 0`; and it has **no tensor s/p partner**, so it **lowers the tensor fraction** of the tail (`r_T/r_U` ×0.66139 / ×0.0031829 / ×6.6076e−05 at x = 0.01 / 0.10 / 0.30, Q² = 5) — the tensor part of those peaks is, since 2026-09-06, **bounded, not computed** by `--rc-sp-tensor-scale`, and that bound is **empty at those three points** (recovers 0.0 % of the collapse, bit-identical) and at most **21.72 %** anywhere on the grid, with the quasi-elastic s/p column bounded by **nothing** — see §7b. Whole-run mean `rc_tail` on 200 k inclusive ⁶Li config-1 events, **at the default fill P_z = 0.7**: **1.021778527 → 1.040274188**; at **P_z = 0**, **1.021836305 → 1.040368933** (*corrected 2026-09-15: the 2026-09-06 note that the 1.021836 → 1.040369 pair "is pre-Phase-A and does not reproduce" is **withdrawn** — it is this build's own P_z = 0 answer, re-measured*). In the `Q² ≥ 20 GeV²`, `y ≤ 0.9` window the two edges agree to **+0.61 % event-weighted at P_z = 0, +0.62 % at P_z = 0.7** but **not cell by cell**: 331 of 1356 accepted cells (24.4 %) differ by more than 1 %, worst **×6444** at `x = 0.79`, `y = 0.0088`, and they differ by 59 % at `y = 0.985`. Per-cell agreement is ≤ 0.55 % only for `0.15 ≤ y ≤ 0.7` |
-| `--rc-qe-suppression` | **0, 0.5, 1** | a flat multiplier on the quasi-elastic tail, **on top of** the Pauli suppression below. `rc_tail` is quasi-elastic-**dominated** at every `x ≳ 0.03` (73 % of the tail at `x = 0.1`, **99.9 %** at `x = 0.30`), so 0 is never a small variation |
-| `--rc-qe-tensor-scale` | **0 (default) and 1 — and read the caveat before either** | the **POLARISED** quasi-elastic tail, which is otherwise treated as exactly tensor-blind on the piece that is 73 % of `rc_tail` at x = 0.1 and **99.9 %** at x = 0.30. Nobody has computed it: POLRAD has no tensor partner to Eq. (44) and no such calculation exists for an A = 6 spin-1 nucleus. At **1** the quasi-elastic tail is lent the **elastic** tail's own σ^el_T/σ^el_U — a **BORROWED MAGNITUDE, not a derived bound** (a *coherent* nuclear quadrupole fraction on an *incoherent* nucleon process). ⁶Li's elastic tensor fraction is anomalously small for a reason the quasi-elastic piece has no reason to share, so **1 may be ~10² too small at x ≤ 0.1**, and the SIGN it inherits is meaningless — read the **magnitude**. It is **exactly linear**, so one run rescales to any value. Measured at Q² = 5: ΔA_zz moves by −1.162e−07 / +3.018e−10 / +1.796e−09 at x = 0.01 / 0.10 / 0.30, i.e. **0.086 % / 0.0003 % / 0.25 %** of the band half-width there |
-| `--rc-sp-tensor-scale` | **0 (default) and 1 — and read where the bound is EMPTY before quoting either** | the **TENSOR fraction of the leading-log s-/p-peaks**, which `--rc-tail-model t-peak+ll` otherwise adds to the **unpolarised** numerator alone, so that edge lowers `r_T/r_U` by **×0.66139 / ×0.0031829 / ×6.6076e−05** at x = 0.01 / 0.10 / 0.30, Q² = 5 purely by growing the denominator (`r_U` ×1.512 / ×314.18 / ×15134). **Refused unless `--rc-tail-model t-peak+ll`** — the t-peak-only tail computes no s/p peaks, so a price there would be recorded without a single operation behind it. At **1** the **elastic** s-/p-peaks are lent the elastic t-peak's own σ^el_T/σ^el_U. **IT IS A BOUND WITH NO DERIVATION**, and it borrows *less* than `--rc-qe-tensor-scale` (the same coherent ⁶Li vertex, a different photon topology) — but **it is EMPTY at the three standard points**: Q′²_s = 4.3728 / 4.9382 / 4.9801 GeV² there, where F_c = −3.75e−45 / −6.44e−51 / −2.41e−51 against **+2.99260** at the t-peak's own t_min = 8.7304e−05, so `u_sp/σ^el_U` = 5.25e−79 / 2.07e−86 / 4.06e−83 and **ΔA_zz moves by exactly 0 at scale 0, 0.5 and 1**, recovering **0.0 %** of the collapse. It bites on **77 of 3051 accepted cells** (x ≤ 7.94e−03, y ≥ 0.366), reaching **582.9 %** of the band half-width at x = 4.169e−04, y = 0.9692 (`--rc-qe-tensor-scale 1` gives 328.4 % there) and recovering at most **21.72 %** of the collapse. Exactly linear, so one run rescales. The **quasi-elastic** s/p column is bounded by **neither** scale |
-| `RcOptions::qe_kf_gev` (API) | **0.169 (default), 0.221, 0** | POLRAD Eq. (44)'s `S_E`/`S_M`, the de Forest–Walecka Fermi-gas factor `S(q) = (3/4)(q/k_F) − (q/k_F)³/16` below `q = 2k_F`, exactly as POLRAD's `ffquas` codes it. **On by default** at ⁶Li's measured `k_F` (Moniz *et al.*, PRL **26** (1971) 445). It cuts the QRT to **0.47** at `x = 0.01` and **0.87** at `x = 0.1`; `0` is the unsuppressed edge v0 shipped |
+| `--rc-c0-shape` | **`ho` and `vmc-ft`** | the ⁶Li **C0 (monopole) SHAPE**, shared by F_c and F_q. `ho` is the unfitted harmonic oscillator every published number was made with; `vmc-ft` is the j₀ transform of the committed ANL VMC point-proton density, r-rescaled so that **⟨r²⟩_point, F_c(0) = 3 and F_q(0) = −65.914 are identical on the two edges** (T11 gates all three on both). It is a *shape*, not a multiplier: it cannot be rescaled out of one run, and no two-parameter oscillator can be refitted to reach the other edge while holding ⟨r²⟩. It **flips the sign of the tensor fraction of the elastic tail at x = 0.1** — see the box below. Cost: `RcModel` construction 0.11 s → 1.29 s on `t-peak`; 11.9 s → 16.1 s on the default `polrad-full` (unloaded, 2026-10-29) |
+| `--rc-tail-model` | **`polrad-full` (the default since D5, 2026-10-27), `t-peak` and `t-peak+ll`** | **WHICH PEAKS OF THE TAIL ARE IN IT.** `polrad-full` (2026-09-06; the shipped default since 2026-10-27) is POLRAD **Eq. (18) + Appendix B + Eq. (A.4)** — ONE exact τ_A quadrature with all three peaks **and** the s-/p-peaks' own Eq. (A.4) tensor content, so `--rc-sp-tensor-scale` is refused on it (the term RAN). **It is NOT inside the t-peak pair**: between the two edges on **1725 of 3051** accepted cells (56.5 %), covering a median **0.6555** of the gap **over the 3027 cells whose gap is nonzero** (0.6620 over all 3051; the other 24 have `t-peak+ll` = `t-peak` exactly, so no fraction), with the **ratio of the σ-weighted mean shifts** at **0.428** — a ratio of means, **not** a σ-weighted (still less an event-weighted) mean of the per-cell fractions, which is **6.483** — and **above both** in the Q² ≥ 20, y ≤ 0.9 window. Whole-run mean `rc_tail` (200 k, seed 1234, toy SFs) **at the default fill P_z = 0.7**: **1.021778527 / 1.040274188 / 1.029702912** (D7's grids: 1.025494331 / 1.047116364 / 1.034783841); at **P_z = 0** (the plan both test suites use) **1.021836305 / 1.040368933 / 1.029775347** (D7: 1.025506240 / 1.047148070 / 1.034803052) on the same build. Its **proton** (quasi-elastic) slot is checked against DJANGOH 4.6.21's exact O(α) tail (BENCHMARK_PLAN row 7: 1.0004 / 1.0010 / 0.9995 / 0.9866 from the quadrature); the coherent ⁶Li slot and the tensor term only POLRAD-internally (`Eq. (18)/Eq. (38) → 1` as `x_A → 0`, 1.00230 unpolarised / 1.00313 tensor at x_A = 0.003) and against the leading log; [MT69] is not in the tree. Costs ~12 s of table build per run, uncached, and needs `n_eta ≥ 64` and a `long double` wider than `double` (MSVC and Apple arm64 refuse it; aarch64 Linux unmeasured). `t-peak` (the default until 2026-10-27; every unlabelled RC-tail number published before then is a `t-peak` one) is the **lower** edge: POLRAD Eqs. (37)–(39), (43), one peak of a three-peak object. `t-peak+ll` adds the leading-log s- and p-peaks and is the **upper** edge. Their sum is a **stated model of mixed approximation orders** (an η_A quadrature plus a single-z leading log), good to ~5–10 %, with an uncancelled soft `1/(1−z)` as `y → 0`; and it has **no tensor s/p partner**, so it **lowers the tensor fraction** of the tail (`r_T/r_U` ×0.66139 / ×0.0031829 / ×6.6076e−05 at x = 0.01 / 0.10 / 0.30, Q² = 5) — the tensor part of those peaks is, since 2026-09-06, **bounded, not computed** by `--rc-sp-tensor-scale`, and that bound is **empty at those three points** (recovers 0.0 % of the collapse, bit-identical) and at most **21.72 %** anywhere on the grid, with the quasi-elastic s/p column bounded by **nothing** — see §7b. Whole-run mean `rc_tail` on 200 k inclusive ⁶Li config-1 events (toy SFs), **at the default fill P_z = 0.7**: **1.021778527 → 1.040274188** (D7's grids: 1.025494331 → 1.047116364); at **P_z = 0**, **1.021836305 → 1.040368933** (D7: 1.025506240 → 1.047148070) (*corrected 2026-09-15: the 2026-09-06 note that the 1.021836 → 1.040369 pair "is pre-Phase-A and does not reproduce" is **withdrawn** — it is this build's own P_z = 0 answer, re-measured*). In the `Q² ≥ 20 GeV²`, `y ≤ 0.9` window the two edges agree to **+0.61 % event-weighted at P_z = 0, +0.62 % at P_z = 0.7** but **not cell by cell**: 331 of 1356 accepted cells (24.4 %) differ by more than 1 %, worst **×6444** at `x = 0.79`, `y = 0.0088`, and they differ by 59 % at `y = 0.985`. Per-cell agreement is ≤ 0.55 % only for `0.15 ≤ y ≤ 0.7` |
+| `--rc-qe-suppression` | **0, 0.5, 1** | a flat multiplier on the quasi-elastic tail, **on top of** the Pauli suppression below. `rc_tail` is quasi-elastic-**dominated** at every `x ≳ 0.03` (99.8 % of the default tail at `x = 0.1`, **100 %** at `x = 0.30`; 73 % / 99.9 % of the `t-peak` one), so 0 is never a small variation |
+| `--rc-qe-tensor-scale` | **0 (default) and 1 — and read the caveat before either** | the **POLARISED** quasi-elastic tail, which is otherwise treated as exactly tensor-blind on the piece that is 99.8 % / **100 %** of the default `rc_tail` at x = 0.1 / 0.30 (73 % / 99.9 % on `t-peak`). Nobody has computed it: POLRAD has no tensor partner to Eq. (44) and no such calculation exists for an A = 6 spin-1 nucleus. At **1** the quasi-elastic tail is lent the **elastic** tail's own σ^el_T/σ^el_U — a **BORROWED MAGNITUDE, not a derived bound** (a *coherent* nuclear quadrupole fraction on an *incoherent* nucleon process). ⁶Li's elastic tensor fraction is anomalously small for a reason the quasi-elastic piece has no reason to share, so **1 may be ~10² too small at x ≤ 0.1**, and the SIGN it inherits is meaningless — read the **magnitude**. It is **exactly linear**, so one run rescales to any value. Measured at Q² = 5 on `t-peak`: ΔA_zz moves by −1.162e−07 / +3.018e−10 / +1.796e−09 at x = 0.01 / 0.10 / 0.30, i.e. **0.086 % / 0.0003 % / 0.25 %** of the band half-width there. **On the default `polrad-full` (re-measured 2026-10-29 on the toy SFs; on D7's grids −2.998e−07 / +1.584e−08 / +7.804e−06, the same 0.195 % / 0.018 % / 1454 %): −2.650e−07 / +1.741e−08 / +1.0625e−05, i.e. 0.195 % / 0.018 % / 1454 % — at x = 0.30 the stand-in at scale 1 is 14.5× the band half-width**, because the quasi-elastic tail is 3.7 × 10⁶ σ^el_U there |
+| `--rc-sp-tensor-scale` | **0 (default) and 1 — and read where the bound is EMPTY before quoting either** | the **TENSOR fraction of the leading-log s-/p-peaks**, which `--rc-tail-model t-peak+ll` otherwise adds to the **unpolarised** numerator alone, so that edge lowers `r_T/r_U` by **×0.66139 / ×0.0031829 / ×6.6076e−05** at x = 0.01 / 0.10 / 0.30, Q² = 5 purely by growing the denominator (`r_U` ×1.512 / ×314.18 / ×15134). **Refused unless `--rc-tail-model t-peak+ll`** — on `t-peak` because the t-peak-only tail computes no s/p peaks, so a price there would be recorded without a single operation behind it; on the default `polrad-full` for the **opposite** reason: Eq. (18) computed the s/p tensor term, and the stand-in would double-count it. At **1** the **elastic** s-/p-peaks are lent the elastic t-peak's own σ^el_T/σ^el_U. **IT IS A BOUND WITH NO DERIVATION**, and it borrows *less* than `--rc-qe-tensor-scale` (the same coherent ⁶Li vertex, a different photon topology) — but **it is EMPTY at the three standard points**: Q′²_s = 4.3728 / 4.9382 / 4.9801 GeV² there, where F_c = −3.75e−45 / −6.44e−51 / −2.41e−51 against **+2.99260** at the t-peak's own t_min = 8.7304e−05, so `u_sp/σ^el_U` = 5.25e−79 / 2.07e−86 / 4.06e−83 and **ΔA_zz moves by exactly 0 at scale 0, 0.5 and 1**, recovering **0.0 %** of the collapse. It bites on **77 of 3051 accepted cells** (x ≤ 7.94e−03, y ≥ 0.366), reaching **582.9 %** of the band half-width at x = 4.169e−04, y = 0.9692 (`--rc-qe-tensor-scale 1` gives 328.4 % there) and recovering at most **21.72 %** of the collapse. Exactly linear, so one run rescales. The **quasi-elastic** s/p column is bounded by **neither** scale |
+| `RcOptions::qe_kf_gev` (API) | **0.169 (default), 0.221, 0** | POLRAD Eq. (44)'s `S_E`/`S_M`, the de Forest–Walecka Fermi-gas factor `S(q) = (3/4)(q/k_F) − (q/k_F)³/16` below `q = 2k_F`, exactly as POLRAD's `ffquas` codes it. **On by default** at ⁶Li's measured `k_F` (Moniz *et al.*, PRL **26** (1971) 445). It cuts the QRT to **0.67** at `x = 0.01` and **0.999** at `x = 0.1` on the default `polrad-full` tail and to **0.47** / **0.87** on `t-peak` (Q² = 5, re-measured 2026-10-29); `0` is the unsuppressed edge v0 shipped |
 
 > **The C0 shape band decides a sign, so read this before quoting `σ^el_T`.**
-> `(1/6)σ^el_T/σ^el_U` at Q² = 5 GeV², `ho` / `vmc-ft`:
+> `(1/6)σ^el_T/σ^el_U` at Q² = 5 GeV², `ho` / `vmc-ft`, on `t-peak` (the published rows) and, in brackets, on the default `polrad-full` (D5; re-measured 2026-10-29):
 >
 > | x | 0.01 | 0.03 | 0.10 | 0.30 |
 > |---|---|---|---|---|
-> | `ho` | −5.0943e−04 | −7.3583e−04 | **+1.5595e−04** | +1.3287e−02 |
-> | `vmc-ft` | −5.4705e−04 | −8.0426e−04 | **−4.0702e−05** | +1.5556e−02 |
+> | `ho` | −5.0943e−04 (−5.1540e−04) | −7.3583e−04 (−7.4709e−04) | **+1.5595e−04** (**+4.4562e−05**) | +1.3287e−02 (+1.0947e−02) |
+> | `vmc-ft` | −5.4705e−04 (−5.5461e−04) | −8.0426e−04 (−8.1840e−04) | **−4.0702e−05** (**−1.6369e−04**) | +1.5556e−02 (+1.1293e−02) |
 >
 > The **sign change with x survives** the band — both edges are negative at low
 > x and positive at 0.30 — but **where** it happens does not, and **at x = 0.10
-> the sign is indeterminate**: publish it as such, never as +1.6e−04. Adding
-> `--rc-fq-scale 0 … 2` widens x = 0.10 to −9.0e−05 … +4.0e−04, still spanning
+> the sign is indeterminate** on both tail models: publish it as such, never as +1.6e−04. Adding
+> `--rc-fq-scale 0 … 2` widens x = 0.10 to −9.0e−05 … +4.0e−04 (`t-peak`), still spanning
 > zero on both edges. `σ^el_U` rises by ×1.011 / ×1.022 / ×1.104 / ×3.03 over
-> the same x, the quasi-elastic tail is **bit-identical** between the edges, and
-> `ΔA_zz` moves by −8 % / +0.6 % / +37 % at x = 0.01 / 0.10 / 0.30 — three
+> the same x (×1.011 / ×1.023 / ×1.105 / ×2.761 on `polrad-full`), the quasi-elastic tail is **bit-identical** between the edges, and
+> `ΔA_zz` moves by −8 % / +0.6 % / +37 % at x = 0.01 / 0.10 / 0.30 (as published, `t-peak` on the withdrawn deuteron-b₁ `A_zz`; with the shipped ⁶Li b₁ +18.7 / −4.0 / +90.7 % on `t-peak` and +29.4 / −0.0 / +0.0 % on `polrad-full`, 2026-10-29, toy SFs; on D7's grids +22.5 / −4.6 / +109.7 % and +43.9 / −0.0 / +0.0 %) — three
 > orders below the band, so the *ordering* of the systematics is unchanged.
 > `meta["rc_c0_shape"]` records which edge ran. Everything measured, with the
 > high-q continuation and the two policy overrides argued:
@@ -2274,7 +2274,7 @@ At `x = 0.01, Q² = 5 GeV²` (config 1, `--plan tensor-thirds --pzz 0.6`) the
 band is by far the largest of these: half-width **`1.358472e−04`** on `A_zz` at
 δ_low = 0.30, against `8.0e−07` from the whole `fq_scale`
 band, `2.9e−08` from the whole C0 shape band and `1.769797e−07` from the entire
-tail — a factor **768** over the tail. **The band — the unapplied
+`t-peak` tail — a factor **768** over the tail (**`1.178978e−07`**, ×**1152**, on the default `polrad-full` tail since D5; re-measured 2026-10-29 on the toy SFs — **8.874874e−08, ×1732** on D7's grids). **The band — the unapplied
 lepton-vertex correction — is what `--rc tensor-band` is for; the tail is a
 bookkeeping item at EIC energies and the headline at a fixed target.** Every
 number is in `docs/OPEN_ITEMS_SOLUTIONS.md` §9.
@@ -2285,8 +2285,8 @@ number is in `docs/OPEN_ITEMS_SOLUTIONS.md` §9.
 > withdrawn on 2026-09-04
 > (`open_items/run_2026-09-03/phase_B_numbers.md` §B3.2); with this
 > generator's own ⁶Li b₁ the half-width is **`1.358472e−04`** (and
-> **`8.603659e−05`** at δ_low = 0.19, re-measured here) and the whole tail
-> **`−1.769797e−07`**, so the factor is **768**, not 1300.
+> **`8.603659e−05`** at δ_low = 0.19, re-measured here) and the whole (`t-peak`) tail
+> **`−1.769797e−07`**, so the factor is **768**, not 1300 (×1152 on the `polrad-full` default since D5; ×1732 on D7's grids).
 > **The other two entries — `8.0e−07` from `fq_scale` and `2.9e−08` from the
 > C0 shape — are `OPEN_ITEMS_SOLUTIONS.md` §9's own un-re-measured rows and
 > still carry the withdrawn `A_zz`**; they are quoted unchanged and are not
@@ -2338,8 +2338,8 @@ number is in `docs/OPEN_ITEMS_SOLUTIONS.md` §9.
   has no tensor partner to Eq. (44) and no such calculation exists for an
   A = 6 spin-1 nucleus — and it is **neglected by default**, citing Z.-L. Zhou
   *et al.*, PRL **82** (1999) 687 (a *deuteron* statement, and a paper not in
-  this repository). Since the quasi-elastic term is **22 % / 73 % / 99.9 %**
-  of `rc_tail` at x = 0.01 / 0.10 / 0.30, that zero is the largest unpriced
+  this repository). Since the quasi-elastic term is **38.7 % / 99.8 % / 100 %**
+  of the default `rc_tail` at x = 0.01 / 0.10 / 0.30 (22 / 73 / 99.9 % on `t-peak`; Q² = 5), that zero is the largest unpriced
   piece of the tail, and `--rc-qe-tensor-scale` (default **0.0**, the shipped
   tensor-blind tail bit for bit) prices it by lending the quasi-elastic tail
   the **elastic** tail's own σ^el_T/σ^el_U. **That is a borrowed magnitude,
@@ -2351,14 +2351,14 @@ number is in `docs/OPEN_ITEMS_SOLUTIONS.md` §9.
   `docs/open_items/run_2026-09-03/phase_B_numbers.md` §B3.
 * **`rc_tail` has THREE tail models, the two t-peak ones are a PRICE RANGE
   and NOT a confidence interval, and none of the three is "the" radiative
-  tail.** `--rc-tail-model t-peak` (the **default**, bit for bit every
-  published number) is ONE PEAK of the elastic and quasi-elastic tails and its
-  absolute normalisation is not validated against any exact tail: it is a
+  tail.** `--rc-tail-model t-peak` (the **default until 2026-10-27**: every
+  unlabelled RC-tail number published before then is a `t-peak` one, computed on the structure-function backends shipped then; event-level numbers on a tilted plan cannot be regenerated after D4, and a HepMC3 file records `rc_tail` without the rc mode, the tail model or the backend) is ONE PEAK of the elastic and quasi-elastic tails,
+  0.599 / 0.878 / 0.989 / 0.985 of DJANGOH's exact proton tail (row 7): it is a
   **lower bound on the dilution**. `--rc-tail-model t-peak+ll` adds the
   leading-log s- and p-peaks of the same two unpolarised observables
   (`ll_peaks_spin1` / `ll_peaks_qe`, promoted out of the test binary in the
   2026-09-03 run) and is the **upper edge**. `--rc-tail-model polrad-full`
-  (2026-09-06) is POLRAD **Eq. (18) + Appendix B + Eq. (A.4)**: ONE exact τ_A
+  (2026-09-06; **the default since D5, 2026-10-27**) is POLRAD **Eq. (18) + Appendix B + Eq. (A.4)**: ONE exact τ_A
   quadrature carrying all three peaks, with the s-/p-peaks' own Eq. (A.4)
   **tensor** content. Run all three; quote all three.
 
@@ -2374,23 +2374,23 @@ number is in `docs/OPEN_ITEMS_SOLUTIONS.md` §9.
   `Q² ≥ 20 GeV²`, `y ≤ 0.9` window it is **above
   both** (8.815031e−03 against 8.719649e−03 and 8.773752e−03, at the default
   fill P_z = 0.7). Whole-run mean
-  `rc_tail`, 200 k events, seed 1234, **at P_z = 0.7**: **1.021778527 →
-  1.040274188 → 1.029702912**; at **P_z = 0** (`tensor_thirds_plan(0.0, 0.6)`,
-  the plan both test suites use) **1.021836305 → 1.040368933 → 1.029775347**
+  `rc_tail`, 200 k events, seed 1234, toy SFs, **at P_z = 0.7**: **1.021778527 →
+  1.040274188 → 1.029702912** (D7's grids: 1.025494331 → 1.047116364 → 1.034783841); at **P_z = 0** (`tensor_thirds_plan(0.0, 0.6)`,
+  the plan both test suites use) **1.021836305 → 1.040368933 → 1.029775347** (D7: 1.025506240 → 1.047148070 → 1.034803052)
   on the same build. The cell-σ-weighted census above is P_z-free; an
   event-weighted mean is not, because the fill plan decides which events the
   sampler draws (re-measured at both, 2026-09-15).
 
-  **What `polrad-full` is still NOT checked against: Mo–Tsai, or any external
-  exact tail.** `[MT69]` is not in this tree and no number from it is quoted
-  anywhere. What is checked is **POLRAD-internal** — with a form factor dead
+  **What `polrad-full` is checked against, and what not.** Its **proton** (quasi-elastic) slot against DJANGOH 4.6.21's exact O(α) tail (BENCHMARK_PLAN row 7, 2026-10-26: 1.0004 / 1.0010 / 0.9995 / 0.9866 from the quadrature;
+  the (x, y) table adds +1.9 … +2.5 % — R = 1.0199 / 1.0261 / 1.0219 / 1.0098 through it; one beam, one dipole). `[MT69]` is not in this tree, and the coherent ⁶Li slot
+  and the tensor term are checked only **POLRAD-internally** — with a form factor dead
   at the s-/p-peak vertex, so only the t-peak survives, `Eq. (18)/Eq. (38)` is
   **1.00230** (unpolarised) and **1.00313** (tensor) — the F_m-only sector's ratios; the spin-0 unpolarised ratio at the same x_A is 1.00492 and the F_q tensor ratio 1.01872 (§B2.3) at `x_A = 0.003` and tends
   to 1 as `x_A → 0` — the `Q_N = 0` Rosenbluth limit of Eq. (A.4) (T9,
-  un-skipped for this), and the leading-log fallback. It costs **~10 s** of
-  tail-table build and needs `rc_options.n_eta ≥ 64`; both a smaller `n_eta`
-  and a platform whose `long double` is no wider than `double` are **refused**,
-  never silently degraded. Details, and the FIVE transcription defects found in
+  un-skipped for this), and the leading-log fallback. It costs **~12 s** of
+  tail-table build per run (⁶Li config 1, unloaded; no cache) and needs `rc_options.n_eta ≥ 64`; both a smaller `n_eta`
+  and a platform whose `long double` is no wider than `double` (MSVC, Apple arm64; aarch64 Linux's software quad is unmeasured) are **refused**
+  where a tail is built, never silently degraded. Details, and the FIVE transcription defects found in
   `polrad2t.tex`'s Appendix B on the way, in
   `docs/open_items/run_2026-09-06/phase_B_numbers.md` §B2.
 
@@ -2446,7 +2446,7 @@ number is in `docs/OPEN_ITEMS_SOLUTIONS.md` §9.
   where `t-peak+ll` is itself least trustworthy, so a large price there is not a
   licence to quote it. The distribution over those 77 is extreme: **3** cells
   exceed 100 % of the band, 6 exceed 10 %, 8 exceed 1 %, 18 exceed 0.1 %, and
-  the median is **2.8e−05 %**. Whole-run mean `rc_tail` (200 k, seed 1234, config 1)
+  the median is **2.8e−05 %**. Whole-run mean `rc_tail` (200 k, seed 1234, config 1; toy SFs — 1.047116364 on D7's grids)
   moves **1.040274188 → 1.040274193** at scale 1 and → 1.040274711 at scale 100 (event-weighted at the CLI default P_z = 0.7).
 
   **What is still bounded by nothing:** the **QUASI-ELASTIC s/p column**
@@ -2537,7 +2537,7 @@ number is in `docs/OPEN_ITEMS_SOLUTIONS.md` §9.
   the low-`Q²` corner of the generator window (`x = 0.01`, `y = 0.1`,
   `Q² ≈ 4 GeV²`) the quasi-elastic s+p is **3.35×** the t-peak unsuppressed
   and **7.09×** at the shipped Pauli `k_F` (the s-peak **alone** is 2.33× /
-  4.94×). Do not port the `t-peak` default to fixed-target kinematics without
+  4.94×). Do not port the `t-peak` option (the default until D5) to fixed-target kinematics without
   the s-/p-peaks.
 * At θ_S ≠ 0 the tail is the **φ-integrated** one applied to a density that
   carries cos φ′ and cos 2φ′ modulations: it dilutes the φ-*averaged* rate
@@ -2547,21 +2547,21 @@ number is in `docs/OPEN_ITEMS_SOLUTIONS.md` §9.
 
 The run banner prints the band at two x values and, **only on a channel where
 the tail actually applies**, the form factor in use with its provenance, the
-clipped tail-**node** fraction globally and per y-band, and the t-peak caveat
-above; on a channel where the tail is off it prints the exclusion reason once
+clipped tail-**node** fraction globally and per y-band, and the running model's paragraph (the t-peak caveat
+above, or `polrad-full`'s checks); on a channel where the tail is off it prints the exclusion reason once
 instead of three times. After generation it prints the clipped **event**
 counts for the tail and the band — a different quantity from the node
 fractions, since nodes are not event-weighted — and both land in the npz as
 `meta["rc_clipped_tail_event_fraction"]` / `..._band_event_fraction"]`, with
-the per-event bits on `Event.rc_clipped` (`1` = tail, `2` = band). At the
-current defaults **nothing clips on the tail** (the pre-2026-09-03 numbers,
+the per-event bits on `Event.rc_clipped` (`1` = tail, `2` = band). On
+`--rc-tail-model t-peak` **nothing clips on the tail** (the pre-2026-09-03 numbers,
 1.71 % of nodes and 21.95 % of the `y > 0.9` ones, were an artefact of the
-factor-6 per-nucleon error) and 1.2–2.6 % of tagged events clip on the band.
+factor-6 per-nucleon error) and 0.08–2.5 % of tagged events clip on the band (VMC default; 1.2–2.6 % on Hulthén).
 On `--rc-tail-model t-peak+ll` the **nodes** do clip again — **0.36 %**
 globally and **4.62 %** of the `y > 0.9` band on the 101 × 77 CLI grid — which
 is the same `y → 1` edge as everything else in this bullet; the **event**
 count stays **0 / 200 000**, because no accepted cell centre lands in those
-nodes. On `--rc-tail-model polrad-full` the nodes clip **0.386 %** globally,
+nodes. On the default `polrad-full` (D5) the nodes clip **0.386 %** globally (configs 0 / 1 / 2: 0.399 / 0.386 / 0.360 %, 0 of 50 000 events each, 2026-10-29),
 and in a **different** corner — **0.456 %** of `y < 0.5` and **0.124 %** of
 `0.5 ≤ y ≤ 0.9`, and **nothing** at `y > 0.9`. Six accepted cells reach the
 `tail_max` ceiling there, all at `x = 0.955` with `y` = 0.049–0.193 (**4.96e−07
@@ -2569,7 +2569,7 @@ of the cross section**, and the event count is again **0 / 200 000**): at
 `x → 1` the DIS Born is negligible while the elastic tail is not, so `w_tail`
 is genuinely ~4500 there and the t-peak, whose own vertex sits above
 `t_min ∝ x²`, returns 6.6e−21 — it is not a lower bound with an error there,
-it is zero where the answer is everything.
+it is zero where the answer is everything. Since D5 that ceiling, 1 + `tail_max` = 11, and the (x, y) table's +1.9 … +2.5 % (row 7) are on the DEFAULT path: a wider-x or other-acceptance study meets them.
 `Pipeline::rc_model()` (Python: `p.rc_model`) exposes `delta(x)`,
 `tail_ratio_at(x, q2, q_n)`, `tail_sigma_at(x, q2)` (**five** wide since the
 2026-09-03 run: `u, t, qe, u_sp, qe_sp`, the last two zero unless
@@ -2578,11 +2578,11 @@ Eq. (18) puts all three peaks in ONE integral, so `u`/`qe` already contain the
 s+p and there is no decomposition to read), `ff_provenance`,
 `clipped_fraction_by_y` and the **five** raw tail tables for plotting.
 
-Cost: **0.106 s** at setup (the η_A quadratures over a 101 × 77 node grid;
+Cost: **12.0 s** at setup on the default `polrad-full` (⁶Li config 1, a four-panel tanh-sinh τ_A quadrature in `long double` at each of 101 × 77 nodes; unloaded, 2026-10-29, ~15 s on a loaded 4-core machine; 16.1 s on `--rc-c0-shape vmc-ft`; **no cache**, so every `--rc tensor-band` run and every `Pipeline` pays it — 9.84 s was the 2026-09-06 measurement);
+**0.106 s** on `--rc-tail-model t-peak` (2026-09-02; 0.16 s re-measured the same way 2026-10-29, beside the 12.0 s; the η_A quadratures over the same grid;
 **1.29 s** on `--rc-c0-shape vmc-ft`, which evaluates a 99-term j₀ sum at every
-η node below its q = 3 fm⁻¹ cut instead of a closed form; **9.84 s** on
-`--rc-tail-model polrad-full`, which replaces each of them by a four-panel
-tanh-sinh τ_A quadrature in `long double`) and
+η node below its q = 3 fm⁻¹ cut instead of a closed form) and, on both models (the per-event
+table lookup is the same code; not re-measured on `polrad-full`),
 **≈ 14 %** of the inclusive event rate (575 k → 495 k ev/s single core on this
 machine — the same measurement `OPEN_ITEMS_SOLUTIONS.md` §9 and
 `phase_C_numbers.md` §8.3 quote; the *ratio* is the number to carry, the
@@ -2615,7 +2615,7 @@ core cannot see):
 * **`read`** — the run consults it: some quantity it computes is a function of
   this knob, so another value would in general give another file.
 * **`not-read`** — nothing the run computes is a function of it, *and a
-  different value is accepted*. The `meta` key then carries the `label`
+  different value is accepted* — or (A17, 2026-11-03) the knob sits AT ITS DEFAULT and its reason says every other value is refused: an explicit default on an unread knob is accepted and labelled, the one rule of `docs/CONVENTIONS.md` "Refuse or label". The `meta` key then carries the `label`
   (`not read on channel coherent-6Li`, `not read by plan tensor-thirds`,
   `not read at rc = off`, …) instead of a value that would mislead.
   **The three route knobs are the one place where the label carries the value
@@ -2631,7 +2631,7 @@ core cannot see):
   `not read on channel inclusive`.
 * **`refused`** — the **axis** is closed on this run: `PipelineConfig.validate()`
   (or the `Pipeline` constructor) throws on any value but the one shown, so a
-  bare value cannot mislead and is kept.
+  bare value cannot mislead and is kept. Since A17 (2026-11-03; every row since the supervisor's note of 2026-11-06) such an axis reads `not-read` AT ITS DEFAULT, its reason saying the axis is closed — so `refused` is the status of a value `validate()` refuses, and a run that built has no `refused` row.
 
 **Where it shows up.**
 
@@ -2647,13 +2647,13 @@ core cannot see):
    (values for the ones off their defaults), then every **not-read knob that
    is set away from its default with its reason spelled out** — those are the
    ones that would mislead — then the not-read defaults grouped by their
-   label, then the refused axes. Reasons for the rest are in the file.
+   label, then the refused axes (none on a run that built, since A17 — the line is printed only when there is one). Reasons for the rest are in the file.
 
-`lipolgen-run --events 200 --seed 5 --pol-sf nnpdfpol`, verbatim except for
+`lipolgen-run --events 200 --seed 5 --pol-sf toy` (D7: `nnpdfpol` is the default and was this example's flag until then; re-run 2026-10-29), verbatim except for
 the two `…` elisions:
 
 ```
-  KNOB PROVENANCE -- what this run READ and what it did not (68 knobs;
+  KNOB PROVENANCE -- what this run READ and what it did not (69 knobs;
      meta["knob_provenance"] carries the whole table with every reason)
      read (16), of which set away from the default: seed = 5, events =
        200, pz = 0.7, pzz = 0.6
@@ -2664,13 +2664,15 @@ the two `…` elisions:
          (bookkeeping.cpp: the three tensor plans hard-code an unpolarised
          beam), so P_e multiplies nothing -- the per-event `pe` column records
          0
-       pol_sf = nnpdfpol  (--pol-sf)
+       pol_sf = toy  (--pol-sf)
          not read under this run's fill: no category carries lam_e * P_e != 0,
          and lam_e * P_e is the only thing g1 is multiplied by
          (InclusiveKernel::amplitudes adds helicity * (m/J) * cos(theta_S) *
          A_par and nothing else reads a PolSF).  The three TENSOR plans build
          every category at lam_e = 0, pe = 0 (bookkeeping.cpp: ...) ...
-     not read, at their defaults (44):
+     not read, at their defaults (51):
+       not read at b1_model = miller: b1_band_scale,
+         b1_alpha_d_dwave_weight, b1_unpol, r_source
        not read at fsi = off: fsi_sigma_mb
        not read at rc = off: rc_delta_low_x, rc_delta_high_x, rc_x_low, ...
          ... rc_tail_model, rc_sp_tensor_scale, rc_with_qe_tail, rc_with_tail,
@@ -2679,14 +2681,12 @@ the two `…` elisions:
        not read in FIXED-COUNT mode (events = 200): lumi_pb
        not read in fixed-count mode: poisson, apply_optics_lumi_fraction
        not read on channel inclusive: optics, n_sigma, pot_config,
-         cluster_beta, p_d, triton_sf, tier, inclusive_b1, coherent_t_max, ...
+         cluster_wave, cluster_vmc_mc_sigma, cluster_beta, p_d, triton_sf,
+         tier, inclusive_b1, fsi, coherent_t_max, ...
        not read without --hadronize: coherent_t2, pom_set, pom_rescale
-     refused axes (7), where validate() throws on any other value:
-       b1_band_scale, b1_alpha_d_dwave_weight, b1_unpol, r_source,
-       cluster_wave, cluster_vmc_mc_sigma, fsi
 ```
 
-*(66 knobs and seven refused axes until 2026-09-06, when `--r-source` added
+*(69 knobs on the D7 re-run — the page said 68, stale already before D7; A17 (2026-11-03, re-run 2026-11-06): `cluster_wave` moved from the refused axes (7 → 6) to the not-read defaults (44 → 45), the one rule; since the supervisor's note of 2026-11-06 the rule reaches every row (re-run that day): 51 not-read defaults and no refused axis, so the banner prints no refused line; 66 knobs and seven refused axes until 2026-09-06, when `--r-source` added
 an eighth and `--pzz-mode` a 68th knob — labelled, not refused, under the
 three tensor plans; re-measured from the command above. The eighth refused
 axis was `rc_m_lepton`, and it came back OUT the same day: `PolradFull` was
@@ -2705,7 +2705,7 @@ an envelope; `cluster_beta`, `p_d`, `triton_sf`, `inclusive_b1` and
 `coherent_t2` / `pom_set` / `pom_rescale` are round 3.
 
 3. **`python/tests/test_knob_provenance.py`** rebuilds the (spec × knob)
-   matrix — 12 (isotope, channel, plan) specs, 81 knob variants, **627 cells**
+   matrix — 12 (isotope, channel, plan) specs, 81 knob variants, **627 cells** (641 since 2026-11-03: 14 shipped-`polrad-full` sub-knob cells)
    (re-measured 2026-09-15; 76 / 592 was the count after Phase A)
    (re-measured 2026-09-06, after `--r-source` added three and `--pzz-mode`
    two):
@@ -2758,7 +2758,7 @@ array is bit for bit):
 * `--cluster-wave`, `--triton-sf`, `--inclusive-b1`, `--cluster-beta`,
   `--p-d`, `--fsi-sigma-mb`, `--coherent-t-max` and `--x-max` were accepted
   and recorded **nowhere**; they now have a row on every channel, so a VMC and
-  a Hulthén tagged file are no longer indistinguishable in `meta`.
+  a Hulthén tagged file are no longer indistinguishable in `meta` (since D6 also `meta["cluster_wave"]`; a HepMC3 file carries no record of the wave — its `GenRunInfo` has the tool name and version only).
 * `--pom-set` / `--pom-rescale` / `--coherent-t2` are labelled off the
   coherent channel and without `--hadronize`.
 
@@ -2777,10 +2777,10 @@ The full measured reach table, channel by channel and plan by plan, is
 Each prints σ per spin category, the tag fraction at every optics of the menu,
 the conservation residual and the throughput, and writes HepMC3 (`--out ""` to
 skip). Measured single-core throughput on this machine (200 k events, 6Li mid
-configuration), with `Pipeline::event` reconstructing in place since
-2026-08-30:
+configuration; 2026-08-30, on the TOY structure functions, the default until D7), with `Pipeline::event` reconstructing in place since
+then. Re-measured 2026-10-30 (the examples' own streaming rate, `--out ""`, 200 k events, median of 3; taken while F7's gate runs shared the machine, the raw log not kept and not re-measured — fix stage, 2026-11-03) on D7's shipped CT18NLO / NNPDFpol1.1: inclusive **0.65**, tagged ⁶Li α **0.36**, coherent **1.08 M ev/s** — against 1.92 / 0.585 / 1.13 for the same commands on the pre-D7 build (`c52c164`) today, ×0.34 / ×0.61 / ×0.96 (the T0/T1 kernel and species draws now read the grids; coherent barely does). A16 (2026-11-03), re-measured 2026-11-06 on the idle machine at `888ca3b` with the same recipe and the raw log kept (`docs/open_items/run_2026-11-03/phase_P6_throughput.md`): inclusive **0.54**, tagged ⁶Li α **0.33**, coherent **1.07 M ev/s** (medians of 3 × 200 k events; at 2 M events per run 0.61 / 0.33 / 1.05 — the 0.3 s inclusive runs are clock-ramp limited); the run's own code changes (P1 → HEAD, identical out-of-tree builds, alternating rounds) cost ×0.98 / ×0.96 / ×0.98, and the rest of the gap to the 2026-10-30 values is not attributable, that day's run having no log. The toy-SF table of 2026-08-30 follows:
 
-| channel | streaming (`for_each`, `for_each_range`) | `generate_range`, chunk 4096 | chunk 1024 |
+| channel (toy SFs, 2026-08-30) | streaming (`for_each`, `for_each_range`) | `generate_range`, chunk 4096 | chunk 1024 |
 |---|---|---|---|
 | inclusive | **2.83 M ev/s** (was 2.67) | 2.20 (was 2.07) | 2.62 (was 2.36) |
 | tagged ⁶Li α at T1 | **1.02 M ev/s** (was 0.93) | 1.01 (was 0.92) | — |
@@ -2790,7 +2790,7 @@ A `generate_range` buffer costs cache, not allocations, so prefer
 `for_each_range(sink, first, last)` when the records are consumed and
 dropped. HepMC3 output is the bottleneck when it is on (~18 k ev/s), and the
 T2 (PYTHIA) tier runs at ~40 k ev/s. Threading helps only when the per-event
-work is heavy; on bare T0/T1 the events are already ~1 µs.
+work is heavy; on bare T0/T1 the events are already ~1 µs (on the toy; 1.5–2.8 µs on D7's grids).
 
 ## 9. Polarized ⁶Li configurations for coherent-diffraction codes
 
@@ -2990,3 +2990,146 @@ which **throws** — reserved, not implemented, so the approximation is
 visible in the API rather than buried in a comment.
 `docs/open_items/run_2026-09-02/design_G_cluster_config.md` has the physics
 and `phase_G_numbers.md` the reproduced numbers.
+
+## 10. The shipped structure functions — decision D7 (2026-10-27)
+
+**What changed.** The run's default unpolarised and polarised structure
+functions are the LHAPDF grids: `--unpol-sf ct18nlo` (`LhapdfSF("CT18NLO",
+0)`) and `--pol-sf nnpdfpol` (`LhapdfG1("NNPDFpol11_100", 0)`). They are named
+in ONE place, `UNPOL_SF_DEFAULT` / `POL_SF_DEFAULT` in
+`include/lipolgen/pipeline.hpp`; `PipelineConfig`'s fields, `cli.DEFAULTS`,
+`lipolgen.make_config` and the bindings read them. `toy` / `toy` — `ToyF2` /
+`ToyG1`, the default until 2026-10-27 — is an option, and NAMED it is the
+pre-D7 run **bit for bit** (24 channel × isotope × configuration runs and the
+class-level kernel compared to the c52c164 build: identical σ, per-category σ
+and column hashes). `--b1-unpol` keeps `toy` as its own default.
+
+**What it is, and what it is not.** Both grids are NLO fits evaluated with the
+**leading-order** parton formulas — F₂ = x Σ e_q² (q + q̄) over five massless
+flavours, g₁ = ½ Σ e_q² (Δq + Δq̄) over three — with no coefficient functions:
+the development item D7 names. The unpolarised input is the **free nucleon**
+(Z F₂ᵖ + N F₂ⁿ; `EPPS21nlo_CT18Anlo_Li6` stays an option of the validation
+harnesses, not of the run) and R stays `r_sigma_lt` (`--r-source r1998` stays
+opt-in): neither is part of D7.
+
+**Frozen at the grid edges, whatever `lhapdf.conf` says.** CT18NLO starts at
+Q² = 1.677 and the shipped ⁶Li window at 1.054, so **39.23 %** of a default
+inclusive run's own accepted rate (48.37 % on the coherent channel, 39.51 %
+on `tagged-d-p`, 39.29 % on ⁷Li inclusive) sits below the grid. There the tier
+**freezes** the set at its edge — the letter's `--pdf grid` chain freezes Q² only, at Q₀, on a nuclear set —
+by clamping (x, Q²) to the knot arrays and setting LHAPDF's `nearest`
+extrapolator, the `logcubic` interpolator and ForcePositive 0 on every grid
+it opens (`src/lhapdf/lhapdf_sf.cpp`, `Grid::open`). Neither set's `.info`
+pins those, so before D7 the numbers followed whichever `lhapdf.conf` LHAPDF
+found first; measured now, an `lhapdf.conf` saying `continuation`, `linear`
+and `ForcePositive: 1` leaves every default number bit-identical
+(`python/tests/test_d7_shipped_kernel.py`), where the pre-D7 build moved the
+⁷Li rate by 4.5 × 10⁻⁴. NNPDFpol1.1's floor is Q² = 1, so the polarised
+below-grid fraction is 0 on the shipped window. Every run records it:
+`meta["unpol_sf_grid_q2_min"]`, `["unpol_sf_below_grid_frac"]`,
+`["unpol_sf_extrapolation"]` (= `nearest`) and the polarised twins
+`["pol_sf_grid_q2_min"]`, `["pol_sf_below_grid_frac"]`,
+`["pol_sf_extrapolation"]` — where g₁ RAN; elsewhere its label and NaN, never a credit (F7) — and the run banner prints them with the LO
+caveat. **A HepMC3 file carries none of this** — its `GenRunInfo` has the tool
+name and version only, and `docs/HEPMC3_CONVENTION.md` (sha256-pinned by T6)
+is not edited here; the same gap D4 and D6 recorded.
+
+**What it costs and moves (measured 2026-10-29, ⁶Li config 1).** Against the
+toy: accepted σ ×0.83862 (591846.2 → 496334.2 pb), coherent ×0.75541, ⁷Li
+inclusive ×0.83604 (590952.4 → 494062.8 pb); run-level A_zz ×1.19243; A_∥
+×0.12933 (the polarised swap ×0.10846 times the F₁ change); §2b has the full
+table. The sweet-spot a₂ cells do not move (F₂ cancels at fixed Δ/F₁), the
+tag fraction and ⟨k⟩ of a fixed-seed tagged sample barely do (400 k ⁶Li α
+events: 0.248635 → 0.2486425 at the tagging optics, ⟨k⟩ in the sixth digit;
+the FSI and RC-clamp tables of §3 / §7b at the 10⁻⁵ level) — but the
+SHAPES do: ⟨x⟩ of the default inclusive and tagged-⁶Li-α samples moves
+0.0267 → 0.0328 (+23 %), ⟨Q²⟩ 4.18 → 4.54 (inclusive) / 4.47 GeV² (tagged). Time: `make_config` loads
+nothing (the grids attach when the `Pipeline` is built: 0.14 ms against 0.06 ms
+on the toy, where naming `ct18nlo` cost 37 ms before D7); the first `Pipeline`
+of a process builds in 0.25 s (0.21 s after, the objects being shared; the toy
+0.05 s); a 5000-event `lipolgen-run` takes 0.38 s against 0.17 s on the toy.
+
+**Where the defaults are refused, and the cure each refusal computes.** The
+sampler's positivity check (`InclusiveSampler`) refuses a cell whose
+φ-averaged density would go negative, names the cell, splits w_avg into its
+VECTOR (P_e P_z D(y) A₁) and RANK-2 parts, and computes the `--x-max` below
+which the run builds. Measured on the 66 isotope × configuration × channel ×
+plan runs at x_max 1.0: the toy refuses none; the default refused six (D7, 2026-10-29), all
+`helicity-flip` at the CLI's P_e 0.7, all at x = 0.955, all cured by
+`--x-max 0.95` — **since A3 (2026-11-03) only the d inclusive configs 0 and 1 are refused** (re-measured 2026-11-06: the rank-2 term on top of the vector one at the clipped A₁ = 0.9136; worst cell 1 + w_avg −0.2275 / −0.1410, rank-2 −0.5911 / −0.7607), the other four build *(V-CODE-5 (2026-11-10): the table below is D7's, 2026-10-29, before A1 and A3 — none of its numbers is today's; today `--isotope d --channel inclusive --config 0|1 --plan helicity-flip --events 200 --seed 1234` exit 1 at the first refused cell x = 0.955, Q² = 534.5 / 1536, 1 + w_avg = −0.05837 / −0.02078, and config 2, `tagged-d-p` configs 0 / 1 and `tagged-6Li-alpha` config 0 exit 0, as `docs/open_items/run_2026-11-03/phase_P2_positivity.md` §1 records; **J1 (2026-11-10): since the deuteron's rank-2 slot became `MillerB1` itself (×3.0532 on its b₁), EVERY default inclusive deuteron run is refused at x_max 1.0** — every plan, configs 0, 1 and 2, at the whole x = 0.955 row (15 / 24 / 24 cells, first refused cell Q² = 167.3, rank-2 term −1.13, b₁/F₁ = 3.53 there against the pure m = ±1 state's bound 3/ρ ≈ 3.1), `--x-max 0.95` builds all but `helicity-flip` config 0, which needs `--x-max 0.87` (one x = 0.871 cell, vector −0.5846 + rank-2 −0.4416); ⁶Li is unchanged (every plan builds); the measurements and the open choice of the high-x treatment are `docs/open_items/run_2026-11-10/phase_P2_deuteron_b1.md`; **J1 note (2026-11-12): no longer refused — the supervisor's note under J1 confines the deuteron's slot to the spin-1 positivity domain (the key `b1_clipped_rate_fraction` above), and all 24 default inclusive deuteron plan × config runs build at x_max 1.0 (smallest φ-averaged density 0.2586, helicity-flip config 0, x = 0.871); the refusal stays as the backstop, e.g. for an unconfined caller kernel; `docs/open_items/run_2026-11-10/phase_P2b_spin1_domain.md`**)*:
+
+| run | cell Q² | 1 + w_avg | vector part (A₁) | rank-2 part |
+|---|---|---|---|---|
+| `--isotope d --channel inclusive --config 0` | 283.7 | −0.004833 | −0.5914 (2.026) | −0.4134 |
+| `--isotope d --channel inclusive --config 1` | 1007 | −0.01952 | −0.4186 (2.024) | −0.6009 |
+| `--isotope d --channel inclusive --config 2` | 1897 | −0.02576 | −0.3126 (2.033) | −0.7132 |
+| `--channel tagged-d-p --config 0` | 229.7 | −0.005726 | −1.006 (4.366) | 0 |
+| `--channel tagged-d-p --config 1` | 1119 | −0.02414 | −1.024 (4.406) | 0 |
+| `--channel tagged-6Li-alpha --config 0` | 480.9 | −0.02789 | −1.028 (1.98) | 0 |
+
+**The inclusive deuteron needs both terms, measured:** with the toy g₁ in
+place of NNPDFpol1.1 (`--pol-sf toy`) configs 0 and 1 are still refused, but
+at a different cell where the RANK-2 term dominates (Q² = 594 / 1707,
+A₁ = 0.845, 1 + w_avg = −0.04631 / −0.007475) and config 2 builds; with the toy
+F₂ (`--unpol-sf toy --pol-sf nnpdfpol`) all three build. The tagged rows are
+the vector term alone (the struck neutron's g₁/F₁ reaches 4.4 on the pair, clipped to 1 since A3). **The cure removed negative densities, not unphysical asymmetries** (2026-11-03, before A3's clip): at LO the pair breaks |A₁| ≤ 1 from x ≳ 0.83 (free neutron) and x ≳ 0.87 (deuteron, proton), so at `--x-max 0.95` the x = 0.871 cell of the d inclusive and `tagged-d-p` runs still generates with |A₁| > 1 — filed under the LO development item (`docs/open_items/run_2026-10-27/DECISIONS.md` D7).
+Three more recipes change at the default:
+
+* **the mandatory b₁ band's ×2 row** (`--b1-band-scale 2` on `cdks` or
+  `li6-convolution`) is refused at `--x-max` 0.95 and 0.9 — cell x = 0.871,
+  the rank-2 term alone (1 + w_avg = −0.008234 on `cdks`, D7's number at Q² = 186; V-CODE-3 (2026-11-10): since A1 (2026-11-03) −0.01927 at Q² = 150.6, measured `lipolgen-run --b1-model cdks --b1-band-scale 2 --x-max 0.95|0.9 --events 100` exit 1, 0.85 exit 0) — and builds at
+  **0.85**; the toy builds it at 0.95. Run 0 / 1 / 2 at 0.85;
+* **`--b1-model li6-convolution` must name `--b1-unpol`**: `toy` there means
+  "the kernel's own `UnpolSF`", now CT18NLO, so `validate()` refuses it and
+  names the three ways out (`--b1-unpol ct18nlo` — the SAME cached object as
+  the rate's, so the two F₁ are one again — `--b1-unpol mstw`, the A = 2
+  gate's configuration, or `--unpol-sf toy`). `validation/price_defaults.py`'s
+  `li6-incl-r` family names `--b1-unpol ct18nlo`;
+* **`--inclusive-b1` on `tagged-6Li-alpha`** is refused at the default
+  tensor-thirds plan (x = 0.955, Q² = 167.3, 1 + w_avg = −0.1302, the rank-2
+  term) and builds at `--x-max 0.95`; on the toy it ran at 1.0.
+
+**The configuration rules that came with it.** A caller-supplied
+`PipelineConfig::kernel` is accepted beside the selectors only at their
+SHIPPED values (`meta` then says "caller-supplied kernel"; since A17 (2026-11-03) "not read with a caller-supplied kernel", V-CODE-1 (2026-11-10)) and refused at any
+other, `toy` included, with a message naming both; `struck.f2_source` /
+`struck.g1_model` set by hand need the selector `Custom` (any other value is
+refused — a `ct18nlo` label over a toy struck slot ran at the toy's
+591846.17 pb before); and a `PythiaBridge` must draw its T2 species from the
+config's own object (`set_pythia_hadronizer` refuses otherwise, now in the C++
+tier too). `lipolgen-run` and `lipolgen.run` do that wiring. Since 2026-11-03 an object in a GRID slot (`unpol_sf_obj` under `ct18nlo`, `pol_sf_obj` under `nnpdfpol`) must be the tier's own shipped object (`make_lhapdf_unpol_sf` / `make_lhapdf_pol_sf`, what `attach_shipped_sf_backends` puts there); any other is refused and names `Custom` — before, `ToyF2` put back under `ct18nlo` ran the toy's 591846.17 pb with `meta` and the knob row saying `ct18nlo`.
+
+**Data, and the toy escape.** A default run needs `CT18NLO` and
+`NNPDFpol11_100` where LHAPDF looks (`LHAPDF_DATA_PATH`; `env.sh` sets it;
+`.github/scripts/build_deps.sh` fetches the three sets, SHA-256-pinned since
+D7). Without them it is refused **by name** before any LHAPDF `Config` exists:
+the message keeps LHAPDF's "Info file not found for PDF set 'CT18NLO'",
+lists the searched paths and whether an `lhapdf.conf` was found, and names
+`--unpol-sf toy --pol-sf toy` (Python `unpol_sf="toy", pol_sf="toy"`, C++
+`toy_config()`); `lipolgen-run` exits 1 — never LHAPDF's exit-time abort,
+134. The Python suite stops at session start with return code 3 under the
+same conditions (`python/tests/conftest.py`;
+`LIPOLGEN_TESTS_ALLOW_MISSING_SETS=1` proceeds anyway).
+
+**The C++ API contract changed.** A default `PipelineConfig` names grid
+backends the core library cannot build. In C++, include
+`<lipolgen/lhapdf_sf.hpp>`, link `LiPolGenLHAPDF`, and either install the
+tier's filler once per process — `install_lhapdf_sf_filler()`, after which
+every `Pipeline` attaches the shared, frozen objects itself, lazily — or fill
+one config — `attach_shipped_sf_backends(cfg)` (what a caller does before
+building a `PythiaBridge`, whose `f2_source` must be `cfg.unpol_sf_obj`). The
+objects are process-wide and shared read-only (`make_lhapdf_unpol_sf` /
+`make_lhapdf_pol_sf`); threaded generation on them is bit-identical to
+single-threaded (`tests/test_lhapdf.cpp`). Without either, `validate()`
+refuses the default by name; the core-only path is `toy_config()`. A build
+without the LHAPDF tier (since A9, 2026-11-03, only an explicit `-DLIPOLGEN_WITH_LHAPDF=OFF`: a missing `lhapdf-config` stops the configure) therefore refuses every default run and skips the
+four `generate_*` examples: the tier is no longer optional for the shipped
+default (`docs/PACKAGING.md` §2.5).
+
+**What pins it.** The reference JSONs of `validation/reference/` pin the
+CLASS-LEVEL kernels — `default_inclusive_kernel(ion)` with one argument is
+still the toy — and are unchanged. The kernel a default run builds
+(`lipolgen.shipped_inclusive_kernel(ion)`, the C++ 8-argument form on the
+shared objects) is pinned at six (x, Q²) points, one below the CT18NLO floor,
+and at the four sweet-spot cells by `python/tests/test_d7_shipped_kernel.py`
+at rtol 1e-12, which also asserts it is the default `Pipeline`'s own kernel.

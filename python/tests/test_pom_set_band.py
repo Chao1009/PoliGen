@@ -38,8 +38,13 @@ SETS = (6, 5, 9, 10)
 
 
 def _run(pom_set, q2_pdf_min=None, include_charm=None, events=N_EVENTS):
+    # D7 (2026-10-29): the TOY pair NAMED.  Every number pinned below (the
+    # 0.207 fallback share, the -2.6 % / +9.9 % <n_ch> band, the kaon factor
+    # 2.8) was measured on ToyF2/ToyG1 in phase D4 (2026-09-03), and the
+    # coherent T0 sample rides the inclusive cell cross sections, which D7's
+    # CT18NLO moves; on the toy the bridge's own ToyF2 is the run's backend.
     cfg = lg.make_config(isotope="6Li", config=1, channel="coherent",
-                         events=events, seed=SEED)
+                         events=events, seed=SEED, unpol_sf="toy", pol_sf="toy")
     beams = lg.default_configs(cfg.isotope)[cfg.beam_config]
     po = lg.PythiaBridgeOptions()
     po.coherent_t2 = lg.CoherentT2.Pomeron

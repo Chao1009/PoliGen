@@ -69,6 +69,25 @@ LHAPDF_SETS="${LHAPDF_SETS:-CT18NLO NNPDFpol11_100 EPPS21nlo_CT18Anlo_Li6}"
 HEPMC3_SHA256="6f876091edcf7ee6d0c0db04e080056e89efc1a61abe62355d97ce8e735769d6"
 LHAPDF_SHA256="641d5ea0942b79e4447e15e5a33491ff3c7032d71d618119935e14ad27f5e3a5"
 
+# D7 (2026-10-27): the SHIPPED structure-function defaults are two of these
+# LHAPDF sets (CT18NLO, NNPDFpol11_100), so the sets are pinned like the code:
+# the SHA-256 of the three tarballs this tree was built and measured against
+# (`sha256sum ../deps/src/*.tar.gz` on the author's machine, 2026-10-27,
+# re-checked 2026-10-29).  `/current/` is a moving target by construction, so
+# a re-published set FETCHED by this script now fails it by name instead of
+# moving every default number in silence.  A set not listed here is fetched
+# unverified, and the script says so.  A set ALREADY in the prefix is
+# re-verified only through its cached tarball in $SRC (F7, 2026-10-30); one
+# whose tarball is gone -- a prefix built before these pins, a copied store --
+# is reported "NOT re-verified", never passed as checked.  (CI never reaches
+# this on a cache hit: the whole script is skipped and the restored prefix is
+# the one a cache miss verified when it filled the cache.)
+declare -A SET_SHA256=(
+  [CT18NLO]="c9127231e77e97cbec79cb5839203ab00f8db77237a061b61f9420f2b7b9c213"
+  [NNPDFpol11_100]="48b586b14821ef2858a52a763d3db99ff283a1405d7677298d4c9ec12f0dde5a"
+  [EPPS21nlo_CT18Anlo_Li6]="1afe5f6f8df61edb158485b419a788528f4c1eed1d9769e57eebc59c665cd868"
+)
+
 mkdir -p "$PREFIX"
 PREFIX="$(cd "$PREFIX" && pwd)"
 SRC="$(dirname "$PREFIX")/src"
@@ -87,6 +106,11 @@ fetch() {  # fetch <url> <dest> [sha256]
     curl -fsSL --retry 3 --retry-delay 5 -o "$dest.part" "$url"
     mv "$dest.part" "$dest"
   fi
+  verify_sha256 "$dest" "$want"
+}
+
+verify_sha256() {  # verify_sha256 <file> [sha256] -- exit 1 on a mismatch
+  local dest="$1" want="${2:-}"
   if [ -n "$want" ]; then
     local got
     got="$(sha256sum "$dest" | cut -d' ' -f1)"
@@ -143,11 +167,16 @@ say "LHAPDF sets: $LHAPDF_SETS"
 mkdir -p "$PREFIX/share/LHAPDF"
 for set_name in $LHAPDF_SETS; do
   if [ -d "$PREFIX/share/LHAPDF/$set_name" ]; then
+    if [ -f "$SRC/${set_name}.tar.gz" ]; then
+      verify_sha256 "$SRC/${set_name}.tar.gz" "${SET_SHA256[$set_name]:-}"
+    else
+      echo "NOT re-verified (no cached $SRC/${set_name}.tar.gz): $set_name"
+    fi
     echo "already present: $set_name"
     continue
   fi
   fetch "https://lhapdfsets.web.cern.ch/current/${set_name}.tar.gz" \
-        "$SRC/${set_name}.tar.gz"
+        "$SRC/${set_name}.tar.gz" "${SET_SHA256[$set_name]:-}"
   tar -xzf "$SRC/${set_name}.tar.gz" -C "$PREFIX/share/LHAPDF"
   echo "installed set: $set_name"
 done

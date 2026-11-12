@@ -69,9 +69,9 @@ const Ion& PROTON() {
   return i;
 }
 const Ion& DEUTERON() {
-  // The deuteron's slot IS the expression 6Li's is built from, so the two
-  // agree bit for bit and the ratio of their per-nucleon g1 is
-  // (1 - 1.5 P_D_LI6)/3 exactly.
+  // A1 (2026-11-03): the INCLUSIVE deuteron species is AV18's, P_D_DEUTERON
+  // = 0.0576, eff_pol 0.9325 -> 0.9136 (`DEUTERON_SCENARIO()`, at the end of
+  // this file, keeps 0.9325).  The constexpr constant, the compile-time double.
   static const Ion i{"d", 2, 1, 1.0, DEUTERON_VECTOR_POLARIZATION,
                      DEUTERON_VECTOR_POLARIZATION};
   return i;
@@ -85,7 +85,7 @@ const Ion& LI6() {
   // The CLUSTER PICTURE, since the author decision of 2026-08-29 that closed
   // plans/04 #6: the 6Li spin is carried by the deuteron cluster, so a nucleon
   // of that deuteron is polarized along the 6Li spin by the product of the
-  // alpha-d and deuteron vector dilutions, LI6_CLUSTER_POLARIZATION =
+  // alpha-d and deuteron vector dilutions, LI6_CLUSTER_POLARIZATION_HULTHEN =
   // 0.86995 x 0.9325 = 0.81123 whole-nucleus (Schellingerhout PRC 48:2714),
   // and the slots hold a THIRD of it each so that Z*P_p = N*P_n = 0.81123.
   // Built from the same two D-state probabilities the tagged sector uses
@@ -102,8 +102,8 @@ const Ion& LI6() {
   // the band" until 2026-09-16; that reading was retracted on 2026-09-05 in
   // docs/CONVENTIONS.md and docs/PHYSICS_CHANNELS.md and was corrected at
   // those two sites only.
-  static const Ion i{"6Li", 6, 3, 1.0, LI6_CLUSTER_POLARIZATION / 3.0,
-                     LI6_CLUSTER_POLARIZATION / 3.0};
+  // A1 (2026-11-03): the paragraph above is the PRE-A1 reading; see the end of the file.
+  static const Ion i = li6_ion(LI6_CLUSTER_POLARIZATION);   // 0.848/3 per slot
   return i;
 }
 const Ion& LI7() {
@@ -154,6 +154,36 @@ std::vector<BeamConfig> default_configs(const std::string& ion_name) {
     out.push_back(c);
   }
   return out;
+}
+
+// A1 (2026-11-03; docs/open_items/run_2026-11-03/DECISIONS.md A1, the
+// supervisor's choice under the author's delegation).  `LI6()` above reads
+// LI6_CLUSTER_POLARIZATION = LI6_POLARIZATION_VMC_SIX_BODY = 0.848 (Wiringa
+// PRC 89:024305 Table I), a third of it per slot; band 0.811 ... 0.887 around
+// 0.848, the two cluster readings.  Its comment is the PRE-A1 reasoning (the
+// cluster product 0.81123), kept as the record of what the Hulthen reading
+// is; `li6_ion(LI6_CLUSTER_POLARIZATION_HULTHEN)` is that Ion, bit for bit.
+// Since A1 the inclusive deuteron is AV18's (0.9136), so the default ions'
+// per-nucleon g1(6Li)/g1(d) is (0.848/3)/0.9136 = 0.309399, not the
+// (1 - 1.5 P_D_LI6)/3 = 0.290 of that comment.
+//
+// The PARAMETERS through which a caller reaches a factor other than the
+// default: the polligen port gates pass the pre-A1 0.811228 and P_D = 0.045
+// here.  The slots are the same expressions the statics were built from.
+Ion li6_ion(double whole_nucleus_polarization) {
+  return Ion{"6Li", 6, 3, 1.0, whole_nucleus_polarization / 3.0,
+             whole_nucleus_polarization / 3.0};
+}
+Ion deuteron_ion(double p_d) {
+  const double v = vector_dilution_of(p_d);
+  return Ion{"d", 2, 1, 1.0, v, v};
+}
+const Ion& DEUTERON_SCENARIO() {
+  // The pre-A1 `DEUTERON()` bit for bit (vector_dilution_of(0.045) = 0.9325):
+  // the Hulthen alpha tag's embedded deuteron and polligen's `DEUTERON`.
+  static const Ion i{"d", 2, 1, 1.0, DEUTERON_VECTOR_POLARIZATION_SCENARIO,
+                     DEUTERON_VECTOR_POLARIZATION_SCENARIO};
+  return i;
 }
 
 }  // namespace lipolgen

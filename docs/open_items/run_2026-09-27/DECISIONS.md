@@ -28,6 +28,7 @@ the Cosyn–Weiss gate already runs on), and the row stays a recorded FAIL
 so the gap stays visible. Revisit at M2 (numbers frozen): switching the
 default then costs one re-pin, and should be done if any quoted number
 still depends on the Hulthén D wave.
+*Superseded 2026-10-27 by D6 (`../run_2026-10-27/DECISIONS.md`; implemented 2026-10-29): the VMC AV18+UX cluster waves are the shipped run default and the Hulthén forms the `--cluster-wave hulthen` option; the `t2_deuteron_static` FAIL stays recorded — its rule covers every shipped wave function, and the Hulthén still ships.*
 
 **D3 — a new benchmark-plan row: the CLAS Deeps spectator tail.**
 `validation/benchmarks/data/clas_deeps_klimenko2006_f2P.json` was vendored

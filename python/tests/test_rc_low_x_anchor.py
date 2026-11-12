@@ -58,22 +58,35 @@ Q2 = 5.0
 # generator's own 6Li b1 (NOT phase_C sec. 8.2's x3.253983 deuteron-b1 column).
 # The document prints these to seven digits (1.358472e-04 ...); pinned here
 # to the full double, because rtol 1e-12 is what stops a silent drift.
-HALF_WIDTH = {
-    0.30:  (0.0001358472494654602, 0.00014590673286701302,
-            9.680015652051017e-05, 1.920690621629717e-05),
-    0.266: (0.00012045122785937472, 0.00013085664856817475,
-            8.798803601270058e-05, 1.920690621629717e-05),
-    0.113: (5.116913063199001e-05, 6.313126922340236e-05,
-            4.83334937275573e-05, 1.920690621629717e-05),
+HALF_WIDTH = {   # A1 (2026-11-03): x1.0657619 with A_zz (the b1 transfer); pre-A1 below in the record
+    0.30:  (0.00014478082470117484, 0.00015550183899241306,
+            0.00010316592015950678, 2.046998914512917e-05),
+    0.266: (0.0001283723312350417, 0.00013946203233322838,
+            9.377429773426811e-05, 2.046998914512917e-05),
+    0.113: (5.453411063744252e-05, 6.728290236689725e-05,
+            5.151199682069396e-05, 2.046998914512917e-05),
 }
 # A_zz(Born) at those four x, same configuration (phase_B_numbers.md sec. B3.2
-# corrected the x = 0.01 / 0.10 entries; 0.063 and 0.16 are new here).
-AZZ = (-4.528241648849e-04, -1.316774298646e-03,
-       -1.528923484258e-03, -1.280460414420e-03)
+# corrected the x = 0.01 / 0.10 entries; 0.063 and 0.16 are new here).  D7
+# (2026-10-29): both tables were measured on ToyF2 / ToyG1, the shipped default
+# until D7, so A2 NAMES the toy pair (`toy=True`); on the shipped CT18NLO /
+# NNPDFpol1.1 the four A_zz are -5.461032e-04, -1.371520e-03, -1.482635e-03, -1.132529e-03 (A1 (2026-11-03);
+# -5.124064e-04, -1.286892e-03, -1.391150e-03, -1.062647e-03 before) -- delta(x) is backend-free.
+AZZ = (-4.826027490039e-04, -1.403367897793e-03,   # A1 (2026-11-03): x1.0657619 (pre-A1
+       -1.629468420059e-03, -1.364665943009e-03)   # -4.528241648849e-04 -1.316774298646e-03 ...)
 
 
-def _pipeline(anchor=None, channel="inclusive", events=2000, seed=99):
+def _pipeline(anchor=None, channel="inclusive", events=2000, seed=99,
+              toy=False):
     kw = {} if anchor is None else {"rc_delta_low_x": anchor}
+    if toy:                       # D7 (2026-10-29): the pre-D7 default, NAMED
+        kw.update(unpol_sf="toy", pol_sf="toy")
+    # D5 (2026-10-29): t-peak BY NAME on the inclusive builds, for RUNTIME --
+    # A1-A4 read the band, which no tail model touches, and a polrad-full
+    # table costs ~13 s a build.  Never on A5's tagged-alpha builds: an
+    # explicit t-peak is a non-default tail knob there, and refused.
+    if channel == "inclusive":
+        kw["rc_tail_model"] = "t-peak"
     cfg = lg.make_config(isotope="6Li", channel=channel, config=1,
                          events=events, seed=seed, rc="tensor-band", **kw)
     return lg.Pipeline(cfg, lg.tensor_thirds_plan(0.0, 0.6))
@@ -98,7 +111,7 @@ def test_the_shipped_anchor_has_not_moved():
 
 def test_the_three_row_table_of_band_half_widths_on_azz():
     """A2.  The priced table, re-run reduced, at rtol 1e-12."""
-    p0 = _pipeline()
+    p0 = _pipeline(toy=True)
     kern, s = p0.dis_sampler.kernel, p0.dis_sampler.s
     azz = []
     for x in XS:

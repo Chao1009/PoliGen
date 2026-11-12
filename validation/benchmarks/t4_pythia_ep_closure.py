@@ -58,7 +58,7 @@ process's outgoing lepton; bridge: `Role.Hadron`, `Status.Final`, via
   n_ch_eta[a,b)  the charged count in lab pseudorapidity bins with edges
               -inf, -2, 0, 2, 4, +inf (the charged eta flow).
 (x, Q^2) MATCHING.  Each generator fills the window with its own (x, Q^2)
-density (PYTHIA's LO cross section vs LiPolGen's kernel on ToyF2), and every
+density (PYTHIA's LO cross section vs LiPolGen's kernel, CT18NLO since D7), every
 observable above moves with (x, Q^2) -- sum_empz IS 2 E_e y.  So the bridge's
 mean is taken in 4 x 4 log-uniform (x, Q^2) sub-bins of the window and
 re-weighted to the STOCK sample's sub-bin populations; stock sub-bins with no
@@ -94,8 +94,9 @@ flavour draw, LHA record) against PYTHIA's own DIS, not PYTHIA against HERA
 nucleon, no neutron instance, no tagged or coherent (Pomeron) record, no
 nuclear effect on the final state (none is modelled -- PYTHIA_BRIDGE.md
 sec. 9).  No cross section, no spin, no QED radiation (off on both sides).
-PYTHIA version: this row ran PYTHIA 8.312 (conda-forge); the project pins
-8.317 -- the version actually used is recorded in `config`.
+PYTHIA version: measured first on 8.312 (conda-forge, 2026-09-26); since
+2026-10-26 the row runs on the pinned 8.317 -- the version actually used is
+recorded in `config`.
 
 MEASURED 2026-09-26 (PYTHIA 8.312, after the tolerance, windows, bins,
 threshold and matching above were fixed; nothing was changed after the first
@@ -113,13 +114,22 @@ PYTHIA's own massive beam electron (event entry 2), not a massless
 (10, 0, 0, -10); it moved the stock means in the fourth digit (n_ch W1
 8.0261 -> 8.0267) and changed no tolerance, window, bin or threshold.
 
+MEASURED 2026-10-26 on the pinned PYTHIA 8.317 (run 2026-10-26 phase 0,
+after `_report.import_pythia8`; the tolerance, windows, bins, threshold and
+matching unchanged -- all fixed on 2026-09-26, before either run): PASS,
+max |bridge/stock - 1| = 0.076 over 15 compared sub-rows (W2
+n_ch_eta[-2,0), 0.924 +- 0.062 statistical, 776 stock particles -- a
+low-count bin); <n_ch> matched ratio 1.007 (W1) / 0.997 (W2)
+(docs/open_items/run_2026-10-26/phase_A_baseline.md sec. 2.3).  Written
+into this header by that run's phase F: it said 8.312 until then.
+
 EXPENSIVE = True: a generator-vs-generator sample is an expensive row by
 kind (BENCHMARK_PLAN.md sec. 3), so its full-size pytest runs only with
 LIPOLGEN_BENCH=1; a small-N smoke run is always on.  (Measured, the full row
 takes ~10 s, under README.md's 30 s line: the flag is set by the row's KIND,
 and whether to keep it opt-in at this cost is the README owner's call.)
 
-Run:  source env.sh && python3 validation/benchmarks/t4_pythia_ep_closure.py
+Run:  source env.sh && python3 validation/benchmarks/t4_pythia_ep_closure.py [--plot]
 
 Exit status (validation/benchmarks/README.md): 0 when the harness ran and
 printed its REPORT row -- pass, recorded fail and blocked alike, since the
@@ -136,6 +146,10 @@ import math
 import sys
 import time
 import traceback
+import os
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from _report import import_pythia8  # noqa: E402  (PYTHIA 8.317 imports only from a cwd without `python/`; see _report.py)
 
 NAME = "t4_pythia_ep_closure"
 EXPENSIVE = True            # full N costs a generator-vs-generator sample
@@ -202,7 +216,7 @@ def environment():
     if not getattr(lg, "HAVE_PYTHIA8", False):
         return "environment: lipolgen built without PYTHIA 8 (HAVE_PYTHIA8 false)"
     try:
-        import pythia8                                     # noqa: F401,WPS433
+        import_pythia8()
     except Exception:
         return "environment: pythia8 Python module not importable (stock side)"
     return None
@@ -305,7 +319,7 @@ def stock_settings(window, seed, e_a, e_b):
 
 def stock_sample(window, n_events, seed, cuts, beams):
     """Stock PYTHIA e p, selected after the fact into the window."""
-    import pythia8                                         # noqa: WPS433
+    pythia8 = import_pythia8()
     with contextlib.redirect_stdout(io.StringIO()):
         py = pythia8.Pythia("", False)
     p_u, e_e = beams["p_u"], beams["e_e"]
@@ -378,7 +392,7 @@ def bridge_sample(window, n_events, seed):
     beams = lg.default_configs(cfg.isotope)[cfg.beam_config]
     opts = lg.PythiaBridgeOptions()
     opts.seed = seed
-    opts.f2_source = cfg.unpol_sf_obj           # what cli.py does, verbatim
+    lg._lipolgen.fill_grid_sf_backends(cfg); opts.f2_source = cfg.unpol_sf_obj  # as cli.py (D7: attach first)
     bridge = lg.PythiaBridge(beams, opts)
     lg.set_pythia_hadronizer(cfg, bridge)
     pipe = lg.Pipeline(cfg, make_plan())
@@ -606,11 +620,77 @@ def run(verbose=True, n_events=N_EVENTS, seed=SEED, windows=WINDOWS):
     return report
 
 
+# ------------------------------------------------------------------- figure
+
+#: the marker of each window (one configuration, the bridge: one colour)
+PLOT_WINDOW_MARKERS = {"W1": "o", "W2": "s"}
+
+
+def plot(report, out_dir=None):
+    """bridge / stock per observable (the matched ratio, its statistical
+    error) in each window, the stock reference the line at 1 and D-1's
+    +-20 % tolerance the grey band; a sub-row not compared (too few stock
+    particles in its eta bin) hollow and grey.  The un-matched ratios are
+    in the row, not drawn.  Nothing to draw for a BLOCKED row (None).  A
+    view of the row: every number drawn is in the report."""
+    if not report.get("subrows"):
+        return None
+    here = os.path.dirname(os.path.abspath(__file__))
+    if here not in sys.path:
+        sys.path.insert(0, here)
+    from _plots import BAND, INK, MUTED, new_figure, save, status_title, style_series
+    subs = report["subrows"]
+    obs = list(OBSERVABLES)
+    fig, ax = new_figure()
+    ax.axhspan(1.0 - TOL, 1.0 + TOL, color=BAND, alpha=0.8, linewidth=0, zorder=1,
+               label="tolerance |bridge/stock - 1| <= %.2f (D-1)" % TOL)
+    ax.axhline(1.0, color=INK, linewidth=1.0, zorder=2,
+               label="stock PYTHIA 8 ff2ff(t:gmZ) (the reference)")
+    windows = {w["label"]: w for w in report["windows"]}
+    for k, (wl, mk) in enumerate(PLOT_WINDOW_MARKERS.items()):
+        if wl not in windows:
+            continue
+        w = windows[wl]
+        off = 0.14 * (2 * k - 1)              # the two windows side by side
+        comp = [s for s in subs if s["window"] == wl and s["compared"]]
+        kw = style_series("default", label="LiPolGen bridge, %s: x %g-%g, Q2 %g-%g "
+                          "GeV^2" % (wl, w["x"][0], w["x"][1], w["q2"][0], w["q2"][1]),
+                          marker=mk)
+        kw.update(markersize=6, capsize=2, elinewidth=1.0)
+        ax.errorbar([obs.index(s["observable"]) + off for s in comp],
+                    [s["ratio"] for s in comp], yerr=[s["ratio_err"] for s in comp],
+                    **kw)
+        nc = [s for s in subs if s["window"] == wl and not s["compared"]]
+        if nc:
+            kw = style_series("default", label="%s, not compared (< %d stock "
+                              "particles in the bin)" % (wl, MIN_STOCK_COUNTS),
+                              marker=mk)
+            kw.update(color=MUTED, markerfacecolor="none", markersize=6, capsize=2,
+                      elinewidth=1.0)
+            ax.errorbar([obs.index(s["observable"]) + off for s in nc],
+                        [s["ratio"] for s in nc], yerr=[s["ratio_err"] for s in nc],
+                        **kw)
+    ax.set_xticks(range(len(obs)))
+    ax.set_xticklabels(obs, rotation=25, ha="right", fontsize=7)
+    ax.set_xlim(-0.6, len(obs) - 0.4)
+    ax.set_ylim(1.0 - 2.0 * TOL, 1.0 + 1.5 * TOL)
+    ax.set_ylabel("bridge / stock, matched (x, Q2)")
+    ax.legend(loc="lower right", fontsize=7, ncol=1)
+    wst = report["worst"]
+    status_title(fig, NAME, report["status"],
+                 "e 10 x p 100 GeV; worst |ratio - 1| = %.3f (%s %s) of %.2f allowed"
+                 % (wst["distance"], wst["window"], wst["observable"], TOL))
+    return save(fig, NAME, out_dir)
+
+
 if __name__ == "__main__":
     # Exit convention (module docstring, validation/benchmarks/README.md):
     # 0 = ran and printed its REPORT row, whatever the verdict; 2 = broken.
+    # `--plot` also writes the row's figure (plot()); the same rule holds.
     try:
-        run()
+        rep = run()
+        if "--plot" in sys.argv[1:]:
+            print("figure: %s" % plot(rep))
     except Exception:  # any exception means the harness itself is broken
         traceback.print_exc()
         sys.exit(2)

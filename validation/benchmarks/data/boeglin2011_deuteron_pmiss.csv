@@ -1,0 +1,146 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# ============================================================================
+# VENDORED REFERENCE TABLE -- tier T2, docs/benchmarking/02_data_nucleon_deuteron.md
+# sec. 5.4: the d(e,e'p)n REDUCED CROSS SECTION against missing momentum of
+# Boeglin et al. 2011, Fig. 2, read back from the PDF's VECTOR drawing (no
+# pixel was picked, nothing eyeballed)
+# ----------------------------------------------------------------------------
+# Paper:     W. U. Boeglin et al. (Hall A Collaboration), "Probing the high
+#            momentum component of the deuteron at high Q^2", Phys. Rev. Lett.
+#            107 (2011) 262501, doi:10.1103/PhysRevLett.107.262501;
+#            arXiv:1106.0275v3 [nucl-ex] (21 Jul 2011).  2H(e,e'p)n at
+#            Q^2 = 3.5 (GeV/c)^2, beam 5.008 GeV/c, Hall A HRS pair.
+# Document:  the arXiv PDF in the author's corpus,
+#            PolarizedLithiumSim/refs/1106.0275.pdf (read, never edited):
+#            5 pages, 523 354 bytes, sha256
+#            b9abd4132e4736ac195d608d43354d3774c2ca233a587495adb1e31395c70f91
+#            (pdfTeX-1.40.10; no raster image on any page).  The PDF is NOT in
+#            this repository; only the numbers below are.
+#            Read 2026-10-27 (UTC) by run 2026-10-26 phase C5.
+# Licence:   facts (numbers) read from a published figure, quoted with
+#            attribution; no figure, text or table of the paper is reproduced.
+# Figure:    Fig. 2, PDF page 5: sigma_red(p_m) = sigma_exp/(k sigma_cc1) in
+#            fm^3 against p_m (GeV/c), panels (a), (b), (c) at theta_nq = 35,
+#            45 and 75 deg, bin width +-5 deg; data as filled circles with
+#            error bars; four curves of the MS model [15, 19, 27].  Caption:
+#            "CD-Bonn potential: dashed (blue) lines PWIA, solid (blue) lines
+#            FSI.  Paris potential: dash-dot (green) lines PWIA, long-dashed
+#            (green) lines FSI.  The PWIA results are for all angles
+#            identical."  Text (p. 4): sigma_red = sigma_exp/(k sigma_cc1)
+#            "using the same form factor as previously (Table I in ref.
+#            [30])", sigma_cc1 the de Forest CC1 off-shell cross section [35];
+#            "The theoretical cross sections have been treated the same way
+#            as the experimental ones."  Each curve is a polyline with ONE
+#            vertex at each data point's p_m (the theory was computed at the
+#            bins' averaged kinematics), so every row below carries the four
+#            curves' values at its own point.
+# Frames:    each panel is four 0.64-pt strokes:
+#              (a) (x0, y0, x1, y1) = (114.973, 63.567, 251.737, 258.945) pt
+#              (b)                    (251.737, 63.567, 388.502, 258.945)
+#              (c)                    (388.502, 63.567, 525.267, 258.945)
+#            Calibration, linear in p_m and in log10 sigma_red between the
+#            box edges: p_m = 0.7 (x - x0)/(x1 - x0) GeV/c; log10 sigma_red =
+#            -5 + 6 (258.945 - y)/195.378.  The tick LABELS are glyph
+#            outlines, not text (no numeric word exists on the page), read
+#            from the page image: 0.1 .. 0.6 under the six major x ticks,
+#            10^1 at the top and 10^-5 at the bottom of the decade ticks.
+#            CHECKED on the tick marks: the major x ticks read back as p_m =
+#            0.10000 .. 0.60000 on every panel; all 55 y ticks (decades and
+#            log10 2 .. 9) within 2.1e-5 decade of log10 n.
+# Precision: the coordinates are float32 output of the plotting program
+#            (~1e-4 pt), written below to 0.001 pt; 0.01 pt is the declared
+#            digitization error of every coordinate: dpm_gev = 0.000051,
+#            dlog10 = 0.000307 decade (0.07 % in sigma_red).
+# ----------------------------------------------------------------------------
+# HOW THE NUMBERS WERE READ (commands; cwd anywhere, PyMuPDF 1.28.2):
+#   1. The sibling programme's tool, PolarizedLithiumSim/tools/digitize_figure.py
+#      (read, never copied):
+#        python3 tools/digitize_figure.py --pdf refs/1106.0275.pdf --page 5 --inspect
+#      lists the four frames (the three panels and the outer box), and
+#        python3 tools/digitize_figure.py --pdf refs/1106.0275.pdf --page 5 \
+#          --frame 114.97 63.57 251.74 258.94 --xrange 0 0.7 --yrange 1e-5 10 \
+#          --ylog --min-items 5 \
+#          --curve "CDB_PWIA:0,0,1:[ 3.19245 .63849 ] 0" \
+#          --curve "CDB_FSI:0,0,1:[ .63849 0 ] 0" \
+#          --curve "PAR_PWIA:0,0.8,0:[ 3.19245 .63849 1.27698 .63849 ] 0" \
+#          --curve "PAR_FSI:0,0.8,0:[ 6.3849 1.9154701 ] 0" --grid 50
+#      (and the same with --frame 251.74 63.57 388.50 258.94) extracts the
+#      four curves of panels (a) and (b): they agree with the rows below to
+#      6.2e-4 (relative; its frame is rounded to 0.01 pt).  It reads no data
+#      point or error bar, and its label check finds no numeric word.
+#   2. The per-object extraction that wrote every row below:
+#        source env.sh && python3 validation/benchmarks/t2_boeglin_nk.py \
+#          --redigitize PolarizedLithiumSim/refs/1106.0275.pdf
+#      re-reads the PDF and compares the body it writes with this file's
+#      body, line for line (exit 0 identical, 1 different).  Its rules are
+#      the harness's `digitize()`: the data points are the black-stroked,
+#      black-filled 8-arc circles inside a panel (centre = bounding-box
+#      centre); each one's error bar is the 1.28-pt black vertical stroke at
+#      its x (one per point, asserted); the curves are the four
+#      (colour, dash) styles of the caption with >= 3 segments inside the
+#      panel (the legend handles are single segments), one vertex at each
+#      point's x (asserted).
+# ----------------------------------------------------------------------------
+# PUBLISHING CONVENTION (per deuteron):
+#   sigma_red = sigma_exp/(k sigma_cc1), fm^3, the paper's reduced cross
+#   section: in PWIA (-p_m the struck proton's initial momentum) it is the
+#   proton momentum distribution in the deuteron n(p_m), normalised to
+#   INT n(p) d^3p = 1 (one proton per deuteron; p in fm^-1).  The ERRORS
+#   are the bars as drawn, symmetric in sigma_red (max asymmetry 1.3e-3 of
+#   the bar): statistical (+) the per-bin kinematic systematics (p. 3: "The
+#   systematic error due to uncertainties in the measured kinematic
+#   variables were calculated for each data bin and added quadratically to
+#   the statistical error.  An overall error of 4.5 % was added ..." -- the
+#   text does not say whether the 4.5 % is inside the bars).
+# ----------------------------------------------------------------------------
+# COLUMNS.
+#   panel, theta_nq_deg   a 35, b 45, c 75 (deg; bin width +-5 deg).
+#   point                 1 .. N within the panel, in increasing p_m.
+#   pm_gev                the point's p_m (GeV/c) -- the bin's averaged p_m.
+#   sigma_red_fm3         the point; sigma_red_lo_fm3 / _hi_fm3 its bar's ends.
+#   cdbonn_pwia_fm3, cdbonn_fsi_fm3, paris_pwia_fm3, paris_fsi_fm3
+#                         the four MS curves at the point's p_m.
+#   x_pt, y_pt, y_bar_lo_pt, y_bar_hi_pt, y_<curve>_pt   the PDF coordinates
+#                         (points, y down) every number above is read from.
+#   dpm_gev, dlog10       the digitization error (0.01 pt), per row.
+# Integrity: validation/benchmarks/t2_boeglin_nk.py records the sha256 of
+#   EVERY byte of this file and re-checks it on every read; it also
+#   re-derives every number of every row from its coordinates.  An altered
+#   file raises RuntimeError and the harness exits 2.
+# ============================================================================
+panel,theta_nq_deg,point,pm_gev,sigma_red_fm3,sigma_red_lo_fm3,sigma_red_hi_fm3,cdbonn_pwia_fm3,cdbonn_fsi_fm3,paris_pwia_fm3,paris_fsi_fm3,x_pt,y_pt,y_bar_lo_pt,y_bar_hi_pt,y_cdbonn_pwia_pt,y_cdbonn_fsi_pt,y_paris_pwia_pt,y_paris_fsi_pt,dpm_gev,dlog10
+a,35,1,0.17833,0.0148438,0.0141679,0.0155189,0.0217689,0.0187212,0.0209401,0.0182597,149.814,155.670,156.329,155.041,150.255,152.388,150.804,152.741,0.000051,0.000307
+a,35,2,0.21719,0.00630092,0.00594092,0.00666057,0.00793391,0.00648948,0.00750922,0.0062849,157.406,167.788,168.620,167.003,164.529,167.371,165.307,167.824,0.000051,0.000307
+a,35,3,0.25555,0.00222404,0.00198627,0.00246174,0.00332992,0.00272542,0.00312703,0.00264379,164.901,182.515,184.114,181.079,176.807,179.640,177.696,180.070,0.000051,0.000307
+a,35,4,0.29631,0.00109846,0.000858416,0.00133849,0.00143413,0.00113069,0.00137048,0.00114315,172.866,192.491,195.978,189.696,188.720,192.082,189.362,191.927,0.000051,0.000307
+a,35,5,0.34214,0.000490837,0.000434781,0.00054692,0.000687835,0.000557304,0.00069458,0.000600809,181.819,203.883,205.598,202.353,199.111,202.087,198.973,201.024,0.000051,0.000307
+a,35,6,0.38008,0.000248535,0.000220852,0.000276248,0.000375738,0.000308705,0.000415279,0.000363688,189.232,213.507,215.177,212.012,207.662,210.441,206.247,208.123,0.000051,0.000307
+a,35,7,0.41899,0.000147987,0.000131411,0.00016457,0.000223982,0.000189623,0.000275136,0.000246871,196.835,220.839,222.519,219.337,214.978,217.333,212.069,213.602,0.000051,0.000307
+a,35,8,0.45940,0.000106676,9.53863e-05,0.000117969,0.00013899,0.000122561,0.00019193,0.000177329,204.730,225.468,227.050,224.045,221.726,223.505,217.162,218.281,0.000051,0.000307
+a,35,9,0.49799,7.4342e-05,6.48077e-05,8.38795e-05,9.19296e-05,8.09657e-05,0.000140771,0.00012716,212.268,230.575,232.516,228.868,227.572,229.368,221.546,222.984,0.000051,0.000307
+a,35,10,0.53811,4.89797e-05,4.00286e-05,5.79323e-05,5.93211e-05,5.11314e-05,0.000101704,9.09468e-05,220.107,236.476,239.330,234.102,233.767,235.868,226.143,227.724,0.000051,0.000307
+b,45,1,0.05499,1.58214,1.53476,1.62949,1.81541,1.72164,1.81336,1.72322,262.480,89.642,90.072,89.225,87.697,88.447,87.713,88.434,0.000051,0.000307
+b,45,2,0.09245,0.317023,0.295777,0.33826,0.370881,0.33709,0.368086,0.335901,269.800,112.376,113.357,111.459,110.157,111.508,110.264,111.558,0.000051,0.000307
+b,45,3,0.17953,0.0154762,0.0146177,0.0163341,0.0211021,0.0171399,0.0202814,0.0167079,286.814,155.080,155.887,154.317,150.695,153.636,151.256,153.997,0.000051,0.000307
+b,45,4,0.21769,0.00508286,0.00477419,0.00539201,0.0078004,0.00605329,0.00737869,0.00585915,294.269,170.826,171.712,169.991,164.769,168.355,165.555,168.816,0.000051,0.000307
+b,45,5,0.25619,0.00224537,0.00203705,0.00245357,0.00320766,0.00239325,0.00301393,0.00233409,301.792,182.380,183.757,181.126,177.336,181.478,178.217,181.832,0.000051,0.000307
+b,45,6,0.29620,0.000836426,0.000672065,0.00100071,0.0014525,0.00109365,0.00138696,0.00110594,309.608,196.345,199.439,193.809,188.540,192.553,189.193,192.395,0.000051,0.000307
+b,45,7,0.34036,0.000455714,0.000395559,0.000515854,0.000696104,0.00053178,0.000702334,0.000583228,318.237,204.933,206.935,203.180,198.942,202.750,198.816,201.444,0.000051,0.000307
+b,45,8,0.38087,0.000303446,0.000279351,0.000327527,0.000377363,0.000298867,0.000416986,0.000362968,326.151,210.684,211.854,209.604,207.601,210.899,206.189,208.151,0.000051,0.000307
+b,45,9,0.41896,0.000188527,0.000172725,0.000204325,0.000228267,0.000194829,0.000279944,0.000259086,333.592,217.415,218.653,216.277,214.710,216.950,211.824,212.919,0.000051,0.000307
+b,45,10,0.45820,0.000128798,0.000115126,0.000142473,0.000141219,0.000132026,0.000194568,0.000193456,341.260,222.803,224.390,221.376,221.501,222.453,216.969,217.050,0.000051,0.000307
+b,45,11,0.49691,0.000110891,9.56429e-05,0.000126139,9.20272e-05,9.44867e-05,0.00014177,0.000147768,348.823,224.920,227.012,223.098,227.557,227.184,221.446,220.860,0.000051,0.000307
+b,45,12,0.53553,7.6789e-05,5.54709e-05,9.81089e-05,6.11828e-05,6.78272e-05,0.000104459,0.000112288,356.368,230.117,234.716,226.652,233.330,231.872,225.765,224.743,0.000051,0.000307
+c,75,1,0.05656,1.46384,1.43312,1.49449,1.65843,1.55959,1.6562,1.56069,399.553,90.741,91.041,90.448,88.976,89.845,88.995,89.835,0.000051,0.000307
+c,75,2,0.09603,0.262591,0.255719,0.269476,0.316754,0.278661,0.314055,0.277442,407.265,115.040,115.415,114.674,112.388,114.200,112.509,114.262,0.000051,0.000307
+c,75,3,0.13805,0.0477756,0.0464827,0.0490698,0.0761618,0.0586164,0.0745526,0.0577932,415.474,139.139,139.527,138.761,132.544,136.247,132.846,136.447,0.000051,0.000307
+c,75,4,0.17751,0.0139739,0.0134933,0.0144533,0.0231453,0.014759,0.022286,0.0143667,423.184,156.524,157.019,156.047,149.388,155.751,149.923,156.132,0.000051,0.000307
+c,75,5,0.21816,0.00397494,0.00380955,0.00414018,0.00796595,0.00447317,0.00753955,0.00432634,431.125,174.303,174.904,173.727,164.472,172.633,165.250,173.105,0.000051,0.000307
+c,75,6,0.25857,0.00168717,0.00159867,0.00177567,0.00316575,0.00167647,0.00297392,0.00168801,439.022,186.422,187.184,185.699,177.522,186.512,178.406,186.415,0.000051,0.000307
+c,75,7,0.29944,0.00115591,0.00109095,0.00122094,0.00140066,0.00137097,0.0013401,0.00142392,447.007,191.770,192.588,190.996,189.054,189.357,189.679,188.821,0.000051,0.000307
+c,75,8,0.34039,0.000863042,0.000821827,0.000904274,0.000680337,0.00106767,0.000688468,0.00114955,455.007,195.902,196.594,195.242,199.266,192.893,199.098,191.848,0.000051,0.000307
+c,75,9,0.38007,0.000736722,0.000701986,0.000771483,0.000374677,0.000791206,0.000414135,0.000889498,462.760,198.140,198.823,197.488,207.702,197.131,206.286,195.475,0.000051,0.000307
+c,75,10,0.41939,0.000611136,0.000580759,0.000641557,0.000223903,0.000611006,0.000275117,0.0006935,470.441,200.783,201.504,200.096,214.983,200.786,212.070,198.995,0.000051,0.000307
+c,75,11,0.45924,0.000512654,0.000486243,0.000539049,0.000139581,0.000438703,0.000192488,0.000515927,478.227,203.268,204.016,202.558,221.666,205.471,217.121,203.178,0.000051,0.000307
+c,75,12,0.49863,0.000388353,0.000364692,0.000412003,8.92206e-05,0.000286311,0.000137991,0.000341577,485.924,207.195,208.084,206.359,227.995,211.506,221.828,209.010,0.000051,0.000307
+c,75,13,0.53785,0.000287569,0.00026423,0.000310895,5.93211e-05,0.000183828,0.000101439,0.000226531,493.586,211.444,212.641,210.341,233.767,217.772,226.180,214.818,0.000051,0.000307

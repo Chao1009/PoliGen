@@ -132,10 +132,10 @@ const TaggingRow kTaggingLegacy[] = {
 // factory and by `inclusive_rank2_is_empty` below -- so the loud zero and the
 // thing it reports on cannot drift apart (docs/CONVENTIONS.md).
 //
-// It keys on the SPIN and not on the isotope on purpose: that is what makes an
-// `--isotope d --channel inclusive` run pick up the 6Li rank-2 transfer, which
-// is documented behaviour and a phase-F decision (OPEN_ITEMS_SOLUTIONS.md
-// sec. 14, "Adjacent defects"), not something this function may quietly change.
+// It keys on the SPIN; J1 (2026-11-10, the author's decision; DECISIONS.md of run 2026-11-10): WHICH camp fills the spin-1 slot is keyed on what the ion IS, by `spin1_rank2_camp` -- the deuteron gets MillerB1 itself (per nucleon, unmapped), 6Li `Li6B1(MillerB1)`; until J1 the deuteron took the 6Li rank-2 transfer (OPEN_ITEMS_SOLUTIONS.md sec. 14, "Adjacent defects").
+enum class Spin1Camp { Deuteron, Li6 };  // J1 (2026-11-10): the two spin-1 ions the tree ships; any other spin-1 ion THROWS below rather than silently take one of their mappings
+Spin1Camp spin1_rank2_camp(const Ion& ion) { if (ion.A == 2 && ion.Z == 1) return Spin1Camp::Deuteron; if (ion.A == 6 && ion.Z == 3) return Spin1Camp::Li6;
+  throw std::runtime_error("default_inclusive_kernel: spin-1 ion " + ion.name + " (A = " + std::to_string(ion.A) + ", Z = " + std::to_string(ion.Z) + ") has no rank-2 mapping -- the b1 slot is defined for the deuteron (MillerB1 itself, J1) and for 6Li (Li6B1, the embedded-deuteron transfer) only; build the kernel with its own Options::b1_func"); }
 bool kernel_fills_rank2(const Ion& ion) {
   return std::fabs(ion.spin - 1.0) < 1e-9;
 }
@@ -275,12 +275,12 @@ std::shared_ptr<const InclusiveKernel> struck_cluster_kernel(
   }
   o.delta_func = opt.delta_func;
   // The tagged channels' ONLY structure-function injection point (D2).
-  // BOTH SLOTS ARE NULL BY DEFAULT and are handed over unchanged, so the
+  // BOTH SLOTS ARE NULL AT CLASS LEVEL and are handed over unchanged, so the
   // null branch of `InclusiveKernel`'s constructor -- a fresh `ToyF2` and a
   // `ToyG1` built on it with this kernel's own `r_func` -- is taken exactly
-  // as it was before these fields existed.  A default tagged run is
-  // therefore bit for bit BY CONSTRUCTION.  `Pipeline` fills them from
-  // `PipelineConfig::unpol_sf_obj` / `pol_sf_obj`; note that
+  // as it was before these fields existed: the toy NAMED is the pre-D7
+  // default bit for bit BY CONSTRUCTION.  `Pipeline` fills them from
+  // `PipelineConfig::unpol_sf_obj` / `pol_sf_obj` (D7: the grids); note that
   // `PipelineConfig::kernel` does NOT reach here (the `Pipeline` reads it on
   // the non-tagged branch alone), which is why these two fields, and not
   // that escape hatch, are what a tagged run has.
@@ -486,43 +486,43 @@ void PipelineConfig::validate() const {
   // "silently ignored flag" C5.4 named as a defect on the deuteron control,
   // and the mechanism by which C5.5's 11.61 % inclusive-vs-tagged drift used to
   // reach a user: they set the flag wanting a "VMC 6Li" inclusive row, nothing
-  // refused it, and they got `LI6_CLUSTER_POLARIZATION` = 0.811228 with no
-  // warning.  The asymmetry with `cluster_vmc_mc_sigma` (refused for a 0.02 %
-  // effect two lines below) had no defence: this one is worth 11.61 %.
-  //
-  // WHAT THE REFUSAL DOES NOT CLAIM.  It does not make an inclusive VMC 6Li
-  // available -- there is none, and C5.5 is the argument that substituting
-  // `VMC_P_D_LI6` into `LI6_CLUSTER_POLARIZATION` would move it AWAY from the
-  // one ab initio anchor.  It converts a silent 11.61 % into an error message.
-  if (cluster_wave != ClusterWaveSource::Hulthen && !is_tagged(channel)) {
+  // refused it, and they got `LI6_CLUSTER_POLARIZATION` = 0.811228 (pre-A1) with no
+  // warning (`cluster_vmc_mc_sigma`, a 0.02 % effect, was refused already).
+  // D6 (2026-10-27): the default is `CLUSTER_WAVE_DEFAULT` = VmcAV18, so the
+  // rule refuses a value MOVED FROM THE DEFAULT (the RcOptions rule); an
+  // EXPLICIT request is refused by `make_config` / the CLI, which can see one.
+  // NOT CLAIMED: an inclusive VMC 6Li -- there is none, and C5.5 is the argument
+  // that substituting `VMC_P_D_LI6` into `LI6_CLUSTER_POLARIZATION` would move
+  // it AWAY from the one ab initio anchor.  A silent 11.61 % becomes an error.
+  if (cluster_wave != CLUSTER_WAVE_DEFAULT && !is_tagged(channel)) {
     throw std::runtime_error(
         std::string("PipelineConfig: cluster_wave selects the CLUSTER RELATIVE "
                     "wave function of a tagged channel and is never read on ")
         + pipeline_channel_name(channel)
-        + " -- the inclusive 6Li effective polarization "
-          "(LI6_CLUSTER_POLARIZATION = 0.811228) and the coherent form factors "
-          "do not follow it, so accepting it would promise a VMC row and "
-          "deliver the shipped one, 11.61 % away in the vector sector (open "
-          "item C5.5).  Leave it at Hulthen, or run a tagged channel");
+        + " -- the inclusive 6Li constants (LI6_CLUSTER_POLARIZATION = "
+          "0.848, the six-body ab initio value since A1) and the coherent form "
+          "factors do not follow it, so a value moved from the default (vmc, "
+          "D6) would promise a row the run does not make (C5.5).  Leave "
+          "cluster_wave at its default, or run a tagged channel");
   }
   // C5.2.  A KNOB THAT DID NOT RUN MAY NOT BE RECORDED AS IF IT HAD -- the
   // same rule the b1 band scales are refused under.  The MC band exists only
-  // where a table carries printed 1-sigma errors, which is the two `momenta/`
-  // files and nothing else: the Hulthen forms are analytic and `fdeut.av18`
-  // (the deuteron control's VmcAV18 wave) prints none.
+  // where a table carries printed 1-sigma errors: the two `momenta/` files (the
+  // Hulthen forms are analytic; `fdeut.av18`, the d control's wave, prints none).
   if (cluster_vmc_mc_sigma != 0.0) {
+    if (!std::isfinite(cluster_vmc_mc_sigma))  // F6 (2026-10-29): NaN != 0.0 too
+      throw std::runtime_error("PipelineConfig: cluster_vmc_mc_sigma must be "
+                               "finite (a number of the tables' printed sigmas)");  if (std::fabs(cluster_vmc_mc_sigma) > 3.0) throw std::runtime_error("PipelineConfig: cluster_vmc_mc_sigma = " + /* V-PHYSICS-8 (2026-11-10): the shortest round-trip digits, so 3.0000001 never prints as the bound */ [](double v) { char b[40]; for (int p = 6; p <= 17; ++p) { std::snprintf(b, sizeof(b), "%.*g", p, v); if (std::stod(std::string(b)) == v) break; } return std::string(b); }(cluster_vmc_mc_sigma) + " is outside the band it names -- a number of the tables' printed 1-sigma; |sigma| <= 3, the widest reading of a statistical band (A11, 2026-11-03: 1000 sigma built an alpha-d P_D of 0.133 that prices nothing the tables say)");
     if (cluster_wave != ClusterWaveSource::VmcAV18) {
-      throw std::runtime_error(
-          "PipelineConfig: cluster_vmc_mc_sigma is the ANL VMC tables' own "
-          "Monte Carlo band and needs cluster_wave = VmcAV18 (the analytic "
-          "Hulthen forms carry no MC error)");
+      throw std::runtime_error("PipelineConfig: cluster_vmc_mc_sigma is the ANL "
+          "VMC tables' own Monte Carlo band and needs cluster_wave = VmcAV18 (the "
+          "analytic Hulthen forms carry no MC error)");
     }
     if (channel != PipelineChannel::TaggedLi6Alpha
         && channel != PipelineChannel::TaggedLi7Alpha) {
       throw std::runtime_error(
           std::string("PipelineConfig: cluster_vmc_mc_sigma needs a lithium "
-                      "alpha-tag channel, got ")
-          + pipeline_channel_name(channel)
+                      "alpha-tag channel, got ") + pipeline_channel_name(channel)
           + " (only li6_ad1.momentum and li7_at3.momentum print MC errors; "
             "the deuteron control's fdeut.av18 does not, so the band would be "
             "recorded without having run)");
@@ -608,12 +608,12 @@ void PipelineConfig::validate() const {
             "leave the quasi-elastic tail on");
       }
     }
-    // `RcTailModel::PolradFull` -- POLRAD Eq. (18) + Appendix B + Eq. (A.4),
-    // implemented 2026-09-06 (phase_B_numbers.md sec. B2).  Its two
-    // preconditions are `RcModel`'s own and are repeated here for the same
-    // reason every other rc check is: `validate()` has to refuse BEFORE any
-    // model exists.
-    if (rc_options.tail_model == RcTailModel::PolradFull) {
+    // `RcTailModel::PolradFull` (POLRAD Eq. (18) + App. B + Eq. (A.4)), the
+    // DEFAULT since D5: its two preconditions are `RcModel`'s own, repeated so
+    // validate() refuses BEFORE a model exists -- and only where a TAIL is
+    // built (D5, 2026-10-29: a tagged run refuses --rc-tail-model t-peak).
+    if (rc_options.tail_model == RcTailModel::PolradFull &&
+        rc_tail_applies(event_channel_of(channel), rc_options.with_tail)) {
       if (std::numeric_limits<long double>::digits <=
           std::numeric_limits<double>::digits) {
         throw std::runtime_error(
@@ -633,12 +633,12 @@ void PipelineConfig::validate() const {
     // THE SAME RULE AGAIN, ONE LEVEL DOWN: `sp_tensor_scale` is a fraction OF
     // the leading-log s-/p-peak column `TailTriple::u_sp`, and only
     // `tail_model = TPeakPlusLL` computes that column -- under `TPeak` the
-    // table is identically zero, so the scale multiplies nothing and the run
-    // is bit-identical to the default while `meta` would carry
-    // `rc_sp_tensor_scale` as if the s/p tensor omission had been priced.
-    // `RcModel`'s constructor makes the identical check for the C++ API path.
-    if (rc_options.tail_model != RcTailModel::TPeakPlusLL &&
-        rc_options.sp_tensor_scale != 0.0) {
+    // table is identically zero, so the scale multiplies nothing and `meta`
+    // would carry `rc_sp_tensor_scale` as if the s/p omission had been priced.
+    // ONLY WHERE A TAIL IS BUILT (F5, 2026-10-29): off it the tail sub-knob rule
+    // below names THAT cause.  `RcModel`'s constructor checks the C++ API path.
+    if (rc_options.tail_model != RcTailModel::TPeakPlusLL && rc_options.sp_tensor_scale != 0.0 &&
+        rc_tail_applies(event_channel_of(channel), rc_options.with_tail)) {
       throw std::runtime_error(
           std::string("PipelineConfig: rc sp_tensor_scale != 0 needs "
                       "tail_model = TPeakPlusLL (--rc-tail-model t-peak+ll) "
@@ -677,8 +677,8 @@ void PipelineConfig::validate() const {
         rc_options.m_lepton != M_ELECTRON) {
       throw std::runtime_error(
           "PipelineConfig: rc_options.m_lepton is read ONLY by tail_model = "
-          "PolradFull (POLRAD's F_IR, C_{1,2} and lambda_s); the shipped "
-          "TPeak tail has no lepton-mass dependence and TPeakPlusLL's "
+          "PolradFull (POLRAD's F_IR, C_{1,2} and lambda_s; the default since "
+          "D5); the TPeak tail has no lepton-mass dependence and TPeakPlusLL's "
           "leading-log radiator reads constants.hpp's M_ELECTRON directly, "
           "so setting it here would record a variation that did not run -- "
           "leave it at M_ELECTRON or run --rc-tail-model polrad-full");
@@ -741,8 +741,8 @@ void PipelineConfig::validate() const {
            rc_options.sp_tensor_scale != od.sp_tensor_scale},
           {"rc_options.qe_kf_gev", rc_options.qe_kf_gev != od.qe_kf_gev},
           {"--rc-tail-model", rc_options.tail_model != od.tail_model},
-          {"rc_options.with_qe_tail",
-           rc_options.with_qe_tail != od.with_qe_tail},
+          {"rc_options.with_qe_tail", rc_options.with_qe_tail != od.with_qe_tail},
+          {"rc_options.m_lepton", rc_options.m_lepton != od.m_lepton},  // D5
           {"rc_options.n_eta", rc_options.n_eta != od.n_eta},
           {"rc_options.tail_max", rc_options.tail_max != od.tail_max},
       };
@@ -979,28 +979,28 @@ void PipelineConfig::validate() const {
         "variation that did not run");
   }
   // --unpol-sf / --pol-sf: the structure-function backend of EVERY kernel
-  // this config builds (`UnpolSfSource`, `PolSfSource`).  Five clauses, all
-  // of them the rules already enforced above, and the last two new because
-  // these two selectors are the first ones that reach the tagged channels.
+  // this config builds (`UnpolSfSource`, `PolSfSource`).  Six clauses; since
+  // D7 (2026-10-27) the SHIPPED defaults are grid backends (`ct18nlo` /
+  // `nnpdfpol`), which moved clauses (1), (3) and (5).
   //
   // (1) A NAMED BACKEND WITH AN EMPTY SLOT IS AN ERROR, NEVER A FALLBACK --
-  //     the `b1_unpol` rule verbatim.  The core library links neither the
-  //     PYTHIA nor the LHAPDF tier, so it cannot build `MstwSF` /
-  //     `LhapdfSF` / `LhapdfG1`; falling back to the toy would put the toy's
-  //     numbers under a label that says otherwise, and the toy is 20 % away
-  //     on the 6Li rate and has the WRONG SIGN on g1n over 0.25 < x < 0.6.
-  // (2) `Toy` WITH AN OBJECT is the same contradiction the other way: the
-  //     Python setters name an attached object `Custom`, so reaching this
-  //     state means the provenance and the realisation drifted apart.
-  // (3) A CALLER-SUPPLIED KERNEL WINS over both selectors on the inclusive
-  //     branch and is not even read on the tagged one, while `meta` would
-  //     print both -- the `b1_model` argument verbatim.
+  //     the `b1_unpol` rule verbatim -- UNLESS it is a grid backend and the
+  //     LHAPDF tier's filler is installed in this process: the `Pipeline`
+  //     then attaches the object when it is built (`fill_grid_sf_backends`,
+  //     the D7 block of pipeline.hpp).  The core links no LHAPDF, and the toy
+  //     in its place would be 20 % away on the 6Li rate and wrong-signed on g1n.
+  // (2) `Toy` WITH AN OBJECT -- or a GRID selector holding any object but
+  //     the tier's shipped one (2026-11-03) -- is the same contradiction: the
+  //     Python setters name an attached object `Custom`; reaching it is drift.
+  // (3) BESIDE A CALLER-SUPPLIED KERNEL the selectors are NOT READ (the
+  //     kernel wins on the inclusive branch; the tagged one refuses it, (6)),
+  //     so they are accepted at their shipped defaults -- `meta` then says
+  //     "caller-supplied kernel" -- and refused at any other value (D7).
   // (4) THE b1 COLLISION.  See `B1UnpolSource`: with a non-toy `unpol_sf`
   //     the `Li6Convolution` branch's null `b1_unpol` no longer means
   //     `ToyF2`, so `meta["b1_unpol"] = "toy"` would name something else.
-  // (5) A DIRECTLY SET `struck.f2_source` / `struck.g1_model` with the
-  //     matching selector still at `Toy` -- same rule, tagged branch.
-  //
+  // (5) A DIRECTLY SET `struck.f2_source` / `struck.g1_model` under any
+  //     selector but `Custom` -- same rule, tagged branch (D7: not only `Toy`).
   // (6) A CALLER-SUPPLIED KERNEL ON A TAGGED CHANNEL, selectors or no
   //     selectors -- the `cluster_wave` rule (a knob that is never read on
   //     this channel is refused, not accepted in silence) applied to the
@@ -1025,7 +1025,8 @@ void PipelineConfig::validate() const {
           "run on your own UnpolSF (Python: config.unpol_sf_obj = obj, which "
           "sets Custom for you), or clear the slot");
     }
-  } else if (!unpol_sf_obj) {
+  } else if (!unpol_sf_obj && !kernel &&
+             !(unpol_sf == UnpolSfSource::Ct18Nlo && grid_sf_filler())) {
     throw std::runtime_error(
         std::string("PipelineConfig: unpol_sf = ") + unpol_sf_name(unpol_sf) +
         " but unpol_sf_obj is empty, and it is NEVER silently replaced by "
@@ -1041,14 +1042,13 @@ void PipelineConfig::validate() const {
                "/ _lipolgen.set_unpol_sf(cfg, UnpolSfSource.Mstw), C++ "
                "cfg.unpol_sf_obj = std::make_shared<const MstwSF>()"
              : unpol_sf == UnpolSfSource::Ct18Nlo
-                   ? " -- LhapdfSF lives in the OPTIONAL LHAPDF tier "
-                     "(src/lhapdf/lhapdf_sf.cpp), which the core library "
-                     "deliberately does not link.  Configure with "
-                     "-DLIPOLGEN_WITH_LHAPDF=ON (and the CT18NLO set in "
-                     "LHAPDF's store), then attach it: Python "
-                     "lipolgen.make_config(unpol_sf='ct18nlo'), C++ "
-                     "cfg.unpol_sf_obj = std::make_shared<const LhapdfSF>("
-                     "\"CT18NLO\", 0)"
+                   ? " -- ct18nlo is the SHIPPED default since D7 (2026-10-27); "
+                     "LhapdfSF lives in the OPTIONAL LHAPDF tier, which the core "
+                     "does not link, and no tier filler is installed here.  Build "
+                     "with the tier and the CT18NLO set on LHAPDF_DATA_PATH, call "
+                     "lipolgen::install_lhapdf_sf_filler() once or attach_shipped_"
+                     "sf_backends(cfg) (Python does it at import) -- or run the "
+                     "toy NAMED (lipolgen::toy_config(), --unpol-sf toy); say so"
                    : " -- Custom means the object YOU attach; put it in "
                      "unpol_sf_obj or leave unpol_sf at Toy"));
   }
@@ -1062,56 +1062,56 @@ void PipelineConfig::validate() const {
           "(Python: config.pol_sf_obj = obj, which sets Custom for you), or "
           "clear the slot");
     }
-  } else if (!pol_sf_obj) {
+  } else if (!pol_sf_obj && !kernel &&
+             !(pol_sf == PolSfSource::NnpdfPol && grid_sf_filler())) {
     throw std::runtime_error(
         std::string("PipelineConfig: pol_sf = ") + pol_sf_name(pol_sf) +
         " but pol_sf_obj is empty, and it is NEVER silently replaced by "
         "ToyG1" +
         (pol_sf == PolSfSource::NnpdfPol
-             ? " -- LhapdfG1 lives in the OPTIONAL LHAPDF tier "
-               "(src/lhapdf/lhapdf_sf.cpp), which the core library "
-               "deliberately does not link.  Configure with "
-               "-DLIPOLGEN_WITH_LHAPDF=ON (and the NNPDFpol11_100 set in "
-               "LHAPDF's store -- it is the only POLARISED set installed "
-               "here), then attach it: Python "
-               "lipolgen.make_config(pol_sf='nnpdfpol'), C++ cfg.pol_sf_obj "
-               "= std::make_shared<const LhapdfG1>(\"NNPDFpol11_100\", 0)"
+             ? " -- nnpdfpol is the SHIPPED default since D7 (2026-10-27), "
+               "and LhapdfG1(\"NNPDFpol11_100\", 0) lives in the OPTIONAL LHAPDF "
+               "tier, which the core does not link, and no tier filler is "
+               "installed in this process.  Build with the tier and the set "
+               "and call lipolgen::install_lhapdf_sf_filler() once or "
+               "attach_shipped_sf_backends(cfg) -- or run the toy NAMED "
+               "(lipolgen::toy_config(), --pol-sf toy) and say so"
              : " -- Custom means the object YOU attach; put it in pol_sf_obj "
                "or leave pol_sf at Toy"));
   }
-  // (5) ... and the same rule for the tagged branch's own slots.  A C++
-  //     caller may put an object straight into `struck.f2_source` /
-  //     `struck.g1_model` (the `breakup.triton_sf` arrangement: `Pipeline`
-  //     fills them only when they are empty), but then `meta["unpol_sf"]`
-  //     would still write "toy" for a run made on something else.  Naming
-  //     the selector `Custom` alongside costs one line and keeps the file
-  //     honest.
-  if (struck.f2_source && unpol_sf == UnpolSfSource::Toy) {
+  refuse_foreign_grid_sf_objects(*this);  // (2), grid half: pipeline.hpp, 2026-11-03
+  // (5) ... and the same rule for the tagged branch's own slots: an object
+  //     put straight into `struck.f2_source` / `struck.g1_model` (`Pipeline`
+  //     fills them only when empty) runs while `meta` names the SELECTOR's
+  //     backend.  Until D7 refused under `Toy` only; MEASURED 2026-10-27, a
+  //     tagged-6Li-alpha run, ToyF2 there, ct18nlo named: 591846.1688784088 pb.
+  if (struck.f2_source && unpol_sf != UnpolSfSource::Custom) {
     throw std::runtime_error(
-        "PipelineConfig: struck.f2_source is set but unpol_sf = toy -- the "
-        "tagged kernel would run on your object while meta[\"unpol_sf\"] "
-        "recorded \"toy\".  Set unpol_sf = Custom as well (Python: "
-        "config.unpol_sf_obj = obj, which sets Custom for you, and Pipeline "
-        "then fills struck.f2_source from it), or clear the slot");
+        std::string("PipelineConfig: struck.f2_source is set but unpol_sf = ") +
+        unpol_sf_name(unpol_sf) + " -- the tagged kernel would run on your "
+        "object while meta[\"unpol_sf\"] recorded that selector.  Name it "
+        "Custom (Python: config.unpol_sf_obj = obj, which sets Custom, and "
+        "Pipeline fills struck.f2_source from it), or clear the slot");
   }
-  if (struck.g1_model && pol_sf == PolSfSource::Toy) {
+  if (struck.g1_model && pol_sf != PolSfSource::Custom) {
     throw std::runtime_error(
-        "PipelineConfig: struck.g1_model is set but pol_sf = toy -- the "
-        "tagged kernel would run on your object while meta[\"pol_sf\"] "
-        "recorded \"toy\".  Set pol_sf = Custom as well (Python: "
-        "config.pol_sf_obj = obj), or clear the slot");
+        std::string("PipelineConfig: struck.g1_model is set but pol_sf = ") +
+        pol_sf_name(pol_sf) + " -- the tagged kernel would run on your "
+        "object while meta[\"pol_sf\"] recorded that selector.  Name it "
+        "Custom (Python: config.pol_sf_obj = obj), or clear the slot");
   }
-  if (kernel && (unpol_sf != UnpolSfSource::Toy ||
-                 pol_sf != PolSfSource::Toy)) {
+  const PipelineConfig shipped;  // (3): the shipped defaults, read not retyped
+  if (kernel && (unpol_sf != shipped.unpol_sf || pol_sf != shipped.pol_sf)) {
     throw std::runtime_error(
         std::string("PipelineConfig: unpol_sf = ") + unpol_sf_name(unpol_sf) +
-        " / pol_sf = " + pol_sf_name(pol_sf) +
-        " with a caller-supplied kernel: on the inclusive channel the kernel "
-        "wins and the selectors would be silently ignored, and on a tagged "
-        "channel the kernel is not read at all -- either way meta would "
-        "record a backend that did not run, so the two are refused together "
-        "(drop one; a hand-built kernel already carries its own f2_source "
-        "and g1_model)");
+        " / pol_sf = " + pol_sf_name(pol_sf) + " with a caller-supplied "
+        "kernel: beside a kernel the selectors are NOT READ (it wins on the "
+        "inclusive channel and is refused on a tagged one), so they are "
+        "accepted only at their shipped defaults, " +
+        unpol_sf_name(shipped.unpol_sf) + " / " + pol_sf_name(shipped.pol_sf) +
+        " (D7), and refused at any other value, which meta would record as "
+        "a backend that did not run.  Leave them at the defaults (a "
+        "hand-built kernel carries its own f2_source and g1_model)");
   }
   if (kernel && is_tagged(channel)) {
     throw std::runtime_error(
@@ -1137,14 +1137,14 @@ void PipelineConfig::validate() const {
         "means \"the kernel's own UnpolSF, shared as one object\", and that "
         "object is no longer ToyF2 -- so meta[\"b1_unpol\"] would record "
         "\"toy\" for a b1 folded against " + unpol_sf_name(unpol_sf) +
-        ".  Name the b1 backend explicitly instead: " +
+        (unpol_sf == UNPOL_SF_DEFAULT ? " (the shipped default since D7); name --b1-unpol: " : "; name --b1-unpol: ") +
         (unpol_sf == UnpolSfSource::Custom
              ? std::string("attach the same object (Python: "
                            "config.b1_unpol_sf = config.unpol_sf_obj)")
              : std::string("--b1-unpol ") + unpol_sf_name(unpol_sf) +
                    " to fold against the same one") +
-        ", or --b1-unpol mstw for the configuration the A = 2 gate passes "
-        "on (G3b 0.843243)");
+        ", --b1-unpol mstw for the configuration the A = 2 gate passes on "
+        "(G3b 0.843243), or --unpol-sf toy for the pre-D7 toy pair");
   }
   scenario.validate();
 }
@@ -1158,20 +1158,20 @@ std::shared_ptr<const InclusiveKernel> default_inclusive_kernel(
     const Ion& ion, B1Model model, double band_scale, double w_alpha_d,
     std::shared_ptr<const UnpolSF> b1_unpol,
     std::shared_ptr<const UnpolSF> unpol_sf,
-    std::shared_ptr<const PolSF> pol_sf, RSource r_source) {
+    std::shared_ptr<const PolSF> pol_sf, RSource r_source, double b1_transfer) {
   InclusiveKernel::Options opt;
   // ONE UnpolSF, shared: the core must not link LHAPDF or PYTHIA (sf.hpp),
   // so an `LhapdfSF` / `MstwSF` only ever enters through the `unpol_sf`
-  // argument (filled one layer up by `_lipolgen.set_unpol_sf`), a
+  // argument (the `Pipeline` passes the tier's D7 grids, `set_unpol_sf`), a
   // caller-supplied `cfg.kernel`, or a validation script.  Naming the object
   // here rather than letting `InclusiveKernel` default it is what lets the
   // `Li6Convolution` branch hand the SAME object to
   // `Li6ConvolutionOptions::unpol`, so "the kernel's UnpolSF" is literally
   // one object and not a second one that merely looks like it.  ToyF2 is
-  // stateless closed form, so the default is bit for bit the old null
-  // default (validation/reference/b1_default_li6.json, T9).
+  // stateless closed form, so the null path is bit for bit the old null
+  // default (validation/reference/b1_default_li6.json, T9: the class toy).
   // `--unpol-sf` / `--pol-sf` (`UnpolSfSource`, `PolSfSource`).  NULL -- the
-  // default, and every caller that predates them -- keeps the shared `ToyF2`
+  // class-level toy, every caller that predates them -- keeps the shared `ToyF2`
   // named on the line below and leaves `g1_model` UNSET, so
   // `InclusiveKernel` takes its own null branch and builds `ToyG1` on that
   // same object with this kernel's own `r_func`, exactly as before: bit for
@@ -1191,23 +1191,23 @@ std::shared_ptr<const InclusiveKernel> default_inclusive_kernel(
   // whole tensor and cos 2phi sector of the run is identically zero, which is
   // what the run surface now says out loud instead of returning silent zeros.
   if (kernel_fills_rank2(ion)) {
-    if (model == B1Model::Miller) {
-      // UNCHANGED DEFAULT PATH, including the function-local `static`:
-      // `TensorSF::b1_func()` returns a closure capturing raw `this` and
-      // "must not outlive the backend" (sf.hpp), and this is how that
-      // lifetime has always been met here.  `band_scale` is deliberately NOT
-      // applied -- Miller's numbers are the published ones and stay bit for
-      // bit; the band belongs to the two opt-in backends.
-      static const auto li6_b1 =
-          std::make_shared<Li6B1>(std::make_shared<MillerB1>());
-      opt.b1_func = li6_b1->b1_func();
+    const Spin1Camp camp = spin1_rank2_camp(ion);  // J1 (2026-11-10): keyed on what the ion IS; throws for a spin-1 ion with no mapping
+    if (camp == Spin1Camp::Deuteron && model != B1Model::Miller) throw std::runtime_error(std::string("default_inclusive_kernel: b1_model = ") + b1_model_name(model) + " on the deuteron is refused -- both opt-in models carry the 6Li rank-2 transfer, and since J1 (2026-11-10) the deuteron's slot is its own camp, MillerB1 per nucleon, unmapped (PipelineConfig::validate() refuses the flag off 6Li; for the A = 2 convolution use DeuteronConvolutionB1, b1_nuclear.hpp)");
+    if (camp == Spin1Camp::Deuteron && b1_transfer != LI6_B1_RANK2_TRANSFER) throw std::runtime_error([&] { char v[64]; std::snprintf(v, sizeof(v), "%.17g", b1_transfer); return std::string("default_inclusive_kernel: b1_transfer = ") + v + " on the deuteron is refused -- since J1 (2026-11-10) the deuteron's rank-2 slot is MillerB1 itself, per nucleon, unmapped, and reads no 6Li rank-2 transfer, so a moved value would record a variation that did not run (A17: the default is accepted and labelled not read).  The pre-J1 reading Li6B1(MillerB1, transfer) stays constructible: pass it as InclusiveKernel::Options::b1_func"; }());
+    if (camp == Spin1Camp::Deuteron) { const auto d_b1 = std::make_shared<const MillerB1>(); opt.b1_func = [d_b1](double x, double q2, double f1) { return d_b1->b1(x, q2, f1); }; opt.confine_spin1_rank2 = true;  // J1 note (2026-11-12): confined to the spin-1 LO positivity domain (xsec.hpp Options::confine_spin1_rank2; meta b1_clipped_rate_fraction).  J1 (2026-11-10): the deuteron camp itself (was Li6B1(MillerB1) = 0.32753 x MillerB1); the shared_ptr captured BY VALUE, as the Cdks branch does, so nothing dangles
+    } else if (model == B1Model::Miller) {  // 6Li ALONE since J1 (2026-11-10).  The DEFAULT transfer keeps the function-local `static` (`TensorSF::b1_func()` captures raw `this` and "must not outlive the
+      // backend", sf.hpp); any other `b1_transfer` (A1, 2026-11-03: the polligen gates' 0.921947) gets its own object, kept alive by value capture.  `band_scale` is NOT applied: Miller's are the published.
+      static const auto li6_b1 = std::make_shared<Li6B1>(std::make_shared<MillerB1>());
+      const auto b = b1_transfer == LI6_B1_RANK2_TRANSFER ? std::shared_ptr<const Li6B1>() : std::make_shared<const Li6B1>(std::make_shared<MillerB1>(), b1_transfer);  // V-CODE-7 (2026-11-10): built only where it is read
+      if (b1_transfer == LI6_B1_RANK2_TRANSFER) opt.b1_func = li6_b1->b1_func();
+      else opt.b1_func = [b](double x, double q2, double f1) { return b->b1(x, q2, f1); };
     } else if (model == B1Model::Cdks) {
       // NOT a `static`: that would freeze the first band scale for the whole
       // process, so a `--b1-band-scale 0` run after a `1` run would silently
       // get the wrong object.  Capturing the shared_ptr BY VALUE in the
       // closure keeps the backend alive exactly as long as the closure --
       // which is what `b1_func()`'s raw-`this` capture cannot do.
-      const auto b = std::make_shared<const Li6B1>(std::make_shared<CdksB1>());
+      const auto b = std::make_shared<const Li6B1>(std::make_shared<CdksB1>(), b1_transfer);  // A1
       opt.b1_func = [b, band_scale](double x, double q2, double f1) {
         return band_scale * b->b1(x, q2, f1);
       };
@@ -1225,7 +1225,7 @@ std::shared_ptr<const InclusiveKernel> default_inclusive_kernel(
       // (`InclusiveSampler::cell_xsec_pb`) is bit-identical across settings,
       // and the tensor-weighted per-category cross sections move, which is
       // the point.  That asymmetry is deliberate and documented at
-      // `B1UnpolSource`.  Off that default the shared object is no longer
+      // `B1UnpolSource`.  Off the toy (D7's shipped ct18nlo too) the object is not
       // `ToyF2`, and `b1_unpol = Toy` would then record "toy" for something
       // else -- which `PipelineConfig::validate()` refuses outright rather
       // than resolve silently.
@@ -1289,7 +1289,7 @@ std::string rank2_input_report(const PipelineConfig& cfg, const RunPlan& plan) {
   if (kernel_fills_rank2(ion)) {
     return std::string("b1_model = ") + b1_model_name(cfg.b1_model) +
            " (spin 1: b1_func filled, b2 = 2x*b1 by default, delta_func = "
-           "toy_delta_gluon at the 1e-2 discovery scale)";
+           "toy_delta_gluon at the 1e-2 discovery scale, Jaffe-Manohar Delta)" + std::string(spin1_rank2_camp(ion) == Spin1Camp::Deuteron ? "; on the deuteron b1_func is MillerB1 itself, per nucleon, unmapped, and the 6Li rank-2 transfer is not read (J1, 2026-11-10); confined to the spin-1 leading-order positivity domain -(3/2) F1 <= b1 <= 3 (F1 - |g1|) per nucleon, b2 in step (J1 note, 2026-11-12; meta b1_clipped_rate_fraction)" : "");
   }
   if (!kernel_has_rank2_sector_unfilled(ion)) {
     return std::string("no rank-2 sector at spin ") + fmt_g(ion.spin) +
@@ -1347,7 +1347,7 @@ bool pol_sf_is_read(const PipelineConfig& cfg, const RunPlan& plan) {
   // THE RUN PLAN.  `plan_has_beam_helicity` is the whole of it -- see there.
   // This clause is the one that was missing until 2026-09-05, and it is the
   // one that bites at the CLI's own default plan.
-  if (cfg.channel == PipelineChannel::CoherentLi6) return false;
+  if (cfg.channel == PipelineChannel::CoherentLi6) { return false; }  if (cfg.channel == PipelineChannel::Inclusive && !cfg.kernel && cfg.isotope == "d") { return true; }  // J1 note (2026-11-12): on the default inclusive deuteron g1 bounds the rank-2 slot (the spin-1 domain, b1 <= 3 (F1 - |g1|)), so it is read under EVERY fill
   return plan_has_beam_helicity(plan);
 }
 
@@ -1372,7 +1372,7 @@ std::string pol_sf_unread_label(const PipelineConfig& cfg,
 
 std::string pol_sf_reach_report(const PipelineConfig& cfg,
                                 const RunPlan& plan) {
-  if (cfg.channel != PipelineChannel::CoherentLi6 &&
+  if (cfg.channel != PipelineChannel::CoherentLi6 && !(cfg.channel == PipelineChannel::Inclusive && !cfg.kernel && cfg.isotope == "d") &&  // J1 note (2026-11-12): the inclusive deuteron reads g1 under every fill
       !plan_has_beam_helicity(plan)) {
     return pol_sf_unread_label(cfg, plan) +
            ": no category carries lam_e * P_e != 0, and lam_e * P_e is the "
@@ -1408,7 +1408,7 @@ std::string pol_sf_reach_report(const PipelineConfig& cfg,
            "kernel still carries the selected g1_model, so "
            "dis_sampler().kernel().tables(x, q2).g1 does move -- the RUN "
            "never asks for it.  --unpol-sf, by contrast, DOES reach this "
-           "channel (x0.705841 on the shipped 6Li ct18nlo run), through the "
+           "channel (x0.755407 on the shipped, frozen 6Li ct18nlo run), through the "
            "very cell cross sections above";
   }
   if (cfg.kernel) return "caller-supplied kernel";
@@ -1419,7 +1419,7 @@ std::string pol_sf_reach_report(const PipelineConfig& cfg,
               : " -> InclusiveKernel::Options::g1_model") +
          "; g2 follows it through Wandzura-Wilczek, and at pol_sf = toy the "
          "kernel's own ToyG1 is built on the kernel's own UnpolSF, so "
-         "--unpol-sf moves g1 too";
+         "--unpol-sf moves g1 too" + std::string(cfg.channel == PipelineChannel::Inclusive && cfg.isotope == "d" ? "; on the inclusive deuteron g1 also bounds the rank-2 slot -- b1 is confined to the spin-1 positivity domain -(3/2) F1 <= b1 <= 3 (F1 - |g1|) (J1 note, 2026-11-12) -- so it is read under every fill, the tensor plans included" : "");
 }
 
 // ============================================================ event helpers
@@ -1506,7 +1506,7 @@ bool struck_cluster_of(const Event& ev, const TaggedChannel& channel,
 
 Pipeline::Pipeline(PipelineConfig config, RunPlan plan)
     : cfg_(std::move(config)), plan_(std::move(plan)) {
-  cfg_.validate();
+  fill_grid_sf_backends(cfg_); cfg_.validate();  // D7: grid backends attach lazily
   if (plan_.categories().empty()) {
     throw std::runtime_error("Pipeline: the run plan has no category");
   }
@@ -1529,7 +1529,7 @@ Pipeline::Pipeline(PipelineConfig config, RunPlan plan)
             : cfg_.channel == PipelineChannel::TaggedLi7Alpha
                   ? li7_alpha_channel(cfg_.cluster_beta, cfg_.cluster_wave,
                                       cfg_.cluster_vmc_mc_sigma)
-                  : deuteron_channel(cfg_.cluster_beta, P_D_DEUTERON,
+                  : deuteron_channel(cfg_.cluster_beta, P_D_DEUTERON_SCENARIO,
                                      cfg_.cluster_wave)));
     model_ = std::make_shared<TaggedModel>(*channel_);
     StruckClusterOptions sopt = cfg_.struck;
@@ -1673,8 +1673,8 @@ Pipeline::Pipeline(PipelineConfig config, RunPlan plan)
     tier_ = cfg_.tier;
     if (tier_ == Tier::T1) {
       BreakupOptions bo = cfg_.breakup;
-      // One beta, one F2 backend.  The breakup's internal wave function and
-      // its species draw MUST be the ones the rest of the run is made with,
+      // One beta, one wave family, one F2.  The breakup's internal wave function
+      // and its species draw MUST be the ones the rest of the run is made with,
       // or the T1 tier would describe a different nucleus from the T0 one
       // (docs/CONVENTIONS.md: no physics number is defined twice).
       bo.beta = cfg_.cluster_beta;
@@ -2052,7 +2052,7 @@ double Pipeline::coherent_rate_x_edge() const {
   // largest rate-carrying centre (0.0954992586 at config 1), not the top of
   // that cell (exp(logx_hi) = 0.1 + 1 ulp).  Measured 2026-09-05: every
   // x_max in (0.09549926, 0.1] is bit-identical to the default (1822 cells,
-  // 1726 carrying, sigma 12476.025113185518), and 0.09549 is the first value
+  // 1726 carrying, sigma 12476.025113185518 on the toy SFs, pre-D7), and 0.09549 is the first value
   // that moves (1770 / 1702, 12475.913921); the boundary rule called 0.097
   // "read" on a run identical to the default.
   auto edge_of = [](const std::vector<double>& w,
@@ -2069,7 +2069,7 @@ double Pipeline::coherent_rate_x_edge() const {
   // 0.05 by construction, so the edge comes back 0.047863 and the rule
   // concluded "0.05 is above the edge, it clips nothing" about a value that
   // had just removed 320 of 1726 rate-carrying cells and moved sigma from
-  // 12476.025113 to 12446.109030 pb.  The edge belongs to the WINDOW AT THE
+  // 12476.025113 to 12446.109030 pb (toy SFs).  The edge belongs to the WINDOW AT THE
   // SHIPPED x_max, which is a property of the channel and of the rest of the
   // scenario, and not of the knob being judged.
   const double ref_x_max = std::max(d.scenario.x_max, cfg_.scenario.x_max);
@@ -2115,16 +2115,16 @@ double Pipeline::coherent_rate_x_edge() const {
 std::vector<KnobProvenance> Pipeline::knob_provenance(
     const KnobRunContext& ctx) const {
   const PipelineConfig d;          // the shipped defaults, read not retyped
-  const PipelineConfig& c = cfg_;
+  const PipelineConfig& c = cfg_;  const std::string kA17 = "; an explicit request of the default is accepted and labelled not-read (A17, docs/CONVENTIONS.md \"Refuse or label\")";  // A17 (2026-11-03): one rule for an explicit DEFAULT on an unread knob
   std::vector<KnobProvenance> rows;
-  auto add = [&rows](const char* name, const char* flag, std::string value,
+  auto add = [&rows, &kA17](const char* name, const char* flag, std::string value,
                      KnobStatus st, std::string reason, bool at_default) {
     KnobProvenance r;
     r.name = name;
     r.flag = flag;
     r.value = std::move(value);
-    r.status = st;
-    r.reason = std::move(reason);
+    r.status = st;  r.reason = std::move(reason);  // A17 (2026-11-03; the supervisor's note of 2026-11-06): the rule reaches EVERY row --
+    if (st == KnobStatus::Refused && at_default) { r.status = st = KnobStatus::NotRead; if (r.reason.rfind("not read", 0) != 0) r.reason = "not read on this run: " + r.reason; if (r.reason.find(kA17) == std::string::npos) r.reason += kA17; }  // an axis validate() closes reads NotRead AT ITS DEFAULT; a moved value stays Refused (it never builds)
     // THE LABEL IS DERIVED, ONCE, HERE.  Every `NotRead` reason below opens
     // with its scope clause -- "not read on channel X", "not read by plan Y",
     // "not read at Z" -- and then explains; the clause alone is what a `meta`
@@ -2143,7 +2143,7 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
   };
   auto yn = [](bool b) { return std::string(b ? "true" : "false"); };
   const std::string chn = pipeline_channel_name(c.channel);
-  const std::string off_ch = "not read on channel " + chn + ": ";
+  const std::string off_ch = "not read on channel " + chn + ": ";  const std::string with_k = "not read with a caller-supplied kernel: ";  // A17 (2026-11-03): kA17 is defined above `add`
   // Which of `--pz` / `--pzz` / `--rel-lumi-offset` the NAMED plan factory
   // takes.  bookkeeping.hpp's four factories are the whole of it:
   // tensor_thirds_plan(pz, pzz, rel_lumi_offset, ...),
@@ -2597,7 +2597,7 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
       // `--x-max 0.05` the surviving cells lie below 0.05 by construction,
       // the edge came back 0.047863, and the row said NOT READ of a value
       // that had just removed 320 of the 1726 rate-carrying cells and moved
-      // sigma from 12476.025113 to 12446.109030 pb.  (2) It compared
+      // sigma from 12476.025113 to 12446.109030 pb (toy SFs).  (2) It compared
       // exactly, and the edge is `exp(logx_hi)` of a grid boundary: at
       // `--x-max 0.1` the edge comes back 0.10000000000000002, one ulp above
       // the value that produced it, so a run BIT-IDENTICAL to the default
@@ -2648,8 +2648,8 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
                "`kernel` reaches the ion-level one alone; validate() refuses "
                "it here")
             : std::string("the ion-level kernel of this run: it WINS over "
-                          "--unpol-sf / --pol-sf / --b1-model, which "
-                          "validate() therefore refuses beside it"),
+                          "--unpol-sf / --pol-sf / --b1-model, which validate() "
+                          "accepts beside it only at their defaults, unread"),
         false);
   } else {
     add("kernel", "", "null (default_inclusive_kernel)",
@@ -2668,9 +2668,9 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
                : std::string(unpol_sf_name(c.unpol_sf)),
       c.kernel ? KnobStatus::Refused : KnobStatus::Read,
       c.kernel
-          ? std::string("a caller-supplied kernel carries its own f2_source, "
-                        "so validate() refuses any non-toy selector beside "
-                        "one")
+          ? std::string(with_k + "a caller-supplied kernel carries its own f2_source, "
+                        "so the selector is not read: validate() accepts it "
+                        "at its default only (D7) and refuses any other value")
           : std::string("-> InclusiveKernel::Options::f2_source on EVERY "
                         "kernel this run builds: the unpolarised rate, the "
                         "D_phi denominator of the tensor weight, the T1 "
@@ -2686,26 +2686,26 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
         // ONE sentence, from `pol_sf_reach_report` on EVERY branch -- the
         // caller-supplied-kernel one included -- so `meta["pol_sf_reach"]`,
         // this row and the banner cannot say three different things.
-        pol_sf_reach_report(c, plan_),
+        (c.kernel ? with_k : std::string()) + pol_sf_reach_report(c, plan_),  // A17 (2026-11-03): the scope clause first
         c.pol_sf == d.pol_sf);
   }
   {
     const bool no_rank2 = inclusive_rank2_is_empty(c);
     const bool incl = (c.channel == PipelineChannel::Inclusive) && !c.kernel;
-    const bool b1_read = incl && !no_rank2;
+    const bool b1_read = incl && !no_rank2;  const std::string b1_scope = c.kernel ? with_k : !incl ? off_ch : no_rank2 ? ("not read on " + c.isotope + " (no rank-2 input): ") : ("not read at b1_model = " + std::string(b1_model_name(c.b1_model)) + ": ");  // A17 (2026-11-03)
     std::string val = c.kernel ? std::string("caller-supplied kernel")
                       : no_rank2 ? std::string(rank2_none_label())
                                  : std::string(b1_model_name(c.b1_model));
-    // `no_rank2` (7Li inclusive) is REFUSED and not merely NotRead: the value
-    // shown is `rank2_none_label()`, which names no backend and so cannot
-    // mislead, AND `validate()` throws on cdks and li6-convolution there.
-    // `Refused` is the status that says both.
+    // `no_rank2` (7Li inclusive): the value shown is `rank2_none_label()`,
+    // which names no backend, and `validate()` throws on cdks and
+    // li6-convolution there.  Since A17 (2026-11-03) the row is NotRead at its
+    // default, its label "not read on 7Li (no rank-2 input)" in `meta`.
     add("b1_model", "--b1-model", val,
         b1_read ? KnobStatus::Read : KnobStatus::Refused,
         b1_read ? rank2_input_report(c, plan_)
-        : no_rank2 ? rank2_input_report(c, plan_)
+        : no_rank2 ? b1_scope + rank2_input_report(c, plan_)
                    : (c.kernel
-                          ? std::string("the caller's kernel carries the "
+                          ? std::string(b1_scope + "the caller's kernel carries the "
                                         "rank-2 slots; validate() refuses any "
                                         "value but miller beside one")
                           : off_ch +
@@ -2723,7 +2723,7 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
             ? std::string("multiplies the WHOLE b1 of the opt-in backend -- "
                           "the MANDATORY 0/1/2 band of design_D_b1_li6.md "
                           "sec. 4.3")
-            : std::string("the band is deliberately not applied to the "
+            : std::string(b1_scope + "the band is deliberately not applied to the "
                           "published Miller numbers and does not exist off "
                           "the inclusive 6Li rank-2 path, so validate() "
                           "refuses any value but 1.0 here rather than let "
@@ -2735,7 +2735,7 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
         conv ? KnobStatus::Read : KnobStatus::Refused,
         conv ? std::string("Li6ConvolutionOptions::w_alpha_d_dwave -- terms "
                            "(2d) and (2a) together, one physical effect")
-             : std::string("only the li6-convolution branch reads it (miller "
+             : std::string(b1_scope + "only the li6-convolution branch reads it (miller "
                            "is a ratio model, cdks a digitized column), so "
                            "validate() refuses any value but 1.0 here"),
         c.b1_alpha_d_dwave_weight == d.b1_alpha_d_dwave_weight);
@@ -2747,7 +2747,7 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
         conv ? std::string("the UNPOLARISED F1 the alpha-d convolution folds "
                            "against (Li6ConvolutionOptions::unpol); mstw is "
                            "the configuration the A = 2 gate passes on")
-             : std::string("read ONLY by b1_model = li6-convolution, so "
+             : std::string(b1_scope + "read ONLY by b1_model = li6-convolution, so "
                            "validate() refuses any value but toy here"),
         c.b1_unpol == d.b1_unpol);
     // `--r-source`, the ONE R hook into BOTH halves of the tensor weight.
@@ -2790,7 +2790,7 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
                              "Options::r_func, its denominator), so the "
                              "ratio's two halves are the same choice; unset "
                              "installs neither and is today bit for bit")
-               : std::string("read ONLY by b1_model = li6-convolution (miller "
+               : std::string(b1_scope + "read ONLY by b1_model = li6-convolution (miller "
                              "is a ratio model with no F1 of its own, cdks a "
                              "digitized column), so validate() refuses any "
                              "value but unset here"),
@@ -2803,18 +2803,18 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
     const bool vmc = c.cluster_wave == ClusterWaveSource::VmcAV18;
     const bool li_tag = (c.channel == PipelineChannel::TaggedLi6Alpha ||
                          c.channel == PipelineChannel::TaggedLi7Alpha);
-    add("cluster_wave", "--cluster-wave",
-        cluster_wave_name(c.cluster_wave),
-        tag ? KnobStatus::Read : KnobStatus::Refused,
+    add("cluster_wave", "--cluster-wave",  // D6: no bare "vmc" off the tags
+        tag ? std::string(cluster_wave_name(c.cluster_wave)) : off_ch.substr(0, off_ch.size() - 2),
+        tag ? KnobStatus::Read : KnobStatus::NotRead,  // A17 (2026-11-03): the unread default is labelled, a moved value refused
         tag ? std::string("the family of radial forms of this channel's "
                           "cluster relative wave -- and, on the 6Li alpha "
                           "tag and the d control, of the embedded deuteron "
-                          "too (open items C5.4, C5.5b)")
+                          "too (open items C5.4, C5.5b); vmc is the run default since D6")
             : (off_ch +
-               "the inclusive 6Li constants (LI6_CLUSTER_POLARIZATION = "
-               "0.811228) and the coherent form factors do not follow it, so "
-               "validate() refuses it here rather than promise a VMC row and "
-               "deliver the shipped one, 11.61 % away (C5.5)"),
+               "the value is withheld -- the run default (vmc since D6) is read on the tagged "
+               "channels only; the inclusive 6Li constants (LI6_CLUSTER_POLARIZATION = 0.848, "
+               "the six-body value since A1) and the coherent form factors do not follow it, so "
+               "validate() refuses a moved value (C5.5)" + kA17),
         c.cluster_wave == d.cluster_wave);
     const bool mc_read = vmc && li_tag;
     add("cluster_vmc_mc_sigma", "", fmt_g(c.cluster_vmc_mc_sigma),
@@ -2822,8 +2822,8 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
         mc_read ? std::string("the ANL VMC tables' own printed 1-sigma band, "
                               "fully correlated across k (open item C5.2); "
                               "+-1 sigma is 0.02 % on the tagged tensor "
-                              "dilution")
-                : std::string("only li6_ad1.momentum and li7_at3.momentum "
+                              "dilution; READ on the default lithium tags (D6)")
+                : std::string((!li_tag ? off_ch : "not read at cluster_wave = " + std::string(cluster_wave_name(c.cluster_wave)) + ": ") + "only li6_ad1.momentum and li7_at3.momentum "
                               "print MC errors -- the analytic Hulthen forms "
                               "and fdeut.av18 print none -- so validate() "
                               "refuses any value but 0 here"),
@@ -2966,31 +2966,31 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
     auto band_row = [&](const char* name, const char* flag, std::string value,
                         std::string what, bool at_def) {
       add(name, flag, std::move(value),
-          band ? KnobStatus::Read
-               : (on ? KnobStatus::Refused : KnobStatus::NotRead),
+          band ? KnobStatus::Read  // A17 (2026-11-03): the unread DEFAULT is labelled, a moved value refused
+               : (on && !at_def ? KnobStatus::Refused : KnobStatus::NotRead),
           band ? ("BAND knob: " + what)
-          : on  ? ("the band does not apply on channel " + chn +
+          : on  ? ((at_def ? off_ch : std::string()) + "the band does not apply on channel " + chn +
                   " (RcModel::applies() is false, every rc_tensor_* weight is "
                   "exactly 1.0), so this knob would record a systematic as "
                   "PRICED that was never computed -- validate() refuses any "
-                  "value but the default here")
+                  "value but the default here" + (at_def ? kA17 : std::string()))
                 : std::string("not read at rc = off: no RcModel is built"),
           at_def);
     };
-    auto tail_row = [&](const char* name, const char* flag, std::string value,
+    auto tail_scope = [&](bool at_def) { return !at_def ? std::string() : rc_tail_applies(event_channel_of(c.channel), true) ? std::string("not read on this run: ") : off_ch; };  auto tail_row = [&](const char* name, const char* flag, std::string value,
                         std::string what, bool at_def) {
       add(name, flag, std::move(value),
-          tail ? KnobStatus::Read
-               : (on ? KnobStatus::Refused : KnobStatus::NotRead),
+          tail ? KnobStatus::Read  // A17 (2026-11-03): the unread DEFAULT is labelled, a moved value refused
+               : (on && !at_def ? KnobStatus::Refused : KnobStatus::NotRead),
           tail ? ("TAIL knob: " + what)
-          : on  ? ("the radiative tail does not apply on this run (rc_tail == "
+          : on  ? (tail_scope(at_def) + "the radiative tail does not apply on this run (rc_tail == "
                   "1 exactly" +
                   std::string(is_tagged(c.channel)
                                   ? " by construction on channel " + chn
                                   : "") +
                   "), so this knob would record a systematic as PRICED that "
                   "was never computed -- validate() refuses any value but the "
-                  "default here")
+                  "default here" + (at_def ? kA17 : std::string()))
                 : std::string("not read at rc = off: no RcModel is built"),
           at_def);
     };
@@ -3038,7 +3038,7 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
         o.scope == RcScope::TensorRate ? "tensor-rate" : "tensor-all",
         scope_read ? KnobStatus::Read
                    : (band ? KnobStatus::NotRead
-                           : (on ? KnobStatus::Refused
+                           : (on && o.scope != od.scope ? KnobStatus::Refused  // A17 (2026-11-03)
                                  : KnobStatus::NotRead)),
         scope_read
             ? std::string("BAND knob: tensor-all adds the band to the "
@@ -3050,12 +3050,12 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
                   "sits at theta_S = 0 -- measured bit-identical under "
                   "tensor-thirds, and it does move under transverse-tensor "
                   "and tensor-flip")
-        : on   ? std::string("the band does not apply on channel " + chn +
+        : on   ? std::string((o.scope == od.scope ? off_ch : std::string()) + "the band does not apply on channel " + chn +
                             " (RcModel::applies() is false, every rc_tensor_* "
                             "weight is exactly 1.0), so this knob would "
                             "record a systematic as PRICED that was never "
                             "computed -- validate() refuses any value but the "
-                            "default here")
+                            "default here" + (o.scope == od.scope ? kA17 : std::string()))
                : std::string("not read at rc = off: no RcModel is built"),
         o.scope == od.scope);
     tail_row("rc_fq_scale", "--rc-fq-scale", fmt_g(o.fq_scale),
@@ -3085,20 +3085,20 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
                       std::string what, bool at_def) {
       add(name, flag, std::move(value),
           (tail && o.with_qe_tail)
-              ? KnobStatus::Read
-              : (on ? KnobStatus::Refused : KnobStatus::NotRead),
+              ? KnobStatus::Read  // A17 (2026-11-03): the unread DEFAULT on a tail-less run is labelled
+              : (on && !(at_def && !tail) ? KnobStatus::Refused : KnobStatus::NotRead),
           (tail && o.with_qe_tail) ? ("QUASI-ELASTIC TAIL knob: " + what)
           : !on ? std::string("not read at rc = off: no RcModel is built")
           : !tail
-              ? ("the radiative tail does not apply on this run (rc_tail == 1 "
+              ? (tail_scope(at_def) + "the radiative tail does not apply on this run (rc_tail == 1 "
                  "exactly" +
                  std::string(is_tagged(c.channel)
                                  ? " by construction on channel " + chn
                                  : "") +
                  "), so this knob would record a systematic as PRICED that "
                  "was never computed -- validate() refuses any value but the "
-                 "default here")
-              : std::string("rc_options.with_qe_tail = false switches POLRAD "
+                 "default here" + (at_def ? kA17 : std::string()))
+              : std::string("not read at rc_with_qe_tail = false: rc_options.with_qe_tail = false switches POLRAD "
                             "Eq. (44)'s unpolarised quasi-elastic tail off, "
                             "so sigma^q_U is not computed at all and this "
                             "knob scales nothing -- validate() refuses any "
@@ -3120,45 +3120,45 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
            "6Li's measured Fermi momentum in the Pauli suppression S(q)",
            o.qe_kf_gev == od.qe_kf_gev);
     tail_row("rc_tail_model", "--rc-tail-model", rc_tail_model_name(o.tail_model),
-             "t-peak alone (a LOWER bound), t-peak plus the leading-log s- "
-             "and p-peaks, or POLRAD Eq. (18)'s exact tau_A quadrature",
+             "POLRAD Eq. (18)'s exact tau_A quadrature (the default since D5, "
+             "2026-10-27), the t-peak alone (a LOWER bound) or t-peak + the leading-log s-/p-peaks",
              o.tail_model == od.tail_model);
     // THE s-/p-PEAK SUB-FAMILY, the same shape as `qe_row` one branch over.
     // `sp_tensor_scale` additionally needs the LEADING-LOG s-/p-peaks to have
-    // run, and only `tail_model = TPeakPlusLL` computes them; under the
-    // shipped `TPeak` the `u_sp` table is identically zero, so the scale is a
+    // run, and only `tail_model = TPeakPlusLL` computes them; under `TPeak`
+    // (the default until D5) the `u_sp` table is identically zero, so the scale is a
     // multiplier on a term this run computes as exactly 0 -- REFUSED by
     // `validate()` and by `RcModel`'s constructor, not labelled, under the
     // criterion stated once at `KnobProvenance`.
     {
       const bool sp = tail && o.tail_model == RcTailModel::TPeakPlusLL;
-      const bool pf = o.tail_model == RcTailModel::PolradFull;
+      const bool pf = o.tail_model == RcTailModel::PolradFull;  const bool sp_def = o.sp_tensor_scale == od.sp_tensor_scale;
       add("rc_sp_tensor_scale", "--rc-sp-tensor-scale",
           fmt_g(o.sp_tensor_scale),
-          sp ? KnobStatus::Read
-             : (on ? KnobStatus::Refused : KnobStatus::NotRead),
+          sp ? KnobStatus::Read  // A17 (2026-11-03): the unread DEFAULT on a tail-less run is labelled
+             : (on && !(sp_def && !tail) ? KnobStatus::Refused : KnobStatus::NotRead),
           sp ? std::string("LEADING-LOG s-/p-PEAK knob: prices the tensor "
                            "fraction of the s-/p-peaks with a BORROWED "
                            "magnitude -- a BOUND WITH NO DERIVATION; 0 is the "
                            "shipped tensor-blind s+p")
           : !on ? std::string("not read at rc = off: no RcModel is built")
           : !tail
-              ? ("the radiative tail does not apply on this run (rc_tail == 1 "
+              ? (tail_scope(sp_def) + "the radiative tail does not apply on this run (rc_tail == 1 "
                  "exactly" +
                  std::string(is_tagged(c.channel)
                                  ? " by construction on channel " + chn
                                  : "") +
                  "), so this knob would record a systematic as PRICED that "
                  "was never computed -- validate() refuses any value but the "
-                 "default here")
-          : pf ? std::string("rc_options.tail_model = polrad-full needs no "
+                 "default here" + (sp_def ? kA17 : std::string()))
+          : pf ? std::string("not read at rc_tail_model = polrad-full: rc_options.tail_model = polrad-full needs no "
                              "s/p tensor stand-in: Eq. (18) carries the s- "
                              "and p-peaks inside its own tau_A integral WITH "
                              "their Eq. (A.4) tensor content, so this knob "
                              "would double-count a term that RAN -- "
                              "validate() refuses any value but the default "
                              "here.  The OPPOSITE reason to the t-peak one")
-              : std::string("rc_options.tail_model = t-peak computes no "
+              : std::string("not read at rc_tail_model = t-peak: rc_options.tail_model = t-peak computes no "
                             "leading-log s-/p-peaks at all (the u_sp table is "
                             "identically zero), so this knob scales nothing "
                             "-- validate() refuses any value but the default "
@@ -3207,7 +3207,7 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
     {
       const bool ml = tail && o.tail_model == RcTailModel::PolradFull;
       add("rc_m_lepton", "", fmt_g(o.m_lepton),
-          ml ? KnobStatus::Read : (on ? KnobStatus::Refused
+          ml ? KnobStatus::Read : (on && !(!tail && o.m_lepton == od.m_lepton) ? KnobStatus::Refused  // A17 (2026-11-03)
                                       : KnobStatus::NotRead),
           ml ? std::string("the LEPTON MASS of POLRAD Eq. (18): the m^2 of "
                            "C_{1,2}(tau) (Eq. (B.13)), of F_IR = m^2 F_2+ - "
@@ -3217,8 +3217,8 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
           : !tail
               ? (off_ch +
                  "the radiative tail does not apply on this run, so no "
-                 "quadrature reads a lepton mass at all")
-              : std::string("read ONLY by tail_model = polrad-full.  The "
+                 "quadrature reads a lepton mass at all" + (o.m_lepton == od.m_lepton ? kA17 : std::string()))
+              : std::string("not read at rc_tail_model = " + std::string(rc_tail_model_name(o.tail_model)) + ": read ONLY by tail_model = polrad-full.  The "
                             "t-peak forms of Eqs. (37)-(39) carry no lepton "
                             "mass and TPeakPlusLL's leading-log radiator "
                             "takes M_ELECTRON from constants.hpp directly, "
@@ -3826,6 +3826,305 @@ std::uint64_t Pipeline::for_each(const EventSink& sink, unsigned nthreads,
     pos += static_cast<std::uint64_t>(nthreads) * chunk;
   }
   return total_;
+}
+
+// ===================================================== D7 (2026-10-27)
+// The grid-backend filler (pipeline.hpp, "D7").  One function pointer per
+// process, under a mutex: it is set at import / program start and read by
+// every `Pipeline` constructor and `validate()`.
+
+namespace {
+std::mutex& grid_sf_filler_mutex() {
+  static std::mutex m;
+  return m;
+}
+GridSfFiller& grid_sf_filler_slot() {
+  static GridSfFiller f = nullptr;
+  return f;
+}
+}  // namespace
+
+void set_grid_sf_filler(GridSfFiller filler) {
+  std::lock_guard<std::mutex> lock(grid_sf_filler_mutex());
+  grid_sf_filler_slot() = filler;
+}
+
+GridSfFiller grid_sf_filler() {
+  std::lock_guard<std::mutex> lock(grid_sf_filler_mutex());
+  return grid_sf_filler_slot();
+}
+
+bool grid_sf_slot_empty(const PipelineConfig& cfg) {
+  return (cfg.unpol_sf == UnpolSfSource::Ct18Nlo && !cfg.unpol_sf_obj) ||
+         (cfg.pol_sf == PolSfSource::NnpdfPol && !cfg.pol_sf_obj);
+}
+
+void fill_grid_sf_backends(PipelineConfig& cfg) {
+  // Beside a caller-supplied kernel the selectors are not read (validate()'s
+  // clause (3)), so nothing is attached for them: loading a grid nobody
+  // reads would cost the load and record nothing.
+  if (cfg.kernel || !grid_sf_slot_empty(cfg)) return;
+  if (const GridSfFiller f = grid_sf_filler()) f(cfg);
+}
+
+namespace {
+std::mutex& shipped_grid_sf_mutex() {
+  static std::mutex m;
+  return m;
+}
+const UnpolSF*& shipped_grid_unpol_slot() {
+  static const UnpolSF* p = nullptr;
+  return p;
+}
+const PolSF*& shipped_grid_pol_slot() {
+  static const PolSF* p = nullptr;
+  return p;
+}
+}  // namespace
+
+void register_shipped_grid_sf(const UnpolSF* obj) {
+  std::lock_guard<std::mutex> lock(shipped_grid_sf_mutex());
+  shipped_grid_unpol_slot() = obj;
+}
+void register_shipped_grid_sf(const PolSF* obj) {
+  std::lock_guard<std::mutex> lock(shipped_grid_sf_mutex());
+  shipped_grid_pol_slot() = obj;
+}
+bool is_shipped_grid_sf(const UnpolSF* obj) {
+  std::lock_guard<std::mutex> lock(shipped_grid_sf_mutex());
+  return obj != nullptr && obj == shipped_grid_unpol_slot();
+}
+bool is_shipped_grid_sf(const PolSF* obj) {
+  std::lock_guard<std::mutex> lock(shipped_grid_sf_mutex());
+  return obj != nullptr && obj == shipped_grid_pol_slot();
+}
+
+void refuse_foreign_grid_sf_objects(const PipelineConfig& cfg) {
+  // Verification of D7, 2026-11-03 (code finding 1): measured before this
+  // clause, make_config() with unpol_sf_obj = ToyF2() and unpol_sf = Ct18Nlo
+  // ran at 591846.1688784091 pb (the toy's) with the knob row "ct18nlo | read".
+  if (cfg.unpol_sf == UnpolSfSource::Ct18Nlo && cfg.unpol_sf_obj &&
+      !is_shipped_grid_sf(cfg.unpol_sf_obj.get())) {
+    throw std::runtime_error(
+        "PipelineConfig: unpol_sf = ct18nlo with an object in unpol_sf_obj "
+        "that is not the LHAPDF tier's shipped CT18NLO (make_lhapdf_unpol_sf"
+        "(UnpolSfSource::Ct18Nlo)) -- the run would compute with YOUR object "
+        "while meta[\"unpol_sf\"] and the knob row said ct18nlo.  Name it "
+        "Custom (Python: config.unpol_sf_obj = obj, which sets Custom), or "
+        "clear the slot and let the Pipeline attach the shipped grid");
+  }
+  if (cfg.pol_sf == PolSfSource::NnpdfPol && cfg.pol_sf_obj &&
+      !is_shipped_grid_sf(cfg.pol_sf_obj.get())) {
+    throw std::runtime_error(
+        "PipelineConfig: pol_sf = nnpdfpol with an object in pol_sf_obj "
+        "that is not the LHAPDF tier's shipped NNPDFpol11_100 "
+        "(make_lhapdf_pol_sf(PolSfSource::NnpdfPol)) -- the run would compute "
+        "with YOUR object while meta[\"pol_sf\"] and the knob row said "
+        "nnpdfpol.  Name it Custom (Python: config.pol_sf_obj = obj, which "
+        "sets Custom), or clear the slot and let the Pipeline attach the "
+        "shipped grid");
+  }
+}
+
+PipelineConfig toy_config() {
+  PipelineConfig c;
+  c.unpol_sf = UnpolSfSource::Toy;
+  c.pol_sf = PolSfSource::Toy;
+  return c;
+}
+
+// A1 (2026-11-03): the three inclusive polarization factors ONE run used
+// (pipeline.hpp, `InclusivePolarizationFactors`).  Read off the run's own
+// kernel so that a caller-supplied one (the API route to the pre-A1 values)
+// reports what it carries, not what the defaults say.
+InclusivePolarizationFactors inclusive_polarization_factors(const Pipeline& p) {
+  InclusivePolarizationFactors f;
+  const PipelineConfig& c = p.config();
+  if (c.channel != PipelineChannel::Inclusive) return f;
+  f.caller_kernel = static_cast<bool>(c.kernel);
+  const Ion& ion = p.dis_sampler().kernel().ion();
+  std::string s;
+  char buf[256];
+  if (ion.name == "6Li") {
+    // The default `LI6()` reports the constant itself rather than 3 x (P/3).
+    f.li6_cluster_polarization = (ion.eff_pol_p == LI6().eff_pol_p)
+                                     ? LI6_CLUSTER_POLARIZATION
+                                     : ion.Z * ion.eff_pol_p;
+    std::snprintf(buf, sizeof(buf),
+                  "6Li whole-nucleus vector polarization %.6g%s", f.li6_cluster_polarization,
+                  f.li6_cluster_polarization == LI6_CLUSTER_POLARIZATION
+                      ? " (the six-body VMC value, A1; band 0.811 ... 0.887, the two "
+                        "cluster readings)"
+                      : f.li6_cluster_polarization == LI6_CLUSTER_POLARIZATION_HULTHEN
+                            ? " (the pre-A1 Hulthen cluster product, passed explicitly)"
+                            : " (caller-supplied)");
+    s += buf;
+  } else if (ion.name == "d") {
+    f.deuteron_p_d = (ion.eff_pol_p == DEUTERON_VECTOR_POLARIZATION) ? P_D_DEUTERON
+                     : (ion.eff_pol_p == DEUTERON_VECTOR_POLARIZATION_SCENARIO)
+                         ? P_D_DEUTERON_SCENARIO
+                         : (1.0 - ion.eff_pol_p) / 1.5;
+    std::snprintf(buf, sizeof(buf),
+                  "deuteron P_D %.6g, eff_pol %.6g%s", f.deuteron_p_d, ion.eff_pol_p,
+                  f.deuteron_p_d == P_D_DEUTERON
+                      ? " (AV18's, A1; 0.045 scenario before)"
+                      : f.deuteron_p_d == P_D_DEUTERON_SCENARIO
+                            ? " (the pre-A1 scenario, passed explicitly)"
+                            : " (caller-supplied)");
+    s += buf;
+  }
+  if (std::fabs(ion.spin - 1.0) < 1e-9) {   // `kernel_fills_rank2`
+    if (f.caller_kernel) {
+      s += "; rank-2 transfer: caller-supplied kernel (not knowable from the run)";
+    } else if (spin1_rank2_camp(ion) == Spin1Camp::Deuteron) { f.li6_b1_rank2_transfer_label = "not read on isotope d -- the deuteron's rank-2 slot is MillerB1 itself, per nucleon, unmapped (J1, 2026-11-10)"; s += "; rank-2 slot MillerB1 per nucleon, unmapped: the 6Li rank-2 transfer is not read (J1, 2026-11-10; 0.32753 x MillerB1 before)";
+    } else if (c.b1_model == B1Model::Miller || c.b1_model == B1Model::Cdks) { f.li6_b1_rank2_transfer = LI6_B1_RANK2_TRANSFER;
+      std::snprintf(buf, sizeof(buf),
+                    "; 6Li rank-2 transfer %.6g (the VMC alpha-d value, A1; 0.921947 "
+                    "before)%s", f.li6_b1_rank2_transfer,
+                    "");  // J1 (2026-11-10): 6Li only now; was `ion.name == "d" ? ", which the deuteron's class-level b1 reads too" : ""`
+      s += buf;
+    } else {
+      s += "; rank-2 transfer not read (b1_model li6-convolution builds its own)";
+    }
+  }
+  f.report = s;
+  return f;
+}
+
+// A3 (2026-11-03): the share of THIS run's rate the positivity clip acts on
+// (pipeline.hpp, `G1PositivityClip`, where the definition is written).
+G1PositivityClip g1_positivity_clip(const Pipeline& p) {
+  G1PositivityClip c;
+  if (!pol_sf_is_read(p.config(), p.plan())) {
+    c.report = "g1 not read on this run (the clip changes nothing)";
+    return c;
+  }
+  const InclusiveKernel& k = p.dis_sampler().kernel();
+  const auto* clip = dynamic_cast<const PositivityClippedG1*>(&k.g1_model());
+  if (clip == nullptr) {  // every InclusiveKernel installs it (xsec.cpp)
+    c.report = "no positivity clip on this kernel";
+    return c;
+  }
+  const Ion& ion = k.ion();
+  const bool rp = ion.Z > 0 && ion.eff_pol_p != 0.0;
+  const bool rn = ion.N() > 0 && ion.eff_pol_n != 0.0;
+  const PolSF& in = *clip->inner();
+  const std::vector<double>& w = p.cell_rate_weights_pb();
+  const std::vector<double>& xc = p.dis_sampler().x_cells();
+  const std::vector<double>& qc = p.dis_sampler().q2_cells();
+  double tot = 0.0, bound = 0.0, mp = 0.0, mn = 0.0;
+  for (std::size_t i = 0; i < w.size() && i < xc.size(); ++i) {
+    tot += w[i];
+    bool binds = false;
+    if (rp) {
+      const double g = in.g1p(xc[i], qc[i]), f = clip->f1p(xc[i], qc[i]);
+      binds = binds || std::fabs(g) > (f > 0.0 ? f : 0.0);
+      if (f > 0.0) mp = std::max(mp, std::fabs(g) / f);
+    }
+    if (rn) {
+      const double g = in.g1n(xc[i], qc[i]), f = clip->f1n(xc[i], qc[i]);
+      binds = binds || std::fabs(g) > (f > 0.0 ? f : 0.0);
+      if (f > 0.0) mn = std::max(mn, std::fabs(g) / f);
+    }
+    if (binds) bound += w[i];
+  }
+  c.fraction = tot > 0.0 ? bound / tot : NAN;
+  if (rp) c.max_unclipped_a1p = mp;
+  if (rn) c.max_unclipped_a1n = mn;
+  char buf[256];
+  std::snprintf(buf, sizeof(buf), "binds on %.4g %% of the rate (max unclipped", 100.0 * c.fraction);
+  std::string s = buf;
+  if (rp) { std::snprintf(buf, sizeof(buf), " A1^p = %.4g", mp); s += buf; }
+  if (rp && rn) s += ",";
+  if (rn) { std::snprintf(buf, sizeof(buf), " A1^n = %.4g", mn); s += buf; }
+  c.report = s + ")";
+  return c;
+}
+
+// V-CODE-7 (2026-11-10): one `namespace lipolgen` block (it was closed and
+
+// re-opened here).
+
+// A10 (2026-11-03): see the declaration in pipeline.hpp.  Every value is the
+// expression `meta` used for its key before A10, moved here so that the npz
+// `meta` (python/bindings.cpp) and the HepMC3 `GenRunInfo` read one source.
+std::map<std::string, std::string> run_provenance(const Pipeline& p,
+                                                  const KnobRunContext& ctx) {
+  const std::vector<KnobProvenance> knobs = p.knob_provenance(ctx);
+  auto label = [&knobs](const char* name) {
+    for (const KnobProvenance& r : knobs)
+      if (r.name == name) return r.meta_value();
+    throw std::runtime_error(std::string("run_provenance: no knob_provenance "
+                                         "row named ") + name);
+  };
+  const PipelineConfig& c = p.config();
+  std::map<std::string, std::string> m;
+  m["version"] = LIPOLGEN_VERSION;
+  m["channel"] = pipeline_channel_name(c.channel);
+  m["isotope"] = c.isotope;
+  if (!ctx.plan_name.empty()) m["plan"] = ctx.plan_name;
+  m["delta_convention"] = DELTA_CONVENTION;
+  m["cluster_wave"] = label("cluster_wave");
+  m["unpol_sf"] = label("unpol_sf");  // A17 (2026-11-03): the backend's name,
+                                      // or the label beside a caller's kernel
+  m["pol_sf"] = label("pol_sf");
+  m["b1_model"] = label("b1_model");
+  m["b1_unpol"] = label("b1_unpol");
+  m["r_source"] = label("r_source");
+  if (p.rc_model() != nullptr) {
+    m["rc"] = rc_mode_name(c.rc);
+    m["rc_tail_model"] = label("rc_tail_model");
+    m["rc_c0_shape"] = label("rc_c0_shape");
+    m["rc_scope"] = label("rc_scope");
+  }
+  if (p.fsi_weight() != nullptr) m["fsi"] = pipeline_fsi_name(c.fsi);
+  char buf[64];
+  for (const auto& kv : inclusive_polarization_factors(p).meta()) {
+    std::snprintf(buf, sizeof(buf), "%.17g", kv.second);
+    m[kv.first] = buf;
+  }  for (const auto& kv : inclusive_polarization_factors(p).meta_labels()) m[kv.first] = kv.second;  // J1 (2026-11-10): the deuteron's `not read ...` transfer label
+  return m;
+}
+
+}  // namespace lipolgen
+
+namespace lipolgen {
+
+// J1 note (2026-11-12): see `B1RankTwoConfinement` in pipeline.hpp, where the
+// definition is written.
+B1RankTwoConfinement b1_rank2_confinement(const Pipeline& p) {
+  B1RankTwoConfinement c;
+  if (p.config().channel != PipelineChannel::Inclusive) return c;
+  const InclusiveKernel& k = p.dis_sampler().kernel();
+  if (!k.confine_spin1_rank2()) return c;
+  c.applied = true;
+  const std::vector<double>& w = p.cell_rate_weights_pb();
+  const std::vector<double>& xc = p.dis_sampler().x_cells();
+  const std::vector<double>& qc = p.dis_sampler().q2_cells();
+  const std::vector<SFTables>& tc = p.dis_sampler().tables();
+  double tot = 0.0, bound = 0.0, mx = -INFINITY;
+  for (std::size_t i = 0; i < w.size() && i < xc.size() && i < tc.size(); ++i) {
+    tot += w[i];
+    const double f1 = tc[i].f1;
+    if (!(f1 > 0.0)) continue;
+    const double b = k.unconfined_b1(xc[i], qc[i], f1);
+    if (b / f1 > mx) { mx = b / f1; c.max_at_x = xc[i]; c.max_at_q2 = qc[i]; }
+    const double lo = -1.5 * f1, hi = 3.0 * (f1 - std::fabs(tc[i].g1));
+    if (!(hi >= lo)) continue;
+    if (b > hi) ++c.n_upper;
+    if (b < lo) ++c.n_lower;
+    if (b > hi || b < lo) { ++c.n_cells; bound += w[i]; }
+  }
+  c.fraction = tot > 0.0 ? bound / tot : NAN;
+  if (mx > -INFINITY) c.max_b1_over_f1 = mx;
+  char buf[320];
+  std::snprintf(buf, sizeof(buf),
+                "binds on %.4g %% of the rate, %d cell(s) (%d upper, %d lower; "
+                "max unconfined b1/F1 = %.4g at x = %.4g, Q2 = %.4g)",
+                100.0 * c.fraction, c.n_cells, c.n_upper, c.n_lower,
+                c.max_b1_over_f1, c.max_at_x, c.max_at_q2);
+  c.report = buf;
+  return c;
 }
 
 }  // namespace lipolgen

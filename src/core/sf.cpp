@@ -502,4 +502,44 @@ DeltaModel make_moment_b(const std::string& variant, double c_moment,
                                 dilution));
 }
 
+// ------------------------------------------------ A3: the positivity clip
+
+PositivityClippedG1::PositivityClippedG1(std::shared_ptr<const PolSF> inner,
+                                         std::shared_ptr<const UnpolSF> base,
+                                         RFunc r_func)
+    : inner_(std::move(inner)),
+      base_(base ? std::move(base) : std::make_shared<const ToyF2>()),
+      r_func_(std::move(r_func)) {
+  if (!inner_) throw std::invalid_argument("PositivityClippedG1: no inner PolSF");
+}
+
+// The SAME expression as `ToyG1::f1_of` and `NuclearF2::f1a`, so that on the
+// toy the bound and the toy's own F1 are the same double.
+double PositivityClippedG1::f1p(double x, double q2) const {
+  return base_->f2p(x, q2) / (2.0 * x * (1.0 + resolve_r(r_func_, x, q2)));
+}
+
+double PositivityClippedG1::f1n(double x, double q2) const {
+  return base_->f2n(x, q2) / (2.0 * x * (1.0 + resolve_r(r_func_, x, q2)));
+}
+
+namespace {
+// |g1| <= F1: the value itself where the bound holds (or g1 is NaN); a
+// non-positive F1 bounds g1 to 0.
+double positivity_clip(double g1, double f1) {
+  const double b = f1 > 0.0 ? f1 : 0.0;
+  if (g1 > b) return b;
+  if (g1 < -b) return -b;
+  return g1;
+}
+}  // namespace
+
+double PositivityClippedG1::g1p(double x, double q2) const {
+  return positivity_clip(inner_->g1p(x, q2), f1p(x, q2));
+}
+
+double PositivityClippedG1::g1n(double x, double q2) const {
+  return positivity_clip(inner_->g1n(x, q2), f1n(x, q2));
+}
+
 }  // namespace lipolgen

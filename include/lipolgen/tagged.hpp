@@ -53,23 +53,23 @@ class FsiWeight;
 
 // P_D_LI6 and P_D_DEUTERON are NOT defined here.  Since 2026-08-29 they live
 // in `beams.hpp` (included above), which is where `polli_fastsim.beams` keeps
-// them and where `polligen.tagged` re-exports them from: on the HULTHEN
-// DEFAULT the inclusive effective polarization of 6Li
-// (`LI6_CLUSTER_POLARIZATION`, the two dilutions multiplied) and the tagged
-// S/D interference below are the same wave function seen in two experiments
+// them and where `polligen.tagged` re-exports them from: on the HULTHEN wave
+// (the run default until D6, an option since) the inclusive effective
+// polarization of 6Li (`LI6_CLUSTER_POLARIZATION`, two dilutions multiplied -- named `LI6_CLUSTER_POLARIZATION_HULTHEN` since A1 (2026-11-03), V-CODE-6 (2026-11-10)) and
+// the tagged S/D interference below are the same wave function seen in two experiments
 // and agree to 7.84e-6 (0.869950 closed form against the model's
 // 0.8699431789; it was 1.22e-5 before the 2026-09-06 S-D sign fix moved the
-// quadrature residual).  The names, values and meanings are unchanged.
+// quadrature residual).  The names, values and meanings are unchanged (V-CODE-6 (2026-11-10): until A1 (2026-11-03); since A1 the inclusive default is the six-body 0.848, the product is `LI6_CLUSTER_POLARIZATION_HULTHEN`, `P_D_DEUTERON` is AV18's 0.0576 and the Hulthen deuteron's 0.045 is `P_D_DEUTERON_SCENARIO`).
 //
-// UNDER `ClusterWaveSource::VmcAV18` THEY DO DRIFT APART, by +11.61 % in the
-// vector sector and +6.58 % in the rank-2 one (open item C5.5, measured
-// 2026-09-04): the tagged channel switches to the ANL VMC alpha-d overlap at
-// `VMC_P_D_LI6` = 0.019355 and the inclusive constant does not follow.  It is
-// NOT closed by substitution -- `LI6_CLUSTER_POLARIZATION_VMC` below overshoots
-// the ab initio `LI6_POLARIZATION_VMC_SIX_BODY` = 0.848 by 6.8 % where the
-// shipped constant undershoots it by 4.3 % -- so it is documented, banded and
-// left alone.  See the note on `LI6_CLUSTER_POLARIZATION` (beams.hpp) and
-// docs/open_items/run_2026-09-03/phase_C_numbers.md sec. C5.5.
+// UNDER `ClusterWaveSource::VmcAV18` -- THE RUN DEFAULT SINCE D6 (2026-10-27)
+// -- THEY DRIFT APART (V-CODE-6 (2026-11-10): until A1 (2026-11-03); since A1 the two default runs differ by +4.6 % vector and 0 rank-2), by +11.61 % in the alpha-d vector sector and +6.58 % in
+// the rank-2 one (open item C5.5, measured 2026-09-04): the tagged channel
+// takes the ANL VMC alpha-d overlap at `VMC_P_D_LI6` = 0.019355 and the
+// inclusive constants do not follow, so the two DEFAULT 6Li runs now differ --
+// the author's question (registry row 10).  It is NOT closed by substitution:
+// `LI6_CLUSTER_POLARIZATION_VMC` below overshoots the ab initio
+// `LI6_POLARIZATION_VMC_SIX_BODY` = 0.848 by 6.8 % where the shipped constant
+// undershoots it by 4.3 %.  See beams.hpp and phase_C_numbers.md sec. C5.5.
 //
 // THAT DRIFT IS BETWEEN TWO RUNS.  The one that was INSIDE one run -- the
 // embedded deuteron not following the flag its relative motion followed, worth
@@ -108,17 +108,17 @@ inline constexpr double VMC_S_ALPHA_D_LI6 = 0.81971;
 /// (`li7_at1.momentum`, the 1/2- excited state, gives 0.98683 -- not this.)
 inline constexpr double VMC_S_ALPHA_T_LI7 = 1.0084;
 
-/// What `LI6_CLUSTER_POLARIZATION` (beams.hpp) would be if the ALPHA-D factor
-/// alone came from the wave function `ClusterWaveSource::VmcAV18` uses:
-/// `li6_cluster_polarization(VMC_P_D_LI6, P_D_DEUTERON)` = 0.905427, against
-/// the shipped 0.811228 -- the +11.61 % of C5.5, with ONE definition of the
+/// What the Hulthen `LI6_CLUSTER_POLARIZATION_HULTHEN` (beams.hpp) would be if
+/// the ALPHA-D factor alone came from the wave `ClusterWaveSource::VmcAV18` uses:
+/// `li6_cluster_polarization(VMC_P_D_LI6, P_D_DEUTERON_SCENARIO)` = 0.905427,
+/// against 0.811228 -- the +11.61 % of C5.5, with ONE definition of the
 /// formula and no retyped literal.  It is a DIAGNOSTIC, not a default: it sits
 /// 6.8 % above the ab initio `LI6_POLARIZATION_VMC_SIX_BODY` = 0.848, so it is
-/// not the "corrected" number and must never be substituted for the shipped
-/// one on the strength of being more self-consistent.
+/// not the "corrected" number and was never substituted (A1, 2026-11-03, moved
+/// the inclusive default to 0.848 itself; this stays bit for bit).
 ///
-/// IT IS ALSO NOT WHAT A `VmcAV18` RUN READS, and since 2026-09-04 it never
-/// was meant to be.  Such a run's whole-nucleus reading is
+/// IT IS ALSO NOT WHAT A `VmcAV18` RUN -- THE DEFAULT SINCE D6 -- READS, and
+/// since 2026-09-04 it never was meant to be.  Its whole-nucleus reading is
 /// `li6_cluster_polarization(VMC_P_D_LI6, deuteron_av18_p_d())` = 0.887076 --
 /// the AV18 deuteron with the AV18+UX overlap, one Hamiltonian.  0.905427 is
 /// the MONGREL (VMC alpha-d x scenario deuteron) that the run produced until
@@ -127,7 +127,7 @@ inline constexpr double VMC_S_ALPHA_T_LI7 = 1.0084;
 /// into the INCLUSIVE constant would change the alpha-d factor and leave the
 /// deuteron one, which is exactly this expression.
 inline constexpr double LI6_CLUSTER_POLARIZATION_VMC =
-    li6_cluster_polarization(VMC_P_D_LI6, P_D_DEUTERON);
+    li6_cluster_polarization(VMC_P_D_LI6, P_D_DEUTERON_SCENARIO);
 
 /// The data files `ClusterWaveSource::VmcAV18` opens, relative to
 /// `data_dir()` (`$LIPOLGEN_DATA_DIR`, else the compiled-in
@@ -146,9 +146,9 @@ const Ion& NEUTRON_TARGET();
 
 /// THE EMBEDDED DEUTERON OF `ClusterWaveSource::VmcAV18` (C5.5b, 2026-09-04).
 ///
-/// `beams.DEUTERON()` is the SCENARIO deuteron: its per-nucleon effective
-/// polarization is `DEUTERON_VECTOR_POLARIZATION` = 1 - 1.5 * `P_D_DEUTERON`
-/// = 0.9325, built from a chosen P_D = 0.045.  This one is the same Ion in
+/// `DEUTERON_SCENARIO()` is the SCENARIO deuteron (the pre-A1 `DEUTERON()`):
+/// eff_pol `DEUTERON_VECTOR_POLARIZATION_SCENARIO` = 1 - 1.5 * 0.045 = 0.9325
+/// (A1, 2026-11-03: `DEUTERON()` itself is now AV18's).  This one is the same Ion in
 /// every other slot (name, A, Z, spin) with the effective polarization built
 /// from `deuteron_av18_p_d()` = 0.057600 instead -- the D-state probability of
 /// the AV18 deuteron that `data/vmc/deuteron/fdeut.av18` tabulates, which is
@@ -168,8 +168,8 @@ const Ion& NEUTRON_TARGET();
 ///
 /// WHAT IT IS NOT.  The deuteron INSIDE 6Li is not the free deuteron -- it is
 /// off shell and compressed, and its P_D is not exactly the free one.  Using
-/// the free AV18 table for it is the same approximation the Hulthen default
-/// makes with `P_D_DEUTERON`, taken at the right Hamiltonian instead of at a
+/// the free AV18 table for it is the same approximation the Hulthen option
+/// makes with `P_D_DEUTERON_SCENARIO` (V-CODE-6 (2026-11-10): `P_D_DEUTERON` until A1 (2026-11-03)), taken at the right Hamiltonian instead of at a
 /// chosen number; it is not a six-body result.  The ab initio whole-nucleus
 /// answer for this observable is `LI6_POLARIZATION_VMC_SIX_BODY` = 0.848
 /// (beams.hpp) and neither reading reproduces it -- see C5.5.
@@ -192,10 +192,10 @@ struct TaggedChannel {
 
 /// 6Li: DIS on the embedded deuteron, alpha spectator (S+D waves).
 ///
-/// `source` defaults to `Hulthen`, which keeps every existing number
-/// BIT-FOR-BIT; `VmcAV18` replaces both radial shapes with the ANL tables and
-/// IGNORES `beta` and `p_d` (the D-state probability is then a property of
-/// the wave function, `VMC_P_D_LI6`, not a knob).
+/// `source` defaults to `Hulthen`, the analytic family whose parameters `beta`
+/// and `p_d` are -- this FACTORY's default; the RUN default is `VmcAV18` since
+/// D6 (`CLUSTER_WAVE_DEFAULT`, cluster.hpp).  `VmcAV18` uses the ANL tables and
+/// IGNORES `beta` and `p_d` (P_D is then the wave function's, `VMC_P_D_LI6`).
 ///
 /// `vmc_mc_sigma` is the MONTE CARLO BAND of those tables (open item C5.2,
 /// 2026-09-04): psi_L -> psi_L + n sigma_L(k) with the file's own printed
@@ -225,8 +225,8 @@ TaggedChannel li7_alpha_channel(
 /// Deuteron control: DIS on the neutron, proton spectator (S+D).  The
 /// Cosyn-Weiss tagged limit of the machinery.
 ///
-/// `source` = `Hulthen` (the default, bit for bit what it always was) is the
-/// two-parameter analytic pair at the SCENARIO `P_D_DEUTERON` = 0.045;
+/// `source` = `Hulthen` (this FACTORY's default; the RUN default is `VmcAV18`
+/// since D6) is the two-parameter analytic pair at the SCENARIO P_D_DEUTERON_SCENARIO = 0.045;
 /// `VmcAV18` is the exact AV18 deuteron of `data/vmc/deuteron/fdeut.av18`,
 /// psi_0 = u(k), psi_2 = +w(k) (CDKS phi_2 = -W and phi_L = i^L psi_L, so the
 /// STORED relative sign is the + the Hulthen forms already carry), at that
@@ -241,7 +241,7 @@ TaggedChannel li7_alpha_channel(
 /// IS the cluster" was true of the `momenta/` files and FALSE of this one:
 /// u and w ARE the p-n relative S and D waves.
 TaggedChannel deuteron_channel(double beta = BETA_DEFAULT,
-                               double p_d = P_D_DEUTERON,
+                               double p_d = P_D_DEUTERON_SCENARIO,  // A1: 0.045 kept
                                ClusterWaveSource source
                                    = ClusterWaveSource::Hulthen);
 /// P_D of the AV18 deuteron control channel, from `fdeut.av18`'s own k-space

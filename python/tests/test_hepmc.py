@@ -109,3 +109,39 @@ def test_electron_generated_mass_is_the_pdg_mass(written):
             assert electrons
             for q in electrons:
                 assert q.generated_mass == pytest.approx(0.51099895e-3, rel=1e-9)
+
+
+def test_a10_a_cli_file_carries_the_npz_meta_as_run_attributes(tmp_path):
+    """A10 (2026-11-03; DECISIONS.md A10, the supervisor's choice under the
+    author's delegation): a `lipolgen-run --hepmc` file records the run's
+    physics provenance as `lipolgen.<key>` GenRunInfo attributes whose values
+    are exactly the npz meta's of the same run (docs/HEPMC3_CONVENTION.md,
+    "Run provenance attributes"), on the default tagged run, an RC run and
+    an inclusive run where the cluster wave and the tail model are labels."""
+    import json
+    from lipolgen import cli
+    for tag, argv in (("tag", ["--channel", "tagged-6Li-alpha"]),
+                      ("rc", ["--channel", "tagged-6Li-alpha", "--rc", "tensor-band"]),
+                      ("inc", ["--channel", "inclusive", "--cluster-wave", "vmc"])):
+        h, z = str(tmp_path / (tag + ".hepmc")), str(tmp_path / (tag + ".npz"))
+        assert cli.main(argv + ["--events", "50", "--seed", "3", "--hepmc", h,
+                                "--npz", z, "--quiet"]) == 0
+        meta = json.loads(str(np.load(z, allow_pickle=False)["meta"]))
+        with pyhepmc.open(h) as f:
+            evs = list(f)
+        ours = {k[len("lipolgen."):]: str(v)
+                for k, v in evs[0].run_info.attributes.items()
+                if k.startswith("lipolgen.")}
+        assert {"version", "delta_convention", "cluster_wave", "unpol_sf",
+                "pol_sf", "unpol_sf_extrapolation"} <= set(ours), (tag, ours)
+        for k, v in ours.items():
+            m = meta[k]
+            assert (v == m) if isinstance(m, str) else float(v) == m, (tag, k, v, m)
+        for ev in evs[1:]:
+            assert {k: str(v) for k, v in ev.run_info.attributes.items()} == \
+                {k: str(v) for k, v in evs[0].run_info.attributes.items()}
+        if tag == "rc":
+            assert ours["rc_tail_model"] == "not read on channel tagged-6Li-alpha"
+        if tag == "inc":
+            assert ours["cluster_wave"] == "not read on channel inclusive"
+            assert "li6_cluster_polarization" in ours

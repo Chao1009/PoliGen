@@ -32,6 +32,9 @@ lg = pytest.importorskip("lipolgen")
 
 _ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 _BENCH = os.path.join(_ROOT, "validation", "benchmarks")
+if _BENCH not in sys.path:
+    sys.path.insert(0, _BENCH)
+from _report import import_pythia8  # noqa: E402  (PYTHIA 8.317 imports only from a cwd without `python/`; see _report.py)
 
 
 def _load(name):
@@ -44,7 +47,7 @@ def _load(name):
 
 def _have_pythia8_module():
     try:
-        import pythia8                                     # noqa: F401
+        import_pythia8()
     except ImportError:
         return False
     return True
@@ -182,7 +185,7 @@ def test_t4_smoke_small_n(t4):
     is well formed, follows from its numbers, and ran the configuration its
     header claims (one PYTHIA library, PYTHIA's own PDF, protons only)."""
     _skip_without_pythia_tier("the T4 smoke run")
-    import pythia8
+    pythia8 = import_pythia8()
     rep = t4.run(verbose=False, n_events=200)
     for k in ("name", "generator", "reference", "tolerance", "status"):
         assert k in rep
@@ -239,13 +242,22 @@ def test_t4_t6_exit_2_when_lipolgen_is_not_importable(harness, tmp_path):
 
 # The full-size row: ~10 s measured, but a generator-vs-generator sample is an
 # EXPENSIVE row by kind (BENCHMARK_PLAN.md sec. 3).
-T4_PINNED = {  # measured 2026-09-26, PYTHIA 8.312, N = 20 000 per side/window
-    ("W1", "n_ch"): (8.0267, 8.0539),
-    ("W1", "sum_empz"): (2.7229, 2.7405),
-    ("W1", "sum_pt_ch"): (3.8271, 3.8492),
-    ("W2", "n_ch"): (7.2606, 7.2428),
-    ("W2", "sum_empz"): (2.0012, 2.0060),
-    ("W2", "sum_pt_ch"): (6.1278, 6.1313),
+# (stock, bridge) means, N = 20 000 per side/window, seed as in the harness.
+# Re-taken 2026-10-26 (run 2026-10-26, phase E) from this machine's run of the
+# harness on the PINNED PYTHIA 8.317 (LIPOLGEN_BENCH=1, 2026-10-27T01:08Z UTC;
+# the row PASSES, worst 0.076).  The previous pin was PYTHIA 8.312's
+# (2026-09-26, unpinned conda-forge): W1 (8.0267, 8.0539), (2.7229, 2.7405),
+# (3.8271, 3.8492); W2 (7.2606, 7.2428), (2.0012, 2.0060), (6.1278, 6.1313)
+# -- every one of them within the rel 3 % below of the 8.317 values (largest
+# move 2.0 %, W2 n_ch), so the old pin still passed; it is re-taken so that
+# the pin is the pinned version's.  Tolerance and verdict logic unchanged.
+T4_PINNED = {
+    ("W1", "n_ch"): (8.1441, 8.2035),
+    ("W1", "sum_empz"): (2.7353, 2.7449),
+    ("W1", "sum_pt_ch"): (3.8483, 3.8815),
+    ("W2", "n_ch"): (7.4037, 7.3826),
+    ("W2", "sum_empz"): (1.9954, 2.0016),
+    ("W2", "sum_pt_ch"): (6.1940, 6.1633),
 }
 
 
@@ -259,15 +271,17 @@ def test_t4_full_row_passes_and_is_pinned(t4):
     _t4_verdict_follows(rep, t4)
     assert rep["status"] == "pass"
     by = {(s["window"], s["observable"]): s for s in rep["subrows"]}
-    # rel 3 %: several times each mean's statistical error (<= 0.7 %), loose
-    # enough for the pinned PYTHIA 8.317 against the 8.312 that measured it.
+    # rel 3 %: several times each mean's statistical error (<= 0.7 %); until
+    # 2026-10-26 the pins were 8.312's and this held them against 8.317 too.
     for key, (stock, bridge) in T4_PINNED.items():
         assert by[key]["stock"] == pytest.approx(stock, rel=0.03), key
         assert by[key]["bridge"] == pytest.approx(bridge, rel=0.03), key
         assert by[key]["ratio"] == pytest.approx(bridge / stock, abs=0.03), key
     assert sum(1 for s in rep["subrows"] if s["compared"]) == 15
     assert not by[("W2", "n_ch_eta[-inf,-2)")]["compared"]
-    assert rep["worst"]["distance"] == pytest.approx(0.023, abs=0.03)
+    # 0.076 measured 2026-10-26 on the PINNED PYTHIA 8.317 (W2 n_ch_eta[-2,0),
+    # a low-count bin); the 2026-09-26 pin was 0.023 on the unpinned 8.312.
+    assert rep["worst"]["distance"] == pytest.approx(0.076, abs=0.03)
     for w in rep["windows"]:
         assert w["match"]["n_sub_kept"] == 16 and w["match"]["n_stock_dropped"] == 0
         assert w["stock"]["n_accepted"] == t4.N_EVENTS
@@ -379,6 +393,7 @@ def test_t6_measured_row_is_pinned(t6, t6_rep):
         {c: s["status"] for c, s in by.items()}
     assert by["C12"]["n_checked"] == 200 and by["C22"]["files"] == 1
     assert by["C23"]["files"] == 7
+    assert by["C24"]["files"] == 8      # A10 (2026-11-03): every file carries the attributes
     # every record balances to far inside the doc's 1e-9: 700 on status 1
     # alone, the 100 T0 inclusive events with X; no remnant-shaped deficit left
     c13 = rep["conservation"]
@@ -418,10 +433,11 @@ def _tamper(src, dst, fn):
     open(dst, "w").write("\n".join(out) + "\n")
 
 
-def _violations(t6, run, path, cid):
+def _violations(t6, run, path, cid, meta_of=None):
     raw, events = t6.read_file(path)
     ctx = dict(n_events=len(events), version=lg.__version__, charge=None,
-               charge_reason="not needed")
+               charge_reason="not needed",
+               npz_meta=t6.npz_meta_of(meta_of or path))   # A10 (2026-11-03): C24's reference
     return t6.CHECKS[cid](run, raw, events, ctx)[1]
 
 
@@ -468,8 +484,17 @@ def test_t6_checks_can_fail(t6, tmp_path):
         bad = str(tmp_path / (fn.__name__ + ".hepmc"))
         _tamper(path, bad, fn)
         for cid in cids:
-            v = _violations(t6, _TAGGED_T0, bad, cid)
+            v = _violations(t6, _TAGGED_T0, bad, cid, meta_of=path)
             assert v and v[0].startswith("event 0"), (fn.__name__, cid, v)
+    # A10 (2026-11-03): C24 reads the run-level block; a changed value and a
+    # dropped attribute each fail it, against the npz meta of the same run.
+    raw = open(path).read().splitlines()
+    for label, edit in (("value", lambda s: s.replace("A lipolgen.pol_sf ", "A lipolgen.pol_sf x", 1)),
+                        ("dropped", lambda s: "" if s.startswith("A lipolgen.cluster_wave ") else s)):
+        bad = str(tmp_path / ("c24_" + label + ".hepmc"))
+        open(bad, "w").write("\n".join(x for x in map(edit, raw) if x != "") + "\n")
+        v = _violations(t6, _TAGGED_T0, bad, "C24", meta_of=path)
+        assert v and ("pol_sf" in v[0] or "cluster_wave" in v[0]), (label, v)
 
 
 def test_t6_blocked_paths_name_the_environment(t6, monkeypatch):
@@ -491,3 +516,20 @@ def test_t6_missing_charge_table_blocks_only_c14(t6, monkeypatch):
     assert by["C14"]["reason"] == env["charge"]
     assert rep["status"] == "blocked" and rep["reason"] == env["charge"]
     assert all(s["status"] in ("pass", "n/a") for c, s in by.items() if c != "C14")
+
+
+def test_t4_pythia_ep_closure_plot_writes_png(t4, tmp_path):
+    """plot() draws the row's figure -- a view of the report, never the
+    record -- as a non-empty PNG where it is told to (here a tmp dir), from
+    a 200-event smoke run (the full row is opt-in); a BLOCKED row, which
+    has no sub-row, has nothing to draw."""
+    pytest.importorskip("matplotlib", reason="matplotlib (the figure only)")
+    _skip_without_pythia_tier("the T4 figure")
+    rep = t4.run(verbose=False, n_events=200)
+    path = t4.plot(rep, out_dir=str(tmp_path))
+    assert path == os.path.join(str(tmp_path), "t4_pythia_ep_closure.png")
+    with open(path, "rb") as f:
+        assert f.read(8) == b"\x89PNG\r\n\x1a\n"
+    assert os.path.getsize(path) > 0
+    assert t4.plot(dict(rep, status="blocked", subrows=[]),
+                   out_dir=str(tmp_path / "blocked")) is None

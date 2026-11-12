@@ -35,7 +35,7 @@
 
 #include <cmath>
 #include <memory>
-
+#include <cstdlib>
 #include "check_close.hpp"
 #include "lipolgen/beams.hpp"
 #include "lipolgen/lhapdf_sf.hpp"
@@ -290,6 +290,250 @@ TEST_CASE("LHAPDF Epps21Ratio::f2_per_nucleon matches the direct EPPS21 evaluati
   // Outside (0, 1), like PartonF2's scalar worker, f2_per_nucleon is 0.
   CHECK(r.f2_per_nucleon(0.0, 10.0) == 0.0);
   CHECK(r.f2_per_nucleon(1.0, 10.0) == 0.0);
+}
+
+// ===================================================== D7 (2026-10-27)
+// The SHIPPED structure-function defaults are this tier's grids (pipeline.hpp,
+// lhapdf_sf.hpp, "D7").  The core suite runs on the toy NAMED
+// (tests/sf_test_support.hpp); these cases gate the D7 wiring itself.  Every
+// case that installs the filler removes it again (`FillerScope`), so the rest
+// of the binary keeps seeing a core-only process.
+#include <filesystem>
+#include <fstream>
+#include <string>
+#include <unistd.h>
+
+#include "LHAPDF/GridPDF.h"
+#include "lipolgen/pipeline.hpp"
+
+namespace {
+
+struct FillerScope {
+  FillerScope() { install_lhapdf_sf_filler(); }
+  ~FillerScope() { set_grid_sf_filler(nullptr); }
+};
+
+/// LHAPDF_DATA_PATH swapped for one scope, then restored (LHAPDF reads it on
+/// every path lookup).
+struct DataPathScope {
+  std::string old;
+  bool had = false;
+  explicit DataPathScope(const std::string& value) {
+    const char* o = std::getenv("LHAPDF_DATA_PATH");
+    had = o != nullptr;
+    if (had) old = o;
+    setenv("LHAPDF_DATA_PATH", value.c_str(), 1);
+  }
+  ~DataPathScope() {
+    if (had) setenv("LHAPDF_DATA_PATH", old.c_str(), 1);
+    else unsetenv("LHAPDF_DATA_PATH");
+  }
+};
+
+bool has(const std::string& s, const std::string& what) {
+  return s.find(what) != std::string::npos;
+}
+
+/// PartonF2's proton sum on a RAW LHAPDF object, in `f2_from_weights`'s order.
+double raw_f2p(const LHAPDF::PDF& pdf, double x, double q2) {
+  const double e2[5] = {1.0 / 9.0, 4.0 / 9.0, 1.0 / 9.0, 4.0 / 9.0, 1.0 / 9.0};
+  double tot = 0.0;
+  for (int pid = 1; pid <= 5; ++pid) {
+    tot += e2[pid - 1] * (pdf.xfxQ2(pid, x, q2) + pdf.xfxQ2(-pid, x, q2));
+  }
+  return std::max(tot, 0.0);
+}
+
+}  // namespace
+
+TEST_CASE("D7: the pre-flight refuses a missing set or lhapdf.conf by name, in "
+          "LHAPDF's own words, with the toy escape") {
+  namespace fs = std::filesystem;
+  const fs::path base =
+      fs::temp_directory_path() / ("lipolgen_d7_" + std::to_string(::getpid()));
+  fs::create_directories(base / "empty");
+  fs::create_directories(base / "confonly");
+  std::ofstream(base / "confonly" / "lhapdf.conf") << "Verbosity: 0\n";
+  for (const char* dir : {"empty", "confonly"}) {
+    CAPTURE(dir);
+    DataPathScope scope((base / dir).string() + "::");  // `::` blocks the prefix
+    const std::string u = lhapdf_set_problem("CT18NLO");
+    const std::string g = lhapdf_set_problem("NNPDFpol11_100");
+    CHECK(has(u, "Info file not found for PDF set 'CT18NLO'"));  // _report.py
+    CHECK(has(u, "--unpol-sf toy"));
+    CHECK(has(g, "Info file not found for PDF set 'NNPDFpol11_100'"));
+    CHECK(has(g, "--pol-sf toy"));
+    CHECK(has(u, std::string(dir) == "empty" ? "lhapdf.conf NOT found"
+                                             : "lhapdf.conf found at"));
+    CHECK_THROWS_WITH_AS(LhapdfSF("CT18NLO", 0),
+                         doctest::Contains("Info file not found for PDF set"),
+                         std::runtime_error);
+    CHECK_THROWS_AS(LhapdfG1("NNPDFpol11_100", 0), std::runtime_error);
+    CHECK_THROWS_AS(Epps21Ratio(), std::runtime_error);
+  }
+  fs::remove_all(base);
+  CHECK(lhapdf_set_problem("CT18NLO").empty());  // the real store, again
+  CHECK(lhapdf_set_problem("NNPDFpol11_100").empty());
+}
+
+TEST_CASE("D7: every grid the tier opens is FROZEN at its own knot edges -- "
+          "bit for bit LHAPDF's `nearest`, whatever lhapdf.conf says") {
+  CHECK(std::string(LHAPDF_EXTRAPOLATOR) == "nearest");
+  CHECK(std::string(LHAPDF_INTERPOLATOR) == "logcubic");
+  CHECK(LHAPDF_FORCE_POSITIVE == 0);
+  const LhapdfSF f2;
+  std::unique_ptr<LHAPDF::PDF> raw(LHAPDF::mkPDF("CT18NLO", 0));
+  auto* grid = dynamic_cast<LHAPDF::GridPDF*>(raw.get());
+  REQUIRE(grid != nullptr);
+  grid->setExtrapolator(std::string("nearest"));   // LHAPDF's own freeze
+  grid->setInterpolator(std::string("logcubic"));
+  grid->setForcePositive(0);
+  // below CT18NLO's Q2 = 1.677 (the shipped window starts at 1.054), and at
+  // an x below nothing: the tier's clamp IS LHAPDF's nearest, to the bit, and
+  // a frozen grid returns its edge value
+  const double pts[4][2] = {{3e-4, 0.7}, {0.01, 1.2}, {0.30, 1.0}, {0.1, 10.0}};
+  for (const auto& pt : pts) {
+    CAPTURE(pt[0]);
+    CAPTURE(pt[1]);
+    CHECK(f2.f2p(pt[0], pt[1]) == raw_f2p(*raw, pt[0], pt[1]));
+  }
+  CHECK(f2.f2p(3e-4, 0.7) == f2.f2p(3e-4, f2.q2_min()));
+  CHECK(f2.f2p(0.30, 1.0) == f2.f2p(0.30, f2.q2_min()));
+  const LhapdfG1 g1;
+  CHECK(g1.q2_min() == doctest::Approx(1.0).epsilon(1e-12));
+  CHECK(g1.g1p(0.01, 0.5) == g1.g1p(0.01, g1.q2_min()));
+  CHECK(g1.g1n(0.20, 0.8) == g1.g1n(0.20, g1.q2_min()));
+}
+
+TEST_CASE("D7: a default PipelineConfig needs the tier's filler, and with it "
+          "runs on the ONE shared frozen pair") {
+  PipelineConfig cfg;
+  cfg.n_events = 200;
+  CHECK(cfg.unpol_sf == UnpolSfSource::Ct18Nlo);    // the literals, not a
+  CHECK(cfg.pol_sf == PolSfSource::NnpdfPol);       // round trip of a constant
+  CHECK(std::string(unpol_sf_name(UNPOL_SF_DEFAULT)) == "ct18nlo");
+  CHECK(std::string(pol_sf_name(POL_SF_DEFAULT)) == "nnpdfpol");
+  set_grid_sf_filler(nullptr);
+  CHECK_THROWS_WITH_AS(cfg.validate(),
+                       doctest::Contains("ct18nlo is the SHIPPED default since D7"),
+                       std::runtime_error);
+  CHECK_THROWS_AS(Pipeline(cfg, tensor_thirds_plan(0.7, 0.6)), std::runtime_error);
+  {
+    FillerScope filler;
+    CHECK_NOTHROW(cfg.validate());
+    const Pipeline p(cfg, tensor_thirds_plan(0.7, 0.6));
+    CHECK(p.config().unpol_sf_obj == make_lhapdf_unpol_sf(UnpolSfSource::Ct18Nlo));
+    CHECK(p.config().pol_sf_obj == make_lhapdf_pol_sf(PolSfSource::NnpdfPol));
+    CHECK(!cfg.unpol_sf_obj);                       // attached LAZILY, on the copy
+    // D7 (2026-10-29): the shipped 6Li inclusive config-1 cross section on the
+    // frozen pair, and the toy NAMED, which is the pre-D7 default bit for bit
+    // (591846.1688784091 pb on 2026-10-26's tree, plan_D7 sec. 3.2).
+    CHECK(p.sigma_pb() == doctest::Approx(496334.155954048).epsilon(1e-12));
+    PipelineConfig t = toy_config();
+    t.n_events = 200;
+    CHECK(Pipeline(t, tensor_thirds_plan(0.7, 0.6)).sigma_pb() ==
+          doctest::Approx(591846.1688784091).epsilon(1e-12));
+    PipelineConfig a = cfg;                         // the explicit C++ path
+    attach_shipped_sf_backends(a);
+    CHECK(a.unpol_sf_obj == p.config().unpol_sf_obj);
+    CHECK(Pipeline(a, tensor_thirds_plan(0.7, 0.6)).sigma_pb() == p.sigma_pb());
+  }
+  CHECK(grid_sf_filler() == nullptr);
+}
+
+TEST_CASE("D7: a caller kernel sits beside the SHIPPED selectors only, and a "
+          "struck slot needs Custom") {
+  FillerScope filler;
+  PipelineConfig c;
+  c.n_events = 10;
+  c.kernel = default_inclusive_kernel(LI6());
+  CHECK_NOTHROW(c.validate());                      // unread: the kernel wins
+  c.unpol_sf = UnpolSfSource::Toy;                  // not the default any more
+  CHECK_THROWS_WITH_AS(c.validate(), doctest::Contains("caller-supplied kernel"),
+                       std::runtime_error);
+  c.unpol_sf = UNPOL_SF_DEFAULT;
+  c.pol_sf = PolSfSource::Toy;
+  CHECK_THROWS_AS(c.validate(), std::runtime_error);
+  // the mislabel measured on 2026-10-27 (plan_D7 sec. 3.5): ct18nlo named,
+  // ToyF2 in the struck slot, sigma the toy's under the label ct18nlo
+  PipelineConfig t;
+  t.channel = PipelineChannel::TaggedLi6Alpha;
+  t.n_events = 10;
+  t.unpol_sf_obj = make_lhapdf_unpol_sf(UnpolSfSource::Ct18Nlo);
+  t.struck.f2_source = std::make_shared<const ToyF2>();
+  CHECK_THROWS_WITH_AS(t.validate(),
+                       doctest::Contains("struck.f2_source is set but unpol_sf = ct18nlo"),
+                       std::runtime_error);
+  t.unpol_sf = UnpolSfSource::Custom;               // ... named for what it is
+  CHECK_NOTHROW(t.validate());
+  t.struck.g1_model = std::make_shared<const ToyG1>();
+  CHECK_THROWS_AS(t.validate(), std::runtime_error);
+  t.pol_sf = PolSfSource::Custom;
+  t.pol_sf_obj = std::make_shared<const ToyG1>();
+  CHECK_NOTHROW(t.validate());
+}
+
+TEST_CASE("D7: threaded generation on the shared frozen grids is bit-identical "
+          "to single-threaded") {
+  FillerScope filler;
+  struct Row { PipelineChannel ch; const char* iso; bool flip; };
+  const Row rows[3] = {{PipelineChannel::Inclusive, "6Li", false},
+                       {PipelineChannel::TaggedLi6Alpha, "6Li", false},
+                       {PipelineChannel::TaggedLi7Alpha, "7Li", true}};
+  for (const Row& row : rows) {
+    CAPTURE(pipeline_channel_name(row.ch));
+    PipelineConfig cfg;
+    cfg.channel = row.ch;
+    cfg.isotope = row.iso;
+    cfg.n_events = 6000;
+    cfg.seed = 99;
+    const Pipeline p(cfg, row.flip ? helicity_flip_plan(1.5, 0.7, 0.7)
+                                   : tensor_thirds_plan(0.7, 0.6));
+    std::vector<Event> a, b;
+    p.for_each([&](const Event& ev) { a.push_back(ev); });
+    p.for_each([&](const Event& ev) { b.push_back(ev); }, 4, 777);
+    REQUIRE(a.size() == b.size());
+    bool same = true;
+    for (std::size_t i = 0; i < a.size() && same; ++i) {
+      same = a[i].kin.x == b[i].kin.x && a[i].kin.q2 == b[i].kin.q2 &&
+             a[i].kin.k == b[i].kin.k && a[i].weight == b[i].weight &&
+             a[i].particles.size() == b[i].particles.size();
+    }
+    CHECK(same);
+  }
+}
+
+TEST_CASE("D7 verification (2026-11-03, code finding 1): a grid selector "
+          "holding any object but the tier's shipped one is refused") {
+  // Before this rule a default config with ToyF2 in unpol_sf_obj ran the toy
+  // (591846.1688784091 pb) while meta and the knob row said ct18nlo.
+  FillerScope filler;
+  PipelineConfig c;
+  c.n_events = 10;
+  c.unpol_sf_obj = std::make_shared<const ToyF2>();      // selector left Ct18Nlo
+  CHECK_THROWS_WITH_AS(c.validate(),
+                       doctest::Contains("not the LHAPDF tier's shipped CT18NLO"),
+                       std::runtime_error);
+  CHECK_THROWS_AS(Pipeline(c, tensor_thirds_plan(0.7, 0.6)), std::runtime_error);
+  c.unpol_sf = UnpolSfSource::Custom;                    // named for what it is
+  CHECK_NOTHROW(c.validate());
+  c.unpol_sf = UnpolSfSource::Ct18Nlo;                   // the shipped object
+  c.unpol_sf_obj = make_lhapdf_unpol_sf(UnpolSfSource::Ct18Nlo);
+  CHECK_NOTHROW(c.validate());
+  c.unpol_sf_obj = std::make_shared<const LhapdfSF>("CT18NLO", 0);  // a copy is
+  CHECK_THROWS_AS(c.validate(), std::runtime_error);     // not the shipped one
+  c.unpol_sf_obj.reset();
+  c.pol_sf_obj = std::make_shared<const ToyG1>();        // selector left NnpdfPol
+  CHECK_THROWS_WITH_AS(c.validate(),
+                       doctest::Contains("not the LHAPDF tier's shipped NNPDFpol11_100"),
+                       std::runtime_error);
+  c.pol_sf = PolSfSource::Custom;
+  CHECK_NOTHROW(c.validate());
+  c.pol_sf = PolSfSource::NnpdfPol;
+  c.pol_sf_obj = make_lhapdf_pol_sf(PolSfSource::NnpdfPol);
+  CHECK_NOTHROW(c.validate());
+  const Pipeline p(c, tensor_thirds_plan(0.7, 0.6));     // the shipped pair runs
+  CHECK(p.sigma_pb() == doctest::Approx(496334.155954048).epsilon(1e-12));
 }
 
 #endif  // LIPOLGEN_HAVE_LHAPDF

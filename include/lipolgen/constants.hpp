@@ -24,10 +24,10 @@ namespace lipolgen {
 ///       with P_zz = n+ + n- - 2 n0 the tensor polarization, i.e. b1 > 0
 ///       means the m = 0 state is the one with the LARGER cross section.
 ///   +1  the repository's own private convention until that date -- the
-///       transcription of Hoodbhoy-Jaffe-Manohar in docs/Discussions.pptx
-///       p.5, giving Azz = +(2/3) b1/F1.  Kept reachable by setting this
-///       constant back, which is the whole of the change: nothing else in
-///       the program knows the sign.
+///       sibling's docs/Discussions.pptx p.5, a transcription of the JLab
+///       LOI's Eq. (9) (arXiv:1803.11206) long called Hoodbhoy-Jaffe-
+///       Manohar's (R1, 2026-10-27), giving Azz = +(2/3) b1/F1.  Kept
+///       reachable by setting this constant back: nothing else knows it.
 ///
 /// The decision was taken on the literature and not on a new derivation.
 /// The two differ by the sign of b1 itself, so |Azz| and the whole Delta
@@ -71,8 +71,8 @@ inline constexpr double PROTON_MASS = 0.938272088;
 ///     what regulates the s- and p-peaks (`src/core/rc.cpp`,
 ///     `polrad_full_sigma_el` / `polrad_full_sigma_qe_u`).  The two t-peak
 ///     tails read no lepton mass, so `PipelineConfig::validate()` refuses a
-///     non-default `m_lepton` ON THOSE TWO ONLY.  `hepmc_writer` and
-///     `PolradFull` are this constant's two consumers.
+///     non-default `m_lepton` on those two, and (D5) on ANY model where no
+///     tail is built.  `hepmc_writer` and `PolradFull` are its two consumers.
 /// The literal is unchanged from the one it replaces (tests/test_hepmc.cpp
 /// and python/tests/test_hepmc.py pin the written value).
 inline constexpr double M_ELECTRON = 0.51099895e-3;
@@ -122,23 +122,46 @@ inline constexpr double B1_MILLER_TABLE_TO_PER_NUCLEON =
 /// normalisation.
 inline constexpr double B1_CDKS_TABLE_TO_PER_NUCLEON = 1.0;
 
-/// Rank-2 transfer of the embedded deuteron's tensor polarization to 6Li:
-/// `TaggedModel(li6_alpha_channel()).tensor_dilution()` evaluated at
-/// `P_D_LI6` (beams.hpp), pinned in tests/test_tagged.cpp (plans/08 D9).
-/// It is a QUADRATURE over the channel and not a closed form: the closed form
-/// 1 - (9/10) P_D gives 0.921970 against the 0.9219490 measured, so the two
-/// are pinned to each other at 1e-4 and not asserted equal.  (0.9219467 until
-/// the 2026-09-06 tagged S-D sign fix, which moves this quadrature residual by
-/// +2.46e-6 -- against a 1e-4 pin, so the constant itself does not move.)
-inline constexpr double LI6_B1_RANK2_TRANSFER = 0.921947;
-/// The pre-2026-08-28 VECTOR dilution 1 - (3/2) P_D -- the wrong rank for b1.
-inline constexpr double LI6_B1_LEGACY_TRANSFER = 0.87;
-/// 6Li carries two polarized nucleons out of six.
-inline constexpr double LI6_B1_PER_NUCLEON = 2.0 / 6.0;
+/// Rank-2 transfer of the embedded deuteron's tensor polarization to 6Li, the
+/// quadrature `TaggedModel(li6_alpha_channel(..)).tensor_dilution()`: HULTHEN at P_D_LI6
+/// (1 - 0.9 P_D = 0.921970, pinned at 1e-4; 0.9219467 before the 2026-09-06 S-D
+/// sign fix) and VMC AV18+UX (0.98257587, pinned to the literal at 5e-7, test_tagged.cpp).
+inline constexpr double LI6_B1_RANK2_TRANSFER_HULTHEN = 0.921947;  // pre-A1, polligen's
+inline constexpr double LI6_B1_RANK2_TRANSFER_VMC = 0.982576;      // the default wave's
+/// A1 (2026-11-03): the inclusive b1 / A_zz read the VMC value, x1.06576 (6Li only since J1, 2026-11-10: the deuteron's slot is MillerB1, unmapped) (the old one
+/// via `default_inclusive_kernel(..., b1_transfer)`).  UNQUANTIFIED SYSTEMATIC: the
+/// non-cluster depletion taking the vector sector from the cluster 0.887 to the
+/// six-body 0.848 (4.4 %) has no rank-2 counterpart, so none is applied here.
+inline constexpr double LI6_B1_RANK2_TRANSFER = LI6_B1_RANK2_TRANSFER_VMC;
+inline constexpr double LI6_B1_LEGACY_TRANSFER = 0.87;  ///< pre-2026-08-28 VECTOR 1 - 1.5 P_D: wrong rank for b1
+inline constexpr double LI6_B1_PER_NUCLEON = 2.0 / 6.0;  ///< 6Li: two polarized nucleons of six
 
 /// Sather-Schmidt bag-model sum-rule coefficient (PRD 42:1424):
 /// int_0^1 x Delta dx = C_BAG * alpha_s(Q2).
 inline constexpr double C_BAG = -0.012;
+
+/// Normalisation of the double-helicity-flip (gluon transversity) cos 2phi
+/// term -- the single place it is set.  0.5 SINCE 2026-10-27 (author decision
+/// D4, docs/open_items/run_2026-10-27/DECISIONS.md): the kernel's term is
+///
+///   a_2 = -DELTA_COS2PHI_NORM (1-y)/y^2 c_eff(m) sin^2(theta_S) Delta/D_phi,
+///
+/// so Delta is Jaffe and Manohar's double-helicity-flip amplitude A_{+-,-+}
+/// normalised like F1 = (1/3) sum_H A_{+H,+H}: Jaffe-Manohar PLB 223 (1989) 218
+/// Eq. (16) (preprint CTP#1712 numbering), Sather-Schmidt PRD 42 (1990) 1424
+/// Eq. (A7), Detmold-Shanahan PRD 94 (2016) 014507 Eq. (5), Ma-Wang-Zhang
+/// arXiv:1306.6693 Eq. (23).  A Delta or a moment quoted in those papers' units
+/// enters as printed (`C_BAG` above among them).  1.0 is the JLab LOI's Eq. (9)
+/// (arXiv:1803.11206), twice that, carried from the first port to D4; setting
+/// it back, with `DELTA_CONVENTION` below, is the whole of the reversal.
+/// `tests/test_xsec.cpp` pins the value and closed form (docs/CONVENTIONS.md).
+inline constexpr double DELTA_COS2PHI_NORM = 0.5;
+/// The provenance label: `meta["delta_convention"]` of `Pipeline.generate()`
+/// (so of every .npz the CLI writes; no HepMC3 file carries it) and the CLI run
+/// banner.  It names the 1/2: the static_assert makes the two change together.
+inline constexpr const char* DELTA_CONVENTION =
+    "jaffe-manohar-1989; cos2phi coefficient -(1/2)(1-y)/y^2 (D4, 2026-10-27)";
+static_assert(DELTA_COS2PHI_NORM == 0.5, "DELTA_CONVENTION names the 1/2");
 
 /// The valence window over which the two polarized-EMC camps are put on a
 /// common 7Li baseline (`polli_fastsim.polarized.POLEMC_VALENCE_WINDOW`).

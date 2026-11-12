@@ -1,0 +1,728 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# ============================================================================
+# VENDORED REFERENCE TABLE -- tier T3, docs/benchmarking/04_theory.md T-20
+# The 6Li elastic form factors of Wiringa & Schiavilla 1998, Fig. 1, read
+# back from the PDF's VECTOR drawing (no pixel was picked, nothing eyeballed)
+# ----------------------------------------------------------------------------
+# Paper:     R. B. Wiringa and R. Schiavilla, "Microscopic calculation of 6Li
+#            elastic and transition form factors", Phys. Rev. Lett. 81 (1998)
+#            4317, doi:10.1103/PhysRevLett.81.4317; arXiv:nucl-th/9807037v2
+#            (20 Aug 1998).  VMC wave functions of the AV18 + Urbana IX
+#            Hamiltonian; one-body (IA) and one- plus two-body (IA+MEC)
+#            charge and current operators.
+# Document:  the arXiv PDF in the author's corpus,
+#            PolarizedLithiumSim/refs/nucl-th_9807037.pdf (read, never
+#            edited): 11 pages, 152 769 bytes, sha256
+#            fc51cb930e81b16238bb02561e81d4f9160a7d1708e813f8380ba669991d20e8
+#            (Ghostscript 9.22 conversion of the authors' PostScript).  The
+#            PDF is NOT in this repository; only the numbers below are.
+#            Read 2026-10-27 (UTC) by run 2026-10-26 phase C4.
+# Licence:   facts (numbers) read from a published figure, quoted with
+#            attribution; no figure, text or table of the paper is reproduced.
+# Figure:    Fig. 1, PDF page 10 ("Fig.1 Wiringa & Schiavilla").  Two panels,
+#            both against q (fm^-1), the label "q (fm^-1)" under each:
+#              left  F_L^2(q): q = 0 .. 4 fm^-1 (labels 0, 1, 2, 3; the panel
+#                    boundary is q = 4), log axis 10^-7 .. 10^0;
+#              right F_T^2(q): q = 0 .. 4 fm^-1, log axis 10^-10 .. 10^-3.
+#            Caption (p. 9): "Calculated longitudinal and transverse elastic
+#            form factors of the 6Li ground state are shown in impulse
+#            approximation (IA) and with two-body charge and current
+#            operators added (IA+MEC) as filled symbols with Monte Carlo
+#            statistical error bars.  The Coulomb monopole (C0) and quadrupole
+#            (C2) contributions to the longitudinal form factor are also shown
+#            by the dashed (IA) and solid (IA+MEC) lines.  Data are from Refs.
+#            [8,28-30]."  Legends: left Stanford / IA / IA+MEC; right
+#            Amsterdam / Saskatoon / Stanford / IA / IA+MEC.  The text (p. 4)
+#            says only the M1 multipole contributes to F_T (J = 1).
+# Frame:     each panel's box is ONE 'qu' (quad) drawing operator:
+#              left  (x0, y0, x1, y1) = (104.40, 214.56, 306.00, 585.12) pt
+#              right (x0, y0, x1, y1) = (306.00, 214.56, 507.60, 585.12) pt
+#            (PDF points, y down).  Calibration, linear in q and in log10 F^2
+#            between the box edges: q = 4 (x - x0)/(x1 - x0); left log10 F^2 =
+#            -7 + 7 (585.12 - y)/370.56, right log10 F^2 = -10 + 7 (585.12 -
+#            y)/370.56.  CHECKED, not assumed: the major tick marks read back
+#            as q = 0, 1, 1.9952, 3 (left; the q = 2 tick is one device unit
+#            low) and 0, 1, 2, 3, 4 (right), and as log10 F^2 within 0.0019 of
+#            every integer decade on both panels; every "10" label word sits
+#            +0.012 .. +0.017 decade and every exponent word +0.133 .. +0.138
+#            decade above its tick, the exponent equal to that tick's decade.
+# Device:    every coordinate of the drawing is a multiple of 0.24 pt (1/300
+#            in).  ONE such unit is the digitization error declared for every
+#            coordinate: dq_fm = 0.0047619 fm^-1, dlog10F2 = 0.0045337 decade
+#            (1.05 % in F^2, 0.52 % in F).  It covers the quantization and the
+#            one-unit irregularity of the tick marks.
+# ----------------------------------------------------------------------------
+# HOW THE NUMBERS WERE READ (commands; cwd anywhere, PyMuPDF 1.28.2):
+#   1. The sibling programme's tool, PolarizedLithiumSim/tools/digitize_figure.py
+#      (read, never copied), for the calibration check and a cross-check:
+#        python3 tools/digitize_figure.py --pdf refs/nucl-th_9807037.pdf \
+#          --page 10 --frame 104.40 214.56 306.00 585.12 --xrange 0 4 \
+#          --yrange 1e-7 1 --ylog --min-items 75 --curve "C2_IAMEC:1,0,0:[] 0"
+#      and the same with --min-items 82 --curve "C2_IA:0,0,1:[ 4.8 4.8 ] 0"
+#      (the x labels read back 0, 1, 1.9952, 3; the right panel with
+#      --frame 306.00 214.56 507.60 585.12 --yrange 1e-10 1e-3 reads 0..4
+#      exactly).  The tool cannot read this figure alone, for four reasons
+#      recorded here: its frame finder looks for four long strokes and finds
+#      none (each frame is a 'qu' quad); its per-style collection merges the
+#      C0 and C2 lines of one calculation (same colour and dash -- the
+#      --min-items values above separate the two C2 lines from the C0 lines
+#      and nothing separates the C0 lines from them); it reads no symbol or
+#      error bar; and its y-label check reads "10" and the exponent as two
+#      words.  Its two C2 extractions agree with the rows below to 1.1e-4
+#      (relative, float32 coordinates against these 0.24-pt-exact ones).
+#   2. The per-path extraction that wrote every row below:
+#        source env.sh && python3 \
+#          validation/benchmarks/t3_li6_ff_wiringa_schiavilla.py \
+#          --redigitize PolarizedLithiumSim/refs/nucl-th_9807037.pdf
+#      re-reads the PDF and compares the body it writes with this file's
+#      body, line for line (exit 0 identical, 1 different).  Its rules are
+#      the harness's `digitize()`: the lines are the stroked red-solid /
+#      blue-dashed paths of >= 60 segments inside the left panel, C0 the one
+#      that starts at the frame's top-left corner (F^2 = 1 at q = 0), C2 the
+#      one that starts on the frame floor; each symbol series is a [bars]
+#      [caps][n symbols] run in drawing order, the k-th bar on the k-th
+#      symbol; the left legend (drawn after the left frame) is excluded.
+# ----------------------------------------------------------------------------
+# PUBLISHING CONVENTION (per nucleus; the tree's Spin1ElasticFF convention is
+# rc.hpp's Rosenbluth one, F_c(0) = Z, F_m(0) = (M_A/m_p) mu, F_q(0) = M_A^2 Q):
+#   F2 is the plotted quantity AS PLOTTED, per nucleus: on the left F_L^2 =
+#   F_C0^2 + F_C2^2 normalised to 1 at q = 0 (the C0 line starts at the frame
+#   corner, F^2 = 1), i.e. the tree's (F_c^2 + F_C2^2)/Z^2; on the right
+#   F_T^2 = F_M1^2 for 6Li, which at q -> 0 is (4/3) eta (1 + eta) F_m^2 / Z^2
+#   (B(Q^2)/Z^2) -- a READING: the paper prints no formula; record (r5) of the
+#   harness checks it against the paper's printed mu and Q.  q is WS98's q,
+#   identified with the tree's q = sqrt(t)/(hbar c); the elastic 3-momentum
+#   in the lab differs from it by a factor sqrt(1 + eta) <= 1.0025 here.
+# ----------------------------------------------------------------------------
+# COLUMNS.  The first five are data/ff/li6_elastic.csv's: TabulatedSpin1FF
+# reads, per line, four numbers (q, F_C0, F_C2, F_M1) after '#'-stripping and
+# ',' -> ' ', and SKIPS any line whose first four tokens are not all numbers
+# -- every RECORD row below has its three form-factor columns EMPTY and is
+# skipped; every SLOT row has all four.  Promotion = this file copied to
+# data/ff/li6_elastic.csv (a registry decision: tests/test_rc.cpp asserts no
+# 6Li table is shipped).
+#   q_fm      q in fm^-1 (record rows: from x_pt through the calibration).
+#   F_C0, F_C2, F_M1   SLOT rows only, the tree's normalisation: F_C0 = Z
+#             |F_C0| > 0; F_C2 = -Z |F_C2| on the C2 line's first branch (the
+#             sign of WS98's printed Q = -0.23(9) fm^2) and +Z |F_C2| on its
+#             second (a simple zero assumed in the floor gap), the multipole
+#             TabulatedSpin1FF turns into F_q = 3 F_C2/(2 sqrt 2 eta_A); F_M1 =
+#             the Sachs F_m, from the IA+MEC F_T^2 symbols through B = (4/3)
+#             eta (1 + eta) F_m^2 at M_A = lg.li6().mass()/lg.HBARC_GEV_FM =
+#             28.38655 fm^-1, Z = 3, signed + below the first F_T zero and -
+#             above (the symbol at the zero, q = 1.2476, takes the sign of the
+#             ln-q interpolation of its neighbours: +), then interpolated
+#             linearly in ln q onto the slot q (TabulatedSpin1FF's own rule).
+#             SLOT q = every computed IA+MEC C0 vertex with q > 0 that has a
+#             computed IA+MEC C2 vertex at the same x: 68 rows, q = 0.119 ..
+#             2.919 fm^-1 (C2 is below the floor at q < 0.1 and in
+#             2.54 .. 2.68 fm^-1).  TabulatedSpin1FF refuses to extrapolate,
+#             so a promoted copy covers 0.119 <= q <= 2.919 fm^-1 ONLY.
+#   source    "WS98 Fig.1 left" / "WS98 Fig.1 right" / "WS98 Fig.1 slot".
+#   curve     C0, C2 (the multipole lines, plotted as F_C0^2, F_C2^2 on the
+#             F_L^2 axis); FL2, FT2 (the symbols: the total F_L^2 and F_T^2);
+#             slot.
+#   calc      IA (blue, dashed / circles), IA+MEC (red, solid / squares), or
+#             data:Stanford / data:Amsterdam / data:Saskatoon (open squares /
+#             triangles / circles, black).  DATA ARE SECOND-HAND: read from
+#             WS98's figure of Refs. [8, 28-30] (Bergstrom-Kowalski-Neuhausen
+#             PRC 25 (1982) 1156; Lapikas 1978; Li-Sick-Whitney-Yearian NPA
+#             162 (1971) 583; Rand-Frosch-Yearian PR 144 (1966) 859); the
+#             figure does not say which reference each set is.  The seven
+#             right-panel Stanford points sit at RFY Table I's seven q (see
+#             rfy1966_li_magnetic_ff.csv; the harness's record (r6)).
+#   kind      vertex (a computed point of a line: the lines are sampled every
+#             0.04 fm^-1, 8-9 device units), clip (where a line meets the
+#             frame floor -- the plotting program's interpolation, NOT a
+#             computed point), symbol, slot.
+#   drawing   the path's index in PyMuPDF's page.get_drawings() (content-
+#             stream order); branch the subpath of a line (a floor clip ends
+#             one and starts the next).
+#   x_pt, y_pt  the vertex, or the symbol's bounding-box centre, in PDF points.
+#   y_bar_lo_pt, y_bar_hi_pt  the error bar's ends (symbols; empty for
+#             lines).  Equal ends = an error below the device resolution.
+#             The bars are symmetric in F^2 (linear) where both ends are
+#             drawn.  The lower end of nine IA+MEC bars is CLIPPED by the
+#             plotting program -- on the left panel's floor at q >= 3 fm^-1,
+#             at 1/100 of the point on the right at q = 1.25, 3.5, 3.75, 4.0
+#             fm^-1 -- so the upper half-bar is the error.
+#   F2, F2_bar_lo, F2_bar_hi  the plotted F^2 at y_pt and at the bar ends.
+#   dq_fm, dlog10F2  the digitization error (one device unit), per row.
+# Integrity: validation/benchmarks/t3_li6_ff_wiringa_schiavilla.py records the
+#   sha256 of EVERY byte of this file and re-checks it on every read; it also
+#   re-derives q and F2 of every row from (x_pt, y_pt) and every slot row from
+#   the record rows.  An altered file raises RuntimeError and the harness
+#   exits 2.
+# ============================================================================
+q_fm,F_C0,F_C2,F_M1,source,curve,calc,kind,drawing,branch,x_pt,y_pt,y_bar_lo_pt,y_bar_hi_pt,F2,F2_bar_lo,F2_bar_hi,dq_fm,dlog10F2
+0.000000,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,104.40,214.56,,,1,,,0.0047619,0.0045337
+0.038095,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,106.32,214.80,,,0.989615,,,0.0047619,0.0045337
+0.076190,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,108.24,215.04,,,0.979338,,,0.0047619,0.0045337
+0.119048,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,110.40,215.28,,,0.969168,,,0.0047619,0.0045337
+0.157143,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,112.32,216.00,,,0.939286,,,0.0047619,0.0045337
+0.195238,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,114.24,216.72,,,0.910326,,,0.0047619,0.0045337
+0.238095,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,116.40,217.44,,,0.882259,,,0.0047619,0.0045337
+0.276190,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,118.32,218.64,,,0.837389,,,0.0047619,0.0045337
+0.319048,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,120.48,219.84,,,0.794802,,,0.0047619,0.0045337
+0.357143,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,122.40,221.04,,,0.754381,,,0.0047619,0.0045337
+0.400000,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,124.56,222.48,,,0.70858,,,0.0047619,0.0045337
+0.438095,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,126.48,224.16,,,0.658647,,,0.0047619,0.0045337
+0.476190,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,128.40,225.84,,,0.612234,,,0.0047619,0.0045337
+0.519048,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,130.56,227.52,,,0.569091,,,0.0047619,0.0045337
+0.557143,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,132.48,229.44,,,0.523494,,,0.0047619,0.0045337
+0.600000,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,134.64,231.60,,,0.47655,,,0.0047619,0.0045337
+0.638095,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,136.56,234.00,,,0.429311,,,0.0047619,0.0045337
+0.676190,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,138.48,236.40,,,0.386754,,,0.0047619,0.0045337
+0.719048,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,140.64,238.80,,,0.348416,,,0.0047619,0.0045337
+0.757143,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,142.56,241.20,,,0.313879,,,0.0047619,0.0045337
+0.800000,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,144.72,243.84,,,0.279828,,,0.0047619,0.0045337
+0.838095,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,146.64,246.72,,,0.246881,,,0.0047619,0.0045337
+0.876190,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,148.56,249.60,,,0.217813,,,0.0047619,0.0045337
+0.919048,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,150.72,252.48,,,0.192167,,,0.0047619,0.0045337
+0.957143,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,152.64,255.60,,,0.16778,,,0.0047619,0.0045337
+1.000000,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,154.80,258.72,,,0.146488,,,0.0047619,0.0045337
+1.038095,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,156.72,262.08,,,0.12657,,,0.0047619,0.0045337
+1.076190,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,158.64,265.44,,,0.10936,,,0.0047619,0.0045337
+1.119048,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,160.80,268.80,,,0.0944906,,,0.0047619,0.0045337
+1.157143,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,162.72,272.40,,,0.0807948,,,0.0047619,0.0045337
+1.200000,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,164.88,276.00,,,0.0690841,,,0.0047619,0.0045337
+1.238095,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,166.80,279.84,,,0.0584574,,,0.0047619,0.0045337
+1.276190,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,168.72,283.68,,,0.0494653,,,0.0047619,0.0045337
+1.319048,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,170.88,287.52,,,0.0418564,,,0.0047619,0.0045337
+1.357143,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,172.80,291.36,,,0.0354179,,,0.0047619,0.0045337
+1.395238,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,174.72,295.44,,,0.0296586,,,0.0047619,0.0045337
+1.438095,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,176.88,299.52,,,0.0248358,,,0.0047619,0.0045337
+1.476190,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,178.80,303.84,,,0.0205812,,,0.0047619,0.0045337
+1.519048,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,180.96,308.16,,,0.0170555,,,0.0047619,0.0045337
+1.557143,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,182.88,312.72,,,0.013987,,,0.0047619,0.0045337
+1.600000,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,185.04,317.04,,,0.011591,,,0.0047619,0.0045337
+1.638095,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,186.96,321.60,,,0.00950559,,,0.0047619,0.0045337
+1.676190,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,188.88,326.16,,,0.00779542,,,0.0047619,0.0045337
+1.719048,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,191.04,330.96,,,0.00632653,,,0.0047619,0.0045337
+1.757143,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,192.96,335.76,,,0.00513443,,,0.0047619,0.0045337
+1.800000,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,195.12,340.80,,,0.00412368,,,0.0047619,0.0045337
+1.838095,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,197.04,345.60,,,0.00334666,,,0.0047619,0.0045337
+1.876190,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,198.96,350.64,,,0.00268784,,,0.0047619,0.0045337
+1.919048,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,201.12,355.68,,,0.00215872,,,0.0047619,0.0045337
+1.957143,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,203.04,360.96,,,0.00171576,,,0.0047619,0.0045337
+1.995238,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,204.96,366.24,,,0.00136369,,,0.0047619,0.0045337
+2.038095,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,207.12,372.00,,,0.00106147,,,0.0047619,0.0045337
+2.076190,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,209.04,377.28,,,0.000843657,,,0.0047619,0.0045337
+2.119048,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,211.20,382.80,,,0.000663577,,,0.0047619,0.0045337
+2.157143,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,213.12,388.32,,,0.000521935,,,0.0047619,0.0045337
+2.195238,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,215.04,394.08,,,0.000406264,,,0.0047619,0.0045337
+2.238095,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,217.20,399.84,,,0.000316228,,,0.0047619,0.0045337
+2.276190,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,219.12,406.32,,,0.000238556,,,0.0047619,0.0045337
+2.319048,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,221.28,412.32,,,0.000183759,,,0.0047619,0.0045337
+2.357143,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,223.20,418.56,,,0.000140079,,,0.0047619,0.0045337
+2.400000,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,225.36,424.56,,,0.000107902,,,0.0047619,0.0045337
+2.438095,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,227.28,430.80,,,8.22537e-05,,,0.0047619,0.0045337
+2.476190,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,229.20,437.52,,,6.14062e-05,,,0.0047619,0.0045337
+2.519048,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,231.36,444.72,,,4.48954e-05,,,0.0047619,0.0045337
+2.557143,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,233.28,451.68,,,3.31685e-05,,,0.0047619,0.0045337
+2.600000,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,235.44,458.88,,,2.42502e-05,,,0.0047619,0.0045337
+2.638095,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,237.36,465.60,,,1.81039e-05,,,0.0047619,0.0045337
+2.676190,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,239.28,472.56,,,1.3375e-05,,,0.0047619,0.0045337
+2.719048,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,241.44,480.00,,,9.67724e-06,,,0.0047619,0.0045337
+2.757143,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,243.36,488.16,,,6.78588e-06,,,0.0047619,0.0045337
+2.795238,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,245.28,496.56,,,4.70899e-06,,,0.0047619,0.0045337
+2.838095,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,247.44,504.48,,,3.33669e-06,,,0.0047619,0.0045337
+2.876190,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,249.36,512.16,,,2.38912e-06,,,0.0047619,0.0045337
+2.919048,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,251.52,519.60,,,1.7286e-06,,,0.0047619,0.0045337
+2.957143,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,253.44,527.28,,,1.2377e-06,,,0.0047619,0.0045337
+3.000000,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,255.60,536.16,,,8.41144e-07,,,0.0047619,0.0045337
+3.038095,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,257.52,546.00,,,5.48264e-07,,,0.0047619,0.0045337
+3.076190,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,259.44,555.12,,,3.68731e-07,,,0.0047619,0.0045337
+3.119048,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,261.60,563.76,,,2.5322e-07,,,0.0047619,0.0045337
+3.157143,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,263.52,572.16,,,1.75719e-07,,,0.0047619,0.0045337
+3.200000,,,,WS98 Fig.1 left,C0,IA,vertex,89,0,265.68,580.56,,,1.21938e-07,,,0.0047619,0.0045337
+3.214286,,,,WS98 Fig.1 left,C0,IA,clip,89,0,266.40,585.12,,,1e-07,,,0.0047619,0.0045337
+0.000000,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,104.40,214.56,,,1,,,0.0047619,0.0045337
+0.038095,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,106.32,214.80,,,0.989615,,,0.0047619,0.0045337
+0.076190,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,108.24,215.04,,,0.979338,,,0.0047619,0.0045337
+0.119048,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,110.40,215.52,,,0.959103,,,0.0047619,0.0045337
+0.157143,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,112.32,216.00,,,0.939286,,,0.0047619,0.0045337
+0.195238,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,114.24,216.72,,,0.910326,,,0.0047619,0.0045337
+0.238095,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,116.40,217.68,,,0.873096,,,0.0047619,0.0045337
+0.276190,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,118.32,218.64,,,0.837389,,,0.0047619,0.0045337
+0.319048,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,120.48,219.84,,,0.794802,,,0.0047619,0.0045337
+0.357143,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,122.40,221.04,,,0.754381,,,0.0047619,0.0045337
+0.400000,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,124.56,222.72,,,0.701221,,,0.0047619,0.0045337
+0.438095,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,126.48,224.16,,,0.658647,,,0.0047619,0.0045337
+0.476190,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,128.40,226.08,,,0.605876,,,0.0047619,0.0045337
+0.519048,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,130.56,227.76,,,0.563181,,,0.0047619,0.0045337
+0.557143,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,132.48,229.68,,,0.518058,,,0.0047619,0.0045337
+0.600000,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,134.64,231.84,,,0.471601,,,0.0047619,0.0045337
+0.638095,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,136.56,234.24,,,0.424853,,,0.0047619,0.0045337
+0.676190,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,138.48,236.64,,,0.382738,,,0.0047619,0.0045337
+0.719048,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,140.64,239.04,,,0.344798,,,0.0047619,0.0045337
+0.757143,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,142.56,241.68,,,0.307393,,,0.0047619,0.0045337
+0.800000,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,144.72,244.32,,,0.274046,,,0.0047619,0.0045337
+0.838095,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,146.64,247.20,,,0.24178,,,0.0047619,0.0045337
+0.876190,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,148.56,250.08,,,0.213312,,,0.0047619,0.0045337
+0.919048,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,150.72,253.20,,,0.186242,,,0.0047619,0.0045337
+0.957143,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,152.64,256.32,,,0.162607,,,0.0047619,0.0045337
+1.000000,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,154.80,259.68,,,0.140497,,,0.0047619,0.0045337
+1.038095,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,156.72,263.04,,,0.121394,,,0.0047619,0.0045337
+1.076190,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,158.64,266.40,,,0.104888,,,0.0047619,0.0045337
+1.119048,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,160.80,270.00,,,0.0896851,,,0.0047619,0.0045337
+1.157143,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,162.72,273.60,,,0.0766858,,,0.0047619,0.0045337
+1.200000,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,164.88,277.44,,,0.0648898,,,0.0047619,0.0045337
+1.238095,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,166.80,281.28,,,0.0549082,,,0.0047619,0.0045337
+1.276190,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,168.72,285.12,,,0.0464621,,,0.0047619,0.0045337
+1.319048,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,170.88,289.20,,,0.0389068,,,0.0047619,0.0045337
+1.357143,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,172.80,293.28,,,0.0325802,,,0.0047619,0.0045337
+1.395238,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,174.72,297.36,,,0.0272823,,,0.0047619,0.0045337
+1.438095,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,176.88,301.68,,,0.0226086,,,0.0047619,0.0045337
+1.476190,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,178.80,306.24,,,0.0185411,,,0.0047619,0.0045337
+1.519048,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,180.96,310.80,,,0.0152053,,,0.0047619,0.0045337
+1.557143,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,182.88,315.36,,,0.0124697,,,0.0047619,0.0045337
+1.600000,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,185.04,319.92,,,0.0102262,,,0.0047619,0.0045337
+1.638095,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,186.96,324.72,,,0.0082993,,,0.0047619,0.0045337
+1.676190,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,188.88,329.52,,,0.00673547,,,0.0047619,0.0045337
+1.719048,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,191.04,334.56,,,0.00540954,,,0.0047619,0.0045337
+1.757143,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,192.96,339.60,,,0.00434464,,,0.0047619,0.0045337
+1.800000,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,195.12,344.88,,,0.00345313,,,0.0047619,0.0045337
+1.838095,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,197.04,350.16,,,0.00274455,,,0.0047619,0.0045337
+1.876190,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,198.96,355.44,,,0.00218138,,,0.0047619,0.0045337
+1.919048,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,201.12,360.96,,,0.00171576,,,0.0047619,0.0045337
+1.957143,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,203.04,366.48,,,0.00134953,,,0.0047619,0.0045337
+1.995238,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,204.96,372.24,,,0.00105044,,,0.0047619,0.0045337
+2.038095,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,207.12,378.48,,,0.000800751,,,0.0047619,0.0045337
+2.076190,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,209.04,384.48,,,0.000616816,,,0.0047619,0.0045337
+2.119048,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,211.20,390.48,,,0.000475131,,,0.0047619,0.0045337
+2.157143,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,213.12,396.48,,,0.000365992,,,0.0047619,0.0045337
+2.195238,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,215.04,402.72,,,0.000278995,,,0.0047619,0.0045337
+2.238095,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,217.20,409.20,,,0.000210468,,,0.0047619,0.0045337
+2.276190,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,219.12,416.40,,,0.000153878,,,0.0047619,0.0045337
+2.319048,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,221.28,423.60,,,0.000112503,,,0.0047619,0.0045337
+2.357143,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,223.20,430.56,,,8.31169e-05,,,0.0047619,0.0045337
+2.400000,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,225.36,437.52,,,6.14062e-05,,,0.0047619,0.0045337
+2.438095,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,227.28,444.96,,,4.44292e-05,,,0.0047619,0.0045337
+2.476190,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,229.20,452.64,,,3.1812e-05,,,0.0047619,0.0045337
+2.519048,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,231.36,461.52,,,2.16194e-05,,,0.0047619,0.0045337
+2.557143,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,233.28,470.64,,,1.454e-05,,,0.0047619,0.0045337
+2.600000,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,235.44,479.52,,,9.8814e-06,,,0.0047619,0.0045337
+2.638095,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,237.36,488.64,,,6.64567e-06,,,0.0047619,0.0045337
+2.676190,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,239.28,498.00,,,4.42309e-06,,,0.0047619,0.0045337
+2.719048,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,241.44,508.32,,,2.82343e-06,,,0.0047619,0.0045337
+2.757143,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,243.36,520.80,,,1.64069e-06,,,0.0047619,0.0045337
+2.795238,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,245.28,534.24,,,9.14408e-07,,,0.0047619,0.0045337
+2.838095,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,247.44,548.40,,,4.93916e-07,,,0.0047619,0.0045337
+2.876190,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,249.36,562.80,,,2.64017e-07,,,0.0047619,0.0045337
+2.919048,,,,WS98 Fig.1 left,C0,IA+MEC,vertex,90,0,251.52,578.40,,,1.3395e-07,,,0.0047619,0.0045337
+2.933333,,,,WS98 Fig.1 left,C0,IA+MEC,clip,90,0,252.24,585.12,,,1e-07,,,0.0047619,0.0045337
+0.090476,,,,WS98 Fig.1 left,C2,IA,clip,91,0,108.96,585.12,,,1e-07,,,0.0047619,0.0045337
+0.119048,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,110.40,559.44,,,3.05565e-07,,,0.0047619,0.0045337
+0.157143,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,112.32,534.00,,,9.24003e-07,,,0.0047619,0.0045337
+0.195238,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,114.24,514.80,,,2.12994e-06,,,0.0047619,0.0045337
+0.238095,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,116.40,499.44,,,4.15454e-06,,,0.0047619,0.0045337
+0.276190,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,118.32,486.48,,,7.30032e-06,,,0.0047619,0.0045337
+0.319048,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,120.48,475.44,,,1.18002e-05,,,0.0047619,0.0045337
+0.357143,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,122.40,465.60,,,1.81039e-05,,,0.0047619,0.0045337
+0.400000,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,124.56,457.20,,,2.60886e-05,,,0.0047619,0.0045337
+0.438095,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,126.48,449.76,,,3.60574e-05,,,0.0047619,0.0045337
+0.476190,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,128.40,443.52,,,4.7301e-05,,,0.0047619,0.0045337
+0.519048,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,130.56,438.00,,,6.01375e-05,,,0.0047619,0.0045337
+0.557143,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,132.48,432.72,,,7.56634e-05,,,0.0047619,0.0045337
+0.600000,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,134.64,427.92,,,9.32308e-05,,,0.0047619,0.0045337
+0.638095,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,136.56,423.60,,,0.000112503,,,0.0047619,0.0045337
+0.676190,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,138.48,419.76,,,0.000132955,,,0.0047619,0.0045337
+0.719048,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,140.64,416.64,,,0.00015228,,,0.0047619,0.0045337
+0.757143,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,142.56,413.76,,,0.000172602,,,0.0047619,0.0045337
+0.800000,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,144.72,411.60,,,0.000189605,,,0.0047619,0.0045337
+0.838095,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,146.64,409.68,,,0.00020612,,,0.0047619,0.0045337
+0.876190,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,148.56,407.76,,,0.000224073,,,0.0047619,0.0045337
+0.919048,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,150.72,406.32,,,0.000238556,,,0.0047619,0.0045337
+0.957143,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,152.64,405.36,,,0.000248728,,,0.0047619,0.0045337
+1.000000,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,154.80,404.40,,,0.000259334,,,0.0047619,0.0045337
+1.038095,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,156.72,403.92,,,0.000264806,,,0.0047619,0.0045337
+1.076190,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,158.64,403.44,,,0.000270393,,,0.0047619,0.0045337
+1.119048,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,160.80,403.44,,,0.000270393,,,0.0047619,0.0045337
+1.157143,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,162.72,403.68,,,0.000267585,,,0.0047619,0.0045337
+1.200000,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,164.88,403.92,,,0.000264806,,,0.0047619,0.0045337
+1.238095,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,166.80,404.40,,,0.000259334,,,0.0047619,0.0045337
+1.276190,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,168.72,405.12,,,0.000251339,,,0.0047619,0.0045337
+1.319048,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,170.88,406.08,,,0.00024106,,,0.0047619,0.0045337
+1.357143,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,172.80,407.28,,,0.0002288,,,0.0047619,0.0045337
+1.395238,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,174.72,408.72,,,0.000214909,,,0.0047619,0.0045337
+1.438095,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,176.88,410.40,,,0.000199764,,,0.0047619,0.0045337
+1.476190,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,178.80,412.08,,,0.000185687,,,0.0047619,0.0045337
+1.519048,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,180.96,413.76,,,0.000172602,,,0.0047619,0.0045337
+1.557143,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,182.88,415.68,,,0.000158773,,,0.0047619,0.0045337
+1.600000,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,185.04,417.84,,,0.000144535,,,0.0047619,0.0045337
+1.638095,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,186.96,420.00,,,0.000131574,,,0.0047619,0.0045337
+1.676190,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,188.88,422.64,,,0.000117301,,,0.0047619,0.0045337
+1.719048,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,191.04,425.04,,,0.000105673,,,0.0047619,0.0045337
+1.757143,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,192.96,427.92,,,9.32308e-05,,,0.0047619,0.0045337
+1.800000,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,195.12,430.56,,,8.31169e-05,,,0.0047619,0.0045337
+1.838095,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,197.04,433.68,,,7.2569e-05,,,0.0047619,0.0045337
+1.876190,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,198.96,437.04,,,6.27018e-05,,,0.0047619,0.0045337
+1.919048,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,201.12,440.40,,,5.41762e-05,,,0.0047619,0.0045337
+1.957143,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,203.04,444.00,,,4.63237e-05,,,0.0047619,0.0045337
+1.995238,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,204.96,448.08,,,3.8791e-05,,,0.0047619,0.0045337
+2.038095,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,207.12,452.16,,,3.24831e-05,,,0.0047619,0.0045337
+2.076190,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,209.04,456.72,,,2.6639e-05,,,0.0047619,0.0045337
+2.119048,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,211.20,461.52,,,2.16194e-05,,,0.0047619,0.0045337
+2.157143,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,213.12,466.80,,,1.71832e-05,,,0.0047619,0.0045337
+2.195238,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,215.04,472.56,,,1.3375e-05,,,0.0047619,0.0045337
+2.238095,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,217.20,478.80,,,1.01958e-05,,,0.0047619,0.0045337
+2.276190,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,219.12,485.76,,,7.53257e-06,,,0.0047619,0.0045337
+2.319048,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,221.28,493.20,,,5.45003e-06,,,0.0047619,0.0045337
+2.357143,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,223.20,501.84,,,3.74271e-06,,,0.0047619,0.0045337
+2.400000,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,225.36,511.92,,,2.41419e-06,,,0.0047619,0.0045337
+2.438095,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,227.28,523.92,,,1.43248e-06,,,0.0047619,0.0045337
+2.476190,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,229.20,538.56,,,7.57763e-07,,,0.0047619,0.0045337
+2.519048,,,,WS98 Fig.1 left,C2,IA,vertex,91,0,231.36,558.24,,,3.21938e-07,,,0.0047619,0.0045337
+2.552381,,,,WS98 Fig.1 left,C2,IA,clip,91,0,233.04,585.12,,,1e-07,,,0.0047619,0.0045337
+2.666667,,,,WS98 Fig.1 left,C2,IA,clip,91,1,238.80,585.12,,,1e-07,,,0.0047619,0.0045337
+2.676190,,,,WS98 Fig.1 left,C2,IA,vertex,91,1,239.28,575.28,,,1.5342e-07,,,0.0047619,0.0045337
+2.719048,,,,WS98 Fig.1 left,C2,IA,vertex,91,1,241.44,557.76,,,3.2873e-07,,,0.0047619,0.0045337
+2.757143,,,,WS98 Fig.1 left,C2,IA,vertex,91,1,243.36,546.24,,,5.4257e-07,,,0.0047619,0.0045337
+2.795238,,,,WS98 Fig.1 left,C2,IA,vertex,91,1,245.28,538.80,,,7.49894e-07,,,0.0047619,0.0045337
+2.838095,,,,WS98 Fig.1 left,C2,IA,vertex,91,1,247.44,533.52,,,9.43498e-07,,,0.0047619,0.0045337
+2.876190,,,,WS98 Fig.1 left,C2,IA,vertex,91,1,249.36,529.68,,,1.11501e-06,,,0.0047619,0.0045337
+2.919048,,,,WS98 Fig.1 left,C2,IA,vertex,91,1,251.52,526.80,,,1.26382e-06,,,0.0047619,0.0045337
+2.957143,,,,WS98 Fig.1 left,C2,IA,vertex,91,1,253.44,524.40,,,1.40288e-06,,,0.0047619,0.0045337
+3.000000,,,,WS98 Fig.1 left,C2,IA,vertex,91,1,255.60,522.00,,,1.55725e-06,,,0.0047619,0.0045337
+3.038095,,,,WS98 Fig.1 left,C2,IA,vertex,91,1,257.52,520.08,,,1.69288e-06,,,0.0047619,0.0045337
+3.076190,,,,WS98 Fig.1 left,C2,IA,vertex,91,1,259.44,518.40,,,1.82122e-06,,,0.0047619,0.0045337
+3.119048,,,,WS98 Fig.1 left,C2,IA,vertex,91,1,261.60,517.20,,,1.91881e-06,,,0.0047619,0.0045337
+3.157143,,,,WS98 Fig.1 left,C2,IA,vertex,91,1,263.52,516.00,,,2.02162e-06,,,0.0047619,0.0045337
+3.200000,,,,WS98 Fig.1 left,C2,IA,vertex,91,1,265.68,515.28,,,2.08593e-06,,,0.0047619,0.0045337
+3.238095,,,,WS98 Fig.1 left,C2,IA,vertex,91,1,267.60,514.56,,,2.15229e-06,,,0.0047619,0.0045337
+3.276190,,,,WS98 Fig.1 left,C2,IA,vertex,91,1,269.52,514.08,,,2.1977e-06,,,0.0047619,0.0045337
+3.319048,,,,WS98 Fig.1 left,C2,IA,vertex,91,1,271.68,513.84,,,2.22076e-06,,,0.0047619,0.0045337
+3.357143,,,,WS98 Fig.1 left,C2,IA,vertex,91,1,273.60,513.60,,,2.24407e-06,,,0.0047619,0.0045337
+3.400000,,,,WS98 Fig.1 left,C2,IA,vertex,91,1,275.76,513.60,,,2.24407e-06,,,0.0047619,0.0045337
+3.438095,,,,WS98 Fig.1 left,C2,IA,vertex,91,1,277.68,513.84,,,2.22076e-06,,,0.0047619,0.0045337
+3.476190,,,,WS98 Fig.1 left,C2,IA,vertex,91,1,279.60,514.08,,,2.1977e-06,,,0.0047619,0.0045337
+3.519048,,,,WS98 Fig.1 left,C2,IA,vertex,91,1,281.76,514.56,,,2.15229e-06,,,0.0047619,0.0045337
+3.557143,,,,WS98 Fig.1 left,C2,IA,vertex,91,1,283.68,515.28,,,2.08593e-06,,,0.0047619,0.0045337
+3.600000,,,,WS98 Fig.1 left,C2,IA,vertex,91,1,285.84,516.24,,,2.00063e-06,,,0.0047619,0.0045337
+3.638095,,,,WS98 Fig.1 left,C2,IA,vertex,91,1,287.76,517.44,,,1.89888e-06,,,0.0047619,0.0045337
+3.676190,,,,WS98 Fig.1 left,C2,IA,vertex,91,1,289.68,518.88,,,1.78359e-06,,,0.0047619,0.0045337
+3.719048,,,,WS98 Fig.1 left,C2,IA,vertex,91,1,291.84,520.32,,,1.6753e-06,,,0.0047619,0.0045337
+3.757143,,,,WS98 Fig.1 left,C2,IA,vertex,91,1,293.76,521.76,,,1.57359e-06,,,0.0047619,0.0045337
+3.800000,,,,WS98 Fig.1 left,C2,IA,vertex,91,1,295.92,523.44,,,1.4627e-06,,,0.0047619,0.0045337
+3.838095,,,,WS98 Fig.1 left,C2,IA,vertex,91,1,297.84,525.12,,,1.35963e-06,,,0.0047619,0.0045337
+3.876190,,,,WS98 Fig.1 left,C2,IA,vertex,91,1,299.76,527.28,,,1.2377e-06,,,0.0047619,0.0045337
+3.919048,,,,WS98 Fig.1 left,C2,IA,vertex,91,1,301.92,529.44,,,1.12671e-06,,,0.0047619,0.0045337
+3.957143,,,,WS98 Fig.1 left,C2,IA,vertex,91,1,303.84,531.84,,,1.01502e-06,,,0.0047619,0.0045337
+4.000000,,,,WS98 Fig.1 left,C2,IA,vertex,91,1,306.00,534.48,,,9.04912e-07,,,0.0047619,0.0045337
+0.090476,,,,WS98 Fig.1 left,C2,IA+MEC,clip,92,0,108.96,585.12,,,1e-07,,,0.0047619,0.0045337
+0.119048,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,110.40,560.64,,,2.90025e-07,,,0.0047619,0.0045337
+0.157143,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,112.32,535.20,,,8.77011e-07,,,0.0047619,0.0045337
+0.195238,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,114.24,516.00,,,2.02162e-06,,,0.0047619,0.0045337
+0.238095,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,116.40,500.64,,,3.94326e-06,,,0.0047619,0.0045337
+0.276190,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,118.32,487.92,,,6.85709e-06,,,0.0047619,0.0045337
+0.319048,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,120.48,476.64,,,1.12001e-05,,,0.0047619,0.0045337
+0.357143,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,122.40,467.04,,,1.70047e-05,,,0.0047619,0.0045337
+0.400000,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,124.56,458.40,,,2.47618e-05,,,0.0047619,0.0045337
+0.438095,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,126.48,451.20,,,3.38682e-05,,,0.0047619,0.0045337
+0.476190,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,128.40,444.96,,,4.44292e-05,,,0.0047619,0.0045337
+0.519048,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,130.56,439.44,,,5.64863e-05,,,0.0047619,0.0045337
+0.557143,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,132.48,434.16,,,7.10696e-05,,,0.0047619,0.0045337
+0.600000,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,134.64,429.36,,,8.75704e-05,,,0.0047619,0.0045337
+0.638095,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,136.56,425.04,,,0.000105673,,,0.0047619,0.0045337
+0.676190,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,138.48,421.20,,,0.000124883,,,0.0047619,0.0045337
+0.719048,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,140.64,418.08,,,0.000143034,,,0.0047619,0.0045337
+0.757143,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,142.56,415.20,,,0.000162123,,,0.0047619,0.0045337
+0.800000,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,144.72,413.04,,,0.000178093,,,0.0047619,0.0045337
+0.838095,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,146.64,411.12,,,0.000193605,,,0.0047619,0.0045337
+0.876190,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,148.56,409.44,,,0.000208283,,,0.0047619,0.0045337
+0.919048,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,150.72,408.00,,,0.000221746,,,0.0047619,0.0045337
+0.957143,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,152.64,406.80,,,0.000233627,,,0.0047619,0.0045337
+1.000000,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,154.80,406.08,,,0.00024106,,,0.0047619,0.0045337
+1.038095,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,156.72,405.36,,,0.000248728,,,0.0047619,0.0045337
+1.076190,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,158.64,405.12,,,0.000251339,,,0.0047619,0.0045337
+1.119048,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,160.80,405.12,,,0.000251339,,,0.0047619,0.0045337
+1.157143,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,162.72,405.36,,,0.000248728,,,0.0047619,0.0045337
+1.200000,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,164.88,405.84,,,0.000243589,,,0.0047619,0.0045337
+1.238095,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,166.80,406.32,,,0.000238556,,,0.0047619,0.0045337
+1.276190,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,168.72,407.04,,,0.000231201,,,0.0047619,0.0045337
+1.319048,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,170.88,408.00,,,0.000221746,,,0.0047619,0.0045337
+1.357143,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,172.80,409.44,,,0.000208283,,,0.0047619,0.0045337
+1.395238,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,174.72,410.88,,,0.000195637,,,0.0047619,0.0045337
+1.438095,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,176.88,412.56,,,0.000181851,,,0.0047619,0.0045337
+1.476190,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,178.80,414.24,,,0.000169036,,,0.0047619,0.0045337
+1.519048,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,180.96,415.92,,,0.000157124,,,0.0047619,0.0045337
+1.557143,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,182.88,418.08,,,0.000143034,,,0.0047619,0.0045337
+1.600000,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,185.04,420.24,,,0.000130208,,,0.0047619,0.0045337
+1.638095,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,186.96,422.64,,,0.000117301,,,0.0047619,0.0045337
+1.676190,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,188.88,425.28,,,0.000104576,,,0.0047619,0.0045337
+1.719048,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,191.04,427.92,,,9.32308e-05,,,0.0047619,0.0045337
+1.757143,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,192.96,430.80,,,8.22537e-05,,,0.0047619,0.0045337
+1.800000,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,195.12,433.68,,,7.2569e-05,,,0.0047619,0.0045337
+1.838095,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,197.04,436.80,,,6.33598e-05,,,0.0047619,0.0045337
+1.876190,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,198.96,440.40,,,5.41762e-05,,,0.0047619,0.0045337
+1.919048,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,201.12,444.00,,,4.63237e-05,,,0.0047619,0.0045337
+1.957143,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,203.04,447.84,,,3.9198e-05,,,0.0047619,0.0045337
+1.995238,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,204.96,451.92,,,3.2824e-05,,,0.0047619,0.0045337
+2.038095,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,207.12,456.24,,,2.7201e-05,,,0.0047619,0.0045337
+2.076190,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,209.04,461.04,,,2.20756e-05,,,0.0047619,0.0045337
+2.119048,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,211.20,466.08,,,1.77298e-05,,,0.0047619,0.0045337
+2.157143,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,213.12,471.84,,,1.38005e-05,,,0.0047619,0.0045337
+2.195238,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,215.04,477.84,,,1.06305e-05,,,0.0047619,0.0045337
+2.238095,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,217.20,484.32,,,8.01946e-06,,,0.0047619,0.0045337
+2.276190,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,219.12,491.52,,,5.8632e-06,,,0.0047619,0.0045337
+2.319048,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,221.28,499.44,,,4.15454e-06,,,0.0047619,0.0045337
+2.357143,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,223.20,508.56,,,2.79411e-06,,,0.0047619,0.0045337
+2.400000,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,225.36,518.88,,,1.78359e-06,,,0.0047619,0.0045337
+2.438095,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,227.28,531.12,,,1.04732e-06,,,0.0047619,0.0045337
+2.476190,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,229.20,546.48,,,5.36936e-07,,,0.0047619,0.0045337
+2.519048,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,0,231.36,566.64,,,2.23405e-07,,,0.0047619,0.0045337
+2.542857,,,,WS98 Fig.1 left,C2,IA+MEC,clip,92,0,232.56,585.12,,,1e-07,,,0.0047619,0.0045337
+2.676190,,,,WS98 Fig.1 left,C2,IA+MEC,clip,92,1,239.28,585.12,,,1e-07,,,0.0047619,0.0045337
+2.676190,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,1,239.28,584.64,,,1.0211e-07,,,0.0047619,0.0045337
+2.719048,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,1,241.44,567.60,,,2.14269e-07,,,0.0047619,0.0045337
+2.757143,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,1,243.36,556.56,,,3.46344e-07,,,0.0047619,0.0045337
+2.795238,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,1,245.28,549.36,,,4.73716e-07,,,0.0047619,0.0045337
+2.838095,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,1,247.44,544.56,,,5.83703e-07,,,0.0047619,0.0045337
+2.876190,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,1,249.36,541.20,,,6.75559e-07,,,0.0047619,0.0045337
+2.919048,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,1,251.52,538.80,,,7.49894e-07,,,0.0047619,0.0045337
+2.957143,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,1,253.44,536.88,,,8.1521e-07,,,0.0047619,0.0045337
+3.000000,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,1,255.60,535.20,,,8.77011e-07,,,0.0047619,0.0045337
+3.038095,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,1,257.52,533.52,,,9.43498e-07,,,0.0047619,0.0045337
+3.076190,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,1,259.44,532.32,,,9.94053e-07,,,0.0047619,0.0045337
+3.119048,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,1,261.60,531.60,,,1.02568e-06,,,0.0047619,0.0045337
+3.157143,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,1,263.52,531.12,,,1.04732e-06,,,0.0047619,0.0045337
+3.200000,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,1,265.68,530.64,,,1.06941e-06,,,0.0047619,0.0045337
+3.238095,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,1,267.60,530.40,,,1.08063e-06,,,0.0047619,0.0045337
+3.276190,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,1,269.52,530.40,,,1.08063e-06,,,0.0047619,0.0045337
+3.319048,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,1,271.68,530.40,,,1.08063e-06,,,0.0047619,0.0045337
+3.357143,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,1,273.60,530.40,,,1.08063e-06,,,0.0047619,0.0045337
+3.400000,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,1,275.76,530.88,,,1.05831e-06,,,0.0047619,0.0045337
+3.438095,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,1,277.68,531.36,,,1.03644e-06,,,0.0047619,0.0045337
+3.476190,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,1,279.60,532.08,,,1.00448e-06,,,0.0047619,0.0045337
+3.519048,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,1,281.76,532.80,,,9.73513e-07,,,0.0047619,0.0045337
+3.557143,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,1,283.68,534.00,,,9.24003e-07,,,0.0047619,0.0045337
+3.600000,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,1,285.84,535.20,,,8.77011e-07,,,0.0047619,0.0045337
+3.638095,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,1,287.76,536.64,,,8.23765e-07,,,0.0047619,0.0045337
+3.676190,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,1,289.68,538.32,,,7.65715e-07,,,0.0047619,0.0045337
+3.719048,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,1,291.84,540.00,,,7.11757e-07,,,0.0047619,0.0045337
+3.757143,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,1,293.76,541.92,,,6.5473e-07,,,0.0047619,0.0045337
+3.800000,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,1,295.92,543.84,,,6.02272e-07,,,0.0047619,0.0045337
+3.838095,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,1,297.84,546.00,,,5.48264e-07,,,0.0047619,0.0045337
+3.876190,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,1,299.76,548.40,,,4.93916e-07,,,0.0047619,0.0045337
+3.919048,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,1,301.92,551.04,,,4.40334e-07,,,0.0047619,0.0045337
+3.957143,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,1,303.84,553.92,,,3.88489e-07,,,0.0047619,0.0045337
+4.000000,,,,WS98 Fig.1 left,C2,IA+MEC,vertex,92,1,306.00,557.28,,,3.35666e-07,,,0.0047619,0.0045337
+0.533333,,,,WS98 Fig.1 left,FL2,data:Stanford,symbol,6,0,131.28,228.96,228.96,228.96,0.534539,0.534539,0.534539,0.0047619,0.0045337
+0.576190,,,,WS98 Fig.1 left,FL2,data:Stanford,symbol,7,0,133.44,231.12,231.12,231.12,0.486605,0.486605,0.486605,0.0047619,0.0045337
+0.633333,,,,WS98 Fig.1 left,FL2,data:Stanford,symbol,8,0,136.32,233.76,233.76,233.76,0.433816,0.433816,0.433816,0.0047619,0.0045337
+0.690476,,,,WS98 Fig.1 left,FL2,data:Stanford,symbol,9,0,139.20,237.36,237.36,237.36,0.370937,0.370937,0.370937,0.0047619,0.0045337
+0.757143,,,,WS98 Fig.1 left,FL2,data:Stanford,symbol,10,0,142.56,241.92,241.92,241.92,0.304201,0.304201,0.304201,0.0047619,0.0045337
+0.823810,,,,WS98 Fig.1 left,FL2,data:Stanford,symbol,11,0,145.92,245.76,245.76,245.76,0.257408,0.257408,0.257408,0.0047619,0.0045337
+0.885714,,,,WS98 Fig.1 left,FL2,data:Stanford,symbol,12,0,149.04,249.60,249.60,249.60,0.217813,0.217813,0.217813,0.0047619,0.0045337
+0.942857,,,,WS98 Fig.1 left,FL2,data:Stanford,symbol,13,0,151.92,255.12,255.12,255.12,0.17132,0.17132,0.17132,0.0047619,0.0045337
+0.995238,,,,WS98 Fig.1 left,FL2,data:Stanford,symbol,14,0,154.56,259.92,259.92,259.92,0.139038,0.139038,0.139038,0.0047619,0.0045337
+1.061905,,,,WS98 Fig.1 left,FL2,data:Stanford,symbol,15,0,157.92,265.20,265.20,265.20,0.110508,0.110508,0.110508,0.0047619,0.0045337
+1.114286,,,,WS98 Fig.1 left,FL2,data:Stanford,symbol,16,0,160.56,270.24,270.24,270.24,0.0887537,0.0887537,0.0887537,0.0047619,0.0045337
+1.166667,,,,WS98 Fig.1 left,FL2,data:Stanford,symbol,17,0,163.20,276.24,276.24,276.24,0.0683667,0.0683667,0.0683667,0.0047619,0.0045337
+1.219048,,,,WS98 Fig.1 left,FL2,data:Stanford,symbol,18,0,165.84,281.04,281.04,281.04,0.0554844,0.0554844,0.0554844,0.0047619,0.0045337
+1.285714,,,,WS98 Fig.1 left,FL2,data:Stanford,symbol,19,0,169.20,286.80,286.80,286.80,0.043188,0.043188,0.043188,0.0047619,0.0045337
+1.347619,,,,WS98 Fig.1 left,FL2,data:Stanford,symbol,20,0,172.32,292.08,292.08,292.08,0.0343259,0.0343259,0.0343259,0.0047619,0.0045337
+1.395238,,,,WS98 Fig.1 left,FL2,data:Stanford,symbol,21,0,174.72,297.36,297.36,297.36,0.0272823,0.0272823,0.0272823,0.0047619,0.0045337
+1.442857,,,,WS98 Fig.1 left,FL2,data:Stanford,symbol,22,0,177.12,302.40,302.40,302.40,0.0219116,0.0219116,0.0219116,0.0047619,0.0045337
+1.476190,,,,WS98 Fig.1 left,FL2,data:Stanford,symbol,23,0,178.80,306.72,306.72,306.72,0.018158,0.018158,0.018158,0.0047619,0.0045337
+1.523810,,,,WS98 Fig.1 left,FL2,data:Stanford,symbol,24,0,181.20,312.48,312.48,312.48,0.0141338,0.0141338,0.0141338,0.0047619,0.0045337
+1.561905,,,,WS98 Fig.1 left,FL2,data:Stanford,symbol,25,0,183.12,315.36,315.36,315.36,0.0124697,0.0124697,0.0124697,0.0047619,0.0045337
+1.633333,,,,WS98 Fig.1 left,FL2,data:Stanford,symbol,26,0,186.72,323.76,323.76,323.76,0.00865319,0.00865319,0.00865319,0.0047619,0.0045337
+1.719048,,,,WS98 Fig.1 left,FL2,data:Stanford,symbol,27,0,191.04,335.04,335.04,335.04,0.00529777,0.00529777,0.00529777,0.0047619,0.0045337
+1.804762,,,,WS98 Fig.1 left,FL2,data:Stanford,symbol,28,0,195.36,344.40,344.40,344.40,0.00352598,0.00352598,0.00352598,0.0047619,0.0045337
+1.871429,,,,WS98 Fig.1 left,FL2,data:Stanford,symbol,29,0,198.72,358.08,358.08,358.08,0.00194473,0.00194473,0.00194473,0.0047619,0.0045337
+1.961905,,,,WS98 Fig.1 left,FL2,data:Stanford,symbol,30,0,203.28,368.40,368.40,368.40,0.0012414,0.0012414,0.0012414,0.0047619,0.0045337
+2.033333,,,,WS98 Fig.1 left,FL2,data:Stanford,symbol,31,0,206.88,380.88,380.88,380.88,0.000721374,0.000721374,0.000721374,0.0047619,0.0045337
+2.109524,,,,WS98 Fig.1 left,FL2,data:Stanford,symbol,32,0,210.72,393.60,393.60,393.60,0.000414835,0.000414835,0.000414835,0.0047619,0.0045337
+2.261905,,,,WS98 Fig.1 left,FL2,data:Stanford,symbol,33,0,218.40,420.24,420.24,420.24,0.000130208,0.000130208,0.000130208,0.0047619,0.0045337
+2.371429,,,,WS98 Fig.1 left,FL2,data:Stanford,symbol,34,0,223.92,443.76,443.76,443.52,4.68098e-05,4.68098e-05,4.7301e-05,0.0047619,0.0045337
+2.438095,,,,WS98 Fig.1 left,FL2,data:Stanford,symbol,35,0,227.28,455.04,455.28,454.80,2.86585e-05,2.83609e-05,2.89593e-05,0.0047619,0.0045337
+2.557143,,,,WS98 Fig.1 left,FL2,data:Stanford,symbol,36,0,233.28,484.80,486.00,483.84,7.85376e-06,7.45434e-06,8.18865e-06,0.0047619,0.0045337
+2.619048,,,,WS98 Fig.1 left,FL2,data:Stanford,symbol,37,0,236.40,507.60,510.96,504.72,2.91325e-06,2.51714e-06,3.30204e-06,0.0047619,0.0045337
+2.957143,,,,WS98 Fig.1 left,FL2,data:Stanford,symbol,38,0,253.44,525.12,534.00,518.88,1.35963e-06,9.24003e-07,1.78359e-06,0.0047619,0.0045337
+3.080952,,,,WS98 Fig.1 left,FL2,data:Stanford,symbol,39,0,259.68,520.56,527.28,515.52,1.6579e-06,1.2377e-06,2.06427e-06,0.0047619,0.0045337
+3.161905,,,,WS98 Fig.1 left,FL2,data:Stanford,symbol,40,0,263.76,521.28,527.52,516.24,1.60679e-06,1.22485e-06,2.00063e-06,0.0047619,0.0045337
+3.233333,,,,WS98 Fig.1 left,FL2,data:Stanford,symbol,41,0,267.36,521.76,528.48,516.48,1.57359e-06,1.17476e-06,1.97985e-06,0.0047619,0.0045337
+3.376190,,,,WS98 Fig.1 left,FL2,data:Stanford,symbol,42,0,274.56,524.16,533.52,517.68,1.4176e-06,9.43498e-07,1.87916e-06,0.0047619,0.0045337
+3.538095,,,,WS98 Fig.1 left,FL2,data:Stanford,symbol,43,0,282.72,530.64,543.84,522.24,1.06941e-06,6.02272e-07,1.54108e-06,0.0047619,0.0045337
+3.642857,,,,WS98 Fig.1 left,FL2,data:Stanford,symbol,44,0,288.00,529.20,539.28,522.00,1.13854e-06,7.344e-07,1.55725e-06,0.0047619,0.0045337
+0.047619,,,,WS98 Fig.1 left,FL2,IA,symbol,47,0,106.80,214.80,214.80,214.80,0.989615,0.989615,0.989615,0.0047619,0.0045337
+0.100000,,,,WS98 Fig.1 left,FL2,IA,symbol,48,0,109.44,215.28,215.28,215.28,0.969168,0.969168,0.969168,0.0047619,0.0045337
+0.147619,,,,WS98 Fig.1 left,FL2,IA,symbol,49,0,111.84,215.76,215.76,215.76,0.949143,0.949143,0.949143,0.0047619,0.0045337
+0.195238,,,,WS98 Fig.1 left,FL2,IA,symbol,50,0,114.24,216.72,216.72,216.72,0.910326,0.910326,0.910326,0.0047619,0.0045337
+0.247619,,,,WS98 Fig.1 left,FL2,IA,symbol,51,0,116.88,217.68,217.68,217.68,0.873096,0.873096,0.873096,0.0047619,0.0045337
+0.500000,,,,WS98 Fig.1 left,FL2,IA,symbol,52,0,129.60,226.56,226.80,226.56,0.593357,0.587195,0.593357,0.0047619,0.0045337
+0.747619,,,,WS98 Fig.1 left,FL2,IA,symbol,53,0,142.08,240.72,240.72,240.48,0.320501,0.320501,0.323864,0.0047619,0.0045337
+1.000000,,,,WS98 Fig.1 left,FL2,IA,symbol,54,0,154.80,258.72,258.96,258.72,0.146488,0.144967,0.146488,0.0047619,0.0045337
+1.247619,,,,WS98 Fig.1 left,FL2,IA,symbol,55,0,167.28,280.56,280.80,280.32,0.056655,0.0560667,0.0572495,0.0047619,0.0045337
+1.500000,,,,WS98 Fig.1 left,FL2,IA,symbol,56,0,180.00,305.76,306.00,305.52,0.0189322,0.0187356,0.0191309,0.0047619,0.0045337
+1.747619,,,,WS98 Fig.1 left,FL2,IA,symbol,57,0,192.48,334.08,334.56,333.60,0.00552367,0.00540954,0.00564021,0.0047619,0.0045337
+1.995238,,,,WS98 Fig.1 left,FL2,IA,symbol,58,0,204.96,365.76,366.48,364.80,0.00139246,0.00134953,0.00145183,0.0047619,0.0045337
+2.247619,,,,WS98 Fig.1 left,FL2,IA,symbol,59,0,217.68,400.80,402.00,399.60,0.000303295,0.00028787,0.000319546,0.0047619,0.0045337
+2.495238,,,,WS98 Fig.1 left,FL2,IA,symbol,60,0,230.16,440.64,443.04,438.72,5.36136e-05,4.8299e-05,5.82833e-05,0.0047619,0.0045337
+2.747619,,,,WS98 Fig.1 left,FL2,IA,symbol,61,0,242.88,484.56,490.80,479.76,7.93618e-06,6.04973e-06,9.77879e-06,0.0047619,0.0045337
+3.000000,,,,WS98 Fig.1 left,FL2,IA,symbol,62,0,255.60,512.16,549.12,498.72,2.38912e-06,4.78687e-07,4.28671e-06,0.0047619,0.0045337
+3.247619,,,,WS98 Fig.1 left,FL2,IA,symbol,63,0,268.08,513.84,559.20,499.44,2.22076e-06,3.08772e-07,4.15454e-06,0.0047619,0.0045337
+3.500000,,,,WS98 Fig.1 left,FL2,IA,symbol,64,0,280.80,514.32,549.12,501.12,2.17488e-06,4.78687e-07,3.86178e-06,0.0047619,0.0045337
+3.747619,,,,WS98 Fig.1 left,FL2,IA,symbol,65,0,293.28,521.04,557.76,507.60,1.62365e-06,3.2873e-07,2.91325e-06,0.0047619,0.0045337
+4.000000,,,,WS98 Fig.1 left,FL2,IA,symbol,66,0,306.00,533.28,585.12,518.40,9.53399e-07,1e-07,1.82122e-06,0.0047619,0.0045337
+0.047619,,,,WS98 Fig.1 left,FL2,IA+MEC,symbol,69,0,106.80,214.80,214.80,214.80,0.989615,0.989615,0.989615,0.0047619,0.0045337
+0.100000,,,,WS98 Fig.1 left,FL2,IA+MEC,symbol,70,0,109.44,215.28,215.28,215.28,0.969168,0.969168,0.969168,0.0047619,0.0045337
+0.147619,,,,WS98 Fig.1 left,FL2,IA+MEC,symbol,71,0,111.84,215.76,215.76,215.76,0.949143,0.949143,0.949143,0.0047619,0.0045337
+0.195238,,,,WS98 Fig.1 left,FL2,IA+MEC,symbol,72,0,114.24,216.72,216.72,216.72,0.910326,0.910326,0.910326,0.0047619,0.0045337
+0.247619,,,,WS98 Fig.1 left,FL2,IA+MEC,symbol,73,0,116.88,217.92,217.92,217.92,0.864029,0.864029,0.864029,0.0047619,0.0045337
+0.500000,,,,WS98 Fig.1 left,FL2,IA+MEC,symbol,74,0,129.60,226.80,226.80,226.80,0.587195,0.587195,0.587195,0.0047619,0.0045337
+0.747619,,,,WS98 Fig.1 left,FL2,IA+MEC,symbol,75,0,142.08,240.96,241.20,240.96,0.317172,0.313879,0.317172,0.0047619,0.0045337
+1.000000,,,,WS98 Fig.1 left,FL2,IA+MEC,symbol,76,0,154.80,259.68,259.68,259.44,0.140497,0.140497,0.141972,0.0047619,0.0045337
+1.247619,,,,WS98 Fig.1 left,FL2,IA+MEC,symbol,77,0,167.28,282.00,282.24,282.00,0.0532153,0.0526626,0.0532153,0.0047619,0.0045337
+1.500000,,,,WS98 Fig.1 left,FL2,IA+MEC,symbol,78,0,180.00,308.16,308.64,307.92,0.0170555,0.0167031,0.0172345,0.0047619,0.0045337
+1.747619,,,,WS98 Fig.1 left,FL2,IA+MEC,symbol,79,0,192.48,337.92,338.40,337.44,0.004674,0.00457743,0.00477262,0.0047619,0.0045337
+1.995238,,,,WS98 Fig.1 left,FL2,IA+MEC,symbol,80,0,204.96,371.52,372.48,370.80,0.00108386,0.00103954,0.00111834,0.0047619,0.0045337
+2.247619,,,,WS98 Fig.1 left,FL2,IA+MEC,symbol,81,0,217.68,410.16,411.84,408.72,0.000201861,0.000187636,0.000214909,0.0047619,0.0045337
+2.495238,,,,WS98 Fig.1 left,FL2,IA+MEC,symbol,82,0,230.16,456.72,460.32,453.84,2.6639e-05,2.27779e-05,3.01941e-05,0.0047619,0.0045337
+2.747619,,,,WS98 Fig.1 left,FL2,IA+MEC,symbol,83,0,242.88,513.84,535.20,503.04,2.22076e-06,8.77011e-07,3.55237e-06,0.0047619,0.0045337
+3.000000,,,,WS98 Fig.1 left,FL2,IA+MEC,symbol,84,0,255.60,534.72,585.12,511.44,8.95514e-07,1e-07,2.46513e-06,0.0047619,0.0045337
+3.247619,,,,WS98 Fig.1 left,FL2,IA+MEC,symbol,85,0,268.08,529.92,585.12,509.76,1.10343e-06,1e-07,2.65201e-06,0.0047619,0.0045337
+3.500000,,,,WS98 Fig.1 left,FL2,IA+MEC,symbol,86,0,280.80,531.60,585.12,512.64,1.02568e-06,1e-07,2.33976e-06,0.0047619,0.0045337
+3.747619,,,,WS98 Fig.1 left,FL2,IA+MEC,symbol,87,0,293.28,540.00,585.12,520.32,7.11757e-07,1e-07,1.6753e-06,0.0047619,0.0045337
+4.000000,,,,WS98 Fig.1 left,FL2,IA+MEC,symbol,88,0,306.00,555.12,585.12,532.32,3.68731e-07,1e-07,9.94053e-07,0.0047619,0.0045337
+0.404762,,,,WS98 Fig.1 right,FT2,data:Amsterdam,symbol,104,0,326.40,266.64,282.72,257.28,0.000103799,5.15745e-05,0.000155957,0.0047619,0.0045337
+0.490476,,,,WS98 Fig.1 right,FT2,data:Amsterdam,symbol,106,0,330.72,265.92,271.20,261.60,0.000107101,8.5124e-05,0.000129241,0.0047619,0.0045337
+0.595238,,,,WS98 Fig.1 right,FT2,data:Amsterdam,symbol,108,0,336.00,262.32,267.12,258.48,0.000125256,0.000101654,0.000148026,0.0047619,0.0045337
+0.642857,,,,WS98 Fig.1 right,FT2,data:Amsterdam,symbol,110,0,338.40,261.84,266.40,258.00,0.000127898,0.000104888,0.000151149,0.0047619,0.0045337
+0.700000,,,,WS98 Fig.1 right,FT2,data:Amsterdam,symbol,112,0,341.28,270.24,274.32,266.64,8.87537e-05,7.43214e-05,0.000103799,0.0047619,0.0045337
+0.747619,,,,WS98 Fig.1 right,FT2,data:Amsterdam,symbol,114,0,343.68,275.52,279.36,272.16,7.05416e-05,5.96907e-05,8.16427e-05,0.0047619,0.0045337
+0.795238,,,,WS98 Fig.1 right,FT2,data:Amsterdam,symbol,116,0,346.08,275.04,278.88,271.68,7.20299e-05,6.09501e-05,8.33651e-05,0.0047619,0.0045337
+0.842857,,,,WS98 Fig.1 right,FT2,data:Amsterdam,symbol,118,0,348.48,275.04,279.36,271.20,7.20299e-05,5.96907e-05,8.5124e-05,0.0047619,0.0045337
+0.890476,,,,WS98 Fig.1 right,FT2,data:Amsterdam,symbol,120,0,350.88,285.60,291.12,281.28,4.55021e-05,3.57896e-05,5.49082e-05,0.0047619,0.0045337
+0.795238,,,,WS98 Fig.1 right,FT2,data:Saskatoon,symbol,123,0,346.08,269.76,271.20,268.32,9.06262e-05,8.5124e-05,9.64841e-05,0.0047619,0.0045337
+1.000000,,,,WS98 Fig.1 right,FT2,data:Saskatoon,symbol,124,0,356.40,293.52,295.92,291.12,3.22418e-05,2.90458e-05,3.57896e-05,0.0047619,0.0045337
+1.185714,,,,WS98 Fig.1 right,FT2,data:Saskatoon,symbol,125,0,365.76,329.76,335.52,325.20,6.66552e-06,5.18831e-06,8.12782e-06,0.0047619,0.0045337
+1.385714,,,,WS98 Fig.1 right,FT2,data:Saskatoon,symbol,126,0,375.84,389.28,532.32,373.44,5.0059e-07,9.94053e-10,9.97022e-07,0.0047619,0.0045337
+1.576190,,,,WS98 Fig.1 right,FT2,data:Saskatoon,symbol,127,0,385.44,345.36,353.28,339.36,3.38178e-06,2.39626e-06,4.39023e-06,0.0047619,0.0045337
+1.757143,,,,WS98 Fig.1 right,FT2,data:Saskatoon,symbol,128,0,394.56,336.48,338.88,334.32,4.97612e-06,4.48285e-06,5.46631e-06,0.0047619,0.0045337
+1.919048,,,,WS98 Fig.1 right,FT2,data:Saskatoon,symbol,129,0,402.72,328.32,330.24,326.64,7.09637e-06,6.5278e-06,7.63435e-06,0.0047619,0.0045337
+2.109524,,,,WS98 Fig.1 right,FT2,data:Saskatoon,symbol,130,0,412.32,330.24,331.92,328.56,6.5278e-06,6.0678e-06,7.02268e-06,0.0047619,0.0045337
+2.238095,,,,WS98 Fig.1 right,FT2,data:Saskatoon,symbol,131,0,418.80,336.00,338.16,334.08,5.08111e-06,4.62547e-06,5.52367e-06,0.0047619,0.0045337
+2.419048,,,,WS98 Fig.1 right,FT2,data:Saskatoon,symbol,132,0,427.92,347.76,350.64,345.12,3.04655e-06,2.68784e-06,3.41727e-06,0.0047619,0.0045337
+2.447619,,,,WS98 Fig.1 right,FT2,data:Saskatoon,symbol,133,0,429.36,344.64,347.28,342.24,3.48936e-06,3.11083e-06,3.87332e-06,0.0047619,0.0045337
+2.509524,,,,WS98 Fig.1 right,FT2,data:Saskatoon,symbol,134,0,432.48,353.52,356.16,351.12,2.37137e-06,2.11412e-06,2.63231e-06,0.0047619,0.0045337
+2.638095,,,,WS98 Fig.1 right,FT2,data:Saskatoon,symbol,135,0,438.96,360.48,362.88,358.32,1.75196e-06,1.57829e-06,1.92454e-06,0.0047619,0.0045337
+2.647619,,,,WS98 Fig.1 right,FT2,data:Saskatoon,symbol,136,0,439.44,359.76,362.16,357.60,1.80769e-06,1.6285e-06,1.98576e-06,0.0047619,0.0045337
+2.776190,,,,WS98 Fig.1 right,FT2,data:Saskatoon,symbol,137,0,445.92,369.84,372.00,367.68,1.16603e-06,1.06147e-06,1.28089e-06,0.0047619,0.0045337
+0.847619,,,,WS98 Fig.1 right,FT2,data:Stanford,symbol,140,0,348.72,280.56,288.72,274.56,5.6655e-05,3.97277e-05,7.35496e-05,0.0047619,0.0045337
+0.990476,,,,WS98 Fig.1 right,FT2,data:Stanford,symbol,141,0,355.92,289.20,294.24,284.88,3.89068e-05,3.12477e-05,4.69496e-05,0.0047619,0.0045337
+1.090476,,,,WS98 Fig.1 right,FT2,data:Stanford,symbol,142,0,360.96,309.60,321.60,301.68,1.602e-05,9.50559e-06,2.26086e-05,0.0047619,0.0045337
+1.190476,,,,WS98 Fig.1 right,FT2,data:Stanford,symbol,143,0,366.00,317.76,325.92,311.76,1.12336e-05,7.87722e-06,1.45834e-05,0.0047619,0.0045337
+1.257143,,,,WS98 Fig.1 right,FT2,data:Stanford,symbol,144,0,369.36,331.20,352.32,320.40,6.26083e-06,2.49844e-06,1.00149e-05,0.0047619,0.0045337
+1.285714,,,,WS98 Fig.1 right,FT2,data:Stanford,symbol,145,0,370.80,325.92,342.00,316.56,7.87722e-06,3.91396e-06,1.18355e-05,0.0047619,0.0045337
+1.385714,,,,WS98 Fig.1 right,FT2,data:Stanford,symbol,146,0,375.84,363.84,426.24,348.72,1.51374e-06,1.00299e-07,2.92196e-06,0.0047619,0.0045337
+0.047619,,,,WS98 Fig.1 right,FT2,IA,symbol,149,0,308.40,349.92,350.16,349.68,2.77335e-06,2.74455e-06,2.80246e-06,0.0047619,0.0045337
+0.100000,,,,WS98 Fig.1 right,FT2,IA,symbol,150,0,311.04,318.72,318.96,318.48,1.07742e-05,1.06623e-05,1.08872e-05,0.0047619,0.0045337
+0.147619,,,,WS98 Fig.1 right,FT2,IA,symbol,151,0,313.44,301.20,301.44,300.96,2.30856e-05,2.28459e-05,2.33279e-05,0.0047619,0.0045337
+0.200000,,,,WS98 Fig.1 right,FT2,IA,symbol,152,0,316.08,289.44,289.68,289.20,3.85028e-05,3.81029e-05,3.89068e-05,0.0047619,0.0045337
+0.247619,,,,WS98 Fig.1 right,FT2,IA,symbol,153,0,318.48,281.04,281.28,280.80,5.54844e-05,5.49082e-05,5.60667e-05,0.0047619,0.0045337
+0.500000,,,,WS98 Fig.1 right,FT2,IA,symbol,154,0,331.20,265.44,265.68,265.20,0.00010936,0.000108225,0.000110508,0.0047619,0.0045337
+0.747619,,,,WS98 Fig.1 right,FT2,IA,symbol,155,0,343.68,274.56,274.80,274.08,7.35496e-05,7.27858e-05,7.51013e-05,0.0047619,0.0045337
+1.000000,,,,WS98 Fig.1 right,FT2,IA,symbol,156,0,356.40,306.48,307.20,305.52,1.83485e-05,1.77828e-05,1.91309e-05,0.0047619,0.0045337
+1.247619,,,,WS98 Fig.1 right,FT2,IA,symbol,157,0,368.88,430.08,448.32,420.00,8.48704e-08,3.83881e-08,1.31574e-07,0.0047619,0.0045337
+1.500000,,,,WS98 Fig.1 right,FT2,IA,symbol,158,0,381.60,337.68,339.36,336.24,4.72305e-06,4.39023e-06,5.02834e-06,0.0047619,0.0045337
+1.747619,,,,WS98 Fig.1 right,FT2,IA,symbol,159,0,394.08,321.36,322.32,320.40,9.60534e-06,9.21252e-06,1.00149e-05,0.0047619,0.0045337
+2.000000,,,,WS98 Fig.1 right,FT2,IA,symbol,160,0,406.80,322.80,323.76,321.84,9.02217e-06,8.65319e-06,9.40688e-06,0.0047619,0.0045337
+2.247619,,,,WS98 Fig.1 right,FT2,IA,symbol,161,0,419.28,332.40,333.60,331.44,5.94243e-06,5.64021e-06,6.19582e-06,0.0047619,0.0045337
+2.500000,,,,WS98 Fig.1 right,FT2,IA,symbol,162,0,432.00,347.28,348.72,346.08,3.11083e-06,2.92196e-06,3.27751e-06,0.0047619,0.0045337
+2.747619,,,,WS98 Fig.1 right,FT2,IA,symbol,163,0,444.48,366.72,368.40,365.04,1.33551e-06,1.2414e-06,1.43676e-06,0.0047619,0.0045337
+3.000000,,,,WS98 Fig.1 right,FT2,IA,symbol,164,0,457.20,390.72,393.60,388.32,4.70197e-07,4.14835e-07,5.21935e-07,0.0047619,0.0045337
+3.247619,,,,WS98 Fig.1 right,FT2,IA,symbol,165,0,469.68,420.00,424.80,415.92,1.31574e-07,1.06782e-07,1.57124e-07,0.0047619,0.0045337
+3.500000,,,,WS98 Fig.1 right,FT2,IA,symbol,166,0,482.40,453.36,463.68,446.16,3.08311e-08,1.96807e-08,4.21697e-08,0.0047619,0.0045337
+3.747619,,,,WS98 Fig.1 right,FT2,IA,symbol,167,0,494.88,482.16,504.00,471.12,8.80944e-09,3.40709e-09,1.42396e-08,0.0047619,0.0045337
+4.000000,,,,WS98 Fig.1 right,FT2,IA,symbol,168,0,507.60,495.12,526.08,482.40,5.01337e-09,1.30402e-09,8.71795e-09,0.0047619,0.0045337
+0.047619,,,,WS98 Fig.1 right,FT2,IA+MEC,symbol,171,0,308.40,348.96,349.92,348.00,2.89161e-06,2.77335e-06,3.01491e-06,0.0047619,0.0045337
+0.100000,,,,WS98 Fig.1 right,FT2,IA+MEC,symbol,172,0,311.04,317.28,318.24,316.56,1.14706e-05,1.10015e-05,1.18355e-05,0.0047619,0.0045337
+0.147619,,,,WS98 Fig.1 right,FT2,IA+MEC,symbol,173,0,313.44,299.76,300.48,298.80,2.45779e-05,2.38201e-05,2.56259e-05,0.0047619,0.0045337
+0.200000,,,,WS98 Fig.1 right,FT2,IA+MEC,symbol,174,0,316.08,287.76,288.72,287.04,4.14217e-05,3.97277e-05,4.27395e-05,0.0047619,0.0045337
+0.247619,,,,WS98 Fig.1 right,FT2,IA+MEC,symbol,175,0,318.48,279.36,280.32,278.64,5.96907e-05,5.72495e-05,6.15897e-05,0.0047619,0.0045337
+0.500000,,,,WS98 Fig.1 right,FT2,IA+MEC,symbol,176,0,331.20,263.52,264.48,262.32,0.000118886,0.000114024,0.000125256,0.0047619,0.0045337
+0.747619,,,,WS98 Fig.1 right,FT2,IA+MEC,symbol,177,0,343.68,272.16,274.08,270.48,8.16427e-05,7.51013e-05,8.7832e-05,0.0047619,0.0045337
+1.000000,,,,WS98 Fig.1 right,FT2,IA+MEC,symbol,178,0,356.40,303.36,307.68,300.00,2.10155e-05,1.74154e-05,2.43226e-05,0.0047619,0.0045337
+1.247619,,,,WS98 Fig.1 right,FT2,IA+MEC,symbol,179,0,368.88,420.24,526.08,394.32,1.30208e-07,1.30402e-09,4.02045e-07,0.0047619,0.0045337
+1.500000,,,,WS98 Fig.1 right,FT2,IA+MEC,symbol,180,0,381.60,335.04,343.68,328.80,5.29777e-06,3.63815e-06,6.94975e-06,0.0047619,0.0045337
+1.747619,,,,WS98 Fig.1 right,FT2,IA+MEC,symbol,181,0,394.08,317.52,322.56,313.44,1.13515e-05,9.11684e-06,1.35558e-05,0.0047619,0.0045337
+2.000000,,,,WS98 Fig.1 right,FT2,IA+MEC,symbol,182,0,406.80,318.24,322.56,314.40,1.10015e-05,9.11684e-06,1.30014e-05,0.0047619,0.0045337
+2.247619,,,,WS98 Fig.1 right,FT2,IA+MEC,symbol,183,0,419.28,326.88,331.92,323.04,7.55507e-06,6.0678e-06,8.92847e-06,0.0047619,0.0045337
+2.500000,,,,WS98 Fig.1 right,FT2,IA+MEC,symbol,184,0,432.00,341.04,347.28,336.24,4.08086e-06,3.11083e-06,5.02834e-06,0.0047619,0.0045337
+2.747619,,,,WS98 Fig.1 right,FT2,IA+MEC,symbol,185,0,444.48,359.52,368.16,353.28,1.82666e-06,1.25443e-06,2.39626e-06,0.0047619,0.0045337
+3.000000,,,,WS98 Fig.1 right,FT2,IA+MEC,symbol,186,0,457.20,382.56,397.20,373.68,6.7054e-07,3.54708e-07,9.86668e-07,0.0047619,0.0045337
+3.247619,,,,WS98 Fig.1 right,FT2,IA+MEC,symbol,187,0,469.68,409.92,444.48,396.72,2.03979e-07,4.53665e-08,3.62191e-07,0.0047619,0.0045337
+3.500000,,,,WS98 Fig.1 right,FT2,IA+MEC,symbol,188,0,482.40,439.20,545.04,419.76,5.7079e-08,5.71642e-10,1.32955e-07,0.0047619,0.0045337
+3.747619,,,,WS98 Fig.1 right,FT2,IA+MEC,symbol,189,0,494.88,462.24,568.08,437.04,2.09529e-08,2.09841e-10,6.27018e-08,0.0047619,0.0045337
+4.000000,,,,WS98 Fig.1 right,FT2,IA+MEC,symbol,190,0,507.60,472.32,578.16,445.44,1.35154e-08,1.35356e-10,4.35112e-08,0.0047619,0.0045337
+0.119048,2.93801,-0.00161562,4.9768,WS98 Fig.1 slot,slot,IA+MEC,slot,,,110.40,,,,,,,0.0047619,0.0045337
+0.157143,2.9075,-0.00280947,4.91098,WS98 Fig.1 slot,slot,IA+MEC,slot,,,112.32,,,,,,,0.0047619,0.0045337
+0.195238,2.86233,-0.00426551,4.76296,WS98 Fig.1 slot,slot,IA+MEC,slot,,,114.24,,,,,,,0.0047619,0.0045337
+0.238095,2.80319,-0.00595729,4.62865,WS98 Fig.1 slot,slot,IA+MEC,slot,,,116.40,,,,,,,0.0047619,0.0045337
+0.276190,2.74527,-0.00785581,4.3868,WS98 Fig.1 slot,slot,IA+MEC,slot,,,118.32,,,,,,,0.0047619,0.0045337
+0.319048,2.67455,-0.01004,4.10235,WS98 Fig.1 slot,slot,IA+MEC,slot,,,120.48,,,,,,,0.0047619,0.0045337
+0.357143,2.60565,-0.012371,3.87992,WS98 Fig.1 slot,slot,IA+MEC,slot,,,122.40,,,,,,,0.0047619,0.0045337
+0.400000,2.51217,-0.0149284,3.65645,WS98 Fig.1 slot,slot,IA+MEC,slot,,,124.56,,,,,,,0.0047619,0.0045337
+0.438095,2.43471,-0.0174589,3.47705,WS98 Fig.1 slot,slot,IA+MEC,slot,,,126.48,,,,,,,0.0047619,0.0045337
+0.476190,2.33514,-0.0199966,3.31263,WS98 Fig.1 slot,slot,IA+MEC,slot,,,128.40,,,,,,,0.0047619,0.0045337
+0.519048,2.25136,-0.0225472,3.08315,WS98 Fig.1 slot,slot,IA+MEC,slot,,,130.56,,,,,,,0.0047619,0.0045337
+0.557143,2.15929,-0.0252908,2.8307,WS98 Fig.1 slot,slot,IA+MEC,slot,,,132.48,,,,,,,0.0047619,0.0045337
+0.600000,2.0602,-0.0280737,2.56656,WS98 Fig.1 slot,slot,IA+MEC,slot,,,134.64,,,,,,,0.0047619,0.0045337
+0.638095,1.95542,-0.0308392,2.34714,WS98 Fig.1 slot,slot,IA+MEC,slot,,,136.56,,,,,,,0.0047619,0.0045337
+0.676190,1.85597,-0.0335253,2.14045,WS98 Fig.1 slot,slot,IA+MEC,slot,,,138.48,,,,,,,0.0047619,0.0045337
+0.719048,1.76159,-0.0358791,1.92141,WS98 Fig.1 slot,slot,IA+MEC,slot,,,140.64,,,,,,,0.0047619,0.0045337
+0.757143,1.66329,-0.0381983,1.73437,WS98 Fig.1 slot,slot,IA+MEC,slot,,,142.56,,,,,,,0.0047619,0.0045337
+0.800000,1.57048,-0.0400355,1.52492,WS98 Fig.1 slot,slot,IA+MEC,slot,,,144.72,,,,,,,0.0047619,0.0045337
+0.838095,1.47513,-0.0417426,1.34796,WS98 Fig.1 slot,slot,IA+MEC,slot,,,146.64,,,,,,,0.0047619,0.0045337
+0.876190,1.38557,-0.043296,1.17886,WS98 Fig.1 slot,slot,IA+MEC,slot,,,148.56,,,,,,,0.0047619,0.0045337
+0.919048,1.29467,-0.0446734,0.997203,WS98 Fig.1 slot,slot,IA+MEC,slot,,,150.72,,,,,,,0.0047619,0.0045337
+0.957143,1.20974,-0.0458546,0.842704,WS98 Fig.1 slot,slot,IA+MEC,slot,,,152.64,,,,,,,0.0047619,0.0045337
+1.000000,1.12449,-0.0465783,0.676078,WS98 Fig.1 slot,slot,IA+MEC,slot,,,154.80,,,,,,,0.0047619,0.0045337
+1.038095,1.04525,-0.0473134,0.569033,WS98 Fig.1 slot,slot,IA+MEC,slot,,,156.72,,,,,,,0.0047619,0.0045337
+1.076190,0.971592,-0.047561,0.465846,WS98 Fig.1 slot,slot,IA+MEC,slot,,,158.64,,,,,,,0.0047619,0.0045337
+1.119048,0.898424,-0.047561,0.35404,WS98 Fig.1 slot,slot,IA+MEC,slot,,,160.80,,,,,,,0.0047619,0.0045337
+1.157143,0.830766,-0.0473134,0.258195,WS98 Fig.1 slot,slot,IA+MEC,slot,,,162.72,,,,,,,0.0047619,0.0045337
+1.200000,0.764204,-0.046822,0.15407,WS98 Fig.1 slot,slot,IA+MEC,slot,,,164.88,,,,,,,0.0047619,0.0045337
+1.238095,0.702975,-0.0463358,0.0645904,WS98 Fig.1 slot,slot,IA+MEC,slot,,,166.80,,,,,,,0.0047619,0.0045337
+1.276190,0.646652,-0.0456159,0.00960097,WS98 Fig.1 slot,slot,IA+MEC,slot,,,168.72,,,,,,,0.0047619,0.0045337
+1.319048,0.591744,-0.0446734,-0.0386115,WS98 Fig.1 slot,slot,IA+MEC,slot,,,170.88,,,,,,,0.0047619,0.0045337
+1.357143,0.541499,-0.043296,-0.0801698,WS98 Fig.1 slot,slot,IA+MEC,slot,,,172.80,,,,,,,0.0047619,0.0045337
+1.395238,0.495521,-0.0419611,-0.120577,WS98 Fig.1 slot,slot,IA+MEC,slot,,,174.72,,,,,,,0.0047619,0.0045337
+1.438095,0.451085,-0.0404556,-0.164738,WS98 Fig.1 slot,slot,IA+MEC,slot,,,176.88,,,,,,,0.0047619,0.0045337
+1.476190,0.408497,-0.0390042,-0.2029,WS98 Fig.1 slot,slot,IA+MEC,slot,,,178.80,,,,,,,0.0047619,0.0045337
+1.519048,0.369929,-0.0376048,-0.231043,WS98 Fig.1 slot,slot,IA+MEC,slot,,,180.96,,,,,,,0.0047619,0.0045337
+1.557143,0.335003,-0.0358791,-0.240441,WS98 Fig.1 slot,slot,IA+MEC,slot,,,182.88,,,,,,,0.0047619,0.0045337
+1.600000,0.303374,-0.0342326,-0.250743,WS98 Fig.1 slot,slot,IA+MEC,slot,,,185.04,,,,,,,0.0047619,0.0045337
+1.638095,0.273301,-0.0324916,-0.259672,WS98 Fig.1 slot,slot,IA+MEC,slot,,,186.96,,,,,,,0.0047619,0.0045337
+1.676190,0.24621,-0.0306787,-0.268395,WS98 Fig.1 slot,slot,IA+MEC,slot,,,188.88,,,,,,,0.0047619,0.0045337
+1.719048,0.220649,-0.0289668,-0.277974,WS98 Fig.1 slot,slot,IA+MEC,slot,,,191.04,,,,,,,0.0047619,0.0045337
+1.757143,0.197742,-0.0272081,-0.282627,WS98 Fig.1 slot,slot,IA+MEC,slot,,,192.96,,,,,,,0.0047619,0.0045337
+1.800000,0.17629,-0.0255562,-0.275524,WS98 Fig.1 slot,slot,IA+MEC,slot,,,195.12,,,,,,,0.0047619,0.0045337
+1.838095,0.157165,-0.0238797,-0.26935,WS98 Fig.1 slot,slot,IA+MEC,slot,,,197.04,,,,,,,0.0047619,0.0045337
+1.876190,0.140116,-0.0220813,-0.263304,WS98 Fig.1 slot,slot,IA+MEC,slot,,,198.96,,,,,,,0.0047619,0.0045337
+1.919048,0.124265,-0.0204185,-0.256646,WS98 Fig.1 slot,slot,IA+MEC,slot,,,201.12,,,,,,,0.0047619,0.0045337
+1.957143,0.110208,-0.0187825,-0.250852,WS98 Fig.1 slot,slot,IA+MEC,slot,,,203.04,,,,,,,0.0047619,0.0045337
+1.995238,0.0972317,-0.0171877,-0.24517,WS98 Fig.1 slot,slot,IA+MEC,slot,,,204.96,,,,,,,0.0047619,0.0045337
+2.038095,0.0848926,-0.0156464,-0.234085,WS98 Fig.1 slot,slot,IA+MEC,slot,,,207.12,,,,,,,0.0047619,0.0045337
+2.076190,0.0745073,-0.0140954,-0.223895,WS98 Fig.1 slot,slot,IA+MEC,slot,,,209.04,,,,,,,0.0047619,0.0045337
+2.119048,0.0653925,-0.012632,-0.212652,WS98 Fig.1 slot,slot,IA+MEC,slot,,,211.20,,,,,,,0.0047619,0.0045337
+2.157143,0.0573927,-0.0111447,-0.202848,WS98 Fig.1 slot,slot,IA+MEC,slot,,,213.12,,,,,,,0.0047619,0.0045337
+2.195238,0.0501094,-0.00978134,-0.193215,WS98 Fig.1 slot,slot,IA+MEC,slot,,,215.04,,,,,,,0.0047619,0.0045337
+2.238095,0.0435226,-0.00849559,-0.182576,WS98 Fig.1 slot,slot,IA+MEC,slot,,,217.20,,,,,,,0.0047619,0.0045337
+2.276190,0.0372143,-0.00726421,-0.172979,WS98 Fig.1 slot,slot,IA+MEC,slot,,,219.12,,,,,,,0.0047619,0.0045337
+2.319048,0.0318203,-0.00611481,-0.162258,WS98 Fig.1 slot,slot,IA+MEC,slot,,,221.28,,,,,,,0.0047619,0.0045337
+2.357143,0.0273505,-0.00501468,-0.152892,WS98 Fig.1 slot,slot,IA+MEC,slot,,,223.20,,,,,,,0.0047619,0.0045337
+2.400000,0.0235086,-0.00400653,-0.142536,WS98 Fig.1 slot,slot,IA+MEC,slot,,,225.36,,,,,,,0.0047619,0.0045337
+2.438095,0.0199966,-0.00307015,-0.133484,WS98 Fig.1 slot,slot,IA+MEC,slot,,,227.28,,,,,,,0.0047619,0.0045337
+2.476190,0.0169206,-0.00219828,-0.124572,WS98 Fig.1 slot,slot,IA+MEC,slot,,,229.20,,,,,,,0.0047619,0.0045337
+2.519048,0.013949,-0.00141797,-0.115327,WS98 Fig.1 slot,slot,IA+MEC,slot,,,231.36,,,,,,,0.0047619,0.0045337
+2.676190,0.00630934,0.000958639,-0.0854674,WS98 Fig.1 slot,slot,IA+MEC,slot,,,239.28,,,,,,,0.0047619,0.0045337
+2.719048,0.00504092,0.00138867,-0.077628,WS98 Fig.1 slot,slot,IA+MEC,slot,,,241.44,,,,,,,0.0047619,0.0045337
+2.757143,0.00384268,0.00176553,-0.0711997,WS98 Fig.1 slot,slot,IA+MEC,slot,,,243.36,,,,,,,0.0047619,0.0045337
+2.795238,0.00286874,0.00206481,-0.0661614,WS98 Fig.1 slot,slot,IA+MEC,slot,,,245.28,,,,,,,0.0047619,0.0045337
+2.838095,0.00210837,0.00229201,-0.0605747,WS98 Fig.1 slot,slot,IA+MEC,slot,,,247.44,,,,,,,0.0047619,0.0045337
+2.876190,0.00154148,0.00246577,-0.0556792,WS98 Fig.1 slot,slot,IA+MEC,slot,,,249.36,,,,,,,0.0047619,0.0045337
+2.919048,0.00109798,0.00259789,-0.0502486,WS98 Fig.1 slot,slot,IA+MEC,slot,,,251.52,,,,,,,0.0047619,0.0045337

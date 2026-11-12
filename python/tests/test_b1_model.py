@@ -49,11 +49,11 @@ N = 400
 SEED = 7
 
 # The CDKS camp's b1_d is a Q2 = 2.5 DIGITIZATION with no Q2 evolution, and in
-# the topmost cell of the default window (x = 0.954993) its b1/F1 reaches 6.52
-# for `cdks` and 5.91 for `li6-convolution` -- past where 1 + w_avg stays
-# positive, so `InclusiveSampler` refuses the run.  Both opt-in backends
-# therefore need a window that stops below it; Miller's b1 is a ratio model
-# (0.145 at the same point) and does not.
+# the topmost cell of the default window (x = 0.954993) its b1/F1 reaches 51.87 (A1 (2026-11-03); 48.67 before)
+# for `cdks` and 42.85 for `li6-convolution` on the shipped CT18NLO F1 (D7,
+# 2026-10-29; 6.52 / 5.91 on the toy) -- past where 1 + w_avg stays positive,
+# so `InclusiveSampler` refuses the run.  Both opt-in backends need a window
+# that stops below it; Miller's b1 is a ratio model (1.156 there since A1, 1.085 before; 0.145 toy).
 #
 # Those two numbers live in ONE place, `cli.B1_TOP_CELL_B1_OVER_F1`, and
 # `test_the_top_cell_note_is_the_measured_one` below pins them against the
@@ -64,11 +64,11 @@ X_MAX = 0.95
 
 
 def _cfg(model="miller", band=1.0, w_ad=1.0, x_max=X_MAX, isotope="6Li",
-         channel="inclusive", **kw):
+         channel="inclusive", sf="toy", **kw):  # D7: the toy pair NAMED unless sf="default"
     cfg = lg.make_config(isotope=isotope, channel=channel, config=1,
                          events=N, seed=SEED, b1_model=model,
                          b1_band_scale=band, b1_alpha_d_dwave_weight=w_ad,
-                         **kw)
+                         **dict(dict(unpol_sf="toy", pol_sf="toy") if sf == "toy" else {}, **kw))
     if x_max is not None:
         sc = cfg.scenario           # Scenario comes back BY VALUE
         sc.x_max = x_max
@@ -168,13 +168,13 @@ def test_validate_refuses_the_illegal_combinations(model):
     with pytest.raises(RuntimeError):
         _cfg(model, channel="coherent").validate()
     # a caller-supplied kernel and a non-default model contradict each other
-    cfg = _cfg(model)
+    cfg = _cfg(model, sf="default", **({"b1_unpol": "ct18nlo"} if model == "li6-convolution" else {}))  # D7
     cfg.kernel = _l.default_inclusive_kernel(_l.li6())
     with pytest.raises(RuntimeError):
         cfg.validate()
     # ... but the DEFAULT model with a caller-supplied kernel is legal, as it
-    # has always been
-    cfg.b1_model = _l.B1Model.Miller
+    # has always been (D7: beside the SHIPPED selectors, which it leaves unread)
+    cfg.b1_model = _l.B1Model.Miller; _l.set_b1_unpol(cfg, _l.B1UnpolSource.Toy)
     cfg.validate()
 
 
@@ -240,8 +240,8 @@ def test_cli_says_which_flag_fixes_the_top_x_cell():
     pipeline is built.
     """
     for model in ("cdks", "li6-convolution"):
-        with pytest.raises(SystemExit) as e:
-            cli.main(["--b1-model", model, "--events", "10", "--quiet"])
+        with pytest.raises(SystemExit) as e:   # D7: li6-convolution names --b1-unpol
+            cli.main(["--b1-model", model, "--events", "10", "--quiet"] + (["--b1-unpol", "ct18nlo"] if model != "cdks" else []))
         msg = str(e.value)
         assert "--x-max 0.95" in msg, msg
         assert model in msg
@@ -261,10 +261,10 @@ def test_meta_records_which_b1_made_the_file():
     assert meta["b1_model"] == "miller"
     assert meta["b1_band_scale"] == 1.0
     # ... and a hand-built kernel is NOT labelled with a flag that did not run
-    cfg = _cfg()
+    cfg = _cfg(sf="default")      # D7: a kernel sits beside the shipped selectors
     cfg.kernel = _l.default_inclusive_kernel(_l.li6())
     p = _l.Pipeline(cfg, lg.tensor_thirds_plan(0.0, 0.6))
-    assert p.generate(0, True)["meta"]["b1_model"] == "caller-supplied kernel"
+    assert p.generate(0, True)["meta"]["b1_model"] == "not read with a caller-supplied kernel"  # A17 (2026-11-03): the row's label, was "caller-supplied kernel"
 
 
 # ------------------------------------------------------------------- P2
@@ -344,7 +344,7 @@ def test_default_kernel_is_the_miller_kernel(repo_root):
     with open(path) as fh:
         doc = json.load(fh)
     assert doc["kernel"]["b1_model"] == "miller"
-    k = _l.default_inclusive_kernel(_l.li6())
+    k = _l.default_inclusive_kernel(_l.li6(), b1_transfer=_l.LI6_B1_RANK2_TRANSFER_HULTHEN)  # A1 (2026-11-03): the pre-A1 transfer, explicitly; default 0.982576
     xs = doc["x"]
     assert len(xs) == 200 and len(doc["tables"]) == 3
     n = 0
@@ -646,7 +646,7 @@ def _unpol_cfg(unpol=None, model="li6-convolution", coarse=True, **kw):
     """A cheap li6-convolution config; the coarse grid is a SPEED knob only."""
     cfg = _cfg(model, **kw) if unpol is None else \
         lg.make_config(isotope="6Li", channel="inclusive", config=1, events=N,
-                       seed=SEED, b1_model=model, b1_unpol=unpol, **kw)
+                       seed=SEED, b1_model=model, b1_unpol=unpol, unpol_sf="toy", pol_sf="toy", **kw)  # D7: toy NAMED
     if coarse:
         g = cfg.grid            # SamplerGrid comes back BY VALUE
         g.nx, g.nq2 = 12, 6
@@ -723,7 +723,7 @@ def test_make_config_and_binding_keep_the_two_fields_in_step():
     neither surface lets them drift: `set_b1_unpol` builds the object for a
     named backend, and assigning an object names it `Custom`.
     """
-    cfg = lg.make_config(events=N, b1_model="li6-convolution", b1_unpol="toy")
+    cfg = lg.make_config(events=N, b1_model="li6-convolution", b1_unpol="toy", unpol_sf="toy", pol_sf="toy")  # D7
     assert cfg.b1_unpol == _l.B1UnpolSource.Toy and cfg.b1_unpol_sf is None
 
     with pytest.raises(ValueError):
@@ -792,7 +792,7 @@ def test_the_caller_supplied_kernel_guard_is_unchanged():
     hand-built kernel: `--b1-model li6-convolution --b1-unpol mstw` builds it
     through `default_inclusive_kernel`.
     """
-    cfg = _cfg("li6-convolution")
+    cfg = _cfg("li6-convolution", sf="default", b1_unpol="ct18nlo")  # D7: the shipped selectors
     cfg.b1_unpol_sf = lg.ToyF2()
     cfg.kernel = _l.default_inclusive_kernel(_l.li6())
     with pytest.raises(RuntimeError):
@@ -935,12 +935,12 @@ def test_meta_records_which_unpol_backend_made_the_file():
     assert meta["b1_unpol"] == "toy"
     # the shipped default says what it is too, so no npz is anonymous
     meta = _pipeline().generate(1, True)["meta"]
-    assert meta["b1_unpol"] == "toy"
+    assert meta["b1_unpol"] == "not read at b1_model = miller"  # A17 (2026-11-03): the row's label, was "toy"
     # ... and a hand-built kernel is not labelled with a flag that did not run
-    cfg = _cfg()
+    cfg = _cfg(sf="default")      # D7: a kernel sits beside the shipped selectors
     cfg.kernel = _l.default_inclusive_kernel(_l.li6())
     meta = _l.Pipeline(cfg, plan).generate(1, True)["meta"]
-    assert meta["b1_unpol"] == "caller-supplied kernel"
+    assert meta["b1_unpol"] == "not read with a caller-supplied kernel" # A17 (2026-11-03): the row's label, was "caller-supplied kernel"
 
 
 # ------------------------------------------------------------------- P9
@@ -961,8 +961,8 @@ def test_the_run_banner_says_which_side_of_the_gate_this_run_is_on(name,
     MSTW2008 LO at CDKS Eq. (21) -- and the shipped default is not it.  The
     banner therefore has to say, per run, whether THIS run is in that
     configuration, and it must not call ct18nlo covered either: 0.719 is
-    inside the window but CT18NLO is the retired stand-in, not the row the
-    lift was read off.
+    inside the window but CT18NLO (the shipped --unpol-sf since D7) is not
+    the row the lift was read off.
     """
     lines = cli.b1_gate_lines(name)
     assert len(lines) == 2
@@ -1265,7 +1265,7 @@ def test_r_source_is_refused_where_it_is_not_read_and_recorded_where_it_is():
     # ... and on a run that does not read it the meta carries the REFUSAL's
     # own value, never a backend name that did not run.
     meta = _l.Pipeline(_cfg("miller"), plan).generate(0, True)["meta"]
-    assert meta["r_source"] == "unset"
+    assert meta["r_source"] == "not read at b1_model = miller"  # A17 (2026-11-03): the row's label, was "unset"
 
 
 def test_r_source_moves_the_unpolarised_rate_unlike_b1_unpol():
@@ -1298,7 +1298,7 @@ def test_the_top_cell_note_is_the_measured_one():
     Four sites quoted this pair and no two agreed: the `--x-max` help said
     6.6 / 5.6, the `--b1-model` refusal said 3.3 / 5.6, this file's header
     comment said 3.3 / 5.6 and `docs/USAGE.md` sec. 2a said 6.6 / 5.6, while
-    the code computes 6.52 / 5.91 -- the 3.3 being the pre-2026-09-03 half of
+    the code computed 6.52 / 5.91 (toy; D7: 48.67 / 42.85) -- the 3.3 being the pre-2026-09-03 half of
     the `cdks` figure and the 6.6 twice its rounding.  One definition now, and
     this test is what keeps it true.
     """
@@ -1312,7 +1312,13 @@ def test_the_top_cell_note_is_the_measured_one():
             else {"cdks": _l.B1Model.Cdks,
                   "li6-convolution": _l.B1Model.Li6Convolution,
                   "miller": _l.B1Model.Miller}[name]
-        d = _l.default_inclusive_kernel(ion, model).tables(
+        # D7 (2026-10-29): the SHIPPED kernel is on CT18NLO / NNPDFpol1.1 --
+        # the one-argument form is the class-level toy (6.52 / 5.91 / 0.145)
+        U = _l.make_lhapdf_unpol_sf(_l.UNPOL_SF_DEFAULT)
+        P = _l.make_lhapdf_pol_sf(_l.POL_SF_DEFAULT)
+        d = _l.default_inclusive_kernel(
+            ion, model, unpol_sf=U, pol_sf=P,
+            b1_unpol=U if name == "li6-convolution" else None).tables(
             x, cli.B1_TOP_CELL_Q2).as_dict()
         got = d["b1"] / d["f1"]
         # The constants are quoted to the digits they are written with, so
@@ -1321,5 +1327,44 @@ def test_the_top_cell_note_is_the_measured_one():
         assert got == pytest.approx(want, abs=tol), (name, got, want)
 
     # ... and the sentence the two CLI sites share really does carry them.
-    assert "6.52" in cli.B1_TOP_CELL_NOTE
-    assert "5.91" in cli.B1_TOP_CELL_NOTE
+    assert "51.87" in cli.B1_TOP_CELL_NOTE        # D7 (6.52 on the toy); A1 (2026-11-03): was 48.67
+    assert "42.85" in cli.B1_TOP_CELL_NOTE        # D7 (5.91 on the toy)
+
+
+# ------------------------------------------------------------------- D7
+# D7 (2026-10-27): the SHIPPED structure functions are CT18NLO / NNPDFpol1.1,
+# and two b1 recipes the tree documented on the toy F2 change with them
+# (plan_D7_backend_defaults.md sec. 3.3, re-measured on the frozen grids
+# 2026-10-29, docs/open_items/run_2026-10-27/phase_I7_backends.md).
+
+def test_d7_li6_convolution_alone_is_refused_under_the_default():
+    """`--b1-unpol toy` means "the kernel's own UnpolSF", which is no longer
+    ToyF2 under the default -- so `--b1-model li6-convolution` must NAME its
+    b1 backend; the refusal says so and names the three ways out."""
+    with pytest.raises(RuntimeError) as e:
+        lg.make_config(events=N, b1_model="li6-convolution")
+    msg = str(e.value)
+    assert msg.startswith("PipelineConfig: unpol_sf = ct18nlo with b1_unpol = toy")
+    assert "shipped default since D7" in msg
+    for way in ("--b1-unpol ct18nlo", "--b1-unpol mstw", "--unpol-sf toy"):
+        assert way in msg, way
+    cfg = lg.make_config(events=N, b1_model="li6-convolution", b1_unpol="ct18nlo")
+    assert cfg.b1_unpol == _l.B1UnpolSource.Ct18Nlo
+
+
+def test_d7_the_band_x2_row_needs_x_max_085_on_the_default():
+    """The mandatory band's x2 row on the shipped F1: refused at x_max 0.95 and
+    0.9 (cell x = 0.871 -- the rank-2 term alone, the plan carries no beam
+    helicity), built at 0.85; the sampler's message COMPUTES that cure."""
+    for xm in (0.95, 0.9):
+        cfg = _cfg("cdks", band=2.0, x_max=xm, sf="default")
+        with pytest.raises(RuntimeError) as e:
+            _l.Pipeline(cfg, lg.tensor_thirds_plan(0.7, 0.6))
+        msg = str(e.value)
+        assert "at x = 0.871" in msg and "below x = 0.871" in msg
+        assert "from the RANK-2 term" in msg and "--x-max 0.95 on the" not in msg
+    assert _l.Pipeline(_cfg("cdks", band=2.0, x_max=0.85, sf="default"),
+                       lg.tensor_thirds_plan(0.7, 0.6)).sigma_pb() > 0.0
+    # ... while the toy pair, named, builds the x2 row at 0.95 as before D7
+    assert _l.Pipeline(_cfg("cdks", band=2.0, x_max=0.95),
+                       lg.tensor_thirds_plan(0.7, 0.6)).sigma_pb() > 0.0

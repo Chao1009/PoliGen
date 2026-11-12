@@ -1,0 +1,22 @@
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+# Run 2026-11-10 — status board
+
+The nine items run 2026-11-03 left for the author, decided on 2026-11-10
+("1. go with your recommendation. 2. re-dump, for the others go with your
+recommendation"): J1 and J2 the author's decisions, J3–J9 the supervisor's
+choices under the author's delegation, each with its reason in
+`DECISIONS.md`; implemented by Opus workers under the supervising session.
+Branch `claude/run-2026-10-26`, on top of `b3f8858`.
+
+| phase | items | state | commit | what | record |
+|---|---|---|---|---|---|
+| A — the decisions recorded | J1–J9 | DONE | `dd7f4d4` | the author's words quoted; nine entries, each with its reason, what moves and what does not | `DECISIONS.md` |
+| P1 — the re-dump | J2 | DONE | `1c98f62` | one dump run in place: 3170 numbers in six JSONs + the stale manifest string, a second run byte-identical; the 9.4e−13 traced to a one-ULP arccos change of the magic-angle input; every gate green at its present tolerance (435/435, 1523/155, bench 368/1), xsec headroom 0.056 → 0.0022 of the 1e−12 | `phase_P1_redump.md` |
+| P2 — the deuteron's b₁ slot | J1 | DONE | `d86fbf2` | `MillerB1` unmapped on the inclusive deuteron (b₁, b₂ ×3.0531989383; ⁶Li, ⁷Li, tagged, coherent byte-identical; HERMES: the kernel's own b₁ = the headline, χ²(b₁)/6 14.56 → 5.26); exposure measured: all 24 default deuteron plan × config runs refused at x_max 1.0 by the rank-2 term on the x = 0.955 row (1.6e−9 of the rate; b₁/F₁ up to 6.99 against the pure-state bound 3), 0.95 builds all but helicity-flip c0 (0.87); treatment NOT implemented — recommendation (b), a visible bound −3/2 ≤ b₁/F₁ ≤ 3, for the supervisor's note | `phase_P2_deuteron_b1.md` |
+| P2b — the deuteron slot confined to the spin-1 positivity domain | J1, the supervisor's note of 2026-11-12 | DONE | `8b72cd5` | one kernel option (off by default, on in the deuteron branch) confines b₁ to the spin-1 LO domain, b₂ in step; all 24 default deuteron plan × config runs build at x_max 1.0 (0 before); binds on 40 / 59 / 59 cells, 4.792e−7 / 3.871e−7 / 3.536e−7 of the rate (`meta["b1_clipped_rate_fraction"]`, d only, + banner line), upper half only; ⁶Li / ⁷Li / tagged / coherent byte-identical; HERMES unchanged; `--pol-sf` now read on every inclusive deuteron run (the knob gate); refusal unchanged | `phase_P2b_spin1_domain.md` |
+| P3 — harness rows | J3, J4, J7 | DONE | (next commit) | J3: bench-gated pin, 0 of 28 BONuS headline verdicts flip under the 321 × 321 table or bin averaging (harness's own `judge_block`; byte-identical row); J4: recorded HERMES in-grid sub-row (⟨Q²⟩ ≥ the CT18NLO floor 1.677 read from the library): χ²(b₁) 1.894/3, χ²(A_zz) 1.178/3, below-floor bins 0.51/1.06/1.65 named (shipped/implied F₁ᵈ 1.76/1.41/1.34), headline unchanged; J7: a set installed but not as vendored (or member absent) exits 2, `blocked (environment)` (one `_report.py` classifier branch); report 0 changes + 1 new sub-row (15/8/0); pytest 1533/156, bench 372/1; no C++ change | `phase_P3_harness_rows.md` |
+| P4 — provenance | J5, J6 | TODO | | the clip share's bracket; a HepMC3 file states its provenance or its absence; the extrapolation keys in the one list | `phase_P4_provenance.md` |
+| P5 — records and the throughput | J8, J9 | TODO | | the development item brought up to date; the 2 M-event recipe re-measured on the idle machine | `phase_P5_throughput.md` |
+| V — verification | all | TODO | | two adversarial lenses over the implemented tree | `phase_V_verification.md` |
+| F — fixes | all | TODO | | every finding applied or refuted with the reason | `phase_V_verification.md` |
+| S — summary | | TODO | | the one page | `SUMMARY.md` |

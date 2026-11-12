@@ -209,11 +209,11 @@ class LhapdfSF : public UnpolSF {
 
   /// The loaded grid's OWN lower Q2 edge (`LHAPDF::PDF::q2Min()`), read from
   /// the set's metadata and not transcribed anywhere -- CT18NLO's is 1.677
-  /// (QMin 1.295 GeV), NNPDFpol11_100's is 1.  BELOW IT LHAPDF DOES NOT
-  /// FREEZE: it continues the evolution downward, and F2p falls fast (a
-  /// factor 2.34 below `ToyF2` at x = 3e-4, Q2 = 0.7).  The shipped 6Li
-  /// window's accepted cells start at Q2 = 1.054, so a `--unpol-sf ct18nlo`
-  /// run puts a third of its rate there; `PipelineConfig`'s run banner and
+  /// (QMin 1.295 GeV), NNPDFpol11_100's is 1.  BELOW IT THE TIER FREEZES the
+  /// grid at its edge since D7 (LHAPDF `nearest`, set on the object; before,
+  /// LHAPDF continued the evolution down: F2p 1/2.34 of `ToyF2` at x = 3e-4,
+  /// Q2 = 0.7).  The shipped 6Li window starts at Q2 = 1.054, so the SHIPPED
+  /// default run puts 39 % of its rate there; `PipelineConfig`'s banner and
   /// `meta["unpol_sf_below_grid_frac"]` are computed FROM THIS accessor so
   /// that the fraction is never a typed-in number.
   double q2_min() const;
@@ -231,7 +231,7 @@ class LhapdfG1 : public PolSF {
   ~LhapdfG1() override;
   double g1p(double x, double q2) const override;
   double g1n(double x, double q2) const override;
-
+  double q2_min() const;  ///< the grid's own Q2 floor (1 for NNPDFpol11_100; D7)
  private:
   struct Impl;
   std::unique_ptr<Impl> impl_;
@@ -425,8 +425,8 @@ double b1_li6_from_deuteron(double b1_d,
                             double transfer = LI6_B1_RANK2_TRANSFER,
                             double per_nucleon = LI6_B1_PER_NUCLEON);
 
-/// TOY double-helicity-flip Delta = scale * F1 * x^0.3 (1-x)^4; `scale` is the
-/// peak Delta/F1.  Use 1e-3, 3e-3, 1e-2 as discovery scenarios.
+/// TOY double-helicity-flip Delta = scale * F1 * x^0.3 (1-x)^4, peak Delta/F1 =
+/// 0.337 scale at x = 0.07 (JM Delta, D4).  Discovery scales 1e-3, 3e-3, 1e-2.
 double toy_delta_gluon(double x, double q2, double f1, double scale = 1e-3);
 
 /// Camps as `TensorSF` objects, so a kernel can be handed one backend.
@@ -452,7 +452,7 @@ class CdksB1 : public TensorSF {
   B1Mode mode_;
 };
 
-/// b1 of 6Li built from a deuteron camp through the rank-2 transfer.
+/// b1 of 6Li built from a deuteron camp through the rank-2 transfer (6Li only: since J1, 2026-11-10, the inclusive deuteron reads the camp itself, confined to the spin-1 domain since the J1 note of 2026-11-12).
 class Li6B1 : public TensorSF {
  public:
   Li6B1(std::shared_ptr<const TensorSF> deuteron,
@@ -526,7 +526,7 @@ class DeltaModel : public TensorSF {
   std::string info_;
 };
 
-/// Legacy toy shape; `scale` is the peak Delta/F1.
+/// Legacy toy shape; `scale` is toy_delta_gluon's prefactor (peak 0.337 scale).
 DeltaModel make_delta_toy(double scale = 1e-3);
 
 // `dilution` below is the money_delta convention (`polli_fastsim.delta_models`):
@@ -535,11 +535,11 @@ DeltaModel make_delta_toy(double scale = 1e-3);
 // polarization, so the same physics is expressed by a `dilution` multiplying
 // Delta (1/3 for 6Li).  That 1/3 is a COUNTING fraction -- two polarized
 // nucleons of six -- and NOT a polarization.  In particular it is not
-// `LI6().eff_pol_p`, which since 2026-08-29 is the cluster picture's
-// LI6_CLUSTER_POLARIZATION/3 (plans/04 #6): that is the VECTOR polarization of
+// `LI6().eff_pol_p`, which is LI6_CLUSTER_POLARIZATION/3 (the cluster product
+// 2026-08-29, plans/04 #6; 0.848/3 since A1): that is the VECTOR polarization of
 // the pair, rank 1, while Delta is rank 2 like b1, where the same wave function
 // transfers `LI6_B1_RANK2_TRANSFER`.  Whether Delta should carry that rank-2
-// transfer as b1 does (1/3 -> 0.3073) is open, and nothing published assumes
+// transfer as b1 does (1/3 -> 0.3275 since A1, 0.3073 before) is open, and nothing published assumes
 // it.  Do not set dilution != 1 AND use a per-nucleon-normalized P_zz at the
 // same time.
 /// Interpretation A: Delta = dilution * A * alpha_s(Q2) * F1 * shape.
@@ -551,6 +551,39 @@ DeltaModel make_moment_a(const std::function<double(double, double)>& f1_func,
 DeltaModel make_moment_b(const std::string& variant = "mid_x",
                          double c_moment = C_BAG, double dilution = 1.0,
                          std::function<double(double)> alphas = nullptr);
+
+/// A3 (2026-11-03; DECISIONS.md, the supervisor's choice under the author's
+/// delegation): the positivity bound |g1| <= F1, enforced where the NUCLEON
+/// structure functions are evaluated, per species, for every backend.  It
+/// wraps the backend a kernel reads (toy, grid or custom alike) and returns
+/// g1p / g1n clipped to +-F1 of THAT nucleon, F1 = F2 / (2 x (1 + R)) on the
+/// kernel's own UnpolSF (frozen at the grid edges as D7 left it) and the
+/// kernel's own R, so the bound is the F1 the rate uses.  `g1_nucleus` and
+/// the Wandzura-Wilczek g2 are `PolSF`'s, built on these clipped g1p / g1n.
+/// Where the bound does not bind the inner value is returned AS IS (bit for
+/// bit: `ToyG1` on the kernel's base, |A1| <= 1, never binds); a NaN passes
+/// through.  `InclusiveKernel` installs it on every kernel (xsec.cpp); the
+/// share of a run's rate where it binds is `meta["g1_clipped_rate_fraction"]`
+/// (pipeline.hpp, `G1PositivityClip`).  At LO the shipped pair breaks the
+/// bound from x ~ 0.83 (neutron) and ~ 0.87 (proton, deuteron).
+class PositivityClippedG1 : public PolSF {
+ public:
+  PositivityClippedG1(std::shared_ptr<const PolSF> inner,
+                      std::shared_ptr<const UnpolSF> base, RFunc r_func = nullptr);
+  double g1p(double x, double q2) const override;
+  double g1n(double x, double q2) const override;
+  /// The bound itself: F1 of the nucleon on the base and R above.
+  double f1p(double x, double q2) const;
+  double f1n(double x, double q2) const;
+  /// The unclipped backend.
+  const std::shared_ptr<const PolSF>& inner() const { return inner_; }
+  const std::shared_ptr<const UnpolSF>& base() const { return base_; }
+
+ private:
+  std::shared_ptr<const PolSF> inner_;
+  std::shared_ptr<const UnpolSF> base_;
+  RFunc r_func_;
+};
 
 }  // namespace lipolgen
 

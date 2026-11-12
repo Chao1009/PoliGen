@@ -10,8 +10,8 @@ THE PHYSICS POINT.  The shipped defaults of `lipolgen.make_config()` --
 6Li, inclusive, beam config 1 = `default_configs("6Li")[1]` (10 GeV e x
 99.5 GeV/u), its generator scenario (Q2 >= 0.7, y <= 0.985, W2 >= 8,
 |eta| <= 3.8, E' >= 0.3), a 100 x 72 log-log grid up to x = 1,
-Q2 in [1, 2000], and `default_inclusive_kernel(li6())` (Miller b1, ToyF2,
-ToyG1), which is what `Pipeline` builds for that config
+Q2 in [1, 2000], and `lipolgen.shipped_inclusive_kernel(li6())` (Miller b1 on
+CT18NLO / NNPDFpol1.1 since D7, ToyF2 / ToyG1 before) -- what `Pipeline` builds
 (src/core/pipeline.cpp, inclusive branch) -- with TWO changes, both stated:
   * the window is the valence, high-depolarization corner x >= 0.1
     (`SamplerGrid.x_min`) and y >= 0.5 (`Scenario.y_min`);
@@ -22,7 +22,7 @@ sigma(apar+)/sigma(unpol) - 1 = -6.80e-4, and a sigma comparison between an
 unweighted and a weighted sample resolves it at 3 sigma only with >~ 4e7
 events per route -- a closure that could not tell a working Mode W from
 w = 1.  In this window the EXACT tables (sigma_tot_pb, noise-free) give a
-shift of +1.47 %, resolved at 3 sigma by ~ 8.3e4 events per route; the
+shift of +1.47 % (toy SFs; +1.59 % on D7's grids; +1.66 % since A1, 2026-11-03), resolved at 3 sigma by ~ 8.3e4 events per route; the
 window was picked from those exact numbers alone (x >= 0.05/0.1/0.2 and
 y >= 0.3/0.5/0.7 were tabulated), before any pull in it was computed.
 
@@ -52,12 +52,12 @@ the polarized rate ratio" checks) against the same; and the NULL pull a
 no-op Mode W (w = 1) would give -- the closure's power.
 
 N AND RUNTIME.  L = LUMI_PB = 34000 pb^-1 per nucleon per route (the window's
-sigma_unpol is 87.9 pb), i.e. <N> ~ 2.99e6 events per route; single thread.
-The pull's resolution is ~ 8.2e-4 relative, against the +1.47 % shift.
+sigma_unpol is 87.9 pb; 78.5 pb on D7's grids), i.e. <N> ~ 2.99e6 (2.7e6) events per route; single thread.
+The pull's resolution is ~ 8.2e-4 relative, against the +1.47 % shift (+1.59 % since D7, +1.66 % since A1).
 Measured 2.7 s wall for the whole harness, interpreter start-up included
 (2.6 s inside run()), on the development container, 2026-09-26.
 
-WHAT WAS MEASURED (2026-09-26, PASS).  Unweighted N_U/L = 89.1934 +- 0.0512
+WHAT WAS MEASURED (2026-09-26, PASS, on the toy SFs -- the D7 re-take on the shipped kernel, 2026-10-29: 79.7924 +- 0.0484 vs 79.7677 +- 0.0488 pb, N 2 712 940 / 2 669 772, pull +0.359, exact 79.767466 (apar+) / 78.522871 (unpol), shift +1.5850e-2, no-op +18.61; A1 (2026-11-03): 79.8484 +- 0.0485 vs 79.8237 +- 0.0489, N_U 2 714 846, pull +0.359, shift +1.6564e-2, no-op +19.42).  Unweighted N_U/L = 89.1934 +- 0.0512
 pb (N_U = 3 032 577) against weighted sum w/L = 89.1674 +- 0.0516 pb
 (N_W = 2 987 706, <w> = 1.014722, w in [1.0061, 1.0676]): pull +0.359.
 Exact sigma_tot_pb: 89.167123 pb (apar+), 87.873873 pb (unpol), shift
@@ -82,7 +82,7 @@ WHAT THIS DOES NOT VALIDATE: the per-cell amplitudes themselves (shared
 by both routes, above); the phi' part of Mode W (for this
 longitudinal category a1 = a2 = 0, so phi is uniform and `weights_for`'s
 cos phi', cos 2phi' terms are not exercised; the tensor a2 of the transverse
-plans is ~ 1e-3); the rest of the phase space (the window is 1.5e-4 of the
+plans is ~ 5e-4 since D4, 2026-10-27, ~ 1e-3 before); the rest of the phase space (the window is 1.5e-4 of the
 default window's cross section; there the polarized shift is below any
 affordable resolution); whether sigma_tot_pb is the true integral of the
 cross section (the cell-centre grid discretisation is common to both routes);
@@ -142,7 +142,7 @@ def physics_point(x_min=X_MIN, y_min=Y_MIN):
     import lipolgen as lg
     cfg = lg.make_config()
     beam = lg.default_configs(cfg.isotope)[cfg.beam_config]
-    kern = lg.default_inclusive_kernel(lg.ion_by_name(cfg.isotope))
+    kern = lg.shipped_inclusive_kernel(lg.ion_by_name(cfg.isotope))   # D7 (2026-10-27)
     scenario, grid = cfg.scenario, cfg.grid
     scenario.y_min = max(scenario.y_min, y_min)
     grid.x_min = max(grid.x_min, x_min)

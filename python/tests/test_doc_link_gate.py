@@ -1712,5 +1712,5 @@ def test_every_as_of_anchor_passes_the_bar_at_its_commit(gate):
     # "clean fix, NOT made here" text was gone from the tree entirely (it is
     # the header adec442 carries, and the opposite of what that header says
     # today), so the anchor was annotated rather than re-pointed.
-    assert checked == 110, checked  # 108 until 2026-09-23: +2 = run_2026-09-23/phase_B3_chain_rc.md's README.md:177 / DEVELOPMENT_PLAN.md:213 (as of d735abc)
+    assert checked == 121, checked  # 108 until 2026-09-23: +2 = run_2026-09-23/phase_B3_chain_rc.md's README.md:177 / DEVELOPMENT_PLAN.md:213 (as of d735abc); 110 until D7 (2026-10-29): +9 = the record citations D7's edits moved, annotated (as of c52c164) -- run_2026-09-06/phase_D_numbers.md:1018 (x2) and plan_D7_backend_defaults.md:414 (x2), 591, 659, 660, 668, 813 (phase_I7_backends.md); 119 until D7's fix stage F7 (2026-10-30): +2 = plan_D7_backend_defaults.md:664 and :787, which quote t5_delta_moment_bound.py:66-73 as c52c164 read it, line 66 corrected by F7 (phase_I7_backends.md, Verification)
     assert by_hand == 9, by_hand      # the six of D2.5 + three in this record

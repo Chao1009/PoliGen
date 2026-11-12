@@ -5,10 +5,10 @@ and the FSI unitarity sum of 05 sec. 1.1 (tier T5).  Three sub-rows:
 
   bc_ww                Burkhardt-Cottingham on the tree's `g2_ww`
                        (asserted; PASS)
-  bjorken[toyg1]       Bjorken sum on the shipped `ToyG1`
-                       (asserted; FAIL, recorded)
-  bjorken[nnpdfpol11]  the same on `LhapdfG1("NNPDFpol11_100")`
-                       (BLOCKED: environment, the set is not installed)
+  bjorken[toyg1]       Bjorken sum on `ToyG1` (the shipped g1 until D7,
+                       2026-10-27; an option since) (asserted; FAIL, recorded)
+  bjorken[nnpdfpol11]  the same on `LhapdfG1("NNPDFpol11_100")`, the shipped
+                       g1 since D7 (BLOCKED: environment, when not installed)
   fsi_unitarity        Strikman-Weiss int dGamma S[FSI + FSI^2] = 0
                        (BLOCKED: not definable in the tree as built)
 
@@ -74,8 +74,8 @@ reference's own uncertainty (g_A, alpha_s(M_Z), and the size of the last
 included term) is reported; it is 2.6 / 1.3 / 0.8 % at Q2 = 2 / 5 / 10,
 the truncation term dominating.  In 05's words the sum rule is a
 property of the PDF SET, not of the generator: on `ToyG1` this sub-row
-measures what the shipped default g1 does; on `LhapdfG1` it would check the
-isovector flavour plumbing.
+measures the toy (shipped until D7); on `LhapdfG1` -- the shipped g1 since
+D7 -- what the shipped default does, and the isovector flavour plumbing.
 
     TOLERANCE (declared before computing; see the honesty note below).
     For each Q2, over the x_min scan (toy: 1e-2 ... 1e-6; LHAPDF: 1e-2 ...
@@ -96,21 +96,27 @@ isovector flavour plumbing.
     https://files.pythonhosted.org via https://pypi.org/project/pdg/, wheel
     sha256 681e11f8c9a5accb1cb41ccb87bf7efd398adec8ea39ddb894630b17b45c8e8a;
     data licence CC BY 4.0 per its pdginfo table, package Modified BSD;
-    pdg.lbl.gov itself answers 403 through this machine's proxy):
+    pdg.lbl.gov answered 403 to the 2026-09-26 machine's proxy):
       S017AV  lambda = g_A/g_V = -1.2753 +- 0.0013 (S = 2.7; sign dropped
               here, Gamma_1^{p-n} > 0 is g_A/6 with g_A = |lambda|);
       S044M   M_Z = 91.1879 +- 0.0020 GeV;
       Q005M   m_b(m_b) = 4.186 +- 0.006 GeV;  Q004M  m_c(m_c) = 1.2729 +-
               0.0045 GeV (MS-bar; summary-table values).
-    alpha_s(M_Z) = 0.1180 +- 0.0009 is NOT in that database (it lives in the
-    QCD review): it is the PDG 2024 world average as the author knows it,
-    NOT re-read, and is the least verified input of the row.
+    alpha_s(M_Z) = 0.1180 +- 0.0009, not in that database, VERIFIED 2026-10-26
+    in PDG 2026 itself: Table 1.1 "0.1180(9)" and the QCD review, Eq. (9.25),
+    p. 42 (sources, digests: run_2026-10-26/phase_D_inputs.md sec. 3).
 
-    LhapdfG1 NOTE, for when the set is installed (never run here): LhapdfG1
+    LhapdfG1 NOTE, written 2026-09-26 before the set was installed: LhapdfG1
     is LO g1 (no coefficient functions), so its first moment is a3/6 WITHOUT
     C_Bj; if NNPDFpol1.1 carries a3 ~ g_A it will sit ~ (1/C_Bj - 1), i.e.
     ~ +14 % at Q2 = 5, above Gamma_ref -- a convention of the LO g1, not a
-    flavour bug.  Not verified here.
+    flavour bug.  Not verified then.  MEASURED 2026-10-26 (run 2026-10-26
+    phase 0, the set installed; the rule unchanged): bjorken[nnpdfpol11]
+    FAIL -- 0.2087 / 0.2084 / 0.2083 at Q2 = 2 / 5 / 10, +19.3 / +12.4 /
+    +9.6 % from g_A/6 C_Bj, and not converged (the last decade adds 2.16 /
+    2.20 / 2.25 % of Gamma_ref against <= 1 %); 98.0-98.2 % of g_A/6, i.e.
+    the C_Bj the LO formula does not carry
+    (run_2026-10-26/phase_A_baseline.md sec. 3).
 
 (c) fsi_unitarity -- BLOCKED: "not definable in the tree as built".
 Strikman-Weiss's sum rule (04_theory.md T-29) says the FSI terms integrate
@@ -135,7 +141,7 @@ THE THREE NORMALISATION RULES (BENCHMARK_PLAN.md sec. 8), for THIS row:
      the Bjorken sum is the isovector p - n difference of FREE-nucleon g1.
   3. per nucleon / per nucleus -- bc_ww: g1p, g1n and g2p, g2n are PER
      NUCLEON; the deuteron's `g1_nucleus` is PER NUCLEUS, Z P_p g1p + N P_n
-     g1n with P_p = P_n = 0.9325 = 1 - 1.5 P_D (NOT divided by A = 2; the
+     g1n with P_p = P_n = 0.9136 = 1 - 1.5 P_D (A1; 0.9325 before) (NOT divided by A = 2; the
      inclusive kernel's g1a divides by A).  The closure is linear and
      homogeneous in g1, so the normalisation cancels between its two sides;
      it is stated, and pytest asserts the composition.  bjorken: per nucleon,
@@ -145,7 +151,7 @@ WHAT THIS DOES NOT VALIDATE: the physics of g2 (twist-3 is zero by
 construction; measured g2 -- E155x, RSS, SANE -- would test the WW
 approximation, a structure-function-model question, 05 sec. 1.2); the tensor
 sector (neither sum rule touches b1..b4); any nucleus beyond A = 2; the
-LhapdfG1 flavour plumbing (blocked here); FSI unitarity (not definable).
+LhapdfG1 flavour plumbing (blocked here until 2026-10-26); FSI unitarity (not definable).
 
 HONESTY NOTE.  Before these tolerances were fixed the author had seen: the
 scout's preview "BC on ToyG1 proton at Q2 = 5: int g2^WW = -6.3e-4 against
@@ -170,14 +176,15 @@ FAIL (recorded): int_{x_min}^1 (g1p - g1n) = 0.139 / 0.203 / 0.289 / 0.423 /
 0.643 at x_min = 1e-2 ... 1e-6, Q2 = 5, against Gamma_ref = 0.18538 +- 0.00233
 (alpha_s = 0.2850, nf = 4, C_Bj = 0.8722) -- the last decade alone adds
 0.220 (119 % of the reference); Gamma^p converges to 0.128 (the scout's
-number), Gamma^n does not.  bjorken[nnpdfpol11] BLOCKED (environment);
+number), Gamma^n does not.  bjorken[nnpdfpol11] BLOCKED (environment) on
+that machine (measured 2026-10-26: the LhapdfG1 NOTE above);
 fsi_unitarity BLOCKED (not definable); survival recorded 0.520239.  The row
 as a whole is therefore FAIL, recorded: the status rule is "fail if any
 evaluated sub-row fails, pass if all evaluated pass, blocked if none was
-evaluated", and the failing sub-row is the shipped toy's Bjorken integral,
-not the WW implementation.
+evaluated", and the failing sub-rows are the Bjorken integrals (the toy's,
+and since D7 the shipped NNPDFpol1.1's), not the WW implementation.
 
-Run:  source env.sh && python3 validation/benchmarks/t5_sum_rules.py
+Run:  source env.sh && python3 validation/benchmarks/t5_sum_rules.py [--plot]
 
 Exit status (validation/benchmarks/README.md): 0 when the harness ran and
 printed its REPORT rows -- pass, recorded fail and blocked alike, since the
@@ -568,10 +575,20 @@ def run(verbose=True):
 
     q5 = bj_toy["per_q2"][5.0]
     g_last = q5["rows"][-1]
-    generator = ("bc_ww closure max|resid|/tol = %.3f over %d cells (%s); "
+    # D7 (2026-10-27): the SHIPPED g1 is NNPDFpol1.1, so its Bjorken sub-row
+    # leads the line when it was evaluated; the toy's (the shipped g1 until
+    # then) follows, recorded.  The row's status rule is unchanged.
+    lead = ""
+    if bj_lh["status"] != "blocked":
+        l5 = bj_lh["per_q2"][5.0]
+        lead = ("Bjorken NNPDFpol11 (shipped since D7, LO) Q2=5: int_{1e-5}^1 "
+                "(g1p-g1n) = %.4f (%+.0f %% of the reference, %s); "
+                % (l5["rows"][-1]["gamma_pn"], 100.0 * l5["verdict"]["distance_rel"],
+                   bj_lh["status"].upper()))
+    generator = ("bc_ww closure max|resid|/tol = %.3f over %d cells (%s); %s"
                  "Bjorken ToyG1 Q2=5: int_{1e-6}^1 (g1p-g1n) = %.4f, last decade "
                  "+%.4f (divergent: g1n ~ x^-%.3f)"
-                 % (worst["ratio"], len(cells), bc_row["status"].upper(),
+                 % (worst["ratio"], len(cells), bc_row["status"].upper(), lead,
                     g_last["gamma_pn"], q5["verdict"]["last_decade_step"],
                     1.0 + bc[("n", 5.0)]["toy_lambda"]))
     reference = ("BC: -x_min int g1/u du (exact truncation of int g2^WW); "
@@ -658,11 +675,84 @@ def run(verbose=True):
     return report
 
 
+# ---------------------------------------------------------------------- figure
+
+#: the figure's palette slot and legend name of each Bjorken sub-row, and the
+#: marker of each Q2
+PLOT_SLOTS = {"bjorken[toyg1]": ("alt", "ToyG1 (option; shipped until D7)"),
+              "bjorken[nnpdfpol11]": ("default", "NNPDFpol1.1 (shipped since D7; LO)")}
+PLOT_Q2_MARKERS = {2.0: "o", 5.0: "s", 10.0: "^"}
+
+
+def plot(report, out_dir=None):
+    """The Bjorken running integral int_{x_min}^1 (g1p - g1n) dx over the
+    x_min scan, divided by the reference g_A/6 C_Bj at each Q2 (so the
+    reference is the line at 1, the 10 % tolerance the grey band), for
+    ToyG1 and NNPDFpol1.1 (a blocked sub-row is left out; its reason is in
+    the row).  The BC / g2^WW closure is a one-line note in the title.  A
+    view of the row: every number drawn is in the report."""
+    import os
+    here = os.path.dirname(os.path.abspath(__file__))
+    if here not in sys.path:
+        sys.path.insert(0, here)
+    from matplotlib.lines import Line2D
+    from matplotlib.ticker import FormatStrFormatter, NullFormatter
+    from _plots import (INK, INK_SECONDARY, band, new_figure, save, status_title,
+                        style_series)
+    subs = report["subrows"]
+    fig, ax = new_figure()
+    x_all = sorted(set(X_MIN_SCAN) | set(X_MIN_SCAN_LHAPDF))
+    band(ax, [x_all[0] / 2, x_all[-1] * 2], [1 - BJ_TOL_REL] * 2,
+         [1 + BJ_TOL_REL] * 2)
+    ax.axhline(1.0, color=INK, linewidth=1.0, zorder=2)
+    handles = [Line2D([], [], color=INK, linewidth=1.0),
+               ax.collections[0]]
+    labels = ["g_A/6 C_Bj(alpha_s), leading twist",
+              "tolerance: within %g %% (and converged)" % (100 * BJ_TOL_REL)]
+    for key, (slot, label) in PLOT_SLOTS.items():
+        sr = subs[key]
+        if sr["status"] == "blocked":
+            continue
+        for q2, v in sr["per_q2"].items():
+            g = v["reference"]["gamma"]
+            ax.plot([r["x_min"] for r in v["rows"]],
+                    [r["gamma_pn"] / g for r in v["rows"]],
+                    **style_series(slot, label="_nolegend_",
+                                   marker=PLOT_Q2_MARKERS.get(q2, "D")))
+            ax.lines[-1].set_linestyle("-")
+            ax.lines[-1].set_linewidth(1.2)
+        handles.append(Line2D([], [], **style_series(slot, label=None)))
+        labels.append("%s: %s" % (label, sr["status"].upper()))
+    for q2, mk in PLOT_Q2_MARKERS.items():
+        handles.append(Line2D([], [], color=INK_SECONDARY, marker=mk,
+                              linestyle="none"))
+        labels.append("Q2 = %g GeV^2" % q2)
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.set_yticks([0.8, 1.0, 1.25, 1.5, 2.0, 3.0, 4.0])
+    ax.yaxis.set_major_formatter(FormatStrFormatter("%g"))
+    ax.yaxis.set_minor_formatter(NullFormatter())
+    ax.set_xlim(x_all[0] / 2, x_all[-1] * 2)
+    ax.set_xlabel("x_min of the running integral int_{x_min}^1 (g1p - g1n) dx")
+    ax.set_ylabel("running integral / (g_A/6) C_Bj")
+    ax.legend(handles, labels, loc="upper right", fontsize=7)
+    bc = subs["bc_ww"]
+    status_title(fig, NAME, report["status"],
+                 "Bjorken, each Q2: converged (last decade <= %g %%) and within %g %%; "
+                 "BC/g2^WW closure %s %d/%d"
+                 % (100 * BJ_CONV_REL, 100 * BJ_TOL_REL, bc["status"].upper(),
+                    bc["n_within"], bc["n_cells"]))
+    return save(fig, NAME, out_dir)
+
+
 if __name__ == "__main__":
     # Exit convention (module docstring, validation/benchmarks/README.md):
     # 0 = ran and printed its REPORT row, whatever the verdict; 2 = broken.
+    # `--plot` also writes the row's figure (plot()); the same rule holds.
     try:
-        run()
+        rep = run()
+        if "--plot" in sys.argv[1:]:
+            print("figure: %s" % plot(rep))
     except Exception:  # any exception means the harness itself is broken
         traceback.print_exc()
         sys.exit(2)

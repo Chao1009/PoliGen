@@ -9,19 +9,24 @@ points, 0.0045 <= x <= 0.5, 0.75 <= Q2 <= 65 GeV2 -- vendored VERBATIM from
 the nnpdf-data 4.1.5 wheel (set NMC_NC_NOTFIXED_D, observable EM-F2-HEPDATA)
 by `vendor_nnpdf_commondata.py` into `data/nnpdf_NMC_NC_NOTFIXED_D.json`,
 whose `_provenance` block carries the wheel URL and sha256, the path inside
-the wheel, the HEPData / INSPIRE record and the licences.  Against it: the
+the wheel, the HEPData / INSPIRE record and the licences.  [READ 2026-10-26
+(the arXiv copy, refs/hep-ph_9610231.pdf of the sibling corpus): the 158
+points are the paper's Table 6 (arXiv PDF pp. 35-36), F2d averaged over the
+four beam energies and both triggers with the normalisation shifts of its
+Table 2 applied, 158 of 158 equal to the file in x, Q2, F2d, stat and
+syst.]  Against it: the
 tree's per-nucleon F2 of the deuteron, (F2p + F2n)/2, at each point's OWN
 (x, Q2), for three unpolarized backends (the `--unpol-sf` choices):
 
-  toy      ToyF2() -- the SHIPPED default, i.e. exactly what the generator's
-           `default_inclusive_kernel(deuteron()).tables(x, Q2).f2` returns.
-           THE REPORT ROW'S VERDICT IS THIS CONFIGURATION'S.
+  toy      ToyF2() -- the SHIPPED default until D7 (2026-10-27): exactly what
+           `default_inclusive_kernel(deuteron()).tables(x, Q2).f2` returns (the
+           class-level toy).  Since D7 an OPTION, kept as a RECORDED sub-row.
   mstw     MstwSF() -- MSTW2008 LO read from PYTHIA 8's own pdfdata
            (`--unpol-sf mstw`).  Sub-row.  BLOCKED (environment) only if
            the PYTHIA 8 tier or its pdfdata grid is absent.
-  ct18nlo  LhapdfSF("CT18NLO") (`--unpol-sf ct18nlo`).  Sub-row; BLOCKED
-           (environment) when LHAPDF reports the set not installed --
-           reported with that reason, never dropped, never faked.
+  ct18nlo  LhapdfSF("CT18NLO") at LO -- the SHIPPED default since D7 (`--unpol-sf
+           ct18nlo`): THE REPORT ROW'S VERDICT IS THIS CONFIGURATION'S since
+           then; its set missing, the ROW is blocked (environment), exit 2.
 
 ZERO free parameters, NO tuning: nothing in the tree is adjusted to this.
 
@@ -43,19 +48,51 @@ the one 'sys' component is labelled MULT, CORR, so C makes it 100 %
 correlated over all 158 points -- NNPDF's label, not a statement NMC makes
 in the vendored file, which is why it is not the verdict.  Uncertainties are
 the ABSOLUTE values given (a MULT component already multiplied by the data
-central value; no t0 rescaling).  Whether NMC's overall normalisation
-uncertainty is inside 'sys' is not stated (UNVERIFIED).
+central value; no t0 rescaling).  The paper states its systematics' sources
+and their correlations per energy (the deuteron's Table 4 caption, arXiv PDF
+p. 29), not for the averaged column.
+  Whether NMC's overall normalisation uncertainty is inside 'sys'
+(2026-09-26: UNVERIFIED) -- RESOLVED 2026-10-26: it is NOT, and it is
+nowhere in the file.  The paper: "The total systematic uncertainties on F2,
+obtained by adding in quadrature all the above contributions apart from the
+normalisation uncertainty, range from 1% to 5%", the per-energy 2 % being
+"included in the 2.5% total normalisation uncertainty of the combined data"
+(Sect. 4.1, arXiv PDF p. 8; Figs. 5-6 captions, PDF pp. 18-19: "apart from
+the 2.5% normalisation uncertainty"); the file's 'sys' is Table 6's syst
+column, and the file defines only 'stat' (UNCORR, ADD) and 'sys' (CORR,
+MULT).  Neither chi2 here carries the 2.5 %: it is stated, not added (a new
+error model after the numbers were seen would be a re-tuned tolerance).
+For scale only: a common 2.5 % shift cannot absorb ct18nlo's mean excess of
+8.6 % (3.4 normalisation sigmas with every other residual zero) nor the
+toy's 6.0 %; for mstw (mean 1.025) it is one sigma -- what it would do to
+mstw's chi2, which its worst pull of +5.0 says is not a scale alone, is not
+computed here.
 
 TOLERANCE.  p(chi2, ndf) >= 0.01 on the DIS-cut set, diagonal errors,
 ndf = number of points (nothing is fitted).  The row's STATUS is the shipped
-default's (toy); mstw and ct18nlo are sub-rows with their own status.  The
+default's (ct18nlo since D7, the toy before); the others are sub-rows.  The
 threshold follows row 4 (`t3_nmc_li6_over_d.py`) and was chosen AFTER the
 plan scout's previews had been seen (scout, 2026-09-26: ToyF2 chi2 = 8308
 and MSTW 417 over 155 points, diagonal, Q2 >= 1); it is stated here so that
 it can be argued with, not tuned.  ToyF2 is labelled a TOY in sf.hpp
 ("anchored by eye ... factor-1.5 rate estimates ONLY"): its failure is a
 RECORDED FAIL with its distance, not a defect of this harness, and moves
-nothing.
+nothing.  PREVIEWED 2026-10-26 (phase 0, the first run with the LHAPDF sets
+installed), before this header was revised: the ct18nlo sub-row FAILS,
+3401.8/146 on its own floor Q2 >= 1.677, mean model/data 1.086
+(phase_0_environment.md); the tolerance above is the 2026-09-26 one,
+unchanged, and LhapdfSF's leading-order F2 of an NLO set is phase 0's
+reading of the excess, not tested here.  RECORDED 2026-10-26 (phase F of
+run 2026-10-26, outside the verdict; no number or tolerance moves):
+LhapdfSF builds F2 with five MASSLESS flavours, charm at e^2 = 4/9 and
+bottom included, no threshold (src/lhapdf/lhapdf_sf.cpp, kF2ProtonE2).
+On the 146 points c + b are 3.56 % of the model F2d on average (7.0 % at
+x < 0.02, 7.6 % at 0.02-0.05, 12.7 % at most); without them the mean
+model/data falls from 1.0862 to 1.0459 and the excess is x-dependent
+(1.064 / 1.084 / 1.084 / 1.072 in x < 0.02 / 0.02-0.05 / 0.05-0.1 /
+0.1-0.2, 0.977 above).  About half of the excess (0.040 of 0.086) is the
+tree's heavy-flavour treatment; the rest is unexplained, the NLO
+coefficient functions being one candidate.
 
 THE THREE NORMALISATION RULES (BENCHMARK_PLAN.md sec. 8), for THIS row:
   1. b1 normalisations / A-scaling -- NOT APPLICABLE: no b1 on either side;
@@ -73,21 +110,31 @@ THE THREE NORMALISATION RULES (BENCHMARK_PLAN.md sec. 8), for THIS row:
      functions (NMC's values are the size of ONE nucleon's F2, 0.25-0.44 at
      small x, which excludes a per-deuteron reading).  NOT like for like in
      one respect, stated rather than corrected: NMC's F2d is the DEUTERON's
-     (Fermi motion, binding, shadowing included; not corrected -- UNVERIFIED
-     offline), the tree's is the free isoscalar nucleon; the tree has no
-     deuteron-structure correction for F2.
+     (Fermi motion, binding, shadowing included; not corrected -- READ
+     2026-10-26: the analysis, Sects. 3-4 (arXiv PDF pp. 6-8), applies no
+     nuclear correction to F2d, only the higher-order electroweak one, whose
+     deuteron quasi-elastic suppression concerns the radiative tail; the
+     companion NPB 487 (1997) 3 treats the deuteron's nuclear effects as
+     uncorrected, its Sect. 6), the tree's is the free isoscalar nucleon;
+     the tree has no deuteron-structure correction for F2.
 
 WHAT THIS DOES NOT VALIDATE.  R = sigma_L/sigma_T (NMC's R points are not in
-the package, and the R NMC extracted F2 with is not stated in the file),
-F2 of the proton or neutron separately (only their sum enters), anything
-nuclear beyond A = 2, and the polarized or tensor sector.
+the package -- phase C1's `t1_r_world.py` compares them; the R NMC
+extracted this F2 with (2026-09-26: not stated in the file) -- READ
+2026-10-26: NMC's OWN measured R, one Q2-averaged value per x bin, for
+x < 0.12 (Table 7, arXiv PDF p. 14: 0.537 at x = 0.0045 ... 0.043 at
+x = 0.11), and R1990 for x > 0.12 (Sect. 4, PDF p. 7; Table 6's R column
+equals its R1990 column at every x > 0.12 row); the tree's F2 is
+R-independent, so this row inherits NMC's R only through the data), F2 of
+the proton or neutron separately (only their sum enters), anything nuclear
+beyond A = 2, and the polarized or tensor sector.
 
 INTEGRITY.  The sha256 of every byte of the vendored file (`FILE_SHA256`)
 and of its canonical body (`BODY_SHA256`, also recorded inside the file)
 are re-checked on EVERY read: an altered table is refused with a
 RuntimeError, so `__main__` exits 2, never 0 on moved numbers.
 
-Run:  source env.sh && python3 validation/benchmarks/t1_nmc_f2d.py
+Run:  source env.sh && python3 validation/benchmarks/t1_nmc_f2d.py [--plot]
 
 Exit status (validation/benchmarks/README.md): 0 when the harness ran and
 printed its REPORT row -- pass, recorded fail and blocked alike, since the
@@ -117,7 +164,7 @@ Q2_CUT = 1.0             # GeV^2 -- the declared DIS cut ...
 W2_CUT = 4.0             # GeV^2 -- ... and its W^2 half
 M_NUCLEON = 0.938272     # GeV, for W^2 only
 CONFIGS = ("toy", "mstw", "ct18nlo")
-HEADLINE = "toy"         # the shipped default carries the row's verdict
+HEADLINE = "ct18nlo"     # the shipped default carries the row's verdict (D7; "toy" until 2026-10-27); _headline() checks it
 CT18 = "CT18NLO"
 REFERENCE = ("NMC F2d per nucleon, NPB 483 (1997) 3, HEPData ins424154 "
              "tables 17-32 via nnpdf-data 4.1.5 (NMC_NC_NOTFIXED_D)")
@@ -294,7 +341,7 @@ def build_backend(name):
     import lipolgen as lg
     import lipolgen._lipolgen as _l
     if name == "toy":
-        return (lg.ToyF2(), None, "ToyF2 (shipped default)",
+        return (lg.ToyF2(), None, "ToyF2 (an option since D7; shipped until then)",
                 lg.default_inclusive_kernel(lg.deuteron()), None)
     if name == "mstw":
         if not getattr(_l, "HAVE_PYTHIA8", False):
@@ -316,11 +363,11 @@ def build_backend(name):
         try:
             sf = lg.LhapdfSF(CT18)
         except RuntimeError as exc:
-            if "Info file not found for PDF set" not in str(exc):
+            if "Info file not found for PDF set" not in str(exc) and "lhapdf.conf was not found" not in str(exc):  # 2026-11-03
                 raise
             return (None, None, "LhapdfSF(%s)" % CT18, None,
-                    "environment: LHAPDF set %s not installed" % CT18)
-        return sf, float(sf.q2_min), "LhapdfSF(%s)" % CT18, _kernel_on(sf), None
+                    ("environment: LHAPDF set %s not installed" if "Info file not found" in str(exc) else "environment: LHAPDF set %s present, lhapdf.conf was not found") % CT18)
+        return sf, float(sf.q2_min), "LhapdfSF(%s) (shipped since D7, LO)" % CT18, _kernel_on(sf), None
     raise ValueError("unknown configuration %r" % name)
 
 
@@ -379,7 +426,7 @@ def _line(c):
 def run(path=None, verbose=True):
     t0 = time.perf_counter()
     pts, configs = measure(path)
-    h = configs[HEADLINE]
+    h = _headline(configs)   # F7: the shipped default, checked; a missing set raises LHAPDF's words
     others = "; ".join(
         "%s %s" % (n, "BLOCKED (%s)" % configs[n]["reason"]
                    if configs[n]["status"] == "blocked" else
@@ -389,10 +436,10 @@ def run(path=None, verbose=True):
         for n in CONFIGS if n != HEADLINE)
     report = dict(
         name=NAME,
-        generator="toy (shipped ToyF2): chi2/ndf = %.1f/%d, p = %s on Q2 >= 1, "
-                  "W2 >= 4 [diagonal]; sub-rows: %s"
-                  % (h["dis"]["chi2"], h["dis"]["n"], _fmt_p(h["dis"]["p"]),
-                     others),
+        generator="%s = %s: chi2/ndf = %.1f/%d, p = %s on Q2 >= %.4g, "
+                  "W2 >= 4 [diagonal]; sub-rows: %s"  # the cut from q2_floor, 2026-11-03
+                  % (HEADLINE, h["label"], h["dis"]["chi2"], h["dis"]["n"],
+                     _fmt_p(h["dis"]["p"]), h["q2_floor"], others),
         reference="%s, %d of %d points in the DIS cut"
                   % (REFERENCE, h["dis"]["n"], len(pts)),
         tolerance="p(chi2, ndf) >= %.2f on the DIS cut, stat (+) sys diagonal"
@@ -434,11 +481,110 @@ def run(path=None, verbose=True):
     return report
 
 
+# ------------------------------------------------------------------ figure
+
+#: the figure's palette slot and legend name of each configuration
+PLOT_SLOTS = {"toy": ("alt", "ToyF2 (option; shipped until D7)"),
+              "mstw": ("mstw", "MSTW2008 LO"),
+              "ct18nlo": ("default", "CT18NLO (shipped since D7; LO formula)")}
+
+
+def plot(report, out_dir=None):
+    """F2d per nucleon vs x: the DIS-cut points (ink; the points outside the
+    cut hollow and grey), each evaluated backend's value at the point's own
+    (x, Q2) as a tick in its slot colour, over the verdict chi2's pulls
+    (theory - data)/sigma.  A view of the row: every number drawn is in the
+    report; a blocked configuration is left out (its reason is in the row)."""
+    if HERE not in sys.path:
+        sys.path.insert(0, HERE)
+    from _plots import MUTED, new_figure, save, status_title, style_series
+    pts, configs = report["points"], report["configs"]
+    fig, (ax, axp) = new_figure(two_panel=True)
+    cut = [p for p in pts if dis_cut(p)]
+    out = [p for p in pts if not dis_cut(p)]
+    ax.errorbar([p["x"] for p in cut], [p["value"] for p in cut],
+                yerr=[p["err"] for p in cut], **style_series(
+                    "reference", label="NMC F2d per nucleon (stat (+) sys)"))
+    if out:
+        kw = style_series("reference", label="outside the DIS cut (not compared)")
+        kw.update(color=MUTED, markerfacecolor="none", zorder=4)
+        ax.errorbar([p["x"] for p in out], [p["value"] for p in out],
+                    yerr=[p["err"] for p in out], **kw)
+    for k, n in enumerate(CONFIGS):
+        c = configs[n]
+        if c["status"] == "blocked":
+            continue
+        slot, label = PLOT_SLOTS[n]
+        sel = [j for j, p in enumerate(pts) if dis_cut(p, c["q2_floor"])]
+        kw = style_series(slot, label="%s: %.1f/%d" % (label, c["dis"]["chi2"],
+                                                      c["dis"]["n"]))
+        kw.update(marker="_", linestyle="none", markersize=8, markeredgewidth=1.6)
+        ax.plot([pts[j]["x"] for j in sel], [c["theory"][j] for j in sel], **kw)
+        dodge = 10 ** (0.025 * (k - 1))       # side by side in the pull panel
+        pk = style_series(slot, marker="o")
+        pk.update(markersize=2.5, label="_nolegend_")
+        axp.plot([pts[j]["x"] * dodge for j in sel],
+                 [(c["theory"][j] - pts[j]["value"]) / pts[j]["err"] for j in sel],
+                 **pk)
+    q2s = [p["q2"] for p in cut]
+    ax.set_xscale("log")
+    ax.set_ylabel("F2 per nucleon (deuteron)")
+    ax.legend(loc="lower left", ncol=1, fontsize=7)
+    axp.set_xlabel("x (each point at its own Q2, %g <= Q2 <= %g GeV^2)"
+                   % (min(q2s), max(q2s)))
+    axp.set_ylabel("(th - data)/sigma")
+    h = configs[HEADLINE]
+    status_title(fig, NAME, report["status"],
+                 "%s: %.1f/%d (p = %.2g); tolerance p >= %g on Q2 >= %g, "
+                 "W2 >= %g GeV^2, stat (+) sys diagonal" % (PLOT_SLOTS[HEADLINE][1],
+                    h["dis"]["chi2"], h["dis"]["n"], h["dis"]["p"], P_MIN, Q2_CUT,
+                    W2_CUT))
+    return save(fig, NAME, out_dir)
+
+
+def _headline(configs):
+    """The verdict configuration's entry, for run() (F7, 2026-10-30).
+
+    HEADLINE is a literal, so it is checked here against the library's own
+    shipped default (`lipolgen.UNPOL_SF_DEFAULT`): were the default to move
+    again, the row stops by name until HEADLINE, its labels and the docstring
+    are re-pointed by hand -- the declared rule puts the verdict on the
+    shipped default, and a silent derivation would leave them naming the old
+    one.  Since D7 that configuration needs the LHAPDF tier and CT18NLO.
+    Where LHAPDF reports the set missing, the ROW cannot be evaluated: run()
+    raises in LHAPDF's own words, which make_report records as `blocked
+    (environment)`, exit 2 (README convention 6, the rule of rows 4 and 13);
+    until F7 it crashed on a KeyError there.  Without the tier it raises
+    naming the tier."""
+    import lipolgen as lg
+    shipped = lg.unpol_sf_name(lg.UNPOL_SF_DEFAULT)
+    if HEADLINE != shipped:
+        raise RuntimeError("HEADLINE = %r is not the shipped --unpol-sf default "
+                           "%r: the declared rule puts this row's verdict on the "
+                           "shipped default -- re-point HEADLINE, the labels and "
+                           "the docstring by hand" % (HEADLINE, shipped))
+    h = configs[HEADLINE]
+    if h["status"] != "blocked":
+        return h
+    if h["reason"] == "environment: LHAPDF set %s not installed" % CT18:
+        raise RuntimeError("Info file not found for PDF set '%s' -- the verdict "
+                           "configuration of %s, the shipped --unpol-sf default "
+                           "since D7 (2026-10-27), needs it: the row is blocked "
+                           "(environment)" % (CT18, NAME))
+    raise RuntimeError("%s -- the verdict configuration of %s, the shipped "
+                       "--unpol-sf default since D7 (2026-10-27), needs it"
+                       % (h["reason"], NAME))
+
+
 def main(argv=None):
     # Exit convention (module docstring, validation/benchmarks/README.md):
     # 0 = ran and printed its REPORT row, whatever the verdict; 2 = broken.
+    # `--plot` also writes the row's figure (plot()); the same rule holds.
+    argv = sys.argv[1:] if argv is None else argv
     try:
-        run()
+        rep = run()
+        if "--plot" in argv:
+            print("figure: %s" % plot(rep))
     except Exception:  # any exception means the harness itself is broken
         traceback.print_exc()
         return 2

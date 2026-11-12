@@ -47,8 +47,8 @@ REPORT_STATUSES = HARNESS_STATUSES + (ENV_BLOCKED, ERROR, SKIPPED_OPT_IN)
 
 #: LHAPDF's message when a set is not installed; an exception carrying it is
 #: an environment fact, not a broken harness
-LHAPDF_MISSING = "Info file not found for PDF set"
-_LHAPDF_SET = re.compile(r"Info file not found for PDF set '?([^'\s]+)'?")
+LHAPDF_MISSING = "Info file not found for PDF set"; LHAPDF_CONF_MISSING = "lhapdf.conf was not found"; LHAPDF_NOT_AS_VENDORED = "is installed but not usable as vendored"  # the pre-flight's sentence, 2026-11-03; J7 (2026-11-10): a harness's sentence for a set present with its member file absent or not the vendored sha256 -- blocked (environment), the sentence itself the reason
+_LHAPDF_SET = re.compile(r"(?:Info file not found for PDF set|LHAPDF cannot open the set|LHAPDF set) '?([^'\s]+)'?")
 
 #: significant digits kept for numbers written into REPORT.json
 SIG_DIGITS = 10
@@ -192,7 +192,7 @@ def emit(row, stream=None):
 
 def lhapdf_missing_set(message):
     """The LHAPDF set a message says is not installed, else None."""
-    if LHAPDF_MISSING not in str(message):
+    if LHAPDF_MISSING not in str(message) and LHAPDF_CONF_MISSING not in str(message):
         return None
     m = _LHAPDF_SET.search(str(message))
     return m.group(1) if m else "(name not in the message)"
@@ -206,11 +206,13 @@ def first_line(exc):
 def classify_exception(exc):
     """(status, reason) for an exception raised by importing or running a
     harness.  A missing LHAPDF set is `blocked (environment)` with the
-    harness convention's reason text; anything else is `error` with the
+    harness convention's reason text (J7: one present but not as vendored too, with the harness's sentence); anything else is `error` with the
     exception's type and FIRST line."""
+    if LHAPDF_NOT_AS_VENDORED in str(exc) and str(exc).startswith("environment: LHAPDF set "):  # J7 (2026-11-10)
+        return ENV_BLOCKED, first_line(exc)
     missing = lhapdf_missing_set(exc)
     if missing is not None:
-        return ENV_BLOCKED, "environment: LHAPDF set %s not installed" % missing
+        return ENV_BLOCKED, ("environment: LHAPDF set %s not installed" if LHAPDF_MISSING in str(exc) else "environment: LHAPDF set %s present, lhapdf.conf was not found") % missing
     fl = first_line(exc)
     return ERROR, ("%s: %s" % (type(exc).__name__, fl) if fl
                    else type(exc).__name__)
@@ -348,3 +350,41 @@ def normalise_row(raw, name):
         subrows=extract_subrows(raw),
         notes=notes,
     )
+
+
+# ------------------------------------------------ PYTHIA 8's Python module
+
+def import_pythia8():
+    """Import PYTHIA 8's own Python module (`pythia8`) from a working
+    directory that has no entry named `python`, and hand it back.
+
+    WHY (measured 2026-10-26, PYTHIA 8.317 built from source with
+    `--with-python-config`): the module's initialiser calls
+    `Pythia8::loadExtraPython` (plugins/python/src/PythiaPython.cpp), which
+    opens the directory literally named "python" RELATIVE TO THE CURRENT
+    WORKING DIRECTORY and `pybind11::exec`s every file it finds there as
+    Python source.  From a LiPolGen checkout that directory is `python/`
+    (bindings.cpp, README.md, the package), so `import pythia8` from the
+    repository root dies in `python/bindings.cpp` with a SyntaxError
+    surfacing as `ImportError: initialization failed` -- and that is where
+    `make_report.py` runs every harness and where pytest runs.  From any
+    other directory the same module imports.  The 2026-09-26 run's
+    conda-forge 8.312 did not show this, so the T4 row and T6's charge
+    clause (C14) read BLOCKED (environment) on this machine until this
+    helper existed.  A PYTHIA bug (the path should be anchored on the
+    module, not the cwd), worked around here and nowhere else: the chdir is
+    a one-time window around the import, restored on every exit path, and a
+    second call returns the already-imported module without any chdir."""
+    import importlib
+    import os
+    import sys
+    import tempfile
+    if "pythia8" in sys.modules:
+        return sys.modules["pythia8"]
+    cwd = os.getcwd()
+    with tempfile.TemporaryDirectory(prefix="lipolgen-pythia8-import-") as d:
+        os.chdir(d)
+        try:
+            return importlib.import_module("pythia8")
+        finally:
+            os.chdir(cwd)

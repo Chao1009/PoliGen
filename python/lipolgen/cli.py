@@ -44,23 +44,23 @@ from . import (B1_MODELS, B1_UNPOL, CHANNELS, CLUSTER_WAVES, FSI, OPTICS,
 #: drifted apart: this module's `--x-max` help and its `--b1-model` refusal,
 #: `python/tests/test_b1_model.py` and `docs/USAGE.md` sec. 2a said 6.6 / 5.6,
 #: 3.3 / 5.6, 3.3 / 5.6 and 6.6 / 5.6 respectively, and none of the four was
-#: what the code computes.  MEASURED 2026-09-16 off the shipped kernel at the
-#: default window's top cell (x = 0.954993, Q2 = 167.34413006, 6Li):
-#:
-#:     python -c "import lipolgen as lg, numpy as np; _l = lg._lipolgen; \
-#:       p = _l.Pipeline(lg.make_config(events=100), \
-#:                       lg.tensor_thirds_plan(0.7, 0.6)); \
-#:       x = np.asarray(p.dis_sampler.x_cells).max(); \
-#:       [print(_l.b1_model_name(m), _l.default_inclusive_kernel( \
-#:            _l.ion_by_name('6Li'), m).tables(x, 167.34413006) \
-#:            .as_dict()) for m in _l.B1Model.__members__.values()]"
+#: what the code computes.  MEASURED off the SHIPPED kernel at the default
+#: window's top cell (x = 0.954993, Q2 = 167.34413006, 6Li) -- re-taken
+#: 2026-10-29 for D7 on CT18NLO / NNPDFpol1.1 (li6-convolution on
+#: `--b1-unpol ct18nlo`, the default's own object), whose F1 there is x0.134
+#: of ToyF2's: 51.87 / 42.85 / 1.156 since A1 (48.67 / 42.85 / 1.085 before).  On the toy (2026-09-16, the shipped
+#: kernel until D7): 6.52 / 5.91 / 0.145 -- `default_inclusive_kernel(ion, m)`
+#: with one argument still returns those.  The D7 recipe, with U, P =
+#: `_l.make_lhapdf_unpol_sf(_l.UNPOL_SF_DEFAULT)`, `..._pol_sf(POL_SF_DEFAULT)`:
+#:     _l.default_inclusive_kernel(ion, m, unpol_sf=U, pol_sf=P, b1_unpol=
+#:         U if li6-convolution else None).tables(x, 167.34413006)
 #:
 #: The 3.3 was the PRE-2026-09-03 half of the cdks figure and the 6.6 was
 #: twice the rounded 3.3 -- rounded arithmetic, not a measurement.
 B1_TOP_CELL_X = 0.954993
 B1_TOP_CELL_Q2 = 167.34413006
-B1_TOP_CELL_B1_OVER_F1 = {"cdks": 6.52, "li6-convolution": 5.91,
-                          "miller": 0.145}
+B1_TOP_CELL_B1_OVER_F1 = {"cdks": 51.87, "li6-convolution": 42.85,   # D7; A1 (2026-11-03): cdks 48.67 -> 51.87,
+                          "miller": 1.156}   # miller 1.085 -> 1.156 (the 6Li transfer x1.06576)
 
 #: The sentence those numbers are quoted in, written ONCE.
 B1_TOP_CELL_NOTE = (
@@ -217,21 +217,21 @@ def build_parser():
     p.add_argument("--rel-lumi-offset", type=float, default=None,
                    help="relative-luminosity offset on the plan's own category")
     p.add_argument("--cluster-beta", type=float, default=None,
-                   help="short-range scale of the cluster radial waves")
+                   help="short-range scale of the ANALYTIC cluster waves: read at --cluster-wave hulthen, and on the default vmc by the 7Li T1 triton breakup alone")
     p.add_argument("--p-d", type=float, default=None,
-                   help="D-state probability (6Li alpha tag)")
+                   help="alpha-d D-state probability of the 6Li alpha tag's ANALYTIC pair: read at --cluster-wave hulthen only (the vmc default carries its own)")
     p.add_argument("--cluster-wave", choices=sorted(CLUSTER_WAVES),
                    default=None,
-                   help="cluster radial forms: 'hulthen' (default, "
-                        "bit-compatible) or 'vmc' (ANL VMC tables; ignores "
-                        "--cluster-beta and --p-d on the lithium alpha tags).  "
-                        "TAGGED CHANNELS ONLY -- refused on --channel "
-                        "inclusive / coherent, where it is never read (their "
-                        "6Li constants do not follow it, 11.61 %% away).  On "
-                        "tagged-alpha it also selects the EMBEDDED deuteron "
-                        "(AV18 fdeut, P_D = 0.0576), which is -2.03 %% on the "
-                        "polarised observables against what that path gave "
-                        "before 2026-09-04.  SIGN NOTE (2026-09-06): the "
+                   help="cluster radial forms: '"
+                        + _l.cluster_wave_name(_l.CLUSTER_WAVE_DEFAULT) +
+                        "' is the run default since D6, 2026-10-27 (the ANL "
+                        "VMC AV18 tables: --p-d and --cluster-beta are unread, "
+                        "bar the 7Li T1 triton); 'hulthen', the analytic "
+                        "pair, the option.  TAGGED CHANNELS ONLY: on --channel "
+                        "inclusive / coherent 'hulthen' is refused and 'vmc' accepted, "
+                        "labelled not-read (A17; their 6Li constants follow neither).  On "
+                        "tagged-alpha vmc also selects the EMBEDDED deuteron "
+                        "(AV18 fdeut, P_D = 0.0576).  SIGN NOTE (2026-09-06): the "
                         "tagged S-D interference sign was inverted before that "
                         "date -- build_amp2 summed psi_L where the amplitude "
                         "needs phi_L = i^L psi_L -- so any A_zz^tag quoted "
@@ -289,11 +289,11 @@ def build_parser():
                         "Python, before a Pipeline exists), and an "
                         "explicit (P_z, T) J = 3/2 fill still needs the API "
                         "(USAGE sec. 7b).  At the DEFAULT --rc-tail-model "
-                        "t-peak, rc_tail is the t-PEAK ONLY: a LOWER BOUND "
-                        "on the dilution -- t-peak+ll and polrad-full change "
-                        "exactly that, and the banner says which one ran.  "
-                        "For 6Li at "
-                        "Q^2 >= 20 GeV^2, y <= 0.9 it carries the whole tail "
+                        "polrad-full (since D5, 2026-10-27) rc_tail is POLRAD "
+                        "Eq. (18)'s exact tail, all three peaks; --rc-tail-model "
+                        "t-peak (the default until then) is the t-PEAK ONLY, "
+                        "a LOWER BOUND; the banner says which one ran.  For 6Li at "
+                        "Q^2 >= 20 GeV^2, y <= 0.9 the t-peak carries the t-peak+ll tail "
                         "to +0.61 %% of the EVENT-WEIGHTED mean at --pz 0 "
                         "(+0.62 %% at this CLI's default P_z = 0.7), but PER "
                         "CELL 24.4 %% of that window is off by > 1 %% and the "
@@ -351,14 +351,14 @@ def build_parser():
                         "VMC point-proton density at the SAME measured "
                         "<r^2>_point.  A SHAPE, not a multiplier: RUN BOTH "
                         "EDGES.  The tensor fraction of the elastic tail at "
-                        "x = 0.1 is +1.6e-4 on one edge and -4.1e-5 on the "
-                        "other, i.e. its sign is a band edge and not a result")
+                        "x = 0.1, Q^2 = 5 is +4.5e-5 / -1.6e-4 on the two edges (default tail; "
+                        "+1.6e-4 / -4.1e-5 on t-peak): its sign is a band edge, not a result")
     p.add_argument("--rc-tail-model",
                    choices=("t-peak", "t-peak+ll", "polrad-full"),
                    default=None,
                    help="which radiative-tail formulation rc_tail carries: "
-                        "\"t-peak\" (default, bit for bit every published "
-                        "number -- POLRAD Eqs. (37)-(39), (43), the t-peak "
+                        "\"polrad-full\" (the DEFAULT since D5, 2026-10-27; below), "
+                        "\"t-peak\" (the default until then -- POLRAD Eqs. (37)-(39), (43), the t-peak "
                         "ALONE and therefore a LOWER BOUND) or "
                         "\"t-peak+ll\", which adds the leading-log s- and "
                         "p-peaks to the UNPOLARISED tail.  A STATED MODEL of "
@@ -375,14 +375,14 @@ def build_parser():
                         "high x and y ~ 0.009 where the soft 1/(1-z) radiator "
                         "D(z_s) reaches 11.5 and the model itself breaks "
                         "down.  A factor ~4 at fixed-target kinematics.  RUN "
-                        "BOTH.  \"polrad-full\" (2026-09-06) is POLRAD "
+                        "BOTH.  \"polrad-full\" (2026-09-06; the default since D5) is POLRAD "
                         "Eq. (18) + Appendix B + Eq. (A.4): ONE exact tau_A "
                         "quadrature carrying all THREE peaks WITH the "
                         "s-/p-peaks' own Eq. (A.4) tensor content, so it "
                         "needs no s/p tensor stand-in and --rc-sp-tensor-"
-                        "scale is refused on it.  ITS ABSOLUTE NORMALISATION "
-                        "IS STILL NOT CHECKED AGAINST MO-TSAI OR ANY "
-                        "EXTERNAL EXACT TAIL -- only POLRAD-internally (the "
+                        "scale is refused on it.  Its PROTON (quasi-elastic) "
+                        "slot is checked against DJANGOH 4.6.21's exact tail "
+                        "(BENCHMARK_PLAN row 7); the coherent slot only POLRAD-internally (the "
                         "x_A -> 0 reduction to Eq. (38), unpolarised AND "
                         "tensor) and against the leading-log fallback.  It "
                         "does NOT sit inside the t-peak band: measured over "
@@ -405,22 +405,22 @@ def build_parser():
                         "that ceiling mislabelled; that cell is x3449.9 "
                         "unclipped).  Mean rc_tail on 6Li config 1, each "
                         "with its estimator AND its P_z: EVENT-weighted over "
-                        "200 000 events at seed 1234 AT THE DEFAULT FILL "
+                        "200 000 events at seed 1234 (toy SFs) AT THE DEFAULT FILL "
                         "P_z = 0.7, 1.021778527 (t-peak) -> "
                         "1.040274188 (t-peak+ll) -> 1.029702912 "
-                        "(polrad-full), and at --pz 0 (the plan both test "
+                        "(polrad-full) [D7's grids: 1.025494331 -> 1.047116364 -> 1.034783841], and at --pz 0 (the plan both test "
                         "suites use) 1.021836305 -> 1.040368933 -> "
-                        "1.029775347 on the same build -- the fill plan "
+                        "1.029775347 on the same build [D7: 1.025506240 -> 1.047148070 -> 1.034803052] -- the fill plan "
                         "moves which events the sampler draws, so an "
                         "event-weighted mean is a statement about a "
                         "POLARISATION as well as a seed; "
-                        "CELL-cross-section-weighted over the "
+                        "CELL-cross-section-weighted (toy SFs) over the "
                         "3051 accepted cells, 1.02217080 -> 1.04097066 -> "
                         "1.03021634 unclipped, the last becoming 1.03020526 "
                         "at tail_max = 10, and that estimator is P_z-free "
                         "(measured identical on both plans).  "
-                        "Costs ~10 s of tail-table build "
-                        "and needs rc_options.n_eta >= 64")
+                        "Costs ~12 s of tail-table build per run, uncached (0.16 s on t-peak), "
+                        "and needs rc_options.n_eta >= 64 and a long double wider than double")
     p.add_argument("--rc-tail-tensor-scale", type=float, default=None,
                    help="multiplier on the 6Li MAGNETIC form factor -- the "
                         "eta*F_m^2 tensor sector, which --rc-fq-scale does "
@@ -437,8 +437,8 @@ def build_parser():
     p.add_argument("--rc-qe-tensor-scale", type=float, default=None,
                    help="price the POLARISED quasi-elastic tail, which is "
                         "otherwise treated as exactly tensor-blind on the "
-                        "piece that is 73 %% of rc_tail at x = 0.1 and 99.9 "
-                        "%% at x = 0.3.  Default 0.0 = the shipped, "
+                        "piece that is 99.8 / 100 %% of the default rc_tail at x = 0.1 / 0.3 "
+                        "(73 / 99.9 %% on t-peak).  Default 0.0 = the shipped, "
                         "bit-for-bit tensor-blind tail.  At 1.0 the "
                         "quasi-elastic tail is given the ELASTIC tail's own "
                         "tensor fraction -- a BORROWED magnitude (a coherent "
@@ -456,8 +456,8 @@ def build_parser():
                         "by growing the denominator alone (r_T/r_U x0.66 / "
                         "x0.0032 / x6.6e-05 at x = 0.01 / 0.10 / 0.30, "
                         "Q^2 = 5).  NEEDS --rc-tail-model t-peak+ll (refused "
-                        "otherwise: the t-peak-only tail computes no s/p "
-                        "peaks at all).  Default 0.0.  At 1.0 the ELASTIC "
+                        "otherwise: t-peak computes no s/p peaks, and the default "
+                        "polrad-full computed them).  Default 0.0.  At 1.0 the ELASTIC "
                         "s-/p-peaks are given the elastic t-peak's own tensor "
                         "fraction.  IT IS A BOUND WITH NO DERIVATION: "
                         "POLRAD's Eq. (38) supplies no tensor s/p peak and "
@@ -483,16 +483,16 @@ def build_parser():
                         "construction (the tagged tensor signal lives in the "
                         "spectator-differential rate).  Turn it on and the "
                         "tagged A_zz moves by the same factors the inclusive "
-                        "channel does: -1.557969e-3 (toy) -> -1.951190e-3 "
-                        "(ct18nlo, x1.25239) -> -1.963721e-3 (mstw, "
-                        "x1.26044).  IT NEEDS --x-max 0.95 OFF THE TOY "
-                        "UNPOLARISED BACKEND (measured 2026-09-05, --channel "
-                        "tagged-6Li-alpha at the shipped window): the top "
-                        "cell x = 0.955, Q2 = 167.3 gives 1 + w_avg = -0.1302 "
-                        "under --unpol-sf ct18nlo and -0.03496 under "
-                        "--unpol-sf mstw, and InclusiveSampler refuses the "
-                        "run by name.  --unpol-sf toy runs unchanged, which "
-                        "is why the flag has no unconditional refusal")
+                        "channel does (2026-10-29, --x-max 0.95, VMC wave): "
+                        "-1.660420e-3 (toy) -> -1.979943e-3 (ct18nlo, the "
+                        "default since D7, x1.19243) -> -2.092855e-3 (mstw, "
+                        "x1.26044).  IT NEEDS --x-max 0.95 ON THE SHIPPED "
+                        "DEFAULT (D7): the top cell x = 0.955, Q2 = 167.3 "
+                        "of --channel tagged-6Li-alpha gives 1 + w_avg = "
+                        "-0.1302 on ct18nlo (-0.03496 on mstw), and "
+                        "InclusiveSampler refuses the run by name with that "
+                        "cure.  --unpol-sf toy --pol-sf toy runs at 1.0, "
+                        "which is why the flag has no unconditional refusal")
     p.add_argument("--b1-model", choices=sorted(B1_MODELS), default=None,
                    help="b1 backend of the INCLUSIVE kernel's rank-2 slot: "
                         "'miller' (default; Li6B1(MillerB1) through "
@@ -519,12 +519,12 @@ def build_parser():
                         "the inclusive channel and off 6Li rather than let it "
                         "reach the metadata but not the rate.  li6-convolution "
                         "PASSED its A = 2 magnitude gate on 2026-09-03 -- for "
-                        "ONE unpolarised nucleon input, not for the shipped "
+                        "ONE unpolarised nucleon input, not for --b1-unpol's "
                         "default.  Ratio 0.843 against the digitized CDKS "
                         "deuteron peak with CDKS's own MSTW2008 LO at their "
-                        "Eq. (21); 0.440 on the DEFAULT toy F2, OUTSIDE the "
+                        "Eq. (21); 0.440 on the toy F2, OUTSIDE the "
                         "gate's [0.5, 2] window.  So quote numbers made with "
-                        "--b1-unpol mstw; the default toy backend's are not "
+                        "--b1-unpol mstw; the toy backend's (and ct18nlo's) are not "
                         "covered by the lift.  With CD-Bonn as well the ratio "
                         "is 1.000338 -- a residual below the error of "
                         "digitizing a published figure, NOT three-digit "
@@ -539,7 +539,7 @@ def build_parser():
                         "against Q_d = +0.2859(3) "
                         "fm^2 -- the alpha-d D wave enters the closest "
                         "measured observable with the OPPOSITE sign to the "
-                        "deuteron's and nearly cancels it.  RUN 0 / 1 / 2 and "
+                        "deuteron's and nearly cancels it.  RUN 0 / 1 / 2 (x2 at --x-max 0.85, D7) and "
                         "quote the envelope; never quote one row alone.  "
                         "REFUSED with --b1-model miller (the band is not "
                         "applied to the published numbers, so recording it "
@@ -548,21 +548,21 @@ def build_parser():
                    help="UNPOLARISED structure-function backend that "
                         "--b1-model li6-convolution folds its own F1 against "
                         "(Li6ConvolutionOptions::unpol): 'toy' (default -- "
-                        "the inclusive kernel's own ToyF2, handed over as ONE "
-                        "shared object, bit-for-bit what every published "
-                        "number was made with), 'mstw' (MSTW2008 LO over "
+                        "the inclusive kernel's own UnpolSF, handed over as ONE "
+                        "shared object; since D7 that is CT18NLO, so under "
+                        "the shipped default li6-convolution NAMES one), 'mstw' (MSTW2008 LO over "
                         "PYTHIA 8's own pdfdata grid: the PDF CDKS computed "
                         "their b1_d with, and THE CONFIGURATION THE A = 2 "
                         "GATE PASSES ON -- G3b 0.843 against 0.440 on the "
                         "toy.  Needs the optional PYTHIA tier) or 'ct18nlo' "
-                        "(the phase-D stand-in, kept selectable so the PDF "
-                        "systematic can be quoted; needs the optional LHAPDF "
+                        "(the phase-D stand-in and since D7 the default "
+                        "--unpol-sf's own cached object; needs the LHAPDF "
                         "tier).  MEASURED on Li6ConvolutionB1::b1(x, 2.5): "
                         "mstw/toy = 1.848 / 1.276 / 0.817 at x = 0.10 / 0.30 "
                         "/ 0.50 -- up to a factor 1.85 and not monotone.  It "
                         "moves b1 ONLY: the kernel's own f2_source is set "
-                        "by a SEPARATE flag, --unpol-sf, and at its shipped "
-                        "default 'toy' the SPIN-BLIND cell cross section is "
+                        "by a SEPARATE flag, --unpol-sf, and at any ONE "
+                        "--unpol-sf the SPIN-BLIND cell cross section is "
                         "bit for bit under THIS flag with only the tensor "
                         "shift moving.  The two stay separate because they "
                         "are different quantities -- this one is the "
@@ -570,7 +570,7 @@ def build_parser():
                         "CDKS-comparability choice the A = 2 gate verdict "
                         "rests on -- and validate() refuses the one "
                         "combination that would mislabel them, --b1-unpol "
-                        "toy under a non-toy --unpol-sf.  REFUSED "
+                        "toy under a non-toy --unpol-sf (D7's default).  REFUSED "
                         "with miller and cdks, "
                         "which never read it, and never silently downgraded "
                         "to the toy in a build without the tier")
@@ -595,7 +595,7 @@ def build_parser():
                         "the wiring's own test, not a physics variation, and "
                         "the provenance table labels it not-read.  'r1998' "
                         "installs the A = 2 gate's SLAC world fit in both.  "
-                        "MEASURED at y = 0.5, Q2 = 2.5 against unset: "
+                        "MEASURED at y = 0.5, Q2 = 2.5 against unset (toy SFs): "
                         "K/D_phi (and so A_zz) -3.84 %% / +26.40 %% / "
                         "+3.35 %% and the cos 2phi amplitude -8.33 %% / "
                         "-6.73 %% / -3.14 %% at x = 0.05 / 0.10 / 0.30; the "
@@ -606,48 +606,48 @@ def build_parser():
                         "numerator-only swap of registry option (ii) is "
                         "y-independent to 2 ulp.  Unlike "
                         "--b1-unpol it moves the UNPOLARISED rate too "
-                        "(sigma_pb -0.6847 %% on a 2000-event 6Li run at "
+                        "(sigma_pb -0.6847 %% on the toy SFs, -0.59899 %% on the shipped ct18nlo with --b1-unpol ct18nlo, a 2000-event 6Li run at "
                         "--x-max 0.95), "
                         "because the kernel's r_func reaches F1, F_L, D(y) "
-                        "and ToyG1.  REFUSED with miller and cdks, which "
+                        "and, under --pol-sf toy, ToyG1.  REFUSED with miller and cdks, which "
                         "have no numerator R to share")
     p.add_argument("--unpol-sf", choices=sorted(UNPOL_SF), default=None,
                    help="UNPOLARISED structure-function backend of EVERY "
                         "kernel the run builds -- the inclusive kernel, the "
                         "coherent channel that rides its cell cross "
-                        "sections (x0.7058 on the shipped 6Li ct18nlo "
+                        "sections (x0.7554 against the toy on the shipped 6Li "
                         "coherent run, so it reaches that rate too, which "
                         "--pol-sf does not), and the TAGGED struck-cluster "
                         "kernel, which had no injection point at all before "
-                        "2026-09-04.  'toy' (default) is the library's "
-                        "ToyF2, labelled TOY in sf.hpp and anchored BY EYE "
-                        "('factor-1.5 rate estimates ONLY'); 'mstw' is "
+                        "2026-09-04.  'ct18nlo' (DEFAULT since D7) is "
+                        "LhapdfSF('CT18NLO', 0) at LO on the FREE nucleon (no EPPS21), frozen below its grid "
+                        "(LHAPDF tier); 'toy' (the default until D7) is the "
+                        "library's ToyF2, labelled TOY in sf.hpp and anchored "
+                        "BY EYE ('factor-1.5 rate estimates ONLY'); 'mstw' is "
                         "MSTW2008 LO over PYTHIA 8's own pdfdata grid (needs "
-                        "the optional PYTHIA tier); 'ct18nlo' is "
-                        "LhapdfSF('CT18NLO', 0) (needs the optional LHAPDF "
-                        "tier).  MEASURED on 6Li inclusive at config 1: the "
-                        "summed accepted cell cross section is 591846.2 pb "
-                        "(toy), 472571.9 (ct18nlo, x0.7985), 469556.5 (mstw, "
-                        "x0.7934) -- and it is a SHAPE change, F2p at "
+                        "the optional PYTHIA tier).  MEASURED on 6Li "
+                        "inclusive at config 1: the summed accepted cell "
+                        "cross section is 591846.2 pb (toy), 496334.2 "
+                        "(ct18nlo, x0.8386), 469556.5 (mstw, x0.7934) -- and it is a SHAPE change, F2p at "
                         "Q2 = 10 moving x0.92 / x1.11 / x1.37 / x1.26 "
                         "(ct18nlo) at x = 0.01 / 0.10 / 0.30 / 0.50.  IT IS "
-                        "NOT ORTHOGONAL TO --pol-sf: the kernel's default "
-                        "ToyG1 is built on the kernel's own UnpolSF, so this "
+                        "NOT ORTHOGONAL TO --pol-sf: the toy's ToyG1 "
+                        "is built on the kernel's own UnpolSF, so this "
                         "flag alone moves g1 as well (A1 moves 5-8 %%) -- "
                         "'--pol-sf toy' does NOT mean g1 unchanged.  "
-                        "'ct18nlo' puts about a third of the shipped 6Li "
+                        "'ct18nlo' puts 39 %% of the shipped 6Li "
                         "INCLUSIVE window's rate BELOW CT18NLO's own "
-                        "Q2 = 1.677 grid floor (36.18 %%; on the COHERENT "
-                        "channel the same run's own rate has 44.75 %% below "
+                        "Q2 = 1.677 grid floor (39.23 %%; on the COHERENT "
+                        "channel the same run's own rate has 48.37 %% below "
                         "it, because f_coh(x) reweights the same cells), "
-                        "where LHAPDF extrapolates downward rather than "
-                        "freezing; that is not refused, but THIS run's own "
+                        "where the tier FREEZES the grid at its edge (D7: "
+                        "LHAPDF nearest, set on the object); not refused, but THIS run's own "
                         "fraction, on THIS run's channel, is printed at the "
                         "banner and recorded in meta.  Never silently "
                         "downgraded to the toy in a build without the "
                         "tier.  With --pol-sf nnpdfpol on '--channel "
                         "tagged-d-p --plan helicity-flip' at --pe != 0 the "
-                        "PAIR needs --x-max 0.95 (see that flag)")
+                        "PAIR needed --x-max 0.95 until A3 (2026-11-03): it builds at 1.0 now (see that flag)")
     p.add_argument("--pol-sf", choices=sorted(POL_SF), default=None,
                    help="POLARISED structure-function backend of the "
                         "INCLUSIVE and TAGGED kernels -- g1, and through the "
@@ -664,11 +664,11 @@ def build_parser():
                         "run then RECORDS THE TRUTH: the banner says it did "
                         "not run, meta['pol_sf'] carries 'not read on "
                         "channel coherent-6Li' instead of a backend name, "
-                        "and meta['pol_sf_reach'] the reason.  'toy' (default) is "
-                        "ToyG1 on the kernel's own UnpolSF; 'nnpdfpol' is "
-                        "LhapdfG1('NNPDFpol11_100', 0), the only POLARISED "
-                        "set installed here (needs the optional LHAPDF "
-                        "tier).  MEASURED on 6Li per-nucleon g1A, which "
+                        "and meta['pol_sf_reach'] the reason.  'nnpdfpol' "
+                        "(DEFAULT since D7) is LhapdfG1('NNPDFpol11_100', 0) "
+                        "at LO, frozen below Q2 = 1, the only POLARISED set "
+                        "installed here (LHAPDF tier); 'toy' (the default "
+                        "until D7) is ToyG1.  MEASURED on 6Li per-nucleon g1A, which "
                         "A_par tracks to better than 0.1 %% at y = 0.5: "
                         "nnpdfpol/toy = 0.669 / 1.114 / 1.349 / 0.982 / "
                         "0.636 at (x, Q2) = (0.01, 2.5) / (0.10, 10) / "
@@ -676,16 +676,16 @@ def build_parser():
                         "x1.35 and NOT monotone.  THE NEUTRON IS A SIGN: "
                         "ToyG1's a1n crosses zero near x ~ 0.25 and is "
                         "positive above it while NNPDFpol1.1's g1n stays "
-                        "negative to x ~ 0.6, so the shipped toy g1n has the "
-                        "WRONG SIGN over roughly 0.25 < x < 0.6 -- which "
-                        "matters most on a neutron-tagged run (--channel "
+                        "negative to x ~ 0.6, so the toy g1n (shipped until "
+                        "D7) has the WRONG SIGN over roughly 0.25 < x < 0.6 -- "
+                        "which matters most on a struck-neutron run (--channel "
                         "tagged-d-p) and least on isoscalar 6Li.  ON THAT "
-                        "VERY CHANNEL 'nnpdfpol' NEEDS --x-max 0.95 when it "
-                        "is paired with --unpol-sf ct18nlo|mstw under --plan "
-                        "helicity-flip at --pe != 0: the pair's neutron "
-                        "g1/F1 reaches 4.40579 in the window's top cell and "
-                        "1 + w_avg goes negative, which the sampler refuses "
-                        "by name (see --x-max)")
+                        "VERY CHANNEL 'nnpdfpol' NEEDED --x-max 0.95 when it "
+                        "is paired with --unpol-sf ct18nlo|mstw -- THE DEFAULT "
+                        "since D7 -- under --plan helicity-flip at --pe != 0: the pair's neutron "
+                        "g1/F1 reaches 4.40579 in the window's top cell; since "
+                        "A3 (2026-11-03) g1 is clipped to +-F1 per nucleon and "
+                        "the run builds at 1.0 (see --x-max)")
     p.add_argument("--b1-alpha-d-dwave-weight", type=float, default=None,
                    help="knob on the alpha-d orbital terms (2d) AND (2a) of "
                         "--b1-model li6-convolution -- they are one physical "
@@ -702,24 +702,24 @@ def build_parser():
                         "1 + w_avg stays positive and the sampler refuses the "
                         "run.  Use --x-max 0.95.  Miller's b1 is a ratio "
                         "model (%.3f at the same point) and does not need "
-                        "it.  ALSO NEEDED, for the "
-                        "SAME positivity reason but in the VECTOR sector, by "
-                        "'--isotope d --channel tagged-d-p --unpol-sf "
-                        "{ct18nlo,mstw} --pol-sf nnpdfpol --plan "
-                        "helicity-flip' at any --pe != 0 (the A_par "
-                        "measurement on the neutron target, at this CLI's "
-                        "default --pe 0.7): the neutron g1/F1 at the same top "
-                        "cell (x = 0.955, Q2 = 1119) is 4.40579 on that backend "
-                        "PAIR against 0.7228 and 0.3820 on either backend "
-                        "alone, giving 1 + w_avg = -0.02414 (ct18nlo) resp. "
-                        "-0.1105 (mstw).  The sampler refuses it by name and "
-                        "says so; --x-max 0.95 cures it.  AND, third, by "
-                        "--inclusive-b1 on a TAGGED channel off the toy "
-                        "unpolarised backend: measured 2026-09-05, "
-                        "'--channel tagged-6Li-alpha --inclusive-b1 "
-                        "--unpol-sf ct18nlo' gives 1 + w_avg = -0.1302 at "
-                        "the same top cell (x = 0.955, Q2 = 167.3) and mstw "
-                        "gives -0.03496, while --unpol-sf toy runs"
+                        "it.  ON THE SHIPPED DEFAULT (D7: CT18NLO / "
+                        "NNPDFpol1.1) --x-max 0.95 is ALSO NEEDED, for the "
+                        "SAME positivity reason, by --plan helicity-flip at "
+                        "--pe != 0 (this CLI's --pe 0.7) on two runs since A3 "
+                        "(2026-11-03; re-measured 2026-11-06): --isotope d --channel inclusive "
+                        "at --config 0 / 1, the rank-2 term on top of the "
+                        "vector one at the CLIPPED A1 (A3 clips g1 to +-F1 per "
+                        "nucleon, which lifted D7's other four refusals -- "
+                        "d config 2, tagged-d-p 0 / 1, tagged-6Li-alpha 0 -- "
+                        "and the inclusive 6Li one of A1) in the top cell -- J1 (2026-11-10): since the deuteron's b1 slot is MillerB1 itself, EVERY inclusive d plan and config was refused at 1.0 (the rank-2 term, the whole x = 0.955 row) -- J1 note (2026-11-12): no longer, the deuteron's b1 is confined to the spin-1 positivity domain and all build at 1.0; by "
+                        "--inclusive-b1 on --channel tagged-6Li-alpha "
+                        "(1 + w_avg = -0.1302 at x = 0.955, Q2 = 167.3); and "
+                        "the mandatory band's x2 row (--b1-band-scale 2) "
+                        "needs 0.85: refused at 0.95 and 0.9 (cell x = "
+                        "0.871, the rank-2 term alone).  The sampler refuses "
+                        "each by name and COMPUTES the cure; --unpol-sf toy "
+                        "--pol-sf toy runs the two and --inclusive-b1 at 1.0 "
+                        "and the x2 row at 0.95, as before D7"
                         % (B1_TOP_CELL_X, B1_TOP_CELL_B1_OVER_F1["cdks"],
                            B1_TOP_CELL_B1_OVER_F1["li6-convolution"],
                            B1_TOP_CELL_B1_OVER_F1["miller"]))
@@ -802,7 +802,7 @@ DEFAULTS = dict(isotope="6Li", config=1, channel="inclusive",
                 rel_lumi_offset=0.0, nthreads=1, hadronize=False,
                 quiet=False,
                 hepmc=None, npz=None, hfs_npz=None, cluster_beta=None,
-                p_d=None, cluster_wave="hulthen", triton_sf="hulthen",
+                p_d=None, cluster_wave=None, triton_sf="hulthen",  # D6: None = CLUSTER_WAVE_DEFAULT
                 fsi="off", fsi_sigma_mb=40.0,
                 # CONVENTIONS.md "no physics number defined twice": the band
                 # anchors live in rc.hpp and are exported, so read them rather
@@ -814,13 +814,13 @@ DEFAULTS = dict(isotope="6Li", config=1, channel="inclusive",
                 rc_qe_suppression=1.0, rc_qe_tensor_scale=0.0,
                 rc_sp_tensor_scale=0.0,
                 rc_c0_shape="ho",
-                rc_tail_model="t-peak",
+                rc_tail_model=_l.rc_tail_model_name(_l.RcOptions().tail_model),  # D5: read, not retyped
                 coherent_t2="pomeron", pom_set=6, pom_rescale=1.0,
                 inclusive_b1=False,
                 b1_model="miller", b1_band_scale=1.0,
                 b1_alpha_d_dwave_weight=1.0, b1_unpol="toy",
                 r_source="unset",
-                unpol_sf="toy", pol_sf="toy", x_max=None,
+                unpol_sf=_l.unpol_sf_name(_l.UNPOL_SF_DEFAULT), pol_sf=_l.pol_sf_name(_l.POL_SF_DEFAULT), x_max=None,  # D7: read, not retyped
                 coherent_t_max=None,
                 coherent=None)
 
@@ -877,9 +877,9 @@ def resolve(argv=None):
 #: `tests/test_b1_nuclear.cpp`, not here.
 B1_UNPOL_GATE_ROW = {
     "toy": "its own G3b is 0.440, OUTSIDE the [0.5, 2] window",
-    "ct18nlo": "its own G3b is 0.719 -- inside the window, but CT18NLO is the "
-               "retired stand-in and not CDKS's own PDF, so it is not the row "
-               "the lift was read off",
+    "ct18nlo": "its own G3b is 0.719 -- inside the window, but CT18NLO (the "
+               "shipped --unpol-sf since D7) is not CDKS's own PDF, so it is "
+               "not the row the lift was read off",
 }
 
 
@@ -890,8 +890,8 @@ def b1_gate_lines(unpol_name):
     are testable without building a pipeline.
 
     WHY THE SECOND LINE EXISTS.  The gate's verdict is a statement about ONE
-    unpolarised nucleon input -- MSTW2008 LO at CDKS Eq. (21) -- and the
-    SHIPPED DEFAULT is not it.  A banner that prints "PASSED" over a run made
+    unpolarised nucleon input -- MSTW2008 LO at CDKS Eq. (21) -- and
+    `--b1-unpol`'s default is not it.  A banner that prints "PASSED" over a run made
     with a different backend hands the reader a pass their own numbers are not
     covered by, which is the overclaim this line exists to stop.  It says
     which side of the line THIS run is on.
@@ -899,8 +899,8 @@ def b1_gate_lines(unpol_name):
     lines = [
         "A = 2 validation gate: PASSED 2026-09-03 -- for the MSTW2008 LO "
         "nucleon input at CDKS Eq. (21)'s delta-function, where G3b's peak "
-        "ratio is 0.843 against the digitized CDKS Fig. 4.  The SHIPPED "
-        "DEFAULT toy F2 is 0.440, OUTSIDE the [0.5, 2] window.  With the "
+        "ratio is 0.843 against the digitized CDKS Fig. 4.  --b1-unpol's "
+        "default toy F2 is 0.440, OUTSIDE the [0.5, 2] window.  With the "
         "CD-Bonn wave function as well it is 1.000338 -- a residual below "
         "the error of digitizing a published figure, NOT three-digit "
         "agreement with CDKS.  It is an A = 2 gate and tests NOTHING about "
@@ -1007,7 +1007,7 @@ def require_unpol_sf_tier(name, have_pythia=None, have_lhapdf=None):
     The `require_b1_unpol_tier` shape verbatim: say which OPTIONAL tier is
     missing, at the command line, instead of letting the binding's
     RuntimeError come out three frames down.  It is NEVER downgraded to the
-    toy -- the toy is x0.80 on the shipped 6Li rate and up to 24 % away on
+    toy -- the toy is x1.19 on the shipped (D7) 6Li rate and up to 24 % away on
     the F2n/F2p the species draws use, so a silent fallback would relabel
     exactly the number the flag exists to fix.
     """
@@ -1022,23 +1022,23 @@ def require_unpol_sf_tier(name, have_pythia=None, have_lhapdf=None):
             "because the two differ by a factor 0.79 on the 6Li rate.")
     if name == "ct18nlo" and not have_lhapdf:
         raise SystemExit(
-            "--unpol-sf ct18nlo needs the optional LHAPDF tier, and this "
-            "build has none.  Rebuild with -DLIPOLGEN_WITH_LHAPDF=ON and "
-            "install the CT18NLO set, or run --unpol-sf toy and say so.")
+            "--unpol-sf ct18nlo (the shipped default since D7) needs the LHAPDF "
+            "tier, and this build has none.  Rebuild with -DLIPOLGEN_WITH_LHAPDF=ON "
+            "and install the CT18NLO set, or run --unpol-sf toy and say so.")
 
 
 def require_pol_sf_tier(name, have_lhapdf=None):
     """Refuse `--pol-sf` for a backend this build cannot construct.
 
     Same rule as `require_unpol_sf_tier`, and the reason is sharper: the
-    shipped `ToyG1`'s g1n has the WRONG SIGN over roughly 0.25 < x < 0.6, so
+    toy `ToyG1`'s g1n has the WRONG SIGN over roughly 0.25 < x < 0.6, so
     a silent downgrade would not be a factor, it would be a sign.
     """
     have_lhapdf = _l.HAVE_LHAPDF if have_lhapdf is None else have_lhapdf
     if name == "nnpdfpol" and not have_lhapdf:
         raise SystemExit(
-            "--pol-sf nnpdfpol needs the optional LHAPDF tier, and this "
-            "build has none.  Rebuild with -DLIPOLGEN_WITH_LHAPDF=ON and "
+            "--pol-sf nnpdfpol (the shipped default since D7) needs the LHAPDF "
+            "tier, and this build has none.  Rebuild with -DLIPOLGEN_WITH_LHAPDF=ON and "
             "install the NNPDFpol11_100 set (the only polarised set this "
             "tree ships), or run --pol-sf toy and say so -- it is not "
             "silently substituted, because ToyG1's g1n has the wrong SIGN "
@@ -1046,39 +1046,32 @@ def require_pol_sf_tier(name, have_lhapdf=None):
 
 
 def sf_banner_lines(unpol_name, pol_name, q2_min=None, below_frac=None,
-                    pol_read=True):
+                    pol_read=True, pol_q2_min=None, pol_below=None):
     """The `--unpol-sf` / `--pol-sf` block of the run banner.
 
-    A pure function of the two names, the run's own grid report and the run's
-    own polarised-reach report, so every branch is testable without building
-    a pipeline -- `b1_gate_lines`'s arrangement, and for the same reason: a
-    run that does not say which backend it used is not reproducible from its
-    own log.  Printed on EVERY run, the all-default one included, because
-    "toy" is a physics choice too and it is the one that costs the most.
+    A pure function of the two names, the run's own grid reports (the
+    unpolarised one and, since D7, its polarised twin) and the run's own
+    polarised-reach report, so every branch is testable without building a
+    pipeline -- `b1_gate_lines`'s arrangement, and for the same reason: a run
+    that does not say which backend it used is not reproducible from its own
+    log.  Printed on EVERY run, the all-default one included.
 
     `pol_read` is `_l.pol_sf_is_read(cfg, plan)` -- ONE definition, shared
     with `meta["pol_sf"]` and with the `pol_sf` row of
-    `Pipeline.knob_provenance`.  It is read here for the two PRICE clauses
-    below, which are true only where g1 actually ran.
+    `Pipeline.knob_provenance`, read here for the PRICE clauses below, which
+    are true only where g1 actually ran.  Reach itself is the KNOB PROVENANCE
+    block's (one table for every knob); what stays here is what the table is
+    not: the measured PRICE of the backends and, since D7 (2026-10-27), what
+    the SHIPPED grid pair is not -- an NLO fit evaluated at LEADING ORDER, on
+    the free nucleon (no EPPS21) with the toy R (`r_sigma_lt`), FROZEN at its
+    grid edges (LHAPDF `nearest`, set on the object; `--pdf grid`'s freeze at
+    Q0 in the letter).  The toy is an OPTION since D7: printed by name.
 
-    There was a second parameter, `pol_reach` (`_l.pol_sf_reach_report`),
-    until 2026-09-16: declared, documented, passed -- and never read in this
-    body, so the call that built it was work thrown away on every run.  The
-    reach sentence it would have carried is the `pol_sf` row of the KNOB
-    PROVENANCE block, which is where reach now lives.
-
-    WHAT THIS BLOCK NO LONGER SAYS, AND WHY.  Until 2026-09-05 its first line
-    read "--unpol-sf reaches EVERY kernel this run builds ...; --pol-sf
-    reaches the inclusive and the tagged kernels", and a second block said
-    "--pol-sf DID NOT RUN HERE" on the one channel that had been looked at.
-    Both were hand-written reach claims about two of the run's forty-odd
-    knobs, and the first of them was FALSE on the CLI's own default plan (the
-    tensor plans carry lam_e = 0, so --pol-sf reaches no kernel there).  The
-    reach of every knob is now printed from ONE table --
-    `knob_provenance_lines`, off `Pipeline.knob_provenance` -- which cannot
-    be true of one knob and stale about the next.  What stays here is what
-    the table is not: the measured PRICE of the two backends.
+    Until D7 the all-default run printed "BOTH ARE THE TOY BACKENDS" here;
+    since D7 it prints the LEADING ORDER clause and the grid floors, and the
+    toy clause only on a run that NAMED both toys (pre-D7 default numbers).
     """
+    grids = ("ct18nlo", "nnpdfpol")
     lines = [
         "  SF backends: unpol %s (--unpol-sf), pol %s (--pol-sf)%s"
         % (unpol_name, pol_name,
@@ -1086,11 +1079,11 @@ def sf_banner_lines(unpol_name, pol_name, q2_min=None, below_frac=None,
     ]
     if unpol_name == "toy" and pol_name == "toy":
         lines.append(
-            "     BOTH ARE THE TOY BACKENDS.  ToyF2 and ToyG1 are labelled "
-            "TOY in sf.hpp and anchored by eye ('factor-1.5 rate estimates "
-            "ONLY').  Measured price on 6Li inclusive at config 1: the "
-            "accepted cell cross section is x0.80 on ct18nlo and x0.79 on "
-            "mstw" + (
+            "     BOTH ARE THE TOY BACKENDS, named (the default until D7).  "
+            "ToyF2 and ToyG1 are labelled TOY in sf.hpp and anchored by eye "
+            "('factor-1.5 rate estimates ONLY').  Measured price on 6Li "
+            "inclusive at config 1: the accepted cell cross section is x0.84 "
+            "on the shipped ct18nlo and x0.79 on mstw" + (
                 "." if not pol_read else
                 ", and ToyG1's g1n has the WRONG SIGN over roughly "
                 "0.25 < x < 0.6."))
@@ -1100,28 +1093,35 @@ def sf_banner_lines(unpol_name, pol_name, q2_min=None, below_frac=None,
             "kernel's default ToyG1 is built on the kernel's OWN UnpolSF, so "
             "--unpol-sf alone moves g1 too (A1 = g1/F1 moves 5-8 %).  State "
             "both settings next to any number.")
+    if unpol_name in grids or (pol_name in grids and pol_read):
+        lines.append(
+            "     LEADING ORDER: CT18NLO / NNPDFpol1.1 are NLO fits evaluated "
+            "with the LO parton formulas (no coefficient functions, massless c "
+            "and b) -- the development item of DECISIONS.md D7; free nucleon "
+            "(no EPPS21), R = r_sigma_lt.  Shipped is not validated.")
     if unpol_name != "toy":
-        # ToyF2 is closed form and has no grid, so this clause is about the
-        # selected fit only.  NaN means the backend reports no floor
-        # (PYTHIA's MSTWpdf keeps `qsqmin` private; a Custom object reports
-        # nothing) -- it is never printed as a 0 that was not measured.
+        # ToyF2 is closed form and has no grid; NaN = the backend reports no
+        # floor (MstwSF's is private, a Custom object says nothing) -- never 0.
         if below_frac is not None and below_frac == below_frac:   # not NaN
             lines.append(
                 "     grid floor Q2 = %.6g; %.2f %% of THIS run's own "
-                "accepted RATE is BELOW it, where LHAPDF keeps evolving "
-                "downward instead of freezing.  The denominator is the "
-                "CHANNEL's own per-cell rate, which on the coherent channel "
-                "is sigma_cell x f_coh(x) and not the inclusive cells "
-                "(44.75 %% against 36.18 %% on the shipped 6Li ct18nlo run). "
-                " There is NO --q2-min flag: raise Scenario.q2_min from "
-                "Python to move the window off the extrapolation (it costs "
-                "rate -- 472572 -> 301600 pb on the shipped 6Li ct18nlo "
+                "accepted RATE is BELOW it, where the set is FROZEN at its "
+                "grid edge (LHAPDF 'nearest', set on the object -- no "
+                "lhapdf.conf moves it; D7).  The denominator is the CHANNEL's "
+                "own rate: 48.37 %% on the shipped 6Li coherent run against "
+                "39.23 %% inclusive.  There is NO --q2-min flag: raise "
+                "Scenario.q2_min from Python to move the window off the "
+                "frozen region (496334 -> 301600 pb on the shipped 6Li "
                 "inclusive run at q2_min 0.7 -> 1.7)."
                 % (q2_min, 100.0 * below_frac))
         else:
             lines.append(
                 "     this backend reports no grid floor, so the below-grid "
                 "fraction is NOT known and is recorded as NaN, never as 0.")
+    if pol_name != "toy" and pol_read and pol_below is not None and pol_below == pol_below:  # F7: where g1 ran
+        lines.append(
+            "     polarised grid floor Q2 = %.6g; %.2f %% of THIS run's rate "
+            "is below it (frozen there too, D7)." % (pol_q2_min, 100.0 * pol_below))
     return lines
 
 
@@ -1273,8 +1273,8 @@ def main(argv=None):
     # -- the rule this module already states for `make_plan` below and for the
     # PYTHIA bridge, and which `make_config` was outside of until 2026-09-16.
     # `PipelineConfig::validate()` throws `RuntimeError` (--fsi
-    # glauber-cluster off a tagged channel, --cluster-wave vmc off its
-    # channels, --b1-band-scale off {0,1,2}, --rc-sp-tensor-scale on a
+    # glauber-cluster off a tagged channel, --cluster-wave hulthen off its channels
+    # (`make_config`; A17), --b1-band-scale off {0,1,2}, --rc-sp-tensor-scale on a
     # non-tensor-band --rc, ...), `make_config` itself raises `ValueError`
     # (--config 5), a pybind setter raises `TypeError` (--events -5, --seed -1
     # through the unsigned cast) and `ion_spin` raises `KeyError` (--isotope
@@ -1383,9 +1383,9 @@ def main(argv=None):
         # the way it sees `BreakupOptions::f2`.  Left unset the bridge would
         # keep drawing from ToyF2 while T0 and T1 moved to the selected
         # backend, and the toy's F2n/F2p is up to 24 % away from CT18NLO's at
-        # x = 0.5.  None (the toy default) leaves the bridge's own ToyF2 in
-        # place, so this line is bit for bit at `--unpol-sf toy`.
-        popts.f2_source = cfg.unpol_sf_obj
+        # x = 0.5.  D7: the shipped grid attaches lazily, so it is attached here
+        # first; None (`--unpol-sf toy`, named) keeps the bridge's own ToyF2.
+        _l.fill_grid_sf_backends(cfg); popts.f2_source = cfg.unpol_sf_obj
         try:
             bridge = _l.PythiaBridge(beams, popts)
         except RuntimeError as e:
@@ -1420,15 +1420,15 @@ def main(argv=None):
         # duplicated here (docs/CONVENTIONS.md, "no physics number is defined
         # twice", which applies to messages too).
         #
-        # THE COMBINATION THAT FIRST NEEDED IT (measured 2026-09-05):
-        # `--isotope d --channel tagged-d-p --unpol-sf ct18nlo --pol-sf
-        # nnpdfpol --plan helicity-flip --pz 0.7 --pe 0.7` -- the A_par
-        # measurement on the neutron target, at this CLI's own default --pe.
-        # The neutron kernel's g1/F1 at the shipped window's top cell
-        # (x = 0.955, Q2 = 1119) is 4.40579 on that backend PAIR against 0.7228
-        # (ct18nlo + ToyG1) and 0.3820 (ToyF2 + nnpdfpol), so 1 + w_avg
-        # = -0.02414 and the run is refused.  `--x-max 0.95` cures it.  It is
-        # NOT clamped: a positivity clamp is a physics change.
+        # THE COMBINATION THAT FIRST NEEDED IT (measured 2026-09-05), and
+        # since D7 a DEFAULT run: `--isotope d --channel tagged-d-p --plan
+        # helicity-flip --pz 0.7 --pe 0.7` on CT18NLO / NNPDFpol1.1 -- the
+        # neutron kernel's g1/F1 at the top cell (x = 0.955, Q2 = 1119) is
+        # 4.40579 on that backend PAIR against 0.7228 (ct18nlo + ToyG1) and
+        # 0.3820 (ToyF2 + nnpdfpol), so 1 + w_avg = -0.02414.  D7 makes SIX
+        # helicity-flip runs and two band / b1 recipes refuse at their defaults
+        # (USAGE sec. 10); `--x-max` cures each, and the message computes how
+        # far.  It is NOT clamped: a positivity clamp is a physics change.  V-CODE-5 (2026-11-10): since A3 (2026-11-03) g1, not W, is clipped to |g1| <= F1 per nucleon; two of the six (`--isotope d --channel inclusive` configs 0 / 1) still refuse, the rank-2 term on top.  J1 (2026-11-10): every inclusive d plan and config then refused at x_max 1.0 (the deuteron's b1 is MillerB1 itself, x3.0532); J1 note (2026-11-12): all build again, the slot confined to the spin-1 positivity domain.
         raise SystemExit(str(e))
     t_setup = time.time() - t0
     # THE RUN CONTEXT of the knob-provenance table: what the core cannot see.
@@ -1552,13 +1552,13 @@ def main(argv=None):
     # by 20 % and g1n by a sign, and a run that does not say which ones it
     # used is not reproducible from its own log.  Suppressed only when a
     # caller-supplied kernel wins, where the flags are not what produced the
-    # numbers (`validate()` refuses a non-toy selector there anyway).
+    # numbers (`validate()` accepts them there only at their defaults, D7).
     if cfg.kernel is None:
         q2_min, below = _l.unpol_sf_grid_report(p)
         for line in sf_banner_lines(_l.unpol_sf_name(cfg.unpol_sf),
                                     _l.pol_sf_name(cfg.pol_sf),
                                     q2_min, below,
-                                    _l.pol_sf_is_read(cfg, plan)):
+                                    _l.pol_sf_is_read(cfg, plan), *_l.pol_sf_grid_report(p)):
             say(line)
     # THE KNOB-PROVENANCE BLOCK, on every run and every channel: ONE table
     # (`Pipeline.knob_provenance`) saying what this run read and what it did
@@ -1602,7 +1602,7 @@ def main(argv=None):
             # WHICH R the two halves of the tensor weight were built from.
             # Printed on every li6-convolution run, "unset" included, for the
             # `--b1-unpol` reason: at r1998 the weight moves by up to +26 %
-            # at x = 0.10 and the unpolarised rate by -0.6847 %, and nothing
+            # at x = 0.10 and the unpolarised rate by -0.6847 % (toy SFs; -0.59899 % shipped), and nothing
             # else in the banner says so.
             say("     R = sigma_L/sigma_T %s (--r-source; %s)"
                 % (_l.r_source_name(cfg.r_source),
@@ -1632,7 +1632,7 @@ def main(argv=None):
             "alone), sigma_X%s = %.1f mb, survival = %.4f"
             % (_l.pipeline_fsi_name(cfg.fsi), fw.sigma_eff_mb(0.0),
                p.tagged_channel.base.spectator,
-               fw.sigma_cluster_mb(fw.sigma_eff_mb(0.0)), fw.survival()))
+               fw.sigma_cluster_mb(fw.sigma_eff_mb(0.0)), fw.survival())); say(fsi_clip_line(fw))  # A12 (2026-11-03)
     if p.rc_model is not None:
         r = p.rc_model
         say("  RC %s: delta(x) = %.4g at x=0.01, %.4g at x=0.1; band %s; "
@@ -1649,7 +1649,7 @@ def main(argv=None):
         if r.tail_applies:
             say("     6Li FF: %s" % r.ff_provenance)
             say("     clipped %.3g%% of tail NODES (by y-band %.3g / %.3g / "
-                "%.3g%%; the y > 0.9 one is where Y+ ~ 1/(1-y) bites)"
+                "%.3g%%; t-peak+ll clips at y -> 1, Y+ ~ 1/(1-y); polrad-full at x -> 1)"
                 % ((100.0 * r.clipped_cell_fraction,)
                    + tuple(100.0 * f for f in r.clipped_fraction_by_y)))
             say("     tails: elastic + UNPOLARISED quasi-elastic (Eq. 44, "
@@ -1658,8 +1658,8 @@ def main(argv=None):
             if cfg.rc_options.qe_tensor_scale == 0.0:
                 say("     the POLARISED QE tail is NOT priced (Zhou et al., "
                     "PRL 82 (1999) 687): rc_tail treats as exactly "
-                    "tensor-blind the piece that is 73 % of it at x = 0.1 "
-                    "and 99.9 % at x = 0.3.  --rc-qe-tensor-scale prices "
+                    "tensor-blind the piece that is 99.8 / 100 % of it at x = 0.1 / 0.3 "
+                    "(polrad-full; 73 / 99.9 % on t-peak).  --rc-qe-tensor-scale prices "
                     "that omission with a borrowed magnitude.")
             else:
                 say("     the POLARISED QE tail is priced by a STAND-IN at "
@@ -1675,18 +1675,18 @@ def main(argv=None):
                     "Eq. (A.4) (--rc-tail-model polrad-full): ONE exact "
                     "tau_A quadrature carrying all THREE peaks, with the "
                     "s-/p-peaks' OWN Eq. (A.4) tensor content -- the term "
-                    "t-peak+ll can only bound.  ITS ABSOLUTE NORMALISATION "
-                    "IS STILL NOT CHECKED AGAINST MO-TSAI OR ANY EXTERNAL "
-                    "EXACT TAIL: no such number is in this tree.  What is "
-                    "checked is POLRAD-INTERNAL (the x_A -> 0 reduction to "
+                    "t-peak+ll can only bound; the DEFAULT since D5.  Its PROTON "
+                    "slot is checked against DJANGOH 4.6.21's exact O(alpha) "
+                    "tail (row 7, 2026-10-26); Mo-Tsai is not in this tree.  On the "
+                    "coherent slot it is checked POLRAD-INTERNALLY (the x_A -> 0 reduction to "
                     "Eq. (38), unpolarised AND tensor, and the Q_N = 0 "
                     "Rosenbluth limit) and the leading-log fallback.  The "
                     "QUASI-ELASTIC tail is a sum over SPIN-1/2 nucleons and "
                     "is tensor-blind at all three peaks here too.")
             elif r.options.tail_model == _l.RcTailModel.TPeak:
-                say("     the tail is the t-PEAK ONLY (POLRAD Eqs. 37-39): "
-                    "its absolute normalisation is NOT validated against an "
-                    "exact tail.  Measured (test_rc.cpp T8(c), T8(d)) against "
+                say("     the tail is the t-PEAK ONLY (POLRAD Eqs. 37-39), an option "
+                    "since D5: 0.60 / 0.88 / 0.99 / 0.98 of DJANGOH's exact proton tail "
+                    "(row 7).  Measured (test_rc.cpp T8(c), T8(d)) against "
                     "the leading-log s-/p-peaks, for 6Li at Q^2 >= 20 GeV^2 "
                     "and y <= 0.9: it carries the EVENT-WEIGHTED mean tail to "
                     "0.61 % at P_z = 0 (0.62 % at the CLI default P_z = 0.7), "
@@ -1769,6 +1769,33 @@ def main(argv=None):
                     "calibrate it against."
                     % (cfg.rc_options.a_transfer_frac,
                        (1.0 + cfg.rc_options.a_transfer_frac ** 2) ** 0.5))
+    # WHICH NORMALISATION THE cos 2phi (Delta) TERM CARRIES, on every run: since
+    # D4 (2026-10-27) the kernel's coefficient is Jaffe-Manohar's, half the one
+    # it carried before, so a Delta-induced cos 2phi amplitude on a tilted fill
+    # differs by a factor 2 between a file made before that date and one made
+    # after.  The same string is `meta["delta_convention"]` (constants.hpp).
+    say("  Delta (cos 2phi) convention: %s" % _l.DELTA_CONVENTION)
+    # WHICH CLUSTER WAVE A TAGGED RUN READ (D6, 2026-10-27): the run default is
+    # `CLUSTER_WAVE_DEFAULT`, the ANL VMC tables, and a default run used to name
+    # its wave nowhere.  `meta["cluster_wave"]` carries the same name (the knob
+    # table's row); a HepMC3 file carries neither (its GenRunInfo has the tool
+    # name and version only).
+    if _l.is_tagged(cfg.channel):
+        ch, dflt = p.tagged_channel, _l.cluster_wave_name(_l.CLUSTER_WAVE_DEFAULT)
+        say("  cluster wave: %s -- %s: %s; %s; struck %s eff_pol p/n %.6f / %.6f"
+            % (_l.cluster_wave_name(cfg.cluster_wave),
+               "the run default since D6 (--cluster-wave hulthen for the "
+               "analytic pair)" if cfg.cluster_wave == _l.CLUSTER_WAVE_DEFAULT
+               else "an option (the run default is %s, D6)" % dflt,
+               ch.label, ", ".join("L=%d P=%.6f" % (w.l, w.prob) for w in ch.waves),
+               ch.dis_target.name, ch.dis_target.eff_pol_p, ch.dis_target.eff_pol_n))
+    # A1 (2026-11-03): the INCLUSIVE polarization factors this run used (no
+    # CLI knob moves them; meta["li6_cluster_polarization"] / ["deuteron_p_d"]
+    # / ["li6_b1_rank2_transfer"] carry the same numbers), so a file made
+    # before A1 (0.811228 / 0.045 / 0.921947) and one made after can be told apart.
+    pf = _l.inclusive_polarization_factors(p)["report"]; gc = _l.g1_positivity_clip(p)["report"]  # A3 (2026-11-03): meta["g1_clipped_rate_fraction"]
+    if pf: say("  inclusive polarization factors: %s" % pf)
+    say("  g1 positivity clip (A3, |g1| <= F1 per nucleon): %s" % gc); bc = _l.b1_rank2_confinement(p); bc["applied"] and say("  b1 spin-1 domain (J1 note 2026-11-12, -3/2 F1 <= b1 <= 3 (F1 - |g1|), deuteron): %s" % bc["report"])  # meta["b1_clipped_rate_fraction"], absent where not applied
 
     # Events are only materialized when something needs the records: the HFS
     # exporter always, HepMC only when the T2 tier is on (regenerating a
@@ -1831,14 +1858,28 @@ def main(argv=None):
         t0 = time.time()
         if "events" in cols:
             with _l.HepMC3Writer(opts["hepmc"]) as w:
-                for ev in cols["events"]:
-                    w.write(ev)
+                w.set_run_attributes(_l.hepmc_run_attributes(p, ctx))  # A10 (2026-11-03): the npz meta's strings
+                for ev in cols["events"]: w.write(ev)
         else:
-            p.write_hepmc(opts["hepmc"])
+            p.write_hepmc(opts["hepmc"], context=ctx)  # A10 (2026-11-03): GenRunInfo lipolgen.<key> attributes
         say("  wrote %s (%.1f MB) in %.1f s"
             % (opts["hepmc"], os.path.getsize(opts["hepmc"]) / 1e6,
                time.time() - t0))
     return 0
+
+
+def fsi_clip_line(fw):
+    """A12 (2026-11-03), the supervisor's choice under the author's delegation
+    (docs/open_items/run_2026-11-03/DECISIONS.md): the FSI weight-table
+    ceiling stays at 40 mb, and the share of grid cells clipped at
+    `GlauberFsiOptions.w_max` is printed on EVERY FSI run's banner -- the
+    same number, from the same call, as `meta["fsi_clipped_grid_fraction"]`
+    (python/bindings.cpp) -- because it is an UNPRICED systematic (decision
+    registry row 28); its band is filed with the next FSI design."""
+    return ("  FSI weight table: %.2f %% of cells clipped at w_max = %g "
+            "(sigma_XN = %g mb; meta fsi_clipped_grid_fraction; an unpriced "
+            "systematic, A12)" % (100.0 * fw.clipped_grid_fraction(),
+                                  fw.options.w_max, fw.sigma_eff_mb(0.0)))
 
 
 if __name__ == "__main__":

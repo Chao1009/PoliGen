@@ -1821,3 +1821,75 @@ TEST_CASE("A11: cluster_vmc_mc_sigma is bounded at |sigma| <= 3") {
                        doctest::Contains("cluster_vmc_mc_sigma must be finite"),
                        std::runtime_error);
 }
+
+// J1 (2026-11-10; decision J1, THE AUTHOR'S, docs/open_items/run_2026-11-10/
+// DECISIONS.md; record phase_P2_deuteron_b1.md): the inclusive deuteron's
+// rank-2 slot is the deuteron camp itself, MillerB1 per nucleon, unmapped;
+// 6Li keeps Li6B1(MillerB1); the Delta slot is the same for both; any other
+// spin-1 ion throws; a moved b1_transfer or a non-Miller model on the
+// deuteron is refused (the default is accepted, the meta key labelled not
+// read, A17); the pre-J1 reading stays constructible through Options::b1_func.
+TEST_CASE("J1: the inclusive deuteron's rank-2 slot is MillerB1 itself; 6Li keeps Li6B1(MillerB1)") {
+  const MillerB1 miller;
+  const Li6B1 li6(std::make_shared<MillerB1>());
+  const auto kd = default_inclusive_kernel(DEUTERON());
+  const auto k6 = default_inclusive_kernel(LI6());
+  for (const double x : {0.005, 0.012, 0.1, 0.5, 0.9, 0.955}) {
+    for (const double q2 : {2.5, 100.0, 1897.0}) {
+      CAPTURE(x); CAPTURE(q2);
+      const SFTables td = kd->tables(x, q2), t6 = k6->tables(x, q2);
+      CHECK(td.b1 == miller.b1(x, q2, td.f1));
+      CHECK(td.b2 == 2.0 * x * td.b1);
+      CHECK(td.delta == toy_delta_gluon(x, q2, td.f1, 1e-2));
+      CHECK(t6.b1 == li6.b1(x, q2, t6.f1));
+      CHECK(t6.delta == toy_delta_gluon(x, q2, t6.f1, 1e-2));
+      // the factor every inclusive deuteron rank-2 number moved by: 1/0.32753
+      CHECK_CLOSE(td.b1 / li6.b1(x, q2, td.f1), 1.0 / (LI6_B1_PER_NUCLEON * LI6_B1_RANK2_TRANSFER), 1e-14);
+      CHECK_CLOSE(td.b1 / li6.b1(x, q2, td.f1), 3.0531989383, 1e-10);
+    }
+  }
+  // The pre-J1 reading, explicitly: an InclusiveKernel on the deuteron with
+  // Li6B1(MillerB1) as its b1 slot (captured by value, nothing dangles).
+  InclusiveKernel::Options o;
+  const auto old = std::make_shared<const Li6B1>(std::make_shared<MillerB1>());
+  o.b1_func = [old](double x, double q2, double f1) { return old->b1(x, q2, f1); };
+  o.delta_func = [](double x, double q2, double f1) { return toy_delta_gluon(x, q2, f1, 1e-2); };
+  const InclusiveKernel kold(DEUTERON(), o);
+  CHECK(kold.tables(0.3, 5.0).b1 == li6.b1(0.3, 5.0, 0.0));
+  CHECK(kold.tables(0.3, 5.0).f1 == kd->tables(0.3, 5.0).f1);
+  // the default transfer is accepted on the deuteron; a moved one, or an opt-in model, is refused
+  CHECK_NOTHROW(default_inclusive_kernel(DEUTERON(), B1Model::Miller, 1.0, 1.0, nullptr, nullptr, nullptr, RSource::Unset, LI6_B1_RANK2_TRANSFER));
+  CHECK_THROWS_WITH_AS(default_inclusive_kernel(DEUTERON(), B1Model::Miller, 1.0, 1.0, nullptr, nullptr, nullptr, RSource::Unset, LI6_B1_RANK2_TRANSFER_HULTHEN),
+                       doctest::Contains("b1_transfer = 0.92194699999999996 on the deuteron is refused"), std::runtime_error);
+  CHECK_THROWS_WITH_AS(default_inclusive_kernel(DEUTERON(), B1Model::Cdks),
+                       doctest::Contains("b1_model = cdks on the deuteron is refused"), std::runtime_error);
+  CHECK_THROWS_WITH_AS(default_inclusive_kernel(DEUTERON(), B1Model::Li6Convolution),
+                       doctest::Contains("b1_model = li6-convolution on the deuteron is refused"), std::runtime_error);
+  // 6Li: the polligen gates' explicit 0.921947 still builds, and IS Li6B1 at it
+  const auto k6h = default_inclusive_kernel(LI6(), B1Model::Miller, 1.0, 1.0, nullptr, nullptr, nullptr, RSource::Unset, LI6_B1_RANK2_TRANSFER_HULTHEN);
+  CHECK(k6h->tables(0.3, 5.0).b1 == Li6B1(std::make_shared<MillerB1>(), LI6_B1_RANK2_TRANSFER_HULTHEN).b1(0.3, 5.0, 0.0));
+  // a spin-1 ion with no mapping throws, naming what is missing
+  Ion odd = DEUTERON();
+  odd.name = "X10"; odd.A = 10; odd.Z = 5;
+  CHECK_THROWS_WITH_AS(default_inclusive_kernel(odd), doctest::Contains("has no rank-2 mapping"), std::runtime_error);
+  // the run surface: meta label and banner on a deuteron run, the number on 6Li
+  PipelineConfig cd = toy_config();  // D7: the toy NAMED (sf_test_support.hpp)
+  cd.isotope = "d";
+  cd.n_events = 10;
+  const Pipeline pd(cd, tensor_thirds_plan(0.7, 0.6));
+  const InclusivePolarizationFactors fd = inclusive_polarization_factors(pd);
+  CHECK(std::isnan(fd.li6_b1_rank2_transfer));
+  CHECK(fd.li6_b1_rank2_transfer_label.rfind("not read on isotope d", 0) == 0);
+  CHECK(fd.report.find("the 6Li rank-2 transfer is not read (J1, 2026-11-10") != std::string::npos);
+  CHECK(run_provenance(pd).at("li6_b1_rank2_transfer") == fd.li6_b1_rank2_transfer_label);
+  CHECK(rank2_input_report(cd, tensor_thirds_plan(0.7, 0.6)).find("on the deuteron b1_func is MillerB1 itself") != std::string::npos);
+  PipelineConfig c6 = toy_config();
+  c6.isotope = "6Li";
+  c6.n_events = 10;
+  const Pipeline p6(c6, tensor_thirds_plan(0.7, 0.6));
+  const InclusivePolarizationFactors f6 = inclusive_polarization_factors(p6);
+  CHECK(f6.li6_b1_rank2_transfer == LI6_B1_RANK2_TRANSFER);
+  CHECK(f6.li6_b1_rank2_transfer_label.empty());
+  CHECK(run_provenance(p6).at("li6_b1_rank2_transfer") == "0.982576");  // as a pre-J1 6Li HepMC3 file carries it (the A/B of phase P2)
+  CHECK(rank2_input_report(c6, tensor_thirds_plan(0.7, 0.6)).find("deuteron") == std::string::npos);
+}

@@ -359,7 +359,7 @@ const char* triton_sf_name(TritonSfChoice s);
 ///   Miller          the DEFAULT, and bit-for-bit what every published
 ///                   inclusive tensor number was made with:
 ///                   `Li6B1(MillerB1)` through `LI6_B1_RANK2_TRANSFER` (A1) and
-///                   `LI6_B1_PER_NUCLEON` (2/6).  This IS the run PLAN's
+///                   `LI6_B1_PER_NUCLEON` (2/6) on 6Li; on the deuteron `MillerB1` itself, unmapped (J1, 2026-11-10).  This IS the run PLAN's
 ///                   "toy": today's default b1_func is `Li6B1(MillerB1)`,
 ///                   which is what `toy_b1` reaches.  Pinned at rtol 1e-12
 ///                   by `validation/reference/b1_default_li6.json` at the
@@ -1009,16 +1009,16 @@ struct PipelineConfig {
   void validate() const;
 };
 
-/// The CLASS-LEVEL TOY kernel: the Miller deuteron b1 through the 6Li rank-2
-/// transfer plus a 1e-2 discovery-scale Delta for a spin-1 ion, empty tensor
+/// The CLASS-LEVEL TOY kernel: the Miller deuteron b1 through the 6Li rank-2 transfer on 6Li, unmapped on the deuteron (J1, 2026-11-10; any other spin-1 ion throws),
+/// plus a 1e-2 discovery-scale Delta for a spin-1 ion, empty tensor
 /// slots otherwise (no published rank-2 input for 7Li), on `ToyF2` / `ToyG1`
 /// -- what every reference JSON pins.  Since D7 a default run builds the same
 /// physics on the shipped grids (the form below; Python `shipped_inclusive_kernel`).
 std::shared_ptr<const InclusiveKernel> default_inclusive_kernel(const Ion& ion);
 /// The same with the b1 backend chosen (`PipelineConfig::b1_model` and the two
 /// knobs); the one-argument form is `(ion, B1Model::Miller, 1.0, 1.0)`.  A1
-/// (2026-11-03): `b1_transfer` is what `Li6B1` applies on Miller / Cdks (every
-/// spin-1 ion, the deuteron too), default 0.982576; the gates pass 0.921947.
+/// (2026-11-03): `b1_transfer` is what `Li6B1` applies on Miller / Cdks (6Li; until J1 the deuteron too), default 0.982576; the gates pass 0.921947.
+/// J1 (2026-11-10): on the deuteron the slot is MillerB1 itself, so a moved `b1_transfer` or a non-Miller `model` THROWS there (the default is accepted).
 ///
 /// `band_scale` multiplies the whole b1 of the non-Miller backends;
 /// `w_alpha_d` is `Li6ConvolutionOptions::w_alpha_d_dwave`.  The Delta slot is
@@ -1776,9 +1776,9 @@ struct InclusivePolarizationFactors {
   double li6_cluster_polarization = NAN;  // <cmath>
   /// The deuteron's P_D, (1 - eff_pol_p) / 1.5 (d inclusive runs only).
   double deuteron_p_d = NAN;  // <cmath>
-  /// The rank-2 transfer `Li6B1` applied (spin-1 inclusive runs on the
-  /// default kernel at b1_model miller / cdks; NaN otherwise).
+  /// The rank-2 transfer `Li6B1` applied (6Li inclusive runs on the default kernel at b1_model miller / cdks; NaN otherwise -- J1 (2026-11-10): the deuteron no longer reads it).
   double li6_b1_rank2_transfer = NAN;  // <cmath>
+  std::string li6_b1_rank2_transfer_label; std::vector<std::pair<std::string, std::string>> meta_labels() const { std::vector<std::pair<std::string, std::string>> out; if (!li6_b1_rank2_transfer_label.empty()) out.emplace_back("li6_b1_rank2_transfer", li6_b1_rank2_transfer_label); return out; }  ///< J1 (2026-11-10): on an inclusive DEUTERON run on the default kernel the key `li6_b1_rank2_transfer` carries this `not read ...` label instead of a number (A17; its slot is MillerB1 itself); empty otherwise.  `meta_labels()` lists it.
   /// One sentence for the banner; empty off the inclusive channel and on an
   /// inclusive run that reads none of the three (7Li, p, 3He).
   std::string report;

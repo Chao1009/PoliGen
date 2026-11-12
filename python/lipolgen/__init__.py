@@ -915,8 +915,8 @@ def shipped_inclusive_kernel(ion, b1_transfer=None):
     the LHAPDF tier and both sets (the pre-flight's message otherwise).
 
     A1 (2026-11-03): `b1_transfer` (None = LI6_B1_RANK2_TRANSFER = 0.982576)
-    is the 6Li rank-2 transfer; LI6_B1_RANK2_TRANSFER_HULTHEN is the pre-A1
-    0.921947.  The vector factors are the ION's: li6_ion(...) / deuteron_ion(...)."""
+    is the 6Li rank-2 transfer; LI6_B1_RANK2_TRANSFER_HULTHEN is the pre-A1 0.921947.  J1 (2026-11-10): the deuteron's slot is MillerB1 itself and reads no transfer, so a moved value on deuteron() RAISES.
+    The vector factors are the ION's: li6_ion(...) / deuteron_ion(...)."""
     return _lipolgen.default_inclusive_kernel(
         ion,
         unpol_sf=_lipolgen.make_lhapdf_unpol_sf(_lipolgen.UNPOL_SF_DEFAULT),

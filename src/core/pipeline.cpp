@@ -132,10 +132,10 @@ const TaggingRow kTaggingLegacy[] = {
 // factory and by `inclusive_rank2_is_empty` below -- so the loud zero and the
 // thing it reports on cannot drift apart (docs/CONVENTIONS.md).
 //
-// It keys on the SPIN and not on the isotope on purpose: that is what makes an
-// `--isotope d --channel inclusive` run pick up the 6Li rank-2 transfer, which
-// is documented behaviour and a phase-F decision (OPEN_ITEMS_SOLUTIONS.md
-// sec. 14, "Adjacent defects"), not something this function may quietly change.
+// It keys on the SPIN; J1 (2026-11-10, the author's decision; DECISIONS.md of run 2026-11-10): WHICH camp fills the spin-1 slot is keyed on what the ion IS, by `spin1_rank2_camp` -- the deuteron gets MillerB1 itself (per nucleon, unmapped), 6Li `Li6B1(MillerB1)`; until J1 the deuteron took the 6Li rank-2 transfer (OPEN_ITEMS_SOLUTIONS.md sec. 14, "Adjacent defects").
+enum class Spin1Camp { Deuteron, Li6 };  // J1 (2026-11-10): the two spin-1 ions the tree ships; any other spin-1 ion THROWS below rather than silently take one of their mappings
+Spin1Camp spin1_rank2_camp(const Ion& ion) { if (ion.A == 2 && ion.Z == 1) return Spin1Camp::Deuteron; if (ion.A == 6 && ion.Z == 3) return Spin1Camp::Li6;
+  throw std::runtime_error("default_inclusive_kernel: spin-1 ion " + ion.name + " (A = " + std::to_string(ion.A) + ", Z = " + std::to_string(ion.Z) + ") has no rank-2 mapping -- the b1 slot is defined for the deuteron (MillerB1 itself, J1) and for 6Li (Li6B1, the embedded-deuteron transfer) only; build the kernel with its own Options::b1_func"); }
 bool kernel_fills_rank2(const Ion& ion) {
   return std::fabs(ion.spin - 1.0) < 1e-9;
 }
@@ -1191,12 +1191,12 @@ std::shared_ptr<const InclusiveKernel> default_inclusive_kernel(
   // whole tensor and cos 2phi sector of the run is identically zero, which is
   // what the run surface now says out loud instead of returning silent zeros.
   if (kernel_fills_rank2(ion)) {
-    if (model == B1Model::Miller) {
-      // The DEFAULT transfer keeps the function-local `static`
-      // (`TensorSF::b1_func()` captures raw `this` and "must not outlive the
-      // backend", sf.hpp); any other `b1_transfer` (A1, 2026-11-03: the
-      // polligen gates' 0.921947) gets its own object, kept alive by value
-      // capture.  `band_scale` is NOT applied: Miller's are the published.
+    const Spin1Camp camp = spin1_rank2_camp(ion);  // J1 (2026-11-10): keyed on what the ion IS; throws for a spin-1 ion with no mapping
+    if (camp == Spin1Camp::Deuteron && model != B1Model::Miller) throw std::runtime_error(std::string("default_inclusive_kernel: b1_model = ") + b1_model_name(model) + " on the deuteron is refused -- both opt-in models carry the 6Li rank-2 transfer, and since J1 (2026-11-10) the deuteron's slot is its own camp, MillerB1 per nucleon, unmapped (PipelineConfig::validate() refuses the flag off 6Li; for the A = 2 convolution use DeuteronConvolutionB1, b1_nuclear.hpp)");
+    if (camp == Spin1Camp::Deuteron && b1_transfer != LI6_B1_RANK2_TRANSFER) throw std::runtime_error([&] { char v[64]; std::snprintf(v, sizeof(v), "%.17g", b1_transfer); return std::string("default_inclusive_kernel: b1_transfer = ") + v + " on the deuteron is refused -- since J1 (2026-11-10) the deuteron's rank-2 slot is MillerB1 itself, per nucleon, unmapped, and reads no 6Li rank-2 transfer, so a moved value would record a variation that did not run (A17: the default is accepted and labelled not read).  The pre-J1 reading Li6B1(MillerB1, transfer) stays constructible: pass it as InclusiveKernel::Options::b1_func"; }());
+    if (camp == Spin1Camp::Deuteron) { const auto d_b1 = std::make_shared<const MillerB1>(); opt.b1_func = [d_b1](double x, double q2, double f1) { return d_b1->b1(x, q2, f1); };  // J1 (2026-11-10): the deuteron camp itself (was Li6B1(MillerB1) = 0.32753 x MillerB1); the shared_ptr captured BY VALUE, as the Cdks branch does, so nothing dangles
+    } else if (model == B1Model::Miller) {  // 6Li ALONE since J1 (2026-11-10).  The DEFAULT transfer keeps the function-local `static` (`TensorSF::b1_func()` captures raw `this` and "must not outlive the
+      // backend", sf.hpp); any other `b1_transfer` (A1, 2026-11-03: the polligen gates' 0.921947) gets its own object, kept alive by value capture.  `band_scale` is NOT applied: Miller's are the published.
       static const auto li6_b1 = std::make_shared<Li6B1>(std::make_shared<MillerB1>());
       const auto b = b1_transfer == LI6_B1_RANK2_TRANSFER ? std::shared_ptr<const Li6B1>() : std::make_shared<const Li6B1>(std::make_shared<MillerB1>(), b1_transfer);  // V-CODE-7 (2026-11-10): built only where it is read
       if (b1_transfer == LI6_B1_RANK2_TRANSFER) opt.b1_func = li6_b1->b1_func();
@@ -1289,7 +1289,7 @@ std::string rank2_input_report(const PipelineConfig& cfg, const RunPlan& plan) {
   if (kernel_fills_rank2(ion)) {
     return std::string("b1_model = ") + b1_model_name(cfg.b1_model) +
            " (spin 1: b1_func filled, b2 = 2x*b1 by default, delta_func = "
-           "toy_delta_gluon at the 1e-2 discovery scale, Jaffe-Manohar Delta)";
+           "toy_delta_gluon at the 1e-2 discovery scale, Jaffe-Manohar Delta)" + std::string(spin1_rank2_camp(ion) == Spin1Camp::Deuteron ? "; on the deuteron b1_func is MillerB1 itself, per nucleon, unmapped, and the 6Li rank-2 transfer is not read (J1, 2026-11-10)" : "");
   }
   if (!kernel_has_rank2_sector_unfilled(ion)) {
     return std::string("no rank-2 sector at spin ") + fmt_g(ion.spin) +
@@ -3976,12 +3976,12 @@ InclusivePolarizationFactors inclusive_polarization_factors(const Pipeline& p) {
   if (std::fabs(ion.spin - 1.0) < 1e-9) {   // `kernel_fills_rank2`
     if (f.caller_kernel) {
       s += "; rank-2 transfer: caller-supplied kernel (not knowable from the run)";
-    } else if (c.b1_model == B1Model::Miller || c.b1_model == B1Model::Cdks) {
-      f.li6_b1_rank2_transfer = LI6_B1_RANK2_TRANSFER;
+    } else if (spin1_rank2_camp(ion) == Spin1Camp::Deuteron) { f.li6_b1_rank2_transfer_label = "not read on isotope d -- the deuteron's rank-2 slot is MillerB1 itself, per nucleon, unmapped (J1, 2026-11-10)"; s += "; rank-2 slot MillerB1 per nucleon, unmapped: the 6Li rank-2 transfer is not read (J1, 2026-11-10; 0.32753 x MillerB1 before)";
+    } else if (c.b1_model == B1Model::Miller || c.b1_model == B1Model::Cdks) { f.li6_b1_rank2_transfer = LI6_B1_RANK2_TRANSFER;
       std::snprintf(buf, sizeof(buf),
                     "; 6Li rank-2 transfer %.6g (the VMC alpha-d value, A1; 0.921947 "
                     "before)%s", f.li6_b1_rank2_transfer,
-                    ion.name == "d" ? ", which the deuteron's class-level b1 reads too" : "");
+                    "");  // J1 (2026-11-10): 6Li only now; was `ion.name == "d" ? ", which the deuteron's class-level b1 reads too" : ""`
       s += buf;
     } else {
       s += "; rank-2 transfer not read (b1_model li6-convolution builds its own)";
@@ -4082,7 +4082,7 @@ std::map<std::string, std::string> run_provenance(const Pipeline& p,
   for (const auto& kv : inclusive_polarization_factors(p).meta()) {
     std::snprintf(buf, sizeof(buf), "%.17g", kv.second);
     m[kv.first] = buf;
-  }
+  }  for (const auto& kv : inclusive_polarization_factors(p).meta_labels()) m[kv.first] = kv.second;  // J1 (2026-11-10): the deuteron's `not read ...` transfer label
   return m;
 }
 

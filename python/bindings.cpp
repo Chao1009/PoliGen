@@ -691,7 +691,7 @@ py::dict columns_to_dict(Columns& c, const Pipeline& p, std::uint64_t n,
   const std::pair<double, double> grid = unpol_sf_grid_report(p);
   meta["unpol_sf_grid_q2_min"] = grid.first;
   meta["unpol_sf_below_grid_frac"] = grid.second;
-  for (const auto& kv : sf_grid_extras(p, knob("pol_sf"))) meta[kv.first] = kv.second;  for (const auto& kv : inclusive_polarization_factors(p).meta()) meta[py::str(kv.first)] = kv.second;  meta["g1_clipped_rate_fraction"] = g1_positivity_clip(p).fraction;  // D7; F7: pol keys only where g1 ran; A1 (2026-11-03): the three inclusive polarization factors used, where read; A3 (2026-11-03): the rate share the |g1| <= F1 clip binds on (NaN where g1 is not read)
+  for (const auto& kv : sf_grid_extras(p, knob("pol_sf"))) meta[kv.first] = kv.second;  for (const auto& kv : inclusive_polarization_factors(p).meta()) meta[py::str(kv.first)] = kv.second;  for (const auto& kv : inclusive_polarization_factors(p).meta_labels()) meta[py::str(kv.first)] = kv.second;  meta["g1_clipped_rate_fraction"] = g1_positivity_clip(p).fraction;  // D7; F7: pol keys only where g1 ran; A1 (2026-11-03): the three inclusive polarization factors used, where read; A3 (2026-11-03): the rate share the |g1| <= F1 clip binds on (NaN where g1 is not read)
   // fsi.hpp -- CONDITIONAL, following the `rc` precedent below rather than
   // the unconditional `b1` one, so an `--fsi off` npz carries exactly
   // today's key set and no reference gate moves.  Measured on the three runs
@@ -5213,7 +5213,7 @@ static void bind_io(py::module_& m) {
     const InclusivePolarizationFactors f = inclusive_polarization_factors(p);
     py::dict d;
     for (const auto& kv : f.meta()) d[py::str(kv.first)] = kv.second;
-    d["report"] = f.report;
+    for (const auto& kv : f.meta_labels()) d[py::str(kv.first)] = kv.second; d["report"] = f.report;  // J1 (2026-11-10): the deuteron's `not read ...` transfer label
     return d;
   }, py::arg("pipeline"),
      "A1: the inclusive polarization factors THIS run used -- the meta keys "

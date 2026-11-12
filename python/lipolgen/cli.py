@@ -711,7 +711,7 @@ def build_parser():
                         "vector one at the CLIPPED A1 (A3 clips g1 to +-F1 per "
                         "nucleon, which lifted D7's other four refusals -- "
                         "d config 2, tagged-d-p 0 / 1, tagged-6Li-alpha 0 -- "
-                        "and the inclusive 6Li one of A1) in the top cell; by "
+                        "and the inclusive 6Li one of A1) in the top cell -- J1 (2026-11-10): since the deuteron's b1 slot is MillerB1 itself, EVERY inclusive d plan and config is refused at 1.0 (the rank-2 term, the whole x = 0.955 row) and builds at 0.95, helicity-flip config 0 at 0.87; by "
                         "--inclusive-b1 on --channel tagged-6Li-alpha "
                         "(1 + w_avg = -0.1302 at x = 0.955, Q2 = 167.3); and "
                         "the mandatory band's x2 row (--b1-band-scale 2) "
@@ -1428,7 +1428,7 @@ def main(argv=None):
         # 0.3820 (ToyF2 + nnpdfpol), so 1 + w_avg = -0.02414.  D7 makes SIX
         # helicity-flip runs and two band / b1 recipes refuse at their defaults
         # (USAGE sec. 10); `--x-max` cures each, and the message computes how
-        # far.  It is NOT clamped: a positivity clamp is a physics change.  V-CODE-5 (2026-11-10): since A3 (2026-11-03) g1, not W, is clipped to |g1| <= F1 per nucleon; two of the six (`--isotope d --channel inclusive` configs 0 / 1) still refuse, the rank-2 term on top.
+        # far.  It is NOT clamped: a positivity clamp is a physics change.  V-CODE-5 (2026-11-10): since A3 (2026-11-03) g1, not W, is clipped to |g1| <= F1 per nucleon; two of the six (`--isotope d --channel inclusive` configs 0 / 1) still refuse, the rank-2 term on top.  J1 (2026-11-10): every inclusive d plan and config now refuses at x_max 1.0 (the deuteron's b1 is MillerB1 itself, x3.0532).
         raise SystemExit(str(e))
     t_setup = time.time() - t0
     # THE RUN CONTEXT of the knob-provenance table: what the core cannot see.

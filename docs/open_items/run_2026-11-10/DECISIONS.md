@@ -65,6 +65,81 @@ the toy — Miller's digitized curve up to x = 0.9 and this code's own taper
 above it — leaves the exact spin-1 positivity bound; the treatment is then
 decided by a dated note under this entry, on those measurements.*
 
+*Supervisor's note, 2026-11-12, after phase P2's measurements — the high-x
+treatment.* This is the SUPERVISOR's choice (J1 leaves the treatment to a
+dated note; the author's words on item 1 are the ones quoted at the top and
+say nothing about a treatment) — to be quoted as such.
+
+What was measured. Phase P2 (`phase_P2_deuteron_b1.md` §1 M3–M5): with the
+deuteron's own slot, every default inclusive deuteron run is refused at
+`x_max` 1.0 — 24 of 24 plan × beam-configuration runs, 4 of 24 before — by
+the rank-2 term on the whole x = 0.955 row (15 / 24 / 24 cells, 1.6 × 10⁻⁹ of
+the rate), where b₁/F₁ reaches 6.99 against the bound 3 and the toy is this
+code's own (1−x)³ taper above Miller's last digitized point, a Q²-independent
+table against an evolving F₁. The supervisor's own measurement on P2's tree
+(2026-11-12, same cell tables and states; script and output in the session
+scratch, the numbers in `phase_P2b_spin1_domain.md`): the positivity domain
+of a spin-1 target at leading order — non-negative quark densities in each
+helicity state of the target, q↑¹, q↓¹, q⁰ ≥ 0 — is, per nucleon,
+
+    −(3/2) F₁ ≤ b₁ ≤ 3 (F₁ − |g₁|)
+
+(for g₁ = 0 the single-function bound −3/2 ≤ b₁/F₁ ≤ 3 that P2 derived from
+the kernel's own density). Clipping b₁ to the single-function bound alone
+would let the three tensor plans build on every configuration but leave
+`--plan helicity-flip` refused on all three (2 of 3 before J1): those cells
+violate the JOINT half, the vector and rank-2 terms each inside their own
+bound (config 0 also on the x = 0.871 row). Clipping to the full domain
+leaves no refused state on any of the 24 runs. The deuteron cells outside
+the domain are 40 / 59 / 59 (configs 0 / 1 / 2) on the rows x = 0.871 and
+0.955, carrying 4.79 × 10⁻⁷ / 3.87 × 10⁻⁷ / 3.54 × 10⁻⁷ of the rate. On ⁶Li
+the single-function bound holds everywhere (max 2.29) and no run is refused;
+3 cells of configs 1 and 2 lie outside the joint half (|g₁|/F₁ + b₁/(3F₁) =
+1.046 at x = 0.955, Q² = 1897 GeV²; 2.4 × 10⁻¹¹ / 2.7 × 10⁻¹¹ of the rate).
+
+**The choice: on the inclusive deuteron the kernel's rank-2 slot is confined
+to that domain — b₁ ← min(max(b₁, −(3/2)F₁), 3(F₁ − |g₁|)), per nucleon, with
+the kernel's own F₁ and g₁ at the same (x, Q²), b₂ kept in step — visibly:
+one `meta` key `b1_clipped_rate_fraction` (the share of the run's spin-blind
+cell rate in the cells where the confinement binds at the cell centre, the
+definition `g1_clipped_rate_fraction` has) and one banner line, as A3 did for
+g₁. The configuration-time refusal stays behind it as the backstop. Nothing
+on ⁶Li moves.** *Why: (1) the criterion — a treatment is needed if the plain
+default deuteron run is refused, because a refusal out of the box makes a
+smaller `x_max` the de-facto default, which A4 itself says only hides a
+violation — was the supervisor's before P2 measured, but it was not written
+in the tree before the values were seen; said here. (2) The bound is exact
+at leading order and is the rank-2 counterpart of A3's |g₁| ≤ F₁; taking
+only its single-function half would treat one violation of the domain by a
+clip and another by a refusal, and would leave the deuteron's A_∥ plan — the
+commonest deuteron measurement — worse off than before J1. (3) b₁ yields and
+g₁ does not because b₁ is the least constrained input there: F₁ and g₁ are
+fitted sets (g₁ already bounded by A3), the b₁ at x ≥ 0.87 is a
+Q²-independent digitized model curve to x = 0.9 and this code's taper above
+it. (4) It touches 3.5–4.8 × 10⁻⁷ of the deuteron rate and none of the
+HERMES bins. (5) The scope is the deuteron slot because that is what J1
+opened and ⁶Li is on J1's not-changing list; ⁶Li's three joint-half cells
+are recorded and go to the author with the modelling question below. What
+this re-opens: A4's sentence "Any refusal that survives A3 (a rank-2 one) is
+the right answer and stays" — for the deuteron's slot it is replaced by the
+confinement, with the refusal as backstop; for ⁶Li (the b₁ band ×2, a moved
+transfer) it stands as written. Not chosen: A4 as it stands (reason 1); a
+different taper or a smaller default `x_max` (a choice among unmeasured
+shapes, and no cure for the x = 0.871 cells, which read Miller's own curve);
+reading the toy as the ratio b₁/F₁ at a reference scale, i.e. a
+scale-independent A_zz — probably the better model, and it would remove the
+cause on both ions, but it moves every rank-2 number of ⁶Li at every Q², a
+change of the default b₁ model: the author's, filed in this run's summary.
+What changes: `default_inclusive_kernel`'s deuteron branch (a kernel option,
+off on a kernel a caller builds, so the unconfined toy stays constructible);
+the deuteron's b₁, b₂ on the rows x ≥ 0.871 of the default window; which
+deuteron runs build (to be measured: expected all 24); the deuteron run's
+`meta`, banner and the documents P2 dated. What does not: the deuteron below
+x = 0.83 (to be measured bit-identical to P2's tree, HERMES included); ⁶Li,
+⁷Li, tagged, coherent (byte-identical, the new key absent there);
+`validate()`; the Δ slot; any reference JSON; the refusal itself and its
+message. Implemented in phase P2b, record `phase_P2b_spin1_domain.md`.*
+
 **J2 — the polligen reference tables are re-dumped in place on this machine
 and committed exactly as one run of `validation/dump_polligen_reference.py`
 writes them.** *The author's decision ("re-dump"). The facts it rests on

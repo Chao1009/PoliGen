@@ -176,9 +176,20 @@ def build_models():
 # the declared `cdks_conv_mstw` among them, keeps its A_zz on MstwSF and
 # R1990 (unchanged), recorded.  The b1 chi2 does not depend on F1^d.  Status
 # FAIL -> FAIL.  RECORDED, not acted on: the shipped inclusive deuteron
-# kernel's own b1 is 0.32753 x MillerB1() (= (2/6) x LI6_B1_RANK2_TRANSFER,
+# kernel's own b1 was (until J1, 2026-11-10 -- the NOTE below) 0.32753 x MillerB1() (= (2/6) x LI6_B1_RANK2_TRANSFER,
 # the 6Li mapping), not MillerB1() -- `miller_shipped` is the MillerB1() the
 # `--b1-model miller` backend names, as declared above.
+#
+# J1 NOTE (decision J1 of 2026-11-10, THE AUTHOR'S, docs/open_items/run_2026-11-10/
+# DECISIONS.md; record phase_P2_deuteron_b1.md).  The inclusive deuteron kernel's
+# rank-2 slot is now MillerB1() itself, per nucleon, unmapped, so the headline
+# `miller_shipped` IS the b1 a default deuteron run carries and convention 8's
+# default-run clause applies to this row again.  Measured 2026-11-10 on
+# `shipped_inclusive_kernel(deuteron()).tables(x, q2).b1` at the six bins: equal to
+# MillerB1() bin for bin, chi2(b1)/6 = 5.2619 (4/6) and A_zz 7.3080/6 (3/6) on the
+# shipped F1^d -- the headline's own numbers.  The 0.32753 x MillerB1() reading
+# (chi2(b1)/6 = 14.56, 2/6; A_zz 15.68/6 on the shipped F1^d) is history.  This
+# harness never read the kernel's b1, so no number of this row moved.
 #: the headline: the shipped b1 (A5, 2026-11-03; "cdks_conv_mstw" until then)
 HEADLINE = "miller_shipped"
 

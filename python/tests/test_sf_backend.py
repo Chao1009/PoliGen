@@ -953,8 +953,8 @@ def test_the_neutron_tagged_pair_builds_since_a3_and_a_survivor_names_the_cell_a
         _l.Pipeline(_cfg("inclusive", isotope="d"), _dp_plan())
     msg = str(e.value)
     assert "x = 0.955" in msg and "--x-max" in msg   # the cell; the cure, by flag name
-    assert "A1 = g1/F1 is 0.9136" in msg and "1 + w_avg = -0.02078" in msg  # the clipped A1 = eff_pol
-    assert "-0.7189 from the RANK-2 term" in msg
+    assert "A1 = g1/F1 is 0.9136" in msg and "1 + w_avg = -0.1021" in msg  # the clipped A1 = eff_pol; J1 (2026-11-10): was -0.02078 at Q2 1536, m = -1 (the deuteron read 0.32753 x MillerB1)
+    assert "-1.13 from the RANK-2 term" in msg and "Q2 = 167.3" in msg  # J1 (2026-11-10): was -0.7189 (MillerB1 itself now, x3.0532)
 
 
 @needs_lhapdf

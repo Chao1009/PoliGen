@@ -128,7 +128,7 @@ inline constexpr double B1_CDKS_TABLE_TO_PER_NUCLEON = 1.0;
 /// sign fix) and VMC AV18+UX (0.98257587, pinned to the literal at 5e-7, test_tagged.cpp).
 inline constexpr double LI6_B1_RANK2_TRANSFER_HULTHEN = 0.921947;  // pre-A1, polligen's
 inline constexpr double LI6_B1_RANK2_TRANSFER_VMC = 0.982576;      // the default wave's
-/// A1 (2026-11-03): the inclusive b1 / A_zz read the VMC value, x1.06576 (the old one
+/// A1 (2026-11-03): the inclusive b1 / A_zz read the VMC value, x1.06576 (6Li only since J1, 2026-11-10: the deuteron's slot is MillerB1, unmapped) (the old one
 /// via `default_inclusive_kernel(..., b1_transfer)`).  UNQUANTIFIED SYSTEMATIC: the
 /// non-cluster depletion taking the vector sector from the cluster 0.887 to the
 /// six-body 0.848 (4.4 %) has no rank-2 counterpart, so none is applied here.

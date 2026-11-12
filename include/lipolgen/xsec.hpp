@@ -231,13 +231,13 @@ class InclusiveKernel {
     RFunc r_func;
     bool target_mass = true;
     int g2_npts = 96;
-  };
+    bool confine_spin1_rank2 = false;  };  // J1 note (2026-11-12; the supervisor's note under J1, docs/open_items/run_2026-11-10/DECISIONS.md): DEFAULT OFF.  On, a SPIN-1 kernel confines its final b1 per nucleon to the leading-order spin-1 positivity domain, b1 <- min(max(b1, -(3/2) F1), 3 (F1 - |g1|)) with its OWN F1 and g1 at the same (x, Q2) (`tables`), b2 kept in step; an empty window (3 (F1 - |g1|) < -(3/2) F1) or F1 <= 0 leaves b1 alone.  b3, b4, Delta untouched.  `default_inclusive_kernel` sets it on the deuteron only; a non-spin-1 ion with it set throws.
 
   explicit InclusiveKernel(Ion ion);
   InclusiveKernel(Ion ion, Options options);
 
   const Ion& ion() const { return ion_; }
-  bool target_mass() const { return target_mass_; }
+  bool target_mass() const { return target_mass_; }  bool confine_spin1_rank2() const { return confine_rank2_; }  double unconfined_b1(double x, double q2, double f1) const { return b1_func_ ? b1_func_(x, q2, f1) : 0.0; }  // J1 note (2026-11-12): the option, and the b1 slot BEFORE the confinement (what `b1_rank2_confinement` tests)
   bool tensor_gamma() const { return tensor_gamma_; }
   double g2_scale() const { return g2_scale_; }
 
@@ -368,7 +368,7 @@ class InclusiveKernel {
   double g2_scale_;
   bool target_mass_;
   bool tensor_gamma_;
-  int g2_npts_;
+  int g2_npts_;  bool confine_rank2_ = false;  // J1 note (2026-11-12): Options::confine_spin1_rank2
 };
 
 }  // namespace lipolgen

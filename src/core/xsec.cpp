@@ -76,8 +76,8 @@ InclusiveKernel::InclusiveKernel(Ion ion, Options options)
       g2_scale_(options.g2_scale),
       target_mass_(options.target_mass),
       tensor_gamma_(options.tensor_gamma),
-      g2_npts_(options.g2_npts) {
-  if (const auto c = std::dynamic_pointer_cast<const PositivityClippedG1>(g1_model_)) g1_model_ = c->inner();  // A3 (2026-11-03): one clip, never two;
+      g2_npts_(options.g2_npts), confine_rank2_(options.confine_spin1_rank2) {
+  if (confine_rank2_ && std::fabs(ion_.spin - 1.0) > 1e-9) { throw std::runtime_error("InclusiveKernel: Options::confine_spin1_rank2 is the SPIN-1 positivity domain and ion " + ion_.name + " has spin " + std::to_string(ion_.spin) + " -- leave it off"); }  /* J1 note (2026-11-12) */  if (const auto c = std::dynamic_pointer_cast<const PositivityClippedG1>(g1_model_)) g1_model_ = c->inner();  // A3 (2026-11-03): one clip, never two;
   if (!g1_model_) g1_model_ = std::make_shared<const ToyG1>(nf2_.base(), options.r_func);
   g1_model_ = std::make_shared<const PositivityClippedG1>(g1_model_, nf2_.base(), options.r_func);  // |g1| <= F1 per nucleon on THIS kernel's F1 (sf.hpp)
   // `target_mass = true` with `G2Mode::kZero` is NOT refused (xsec.py:126-129):
@@ -129,7 +129,7 @@ SFTables InclusiveKernel::tables(double x, double q2, bool with_g2) const {
                  }, x, q2, g2_npts_)
                : 0.0;
   }
-  return t;
+  if (confine_rank2_ && rank2 && t.f1 > 0.0) { const double lo = -1.5 * t.f1, hi = 3.0 * (t.f1 - std::fabs(t.g1)); if (hi >= lo && (t.b1 < lo || t.b1 > hi)) { const double nb = std::min(std::max(t.b1, lo), hi); t.b2 = (*b2f) ? t.b2 * (t.b1 != 0.0 ? nb / t.b1 : 1.0) : 2.0 * x * nb; t.b1 = nb; } }  return t;  // J1 note (2026-11-12): the spin-1 LO positivity domain on the FINAL b1, b2 in step (an unset b2 stays 2x b1; a set one is scaled by the same factor); an empty window or F1 <= 0 is left to the sampler's refusal
 }
 
 double InclusiveKernel::dphi(const SFTables& t, double x, double y) {

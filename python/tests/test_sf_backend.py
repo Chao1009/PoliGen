@@ -949,8 +949,9 @@ def test_the_neutron_tagged_pair_builds_since_a3_and_a_survivor_names_the_cell_a
     c = _l.g1_positivity_clip(p)
     assert c["g1_clipped_rate_fraction"] == pytest.approx(2.0924992e-07, rel=1e-6)
     assert c["max_unclipped_a1n"] == pytest.approx(4.436, abs=1e-3) and np.isnan(c["max_unclipped_a1p"])
+    cfg = _cfg("inclusive", isotope="d"); o = _l.InclusiveKernel.Options(); mb = _l.MillerB1(); o.f2_source = _l.make_lhapdf_unpol_sf(_l.UNPOL_SF_DEFAULT); o.g1_model = _l.make_lhapdf_pol_sf(_l.POL_SF_DEFAULT); o.b1_func = lambda x, q2, f1: mb.b1(x, q2, f1); o.delta_func = lambda x, q2, f1: _l.toy_delta_gluon(x, q2, f1, 1e-2)  # J1 note (2026-11-12): the DEFAULT deuteron run builds now (its slot is confined to the spin-1 domain), so the survivor is the UNCONFINED deuteron kernel built through the public API (the shipped objects, MillerB1, the 1e-2 Delta, confine_spin1_rank2 off) -- P2's refusal, reproduced
     with pytest.raises(RuntimeError) as e:
-        _l.Pipeline(_cfg("inclusive", isotope="d"), _dp_plan())
+        cfg.kernel = _l.InclusiveKernel(lg.deuteron(), o); _l.Pipeline(cfg, _dp_plan())
     msg = str(e.value)
     assert "x = 0.955" in msg and "--x-max" in msg   # the cell; the cure, by flag name
     assert "A1 = g1/F1 is 0.9136" in msg and "1 + w_avg = -0.1021" in msg  # the clipped A1 = eff_pol; J1 (2026-11-10): was -0.02078 at Q2 1536, m = -1 (the deuteron read 0.32753 x MillerB1)
@@ -985,17 +986,17 @@ def test_the_cli_reports_it_as_a_configuration_error_not_a_traceback():
     """`lipolgen-run` used to exit 1 through a Python traceback out of
     `_l.Pipeline`.  A configuration refusal is a SystemExit carrying the
     message the sampler wrote -- the `PythiaBridge` clause's rule.  A3
-    (2026-11-03): taken on the inclusive deuteron, which A3 still refuses."""
-    argv = ["--isotope", "d", "--channel", "inclusive", "--events", "10",
+    (2026-11-03): taken on the inclusive deuteron, which A3 still refuses.  J1 note (2026-11-12): the default deuteron run builds since its slot is confined; taken on the 6Li b1 band x2 row (cdks at --x-max 0.95, the rank-2 refusal A4 keeps for 6Li), cured at 0.85."""
+    argv = ["--isotope", "6Li", "--channel", "inclusive", "--events", "10",
             "--unpol-sf", "ct18nlo", "--pol-sf", "nnpdfpol",
-            "--plan", "helicity-flip", "--pz", "0.7", "--pe", "0.7",
+            "--b1-model", "cdks", "--b1-band-scale", "2", "--x-max", "0.95",  # J1 note (2026-11-12): was --isotope d --plan helicity-flip --pz 0.7 --pe 0.7
             "--quiet"]
     with pytest.raises(SystemExit) as e:
         cli.main(argv)
     msg = str(e.value)
-    assert "negative phi-averaged density" in msg and "--x-max" in msg
+    assert "negative phi-averaged density" in msg and "--x-max" in msg and "x = 0.871" in msg  # J1 note (2026-11-12)
     # ... and the cure goes through the CLI
-    cli.main(argv + ["--x-max", "0.95"])
+    cli.main(argv[:-3] + ["--x-max", "0.85", "--quiet"])  # J1 note (2026-11-12): was argv + ["--x-max", "0.95"]
 
 
 # -------------------------------------------------------------------- G13

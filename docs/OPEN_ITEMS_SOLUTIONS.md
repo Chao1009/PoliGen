@@ -2765,7 +2765,7 @@ banner prints it and `meta` carries it, computed from the grid's own
   filed for phase F on this. *(This bullet said the opposite — "This change
   does not close it … Filed for phase F" — until 2026-09-05, while the same
   section's "What was built" already recorded the refusal.)*
-* **An `--isotope d --channel inclusive` run gets the ⁶Li rank-2 transfer** — **CLOSED 2026-11-10 by J1** (the author's decision, `open_items/run_2026-11-10/DECISIONS.md`; record `phase_P2_deuteron_b1.md`): the deuteron's slot is now `MillerB1` itself, per nucleon, unmapped (×3.0532 on every inclusive deuteron rank-2 number), keyed on what the ion IS.
+* **An `--isotope d --channel inclusive` run gets the ⁶Li rank-2 transfer** — **CLOSED 2026-11-10 by J1** (the author's decision, `open_items/run_2026-11-10/DECISIONS.md`; record `phase_P2_deuteron_b1.md`): the deuteron's slot is now `MillerB1` itself, per nucleon, unmapped (×3.0532 on every inclusive deuteron rank-2 number), keyed on what the ion IS; J1 note (2026-11-12): confined to the spin-1 positivity domain (`phase_P2b_spin1_domain.md`), so every default deuteron run builds at x_max 1.0.
   Until then `default_inclusive_kernel`'s tensor branch keyed on `ion.spin == 1`
   and the isotope guard lived only in `validate()`'s non-Miller branch.
   Documented behaviour then (`PHYSICS_CHANNELS.md` said "for ANY spin-1 ion"), but

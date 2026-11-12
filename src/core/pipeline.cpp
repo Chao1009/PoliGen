@@ -1194,7 +1194,7 @@ std::shared_ptr<const InclusiveKernel> default_inclusive_kernel(
     const Spin1Camp camp = spin1_rank2_camp(ion);  // J1 (2026-11-10): keyed on what the ion IS; throws for a spin-1 ion with no mapping
     if (camp == Spin1Camp::Deuteron && model != B1Model::Miller) throw std::runtime_error(std::string("default_inclusive_kernel: b1_model = ") + b1_model_name(model) + " on the deuteron is refused -- both opt-in models carry the 6Li rank-2 transfer, and since J1 (2026-11-10) the deuteron's slot is its own camp, MillerB1 per nucleon, unmapped (PipelineConfig::validate() refuses the flag off 6Li; for the A = 2 convolution use DeuteronConvolutionB1, b1_nuclear.hpp)");
     if (camp == Spin1Camp::Deuteron && b1_transfer != LI6_B1_RANK2_TRANSFER) throw std::runtime_error([&] { char v[64]; std::snprintf(v, sizeof(v), "%.17g", b1_transfer); return std::string("default_inclusive_kernel: b1_transfer = ") + v + " on the deuteron is refused -- since J1 (2026-11-10) the deuteron's rank-2 slot is MillerB1 itself, per nucleon, unmapped, and reads no 6Li rank-2 transfer, so a moved value would record a variation that did not run (A17: the default is accepted and labelled not read).  The pre-J1 reading Li6B1(MillerB1, transfer) stays constructible: pass it as InclusiveKernel::Options::b1_func"; }());
-    if (camp == Spin1Camp::Deuteron) { const auto d_b1 = std::make_shared<const MillerB1>(); opt.b1_func = [d_b1](double x, double q2, double f1) { return d_b1->b1(x, q2, f1); };  // J1 (2026-11-10): the deuteron camp itself (was Li6B1(MillerB1) = 0.32753 x MillerB1); the shared_ptr captured BY VALUE, as the Cdks branch does, so nothing dangles
+    if (camp == Spin1Camp::Deuteron) { const auto d_b1 = std::make_shared<const MillerB1>(); opt.b1_func = [d_b1](double x, double q2, double f1) { return d_b1->b1(x, q2, f1); }; opt.confine_spin1_rank2 = true;  // J1 note (2026-11-12): confined to the spin-1 LO positivity domain (xsec.hpp Options::confine_spin1_rank2; meta b1_clipped_rate_fraction).  J1 (2026-11-10): the deuteron camp itself (was Li6B1(MillerB1) = 0.32753 x MillerB1); the shared_ptr captured BY VALUE, as the Cdks branch does, so nothing dangles
     } else if (model == B1Model::Miller) {  // 6Li ALONE since J1 (2026-11-10).  The DEFAULT transfer keeps the function-local `static` (`TensorSF::b1_func()` captures raw `this` and "must not outlive the
       // backend", sf.hpp); any other `b1_transfer` (A1, 2026-11-03: the polligen gates' 0.921947) gets its own object, kept alive by value capture.  `band_scale` is NOT applied: Miller's are the published.
       static const auto li6_b1 = std::make_shared<Li6B1>(std::make_shared<MillerB1>());
@@ -1289,7 +1289,7 @@ std::string rank2_input_report(const PipelineConfig& cfg, const RunPlan& plan) {
   if (kernel_fills_rank2(ion)) {
     return std::string("b1_model = ") + b1_model_name(cfg.b1_model) +
            " (spin 1: b1_func filled, b2 = 2x*b1 by default, delta_func = "
-           "toy_delta_gluon at the 1e-2 discovery scale, Jaffe-Manohar Delta)" + std::string(spin1_rank2_camp(ion) == Spin1Camp::Deuteron ? "; on the deuteron b1_func is MillerB1 itself, per nucleon, unmapped, and the 6Li rank-2 transfer is not read (J1, 2026-11-10)" : "");
+           "toy_delta_gluon at the 1e-2 discovery scale, Jaffe-Manohar Delta)" + std::string(spin1_rank2_camp(ion) == Spin1Camp::Deuteron ? "; on the deuteron b1_func is MillerB1 itself, per nucleon, unmapped, and the 6Li rank-2 transfer is not read (J1, 2026-11-10); confined to the spin-1 leading-order positivity domain -(3/2) F1 <= b1 <= 3 (F1 - |g1|) per nucleon, b2 in step (J1 note, 2026-11-12; meta b1_clipped_rate_fraction)" : "");
   }
   if (!kernel_has_rank2_sector_unfilled(ion)) {
     return std::string("no rank-2 sector at spin ") + fmt_g(ion.spin) +
@@ -1347,7 +1347,7 @@ bool pol_sf_is_read(const PipelineConfig& cfg, const RunPlan& plan) {
   // THE RUN PLAN.  `plan_has_beam_helicity` is the whole of it -- see there.
   // This clause is the one that was missing until 2026-09-05, and it is the
   // one that bites at the CLI's own default plan.
-  if (cfg.channel == PipelineChannel::CoherentLi6) return false;
+  if (cfg.channel == PipelineChannel::CoherentLi6) { return false; }  if (cfg.channel == PipelineChannel::Inclusive && !cfg.kernel && cfg.isotope == "d") { return true; }  // J1 note (2026-11-12): on the default inclusive deuteron g1 bounds the rank-2 slot (the spin-1 domain, b1 <= 3 (F1 - |g1|)), so it is read under EVERY fill
   return plan_has_beam_helicity(plan);
 }
 
@@ -1372,7 +1372,7 @@ std::string pol_sf_unread_label(const PipelineConfig& cfg,
 
 std::string pol_sf_reach_report(const PipelineConfig& cfg,
                                 const RunPlan& plan) {
-  if (cfg.channel != PipelineChannel::CoherentLi6 &&
+  if (cfg.channel != PipelineChannel::CoherentLi6 && !(cfg.channel == PipelineChannel::Inclusive && !cfg.kernel && cfg.isotope == "d") &&  // J1 note (2026-11-12): the inclusive deuteron reads g1 under every fill
       !plan_has_beam_helicity(plan)) {
     return pol_sf_unread_label(cfg, plan) +
            ": no category carries lam_e * P_e != 0, and lam_e * P_e is the "
@@ -1419,7 +1419,7 @@ std::string pol_sf_reach_report(const PipelineConfig& cfg,
               : " -> InclusiveKernel::Options::g1_model") +
          "; g2 follows it through Wandzura-Wilczek, and at pol_sf = toy the "
          "kernel's own ToyG1 is built on the kernel's own UnpolSF, so "
-         "--unpol-sf moves g1 too";
+         "--unpol-sf moves g1 too" + std::string(cfg.channel == PipelineChannel::Inclusive && cfg.isotope == "d" ? "; on the inclusive deuteron g1 also bounds the rank-2 slot -- b1 is confined to the spin-1 positivity domain -(3/2) F1 <= b1 <= 3 (F1 - |g1|) (J1 note, 2026-11-12) -- so it is read under every fill, the tensor plans included" : "");
 }
 
 // ============================================================ event helpers
@@ -4084,6 +4084,47 @@ std::map<std::string, std::string> run_provenance(const Pipeline& p,
     m[kv.first] = buf;
   }  for (const auto& kv : inclusive_polarization_factors(p).meta_labels()) m[kv.first] = kv.second;  // J1 (2026-11-10): the deuteron's `not read ...` transfer label
   return m;
+}
+
+}  // namespace lipolgen
+
+namespace lipolgen {
+
+// J1 note (2026-11-12): see `B1RankTwoConfinement` in pipeline.hpp, where the
+// definition is written.
+B1RankTwoConfinement b1_rank2_confinement(const Pipeline& p) {
+  B1RankTwoConfinement c;
+  if (p.config().channel != PipelineChannel::Inclusive) return c;
+  const InclusiveKernel& k = p.dis_sampler().kernel();
+  if (!k.confine_spin1_rank2()) return c;
+  c.applied = true;
+  const std::vector<double>& w = p.cell_rate_weights_pb();
+  const std::vector<double>& xc = p.dis_sampler().x_cells();
+  const std::vector<double>& qc = p.dis_sampler().q2_cells();
+  const std::vector<SFTables>& tc = p.dis_sampler().tables();
+  double tot = 0.0, bound = 0.0, mx = -INFINITY;
+  for (std::size_t i = 0; i < w.size() && i < xc.size() && i < tc.size(); ++i) {
+    tot += w[i];
+    const double f1 = tc[i].f1;
+    if (!(f1 > 0.0)) continue;
+    const double b = k.unconfined_b1(xc[i], qc[i], f1);
+    if (b / f1 > mx) { mx = b / f1; c.max_at_x = xc[i]; c.max_at_q2 = qc[i]; }
+    const double lo = -1.5 * f1, hi = 3.0 * (f1 - std::fabs(tc[i].g1));
+    if (!(hi >= lo)) continue;
+    if (b > hi) ++c.n_upper;
+    if (b < lo) ++c.n_lower;
+    if (b > hi || b < lo) { ++c.n_cells; bound += w[i]; }
+  }
+  c.fraction = tot > 0.0 ? bound / tot : NAN;
+  if (mx > -INFINITY) c.max_b1_over_f1 = mx;
+  char buf[320];
+  std::snprintf(buf, sizeof(buf),
+                "binds on %.4g %% of the rate, %d cell(s) (%d upper, %d lower; "
+                "max unconfined b1/F1 = %.4g at x = %.4g, Q2 = %.4g)",
+                100.0 * c.fraction, c.n_cells, c.n_upper, c.n_lower,
+                c.max_b1_over_f1, c.max_at_x, c.max_at_q2);
+  c.report = buf;
+  return c;
 }
 
 }  // namespace lipolgen

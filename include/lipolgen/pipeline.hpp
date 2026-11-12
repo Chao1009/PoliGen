@@ -359,7 +359,7 @@ const char* triton_sf_name(TritonSfChoice s);
 ///   Miller          the DEFAULT, and bit-for-bit what every published
 ///                   inclusive tensor number was made with:
 ///                   `Li6B1(MillerB1)` through `LI6_B1_RANK2_TRANSFER` (A1) and
-///                   `LI6_B1_PER_NUCLEON` (2/6) on 6Li; on the deuteron `MillerB1` itself, unmapped (J1, 2026-11-10).  This IS the run PLAN's
+///                   `LI6_B1_PER_NUCLEON` (2/6) on 6Li; on the deuteron `MillerB1` itself, unmapped (J1, 2026-11-10), confined to the spin-1 positivity domain (J1 note, 2026-11-12).  This IS the run PLAN's
 ///                   "toy": today's default b1_func is `Li6B1(MillerB1)`,
 ///                   which is what `toy_b1` reaches.  Pinned at rtol 1e-12
 ///                   by `validation/reference/b1_default_li6.json` at the
@@ -1018,7 +1018,7 @@ std::shared_ptr<const InclusiveKernel> default_inclusive_kernel(const Ion& ion);
 /// The same with the b1 backend chosen (`PipelineConfig::b1_model` and the two
 /// knobs); the one-argument form is `(ion, B1Model::Miller, 1.0, 1.0)`.  A1
 /// (2026-11-03): `b1_transfer` is what `Li6B1` applies on Miller / Cdks (6Li; until J1 the deuteron too), default 0.982576; the gates pass 0.921947.
-/// J1 (2026-11-10): on the deuteron the slot is MillerB1 itself, so a moved `b1_transfer` or a non-Miller `model` THROWS there (the default is accepted).
+/// J1 (2026-11-10): on the deuteron the slot is MillerB1 itself, so a moved `b1_transfer` or a non-Miller `model` THROWS there (the default is accepted); J1 note (2026-11-12): and `Options::confine_spin1_rank2` is set there (only).
 ///
 /// `band_scale` multiplies the whole b1 of the non-Miller backends;
 /// `w_alpha_d` is `Li6ConvolutionOptions::w_alpha_d_dwave`.  The Delta slot is
@@ -1844,6 +1844,38 @@ G1PositivityClip g1_positivity_clip(const Pipeline& p);
 // see; the Python module adds them from the same function `meta` uses.
 std::map<std::string, std::string> run_provenance(
     const Pipeline& p, const KnobRunContext& ctx = KnobRunContext());
+
+}  // namespace lipolgen
+
+namespace lipolgen {
+
+// J1 note (2026-11-12; the supervisor's note under J1, docs/open_items/
+// run_2026-11-10/DECISIONS.md -- the SUPERVISOR's choice, phase P2b): how
+// much of ONE run's rate the spin-1 positivity confinement of the rank-2 slot
+// (`InclusiveKernel::Options::confine_spin1_rank2`, on the default inclusive
+// DEUTERON kernel only) acts on -- the visibility A3 gave g1's clip.
+// DEFINED before it was measured (phase_P2b_spin1_domain.md sec. 1): over the
+// run's accepted cells c, with w_c = `Pipeline::cell_rate_weights_pb()` (the
+// spin-blind cell cross section, the weights `g1_clipped_rate_fraction` uses),
+//   fraction = sum_{c: the confinement binds} w_c / sum_c w_c,
+// "binds" being, at the CELL CENTRE, with the kernel's own F1 and g1 there
+// (the sampler's cell table) and the slot's unconfined b1
+// (`InclusiveKernel::unconfined_b1`): F1 > 0, the window
+// [-(3/2) F1, 3 (F1 - |g1|)] not empty, and b1 outside it -- the test the
+// kernel makes.  NaN where the confinement is not applied (the option off:
+// every run but the default inclusive deuteron, a caller kernel without it,
+// every other channel); `meta["b1_clipped_rate_fraction"]` is then ABSENT.
+struct B1RankTwoConfinement {
+  bool applied = false;           ///< the run's kernel has the option on (inclusive channel)
+  double fraction = NAN;          ///< `meta["b1_clipped_rate_fraction"]` (NaN = not applied)  // <cmath>
+  int n_cells = 0;                ///< cells where it binds
+  int n_upper = 0;                ///< ... on the upper half, b1 > 3 (F1 - |g1|)
+  int n_lower = 0;                ///< ... on the lower half, b1 < -(3/2) F1
+  double max_b1_over_f1 = NAN;    ///< largest UNCONFINED b1/F1 over the accepted cells  // <cmath>
+  double max_at_x = NAN, max_at_q2 = NAN;  ///< where  // <cmath>
+  std::string report;             ///< the banner sentence (one line)
+};
+B1RankTwoConfinement b1_rank2_confinement(const Pipeline& p);
 
 }  // namespace lipolgen
 

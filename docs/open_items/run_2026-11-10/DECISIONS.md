@@ -140,6 +140,18 @@ x = 0.83 (to be measured bit-identical to P2's tree, HERMES included); ⁶Li,
 `validate()`; the Δ slot; any reference JSON; the refusal itself and its
 message. Implemented in phase P2b, record `phase_P2b_spin1_domain.md`.*
 
+*Supervisor's ruling, 2026-11-12, after phase P2b (its open point 2).* With
+the confinement g₁ bounds b₁, so on a default inclusive deuteron run
+`--pol-sf` moves the output under every fill where a cell binds; P2b
+therefore reports `pol_sf` as read on EVERY default inclusive deuteron run
+(a configuration-level rule), which also says "read" at an `x_max` below
+the binding rows, where g₁ is evaluated and moves nothing. That rule
+stands: it errs toward accepting and recording a knob rather than refusing
+one that can matter, and `pol_sf_reach` states the reason; a run-level
+"read where it binds" rule is left as a possible refinement. Measured in
+`phase_P2b_spin1_domain.md`: all 24 default deuteron runs build, the share
+is 4.79 × 10⁻⁷ / 3.87 × 10⁻⁷ / 3.54 × 10⁻⁷, ⁶Li byte-identical.*
+
 **J2 — the polligen reference tables are re-dumped in place on this machine
 and committed exactly as one run of `validation/dump_polligen_reference.py`
 writes them.** *The author's decision ("re-dump"). The facts it rests on

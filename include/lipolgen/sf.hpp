@@ -452,7 +452,7 @@ class CdksB1 : public TensorSF {
   B1Mode mode_;
 };
 
-/// b1 of 6Li built from a deuteron camp through the rank-2 transfer (6Li only: since J1, 2026-11-10, the inclusive deuteron reads the camp itself).
+/// b1 of 6Li built from a deuteron camp through the rank-2 transfer (6Li only: since J1, 2026-11-10, the inclusive deuteron reads the camp itself, confined to the spin-1 domain since the J1 note of 2026-11-12).
 class Li6B1 : public TensorSF {
  public:
   Li6B1(std::shared_ptr<const TensorSF> deuteron,

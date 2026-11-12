@@ -691,7 +691,7 @@ py::dict columns_to_dict(Columns& c, const Pipeline& p, std::uint64_t n,
   const std::pair<double, double> grid = unpol_sf_grid_report(p);
   meta["unpol_sf_grid_q2_min"] = grid.first;
   meta["unpol_sf_below_grid_frac"] = grid.second;
-  for (const auto& kv : sf_grid_extras(p, knob("pol_sf"))) meta[kv.first] = kv.second;  for (const auto& kv : inclusive_polarization_factors(p).meta()) meta[py::str(kv.first)] = kv.second;  for (const auto& kv : inclusive_polarization_factors(p).meta_labels()) meta[py::str(kv.first)] = kv.second;  meta["g1_clipped_rate_fraction"] = g1_positivity_clip(p).fraction;  // D7; F7: pol keys only where g1 ran; A1 (2026-11-03): the three inclusive polarization factors used, where read; A3 (2026-11-03): the rate share the |g1| <= F1 clip binds on (NaN where g1 is not read)
+  for (const auto& kv : sf_grid_extras(p, knob("pol_sf"))) meta[kv.first] = kv.second;  for (const auto& kv : inclusive_polarization_factors(p).meta()) meta[py::str(kv.first)] = kv.second;  for (const auto& kv : inclusive_polarization_factors(p).meta_labels()) meta[py::str(kv.first)] = kv.second;  meta["g1_clipped_rate_fraction"] = g1_positivity_clip(p).fraction;  { const B1RankTwoConfinement bc = b1_rank2_confinement(p); if (bc.applied) meta["b1_clipped_rate_fraction"] = bc.fraction; }  // D7; F7: pol keys only where g1 ran; A1 (2026-11-03): the three inclusive polarization factors used, where read; A3 (2026-11-03): the rate share the |g1| <= F1 clip binds on (NaN where g1 is not read)
   // fsi.hpp -- CONDITIONAL, following the `rc` precedent below rather than
   // the unconditional `b1` one, so an `--fsi off` npz carries exactly
   // today's key set and no reference gate moves.  Measured on the three runs
@@ -2235,7 +2235,7 @@ static void bind_xsec(py::module_& m) {
       .def_readwrite("emc_ratio", &InclusiveKernel::Options::emc_ratio)
       .def_readwrite("r_func", &InclusiveKernel::Options::r_func)
       .def_readwrite("target_mass", &InclusiveKernel::Options::target_mass)
-      .def_readwrite("g2_npts", &InclusiveKernel::Options::g2_npts);
+      .def_readwrite("g2_npts", &InclusiveKernel::Options::g2_npts).def_readwrite("confine_spin1_rank2", &InclusiveKernel::Options::confine_spin1_rank2);  // J1 note (2026-11-12)
 
   kern.def(py::init([](Ion ion) {
              return std::make_shared<InclusiveKernel>(std::move(ion));
@@ -2246,7 +2246,7 @@ static void bind_xsec(py::module_& m) {
            }), py::arg("ion"), py::arg("options"))
       .def_property_readonly("ion", &InclusiveKernel::ion)
       .def_property_readonly("target_mass", &InclusiveKernel::target_mass)
-      .def_property_readonly("tensor_gamma", &InclusiveKernel::tensor_gamma)
+      .def_property_readonly("tensor_gamma", &InclusiveKernel::tensor_gamma).def_property_readonly("confine_spin1_rank2", &InclusiveKernel::confine_spin1_rank2).def("unconfined_b1", &InclusiveKernel::unconfined_b1, py::arg("x"), py::arg("q2"), py::arg("f1"))  // J1 note (2026-11-12)
       .def_property_readonly("g2_scale", &InclusiveKernel::g2_scale)
       .def("tables", &InclusiveKernel::tables, py::arg("x"), py::arg("q2"),
            py::arg("with_g2") = false)
@@ -5240,7 +5240,7 @@ static void bind_io(py::module_& m) {
   }, py::arg("pipeline"),
      "A3: the share of THIS run's rate the |g1| <= F1 clip binds on "
      "(meta['g1_clipped_rate_fraction']; NaN where g1 is not read), the largest "
-     "unclipped |A1| per species read (NaN where not read) and the banner sentence.");
+     "unclipped |A1| per species read (NaN where not read) and the banner sentence.");  m.def("b1_rank2_confinement", [](const Pipeline& p) { const B1RankTwoConfinement c = b1_rank2_confinement(p); py::dict d; d["applied"] = c.applied; d["b1_clipped_rate_fraction"] = c.fraction; d["n_cells"] = c.n_cells; d["n_upper"] = c.n_upper; d["n_lower"] = c.n_lower; d["max_b1_over_f1"] = c.max_b1_over_f1; d["max_at_x"] = c.max_at_x; d["max_at_q2"] = c.max_at_q2; d["report"] = c.report; return d; }, py::arg("pipeline"), "J1 note (2026-11-12): the share of THIS run's rate the spin-1 positivity confinement of the deuteron's rank-2 slot binds on (meta['b1_clipped_rate_fraction'], written only where applied), the binding cells by half, the largest unconfined b1/F1 and where, and the banner sentence.");
 #if LIPOLGEN_HAVE_LHAPDF
   m.attr("LHAPDF_EXTRAPOLATOR") = std::string(LHAPDF_EXTRAPOLATOR);
   m.attr("LHAPDF_INTERPOLATOR") = std::string(LHAPDF_INTERPOLATOR);

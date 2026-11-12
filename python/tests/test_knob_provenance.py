@@ -84,10 +84,10 @@ needs_pythia = pytest.mark.skipif(
 
 class Spec:
     def __init__(self, tag, isotope, channel, plan_name, j,
-                 pz=0.7, pzz=0.6, pe=0.7, full=True, x_max=None):  # A3 (2026-11-03): P1's x_max field removed (the supervisor's correction of 2026-11-06 under A1); J1 (2026-11-10): back, for the inclusive deuteron (see _spec_x_max)
+                 pz=0.7, pzz=0.6, pe=0.7, full=True):  # A3 (2026-11-03): P1's x_max field removed (the supervisor's correction of 2026-11-06 under A1); J1 (2026-11-10) brought it back for the inclusive deuteron, J1 note (2026-11-12) removed it again (the deuteron builds at 1.0)
         self.tag, self.isotope, self.channel = tag, isotope, channel
         self.plan_name, self.j = plan_name, j
-        self.pz, self.pzz, self.pe, self.full, self.x_max = pz, pzz, pe, full, x_max
+        self.pz, self.pzz, self.pe, self.full = pz, pzz, pe, full
 
     def plan(self, pz=None, pzz=None, pe=None, rel=0.0, pzz_mode="ladder"):
         return lg.make_plan(self.plan_name, j=self.j,
@@ -110,7 +110,7 @@ class Spec:
 SPECS = [
     Spec("inclusive-6Li/tensor-thirds", "6Li", "inclusive", "tensor-thirds", 1.0),
     Spec("inclusive-7Li/helicity-flip", "7Li", "inclusive", "helicity-flip", 1.5),
-    Spec("inclusive-d/tensor-thirds", "d", "inclusive", "tensor-thirds", 1.0, x_max=0.95),  # J1 (2026-11-10): refused at 1.0, see _spec_x_max
+    Spec("inclusive-d/tensor-thirds", "d", "inclusive", "tensor-thirds", 1.0),  # J1 note (2026-11-12): the shipped window again (J1 (2026-11-10) ran it at x_max 0.95)
     Spec("coherent/tensor-thirds", "6Li", "coherent", "tensor-thirds", 1.0),
     Spec("tagged-6Li-alpha/tensor-thirds", "6Li", "tagged-6Li-alpha",
          "tensor-thirds", 1.0),
@@ -506,7 +506,7 @@ def _run(spec, kw, post, plan_kw):
     args.update(kw)
     if args.get("rc_tail_model") == TPK: args["rc_tail_model"] = "t-peak" if spec.channel == "inclusive" else None
     try:
-        cfg = _spec_x_max(spec, lg.make_config(**args))  # J1 (2026-11-10)
+        cfg = lg.make_config(**args)
         if post:
             post(cfg)
         cfg.validate()
@@ -543,7 +543,7 @@ def test_the_table_matches_the_output_hash(cache, spec, variant):
     `refused`.  Nothing else is accepted, in either direction."""
     if (variant.lhapdf and not _l.HAVE_LHAPDF) or (variant.pythia and not _l.HAVE_PYTHIA8):
         pytest.skip(NO_PYTHIA_CELL if variant.pythia and not _l.HAVE_PYTHIA8 else NO_LHAPDF)
-    base = _baseline(cache, spec, variant); pytest.skip(J1_XMAX_CELL) if (spec.x_max is not None and variant.id == "x_max:1.0 -> 0.95") else None  # J1 (2026-11-10)
+    base = _baseline(cache, spec, variant)
     if base[0] != "ran":
         pytest.skip("the BASE of this cell is refused on %s, so there is no "
                     "run to vary: %s" % (spec.tag, base[3][:200]))
@@ -774,7 +774,7 @@ def test_the_route_knobs_are_read_where_a_route_moves(channel, isotope,
 
     def run(**kw):
         cfg = lg.make_config(isotope=isotope, channel=channel, events=2000,
-                             seed=11, **kw); _spec_x_max(Spec("", isotope, channel, plan_name, j, x_max=0.95 if (isotope, channel) == ("d", "inclusive") else None), cfg)  # J1 (2026-11-10)
+                             seed=11, **kw)
         p = _l.Pipeline(cfg, plan)
         cols = p.generate(0, False, 1)
         return (np.asarray(cols["route"]),
@@ -1002,28 +1002,3 @@ def test_an_explicit_default_on_an_unread_knob_is_handled_one_way():
     # D7: --pol-sf nnpdfpol on coherent -- accepted, labelled not-read
     check(dict(channel="coherent"), dict(pol_sf="nnpdfpol"), "pol_sf",
           "not read on channel coherent-6Li")
-
-
-def _spec_x_max(spec, cfg):
-    """J1 (2026-11-10; decision J1, the author's, docs/open_items/run_2026-11-10/
-    DECISIONS.md; record phase_P2_deuteron_b1.md).  Since the inclusive
-    deuteron's rank-2 slot became MillerB1 itself (x3.0532 on its b1) EVERY
-    default inclusive deuteron plan is REFUSED at the shipped window's top x
-    row (x = 0.955; tensor-thirds config 1: Q2 = 167.3, 1 + w_avg = -0.1302,
-    the rank-2 term -1.13, 24 cells) -- the positivity refusal A4 keeps until
-    the supervisor's note under J1 decides the high-x treatment.  So this
-    spec's BASE no longer ran at 1.0 and its cells skipped; it runs at
-    x_max 0.95, which drops that row and nothing else this matrix varies.
-    The one cell that cannot exist then, `x_max 1.0 -> 0.95`, is skipped by
-    name (J1_XMAX_CELL); the four other x_max cells still move.  Returns cfg."""
-    if spec.x_max is not None:
-        sc = cfg.scenario
-        sc.x_max = spec.x_max
-        cfg.scenario = sc
-    return cfg
-
-
-J1_XMAX_CELL = ("J1 (2026-11-10): the inclusive deuteron spec runs at x_max 0.95 "
-                "(its x_max 1.0 base is refused by the rank-2 term since J1), so "
-                "`x_max 1.0 -> 0.95` is no variation on it; the row is covered by "
-                "the other x_max cells and by every other spec")

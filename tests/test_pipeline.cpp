@@ -1838,14 +1838,16 @@ TEST_CASE("J1: the inclusive deuteron's rank-2 slot is MillerB1 itself; 6Li keep
     for (const double q2 : {2.5, 100.0, 1897.0}) {
       CAPTURE(x); CAPTURE(q2);
       const SFTables td = kd->tables(x, q2), t6 = k6->tables(x, q2);
-      CHECK(td.b1 == miller.b1(x, q2, td.f1));
+      const double u = kd->unconfined_b1(x, q2, td.f1);  // J1 note (2026-11-12): the slot before the spin-1 confinement
+      CHECK(u == miller.b1(x, q2, td.f1));
+      CHECK(td.b1 == std::min(std::max(u, -1.5 * td.f1), 3.0 * (td.f1 - std::fabs(td.g1))));  // J1 note (2026-11-12): binds here at x = 0.955, Q2 = 2.5 on the toy
       CHECK(td.b2 == 2.0 * x * td.b1);
       CHECK(td.delta == toy_delta_gluon(x, q2, td.f1, 1e-2));
       CHECK(t6.b1 == li6.b1(x, q2, t6.f1));
       CHECK(t6.delta == toy_delta_gluon(x, q2, t6.f1, 1e-2));
       // the factor every inclusive deuteron rank-2 number moved by: 1/0.32753
-      CHECK_CLOSE(td.b1 / li6.b1(x, q2, td.f1), 1.0 / (LI6_B1_PER_NUCLEON * LI6_B1_RANK2_TRANSFER), 1e-14);
-      CHECK_CLOSE(td.b1 / li6.b1(x, q2, td.f1), 3.0531989383, 1e-10);
+      CHECK_CLOSE(u / li6.b1(x, q2, td.f1), 1.0 / (LI6_B1_PER_NUCLEON * LI6_B1_RANK2_TRANSFER), 1e-14);  // J1 note (2026-11-12): on the unconfined slot
+      CHECK_CLOSE(u / li6.b1(x, q2, td.f1), 3.0531989383, 1e-10);
     }
   }
   // The pre-J1 reading, explicitly: an InclusiveKernel on the deuteron with
@@ -1892,4 +1894,84 @@ TEST_CASE("J1: the inclusive deuteron's rank-2 slot is MillerB1 itself; 6Li keep
   CHECK(f6.li6_b1_rank2_transfer_label.empty());
   CHECK(run_provenance(p6).at("li6_b1_rank2_transfer") == "0.982576");  // as a pre-J1 6Li HepMC3 file carries it (the A/B of phase P2)
   CHECK(rank2_input_report(c6, tensor_thirds_plan(0.7, 0.6)).find("deuteron") == std::string::npos);
+}
+
+// J1 note (2026-11-12; the supervisor's note under J1, docs/open_items/
+// run_2026-11-10/DECISIONS.md -- the SUPERVISOR's choice; record
+// phase_P2b_spin1_domain.md): the option InclusiveKernel::Options::
+// confine_spin1_rank2 -- off by default, on in default_inclusive_kernel's
+// deuteron branch only -- confines the final b1 per nucleon to
+// [-(3/2) F1, 3 (F1 - |g1|)], b2 in step; the empty window and F1 <= 0 are
+// left alone; a non-spin-1 ion refuses it; the run surface reports it.
+TEST_CASE("J1 note: the spin-1 positivity confinement of the rank-2 slot") {
+  auto make = [](SFFunc3 b1, bool on, SFFunc3 b2 = nullptr) {
+    InclusiveKernel::Options o;
+    o.b1_func = std::move(b1);
+    o.b2_func = std::move(b2);
+    o.confine_spin1_rank2 = on;
+    return InclusiveKernel(DEUTERON(), o);
+  };
+  for (const double x : {0.1, 0.5, 0.9}) {
+    CAPTURE(x);
+    const double q2 = 10.0;
+    const SFTables t0 = make(nullptr, false).tables(x, q2);
+    const double f1 = t0.f1, hi = 3.0 * (f1 - std::fabs(t0.g1)), lo = -1.5 * f1;
+    REQUIRE(f1 > 0.0);
+    REQUIRE(hi > lo);
+    // inside the window: untouched, bit for bit
+    const auto inside = [&](double, double, double ff) { return 0.5 * (lo / f1 + hi / f1) * ff; };
+    CHECK(make(inside, true).tables(x, q2).b1 == make(inside, false).tables(x, q2).b1);
+    // the upper (joint) half
+    const auto big = [](double, double, double ff) { return 10.0 * ff; };
+    const SFTables tu = make(big, true).tables(x, q2);
+    CHECK(tu.b1 == hi);
+    CHECK(tu.b2 == 2.0 * x * tu.b1);                    // an unset b2 stays 2x b1
+    CHECK(make(big, false).tables(x, q2).b1 == 10.0 * f1);  // off: unconfined
+    CHECK(make(big, true).unconfined_b1(x, q2, f1) == 10.0 * f1);
+    // the lower half
+    const auto neg = [](double, double, double ff) { return -10.0 * ff; };
+    CHECK(make(neg, true).tables(x, q2).b1 == lo);
+    // a SET b2 is scaled by the same factor
+    const auto b2s = [](double, double, double ff) { return 7.0 * ff; };
+    const SFTables ts = make(big, true, b2s).tables(x, q2);
+    CHECK_CLOSE(ts.b2, 7.0 * f1 * (hi / (10.0 * f1)), 1e-14);
+    // f1, f2, g1, delta untouched by the option
+    CHECK(tu.f1 == t0.f1); CHECK(tu.f2 == t0.f2); CHECK(tu.g1 == t0.g1); CHECK(tu.delta == t0.delta);
+  }
+  // the empty window: |g1| > (3/2) F1 cannot occur after A3 on a nucleus, so it is
+  // made with a g1 backend the clip passes through -- a spin-1 ion whose
+  // eff_pol exceeds 1.5 per nucleon (4.0 here); b1 is then left alone (the refusal speaks)
+  Ion hot = DEUTERON(); hot.eff_pol_p = hot.eff_pol_n = 4.0;
+  InclusiveKernel::Options o;
+  o.b1_func = [](double, double, double ff) { return 10.0 * ff; };
+  o.confine_spin1_rank2 = true;
+  const InclusiveKernel kh(hot, o);
+  const SFTables th = kh.tables(0.9, 10.0);
+  REQUIRE(3.0 * (th.f1 - std::fabs(th.g1)) < -1.5 * th.f1);
+  CHECK(th.b1 == 10.0 * th.f1);
+  // a non-spin-1 ion refuses the option
+  InclusiveKernel::Options o7;
+  o7.confine_spin1_rank2 = true;
+  CHECK_THROWS_WITH_AS(InclusiveKernel(LI7(), o7), doctest::Contains("confine_spin1_rank2 is the SPIN-1 positivity domain"), std::runtime_error);
+  // the factory: on for the deuteron, off for 6Li (6Li untouched)
+  CHECK(default_inclusive_kernel(DEUTERON())->confine_spin1_rank2());
+  CHECK_FALSE(default_inclusive_kernel(LI6())->confine_spin1_rank2());
+  // the run surface: the key's source on a deuteron run, absent elsewhere
+  PipelineConfig cd = toy_config();  // D7: the toy NAMED (sf_test_support.hpp)
+  cd.isotope = "d";
+  cd.n_events = 10;
+  const Pipeline pd(cd, tensor_thirds_plan(0.7, 0.6));
+  const B1RankTwoConfinement bd = b1_rank2_confinement(pd);
+  CHECK(bd.applied);
+  CHECK(bd.fraction >= 0.0);
+  CHECK(bd.n_cells == bd.n_upper + bd.n_lower);
+  CHECK(bd.report.find("binds on") == 0);
+  CHECK(rank2_input_report(cd, tensor_thirds_plan(0.7, 0.6)).find("confined to the spin-1 leading-order positivity domain") != std::string::npos);
+  PipelineConfig c6 = toy_config();
+  c6.isotope = "6Li";
+  c6.n_events = 10;
+  const B1RankTwoConfinement b6 = b1_rank2_confinement(Pipeline(c6, tensor_thirds_plan(0.7, 0.6)));
+  CHECK_FALSE(b6.applied);
+  CHECK(std::isnan(b6.fraction));
+  CHECK(rank2_input_report(c6, tensor_thirds_plan(0.7, 0.6)).find("confined") == std::string::npos);
 }

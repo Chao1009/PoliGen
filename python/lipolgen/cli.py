@@ -711,7 +711,7 @@ def build_parser():
                         "vector one at the CLIPPED A1 (A3 clips g1 to +-F1 per "
                         "nucleon, which lifted D7's other four refusals -- "
                         "d config 2, tagged-d-p 0 / 1, tagged-6Li-alpha 0 -- "
-                        "and the inclusive 6Li one of A1) in the top cell -- J1 (2026-11-10): since the deuteron's b1 slot is MillerB1 itself, EVERY inclusive d plan and config is refused at 1.0 (the rank-2 term, the whole x = 0.955 row) and builds at 0.95, helicity-flip config 0 at 0.87; by "
+                        "and the inclusive 6Li one of A1) in the top cell -- J1 (2026-11-10): since the deuteron's b1 slot is MillerB1 itself, EVERY inclusive d plan and config was refused at 1.0 (the rank-2 term, the whole x = 0.955 row) -- J1 note (2026-11-12): no longer, the deuteron's b1 is confined to the spin-1 positivity domain and all build at 1.0; by "
                         "--inclusive-b1 on --channel tagged-6Li-alpha "
                         "(1 + w_avg = -0.1302 at x = 0.955, Q2 = 167.3); and "
                         "the mandatory band's x2 row (--b1-band-scale 2) "
@@ -1428,7 +1428,7 @@ def main(argv=None):
         # 0.3820 (ToyF2 + nnpdfpol), so 1 + w_avg = -0.02414.  D7 makes SIX
         # helicity-flip runs and two band / b1 recipes refuse at their defaults
         # (USAGE sec. 10); `--x-max` cures each, and the message computes how
-        # far.  It is NOT clamped: a positivity clamp is a physics change.  V-CODE-5 (2026-11-10): since A3 (2026-11-03) g1, not W, is clipped to |g1| <= F1 per nucleon; two of the six (`--isotope d --channel inclusive` configs 0 / 1) still refuse, the rank-2 term on top.  J1 (2026-11-10): every inclusive d plan and config now refuses at x_max 1.0 (the deuteron's b1 is MillerB1 itself, x3.0532).
+        # far.  It is NOT clamped: a positivity clamp is a physics change.  V-CODE-5 (2026-11-10): since A3 (2026-11-03) g1, not W, is clipped to |g1| <= F1 per nucleon; two of the six (`--isotope d --channel inclusive` configs 0 / 1) still refuse, the rank-2 term on top.  J1 (2026-11-10): every inclusive d plan and config then refused at x_max 1.0 (the deuteron's b1 is MillerB1 itself, x3.0532); J1 note (2026-11-12): all build again, the slot confined to the spin-1 positivity domain.
         raise SystemExit(str(e))
     t_setup = time.time() - t0
     # THE RUN CONTEXT of the knob-provenance table: what the core cannot see.
@@ -1795,7 +1795,7 @@ def main(argv=None):
     # before A1 (0.811228 / 0.045 / 0.921947) and one made after can be told apart.
     pf = _l.inclusive_polarization_factors(p)["report"]; gc = _l.g1_positivity_clip(p)["report"]  # A3 (2026-11-03): meta["g1_clipped_rate_fraction"]
     if pf: say("  inclusive polarization factors: %s" % pf)
-    say("  g1 positivity clip (A3, |g1| <= F1 per nucleon): %s" % gc)
+    say("  g1 positivity clip (A3, |g1| <= F1 per nucleon): %s" % gc); bc = _l.b1_rank2_confinement(p); bc["applied"] and say("  b1 spin-1 domain (J1 note 2026-11-12, -3/2 F1 <= b1 <= 3 (F1 - |g1|), deuteron): %s" % bc["report"])  # meta["b1_clipped_rate_fraction"], absent where not applied
 
     # Events are only materialized when something needs the records: the HFS
     # exporter always, HepMC only when the T2 tier is on (regenerating a

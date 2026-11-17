@@ -70,14 +70,14 @@ double r1998(double x, double q2, R1998Form form = R1998Form::kAverage,
 /// max - min of the three forms: the fit's functional-form systematic.
 double r1998_spread(double x, double q2, bool clip = true);
 /// delta-R of the fit (the unnumbered equation below Abe et al. Eq. 3).
-double r1998_fit_error(double x, double q2);
+double r1998_fit_error(double x, double q2);  inline constexpr const char* SF_BACKEND_OWN_EXTRAPOLATION = "the backend's own (not an LHAPDF grid)";  // J6 (2026-11-10): what `UnpolSF::extrapolation` / `PolSF::extrapolation` answer for a backend that is not an LHAPDF grid
 
 // ------------------------------------------------------- unpolarized SFs
 
 /// Abstract unpolarized backend: F2 on p and n, plus the R-derived F1 and FL.
 class UnpolSF {
  public:
-  virtual ~UnpolSF() = default;
+  virtual ~UnpolSF() = default;  virtual std::string extrapolation() const { return SF_BACKEND_OWN_EXTRAPOLATION; }  ///< J6 (2026-11-10; DECISIONS.md J6, the supervisor's choice under the author's delegation): how THIS backend is evaluated outside its grid -- `meta["unpol_sf_extrapolation"]` / `lipolgen.unpol_sf_extrapolation` (`run_provenance`); the LHAPDF tier answers `LHAPDF_EXTRAPOLATOR`.  The toy selector holds no object; its "none (closed-form toy)" is decided by the selector (pipeline.cpp `sf_extrapolation`)
 
   virtual double f2p(double x, double q2) const = 0;
   virtual double f2n(double x, double q2) const = 0;
@@ -161,7 +161,7 @@ double g2_ww(const std::function<double(double, double)>& g1, double x,
 /// Abstract polarized backend.
 class PolSF {
  public:
-  virtual ~PolSF() = default;
+  virtual ~PolSF() = default;  virtual std::string extrapolation() const { return SF_BACKEND_OWN_EXTRAPOLATION; }  ///< J6 (2026-11-10): as `UnpolSF::extrapolation`, for `pol_sf_extrapolation`
 
   virtual double g1p(double x, double q2) const = 0;
   virtual double g1n(double x, double q2) const = 0;
@@ -202,7 +202,7 @@ class ToyG1 : public PolSF {
 class LhapdfSF : public UnpolSF {
  public:
   explicit LhapdfSF(std::string setname = "CT18NLO", int member = 0);
-  ~LhapdfSF() override;
+  ~LhapdfSF() override;  std::string extrapolation() const override;  ///< J6 (2026-11-10): `LHAPDF_EXTRAPOLATOR` (src/lhapdf/lhapdf_sf.cpp), so the core never casts to an LHAPDF type
   double f2p(double x, double q2) const override;
   double f2n(double x, double q2) const override;
   double f2n_over_f2p(double x) const override;
@@ -228,7 +228,7 @@ class LhapdfSF : public UnpolSF {
 class LhapdfG1 : public PolSF {
  public:
   explicit LhapdfG1(std::string setname = "NNPDFpol11_100", int member = 0);
-  ~LhapdfG1() override;
+  ~LhapdfG1() override;  std::string extrapolation() const override;  ///< J6 (2026-11-10): `LHAPDF_EXTRAPOLATOR`, as `LhapdfSF`
   double g1p(double x, double q2) const override;
   double g1n(double x, double q2) const override;
   double q2_min() const;  ///< the grid's own Q2 floor (1 for NNPDFpol11_100; D7)

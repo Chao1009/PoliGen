@@ -393,7 +393,8 @@ def test_t6_measured_row_is_pinned(t6, t6_rep):
         {c: s["status"] for c, s in by.items()}
     assert by["C12"]["n_checked"] == 200 and by["C22"]["files"] == 1
     assert by["C23"]["files"] == 7
-    assert by["C24"]["files"] == 8      # A10 (2026-11-03): every file carries the attributes
+    assert by["C24"]["files"] == 8      # A10 (2026-11-03): every file carries the attributes; J6 (2026-11-10): C25 reads the 8 CLI files and the one written without run attributes
+    assert by["C25"]["files"] == 9 and by["C25"]["n_checked"] == 9 and rep["c25_file"]["n_events"] == t6.C25_N_EVENTS == 20
     # every record balances to far inside the doc's 1e-9: 700 on status 1
     # alone, the 100 T0 inclusive events with X; no remnant-shaped deficit left
     c13 = rep["conservation"]
@@ -495,6 +496,27 @@ def test_t6_checks_can_fail(t6, tmp_path):
         open(bad, "w").write("\n".join(x for x in map(edit, raw) if x != "") + "\n")
         v = _violations(t6, _TAGGED_T0, bad, "C24", meta_of=path)
         assert v and ("pol_sf" in v[0] or "cluster_wave" in v[0]), (label, v)
+    # J6 (2026-11-10): C25 -- an absence attribute on a file whose attributes
+    # were set fails; a file written without them passes as written, and fails
+    # with the attribute dropped or its value changed.
+    bad = str(tmp_path / "c25_set.hepmc")
+    first = next(i for i, s in enumerate(raw) if s.startswith("A lipolgen."))
+    open(bad, "w").write("\n".join(raw[:first] + ["A lipolgen.run_provenance x"]
+                                     + raw[first:]) + "\n")
+    v = _violations(t6, _TAGGED_T0, bad, "C25", meta_of=path)
+    assert v and "run attributes were set" in v[0], v
+    bare = str(tmp_path / "bare.hepmc")
+    spec = t6.write_without_provenance(lg, bare, n_events=3, seed=3)
+    assert _violations(t6, spec, bare, "C25", meta_of=path) == []
+    assert t6.doc_no_provenance_value() == lg.HepMC3Writer.NO_RUN_PROVENANCE
+    braw = open(bare).read().splitlines()
+    for label, edit in (("dropped", lambda s: "" if s.startswith("A lipolgen.run_provenance ") else s),
+                        ("value", lambda s: s.replace("not recorded", "not stored", 1)
+                         if s.startswith("A lipolgen.run_provenance ") else s)):
+        badf = str(tmp_path / ("c25_" + label + ".hepmc"))
+        open(badf, "w").write("\n".join(x for x in map(edit, braw) if x != "") + "\n")
+        v = _violations(t6, spec, badf, "C25", meta_of=path)
+        assert v, label
 
 
 def test_t6_blocked_paths_name_the_environment(t6, monkeypatch):

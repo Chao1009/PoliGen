@@ -145,3 +145,57 @@ def test_a10_a_cli_file_carries_the_npz_meta_as_run_attributes(tmp_path):
         if tag == "inc":
             assert ours["cluster_wave"] == "not read on channel inclusive"
             assert "li6_cluster_polarization" in ours
+
+
+def test_j6_extrapolation_keys_and_the_absence_attribute(tmp_path):
+    """J6 (2026-11-10; docs/open_items/run_2026-11-10/DECISIONS.md J6, the
+    supervisor's choice under the author's delegation): the two
+    `*_sf_extrapolation` keys come from `run_provenance` itself, so the
+    Python path (`hepmc_run_attributes`) and a C++ caller of `run_provenance`
+    write the same map, equal to the npz meta's; a file whose writer is never
+    given the map carries ONE attribute saying so (HepMC3_CONVENTION.md, "Run
+    provenance attributes"); on an inclusive deuteron run the transfer is a
+    label and pol_sf / pol_sf_extrapolation name the backend on a tensor
+    plan; the two clip shares are npz meta keys only."""
+    import json
+    from lipolgen import cli
+    for tag, argv in (("d", ["--channel", "inclusive", "--isotope", "d"]),
+                      ("li6hf", ["--channel", "inclusive", "--plan", "helicity-flip"]),
+                      ("coh", ["--channel", "coherent"]),
+                      ("toy", ["--channel", "tagged-d-p", "--plan", "helicity-flip", "--unpol-sf", "toy", "--pol-sf", "toy"])):
+        h, z = str(tmp_path / (tag + ".hepmc")), str(tmp_path / (tag + ".npz"))
+        assert cli.main(argv + ["--events", "20", "--seed", "3", "--hepmc", h,
+                                "--npz", z, "--quiet"]) == 0
+        meta = json.loads(str(np.load(z, allow_pickle=False)["meta"]))
+        with pyhepmc.open(h) as f:
+            ev0 = next(iter(f))
+        ours = {k[len("lipolgen."):]: str(v) for k, v in ev0.run_info.attributes.items()
+                if k.startswith("lipolgen.")}
+        for k in ("unpol_sf_extrapolation", "pol_sf_extrapolation"):
+            assert ours[k] == meta[k], (tag, k)
+        assert "run_provenance" not in ours
+        assert not {"g1_clipped_rate_fraction", "b1_clipped_rate_fraction"} & set(ours)
+        if tag == "d":
+            assert meta["plan"] == "tensor-thirds"
+            assert ours["pol_sf"] == "nnpdfpol" and ours["pol_sf_extrapolation"] == "nearest"
+            assert ours["li6_b1_rank2_transfer"].startswith("not read on isotope d")
+            assert "b1_clipped_rate_fraction" in meta
+        if tag == "li6hf":
+            assert ours["unpol_sf_extrapolation"] == ours["pol_sf_extrapolation"] == "nearest"
+        if tag == "coh":
+            assert ours["pol_sf_extrapolation"] == ours["pol_sf"] == "not read on channel coherent-6Li"
+        if tag == "toy":
+            assert ours["unpol_sf_extrapolation"] == ours["pol_sf_extrapolation"] == "none (closed-form toy)"
+    p = lg.make_pipeline(isotope="6Li", channel="inclusive", events=5)
+    assert lg.hepmc_run_attributes(p) == lg.run_provenance(p)
+    bare = str(tmp_path / "bare.hepmc")
+    cols = lg.run(channel="tagged-6Li-alpha", events=3, seed=3, keep_events=True)
+    with lg.HepMC3Writer(bare) as w:
+        for ev in cols["events"]:
+            w.write(ev)
+    lines = [s for s in open(bare).read().splitlines() if s.startswith("A lipolgen.")]
+    assert lines == ["A lipolgen.run_provenance " + lg.HepMC3Writer.NO_RUN_PROVENANCE]
+    with pyhepmc.open(bare) as f:
+        evs = list(f)
+    assert all(str(e.run_info.attributes["lipolgen.run_provenance"])
+               == lg.HepMC3Writer.NO_RUN_PROVENANCE for e in evs)

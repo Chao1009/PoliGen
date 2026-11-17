@@ -159,8 +159,16 @@ DOC = os.path.join(ROOT, "docs", "HEPMC3_CONVENTION.md")
 # line 232, C23's "byte-identical" sentence, which the attributes made false
 # (T15/T15b assert the weight block, which stands).  The digest before A10:
 # 56d3a91a9bdf789b3628f9f1bc52c723887466aea3021e58ae511eb306ba4cd4
+# J6 (2026-11-10; docs/open_items/run_2026-11-10/DECISIONS.md J6, the
+# supervisor's choice under the author's delegation): re-pinned 2026-11-16
+# after the one edit J6 allows, inside "Run provenance attributes" (lines
+# 255-306): the extrapolation keys from `run_provenance` on every path, the
+# `lipolgen.run_provenance` absence attribute (clause C25), the deuteron's
+# labels and the npz-only clip shares; no line above 270 moved, C24's anchor
+# (262) stands.  The digest before J6 (the A10 one):
+# 20de1d3b3cbc03a78b92177d8eae71ab4c673a1b1532ee6d89d4033dc4ddad0f
 DOC_SHA256_AT_AUTHORING = (
-    "20de1d3b3cbc03a78b92177d8eae71ab4c673a1b1532ee6d89d4033dc4ddad0f")
+    "2727952ae5a24ec59ca5f6eaf81a159d65517ab2ab0fd3a8c230f36634964eb8")
 
 NAME = "t6_hepmc3_convention"
 N_EVENTS = 100
@@ -287,10 +295,22 @@ CLAUSES = [
     ("C23", "230-232", (230, "is EMPTY when the run has `--rc off`"),
      "--rc off: no rc_* name, and 1 + N weight values"),
     # A10 (2026-11-03): the run's physics provenance in GenRunInfo.
-    ("C24", "255-284", (262, "`lipolgen.<key>` holds exactly the string the run's npz `meta[<key>]` holds"),
+    ("C24", "255-306", (262, "`lipolgen.<key>` holds exactly the string the run's npz `meta[<key>]` holds"),
      "lipolgen.<key> GenRunInfo attributes: the A10 keys present (the rc ones "
      "iff --rc), each value the npz meta's of the same run, written before the "
      "first event, every event sharing the one GenRunInfo"),
+    # J6 (2026-11-10): a file states its provenance or that it has none.  The
+    # rule, declared before it was run: every lipolgen-run file (attributes
+    # set) carries NO lipolgen.run_provenance; one file written through
+    # lipolgen.HepMC3Writer WITHOUT set_run_attributes (the path of the C++
+    # examples that hold no Pipeline) carries exactly ONE lipolgen.* run-level
+    # line before its first event, lipolgen.run_provenance, whose value is the
+    # sentence the document quotes on the anchor line, and every event of it
+    # reads that one attribute through its GenRunInfo.
+    ("C25", "285-294", (290, "`not recorded -- this file was written through the LiPolGen HepMC3 writer"),
+     "lipolgen.run_provenance: absent from every file whose run attributes "
+     "were set; on a file written without them, the ONE lipolgen.* attribute, "
+     "its value the document's quoted sentence"),
 ]
 
 
@@ -990,10 +1010,64 @@ def c24(spec, raw, events, ctx):
     return 1, bad
 
 
+# J6 (2026-11-10): C25 -- see its CLAUSES entry for the rule.
+C25_NAME = A10_PREFIX + "run_provenance"
+C25_N_EVENTS = 20   # the run-level block is what C25 reads; 20 events keep the row's runtime
+
+
+def doc_no_provenance_value(path=DOC):
+    """The sentence the document quotes as lipolgen.run_provenance's value
+    (C25's anchor line, between its backticks)."""
+    ln = next(c[2][0] for c in CLAUSES if c[0] == "C25")
+    line = open(path, encoding="utf-8").read().splitlines()[ln - 1].strip()
+    if not (line.startswith("`") and line.endswith("`")):
+        raise _Blocked("C25's anchor line is not one quoted value")
+    return line[1:-1]
+
+
+def c25(spec, raw, events, ctx):
+    bad = []
+    first_e = next((i for i, s in enumerate(raw) if s.startswith("E ")), len(raw))
+    run_a = [s for s in raw[:first_e]
+             if s.startswith("A ") and s.split()[1].startswith(A10_PREFIX)]
+    mine = [s for s in run_a if s.split()[1] == C25_NAME]
+    if spec.get("provenance", True):
+        if mine:
+            bad.append("%s on a file whose run attributes were set" % C25_NAME)
+        return 1, bad
+    want = doc_no_provenance_value()
+    if len(run_a) != 1 or len(mine) != 1:
+        bad.append("%d lipolgen.* run-level lines before the first event, want "
+                   "exactly one (%s): %s" % (len(run_a), C25_NAME,
+                                             [s.split()[1] for s in run_a]))
+    elif mine[0][len("A " + C25_NAME + " "):] != want:
+        bad.append("%s = %r, the document says %r"
+                   % (C25_NAME, mine[0][len("A " + C25_NAME + " "):], want))
+    for e in events:
+        if (e["run_attrs"] or {}).get(C25_NAME) != want:
+            bad.append("event %d: GenRunInfo %s is %r" % (
+                e["number"], C25_NAME, (e["run_attrs"] or {}).get(C25_NAME)))
+            break
+    return 1, bad
+
+
+def write_without_provenance(lg, path, n_events=N_EVENTS, seed=SEED):
+    """J6 (2026-11-10): C25's second file -- T0 tagged-6Li-alpha events
+    written through lipolgen.HepMC3Writer without set_run_attributes, as
+    generate_inclusive / write_hepmc_example / hadronize_example write."""
+    cols = lg.run(channel="tagged-6Li-alpha", config=1, events=n_events,
+                  seed=seed, keep_events=True)
+    with lg.HepMC3Writer(path) as w:
+        for ev in cols["events"]:
+            w.write(ev)
+    return dict(label="tagged-6Li-alpha-T0-no-provenance", provenance=False,
+                kind="alpha-tag", t2=False, rc=False)
+
+
 CHECKS = dict(C01=c01, C02=c02, C03=c03, C04=c04, C05=c05, C06=c06, C07=c07,
               C08=c08, C09=c09, C10=c10, C11=c11, C12=c12, C13=c13, C14=c14,
               C15=c15, C16=c16, C17=c17, C18=c18, C19=c19, C20=c20, C21=c21,
-              C22=c22, C23=c23, C24=c24)
+              C22=c22, C23=c23, C24=c24, C25=c25)
 
 
 class _Blocked(Exception):
@@ -1109,6 +1183,27 @@ def measure(n_events=N_EVENTS, seed=SEED, out_dir=None, runs=None):
             rrow["seconds"] = time.perf_counter() - t0
             rrow["status"] = "ran"
             res["runs"].append(rrow)
+        # J6 (2026-11-10): C25's file written without run attributes.
+        path = os.path.join(out_dir, "no_provenance.hepmc")
+        t0 = time.perf_counter()
+        spec = write_without_provenance(lg, path, min(n_events, C25_N_EVENTS), seed)
+        raw, events = read_file(path)
+        try:
+            n, bad = c25(spec, raw, events, ctx)
+            per["C25"]["n"] += n
+            per["C25"]["files"] += 1
+            per["C25"]["bad"] += ["%s: %s" % (spec["label"], b) for b in bad]
+            if bad:
+                per["C25"]["failing_files"].append(spec["label"])
+        except _Blocked as exc:
+            per["C25"]["blocked"] = str(exc)
+        # not in "runs": the row's file / event counts stay the CLI files'
+        res["c25_file"] = dict(label=spec["label"], status="ran",
+                                argv="lipolgen.run(channel='tagged-6Li-alpha', "
+                                     "keep_events=True) -> HepMC3Writer, no "
+                                     "set_run_attributes (C25 only)",
+                                n_events=len(events), bytes=os.path.getsize(path),
+                                seconds=time.perf_counter() - t0)
     finally:
         if tmp is not None:
             tmp.cleanup()
@@ -1196,7 +1291,7 @@ def run(verbose=True, n_events=N_EVENTS, seed=SEED, out_dir=None, runs=None):
                     pythia_charge_table=m.get("pythia_version"),
                     hepmc3_file_version=next((r.get("hepmc_version") for r in m["runs"]
                                               if r.get("hepmc_version")), None)),
-        conservation=m.get("c13"), charge=m.get("c14"),
+        conservation=m.get("c13"), charge=m.get("c14"), c25_file=m.get("c25_file"),  # J6 (2026-11-10)
         remnant_diagnostic=m.get("remnant"),
         remnant_charge_diagnostic=m.get("remnant_charge"),
         n_spin_weights_seen=m.get("n_spin_seen"),

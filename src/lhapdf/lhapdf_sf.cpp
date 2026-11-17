@@ -316,4 +316,13 @@ Grid Grid::open(const std::string& set, int member) {
 
 double LhapdfG1::q2_min() const { return impl_->grid.pdf->q2Min(); }
 
+// J6 (2026-11-10; DECISIONS.md J6, the supervisor's choice under the
+// author's delegation): the LHAPDF tier answers for its own objects how they
+// are evaluated outside the grid -- the extrapolator set on every grid above
+// -- so `run_provenance` (core) classifies a backend without casting to an
+// LHAPDF type.  Before J6 the Python module made this classification with a
+// `dynamic_pointer_cast` in `sf_grid_extras`; the string is the same.
+std::string LhapdfSF::extrapolation() const { return std::string(LHAPDF_EXTRAPOLATOR); }
+std::string LhapdfG1::extrapolation() const { return std::string(LHAPDF_EXTRAPOLATOR); }
+
 }  // namespace lipolgen

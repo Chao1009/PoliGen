@@ -268,15 +268,37 @@ so a HepMC3 file and the npz of the same run say the same thing. The keys are
 `r_source`; `rc`, `rc_tail_model` (D5), `rc_c0_shape` and `rc_scope` when RC
 is on; `fsi` when an FSI weight is built; `li6_cluster_polarization`,
 `deuteron_p_d`, `li6_b1_rank2_transfer` (A1) where the inclusive run reads
-them, written `%.17g` so they round-trip to the npz's numbers; and, from the
-Python module and `lipolgen-run`, `unpol_sf_extrapolation` /
-`pol_sf_extrapolation` (D7's frozen grids). One function lists them —
+them, written `%.17g` so they round-trip to the npz's numbers; and
+`unpol_sf_extrapolation` / `pol_sf_extrapolation` (D7's frozen grids). One
+function lists them —
 `lipolgen::run_provenance` (`include/lipolgen/pipeline.hpp`), from which the npz
 `meta` fills the same keys — and `HepMC3Writer::set_run_attributes` writes
 them; `lipolgen-run --hepmc`, `Pipeline.write_hepmc` and the `generate_tagged`
-/ `generate_coherent` / `generate_full` examples pass it. A writer that is not
-given the map (`generate_inclusive`, `write_hepmc_example`, `hadronize_example`,
-which hold no `Pipeline`) writes no `lipolgen.*` attribute at all.
+/ `generate_coherent` / `generate_full` examples pass it, so every path that
+holds a `Pipeline` writes the same keys.
+
+*J6 (2026-11-10; `docs/open_items/run_2026-11-10/DECISIONS.md` J6, the
+supervisor's choice under the author's delegation).* Since J6 the two
+extrapolation keys come from `run_provenance` itself — each backend answers for
+itself (`UnpolSF::extrapolation` / `PolSF::extrapolation`; the LHAPDF tier's
+`nearest`), with the strings the Python module wrote before — so the C++
+examples carry them too. A writer that is never given the map
+(`generate_inclusive`, `write_hepmc_example`, `hadronize_example`, which hold
+no `Pipeline`) writes ONE attribute instead, `lipolgen.run_provenance`, and its
+value is:
+
+`not recorded -- this file was written through the LiPolGen HepMC3 writer without a Pipeline's run attributes, so it carries no record of the physics settings (structure functions, conventions, models) that produced its events`
+
+so a file without provenance says so and is told apart from one written before
+A10 (which has no `lipolgen.*` attribute at all); a file whose attributes were
+set never carries `lipolgen.run_provenance`. On an inclusive deuteron run
+`lipolgen.li6_b1_rank2_transfer` carries a label, `not read on isotope d -- …`
+(J1), not a number, and `lipolgen.pol_sf` / `lipolgen.pol_sf_extrapolation`
+name the backend under every fill, the tensor plans included, because g₁
+bounds the deuteron's rank-2 slot (the J1 note of 2026-11-12).
+`g1_clipped_rate_fraction` and `b1_clipped_rate_fraction` — the shares of the
+rate the |g₁| ≤ F₁ clip and the deuteron's spin-1 confinement bind on — are
+npz `meta` keys only, not run attributes.
 
 The attributes sit in the run-level block written before the first event, so
 every event shares them through its one `GenRunInfo`; they change no weight

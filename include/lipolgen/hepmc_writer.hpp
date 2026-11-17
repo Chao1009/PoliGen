@@ -55,8 +55,8 @@ class HepMC3Writer {
   // `run_provenance(pipeline, ctx)` (pipeline.hpp), the map the npz `meta`
   // reads its provenance keys from, so a file and its npz say the same thing
   // (docs/HEPMC3_CONVENTION.md, "Run provenance attributes").  Must be called
-  // before the first `write`, which is when the GenRunInfo is serialized;
-  // throws otherwise.  Not calling it writes no such attribute at all.
+  // before the first `write`, which is when the GenRunInfo is serialized; throws otherwise.  J6 (2026-11-10; DECISIONS.md J6, the supervisor's choice under the author's delegation): if it is NEVER called, the first `write` records ONE attribute instead, `lipolgen.run_provenance` = `kNoRunProvenance`, so the file says it has none.
+  static constexpr const char* kNoRunProvenance = "not recorded -- this file was written through the LiPolGen HepMC3 writer without a Pipeline's run attributes, so it carries no record of the physics settings (structure functions, conventions, models) that produced its events";
   void set_run_attributes(const std::map<std::string, std::string>& attributes);
 
  private:

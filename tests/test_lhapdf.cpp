@@ -536,4 +536,16 @@ TEST_CASE("D7 verification (2026-11-03, code finding 1): a grid selector "
   CHECK(p.sigma_pb() == doctest::Approx(496334.155954048).epsilon(1e-12));
 }
 
+
+// J6 (2026-11-10; DECISIONS.md J6, the supervisor's choice under the author's
+// delegation): the LHAPDF tier answers for its objects -- the extrapolator
+// every grid is built with -- so the core classifies a backend without
+// casting to these types; the string is the one `meta` carried before J6.
+TEST_CASE("J6: LhapdfSF / LhapdfG1 answer LHAPDF_EXTRAPOLATOR for themselves") {
+  const std::shared_ptr<const UnpolSF> u = make_lhapdf_unpol_sf(UnpolSfSource::Ct18Nlo);
+  const std::shared_ptr<const PolSF> g = make_lhapdf_pol_sf(PolSfSource::NnpdfPol);
+  CHECK(u->extrapolation() == std::string(LHAPDF_EXTRAPOLATOR));
+  CHECK(g->extrapolation() == std::string(LHAPDF_EXTRAPOLATOR));
+  CHECK(u->extrapolation() == "nearest");
+}
 #endif  // LIPOLGEN_HAVE_LHAPDF

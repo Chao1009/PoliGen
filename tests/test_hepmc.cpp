@@ -572,18 +572,50 @@ TEST_CASE("A10: run provenance attributes round-trip through ReaderAscii") {
   }
   CHECK(e0.run_info()->weight_names().size() == 1 + ev.spin_weights.size());
   CHECK(e0.weights().size() == 1 + ev.spin_weights.size());
-  // no map, no attribute
+  // J6 (2026-11-10; DECISIONS.md J6, the supervisor's choice under the
+  // author's delegation): no map -> ONE attribute saying so (until J6: none at
+  // all, "no map, no attribute"); the set file above carries no such line.
+  CHECK(!e0.run_info()->attribute_as_string("lipolgen.run_provenance").size());
   const auto bare = temp_hepmc_path("lipolgen_test_hepmc_a10_bare.hepmc");
   {
     HepMC3Writer writer(bare.string());
     writer.write(ev);
+    writer.write(ev);
   }
   HepMC3::ReaderAscii r2(bare.string());
   HepMC3::GenEvent b0(HepMC3::Units::GEV, HepMC3::Units::MM);
+  HepMC3::GenEvent b1(HepMC3::Units::GEV, HepMC3::Units::MM);
   REQUIRE(r2.read_event(b0));
+  REQUIRE(r2.read_event(b1));
   r2.close();
   std::filesystem::remove(bare);
+  std::vector<std::string> ours_bare;
   for (const std::string& name : b0.run_info()->attribute_names())
+    if (name.rfind("lipolgen.", 0) == 0) ours_bare.push_back(name);
+  REQUIRE(ours_bare.size() == 1);
+  CHECK(ours_bare[0] == "lipolgen.run_provenance");
+  CHECK(b0.run_info()->attribute_as_string("lipolgen.run_provenance") ==
+        std::string(HepMC3Writer::kNoRunProvenance));
+  CHECK(b0.run_info() == b1.run_info());
+  CHECK(b0.run_info()->weight_names().size() == 1 + ev.spin_weights.size());
+}
+
+// J6 (2026-11-10): an EMPTY map is still "set" -- the caller said what the
+// run's provenance is (nothing), so neither the keys nor the absence line.
+TEST_CASE("J6: set_run_attributes with an empty map writes no lipolgen attribute") {
+  const Event ev = make_synthetic_event();
+  const auto path = temp_hepmc_path("lipolgen_test_hepmc_j6_empty.hepmc");
+  {
+    HepMC3Writer writer(path.string());
+    writer.set_run_attributes({});
+    writer.write(ev);
+  }
+  HepMC3::ReaderAscii reader(path.string());
+  HepMC3::GenEvent e0(HepMC3::Units::GEV, HepMC3::Units::MM);
+  REQUIRE(reader.read_event(e0));
+  reader.close();
+  std::filesystem::remove(path);
+  for (const std::string& name : e0.run_info()->attribute_names())
     CHECK(name.rfind("lipolgen.", 0) != 0);
 }
 

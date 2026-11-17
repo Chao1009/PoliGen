@@ -4083,6 +4083,12 @@ std::map<std::string, std::string> run_provenance(const Pipeline& p,
     std::snprintf(buf, sizeof(buf), "%.17g", kv.second);
     m[kv.first] = buf;
   }  for (const auto& kv : inclusive_polarization_factors(p).meta_labels()) m[kv.first] = kv.second;  // J1 (2026-11-10): the deuteron's `not read ...` transfer label
+  for (const KnobProvenance& r : knobs) {  // J6 (2026-11-10): the two extrapolation keys, from the one function `meta` reads
+    if (r.name != "pol_sf") continue;
+    const std::pair<std::string, std::string> e = sf_extrapolation(p, r);
+    m["unpol_sf_extrapolation"] = e.first;
+    m["pol_sf_extrapolation"] = e.second;
+  }
   return m;
 }
 
@@ -4125,6 +4131,31 @@ B1RankTwoConfinement b1_rank2_confinement(const Pipeline& p) {
                 c.max_b1_over_f1, c.max_at_x, c.max_at_q2);
   c.report = buf;
   return c;
+}
+
+}  // namespace lipolgen
+
+namespace lipolgen {
+
+// J6 (2026-11-10): see the declaration in pipeline.hpp.  The order and the
+// strings are those of python/bindings.cpp `sf_grid_extras` before J6; the
+// one change is that an object classifies itself through the virtual
+// `extrapolation()` instead of a `dynamic_pointer_cast` to an LHAPDF type,
+// which the core cannot see.
+std::pair<std::string, std::string> sf_extrapolation(const Pipeline& p,
+                                                     const KnobProvenance& pol) {
+  const PipelineConfig& cfg = p.config();
+  auto unpol = [&cfg]() {
+    if (cfg.kernel) return std::string("caller-supplied kernel");
+    if (cfg.unpol_sf == UnpolSfSource::Toy) return std::string("none (closed-form toy)");
+    return cfg.unpol_sf_obj ? cfg.unpol_sf_obj->extrapolation() : std::string("no object");
+  };
+  auto polar = [&cfg]() {
+    if (cfg.kernel) return std::string("caller-supplied kernel");
+    if (cfg.pol_sf == PolSfSource::Toy) return std::string("none (closed-form toy)");
+    return cfg.pol_sf_obj ? cfg.pol_sf_obj->extrapolation() : std::string("no object");
+  };
+  return {unpol(), pol.status == KnobStatus::NotRead ? pol.label : polar()};
 }
 
 }  // namespace lipolgen

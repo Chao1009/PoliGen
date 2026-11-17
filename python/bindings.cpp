@@ -4946,7 +4946,7 @@ static void bind_io(py::module_& m) {
            py::arg("generator_name") = "LiPolGen",
            py::arg("generator_version") = LIPOLGEN_VERSION)
       .def("write", &HepMC3Writer::write, py::arg("event"))
-      .def("close", &HepMC3Writer::close).def("set_run_attributes", &HepMC3Writer::set_run_attributes, py::arg("attributes"))  // A10 (2026-11-03)
+      .def("close", &HepMC3Writer::close).def("set_run_attributes", &HepMC3Writer::set_run_attributes, py::arg("attributes")).def_property_readonly_static("NO_RUN_PROVENANCE", [](py::object) { return std::string(HepMC3Writer::kNoRunProvenance); })  // A10 (2026-11-03); J6 (2026-11-10): the value of the one `lipolgen.run_provenance` attribute a file gets when set_run_attributes is never called
       .def("__enter__", [](HepMC3Writer& w) { return &w; },
            py::return_value_policy::reference)
       .def("__exit__", [](HepMC3Writer& w, py::object, py::object, py::object) {
@@ -5303,32 +5303,14 @@ py::dict sf_grid_extras(const Pipeline& p, const KnobProvenance& pol) {
   // 'nearest', a floor of 1 and a below-floor share of 0 to a backend that
   // never ran.
   const bool pol_unread = pol.status == KnobStatus::NotRead;
-  const PipelineConfig& cfg = p.config();
-  auto how = [&cfg](const void* obj, bool is_toy, bool is_lhapdf) {
-    if (cfg.kernel) return std::string("caller-supplied kernel");
-    if (is_toy) return std::string("none (closed-form toy)");
-#if LIPOLGEN_HAVE_LHAPDF
-    if (obj != nullptr && is_lhapdf) return std::string(LHAPDF_EXTRAPOLATOR);
-#else
-    (void)is_lhapdf;
-#endif
-    return std::string(obj != nullptr ? "the backend's own (not an LHAPDF grid)"
-                                      : "no object");
-  };
+  // J6 (2026-11-10): the two strings come from the core's `sf_extrapolation`
+  // (pipeline.hpp), which `run_provenance` -- and so every HepMC3 file --
+  // reads too; the backends answer for themselves (`UnpolSF::extrapolation`,
+  // `PolSF::extrapolation`), so no LHAPDF type is cast here any more.
   py::dict out;
-#if LIPOLGEN_HAVE_LHAPDF
-  const bool unpol_lh =
-      std::dynamic_pointer_cast<const LhapdfSF>(cfg.unpol_sf_obj) != nullptr;
-  const bool pol_lh =
-      std::dynamic_pointer_cast<const LhapdfG1>(cfg.pol_sf_obj) != nullptr;
-#else
-  const bool unpol_lh = false, pol_lh = false;
-#endif
-  out["unpol_sf_extrapolation"] =
-      how(cfg.unpol_sf_obj.get(), cfg.unpol_sf == UnpolSfSource::Toy, unpol_lh);
-  out["pol_sf_extrapolation"] =
-      pol_unread ? pol.label
-                 : how(cfg.pol_sf_obj.get(), cfg.pol_sf == PolSfSource::Toy, pol_lh);
+  const std::pair<std::string, std::string> how = sf_extrapolation(p, pol);
+  out["unpol_sf_extrapolation"] = how.first;
+  out["pol_sf_extrapolation"] = how.second;
   const double kNan = std::numeric_limits<double>::quiet_NaN();
   const std::pair<double, double> g =
       pol_unread ? std::make_pair(kNan, kNan) : pol_sf_grid_report(p);
@@ -5338,21 +5320,14 @@ py::dict sf_grid_extras(const Pipeline& p, const KnobProvenance& pol) {
 }
 
 // A10 (2026-11-03): what a HepMC3 file of this run records as its
-// "lipolgen.<key>" GenRunInfo attributes -- `run_provenance` (the core list
-// the npz `meta` fills its provenance keys from) plus the STRING keys of
-// `sf_grid_extras` (the two `*_sf_extrapolation` keys, which classify an
-// LHAPDF object the core cannot see), each exactly as `meta` carries it.
+// "lipolgen.<key>" GenRunInfo attributes.  J6 (2026-11-10): exactly
+// `run_provenance`, which since J6 carries the two `*_sf_extrapolation` keys
+// itself (`sf_extrapolation`, the function `sf_grid_extras` reads), so the
+// Python path and a C++ caller of `run_provenance` write the same keys.  Kept
+// under its A10 name for the callers (cli.py, `Pipeline.write_hepmc`).
 std::map<std::string, std::string> hepmc_run_attributes(
     const Pipeline& p, const KnobRunContext& ctx) {
-  std::map<std::string, std::string> m = run_provenance(p, ctx);
-  for (const KnobProvenance& r : p.knob_provenance(ctx)) {
-    if (r.name != "pol_sf") continue;
-    const py::dict extras = sf_grid_extras(p, r);
-    for (const auto& kv : extras)
-      if (py::isinstance<py::str>(kv.second))
-        m[kv.first.cast<std::string>()] = kv.second.cast<std::string>();
-  }
-  return m;
+  return run_provenance(p, ctx);
 }
 
 }  // namespace

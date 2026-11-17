@@ -1975,3 +1975,41 @@ TEST_CASE("J1 note: the spin-1 positivity confinement of the rank-2 slot") {
   CHECK(std::isnan(b6.fraction));
   CHECK(rank2_input_report(c6, tensor_thirds_plan(0.7, 0.6)).find("confined") == std::string::npos);
 }
+
+// J6 (2026-11-10; docs/open_items/run_2026-11-10/DECISIONS.md J6, the
+// SUPERVISOR's choice under the author's delegation): the two
+// `*_sf_extrapolation` keys come from `run_provenance` (`sf_extrapolation`),
+// with the strings the Python module's `sf_grid_extras` wrote before J6; the
+// object answers for itself (`UnpolSF::extrapolation`), the toy SELECTOR
+// (no object) is decided by the selector, so a caller's ToyF2 under Custom
+// keeps "the backend's own" as before.  Core only: runs in the OFF build.
+TEST_CASE("J6: run_provenance carries the two extrapolation keys, strings as before") {
+  PipelineConfig c = toy_config();  // D7: the toy NAMED (sf_test_support.hpp)
+  c.n_events = 10;
+  {
+    const Pipeline p(c, tensor_thirds_plan(0.7, 0.6));  // g1 not read
+    const auto m = run_provenance(p);
+    CHECK(m.at("unpol_sf_extrapolation") == "none (closed-form toy)");
+    CHECK(m.at("pol_sf_extrapolation") == m.at("pol_sf"));  // the NotRead label
+    CHECK(m.at("pol_sf_extrapolation").rfind("not read", 0) == 0);
+  }
+  {
+    const Pipeline p(c, helicity_flip_plan(1.0, 0.7, 0.7));  // g1 read
+    const auto m = run_provenance(p);
+    CHECK(m.at("unpol_sf_extrapolation") == "none (closed-form toy)");
+    CHECK(m.at("pol_sf_extrapolation") == "none (closed-form toy)");
+  }
+  {
+    PipelineConfig cc = c;
+    cc.unpol_sf = UnpolSfSource::Custom;
+    cc.unpol_sf_obj = std::make_shared<const ToyF2>();
+    cc.pol_sf = PolSfSource::Custom;
+    cc.pol_sf_obj = std::make_shared<const ToyG1>();
+    const Pipeline p(cc, helicity_flip_plan(1.0, 0.7, 0.7));
+    const auto m = run_provenance(p);
+    CHECK(m.at("unpol_sf_extrapolation") == "the backend's own (not an LHAPDF grid)");
+    CHECK(m.at("pol_sf_extrapolation") == "the backend's own (not an LHAPDF grid)");
+    CHECK(ToyF2().extrapolation() == std::string(SF_BACKEND_OWN_EXTRAPOLATION));
+    CHECK(ToyG1().extrapolation() == std::string(SF_BACKEND_OWN_EXTRAPOLATION));
+  }
+}

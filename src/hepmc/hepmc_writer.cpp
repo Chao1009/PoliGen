@@ -55,7 +55,7 @@ struct HepMC3Writer::Impl {
   std::shared_ptr<HepMC3::GenRunInfo> run_info;  // built lazily, from event 0
   std::string generator_name;
   std::string generator_version;
-  bool closed = false;  std::map<std::string, std::string> run_attributes;  bool run_attributes_written = false;  // A10 (2026-11-03)
+  bool closed = false;  std::map<std::string, std::string> run_attributes;  bool run_attributes_written = false;  bool run_attributes_set = false;  // A10 (2026-11-03); J6 (2026-11-10): whether `set_run_attributes` was called
 
   explicit Impl(const std::string& filename, std::string name, std::string version)
       // No GenRunInfo passed here on purpose: WriterAscii only serializes a
@@ -116,7 +116,7 @@ void HepMC3Writer::write(const Event& ev) {
   if (!impl_ || impl_->closed) {
     throw std::runtime_error("HepMC3Writer::write: writer is closed");
   }
-  impl_->ensure_run_info(ev);  if (!impl_->run_attributes_written) { for (const auto& kv : impl_->run_attributes) impl_->run_info->add_attribute("lipolgen." + kv.first, std::make_shared<HepMC3::StringAttribute>(kv.second)); impl_->run_attributes_written = true; }  // A10 (2026-11-03): before the GenRunInfo is first serialized
+  impl_->ensure_run_info(ev);  if (!impl_->run_attributes_written) { for (const auto& kv : impl_->run_attributes) impl_->run_info->add_attribute("lipolgen." + kv.first, std::make_shared<HepMC3::StringAttribute>(kv.second)); if (!impl_->run_attributes_set) impl_->run_info->add_attribute("lipolgen.run_provenance", std::make_shared<HepMC3::StringAttribute>(kNoRunProvenance));  impl_->run_attributes_written = true; }  // A10 (2026-11-03): before the GenRunInfo is first serialized; J6 (2026-11-10): or the one attribute saying there is none
 
   HepMC3::GenEvent genevt(HepMC3::Units::GEV, HepMC3::Units::MM);
   genevt.set_run_info(impl_->run_info);
@@ -253,4 +253,5 @@ void lipolgen::HepMC3Writer::set_run_attributes(
                              "with the first event");
   }
   impl_->run_attributes = attributes;
+  impl_->run_attributes_set = true;  // J6 (2026-11-10)
 }

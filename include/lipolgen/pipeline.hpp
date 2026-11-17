@@ -1801,16 +1801,16 @@ InclusivePolarizationFactors inclusive_polarization_factors(const Pipeline& p);
 // delegation): how much of ONE run's rate the positivity clip |g1| <= F1
 // (sf.hpp, `PositivityClippedG1`) acts on.  DEFINED before it was measured
 // (docs/open_items/run_2026-11-03/phase_P2_positivity.md sec. 1): over the
-// run's accepted cells c, with w_c = `Pipeline::cell_rate_weights_pb()` (the
-// spin-averaged cell cross section, the channel's own rate),
+// run's accepted cells c, with w_c = `Pipeline::cell_rate_weights_pb()` (the spin-averaged cell cross section, the channel's own rate),
 //   fraction = sum_{c: the clip binds on a nucleon species read} w_c / sum_c w_c,
-// "binds" being |g1_N| > F1_N of the backend at the cell centre for a species
-// N (p, n) the kernel's DIS target carries with a non-zero polarization --
-// the same test the clip makes; plus the largest UNCLIPPED |A1_N| = |g1_N| / F1_N
-// met over those cells per species.  Where g1 is not read (`pol_sf_is_read`
-// false: the coherent channel, every plan at lam_e P_e = 0) the clip changes
-// nothing and the fraction is NaN, "not read".  `meta` (python/bindings.cpp)
-// and the CLI banner both read it; nothing else does.
+// "binds" being |g1_N| > F1_N of the backend at the cell centre for a species N (p, n) the kernel's DIS target carries with a non-zero polarization --
+// the same test the clip makes; plus the largest UNCLIPPED |A1_N| = |g1_N| / F1_N met over those cells per species.  Where g1 is not read
+// (`pol_sf_is_read` false: the coherent channel, every plan at lam_e P_e = 0) the clip changes nothing and the fraction is NaN, "not read".
+// `meta` (python/bindings.cpp) and the CLI banner both read it; nothing else does.  J5 (2026-11-10; DECISIONS.md J5, the supervisor's choice under
+// the author's delegation): it is a CELL-CENTRE ESTIMATE -- a cell is counted whole when the bound binds at its centre.  Measured bracket
+// (docs/open_items/run_2026-11-10/phase_P4_provenance.md sec. 1), default inclusive 6Li `--plan helicity-flip`, configs 0 / 1 / 2: centre
+// 4.793e-7 / 3.864e-7 / 3.536e-7; bound at the centre AND all four corners (lower) 4.776e-7 / 3.847e-7 / 3.520e-7; at ANY of them (upper)
+// 6.645e-6 / 5.101e-6 / 3.634e-6 -- the x = 0.794 row, whose upper corners (x = 0.832) the neutron's bound reaches; x = 1 corners never bind.
 struct G1PositivityClip {
   /// `meta["g1_clipped_rate_fraction"]`: the share above (NaN = g1 not read).
   double fraction = NAN;  // <cmath>
@@ -1839,9 +1839,9 @@ G1PositivityClip g1_positivity_clip(const Pipeline& p);
 // python/bindings.cpp fills those `meta` keys FROM this function.  The
 // HepMC3 writer records the same map as `GenRunInfo` string attributes named
 // "lipolgen.<key>" (`HepMC3Writer::set_run_attributes`,
-// docs/HEPMC3_CONVENTION.md "Run provenance attributes").  NOT here: the two
-// `*_sf_extrapolation` keys, which classify an LHAPDF object the core cannot
-// see; the Python module adds them from the same function `meta` uses.
+// docs/HEPMC3_CONVENTION.md "Run provenance attributes").  J6 (2026-11-10):
+// also the two `*_sf_extrapolation` keys, from `sf_extrapolation` (below; the
+// backends answer for themselves), which the npz `meta` reads as well.
 std::map<std::string, std::string> run_provenance(
     const Pipeline& p, const KnobRunContext& ctx = KnobRunContext());
 
@@ -1865,6 +1865,16 @@ namespace lipolgen {
 // kernel makes.  NaN where the confinement is not applied (the option off:
 // every run but the default inclusive deuteron, a caller kernel without it,
 // every other channel); `meta["b1_clipped_rate_fraction"]` is then ABSENT.
+// J5 (2026-11-10; DECISIONS.md J5, the supervisor's choice, reaching this key
+// through the J1 note's "the definition g1_clipped_rate_fraction has"): a
+// CELL-CENTRE ESTIMATE -- a cell is counted whole when the confinement binds
+// at its centre.  Measured bracket (phase_P4_provenance.md sec. 1), default
+// inclusive deuteron, configs 0 / 1 / 2: centre 4.792e-7 / 3.871e-7 /
+// 3.536e-7; at the centre AND all four corners (lower) 5.41e-9 / 1.46e-8 /
+// 1.50e-8; at ANY of them (upper) 5.153e-7 / 4.874e-7 / 4.573e-7.  The lower
+// bracket is small because the x = 0.955 row's x = 1 corners never bind
+// (F1 = 0 there) and the x = 0.871 row binds at its lower corners on 3 / 13 /
+// 13 cells only; the upper adds 3 / 14 / 14 cells of the x = 0.794 row.
 struct B1RankTwoConfinement {
   bool applied = false;           ///< the run's kernel has the option on (inclusive channel)
   double fraction = NAN;          ///< `meta["b1_clipped_rate_fraction"]` (NaN = not applied)  // <cmath>
@@ -1876,6 +1886,24 @@ struct B1RankTwoConfinement {
   std::string report;             ///< the banner sentence (one line)
 };
 B1RankTwoConfinement b1_rank2_confinement(const Pipeline& p);
+
+// J6 (2026-11-10; docs/open_items/run_2026-11-10/DECISIONS.md J6, the
+// SUPERVISOR's choice under the author's delegation): HOW each structure-
+// function backend of this run is evaluated outside its grid -- the values of
+// `unpol_sf_extrapolation` (first) and `pol_sf_extrapolation` (second), which
+// `run_provenance` returns and the npz `meta` (python/bindings.cpp
+// `sf_grid_extras`) reads from here, so both paths write the same strings.
+// Decided in this order, per slot: a caller-supplied kernel ->
+// "caller-supplied kernel"; the toy selector (which holds no object) ->
+// "none (closed-form toy)"; an object -> its own answer
+// (`UnpolSF::extrapolation` / `PolSF::extrapolation`: `LHAPDF_EXTRAPOLATOR`
+// for the LHAPDF tier's, `SF_BACKEND_OWN_EXTRAPOLATION` otherwise); no object
+// -> "no object".  The polarised slot follows `meta["pol_sf"]`'s rule (F7):
+// where its knob row `pol` is NotRead it carries that row's label.  Strings
+// byte-identical to what the Python module wrote before J6 (A/B in
+// phase_P4_provenance.md); the core still does not link LHAPDF.
+std::pair<std::string, std::string> sf_extrapolation(const Pipeline& p,
+                                                     const KnobProvenance& pol);
 
 }  // namespace lipolgen
 

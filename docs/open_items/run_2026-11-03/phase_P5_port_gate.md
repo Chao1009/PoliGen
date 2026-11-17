@@ -16,7 +16,7 @@ A13's reduced `channels.li6_alpha_vmc` block. The code was appended below
 paragraph. The tolerance was declared before any comparison (§2). The
 script was run in place with the tree's `env.sh`. Its three preflights
 passed and the new block came out as designed. The run was NOT additive:
-it also rewrote 3170 numbers of six reference JSONs, `tagged.json` among
+it also rewrote 3170 *(V (2026-11-17), PHYSICS-2: 3154 — the count counted 16 NaN-to-NaN leaves as changed)* numbers of six reference JSONs, `tagged.json` among
 them, at the rounding level, and one manifest string. Under the brief's
 rule (c) every file was restored from `git show HEAD:<path>`, what moved is
 recorded in §1, and the phase stopped. Its residual against LiPolGen,
@@ -38,8 +38,8 @@ files in `dumped/`):
 |---|---|---|---|---|
 | `tagged.json` | 51 (+ the new block) | 4.4e−16 | 2.2e−16 (≤ 1 ULP) | `boost_spectator` of all three channels |
 | `bookkeeping.json` | 2 | 6.9e−18 | 2.8e−16 (2 ULP) | `helicity_flip_j32_maxent_anchor` populations |
-| `coherent.json` | 9 | 2.8e−17 | 1 ULP | `tag_acceptance*`, `fragment_rigidity` |
-| `spectator.json` | 28 | 4.3e−19 | 1 ULP | `boost_fragment` of six channels |
+| `coherent.json` | 9 *(V (2026-11-17), PHYSICS-2: 6; 3 NaN-to-NaN leaves)* | 2.8e−17 | 1 ULP | `tag_acceptance*`, `fragment_rigidity` |
+| `spectator.json` | 28 *(V (2026-11-17), PHYSICS-2: 15; 13 NaN-to-NaN leaves)* | 4.3e−19 | 1 ULP | `boost_fragment` of six channels |
 | `spin.json` | 202 | 1.9e−16 | (values near 0) | `population_sets` of j1 and j3_2 |
 | `xsec.json` | 2878 | 1.4e−9 | 9.4e−13 among values > 1e−6; 3.8 on 1e−19 cancellation residues | every kernel block |
 | `_manifest.json` | 0 numbers | – | – | `could_not_call[0].reason`: `tagged.py:299-302` → `tagged.py:849-852` |
@@ -98,7 +98,7 @@ the logs above.
 | gate | result | wall |
 |---|---|---|
 | the three dump preflights (`_preflight_sd_phase`, `_preflight_delta_convention`, `_preflight_cluster_wave`) | passed (printed: coefficient 1, the LOI's; defaults Hulthén) | the dump, < 1 min |
-| additivity of the dump (design point c) | **FAILED**: 3170 numbers in 6 files + 1 manifest string; restored | – |
+| additivity of the dump (design point c) | **FAILED**: 3170 *(V (2026-11-17), PHYSICS-2: 3154 — the count counted 16 NaN-to-NaN leaves as changed)* numbers in 6 files + 1 manifest string; restored | – |
 | residual against the declared 1e−8 | 5.389e−9 / 3.196e−9: within | < 1 min |
 | C++ build, `lipolgen_tests`, pytest, bench, report | NOT RUN: no code or reference change in the tree | – |
 | `check_spdx_headers.py` | 136 files, all carry the line | 0.04 s |
@@ -248,7 +248,7 @@ of 339 and 338.
 ## 5. Open points
 
 1. **For the author: the reference dump does not reproduce on today's
-   machine.** The in-place dump moves 3170 numbers at the rounding level,
+   machine.** The in-place dump moves 3170 *(V (2026-11-17), PHYSICS-2: 3154 — the count counted 16 NaN-to-NaN leaves as changed)* numbers at the rounding level,
    up to 9.4e−13 relative in `xsec.json` against the rtol 1e−12 port gates
    (first pass §1). The likely cause is the 2026-10-26 libc6 / libpython
    upgrade, not proven. The committed tables still pass every port gate.

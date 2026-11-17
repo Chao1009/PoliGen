@@ -55,7 +55,7 @@ touched the notes.
    (MillerB1 unmapped) and then re-open the toy b₁'s high-x behaviour, which
    a ~3× larger deuteron rank-2 term at the top cell will expose.
 2. **The reference dump is no longer byte-reproducible here.** Run on
-   2026-11-06, `dump_polligen_reference.py` moves 3170 committed numbers of
+   2026-11-06, `dump_polligen_reference.py` moves 3170 *(V (2026-11-17), PHYSICS-2: 3154 — the count counted 16 NaN-to-NaN leaves as changed)* committed numbers of
    six JSONs at the rounding level (≤ 2 ULP; `xsec.json` up to 9.4e−13
    relative among values above 1e−6, against the port gates' rtol 1e−12) with
    the sibling unchanged; the 2026-10-26 libc/libpython upgrade is the

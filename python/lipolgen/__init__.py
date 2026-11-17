@@ -294,7 +294,7 @@ UNPOL_SF = {
 #: evaluates g1 AND the FILL carries lam_e * P_e != 0.  The coherent channel
 #: does neither, and neither does any unpolarised-beam plan -- "tensor-thirds"
 #: is the CLI's own default and builds every category at lam_e = 0, so at the
-#: defaults `--pol-sf` is read on NO channel.  It is LABELLED there, not
+#: defaults `--pol-sf` is read on NO channel (V (2026-11-17), PHYSICS-1; J1 note (2026-11-12): except the inclusive deuteron, where g1 also bounds the rank-2 slot, so it is read there under every fill).  It is LABELLED there, not
 #: refused and not credited (`pol_sf_is_read(config, plan)`, and the `pol_sf`
 #: row of `Pipeline.knob_provenance`).  "nnpdfpol"
 #: is THE DEFAULT since D7 (`POL_SF_DEFAULT`): `LhapdfG1("NNPDFpol11_100", 0)`,

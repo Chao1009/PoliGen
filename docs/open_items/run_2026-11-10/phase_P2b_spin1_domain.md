@@ -121,7 +121,7 @@ refused on any configuration; the smallest density is **0.00462** (config 0,
 λ_e = +1, m = −1, θ_S = 0, x = 0.955, Q² = 733.6), 0.2900 and 0.6362 on configs
 1 and 2. So at the most extreme states the window keeps a margin of 0.005 at
 config 0's top row: the finite-γ g₂ term of the shipped `target_mass` kernel
-and D(y) < 1 eat into the LO bound but do not cross it on the shipped grid.
+and D(y) < 1 eat into the LO bound but do not cross it on the shipped grid. *(Correction, V (2026-11-17), PHYSICS-4: backwards — at the binding cells the confinement makes the LO (D = 1) density of that extreme state exactly 0 by construction (b₁/F₁ = 0.2592, g₁/F₁ = 0.9136 at x = 0.955, Q² = 733.6); the kernel's corrections — vector part 0.9091 against 0.9136 at LO, tensor part −0.08628 against −0.0864 — leave +0.0046.)*
 ⁶Li pure states: smallest 0.1272 / 0.0703 / 0.1778.
 
 ### N4 — `b1_clipped_rate_fraction` (`n45.py`; all 8 plan names × configs, x_max 1.0)

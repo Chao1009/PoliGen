@@ -37,7 +37,7 @@ pushed on its own.
 Exposed by the run, not decided (the reasons and numbers in `SUMMARY.md`):
 
 1. The bare deuteron's inclusive b₁ reads the ⁶Li rank-2 transfer: 0.32753 × MillerB1 (HERMES χ²(b₁)/6 14.56 against 5.26); it drives the two surviving deuteron top-cell refusals. Recommendation: a deuteron b₁ slot of its own, then the toy b₁'s high-x behaviour.
-2. The reference dump is no longer byte-reproducible on this machine (3170 numbers at ≤ 2 ULP, `xsec.json` up to 9.4e−13 relative among values above 1e−6 against rtol 1e−12; the 2026-10-26 libc/libpython upgrade the likely, unproven cause); A13 landed by splice; the stale manifest string.
+2. The reference dump is no longer byte-reproducible on this machine (3170 *(V (2026-11-17), PHYSICS-2: 3154 — the count counted 16 NaN-to-NaN leaves as changed)* numbers at ≤ 2 ULP, `xsec.json` up to 9.4e−13 relative among values above 1e−6 against rtol 1e−12; the 2026-10-26 libc/libpython upgrade the likely, unproven cause); A13 landed by splice; the stale manifest string.
 3. BONuS on the AV18 weight: the header CHECKs miss (recorded, no verdict flips).
 4. HERMES low-x bins on the frozen CT18NLO edge.
 5. The meta clip share counts cell centres only.

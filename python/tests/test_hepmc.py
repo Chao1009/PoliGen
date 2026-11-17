@@ -199,3 +199,47 @@ def test_j6_extrapolation_keys_and_the_absence_attribute(tmp_path):
         evs = list(f)
     assert all(str(e.run_info.attributes["lipolgen.run_provenance"])
                == lg.HepMC3Writer.NO_RUN_PROVENANCE for e in evs)
+
+
+def test_v_code1_a_wrapped_lhapdf_grid_reports_the_grid_it_wraps():
+    """V (2026-11-17), CODE-1 (the supervisor's ruling of 2026-11-17 under
+    J6, docs/open_items/run_2026-11-10/DECISIONS.md): `PositivityClippedG1`
+    answers `extrapolation()` and the two polarised grid keys for the backend
+    it wraps.  A caller's wrapped LHAPDF grid reports what the bare grid
+    reports; a wrapped toy what a bare toy object reports; the default and
+    the toy selector paths are unchanged."""
+    import math
+    _l = lg._lipolgen
+    if not _l.HAVE_LHAPDF:
+        pytest.skip("no LHAPDF tier")
+    keys = ("pol_sf_extrapolation", "pol_sf_grid_q2_min", "pol_sf_below_grid_frac")
+
+    def run(obj=None, toy=False):
+        cfg = lg.make_config(isotope="6Li", events=20)
+        if toy:
+            _l.set_pol_sf(cfg, _l.PolSfSource.Toy)
+        if obj is not None:
+            cfg.pol_sf_obj = obj
+        m = _l.Pipeline(cfg, _l.helicity_flip_plan(1.0, 0.7, 0.7)).generate()["meta"]
+        m = m if isinstance(m, dict) else __import__("json").loads(str(m))
+        return m
+
+    def same(a, b):
+        return all((isinstance(a[k], float) and math.isnan(a[k]) and math.isnan(b[k])) or a[k] == b[k]
+                   for k in keys)
+
+    default = run()
+    assert default["pol_sf"] == "nnpdfpol" and default["pol_sf_extrapolation"] == "nearest"
+    assert default["pol_sf_grid_q2_min"] == 1.0 and default["pol_sf_below_grid_frac"] == 0.0
+    toysel = run(toy=True)
+    assert toysel["pol_sf_extrapolation"] == "none (closed-form toy)"
+    assert (toysel["pol_sf_grid_q2_min"], toysel["pol_sf_below_grid_frac"]) == (0.0, 0.0)
+    grid = _l.make_lhapdf_pol_sf(_l.POL_SF_DEFAULT)
+    bare, wrapped = run(grid), run(_l.PositivityClippedG1(grid))
+    assert bare["pol_sf"] == wrapped["pol_sf"] == "custom"
+    assert same(bare, wrapped) and wrapped["pol_sf_extrapolation"] == "nearest"
+    assert wrapped["pol_sf_grid_q2_min"] == default["pol_sf_grid_q2_min"]
+    bare_toy, wrapped_toy = run(_l.ToyG1()), run(_l.PositivityClippedG1(_l.ToyG1()))
+    assert same(bare_toy, wrapped_toy)
+    assert wrapped_toy["pol_sf_extrapolation"] == "the backend's own (not an LHAPDF grid)"
+    assert math.isnan(wrapped_toy["pol_sf_grid_q2_min"]) and math.isnan(wrapped_toy["pol_sf_below_grid_frac"])

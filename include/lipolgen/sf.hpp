@@ -571,7 +571,7 @@ class PositivityClippedG1 : public PolSF {
   PositivityClippedG1(std::shared_ptr<const PolSF> inner,
                       std::shared_ptr<const UnpolSF> base, RFunc r_func = nullptr);
   double g1p(double x, double q2) const override;
-  double g1n(double x, double q2) const override;
+  double g1n(double x, double q2) const override;  std::string extrapolation() const override { return inner_->extrapolation(); }  ///< V (2026-11-17), CODE-1 (the supervisor's ruling of 2026-11-17 under J6): the wrapper answers for the backend it wraps
   /// The bound itself: F1 of the nucleon on the base and R above.
   double f1p(double x, double q2) const;
   double f1n(double x, double q2) const;

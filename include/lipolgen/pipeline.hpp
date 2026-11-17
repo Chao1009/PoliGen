@@ -996,7 +996,7 @@ struct PipelineConfig {
   /// CLI `--pol-sf`).  NOT every kernel: `PolSfSource`'s own SCOPE note is
   /// the whole rule, and it has TWO axes -- the coherent channel evaluates
   /// no g1, and neither does any unpolarised-beam plan, `tensor-thirds`
-  /// included, which is the CLI's default.  The run LABELS the selector
+  /// included, which is the CLI's default (V (2026-11-17), PHYSICS-1; J1 note (2026-11-12): except the default inclusive deuteron, where g1 also bounds the rank-2 slot, so the selector is read under every fill).  The run LABELS the selector
   /// there rather than crediting it (`pol_sf_is_read(config, plan)`), and
   /// "every kernel the pipeline builds" is true of `unpol_sf` alone.
   /// The DEFAULT is `NnpdfPol` since D7 (`POL_SF_DEFAULT`; `Toy` until then).
@@ -1132,7 +1132,7 @@ inline const char* rank2_none_label() {
 /// Does the POLARISED selector (`PipelineConfig::pol_sf`, CLI `--pol-sf`)
 /// reach the rate of this config's channel at all?
 ///
-/// FALSE ON `CoherentLi6` AND NOWHERE ELSE, and that is a physics statement,
+/// FALSE ON `CoherentLi6` AND NOWHERE ELSE, and that is a physics statement, (V (2026-11-17), PHYSICS-1: on the CHANNEL axis only -- the plan axis below makes it false elsewhere too, and since the J1 note (2026-11-12) the default inclusive deuteron is read under every fill)
 /// not a wiring gap: the coherent yield is `f_coh(x)` times the UNPOLARIZED
 /// inclusive cell cross sections (`Pipeline`'s coherent branch), and this
 /// channel's tensor signal is the recoil azimuth's
@@ -1156,7 +1156,7 @@ inline const char* rank2_none_label() {
 /// enters the rate through exactly one product -- `InclusiveKernel::
 /// amplitudes` adds `lam_e * pe * (m/J) * cos(theta_S) * A_par` and nothing
 /// else reads `PolSF` -- so a fill with `lam_e * P_e == 0` in every category
-/// never evaluates it either.  `tensor_thirds_plan`, `transverse_tensor_plan`
+/// never evaluates it either (V (2026-11-17), PHYSICS-1; J1 note (2026-11-12): except the default inclusive deuteron, whose `tables()` also reads g1 to confine b1 to 3 (F1 - |g1|), so it is read there under every fill).  `tensor_thirds_plan`, `transverse_tensor_plan`
 /// and `tensor_flip_plan` build every category at `lam_e = 0, pe = 0`
 /// (src/core/bookkeeping.cpp), and `helicity_flip_plan` at `--pe 0` is the
 /// same; `tensor-thirds` is the CLI's own default plan.  MEASURED 2026-09-05,
@@ -1166,7 +1166,7 @@ inline const char* rank2_none_label() {
 /// tensor-thirds, and on inclusive-6Li under transverse-tensor, tensor-flip
 /// and helicity-flip at `--pe 0` -- while `meta["pol_sf"]` wrote "nnpdfpol"
 /// and the banner said it reached the kernel.  Both axes are now here, which
-/// is why the plan is an argument.
+/// is why the plan is an argument.  (V (2026-11-17), PHYSICS-1: the inclusive-d measurement is as of 2026-09-05, superseded for the deuteron by the J1 note (2026-11-12).)
 ///
 /// WHY IT IS NOT A REFUSAL, on EITHER axis.  `--unpol-sf` reaches the
 /// coherent rate (through exactly those cell cross sections: x0.7058 on the

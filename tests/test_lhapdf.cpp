@@ -548,4 +548,19 @@ TEST_CASE("J6: LhapdfSF / LhapdfG1 answer LHAPDF_EXTRAPOLATOR for themselves") {
   CHECK(g->extrapolation() == std::string(LHAPDF_EXTRAPOLATOR));
   CHECK(u->extrapolation() == "nearest");
 }
+
+TEST_CASE("V CODE-1: PositivityClippedG1 answers extrapolation() for the backend it wraps") {
+  // V (2026-11-17), CODE-1 (the supervisor's ruling of 2026-11-17 under J6):
+  // the one PolSF wrapper forwards to its inner backend, so a wrapped LHAPDF
+  // grid says LHAPDF_EXTRAPOLATOR and a wrapped toy what the toy says.
+  const std::shared_ptr<const UnpolSF> u = make_lhapdf_unpol_sf(UnpolSfSource::Ct18Nlo);
+  const std::shared_ptr<const PolSF> g = make_lhapdf_pol_sf(PolSfSource::NnpdfPol);
+  const PositivityClippedG1 wg(g, u);
+  CHECK(wg.extrapolation() == g->extrapolation());
+  CHECK(wg.extrapolation() == std::string(LHAPDF_EXTRAPOLATOR));
+  const auto toy = std::make_shared<const ToyG1>();
+  const PositivityClippedG1 wt(toy, nullptr);
+  CHECK(wt.extrapolation() == toy->extrapolation());
+  CHECK(wt.extrapolation() == std::string(SF_BACKEND_OWN_EXTRAPOLATION));
+}
 #endif  // LIPOLGEN_HAVE_LHAPDF

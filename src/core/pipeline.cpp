@@ -1344,7 +1344,7 @@ bool pol_sf_is_read(const PipelineConfig& cfg, const RunPlan& plan) {
   // one through `InclusiveKernel::Options::g1_model`, the three tagged ones
   // through `StruckClusterOptions::g1_model`.
   //
-  // THE RUN PLAN.  `plan_has_beam_helicity` is the whole of it -- see there.
+  // THE RUN PLAN.  `plan_has_beam_helicity` is the whole of it -- see there.  (V (2026-11-17), PHYSICS-1: except the default inclusive deuteron, the J1-note clause on the line below.)
   // This clause is the one that was missing until 2026-09-05, and it is the
   // one that bites at the CLI's own default plan.
   if (cfg.channel == PipelineChannel::CoherentLi6) { return false; }  if (cfg.channel == PipelineChannel::Inclusive && !cfg.kernel && cfg.isotope == "d") { return true; }  // J1 note (2026-11-12): on the default inclusive deuteron g1 bounds the rank-2 slot (the spin-1 domain, b1 <= 3 (F1 - |g1|)), so it is read under EVERY fill
@@ -1377,7 +1377,7 @@ std::string pol_sf_reach_report(const PipelineConfig& cfg,
     return pol_sf_unread_label(cfg, plan) +
            ": no category carries lam_e * P_e != 0, and lam_e * P_e is the "
            "only thing g1 is multiplied by (InclusiveKernel::amplitudes adds "
-           "helicity * (m/J) * cos(theta_S) * A_par and nothing else reads a "
+           "helicity * (m/J) * cos(theta_S) * A_par and nothing else reads a "  // V (2026-11-17), PHYSICS-1: this runtime string is NOT changed -- it is emitted only off the default inclusive deuteron (the condition above), where it is true; changing it would move meta on 6Li runs
            "PolSF).  The three TENSOR plans "
            "build every category at lam_e = 0, pe = 0 "
            "(bookkeeping.cpp: tensor_thirds_plan, transverse_tensor_plan, "

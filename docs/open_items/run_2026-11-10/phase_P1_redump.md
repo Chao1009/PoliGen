@@ -12,7 +12,7 @@ file.
 `validation/dump_polligen_reference.py` was RUN in place with the tree's
 `env.sh`, and nothing was edited by hand. All three preflights passed. The
 reference tables in the tree are now exactly what that run wrote. Six JSONs
-moved: 3170 numbers at the rounding level. `_manifest.json` lost its one
+moved: 3170 numbers at the rounding level *(V (2026-11-17), PHYSICS-2: 3154 — the count of 3170 counted 16 NaN-to-NaN leaves as changed, 13 in `spectator.json` and 3 in `coherent.json`)*. `_manifest.json` lost its one
 stale string. `beams.json`, `b1_default_li6.json` and `validation/README.md`
 are byte-identical to `dd7f4d4`. A second run reproduced the first byte for
 byte, and both are byte-identical to the 2026-11-06 dump of
@@ -29,7 +29,7 @@ tables use less of the 1e−12 tolerance than the committed ones did (§2).
 The recipe was `source env.sh && PYTHONDONTWRITEBYTECODE=1 python3 -B
 validation/dump_polligen_reference.py` (exit 0, 0.51 s, `dump1.log`). Every
 reference JSON was compared, pre (`pre/`, copied before the run) against
-post, by `diff_stats.py` (`diff_stats.log`). "Numbers" are int and float
+post, by `diff_stats.py` (`diff_stats.log`) *(V (2026-11-17), PHYSICS-2: its `!=` comparison counted a NaN leaf, unchanged, as changed)*. "Numbers" are int and float
 leaves. ULP is |Δ| / ulp(pre).
 
 | file | numbers compared | changed | max \|Δ\| | max rel, \|v\| > 1e−6 | max rel overall (on value) | > 1 ULP | > 2 ULP |
@@ -37,13 +37,13 @@ leaves. ULP is |Δ| / ulp(pre).
 | `xsec.json` | 8655 | 2878 | 1.4e−9 | 9.36e−13 (`results/7Li/kernel_scenario_rank2/amplitudes[14]/w_avg[1]`, −1.0086e−5) | 3.8 (on 1.28e−19, a `kernel_tensor_gamma` `w_avg`) | 1761 | 999 (877 among \|v\| > 1e−6, max 5570 ULP) |
 | `spin.json` | 3350 | 202 | 1.85e−16 | 1.41e−15 (12 ULP, `j1` `lab_moments/tensor_zz` = −0.0589) | ∞ (4 values that were exactly 0) | 117 | 96 (8 among \|v\| > 1e−6) |
 | `tagged.json` | 2906 | 51 | 4.4e−16 | 2.19e−16 (`boost_spectator` of `li6_alpha`, `li7_alpha`, `deuteron`) | 2.19e−16 | 0 | 0 |
-| `spectator.json` | 1583 | 28 | 4.3e−19 | 2.2e−16 (`boost_fragment`, seven channels) | 2.2e−16 | 0 | 0 |
-| `coherent.json` | 444 | 9 | 2.8e−17 | 2.05e−16 (`tag_acceptance*`, `fragment_rigidity`) | 2.1e−16 (on 5.0e−7) | 0 | 0 |
+| `spectator.json` | 1583 | 28 *(V (2026-11-17), PHYSICS-2: 15; 13 NaN-to-NaN leaves were counted as changed)* | 4.3e−19 | 2.2e−16 (`boost_fragment`, seven channels) | 2.2e−16 | 0 | 0 |
+| `coherent.json` | 444 | 9 *(V (2026-11-17), PHYSICS-2: 6; 3 NaN-to-NaN leaves were counted as changed)* | 2.8e−17 | 2.05e−16 (`tag_acceptance*`, `fragment_rigidity`) | 2.1e−16 (on 5.0e−7) | 0 | 0 |
 | `bookkeeping.json` | 282 | 2 | 6.9e−18 | 2.78e−16 (`helicity_flip_j32_maxent_anchor` populations) | 2.78e−16 | 2 | 0 |
 | `beams.json` | 101 | 0 | – | – | – | – | – |
 | `b1_default_li6.json` | 2607 | 0 (not this script's file) | – | – | – | – | – |
 | `_manifest.json` | 0 | 1 string: `could_not_call[0].reason` `tagged.py:299-302` → `tagged.py:849-852` | – | – | – | – | – |
-| total | 19928 | 3170 | | | | | |
+| total | 19928 | 3170 *(V (2026-11-17), PHYSICS-2: 3154)* | | | | | |
 
 No key was added or removed. No other non-numeric value changed.
 `git diff --numstat` gives 2878 / 202 / 51 / 15 / 6 / 2 / 1 lines. The
@@ -51,7 +51,7 @@ No key was added or removed. No other non-numeric value changed.
 committed one both parsed and as text (15 lines). `validation/README.md` is
 byte-identical to `dd7f4d4`.
 
-**Against the picture in `phase_P5_port_gate.md` §1.** It matches: 3170
+**Against the picture in `phase_P5_port_gate.md` §1.** *(V (2026-11-17), PHYSICS-2: both counts counted 16 NaN-to-NaN leaves as changed — 3154 numbers moved; the supervisor's check, reproduced in phase V.)* It matches: 3170
 numbers in the same six files with the same per-file counts and maxima, and
 the same manifest string. That section gave only an absolute bound for
 `spin.json`. Measured here: 96 of the 202 moves exceed 2 ULP, and 8 of
@@ -62,7 +62,7 @@ holds `np.arccos(1.0 / np.sqrt(3.0))`. It was 0.9553166181245091 in the
 committed `spin.json` and `xsec.json` and is 0.9553166181245092 today, one
 ULP higher. Against a 40-digit `mpmath.acos`, the old value is 0.965 ULP
 from the true one and today's is 0.035 ULP from it: today's is the correctly
-rounded result. In `xsec.json` the rows at θ_s on that axis carry 776 of the
+rounded result *(V (2026-11-17), PHYSICS-3: the correctly rounded arccos of the DOUBLE `1/np.sqrt(3)`, against which the 0.965 / 0.035 ULP are measured; the magic angle arccos(1/√3) itself is 0.82 ULP from today's value and 1.82 ULP from the old one)*. In `xsec.json` the rows at θ_s on that axis carry 776 of the
 2878 changes and the worst relative move (9.36e−13). Every other row of the
 file changes by at most 5.6e−14 among |v| > 1e−6 (2101 changes). Which
 library changed the arccos (the libc6 2.35-0ubuntu3.13 → .15 upgrade of
@@ -173,7 +173,7 @@ tests, any tolerance and the sibling.
 
 1. **The cause is located, but its library is not proven.** The one-ULP
    arccos change on the magic-angle axis is measured, and today's value is
-   the correctly rounded one. The library that changed is inferred from
+   the correctly rounded one *(V (2026-11-17), PHYSICS-3: of the double `1/np.sqrt(3)`; the magic angle itself is 0.82 ULP away)*. The library that changed is inferred from
    `dpkg.log`.
 2. **Upstream robustness (the sibling's, not this tree's).** A dump input
    that depends on libm's last bit of `arccos` will move again on the next

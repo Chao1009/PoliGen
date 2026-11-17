@@ -97,7 +97,7 @@ def test_the_deuteron_run_labels_the_transfer_not_read_and_6li_keeps_the_number(
 
 
 @needs_lhapdf
-def test_every_default_deuteron_plan_is_refused_at_x_max_1_by_the_rank2_term():
+def test_the_default_deuteron_builds_and_the_unconfined_kernel_is_refused():  # V (2026-11-17), CODE-3: renamed from test_every_default_deuteron_plan_is_refused_at_x_max_1_by_the_rank2_term
     """M3 of phase P2, pinned: the exposure J1 opens.  J1 note (2026-11-12):
     the supervisor's treatment confines the default deuteron slot, so the
     DEFAULT run builds now (its key has its value) and the exposure is pinned on

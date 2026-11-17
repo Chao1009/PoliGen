@@ -345,6 +345,11 @@ at 2026-11-06T21:04:39−06:00 (the machine's local time; 03:04:39 UTC on
 2026-11-07) before the comparison, measured 5.389e−9 (vector) and
 3.196e−9 (tensor).
 
+*Correction, 2026-11-17 (run 2026-11-10's verification, finding PHYSICS-2).*
+The "3170" of this note counts 16 leaves that are NaN before and after; the
+dump moved 3154 numbers. See the correction under J2 in
+`../run_2026-11-10/DECISIONS.md`.
+
 *Qualifier, 2026-11-10, after verification (finding PHYSICS-5).* "Up to
 9.4e−13 relative in `xsec.json`" holds among values above 1e−6
 (`phase_P5_port_gate.md` §1); near-zero cancellation residues of order

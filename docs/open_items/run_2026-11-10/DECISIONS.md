@@ -170,6 +170,15 @@ numbers (no source changes); the sibling. Also recorded, so the next drift
 can be traced: the interpreter, numpy and libc versions of the dump, and
 that a second dump run reproduces the first byte for byte.*
 
+*Supervisor's correction, 2026-11-17, after verification (finding
+PHYSICS-2).* The count "3170" — in this entry, in phase P1's record and in
+run 2026-11-03's records — includes 16 leaves that are NaN before and after
+(13 in `spectator.json`, 3 in `coherent.json`; a `!=` comparison calls a NaN
+changed). The re-dump changed **3154** numbers of 19928 (xsec 2878, spin 202,
+tagged 51, spectator 15, coherent 6, bookkeeping 2) and one manifest string.
+No value, tolerance or gate is affected. The commit messages of `1c98f62`
+and of run 2026-11-03's phase P5 keep the old count; they cannot be changed.*
+
 **J3 — BONuS: the declared CHECK thresholds and the shipped 161 × 161 weight
 table stay; that the two misses on the AV18 headline do not move a verdict
 becomes a pinned test.** *The supervisor's choice. Why: the CHECKs (table
@@ -227,6 +236,21 @@ says both, its sha256 re-pinned in the T6 harness with the old digest in a
 dated comment. What does not: any npz `meta` value (to be measured
 byte-identical on the P4 run list); the attributes of a CLI-written file
 (T6 clause C24); event content.*
+
+*Supervisor's ruling, 2026-11-17, after verification (findings CODE-1,
+CODE-4).* (1) `PositivityClippedG1`, the one wrapper among the `PolSF`
+backends, answers `extrapolation()` for the backend it wraps, and the two
+grid keys (`pol_sf_grid_q2_min`, `pol_sf_below_grid_frac`) are read through
+it likewise. J6 says each backend answers for itself; a wrapped LHAPDF grid
+passed as a caller's object was labelled "the backend's own (not an LHAPDF
+grid)" with NaN grid keys — as before J6, whose cast missed the wrapper
+too. This is the one place where a provenance string moves relative to
+before J6: on a caller's wrapped object only, on no selector path and in no
+file of the P4 run list. (2) `set_run_attributes` called with an EMPTY map
+writes neither attributes nor the absence line (phase P4's choice, pinned by
+its test). It stands: the convention document's two sentences hold as
+written and the document is not edited again; no shipped path passes an
+empty map. The corner is listed for the author in the run's summary.*
 
 **J7 — a verdict set that is installed but is not the vendored version, or
 lacks its member file, is treated as a missing set: the harness raises,

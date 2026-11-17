@@ -4259,7 +4259,7 @@ static void bind_pipeline(py::module_& m) {
       "spin-independent, and it does NOT reach any unpolarised-beam plan -- "
       "tensor_thirds_plan, transverse_tensor_plan and tensor_flip_plan build "
       "every category at lam_e = 0, and tensor-thirds is the CLI's own "
-      "default, so at defaults --pol-sf is read on NO channel.  Neither is "
+      "default, so at defaults --pol-sf is read on NO channel (V (2026-11-17), PHYSICS-1; J1 note (2026-11-12): except the inclusive deuteron, whose kernel also reads g1 to bound the rank-2 slot, b1 <= 3 (F1 - |g1|), so --pol-sf is read there under every fill).  Neither is "
       "refused; both are LABELLED (pol_sf_is_read(config, plan), "
       "meta['pol_sf'] / meta['pol_sf_reach'], and the pol_sf row of "
       "Pipeline.knob_provenance).  'Every kernel the pipeline builds' is "
@@ -4304,7 +4304,7 @@ static void bind_pipeline(py::module_& m) {
         "lam_e = 0, pe = 0 (helicity-flip at --pe 0 likewise).  Measured: "
         "--pol-sf nnpdfpol is bit-identical to toy on four channels under "
         "tensor-thirds, the CLI's own default plan.  The kernel still "
-        "CARRIES the selected g1_model; the run never reads it.  --unpol-sf, "
+        "CARRIES the selected g1_model; the run never reads it.  (V (2026-11-17), PHYSICS-1; J1 note (2026-11-12): except the default inclusive deuteron, whose kernel also reads g1 to bound the rank-2 slot, so this is true there under every fill.)  --unpol-sf, "
         "by contrast, reaches every run.");
   m.def("pol_sf_reach_report", &pol_sf_reach_report, py::arg("config"),
         py::arg("plan"),
@@ -4636,7 +4636,7 @@ static void bind_pipeline(py::module_& m) {
                      "Wandzura-Wilczek, their g2) from -- NOT every kernel: "
                      "the coherent channel evaluates no g1, and neither does "
                      "any unpolarised-beam plan (tensor-thirds included, "
-                     "which is the CLI default), so the run LABELS the "
+                     "which is the CLI default; V (2026-11-17), PHYSICS-1; J1 note (2026-11-12): except the inclusive deuteron, where g1 also bounds the rank-2 slot and is read under every fill), so the run LABELS the "
                      "selector there rather than crediting it (PolSfSource's "
                      "own SCOPE note; pol_sf_is_read(config, plan)).  NnpdfPol "
                      "is the default since D7 (POL_SF_DEFAULT); Toy the option.  "
@@ -5278,7 +5278,7 @@ std::pair<double, double> pol_sf_grid_report(const Pipeline& p) {
   if (cfg.kernel) return {kNan, kNan};
   if (cfg.pol_sf == PolSfSource::Toy) return {0.0, 0.0};
 #if LIPOLGEN_HAVE_LHAPDF
-  if (const auto lh = std::dynamic_pointer_cast<const LhapdfG1>(cfg.pol_sf_obj)) {
+  if (const auto lh = std::dynamic_pointer_cast<const LhapdfG1>([&cfg]() -> std::shared_ptr<const PolSF> { const auto w = std::dynamic_pointer_cast<const PositivityClippedG1>(cfg.pol_sf_obj); return w ? w->inner() : cfg.pol_sf_obj; }())) {  // V (2026-11-17), CODE-1 (the supervisor's ruling of 2026-11-17 under J6): read through the one PolSF wrapper, as its extrapolation() is
     const double q2_min = lh->q2_min();
     const std::vector<double>& sc = p.cell_rate_weights_pb();
     const std::vector<double>& q2c = p.dis_sampler().q2_cells();

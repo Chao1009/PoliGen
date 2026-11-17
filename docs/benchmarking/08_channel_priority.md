@@ -360,7 +360,7 @@ for this file.
    Boeglin row 16 PASS (under its allowance).*
 3. **Rows that stay FAIL by decision are read against this ranking.** The
    Hulthén η (D2) and the C0 zero (≤ 2.2e−7 on ΔA_zz) can stay recorded
-   until M2. The toy F₂ / g₁ failures (A/H) — TAKEN by D7 (2026-10-27): the grids are the default, the LO evaluation the development item — and
+   until M2. The toy F₂ / g₁ failures (A/H) — TAKEN by D7 (2026-10-27): the grids are the default, the LO evaluation the development item (J8, 2026-11-10, the supervisor's choice under the author's delegation: that item stays filed and is not scheduled — since A3 its symptom |A₁| > 1 from x ≳ 0.83 is bounded by the clip |g₁| ≤ F₁ on ~2–5 × 10⁻⁷ of the rate, NLO coefficient functions are a design of their own, and nothing ranked 1–7 here waits on it; EPPS21 stays the option A2 recorded) — and
    `eps_b0` (E) sit under ranks 1, 2 and 4 and are the decisions this file asks the author to take at M2.
 4. **What is deliberately NOT raised.** The ePIC chain legs (K): they
    validate the record, not the physics, and need Phase 2's container

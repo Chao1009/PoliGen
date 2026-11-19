@@ -790,7 +790,7 @@ def build_parser():
     p.add_argument("--npz", default=None, help="columnar .npz output file")
     p.add_argument("--hfs-npz", default=None,
                    help="polligen HFSSample .npz (needs --hadronize)")
-    p.add_argument("--quiet", action="store_true", default=None)
+    p.add_argument("--quiet", action="store_true", default=None);  p.add_argument("--b1-ref-q2", type=float, default=None, metavar="GEV2", help="K1 (2026-11-17): the reference scale Q0^2 [GeV2] at which the digitized deuteron b1 table (the default miller; cdks) is read as the ratio b1/F1: b1(x, Q2) = b1_table(x) F1(x, Q2)/F1(x, Q0^2), with the kernel's own F1, b2 in step (and, on the deuteron, before the spin-1 confinement), so A_zz ~ b1/F1 does not depend on Q2 at fixed x.  Default %g (B1_REFERENCE_Q2: where Kumano's and CDKS's curves meet the HERMES data; inside the CT18NLO grid).  An approximation -- the literature's weight-function form -- not a derivation.  0 = the frozen table, the reading shipped until K1.  Read on --channel inclusive with --isotope 6Li or d at --b1-model miller / cdks, and on tagged-6Li-alpha with --inclusive-b1; elsewhere the default is labelled not-read and any other value REFUSED, as is a value outside the unpolarised grid's Q2 range (it would be read as the edge)" % _l.B1_REFERENCE_Q2)  # K1 (2026-11-17)
     return p
 
 
@@ -819,7 +819,7 @@ DEFAULTS = dict(isotope="6Li", config=1, channel="inclusive",
                 inclusive_b1=False,
                 b1_model="miller", b1_band_scale=1.0,
                 b1_alpha_d_dwave_weight=1.0, b1_unpol="toy",
-                r_source="unset",
+                r_source="unset", b1_ref_q2=_l.B1_REFERENCE_Q2,  # K1 (2026-11-17): read, not retyped
                 unpol_sf=_l.unpol_sf_name(_l.UNPOL_SF_DEFAULT), pol_sf=_l.pol_sf_name(_l.POL_SF_DEFAULT), x_max=None,  # D7: read, not retyped
                 coherent_t_max=None,
                 coherent=None)
@@ -1305,7 +1305,7 @@ def main(argv=None):
                           b1_band_scale=opts["b1_band_scale"],
                           b1_alpha_d_dwave_weight=opts["b1_alpha_d_dwave_weight"],
                           b1_unpol=opts["b1_unpol"],
-                          r_source=opts["r_source"],
+                          r_source=opts["r_source"], b1_reference_q2=opts["b1_ref_q2"],  # K1 (2026-11-17)
                           unpol_sf=opts["unpol_sf"], pol_sf=opts["pol_sf"],
                           coherent_t_max=opts["coherent_t_max"],
                           coherent=opts["coherent"])
@@ -1795,7 +1795,7 @@ def main(argv=None):
     # before A1 (0.811228 / 0.045 / 0.921947) and one made after can be told apart.
     pf = _l.inclusive_polarization_factors(p)["report"]; gc = _l.g1_positivity_clip(p)["report"]  # A3 (2026-11-03): meta["g1_clipped_rate_fraction"]
     if pf: say("  inclusive polarization factors: %s" % pf)
-    say("  g1 positivity clip (A3, |g1| <= F1 per nucleon): %s" % gc); bc = _l.b1_rank2_confinement(p); bc["applied"] and say("  b1 spin-1 domain (J1 note 2026-11-12, -3/2 F1 <= b1 <= 3 (F1 - |g1|), deuteron): %s" % bc["report"])  # meta["b1_clipped_rate_fraction"], absent where not applied
+    say("  g1 positivity clip (A3, |g1| <= F1 per nucleon): %s" % gc); bc = _l.b1_rank2_confinement(p); bc["applied"] and say("  b1 spin-1 domain (J1 note 2026-11-12, -3/2 F1 <= b1 <= 3 (F1 - |g1|), deuteron): %s" % bc["report"]); _l.b1_reference_q2_is_read(cfg) and say("  b1 reference scale (K1 2026-11-17, --b1-ref-q2): %s" % ("b1/F1 at Q0^2 = %g GeV2, b1 = b1_table F1(x, Q2)/F1(x, Q0^2)" % cfg.b1_reference_q2 if cfg.b1_reference_q2 > 0 else "0 -- the frozen table (the reading shipped until K1)"))  # meta["b1_clipped_rate_fraction"], absent where not applied; K1 (2026-11-17): meta["b1_reference_q2"]
 
     # Events are only materialized when something needs the records: the HFS
     # exporter always, HepMC only when the T2 tier is on (regenerating a

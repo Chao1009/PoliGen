@@ -77,7 +77,7 @@ double r1998_fit_error(double x, double q2);  inline constexpr const char* SF_BA
 /// Abstract unpolarized backend: F2 on p and n, plus the R-derived F1 and FL.
 class UnpolSF {
  public:
-  virtual ~UnpolSF() = default;  virtual std::string extrapolation() const { return SF_BACKEND_OWN_EXTRAPOLATION; }  ///< J6 (2026-11-10; DECISIONS.md J6, the supervisor's choice under the author's delegation): how THIS backend is evaluated outside its grid -- `meta["unpol_sf_extrapolation"]` / `lipolgen.unpol_sf_extrapolation` (`run_provenance`); the LHAPDF tier answers `LHAPDF_EXTRAPOLATOR`.  The toy selector holds no object; its "none (closed-form toy)" is decided by the selector (pipeline.cpp `sf_extrapolation`)
+  virtual ~UnpolSF() = default;  virtual std::pair<double, double> grid_q2_range() const { return {0.0, 0.0}; }  /* K1 (2026-11-17): the backend's own grid Q2 range [GeV2], (0, 0) where it reports none (the closed-form toy, MstwSF, a custom object); the LHAPDF tier answers q2Min / q2Max -- read by `validate_b1_reference_q2` */  virtual std::string extrapolation() const { return SF_BACKEND_OWN_EXTRAPOLATION; }  ///< J6 (2026-11-10; DECISIONS.md J6, the supervisor's choice under the author's delegation): how THIS backend is evaluated outside its grid -- `meta["unpol_sf_extrapolation"]` / `lipolgen.unpol_sf_extrapolation` (`run_provenance`); the LHAPDF tier answers `LHAPDF_EXTRAPOLATOR`.  The toy selector holds no object; its "none (closed-form toy)" is decided by the selector (pipeline.cpp `sf_extrapolation`)
 
   virtual double f2p(double x, double q2) const = 0;
   virtual double f2n(double x, double q2) const = 0;
@@ -202,7 +202,7 @@ class ToyG1 : public PolSF {
 class LhapdfSF : public UnpolSF {
  public:
   explicit LhapdfSF(std::string setname = "CT18NLO", int member = 0);
-  ~LhapdfSF() override;  std::string extrapolation() const override;  ///< J6 (2026-11-10): `LHAPDF_EXTRAPOLATOR` (src/lhapdf/lhapdf_sf.cpp), so the core never casts to an LHAPDF type
+  ~LhapdfSF() override;  std::pair<double, double> grid_q2_range() const override;  std::string extrapolation() const override;  ///< J6 (2026-11-10): `LHAPDF_EXTRAPOLATOR` (src/lhapdf/lhapdf_sf.cpp), so the core never casts to an LHAPDF type
   double f2p(double x, double q2) const override;
   double f2n(double x, double q2) const override;
   double f2n_over_f2p(double x) const override;
@@ -396,7 +396,7 @@ double toy_b1_shape(double x, double q2, double f1);
 /// x = 0.010-0.900; frozen at 0.0647 below, tapered to zero at x = 1 above.
 /// The table is per DEUTERON and is converted by
 /// `B1_MILLER_TABLE_TO_PER_NUCLEON` = 0.5 -- likely, not certain; see that
-/// constant.
+/// constant.  K1 (2026-11-17): Q2-independent here (the frozen table); the run surface reads it as b1/F1 at B1_REFERENCE_Q2 (InclusiveKernel::Options::b1_reference_q2).
 double toy_b1(double x, double q2, double f1, B1Mode mode = B1Mode::kDigitized);
 
 /// b1 of the deuteron, per nucleon: the standard convolution (CDKS SD + DD at
@@ -433,7 +433,7 @@ double toy_delta_gluon(double x, double q2, double f1, double scale = 1e-3);
 class MillerB1 : public TensorSF {
  public:
   explicit MillerB1(B1Mode mode = B1Mode::kDigitized) : mode_(mode) {}
-  double b1(double x, double q2, double f1) const override {
+  double b1(double x, double q2, double f1) const override {  // K1 (2026-11-17): the frozen table; scaled by the kernel option, not here
     return toy_b1(x, q2, f1, mode_);
   }
 

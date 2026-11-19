@@ -249,7 +249,7 @@ struct StruckClusterOptions {
   /// support), and shipping it in the same change as these two would make
   /// two independent 10-40 % movements unattributable.
   std::shared_ptr<const UnpolSF> f2_source;
-  std::shared_ptr<const PolSF> g1_model;
+  std::shared_ptr<const PolSF> g1_model;  double b1_reference_q2 = 0.0;  ///< K1 (2026-11-17): `InclusiveKernel::Options::b1_reference_q2` of the struck kernel, read only with `inclusive_b1` (0 = the frozen table, the class level); a `Pipeline` sets it from `PipelineConfig::b1_reference_q2` on tagged-6Li-alpha with --inclusive-b1 and `validate()` refuses a non-zero value here
 };
 
 /// The kernel the struck cluster of `channel` is generated with:
@@ -944,7 +944,7 @@ struct PipelineConfig {
   /// the band expresses; report 0 / 1 / 2 separately from the band.  Read
   /// ONLY by the `Li6Convolution` branch, so `validate()` refuses anything but
   /// 1.0 on `Miller` and `Cdks` -- same provenance rule as the band.
-  double b1_alpha_d_dwave_weight = 1.0;
+  double b1_alpha_d_dwave_weight = 1.0;  double b1_reference_q2 = B1_REFERENCE_Q2;  ///< K1 (2026-11-17): `--b1-ref-q2` [GeV2], the reference scale at which a digitized deuteron b1 table (MillerB1 on 6Li and the deuteron, CdksB1 on 6Li, the struck deuteron of tagged-6Li-alpha under --inclusive-b1) is read as the ratio b1/F1 (`InclusiveKernel::Options::b1_reference_q2`); 0 = the frozen table (the pre-K1 reading).  Read where `b1_reference_q2_is_read`; elsewhere the default is accepted and labelled not-read and a moved value refused (A17)
   /// Which unpolarised backend the `Li6Convolution` b1 folds its F1 against
   /// (`B1UnpolSource` above; CLI `--b1-unpol`).  `Toy` stays the DEFAULT (D7
   /// left it; named under ct18nlo).  Read ONLY by the `Li6Convolution` branch of
@@ -1062,7 +1062,7 @@ std::shared_ptr<const InclusiveKernel> default_inclusive_kernel(
     std::shared_ptr<const UnpolSF> b1_unpol = nullptr,
     std::shared_ptr<const UnpolSF> unpol_sf = nullptr,
     std::shared_ptr<const PolSF> pol_sf = nullptr,
-    RSource r_source = RSource::Unset, double b1_transfer = LI6_B1_RANK2_TRANSFER);
+    RSource r_source = RSource::Unset, double b1_transfer = LI6_B1_RANK2_TRANSFER, double b1_reference_q2 = 0.0);  // K1 (2026-11-17): `b1_reference_q2` -> `InclusiveKernel::Options::b1_reference_q2` on the Miller / Cdks / deuteron slot; 0 (the default: the class level and every factory call) = the frozen table; positive on `Li6Convolution` THROWS (it is not a digitized table)
 
 // ------------------------------------------- the 7Li rank-2 zero, out loud
 //
@@ -1904,6 +1904,37 @@ B1RankTwoConfinement b1_rank2_confinement(const Pipeline& p);
 // phase_P4_provenance.md); the core still does not link LHAPDF.
 std::pair<std::string, std::string> sf_extrapolation(const Pipeline& p,
                                                      const KnobProvenance& pol);
+
+// ------------------------------------------- K1: b1/F1 at a reference scale
+//
+// K1 (2026-11-17; docs/open_items/run_2026-11-17/DECISIONS.md K1 -- the
+// AUTHOR's decision; its details (a)-(g) the SUPERVISOR's choices under it).
+// On the RUN SURFACE a digitized deuteron b1 table is read as the ratio
+// b1/F1 at Q0^2 = `PipelineConfig::b1_reference_q2` (default B1_REFERENCE_Q2
+// = 2.5 GeV2): b1(x, Q2) = b1_table(x) F1(x, Q2) / F1(x, Q0^2), the kernel's
+// own per-nucleon F1 at both scales, b2 in step, before the J1 note's
+// confinement.  Where the knob is READ: the inclusive channel without a
+// caller-supplied kernel, on a spin-1 ion (6Li, d) at b1_model = miller or
+// cdks; and tagged-6Li-alpha with --inclusive-b1 (the struck deuteron's
+// MillerB1 slot).  NOT li6-convolution (its alpha-d terms convolve F1 at the
+// running Q2; its embedded-deuteron and CG terms convolve the frozen CDKS
+// Q2 = 2.5 column -- recorded, not changed, phase_P1_b1_ratio.md), not 7Li,
+// not coherent, not the other tags.  0 = the frozen table, read as such.
+bool b1_reference_q2_is_read(const PipelineConfig& cfg);
+/// The value the run's kernels are built with: `cfg.b1_reference_q2` where
+/// read, 0 (the frozen table, i.e. nothing applied) elsewhere.
+double b1_reference_q2_applied(const PipelineConfig& cfg);
+/// The knob row's reason: what the knob does where read, its scope clause
+/// ("not read ...: ") and why where not.
+std::string b1_reference_q2_report(const PipelineConfig& cfg);
+/// `PipelineConfig::validate()`'s rules for the knob: finite and >= 0 always;
+/// at its default off the read path (A17), any other value refused; a
+/// non-zero `struck.b1_reference_q2` refused (the `PipelineConfig` field is
+/// the one knob); with an unpolarised backend that reports its grid
+/// (`UnpolSF::grid_q2_range`, an LHAPDF grid) 0 < value < the grid's Q2 floor
+/// or value > its ceiling refused -- F1 there would be the frozen edge's, so
+/// the value would be silently read as another.
+void validate_b1_reference_q2(const PipelineConfig& cfg);
 
 }  // namespace lipolgen
 

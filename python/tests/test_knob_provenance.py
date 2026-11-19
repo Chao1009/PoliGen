@@ -301,7 +301,7 @@ VARIANTS = [
       lhapdf=False),  # D7: a CT18NLO kernel is bit-identical to the default on coherent
     V("b1_model", "miller -> cdks (x_max .95)", var=CDKS, base_post=XM,
       post=XM),
-    V("b1_band_scale", "1 -> 2 on the default b1_model", var=dict(b1_band_scale=2.0)),
+    V("b1_band_scale", "1 -> 2 on the default b1_model", var=dict(b1_band_scale=2.0)),  V("b1_reference_q2", "2.5 -> 0, the frozen table (K1, 2026-11-17)", var=dict(b1_reference_q2=0.0)), V("b1_reference_q2", "2.5 -> 0 with --inclusive-b1 (K1, 2026-11-17)", base=dict(inclusive_b1=True), var=dict(inclusive_b1=True, b1_reference_q2=0.0)),
     V("b1_band_scale", "1 -> 2 on cdks (x_max .85; D7: refused at .95)", base=CDKS,
       var=dict(CDKS, b1_band_scale=2.0), base_post=XM85, post=XM85),
     V("b1_alpha_d_dwave_weight", "1 -> 2 on the default b1_model",

@@ -1357,14 +1357,28 @@ def test_d7_the_band_x2_row_needs_x_max_085_on_the_default():
     0.9 (cell x = 0.871 -- the rank-2 term alone, the plan carries no beam
     helicity), built at 0.85; the sampler's message COMPUTES that cure."""
     for xm in (0.95, 0.9):
-        cfg = _cfg("cdks", band=2.0, x_max=xm, sf="default")
+        cfg = _cfg("cdks", band=2.0, x_max=xm, sf="default", b1_reference_q2=0.0)   # K1 (2026-11-17): the frozen table passed explicitly -- this pins the pre-K1 reading (test_k1_the_band_x2_row_on_the_run_surface below: K1 builds at 0.95)
         with pytest.raises(RuntimeError) as e:
             _l.Pipeline(cfg, lg.tensor_thirds_plan(0.7, 0.6))
         msg = str(e.value)
         assert "at x = 0.871" in msg and "below x = 0.871" in msg
         assert "from the RANK-2 term" in msg and "--x-max 0.95 on the" not in msg
-    assert _l.Pipeline(_cfg("cdks", band=2.0, x_max=0.85, sf="default"),
+    assert _l.Pipeline(_cfg("cdks", band=2.0, x_max=0.85, sf="default", b1_reference_q2=0.0),   # K1 (2026-11-17): frozen, as above
                        lg.tensor_thirds_plan(0.7, 0.6)).sigma_pb() > 0.0
     # ... while the toy pair, named, builds the x2 row at 0.95 as before D7
     assert _l.Pipeline(_cfg("cdks", band=2.0, x_max=0.95),
                        lg.tensor_thirds_plan(0.7, 0.6)).sigma_pb() > 0.0
+
+
+def test_k1_the_band_x2_row_on_the_run_surface():
+    """K1 (2026-11-17; DECISIONS.md K1): with the digitized CDKS column read as
+    b1/F1 at 2.5 GeV2 (the default --b1-ref-q2) the band's x2 row on the
+    shipped F1 builds at x_max 0.95 and 0.9 (refused there with the frozen
+    table, the test above) and is still refused at the default 1.0, at the top
+    cell x = 0.955 by the rank-2 term.  Measured 2026-11-19."""
+    for xm in (0.95, 0.9):
+        assert _l.Pipeline(_cfg("cdks", band=2.0, x_max=xm, sf="default"),
+                           lg.tensor_thirds_plan(0.7, 0.6)).sigma_pb() > 0.0
+    with pytest.raises(RuntimeError) as e:
+        _l.Pipeline(_cfg("cdks", band=2.0, x_max=None, sf="default"), lg.tensor_thirds_plan(0.7, 0.6))
+    assert "at x = 0.955" in str(e.value) and "from the RANK-2 term" in str(e.value)

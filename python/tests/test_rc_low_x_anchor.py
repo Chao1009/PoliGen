@@ -80,7 +80,7 @@ def _pipeline(anchor=None, channel="inclusive", events=2000, seed=99,
               toy=False):
     kw = {} if anchor is None else {"rc_delta_low_x": anchor}
     if toy:                       # D7 (2026-10-29): the pre-D7 default, NAMED
-        kw.update(unpol_sf="toy", pol_sf="toy")
+        kw.update(unpol_sf="toy", pol_sf="toy", b1_reference_q2=0.0)   # K1 (2026-11-17): and the frozen b1 table, explicitly -- the priced table (A2) is the pre-K1 one; A1/A3-A5 read the band, which b1 does not touch
     # D5 (2026-10-29): t-peak BY NAME on the inclusive builds, for RUNTIME --
     # A1-A4 read the band, which no tail model touches, and a polrad-full
     # table costs ~13 s a build.  Never on A5's tagged-alpha builds: an

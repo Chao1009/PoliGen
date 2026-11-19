@@ -39,12 +39,12 @@ def _plan(j, pzz=0.5, mode="ladder", **kw):
                         pzz_mode=mode, **kw)
 
 
-def _pipeline(iso, j, pzz=0.5, mode="ladder", events=200, toy=False):
+def _pipeline(iso, j, pzz=0.5, mode="ladder", events=200, toy=False, frozen=False):  # K1 (2026-11-17): frozen=True passes --b1-ref-q2 0
     # `toy=True` NAMES the toy structure functions (D7, 2026-10-29): what
     # every number this file pins at a fixed value was measured on.
     cfg = lg.make_config(isotope=iso, channel="inclusive", config=1,
                          events=events, seed=SEED,
-                         **(dict(unpol_sf="toy", pol_sf="toy") if toy else {}))
+                         **dict(dict(unpol_sf="toy", pol_sf="toy") if toy else {}, **(dict(b1_reference_q2=0.0) if frozen else {})))
     return _l.Pipeline(cfg, _plan(j, pzz, mode))
 
 
@@ -192,8 +192,8 @@ def test_the_measured_price_reproduces(key):
     """P4.  The numbers sec. A3 quotes, from committed state."""
     iso, j, pzz = key
     s_lad, s_typ, pzz_lad = PRICE[key]
-    a = _pipeline(iso, j, pzz, "ladder", toy=True)
-    b = _pipeline(iso, j, pzz, "typed", toy=True)
+    a = _pipeline(iso, j, pzz, "ladder", toy=True, frozen=(iso == "6Li"))   # K1 (2026-11-17): sec. A3's numbers are the frozen b1 table's,
+    b = _pipeline(iso, j, pzz, "typed", toy=True, frozen=(iso == "6Li"))    # so it is passed explicitly (7Li reads no b1)
     assert a.sigma_pb() == pytest.approx(s_lad, rel=1e-12)
     assert b.sigma_pb() == pytest.approx(s_typ, rel=1e-12)
     assert a.plan.pzz_true == pytest.approx(pzz_lad, rel=1e-12)

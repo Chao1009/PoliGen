@@ -325,4 +325,8 @@ double LhapdfG1::q2_min() const { return impl_->grid.pdf->q2Min(); }
 std::string LhapdfSF::extrapolation() const { return std::string(LHAPDF_EXTRAPOLATOR); }
 std::string LhapdfG1::extrapolation() const { return std::string(LHAPDF_EXTRAPOLATOR); }
 
+// K1 (2026-11-17): the grid's own Q2 range, so `validate_b1_reference_q2`
+// (core) refuses a reference scale the frozen grid would read as its edge.
+std::pair<double, double> LhapdfSF::grid_q2_range() const { return {impl_->grid.q2_lo, impl_->grid.q2_hi}; }  // the knot array's own edges, where `xfx` freezes
+
 }  // namespace lipolgen

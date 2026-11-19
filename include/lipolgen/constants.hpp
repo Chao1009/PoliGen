@@ -171,6 +171,20 @@ inline constexpr double POLEMC_VALENCE_WINDOW_HI = 0.65;
 /// pi, spelled once (M_PI is not standard C++).
 inline constexpr double kPi = 3.14159265358979323846;
 
+/// K1 (2026-11-17; docs/open_items/run_2026-11-17/DECISIONS.md K1 -- the
+/// author's decision; the scale is the supervisor's choice (a) under it): the
+/// reference scale Q0^2 [GeV2] at which the run surface reads a digitized
+/// deuteron b1 table (MillerB1, CdksB1) as the ratio b1/F1,
+/// b1(x, Q2) = b1_table(x) F1(x, Q2) / F1(x, Q0^2), so A_zz ~ b1/F1 does not
+/// depend on Q2 at fixed x.  2.5 GeV2: where Kumano's weight-function fit
+/// (PRD 82, 017501: "about the average Q2 of the HERMES measurements") and
+/// CDKS's curve meet the HERMES data; inside the shipped CT18NLO grid (floor
+/// 1.677 GeV2).  An approximation, not a derivation (b1 and F1 need not evolve
+/// alike).  `InclusiveKernel::Options::b1_reference_q2` (0 = the frozen
+/// table, the class-level default); `PipelineConfig::b1_reference_q2`, CLI
+/// `--b1-ref-q2`.
+inline constexpr double B1_REFERENCE_Q2 = 2.5;
+
 }  // namespace lipolgen
 
 #endif  // LIPOLGEN_CONSTANTS_HPP

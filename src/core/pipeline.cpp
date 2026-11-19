@@ -273,7 +273,7 @@ std::shared_ptr<const InclusiveKernel> struck_cluster_kernel(
       return toy_b1(x, q2, f1);
     };
   }
-  o.delta_func = opt.delta_func;
+  o.delta_func = opt.delta_func;  if (opt.inclusive_b1) o.b1_reference_q2 = opt.b1_reference_q2;  // K1 (2026-11-17): the struck deuteron's MillerB1 slot read as b1/F1 at Q0^2 (0 = the frozen table, the class level)
   // The tagged channels' ONLY structure-function injection point (D2).
   // BOTH SLOTS ARE NULL AT CLASS LEVEL and are handed over unchanged, so the
   // null branch of `InclusiveKernel`'s constructor -- a fresh `ToyF2` and a
@@ -1145,7 +1145,7 @@ void PipelineConfig::validate() const {
                    " to fold against the same one") +
         ", --b1-unpol mstw for the configuration the A = 2 gate passes on "
         "(G3b 0.843243), or --unpol-sf toy for the pre-D7 toy pair");
-  }
+  }  validate_b1_reference_q2(*this);  // K1 (2026-11-17): the --b1-ref-q2 rules (pipeline.hpp, the K1 block)
   scenario.validate();
 }
 
@@ -1158,8 +1158,8 @@ std::shared_ptr<const InclusiveKernel> default_inclusive_kernel(
     const Ion& ion, B1Model model, double band_scale, double w_alpha_d,
     std::shared_ptr<const UnpolSF> b1_unpol,
     std::shared_ptr<const UnpolSF> unpol_sf,
-    std::shared_ptr<const PolSF> pol_sf, RSource r_source, double b1_transfer) {
-  InclusiveKernel::Options opt;
+    std::shared_ptr<const PolSF> pol_sf, RSource r_source, double b1_transfer, double b1_reference_q2) {
+  InclusiveKernel::Options opt;  opt.b1_reference_q2 = b1_reference_q2;  if (b1_reference_q2 != 0.0 && model == B1Model::Li6Convolution) throw std::runtime_error("default_inclusive_kernel: b1_reference_q2 = " + fmt_g(b1_reference_q2) + " with b1_model = li6-convolution is refused -- K1 (2026-11-17) reads a DIGITIZED table (MillerB1, CdksB1) as b1/F1 at a reference scale, and the convolution is not one (its alpha-d terms convolve F1 at the running Q2); pass 0");  // K1 (2026-11-17): -> InclusiveKernel::Options::b1_reference_q2 (the kernel refuses a negative / non-finite value and a positive one off spin 1)
   // ONE UnpolSF, shared: the core must not link LHAPDF or PYTHIA (sf.hpp),
   // so an `LhapdfSF` / `MstwSF` only ever enters through the `unpol_sf`
   // argument (the `Pipeline` passes the tier's D7 grids, `set_unpol_sf`), a
@@ -1289,7 +1289,7 @@ std::string rank2_input_report(const PipelineConfig& cfg, const RunPlan& plan) {
   if (kernel_fills_rank2(ion)) {
     return std::string("b1_model = ") + b1_model_name(cfg.b1_model) +
            " (spin 1: b1_func filled, b2 = 2x*b1 by default, delta_func = "
-           "toy_delta_gluon at the 1e-2 discovery scale, Jaffe-Manohar Delta)" + std::string(spin1_rank2_camp(ion) == Spin1Camp::Deuteron ? "; on the deuteron b1_func is MillerB1 itself, per nucleon, unmapped, and the 6Li rank-2 transfer is not read (J1, 2026-11-10); confined to the spin-1 leading-order positivity domain -(3/2) F1 <= b1 <= 3 (F1 - |g1|) per nucleon, b2 in step (J1 note, 2026-11-12; meta b1_clipped_rate_fraction)" : "");
+           "toy_delta_gluon at the 1e-2 discovery scale, Jaffe-Manohar Delta)" + std::string(spin1_rank2_camp(ion) == Spin1Camp::Deuteron ? "; on the deuteron b1_func is MillerB1 itself, per nucleon, unmapped, and the 6Li rank-2 transfer is not read (J1, 2026-11-10); confined to the spin-1 leading-order positivity domain -(3/2) F1 <= b1 <= 3 (F1 - |g1|) per nucleon, b2 in step (J1 note, 2026-11-12; meta b1_clipped_rate_fraction)" : "") + std::string(!b1_reference_q2_is_read(cfg) ? "" : cfg.b1_reference_q2 > 0.0 ? "; K1 (2026-11-17): the digitized table is read as the ratio b1/F1 at Q0^2 = " + fmt_g(cfg.b1_reference_q2) + " GeV2, b1(x, Q2) = b1_table(x) F1(x, Q2)/F1(x, Q0^2) with the kernel's own F1, b2 in step" + std::string(spin1_rank2_camp(ion) == Spin1Camp::Deuteron ? ", before the confinement" : "") + " (--b1-ref-q2; meta b1_reference_q2)" : "; K1 (2026-11-17): --b1-ref-q2 0, the frozen table (the reading shipped until K1)");
   }
   if (!kernel_has_rank2_sector_unfilled(ion)) {
     return std::string("no rank-2 sector at spin ") + fmt_g(ion.spin) +
@@ -1543,7 +1543,7 @@ Pipeline::Pipeline(PipelineConfig config, RunPlan plan)
     // who already put an object in `cfg_.struck` keeps it, the
     // `breakup.triton_sf` rule.
     if (!sopt.f2_source) sopt.f2_source = cfg_.unpol_sf_obj;
-    if (!sopt.g1_model) sopt.g1_model = cfg_.pol_sf_obj;
+    if (!sopt.g1_model) { sopt.g1_model = cfg_.pol_sf_obj; }  sopt.b1_reference_q2 = b1_reference_q2_applied(cfg_);  // K1 (2026-11-17): non-zero on tagged-6Li-alpha with --inclusive-b1 only (validate() refuses a non-zero struck.b1_reference_q2)
     dis_source_ = make_struck_cluster_source(*channel_, beams_, sopt);
     dis_sampler_ = dis_source_->sampler_ptr();
     tsampler_.reset(new TaggedSampler(*model_, p_u, dis_source_.get(), optics_,
@@ -1706,7 +1706,7 @@ Pipeline::Pipeline(PipelineConfig config, RunPlan plan)
                                   ion, cfg_.b1_model, cfg_.b1_band_scale,
                                   cfg_.b1_alpha_d_dwave_weight,
                                   cfg_.b1_unpol_sf, cfg_.unpol_sf_obj,
-                                  cfg_.pol_sf_obj, cfg_.r_source);
+                                  cfg_.pol_sf_obj, cfg_.r_source, LI6_B1_RANK2_TRANSFER, b1_reference_q2_applied(cfg_));  // K1 (2026-11-17): b1/F1 at Q0^2 where the knob is read (0 elsewhere: the coherent channel, li6-convolution, 7Li)
     dis_sampler_ = std::make_shared<InclusiveSampler>(kernel, beams_,
                                                       cfg_.scenario, cfg_.grid);
   }
@@ -2738,7 +2738,7 @@ std::vector<KnobProvenance> Pipeline::knob_provenance(
              : std::string(b1_scope + "only the li6-convolution branch reads it (miller "
                            "is a ratio model, cdks a digitized column), so "
                            "validate() refuses any value but 1.0 here"),
-        c.b1_alpha_d_dwave_weight == d.b1_alpha_d_dwave_weight);
+        c.b1_alpha_d_dwave_weight == d.b1_alpha_d_dwave_weight);  { const bool k1 = b1_reference_q2_is_read(c); add("b1_reference_q2", "--b1-ref-q2", fmt_g(c.b1_reference_q2), k1 ? KnobStatus::Read : KnobStatus::Refused, b1_reference_q2_report(c), c.b1_reference_q2 == d.b1_reference_q2); }  // K1 (2026-11-17)
     add("b1_unpol", "--b1-unpol",
         c.kernel ? std::string("caller-supplied kernel")
         : no_rank2 ? std::string(rank2_none_label())
@@ -4156,6 +4156,97 @@ std::pair<std::string, std::string> sf_extrapolation(const Pipeline& p,
     return cfg.pol_sf_obj ? cfg.pol_sf_obj->extrapolation() : std::string("no object");
   };
   return {unpol(), pol.status == KnobStatus::NotRead ? pol.label : polar()};
+}
+
+// ------------------------------------------- K1: b1/F1 at a reference scale
+// K1 (2026-11-17; docs/open_items/run_2026-11-17/DECISIONS.md K1, the
+// author's decision; (c)-(e) the supervisor's choices under it).  The scope
+// of `PipelineConfig::b1_reference_q2` -- pipeline.hpp, the K1 block.
+
+bool b1_reference_q2_is_read(const PipelineConfig& cfg) {
+  if (cfg.channel == PipelineChannel::TaggedLi6Alpha) return cfg.struck.inclusive_b1;
+  if (cfg.channel != PipelineChannel::Inclusive || cfg.kernel) return false;
+  if (cfg.b1_model != B1Model::Miller && cfg.b1_model != B1Model::Cdks) return false;
+  return kernel_fills_rank2(ion_by_name(cfg.isotope));
+}
+
+double b1_reference_q2_applied(const PipelineConfig& cfg) {
+  return b1_reference_q2_is_read(cfg) ? cfg.b1_reference_q2 : 0.0;
+}
+
+std::string b1_reference_q2_report(const PipelineConfig& cfg) {
+  const std::string what =
+      "the reference scale Q0^2 [GeV2] at which the digitized deuteron b1 "
+      "table is read as the ratio b1/F1 (K1, 2026-11-17): b1(x, Q2) = "
+      "b1_table(x) F1(x, Q2) / F1(x, Q0^2), the kernel's own per-nucleon F1 "
+      "at both scales, b2 in step, so A_zz ~ b1/F1 does not depend on Q2 at "
+      "fixed x (InclusiveKernel::Options::b1_reference_q2; an approximation, "
+      "not a derivation); 0 = the frozen table, the reading shipped until K1";
+  if (b1_reference_q2_is_read(cfg)) {
+    return what + (cfg.channel == PipelineChannel::TaggedLi6Alpha
+                       ? std::string(" -- here the struck deuteron's MillerB1 slot (--inclusive-b1)")
+                       : std::string(" -- here b1_model = ") + b1_model_name(cfg.b1_model) +
+                             " on " + cfg.isotope);
+  }
+  const std::string scope =
+      cfg.kernel ? std::string("not read with a caller-supplied kernel: ")
+      : cfg.channel == PipelineChannel::TaggedLi6Alpha
+          ? std::string("not read on channel tagged-6Li-alpha without --inclusive-b1: ")
+      : cfg.channel != PipelineChannel::Inclusive
+          ? "not read on channel " + std::string(pipeline_channel_name(cfg.channel)) + ": "
+      : !kernel_fills_rank2(ion_by_name(cfg.isotope))
+          ? "not read on " + cfg.isotope + " (no rank-2 input): "
+          : "not read at b1_model = " + std::string(b1_model_name(cfg.b1_model)) + ": ";
+  return scope + what + "; it is read only where a digitized table is the "
+         "rank-2 input of the run (b1_model = miller or cdks on the inclusive "
+         "6Li / deuteron kernel, --inclusive-b1 on tagged-6Li-alpha), so "
+         "validate() refuses any value but the default " +
+         fmt_g(B1_REFERENCE_Q2) + " here";
+}
+
+void validate_b1_reference_q2(const PipelineConfig& cfg) {
+  const double v = cfg.b1_reference_q2;
+  if (!std::isfinite(v) || v < 0.0) {
+    throw std::runtime_error("PipelineConfig: b1_reference_q2 = " + fmt_g(v) +
+                             " GeV2 -- must be finite and >= 0 (0 = the frozen "
+                             "b1 table; default " + fmt_g(B1_REFERENCE_Q2) +
+                             ", K1 2026-11-17)");
+  }
+  if (cfg.struck.b1_reference_q2 != 0.0) {
+    throw std::runtime_error("PipelineConfig: struck.b1_reference_q2 = " +
+                             fmt_g(cfg.struck.b1_reference_q2) +
+                             " is set -- the Pipeline fills it from "
+                             "PipelineConfig::b1_reference_q2 (--b1-ref-q2), "
+                             "the one knob; set that instead (K1, 2026-11-17)");
+  }
+  if (!b1_reference_q2_is_read(cfg)) {
+    if (v != B1_REFERENCE_Q2) {
+      throw std::runtime_error("PipelineConfig: --b1-ref-q2 " + fmt_g(v) + ": " +
+                               b1_reference_q2_report(cfg) +
+                               " -- a moved value would record a variation "
+                               "that did not run (A17: the default is "
+                               "accepted and labelled not-read)");
+    }
+    return;
+  }
+  if (v > 0.0) {
+    // the unpolarised object the run's kernel takes its F1 from: the struck
+    // kernel's own slot where a caller filled it, else the selector's object
+    const std::shared_ptr<const UnpolSF> f2 =
+        (cfg.channel == PipelineChannel::TaggedLi6Alpha && cfg.struck.f2_source)
+            ? cfg.struck.f2_source : cfg.unpol_sf_obj;
+    const std::pair<double, double> g =
+        f2 ? f2->grid_q2_range() : std::pair<double, double>(0.0, 0.0);
+    if (g.second > 0.0 && (v < g.first || v > g.second)) {
+      throw std::runtime_error(
+          "PipelineConfig: --b1-ref-q2 " + fmt_g(v) + " GeV2 is outside the "
+          "unpolarised grid's own Q2 range [" + fmt_g(g.first) + ", " +
+          fmt_g(g.second) + "] GeV2 (" + unpol_sf_name(cfg.unpol_sf) +
+          ", frozen at its edges since D7), so F1(x, Q0^2) would be the edge's "
+          "and the value would be read as another -- choose Q0^2 inside the "
+          "grid, or 0 for the frozen table (K1, 2026-11-17)");
+    }
+  }
 }
 
 }  // namespace lipolgen

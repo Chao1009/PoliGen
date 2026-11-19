@@ -208,8 +208,29 @@ def build_models():
 # 0.063), shipped F1^d / the F1^d HERMES's own b1 and A_zz columns imply = 1.761 /
 # 1.413 / 1.338; on the three in-grid bins chi2(b1)/3 = 1.894 (2/3 within) and
 # chi2(A_zz)/3 = 1.178 (3/3 within).
-#: the headline: the shipped b1 (A5, 2026-11-03; "cdks_conv_mstw" until then)
+#
+# K1 NOTE (decision K1 of 2026-11-17, THE AUTHOR'S, docs/open_items/run_2026-11-17/
+# DECISIONS.md; its details the supervisor's; record phase_P1_b1_ratio.md).  A
+# default deuteron run now reads MillerB1() as the ratio b1/F1 at Q0^2 =
+# B1_REFERENCE_Q2 = 2.5 GeV2: b1(x, Q2) = MillerB1(x) F1(x, Q2)/F1(x, Q0^2), the
+# kernel's own F1, then the J1 note's confinement.  By convention 8 the headline is
+# the b1 a default run carries, so since K1 `miller_shipped` is taken from the
+# RUN-SURFACE kernel itself (`shipped_inclusive_kernel(deuteron(),
+# b1_reference_q2=B1_REFERENCE_Q2)`, asserted equal to the default Pipeline's own
+# kernel at the six bins in test_bench_spin_deuteron.py) at each bin's (<x>, <Q2>);
+# below the grid floor its F1 is the frozen edge's (D7).  The row's rule, its
+# tolerances and the other configurations are untouched (`miller_x1` stays twice
+# the frozen table: registry row 2's normalisation option of the table, not a
+# run).  The frozen-table reading shipped until K1 is kept as ONE RECORDED sub-row
+# (FROZEN_SUBROW: chi2(b1) 5.262/6, chi2(A_zz) 7.308/6 on the shipped F1^d, and
+# J4's in-grid numbers 1.894/3, 1.178/3 beside it); J4's in-grid sub-row is
+# re-taken on the new headline.
+#: the headline: the shipped b1 (A5, 2026-11-03; "cdks_conv_mstw" until then; K1 (2026-11-17): the run-surface kernel's b1)
 HEADLINE = "miller_shipped"
+#: K1 (2026-11-17): the recorded sub-row of the frozen table (no verdict)
+FROZEN_SUBROW = "miller_shipped[frozen table: the reading shipped until K1] (K1, recorded)"
+FROZEN_LABEL = ("the frozen MillerB1() table, b1 independent of Q2 -- the headline's "
+                "reading until K1 (2026-11-17), kept for comparison: no verdict")
 #: J4 (2026-11-10): the recorded in-grid sub-row's name (a diagnostic, no verdict)
 INGRID_SUBROW = "miller_shipped[in-grid: <Q2> >= the shipped grid's Q2 floor] (J4, recorded)"
 INGRID_LABEL = ("chosen after the values were seen (J4, 2026-11-10, the supervisor's "
@@ -224,6 +245,7 @@ def measure():
     miller_undo = 1.0 / _l.B1_MILLER_TABLE_TO_PER_NUCLEON
     import lipolgen as lg  # noqa: WPS433
     shipped = lg.shipped_inclusive_kernel(lg.deuteron())   # A5: the shipped F2^d and R
+    run_k = lg.shipped_inclusive_kernel(lg.deuteron(), b1_reference_q2=_l.B1_REFERENCE_Q2)  # K1 (2026-11-17): the run surface's b1
     # J4 (2026-11-10): the shipped grid's own Q2 floor, from the one shared object the kernel holds
     q2_floor = _l.make_lhapdf_unpol_sf(_l.UNPOL_SF_DEFAULT).q2_min
     per_bin = []
@@ -242,6 +264,9 @@ def measure():
         for name, m in models.items():
             v = 0.0 if m is None else m.b1(x, q2, 0.0)  # f1 arg unused here
             b[name] = v * miller_undo if name == "miller_x1" else v
+        frozen = b[HEADLINE]                            # K1 (2026-11-17): MillerB1(), the frozen table
+        tk = run_k.tables(x, q2)
+        b[HEADLINE] = tk.b1                             # K1: the run-surface kernel's b1 (scaled, confined)
         per_bin.append(dict(
             x=x, q2=q2, data=r, f2d=f2d, f1d=f1d, f1d_r1998=f1d_r98,
             r1990=r90, r1998=r98, f1_ratio_to_implied=f1d / r["f1_implied"],
@@ -254,17 +279,24 @@ def measure():
             q2_grid_floor=q2_floor, below_grid_floor=q2 < q2_floor,           # J4 (2026-11-10)
             f2d_frozen_at_floor=(q2 < q2_floor and t.f2 == shipped.tables(x, q2_floor).f2),
             f1d_shipped_over_implied=f1d_sh / r["f1_implied"],
+            b1_frozen_table=frozen,                                            # K1 (2026-11-17)
+            k1_factor=run_k.b1_reference_factor(x, tk.f1),                     # F1(x, <Q2>)/F1(x, 2.5)
+            k1_f1_kernel=tk.f1, k1_unconfined_b1=run_k.unconfined_b1(x, q2, tk.f1),
+            b1_frozen={HEADLINE: frozen},
+            azz_frozen={HEADLINE: -(2.0 / 3.0) * frozen / f1d},
+            azz_shipped_frozen={HEADLINE: -(2.0 / 3.0) * frozen / f1d_sh},
         ))
     return per_bin, blocked, f2_name
 
 
-def ingrid_subrow(per_bin, name=HEADLINE):
+def ingrid_subrow(per_bin, name=HEADLINE, b1_key="b1", azz_key="azz_shipped"):
     """J4 (2026-11-10): the headline model on the bins at or above the shipped
-    grid's Q2 floor -- RECORDED, chosen after the values were seen, no verdict."""
+    grid's Q2 floor -- RECORDED, chosen after the values were seen, no verdict.
+    K1 (2026-11-17): `b1_key` / `azz_key` select the frozen table's numbers."""
     ing = [p for p in per_bin if not p["below_grid_floor"]]
     below = [p for p in per_bin if p["below_grid_floor"]]
-    cb, wb = chi2_of(ing, name, "b1")
-    ca, wa = chi2_of(ing, name, "azz", key="azz_shipped")
+    cb, wb = chi2_of(ing, name, "b1", key=b1_key)
+    ca, wa = chi2_of(ing, name, "azz", key=azz_key)
     return dict(
         status="recorded", in_verdict=False, label=INGRID_LABEL,
         q2_grid_floor=per_bin[0]["q2_grid_floor"], unpol_sf="CT18NLO (UNPOL_SF_DEFAULT)",
@@ -331,7 +363,8 @@ def run(verbose=True):
         tolerance="per bin sqrt(stat^2+syst^2)",
         status=h["status"], headline=head, configs=configs,
         per_bin=per_bin, f2_source=f2_name,
-        subrows={INGRID_SUBROW: ingrid_subrow(per_bin)},     # J4 (2026-11-10): recorded
+        subrows={INGRID_SUBROW: ingrid_subrow(per_bin),      # J4 (2026-11-10): recorded
+                 FROZEN_SUBROW: frozen_subrow(per_bin)},     # K1 (2026-11-17): recorded
     )
     if verbose:
         print("F1^d rebuilt as HERMES did, with F2 = (F2p+F2n)/2 from %s and "
@@ -374,7 +407,37 @@ def run(verbose=True):
                                  g["chi2_b1"], g["ndf"], g["within_b1"], g["chi2_azz"],
                                  g["ndf"], g["within_azz"], g["bins_below_floor"],
                                  g["frozen_edge"]))
+        f = report["subrows"][FROZEN_SUBROW]                  # K1 (2026-11-17)
+        print("K1 frozen-table sub-row, %s: chi2/ndf b1 = %.3f/%d (%d within), A_zz = "
+              "%.3f/%d (%d within, shipped F1^d; %.3f on MSTW/R1990); in-grid b1 %.3f/%d, "
+              "A_zz %.3f/%d" % (f["label"], f["chi2_b1"], f["ndf"], f["within_b1"],
+                                f["chi2_azz"], f["ndf"], f["within_azz"],
+                                f["chi2_azz_mstw_r1990"], f["in_grid"]["chi2_b1"],
+                                f["in_grid"]["ndf"], f["in_grid"]["chi2_azz"],
+                                f["in_grid"]["ndf"]))
+        for p in per_bin:
+            print("  K1 x=%.3f <Q2>=%.2f  F1(x,<Q2>)/F1(x,2.5) = %.6f  b1 frozen %.6e -> "
+                  "headline %.6e" % (p["x"], p["q2"], p["k1_factor"], p["b1_frozen_table"],
+                                     p["b1"][HEADLINE]))
     return report
+
+
+def frozen_subrow(per_bin, name=HEADLINE):
+    """K1 (2026-11-17): the frozen MillerB1() table -- the headline's reading
+    until K1 -- on all six bins, A_zz on the shipped F1^d as the headline's,
+    with J4's in-grid numbers on it beside; RECORDED, no verdict."""
+    cb, wb = chi2_of(per_bin, name, "b1", key="b1_frozen")
+    ca, wa = chi2_of(per_bin, name, "azz", key="azz_shipped_frozen")
+    cm, wm = chi2_of(per_bin, name, "azz", key="azz_frozen")
+    g = ingrid_subrow(per_bin, name, b1_key="b1_frozen", azz_key="azz_shipped_frozen")
+    return dict(
+        status="recorded", in_verdict=False, label=FROZEN_LABEL, ndf=len(per_bin),
+        chi2_b1=cb, within_b1=wb, chi2_azz=ca, within_azz=wa,
+        chi2_azz_mstw_r1990=cm, within_azz_mstw_r1990=wm,
+        azz_f1d="shipped, as the headline's",
+        in_grid=dict(n_bins=g["n_bins"], ndf=g["ndf"], chi2_b1=g["chi2_b1"],
+                     within_b1=g["within_b1"], chi2_azz=g["chi2_azz"],
+                     within_azz=g["within_azz"], label=g["label"]))
 
 
 # ------------------------------------------------------------------ figure
@@ -382,7 +445,7 @@ def run(verbose=True):
 #: the figure's palette slot, marker and legend name of each configuration
 #: (the null baseline b1 = 0 is drawn as the zero line, not as a series)
 PLOT_SLOTS = {
-    "miller_shipped": ("default", "D", "Miller x 0.5 (shipped)"),
+    "miller_shipped": ("default", "D", "Miller x 0.5 (shipped; b1/F1 at 2.5 GeV2, K1)"),
     "miller_x1": ("alt3", "o", "Miller x 1 (row 2's option)"),
     "cdks_conv_mstw": ("mstw", "s", "CDKS conv., MSTW (A = 2 gate)"),
     "cdks_conv_default": ("alt", "^", "CDKS conv., ToyF2"),
@@ -430,6 +493,11 @@ def plot(report, out_dir=None):
         axp.plot([x * dodge for x in xs],
                  [(p["b1"][n] - p["data"]["b1"]) / p["data"]["b1_err"] for p in bins],
                  **pk)
+    fz = report.get("subrows", {}).get(FROZEN_SUBROW)      # K1 (2026-11-17): the frozen table
+    if fz:
+        ax.plot(xs, [p["x"] * p["b1_frozen_table"] for p in bins], "x", color=MUTED,
+                markersize=7, zorder=5, label="Miller x 0.5, frozen table (until K1): "
+                "%.2f/%d, %d/%d in" % (fz["chi2_b1"], fz["ndf"], fz["within_b1"], fz["ndf"]))
     ax.set_xscale("log")
     ax.set_ylabel("x b1^d (per nucleon)")
     lo, hi = ax.get_ylim()

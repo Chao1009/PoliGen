@@ -231,13 +231,13 @@ class InclusiveKernel {
     RFunc r_func;
     bool target_mass = true;
     int g2_npts = 96;
-    bool confine_spin1_rank2 = false;  };  // J1 note (2026-11-12; the supervisor's note under J1, docs/open_items/run_2026-11-10/DECISIONS.md): DEFAULT OFF.  On, a SPIN-1 kernel confines its final b1 per nucleon to the leading-order spin-1 positivity domain, b1 <- min(max(b1, -(3/2) F1), 3 (F1 - |g1|)) with its OWN F1 and g1 at the same (x, Q2) (`tables`), b2 kept in step; an empty window (3 (F1 - |g1|) < -(3/2) F1) or F1 <= 0 leaves b1 alone.  b3, b4, Delta untouched.  `default_inclusive_kernel` sets it on the deuteron only; a non-spin-1 ion with it set throws.
+    bool confine_spin1_rank2 = false;  double b1_reference_q2 = 0.0;  };  /* K1 (2026-11-17; docs/open_items/run_2026-11-17/DECISIONS.md K1, the author's decision; its details the supervisor's): `b1_reference_q2` [GeV2], DEFAULT 0 = the frozen table (bit for bit the pre-K1 kernel).  Positive, a SPIN-1 kernel reads its b1 slot as the ratio b1/F1 at that reference scale Q0^2: b1(x, Q2) = b1_slot(x, Q2) * F1(x, Q2) / F1(x, Q0^2), with its OWN per-nucleon F1 at both scales (`tables`), b2 by the same factor (an unset b2 stays 2x b1), and b1 = 0 where F1(x, Q0^2) <= 0; applied BEFORE `confine_spin1_rank2`.  An approximation (the weight-function form of Kumano / CDKS at 2.5 GeV2), not a derivation.  Negative / non-finite throws; positive on a non-spin-1 ion throws.  The run surface sets B1_REFERENCE_Q2 (constants.hpp) where a digitized table is the rank-2 input (`--b1-ref-q2`) */  // J1 note (2026-11-12; the supervisor's note under J1, docs/open_items/run_2026-11-10/DECISIONS.md): DEFAULT OFF.  On, a SPIN-1 kernel confines its final b1 per nucleon to the leading-order spin-1 positivity domain, b1 <- min(max(b1, -(3/2) F1), 3 (F1 - |g1|)) with its OWN F1 and g1 at the same (x, Q2) (`tables`), b2 kept in step; an empty window (3 (F1 - |g1|) < -(3/2) F1) or F1 <= 0 leaves b1 alone.  b3, b4, Delta untouched.  `default_inclusive_kernel` sets it on the deuteron only; a non-spin-1 ion with it set throws.
 
   explicit InclusiveKernel(Ion ion);
   InclusiveKernel(Ion ion, Options options);
 
   const Ion& ion() const { return ion_; }
-  bool target_mass() const { return target_mass_; }  bool confine_spin1_rank2() const { return confine_rank2_; }  double unconfined_b1(double x, double q2, double f1) const { return b1_func_ ? b1_func_(x, q2, f1) : 0.0; }  // J1 note (2026-11-12): the option, and the b1 slot BEFORE the confinement (what `b1_rank2_confinement` tests)
+  bool target_mass() const { return target_mass_; }  bool confine_spin1_rank2() const { return confine_rank2_; }  double unconfined_b1(double x, double q2, double f1) const { return b1_func_ ? b1_func_(x, q2, f1) * b1_reference_factor(x, f1) : 0.0; }  double b1_reference_q2() const { return b1_ref_q2_; }  double b1_reference_factor(double x, double f1) const;  // J1 note (2026-11-12): the option, and the b1 slot BEFORE the confinement (what `b1_rank2_confinement` tests); K1 (2026-11-17): AFTER the reference-scale factor F1(x, Q2)/F1(x, Q0^2) (`f1` the kernel's own F1 at (x, Q2); 1 where the option is off, 0 where F1(x, Q0^2) <= 0)
   bool tensor_gamma() const { return tensor_gamma_; }
   double g2_scale() const { return g2_scale_; }
 
@@ -368,7 +368,7 @@ class InclusiveKernel {
   double g2_scale_;
   bool target_mass_;
   bool tensor_gamma_;
-  int g2_npts_;  bool confine_rank2_ = false;  // J1 note (2026-11-12): Options::confine_spin1_rank2
+  int g2_npts_;  bool confine_rank2_ = false;  double b1_ref_q2_ = 0.0;  // J1 note (2026-11-12): Options::confine_spin1_rank2; K1 (2026-11-17): Options::b1_reference_q2
 };
 
 }  // namespace lipolgen

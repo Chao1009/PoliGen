@@ -166,3 +166,69 @@ and each needs the author or an input that does not exist:*
 3. *b₁(⁶Li) beyond the α–d picture* — no calculation exists for any A > 2.
 4. *The recorded disagreements with data on shipped defaults* (BONuS,
    Deeps, the ⁶Li charge form factor's first zero) — recorded, not tuned.
+
+## Dated notes
+
+**K1 (c) note (2026-11-19) — `li6-convolution` is only partly at the running
+scale; K1 is extended to the digitized column inside it.** *The supervisor's
+ruling after phase P1 (`phase_P1_b1_ratio.md` §5 item 1), declared before
+any number is taken on it. (c) left the convolution out on a premise it
+marked "to be confirmed in the code", and the code does not confirm it: of
+the four terms only the two α–d D-wave terms fold F₁ at the running Q²; the
+embedded-deuteron S term and the CG D-wave term fold the digitized CDKS
+Q² = 2.5 GeV² column, which has no Q² dependence — and that part is the
+larger one ((s + cg)/total = 1.68 / −0.83 / 1.15 / 0.72 / 0.91 at (x, Q²) =
+(0.1, 2.5) / (0.1, 100) / (0.3, 10) / (0.5, 100) / (0.7, 1000) on the
+default object, P1's measurement). It is a digitized deuteron table used as
+a rank-2 input, which is what the author's K1 is about, so it gets the same
+reading rather than a second convention inside one backend. P1 changed
+nothing there, as (c) said; phase P2 does, under these details:*
+
+- *Under the integral the embedded deuteron's column is read as
+  b₁ᵈ(z, Q²) = b₁ᵈ,ᵗᵃᵇˡᵉ(z) × F₁ᵈ(z, Q²)/F₁ᵈ(z, Q₀²) at the folded argument
+  z, with the convolution's OWN per-nucleon deuteron F₁ — the one its α–d
+  D-wave term folds (the `--b1-unpol` backend) — at both scales. Not the
+  kernel's F₁ at x as in (b): the factor belongs under the integral, where
+  the only deuteron F₁ is the convolution's, and all four terms then take
+  their Q² dependence from one F₁. Zero where F₁ᵈ(z, Q₀²) ≤ 0, as (g).*
+- *An option of the convolution object, default 0 = the frozen column: the
+  class level, the factories at their defaults, the reference tables and
+  their gates stay bit for bit, as (d). At Q² = Q₀² every number is the
+  frozen one — the published band tables are at Q² = 2.5 GeV² and do not
+  move.*
+- *The run surface hands `--b1-ref-q2` to it, so the knob is READ on
+  `--b1-model li6-convolution` (0 = the frozen column), with (e)'s rule
+  against the Q² range of the `--b1-unpol` grid. The kernel-level factor of
+  (b) is not applied on this model as well: one reading, once.*
+- *This does not make b₁/F₁ of this backend independent of Q² (the folded F₁
+  and the kernel's F₁ at x differ), and is not meant to.*
+- *Measured in P2: the four terms and the total before → after; the band
+  rows on runs; which `--x-max` builds; `--b1-ref-q2 0` against P1's tree
+  byte for byte.*
+
+*The backend stays opt-in under its mandatory 100 % band; the ruling is
+listed for the author in the summary, and `--b1-ref-q2 0` undoes it.*
+
+**K1 (d) note (2026-11-19) — `lipolgen.shipped_inclusive_kernel` is the run
+surface, so its default follows it.** *The supervisor's ruling. P1 read
+(d)'s "the factories" as covering this Python helper and left its new
+keyword at 0. But the helper is by its own definition (D7) "the inclusive
+kernel a default run builds", and after P1 it is that only when asked.
+Phase P2 makes its `b1_reference_q2` default `B1_REFERENCE_Q2` (0 still
+selects the frozen table); `default_inclusive_kernel`, the class-level
+factory the port gates and `b1_default_li6.json` stand on, keeps 0.
+Benchmark rows built on the helper then carry the run's b₁, as convention 8
+asks; a row that moves is re-taken by its own rule and listed, and a test
+that pins the frozen reading passes 0 explicitly.*
+
+**K2 note (2026-11-19) — closed by K1.** *Phase P1's measurement M6: over
+the three default windows ⁶Li has no cell outside the spin-1 domain (3 → 0;
+max b₁/F₁ 2.290 → 0.178, the joint maximum 1.046 → 0.342). By K2's own
+wording the item is closed; the confinement is not extended to ⁶Li.*
+
+**K4 note (2026-11-19) — one more gap, recorded and not closed.** *5. The
+HepMC3 provenance of K1: the new `b1_reference_q2` key is in the npz `meta`
+only, because `docs/HEPMC3_CONVENTION.md` lists the `lipolgen.*` run
+attributes and is not edited; a HepMC3 file therefore does not say which
+reading made it (`lipolgen.b1_model` is `miller` under both). Amending the
+convention is the author's.*

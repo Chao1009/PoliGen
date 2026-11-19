@@ -2013,3 +2013,152 @@ TEST_CASE("J6: run_provenance carries the two extrapolation keys, strings as bef
     CHECK(ToyG1().extrapolation() == std::string(SF_BACKEND_OWN_EXTRAPOLATION));
   }
 }
+
+// K1 (2026-11-17; docs/open_items/run_2026-11-17/DECISIONS.md K1 -- the
+// author's decision; the details the supervisor's): the digitized b1 read as
+// the ratio b1/F1 at a reference scale, InclusiveKernel::Options::
+// b1_reference_q2.  Tolerances declared before any value was seen: the
+// identity b1/F1(Q2) == b1/F1(Q0^2) at 1e-12 relative; exact equality at
+// Q2 = Q0^2 and with the option off.
+TEST_CASE("K1: the b1 slot read as b1/F1 at a reference scale") {
+  auto make = [](const Ion& ion, double q0, SFFunc3 b1, SFFunc3 b2 = nullptr, bool confine = false) {
+    InclusiveKernel::Options o;
+    o.b1_func = std::move(b1);
+    o.b2_func = std::move(b2);
+    o.confine_spin1_rank2 = confine;
+    o.b1_reference_q2 = q0;
+    return InclusiveKernel(ion, o);
+  };
+  const auto miller = [](double x, double q2, double f1) { return toy_b1(x, q2, f1); };
+  const auto b2set = [](double x, double q2, double f1) { return 3.0 * x * toy_b1(x, q2, f1); };
+  // off (0, the default): bit for bit the pre-K1 kernel, every field
+  CHECK(InclusiveKernel::Options().b1_reference_q2 == 0.0);
+  for (const Ion& ion : {DEUTERON(), LI6()}) {
+    const InclusiveKernel k_old = make(ion, 0.0, miller);
+    InclusiveKernel::Options od; od.b1_func = miller;
+    const InclusiveKernel k_def(ion, od);
+    for (const double x : {0.05, 0.3, 0.7, 0.955})
+      for (const double q2 : {1.2, 2.5, 10.0, 1897.0}) {
+        const SFTables a = k_old.tables(x, q2), b = k_def.tables(x, q2);
+        CHECK(a.f1 == b.f1); CHECK(a.f2 == b.f2); CHECK(a.g1 == b.g1); CHECK(a.g2 == b.g2);
+        CHECK(a.b1 == b.b1); CHECK(a.b2 == b.b2); CHECK(a.delta == b.delta);
+        CHECK(k_old.b1_reference_factor(x, a.f1) == 1.0);
+      }
+  }
+  CHECK(default_inclusive_kernel(LI6())->b1_reference_q2() == 0.0);       // (d): the class level
+  CHECK(default_inclusive_kernel(DEUTERON())->b1_reference_q2() == 0.0);  // keeps the frozen table
+  // on: the M1 identity, equality at Q0^2, b2 in step (unset and set)
+  for (const Ion& ion : {DEUTERON(), LI6()}) {
+    const InclusiveKernel off = make(ion, 0.0, miller), on = make(ion, B1_REFERENCE_Q2, miller);
+    const InclusiveKernel off2 = make(ion, 0.0, miller, b2set), on2 = make(ion, B1_REFERENCE_Q2, miller, b2set);
+    for (const double x : {0.1, 0.3, 0.5, 0.7, 0.871}) {
+      CAPTURE(x);
+      const SFTables r = on.tables(x, B1_REFERENCE_Q2), r0 = off.tables(x, B1_REFERENCE_Q2);
+      CHECK(r.b1 == r0.b1); CHECK(r.b2 == r0.b2);
+      CHECK(on2.tables(x, B1_REFERENCE_Q2).b2 == off2.tables(x, B1_REFERENCE_Q2).b2);
+      for (const double q2 : {10.0, 100.0, 733.6, 1897.0}) {
+        CAPTURE(q2);
+        const SFTables t = on.tables(x, q2), t0 = off.tables(x, q2);
+        CHECK_CLOSE(t.b1 / t.f1, r.b1 / r.f1, 1e-12);
+        CHECK(t.b2 == 2.0 * x * t.b1);                       // an unset b2 stays 2x b1
+        CHECK(t.f1 == t0.f1); CHECK(t.g1 == t0.g1); CHECK(t.delta == t0.delta);
+        const double s = on.b1_reference_factor(x, t.f1);
+        CHECK(s == t.f1 / r.f1);
+        CHECK(t.b1 == t0.b1 * s);
+        CHECK(on.unconfined_b1(x, q2, t.f1) == t.b1);        // nothing binds on 6Li / unconfined
+        CHECK_CLOSE(on2.tables(x, q2).b2, off2.tables(x, q2).b2 * s, 1e-14);  // a set b2, same factor
+      }
+    }
+  }
+  // F1(x, Q0^2) <= 0: the scaled b1 is zero (K1 (g)) -- a backend with no F2 below Q2 = 3
+  struct ZeroBelow3 : UnpolSF {
+    double f2p(double, double q2) const override { return q2 < 3.0 ? 0.0 : 0.3; }
+    double f2n(double, double q2) const override { return q2 < 3.0 ? 0.0 : 0.25; }
+    double f2n_over_f2p(double) const override { return 0.25 / 0.3; }
+  };
+  InclusiveKernel::Options oz;
+  oz.f2_source = std::make_shared<const ZeroBelow3>();
+  oz.b1_func = [](double, double, double) { return 0.01; };
+  oz.b1_reference_q2 = B1_REFERENCE_Q2;
+  const InclusiveKernel kz(DEUTERON(), oz);
+  const SFTables tz = kz.tables(0.3, 10.0);
+  REQUIRE(tz.f1 > 0.0);
+  CHECK(kz.b1_reference_factor(0.3, tz.f1) == 0.0);
+  CHECK(tz.b1 == 0.0);
+  CHECK(tz.b2 == 0.0);
+  // the constructor's refusals
+  for (const double bad : {-1.0, std::nan(""), HUGE_VAL}) {
+    InclusiveKernel::Options ob; ob.b1_reference_q2 = bad;
+    CHECK_THROWS_WITH_AS(InclusiveKernel(LI6(), ob), doctest::Contains("must be finite and >= 0"), std::runtime_error);
+  }
+  InclusiveKernel::Options o7; o7.b1_reference_q2 = B1_REFERENCE_Q2;
+  CHECK_THROWS_WITH_AS(InclusiveKernel(LI7(), o7), doctest::Contains("reads the SPIN-1 b1 slot"), std::runtime_error);
+  CHECK_NOTHROW(InclusiveKernel(LI7(), InclusiveKernel::Options()));
+  // scaling BEFORE the confinement: on the toy deuteron at x = 0.9, Q2 = 100
+  // F1 grows by 1.105 from Q0^2, so a slot inside the window when frozen leaves
+  // it when scaled and is clamped to the upper bound 3 (F1 - |g1|)
+  {
+    const double x = 0.9, q2 = 100.0;
+    const SFTables t0 = make(DEUTERON(), 0.0, nullptr).tables(x, q2);
+    const double hi = 3.0 * (t0.f1 - std::fabs(t0.g1)), c = 0.62 * t0.f1;
+    const auto flat = [c](double, double, double) { return c; };
+    REQUIRE(c < hi);
+    const InclusiveKernel frozen = make(DEUTERON(), 0.0, flat, nullptr, true), k1 = make(DEUTERON(), B1_REFERENCE_Q2, flat, nullptr, true);
+    CHECK(frozen.tables(x, q2).b1 == c);                                   // frozen: inside, untouched
+    const double scaled = k1.unconfined_b1(x, q2, t0.f1);
+    CHECK(scaled == c * k1.b1_reference_factor(x, t0.f1));
+    REQUIRE(scaled > hi);
+    CHECK(k1.tables(x, q2).b1 == hi);                                      // scaled, then confined
+    CHECK(k1.tables(x, q2).b2 == 2.0 * x * hi);
+  }
+  // the factory: a trailing b1_reference_q2 (0 by default) on Miller / Cdks / d;
+  // refused on li6-convolution
+  CHECK(default_inclusive_kernel(LI6(), B1Model::Miller, 1.0, 1.0, nullptr, nullptr, nullptr, RSource::Unset, LI6_B1_RANK2_TRANSFER, B1_REFERENCE_Q2)->b1_reference_q2() == B1_REFERENCE_Q2);
+  CHECK(default_inclusive_kernel(LI6(), B1Model::Cdks, 1.0, 1.0, nullptr, nullptr, nullptr, RSource::Unset, LI6_B1_RANK2_TRANSFER, B1_REFERENCE_Q2)->b1_reference_q2() == B1_REFERENCE_Q2);
+  CHECK(default_inclusive_kernel(DEUTERON(), B1Model::Miller, 1.0, 1.0, nullptr, nullptr, nullptr, RSource::Unset, LI6_B1_RANK2_TRANSFER, B1_REFERENCE_Q2)->b1_reference_q2() == B1_REFERENCE_Q2);
+  CHECK_THROWS_WITH_AS(default_inclusive_kernel(LI6(), B1Model::Li6Convolution, 1.0, 1.0, nullptr, nullptr, nullptr, RSource::Unset, LI6_B1_RANK2_TRANSFER, B1_REFERENCE_Q2), doctest::Contains("li6-convolution is refused"), std::runtime_error);
+  // the run surface: the default reads 2.5 on inclusive 6Li / d, 0 on coherent;
+  // the frozen table on request; tagged-6Li-alpha with --inclusive-b1
+  CHECK(PipelineConfig().b1_reference_q2 == B1_REFERENCE_Q2);
+  {
+    PipelineConfig c = toy_config(); c.n_events = 10;
+    const Pipeline p(c, tensor_thirds_plan(0.7, 0.6));
+    CHECK(p.dis_sampler().kernel().b1_reference_q2() == B1_REFERENCE_Q2);
+    CHECK(b1_reference_q2_is_read(c));
+    c.b1_reference_q2 = 0.0;
+    CHECK(Pipeline(c, tensor_thirds_plan(0.7, 0.6)).dis_sampler().kernel().b1_reference_q2() == 0.0);
+    PipelineConfig cd = toy_config(); cd.isotope = "d"; cd.n_events = 10;
+    CHECK(Pipeline(cd, tensor_thirds_plan(0.7, 0.6)).dis_sampler().kernel().b1_reference_q2() == B1_REFERENCE_Q2);
+    PipelineConfig cc = toy_config(); cc.channel = PipelineChannel::CoherentLi6; cc.n_events = 10;
+    CHECK_FALSE(b1_reference_q2_is_read(cc));
+    CHECK(Pipeline(cc, tensor_thirds_plan(0.7, 0.6)).dis_sampler().kernel().b1_reference_q2() == 0.0);
+    PipelineConfig ct = toy_config(); ct.channel = PipelineChannel::TaggedLi6Alpha; ct.n_events = 10;
+    CHECK_FALSE(b1_reference_q2_is_read(ct));
+    CHECK(Pipeline(ct, tensor_thirds_plan(0.7, 0.6)).dis_sampler().kernel().b1_reference_q2() == 0.0);
+    ct.struck.inclusive_b1 = true;
+    CHECK(b1_reference_q2_is_read(ct));
+    CHECK(Pipeline(ct, tensor_thirds_plan(0.7, 0.6)).dis_sampler().kernel().b1_reference_q2() == B1_REFERENCE_Q2);
+  }
+  // validate(): refusals, and the A17 default accepted off the read path
+  {
+    auto refused = [](PipelineConfig c, const char* what) {
+      CHECK_THROWS_WITH_AS(c.validate(), doctest::Contains(what), std::runtime_error);
+    };
+    PipelineConfig c = toy_config(); c.n_events = 10;
+    c.b1_reference_q2 = -1.0; refused(c, "must be finite and >= 0");
+    c.b1_reference_q2 = std::nan(""); refused(c, "must be finite and >= 0");
+    c = toy_config(); c.n_events = 10; c.struck.b1_reference_q2 = 1.0; refused(c, "struck.b1_reference_q2");
+    PipelineConfig c7 = toy_config(); c7.n_events = 10; c7.isotope = "7Li";
+    CHECK_NOTHROW(c7.validate());                                         // the default, labelled
+    c7.b1_reference_q2 = 0.0; refused(c7, "not read on 7Li (no rank-2 input)");
+    PipelineConfig cc = toy_config(); cc.n_events = 10; cc.channel = PipelineChannel::CoherentLi6;
+    cc.b1_reference_q2 = 10.0; refused(cc, "not read on channel coherent-6Li");
+    PipelineConfig cv = toy_config(); cv.n_events = 10; cv.b1_model = B1Model::Li6Convolution;
+    CHECK_NOTHROW(cv.validate());
+    cv.b1_reference_q2 = 0.0; refused(cv, "not read at b1_model = li6-convolution");
+    PipelineConfig ok = toy_config(); ok.n_events = 10; ok.b1_reference_q2 = 0.0;
+    CHECK_NOTHROW(ok.validate());                                         // the frozen table, read
+    ok.b1_reference_q2 = 1.0;
+    CHECK_NOTHROW(ok.validate());                                         // ToyF2 reports no grid
+  }
+}

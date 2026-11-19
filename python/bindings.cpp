@@ -621,7 +621,7 @@ py::dict columns_to_dict(Columns& c, const Pipeline& p, std::uint64_t n,
   // (off the inclusive rank-2 path) `meta` carries its label, as for pol_sf.
   meta["b1_model"] = pv("b1_model");
   meta["b1_band_scale"] = p.config().b1_band_scale;
-  meta["b1_alpha_d_dwave_weight"] = p.config().b1_alpha_d_dwave_weight;
+  meta["b1_alpha_d_dwave_weight"] = p.config().b1_alpha_d_dwave_weight;  { const KnobProvenance& k1 = knob("b1_reference_q2"); if (k1.status == KnobStatus::Read) meta["b1_reference_q2"] = p.config().b1_reference_q2; else meta["b1_reference_q2"] = k1.label; }  // K1 (2026-11-17): the reference scale where read, the A17 label where not; npz-only (docs/HEPMC3_CONVENTION.md lists the run attributes; not added there)
   // Which unpolarised PDF the b1 convolution folded against.  Same provenance
   // rule and the same unconditional write as the three keys above: "toy" and
   // "mstw" differ by up to a factor 1.85 on Li6ConvolutionB1::b1 and by nothing
@@ -1085,7 +1085,7 @@ PYBIND11_MODULE(_lipolgen, m) {
   m.attr("B1_PER_DEUTERON_TO_PER_NUCLEON") = B1_PER_DEUTERON_TO_PER_NUCLEON;
   m.attr("B1_MILLER_TABLE_TO_PER_NUCLEON") = B1_MILLER_TABLE_TO_PER_NUCLEON;
   m.attr("B1_CDKS_TABLE_TO_PER_NUCLEON") = B1_CDKS_TABLE_TO_PER_NUCLEON;
-  m.attr("LI6_B1_RANK2_TRANSFER") = LI6_B1_RANK2_TRANSFER;
+  m.attr("LI6_B1_RANK2_TRANSFER") = LI6_B1_RANK2_TRANSFER;  m.attr("B1_REFERENCE_Q2") = B1_REFERENCE_Q2;  // K1 (2026-11-17)
   m.attr("LI6_B1_LEGACY_TRANSFER") = LI6_B1_LEGACY_TRANSFER;
   m.attr("LI6_B1_PER_NUCLEON") = LI6_B1_PER_NUCLEON;
   m.attr("C_BAG") = C_BAG;
@@ -2235,7 +2235,7 @@ static void bind_xsec(py::module_& m) {
       .def_readwrite("emc_ratio", &InclusiveKernel::Options::emc_ratio)
       .def_readwrite("r_func", &InclusiveKernel::Options::r_func)
       .def_readwrite("target_mass", &InclusiveKernel::Options::target_mass)
-      .def_readwrite("g2_npts", &InclusiveKernel::Options::g2_npts).def_readwrite("confine_spin1_rank2", &InclusiveKernel::Options::confine_spin1_rank2);  // J1 note (2026-11-12)
+      .def_readwrite("g2_npts", &InclusiveKernel::Options::g2_npts).def_readwrite("confine_spin1_rank2", &InclusiveKernel::Options::confine_spin1_rank2).def_readwrite("b1_reference_q2", &InclusiveKernel::Options::b1_reference_q2);  // J1 note (2026-11-12); K1 (2026-11-17): b1_reference_q2 (0 = the frozen table)
 
   kern.def(py::init([](Ion ion) {
              return std::make_shared<InclusiveKernel>(std::move(ion));
@@ -2246,7 +2246,7 @@ static void bind_xsec(py::module_& m) {
            }), py::arg("ion"), py::arg("options"))
       .def_property_readonly("ion", &InclusiveKernel::ion)
       .def_property_readonly("target_mass", &InclusiveKernel::target_mass)
-      .def_property_readonly("tensor_gamma", &InclusiveKernel::tensor_gamma).def_property_readonly("confine_spin1_rank2", &InclusiveKernel::confine_spin1_rank2).def("unconfined_b1", &InclusiveKernel::unconfined_b1, py::arg("x"), py::arg("q2"), py::arg("f1"))  // J1 note (2026-11-12)
+      .def_property_readonly("tensor_gamma", &InclusiveKernel::tensor_gamma).def_property_readonly("confine_spin1_rank2", &InclusiveKernel::confine_spin1_rank2).def("unconfined_b1", &InclusiveKernel::unconfined_b1, py::arg("x"), py::arg("q2"), py::arg("f1")).def_property_readonly("b1_reference_q2", &InclusiveKernel::b1_reference_q2).def("b1_reference_factor", &InclusiveKernel::b1_reference_factor, py::arg("x"), py::arg("f1"))  // J1 note (2026-11-12); K1 (2026-11-17): the option and F1(x, Q2)/F1(x, Q0^2) (f1 at the running Q2)
       .def_property_readonly("g2_scale", &InclusiveKernel::g2_scale)
       .def("tables", &InclusiveKernel::tables, py::arg("x"), py::arg("q2"),
            py::arg("with_g2") = false)
@@ -4520,7 +4520,7 @@ static void bind_pipeline(py::module_& m) {
 
   py::class_<StruckClusterOptions>(m, "StruckClusterOptions")
       .def(py::init<>())
-      .def_readwrite("inclusive_b1", &StruckClusterOptions::inclusive_b1)
+      .def_readwrite("inclusive_b1", &StruckClusterOptions::inclusive_b1).def_readwrite("b1_reference_q2", &StruckClusterOptions::b1_reference_q2)  // K1 (2026-11-17): a Pipeline fills it; validate() refuses a non-zero value set here
       .def_readwrite("delta_func", &StruckClusterOptions::delta_func)
       .def_readwrite("scenario", &StruckClusterOptions::scenario)
       .def_readwrite("grid", &StruckClusterOptions::grid)
@@ -4569,7 +4569,7 @@ static void bind_pipeline(py::module_& m) {
                      "non-Miller model together with a caller-supplied "
                      "kernel, and refuses Li6Convolution off the inclusive "
                      "channel or off 6Li.")
-      .def_readwrite("b1_band_scale", &PipelineConfig::b1_band_scale,
+      .def_readwrite("b1_reference_q2", &PipelineConfig::b1_reference_q2, "K1 (2026-11-17): --b1-ref-q2 [GeV2], default B1_REFERENCE_Q2 = 2.5: the digitized deuteron b1 table read as b1/F1 at this scale, b1 = b1_table F1(x, Q2)/F1(x, Q0^2); 0 = the frozen table (the pre-K1 reading).  Read on the inclusive 6Li / d kernel at b1_model miller or cdks and on tagged-6Li-alpha with --inclusive-b1; elsewhere the default is labelled not-read and a moved value refused.").def_readwrite("b1_band_scale", &PipelineConfig::b1_band_scale,
                      "The MANDATORY 100 % band: multiplies the whole b1 of "
                      "the Cdks and Li6Convolution backends.  Run 0/1/2 and "
                      "quote the envelope -- never a single row.")
@@ -4720,15 +4720,15 @@ static void bind_pipeline(py::module_& m) {
   m.def("default_inclusive_kernel", [](const Ion& ion, B1Model model,
                                        double band_scale, double w_alpha_d,
                                        std::shared_ptr<UnpolSF> b1_unpol, RSource r_source,
-                                       std::shared_ptr<UnpolSF> unpol_sf, std::shared_ptr<PolSF> pol_sf, double b1_transfer) {
+                                       std::shared_ptr<UnpolSF> unpol_sf, std::shared_ptr<PolSF> pol_sf, double b1_transfer, double b1_reference_q2) {
     return std::const_pointer_cast<InclusiveKernel>(
         default_inclusive_kernel(ion, model, band_scale, w_alpha_d,
                                  std::move(b1_unpol), std::move(unpol_sf),
-                                 std::move(pol_sf), r_source, b1_transfer));
+                                 std::move(pol_sf), r_source, b1_transfer, b1_reference_q2));
   }, py::arg("ion"), py::arg("model") = B1Model::Miller,
      py::arg("band_scale") = 1.0, py::arg("w_alpha_d") = 1.0,
      py::arg("b1_unpol") = nullptr, py::arg("r_source") = RSource::Unset,
-     py::arg("unpol_sf") = nullptr, py::arg("pol_sf") = nullptr, py::arg("b1_transfer") = LI6_B1_RANK2_TRANSFER);  // A1
+     py::arg("unpol_sf") = nullptr, py::arg("pol_sf") = nullptr, py::arg("b1_transfer") = LI6_B1_RANK2_TRANSFER, py::arg("b1_reference_q2") = 0.0);  // A1; K1 (2026-11-17): b1_reference_q2, 0 = the frozen table (the class level); the run surface passes B1_REFERENCE_Q2
 
   m.def("momentum_residual", &momentum_residual, py::arg("ev"));
   m.def("momentum_scale", &momentum_scale, py::arg("ev"));
@@ -5240,7 +5240,7 @@ static void bind_io(py::module_& m) {
   }, py::arg("pipeline"),
      "A3: the share of THIS run's rate the |g1| <= F1 clip binds on "
      "(meta['g1_clipped_rate_fraction']; NaN where g1 is not read), the largest "
-     "unclipped |A1| per species read (NaN where not read) and the banner sentence.");  m.def("b1_rank2_confinement", [](const Pipeline& p) { const B1RankTwoConfinement c = b1_rank2_confinement(p); py::dict d; d["applied"] = c.applied; d["b1_clipped_rate_fraction"] = c.fraction; d["n_cells"] = c.n_cells; d["n_upper"] = c.n_upper; d["n_lower"] = c.n_lower; d["max_b1_over_f1"] = c.max_b1_over_f1; d["max_at_x"] = c.max_at_x; d["max_at_q2"] = c.max_at_q2; d["report"] = c.report; return d; }, py::arg("pipeline"), "J1 note (2026-11-12): the share of THIS run's rate the spin-1 positivity confinement of the deuteron's rank-2 slot binds on (meta['b1_clipped_rate_fraction'], written only where applied), the binding cells by half, the largest unconfined b1/F1 and where, and the banner sentence.");
+     "unclipped |A1| per species read (NaN where not read) and the banner sentence.");  m.def("b1_rank2_confinement", [](const Pipeline& p) { const B1RankTwoConfinement c = b1_rank2_confinement(p); py::dict d; d["applied"] = c.applied; d["b1_clipped_rate_fraction"] = c.fraction; d["n_cells"] = c.n_cells; d["n_upper"] = c.n_upper; d["n_lower"] = c.n_lower; d["max_b1_over_f1"] = c.max_b1_over_f1; d["max_at_x"] = c.max_at_x; d["max_at_q2"] = c.max_at_q2; d["report"] = c.report; return d; }, py::arg("pipeline"), "J1 note (2026-11-12): the share of THIS run's rate the spin-1 positivity confinement of the deuteron's rank-2 slot binds on (meta['b1_clipped_rate_fraction'], written only where applied), the binding cells by half, the largest unconfined b1/F1 and where, and the banner sentence.");  m.def("b1_reference_q2_is_read", &b1_reference_q2_is_read, py::arg("config"), "K1 (2026-11-17): whether this config reads PipelineConfig.b1_reference_q2 (--b1-ref-q2): the inclusive 6Li / d kernel at b1_model miller or cdks, or tagged-6Li-alpha with --inclusive-b1.");
 #if LIPOLGEN_HAVE_LHAPDF
   m.attr("LHAPDF_EXTRAPOLATOR") = std::string(LHAPDF_EXTRAPOLATOR);
   m.attr("LHAPDF_INTERPOLATOR") = std::string(LHAPDF_INTERPOLATOR);

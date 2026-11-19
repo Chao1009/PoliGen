@@ -35,7 +35,7 @@ def test_the_class_toy_deuteron_reads_millerb1_itself_and_6li_the_transfer():
 def test_the_shipped_deuteron_kernel_is_the_pipelines_and_reads_millerb1():
     """The kernel a default deuteron run builds (D7 grids) carries MillerB1."""
     m = _l.MillerB1()
-    k = lg.shipped_inclusive_kernel(lg.deuteron())
+    k = lg.shipped_inclusive_kernel(lg.deuteron(), b1_reference_q2=_l.B1_REFERENCE_Q2)   # K1 (2026-11-17): the run reads MillerB1 as b1/F1 at 2.5 GeV2
     cfg = lg.make_config(isotope="d", events=10)
     sc = cfg.scenario
     sc.x_max = 1.0   # J1 note (2026-11-12): builds at the default again (J1 (2026-11-10): 0.95, refused at 1.0)
@@ -43,8 +43,8 @@ def test_the_shipped_deuteron_kernel_is_the_pipelines_and_reads_millerb1():
     kp = _l.Pipeline(cfg, lg.tensor_thirds_plan(0.7, 0.6)).dis_sampler.kernel
     for x, q2 in PTS:
         t = k.tables(x, q2)
-        assert k.unconfined_b1(x, q2, t.f1) == m.b1(x, q2, 0.0) == kp.unconfined_b1(x, q2, t.f1)   # J1 note (2026-11-12)
-        assert t.b1 == kp.tables(x, q2).b1 == min(max(m.b1(x, q2, 0.0), -1.5 * t.f1), 3.0 * (t.f1 - abs(t.g1)))
+        assert k.unconfined_b1(x, q2, t.f1) == m.b1(x, q2, 0.0) * k.b1_reference_factor(x, t.f1) == kp.unconfined_b1(x, q2, t.f1)   # J1 note (2026-11-12); K1 (2026-11-17): MillerB1 times F1(x, Q2)/F1(x, 2.5)
+        assert t.b1 == kp.tables(x, q2).b1 == min(max(k.unconfined_b1(x, q2, t.f1), -1.5 * t.f1), 3.0 * (t.f1 - abs(t.g1)))   # K1 (2026-11-17): the scaled slot, then confined
 
 
 @needs_lhapdf
@@ -91,7 +91,7 @@ def test_the_deuteron_run_labels_the_transfer_not_read_and_6li_keeps_the_number(
     assert m6["li6_b1_rank2_transfer"] == _l.LI6_B1_RANK2_TRANSFER
     assert "deuteron" not in m6["rank2_input"]
     # J1 note (2026-11-12): the confinement's key, on the deuteron only
-    assert m["b1_clipped_rate_fraction"] == pytest.approx(3.871134487837413e-07, rel=1e-9)   # config 1, 59 cells (phase P2b N4)
+    assert m["b1_clipped_rate_fraction"] == pytest.approx(1.658098263036864e-09, rel=1e-9)   # config 1, 24 cells; K1 (2026-11-17): was 3.871134487837413e-07 on 59 cells (phase P2b N4)
     assert "confined to the spin-1 leading-order positivity domain" in m["rank2_input"]
     assert "b1_clipped_rate_fraction" not in m6
 
@@ -105,7 +105,7 @@ def test_the_default_deuteron_builds_and_the_unconfined_kernel_is_refused():  # 
     NNPDFpol1.1 objects, MillerB1, the 1e-2 Delta, the option off -- which
     reproduces P2's refusal.  Default tensor-thirds, config 1."""
     p = _l.Pipeline(lg.make_config(isotope="d", events=10), lg.tensor_thirds_plan(0.7, 0.6))
-    assert _l.b1_rank2_confinement(p)["n_cells"] == 59
+    assert _l.b1_rank2_confinement(p)["n_cells"] == 24   # K1 (2026-11-17): was 59
     o = _l.InclusiveKernel.Options()
     o.f2_source = _l.make_lhapdf_unpol_sf(_l.UNPOL_SF_DEFAULT)
     o.g1_model = _l.make_lhapdf_pol_sf(_l.POL_SF_DEFAULT)

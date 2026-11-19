@@ -36,29 +36,29 @@ SCRIPT = os.path.join(_ROOT, "validation", "price_defaults.py")
 
 # measured by the script, 2026-10-26: 6Li config 1, the shipped window (TOY row since D7)
 SIGMA_TOY_PB = 591846.1688784091          # tensor-thirds, meta["sigma_pb"]
-AZZ_TOY = -5.534747697354494e-04          # thirds estimator; A1 (2026-11-03): x1.06576 (-5.193230890419342e-04)
+AZZ_TOY = -5.581584331732490e-04          # K1 (2026-11-17): was -5.534747697354494e-04; thirds estimator; A1 (2026-11-03): x1.06576 (-5.193230890419342e-04)
 # cos 2phi' amplitude per unit P_zz, super-bins S1..S4 (sibling fig1.json).
 # Re-taken at D4 (2026-10-27, the Jaffe-Manohar coefficient): exactly 1/2 of
 # the 2026-10-26 -1.302913804135417e-03 / -1.0625622769273495e-03 /
 # -1.4290788342523734e-03 / -1.3290877454563259e-03 (a sum of halved terms).
-A2_TOY = (-6.514513502101775e-04,   # A1 (2026-11-03): re-taken, the cells' weights carry b1
-          -5.312780194694191e-04,   # (-6.514569020677085e-04, -5.312811384636748e-04,
-          -7.145295294557536e-04,   #  -7.145394171261867e-04, -6.645438727281629e-04)
-          -6.645350442646617e-04)
+A2_TOY = (-6.514578764173018e-04,   # K1 (2026-11-17): re-taken (was -6.514513502101775e-04, -5.312780194694191e-04, -7.145295294557536e-04, -6.645350442646617e-04); A1 (2026-11-03): re-taken, the cells' weights carry b1
+          -5.312833798498238e-04,   # (-6.514569020677085e-04, -5.312811384636748e-04,
+          -7.145278538752199e-04,   #  -7.145394171261867e-04, -6.645438727281629e-04)
+          -6.645230247505881e-04)
 #: backend -> (sigma ratio, A_zz ratio) against the SHIPPED default.  D7
 #: (2026-10-29): re-taken on CT18NLO (frozen) -- the toy is now a priced row;
-RATIOS = {"mstw": (0.9460490391711457, 1.0570276577574238),
-          "toy": (1.1924348985025401, 0.8386202058176198)}
+RATIOS = {"mstw": (0.9460490391711457, 1.0630107151032795),   # K1 (2026-11-17): A_zz ratios re-taken (were 1.0570276577574238 / 0.8386202058176198)
+          "toy": (1.1924348985025401, 0.8418312259096405)}
 # D7 (2026-10-29): the shipped default, CT18NLO / NNPDFpol1.1 frozen at their
 # grid edges, measured by the script (N-independent, the run's own tables).
 # Pre-D7 (ToyF2/ToyG1) the RATIOS were mstw x0.7934 / x1.2604 and ct18nlo
 # x0.7985 / x1.2524 on sigma / A_zz, ct18nlo then continued below Q0.
 SIGMA_PB = 496334.155954048               # tensor-thirds, meta["sigma_pb"]
-AZZ = -6.599826308749011e-04              # thirds estimator; A1 (2026-11-03): x1.06576 (-6.192589749678352e-04)
-A2 = (-6.520807683198287e-04,             # cos 2phi' amplitude per unit P_zz,
-      -5.317366976891354e-04,             # S1..S4 -- F2 cancels per cell, so
-      -7.145237489847445e-04,             # they move only through the cells'
-      -6.633554244821122e-04)             # cross-section weights (A1 (2026-11-03) re-taken)
+AZZ = -6.630289017494344e-04              # K1 (2026-11-17): was -6.599826308749011e-04; thirds estimator; A1 (2026-11-03): x1.06576 (-6.192589749678352e-04)
+A2 = (-6.520910312402038e-04,             # K1 (2026-11-17): re-taken (was -6.520807683198287e-04, -5.317366976891354e-04, -7.145237489847445e-04, -6.633554244821122e-04); cos 2phi' amplitude per unit P_zz,
+      -5.317466463780099e-04,             # S1..S4 -- F2 cancels per cell, so
+      -7.145218457244720e-04,             # they move only through the cells'
+      -6.633562022589557e-04)             # cross-section weights (A1 (2026-11-03) re-taken)
 
 
 def test_price_defaults_li6_inclusive_runs_returns_table_and_png(tmp_path):

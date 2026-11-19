@@ -444,7 +444,7 @@ def make_config(isotope="6Li", config=1, channel="inclusive", events=0,
                 b1_model=None, b1_band_scale=None,
                 b1_alpha_d_dwave_weight=None, b1_unpol=None,
                 r_source=None,
-                unpol_sf=None, pol_sf=None, coherent_t_max=None):
+                unpol_sf=None, pol_sf=None, coherent_t_max=None, b1_reference_q2=None):  # K1 (2026-11-17): b1_reference_q2
     """A `PipelineConfig` from plain values (the CLI's own constructor).
 
     `channel` is a key of `CHANNELS`; `optics` a key of `OPTICS`.  The isotope
@@ -492,7 +492,7 @@ def make_config(isotope="6Li", config=1, channel="inclusive", events=0,
     "r1998"): the ONE R = sigma_L/sigma_T threaded into BOTH the alpha-d
     convolution's own F1 and the kernel's, so the tensor weight's numerator
     and denominator are the same choice.  Read by
-    `b1_model="li6-convolution"` only.
+    `b1_model="li6-convolution"` only.  K1 (2026-11-17): `b1_reference_q2` [GeV2] (None = B1_REFERENCE_Q2 = 2.5; CLI `--b1-ref-q2`) is the scale at which the digitized deuteron b1 table is read as the ratio b1/F1, b1(x, Q2) = b1_table(x) F1(x, Q2)/F1(x, Q0^2) -- an approximation (the weight-function form of Kumano / CDKS at 2.5 GeV2), not a derivation; 0 = the frozen table, the reading shipped until K1.  Read on "miller" / "cdks" of the inclusive 6Li and deuteron kernels and on tagged-6Li-alpha with `inclusive_b1`; elsewhere the default is labelled not-read and another value refused.
 
     `b1_unpol` is a key of `B1_UNPOL` ("toy", the default, "mstw" or
     "ct18nlo") or a `B1UnpolSource` directly: the UNPOLARISED backend the
@@ -681,7 +681,7 @@ def make_config(isotope="6Li", config=1, channel="inclusive", events=0,
             raise ValueError("unknown pol_sf %r; know %s"
                              % (pol_sf, ", ".join(sorted(POL_SF))))
         pol_sf = POL_SF[pol_sf]
-    _lipolgen.set_pol_sf(cfg, pol_sf)
+    _lipolgen.set_pol_sf(cfg, pol_sf);  cfg.b1_reference_q2 = cfg.b1_reference_q2 if b1_reference_q2 is None else float(b1_reference_q2)  # K1 (2026-11-17)
     if inclusive_b1 is not None:
         struck = cfg.struck
         struck.inclusive_b1 = bool(inclusive_b1)
@@ -902,7 +902,7 @@ def _cluster_wave_on_tagged_only(cfg, cluster_wave):
         % (name, _lipolgen.pipeline_channel_name(cfg.channel)))
 
 
-def shipped_inclusive_kernel(ion, b1_transfer=None):
+def shipped_inclusive_kernel(ion, b1_transfer=None, b1_reference_q2=0.0):  # K1 (2026-11-17): b1_reference_q2
     """D7 (2026-10-27): the INCLUSIVE kernel a default run builds for `ion`.
 
     `default_inclusive_kernel(ion)` -- one argument -- is the CLASS-LEVEL TOY
@@ -916,10 +916,10 @@ def shipped_inclusive_kernel(ion, b1_transfer=None):
 
     A1 (2026-11-03): `b1_transfer` (None = LI6_B1_RANK2_TRANSFER = 0.982576)
     is the 6Li rank-2 transfer; LI6_B1_RANK2_TRANSFER_HULTHEN is the pre-A1 0.921947.  J1 (2026-11-10): the deuteron's slot is MillerB1 itself and reads no transfer, so a moved value on deuteron() RAISES.
-    The vector factors are the ION's: li6_ion(...) / deuteron_ion(...)."""
+    The vector factors are the ION's: li6_ion(...) / deuteron_ion(...).  K1 (2026-11-17): `b1_reference_q2` (default 0 = the frozen table, the class level, as every factory) is the kernel option; a default RUN reads its digitized b1 as b1/F1 at B1_REFERENCE_Q2 = 2.5 GeV2, so the Pipeline's own kernel is this with b1_reference_q2=B1_REFERENCE_Q2 (with 0, b1 / b2 differ from the run's away from Q2 = 2.5)."""
     return _lipolgen.default_inclusive_kernel(
         ion,
         unpol_sf=_lipolgen.make_lhapdf_unpol_sf(_lipolgen.UNPOL_SF_DEFAULT),
         pol_sf=_lipolgen.make_lhapdf_pol_sf(_lipolgen.POL_SF_DEFAULT),
         b1_transfer=(_lipolgen.LI6_B1_RANK2_TRANSFER if b1_transfer is None
-                     else b1_transfer))
+                     else b1_transfer), b1_reference_q2=float(b1_reference_q2))

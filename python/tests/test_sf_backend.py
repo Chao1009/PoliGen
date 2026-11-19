@@ -90,9 +90,9 @@ def _plan():
 #: D7 (2026-10-27): sigma of `_cfg(channel)` on `_plan()` -- the toy NAMED
 #: (= the pre-D7 default, measured on c52c164's build: the same doubles) and
 #: the shipped default (CT18NLO / NNPDFpol1.1, frozen), 2026-10-29
-SIGMA_TOY = {"inclusive": 591846.168878409, "coherent": 12476.025113185518,   # A1 (2026-11-03): incl. -1 ulp (b1)
+SIGMA_TOY = {"inclusive": 591846.1688784126, "coherent": 12476.025113185518,   # A1 (2026-11-03): incl. -1 ulp (b1); K1 (2026-11-17): incl. 591846.168878409 -> 591846.1688784126 (b1/F1 at 2.5 GeV2; the toy F1 evolves)
              "tagged-6Li-alpha": 591846.1688784088}
-SIGMA_D7 = {"inclusive": 496334.15595404804, "coherent": 9424.476321023749,   # A1 (2026-11-03): incl. -1 ulp (b1)
+SIGMA_D7 = {"inclusive": 496334.15595404815, "coherent": 9424.476321023749,   # A1 (2026-11-03): incl. -1 ulp (b1); K1 (2026-11-17): incl. 496334.15595404804 -> 496334.15595404815
             "tagged-6Li-alpha": 496334.15595404874}
 
 
@@ -989,7 +989,7 @@ def test_the_cli_reports_it_as_a_configuration_error_not_a_traceback():
     (2026-11-03): taken on the inclusive deuteron, which A3 still refuses.  J1 note (2026-11-12): the default deuteron run builds since its slot is confined; taken on the 6Li b1 band x2 row (cdks at --x-max 0.95, the rank-2 refusal A4 keeps for 6Li), cured at 0.85."""
     argv = ["--isotope", "6Li", "--channel", "inclusive", "--events", "10",
             "--unpol-sf", "ct18nlo", "--pol-sf", "nnpdfpol",
-            "--b1-model", "cdks", "--b1-band-scale", "2", "--x-max", "0.95",  # J1 note (2026-11-12): was --isotope d --plan helicity-flip --pz 0.7 --pe 0.7
+            "--b1-model", "cdks", "--b1-band-scale", "2", "--b1-ref-q2", "0", "--x-max", "0.95",  # J1 note (2026-11-12): was --isotope d --plan helicity-flip --pz 0.7 --pe 0.7; K1 (2026-11-17): the frozen table passed explicitly (under K1 the x2 row builds at 0.95)
             "--quiet"]
     with pytest.raises(SystemExit) as e:
         cli.main(argv)

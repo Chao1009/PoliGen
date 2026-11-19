@@ -77,7 +77,7 @@ def kernels():
 
 
 def test_it_is_the_default_pipelines_own_kernel(kernels):
-    shipped, pipe = kernels
+    shipped, pipe = kernels;  shipped = lg.shipped_inclusive_kernel(_l.li6(), b1_reference_q2=_l.B1_REFERENCE_Q2)   # K1 (2026-11-17): the run reads its b1 as b1/F1 at 2.5 GeV2; the factory keeps the frozen table unless asked (the six-point pins below stay on it)
     for (x, q2) in POINTS:
         a, b = shipped.tables(x, q2), pipe.tables(x, q2)
         for f in FIELDS + ("g2", "b2"):

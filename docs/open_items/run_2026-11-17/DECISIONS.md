@@ -232,3 +232,20 @@ only, because `docs/HEPMC3_CONVENTION.md` lists the `lipolgen.*` run
 attributes and is not edited; a HepMC3 file therefore does not say which
 reading made it (`lipolgen.b1_model` is `miller` under both). Amending the
 convention is the author's.*
+
+**K4 note (2026-11-19, the second) — one report row for what K1 asserts.**
+*The supervisor's choice, under the author's standing instruction that each
+step ends with a benchmarking plot where one applies, concisely. Row
+`t5_b1_spin1_domain` (tier T5: internal consistency, no external data).
+PASS iff (i) on the run-surface kernels of d and ⁶Li the unconfined b₁/F₁
+at x = 0.1, 0.3, 0.5, 0.7, 0.871, 0.955 is the same at Q² = 10, 100, 733.6
+and 1897 GeV² as at 2.5 GeV² to 1e−12 relative (the tolerance phase P1's
+brief declared before its values), and (ii) on every cell of the three
+default windows, for both ions, the run kernel's b₁ lies inside
+−(3/2) F₁ ≤ b₁ ≤ 3 (F₁ − |g₁|) — the domain itself, no tolerance. Part (ii)
+is declared AFTER P1's M5 and M6 were seen (no ⁶Li cell outside; the
+deuteron inside by its confinement), and the row's label says so. Recorded
+beside it, not in the verdict: the frozen table on the same cells (the
+three ⁶Li cells of run 2026-11-10), where the deuteron's confinement still
+binds and on what share of the rate, and the price of the reference scale.
+One figure: b₁/F₁ against Q² at high x, frozen and K1, with the bound.*

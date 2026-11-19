@@ -1,15 +1,15 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""BENCHMARK_PLAN.md sec. 4 rows 4, 5, 6 -- the NUCLEAR-INPUTS harnesses under
+"""BENCHMARK_PLAN.md sec. 4 rows 4 and 5 -- the NUCLEAR-INPUTS harnesses under
 validation/benchmarks/ (tier T3), exercised as tests.
 
-All three are cheap (< 2 s together), so none sits behind LIPOLGEN_BENCH.
+Both are cheap (< 2 s together), so neither sits behind LIPOLGEN_BENCH.
 A harness that DISAGREES with the tree is not a failing test: the test pins
 what the harness MEASURES and that its verdict follows from the numbers.  No
 test here moves, or asserts a new value for, any tree default.
 
   row 4  t3_nmc_li6_over_d.py      NMC F2(6Li)/F2(D) vs EPPS21 (isoscalar)
   row 5  t3_li6_charge_ff_fb.py    UVa FB charge density vs HoSpin1FF C0
-  row 6  t3_li_magnetization_rfy.py  BLOCKED until RFY66 / ADNDT 14 lands
+  (row 6, t3_li_magnetization_rfy.py: python/tests/test_bench_rfy.py since 2026-10-26)
 """
 import hashlib
 import importlib.util
@@ -226,22 +226,33 @@ def test_fb_tree_c0_without_a_zero_is_a_recorded_fail(monkeypatch, capsys):
 
 
 # ------------------------------------------------------------------ row 6
-
-def test_rfy_tree_side_closed_form():
-    """Measured even while the row is blocked: the tree's F_m slope radius is
-    the closed form 6/q_z^2 + (3/2) b^2 of rc.hpp's F_mag."""
-    mod = _load("t3_li_magnetization_rfy")
-    t = mod.tree_side()
-    assert t["r_mag_li6"] == pytest.approx(t["r_mag_li6_closed"], rel=1e-5)
-    assert t["r_mag_li6_closed"] == pytest.approx(2.94688, abs=5e-5)
-    assert t["li7"].startswith("not implemented in the tree")
+# test_rfy_tree_side_closed_form and test_rfy_magnetization_benchmark
+# (2026-09-23 .. 2026-10-26) are retired: row 6 was re-wired on Rand-Frosch-
+# Yearian's Table I on 2026-10-26 and is a measurement (PASS); the closed-form
+# r_mag pin and the verdict live in python/tests/test_bench_rfy.py
+# (test_tree_side_and_rule3, test_verdict_is_pinned;
+# docs/open_items/run_2026-10-26/phase_B2_rfy.md).
 
 
-def test_rfy_magnetization_benchmark():
-    mod = _load("t3_li_magnetization_rfy")
-    rep = mod.run(verbose=False)
-    if rep["status"] == "blocked":
-        assert "Phys. Rev. 144 (1966) 859" in rep["reason"]
-        assert "10.1016/S0092-640X(74)80002-1" in rep["reason"]
-        pytest.skip(rep["reason"])
-    assert rep["status"] in ("pass", "fail")      # pragma: no cover
+def test_t3_nmc_li6_over_d_plot_writes_png(nmc, tmp_path):
+    """plot() draws the row's figure -- a view of the report, never the
+    record -- as a non-empty PNG where it is told to (here a tmp dir)."""
+    pytest.importorskip("matplotlib", reason="matplotlib (the figure only)")
+    mod, _, rep = nmc
+    path = mod.plot(rep, out_dir=str(tmp_path))
+    assert path == os.path.join(str(tmp_path), "t3_nmc_li6_over_d.png")
+    with open(path, "rb") as f:
+        assert f.read(8) == b"\x89PNG\r\n\x1a\n"
+    assert os.path.getsize(path) > 0
+
+
+def test_t3_li6_charge_ff_fb_plot_writes_png(fb, tmp_path):
+    """plot() draws the row's figure -- a view of the report, never the
+    record -- as a non-empty PNG where it is told to (here a tmp dir)."""
+    pytest.importorskip("matplotlib", reason="matplotlib (the figure only)")
+    mod, rep = fb
+    path = mod.plot(rep, out_dir=str(tmp_path))
+    assert path == os.path.join(str(tmp_path), "t3_li6_charge_ff_fb.png")
+    with open(path, "rb") as f:
+        assert f.read(8) == b"\x89PNG\r\n\x1a\n"
+    assert os.path.getsize(path) > 0

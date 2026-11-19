@@ -229,7 +229,7 @@ does not warn about mismatched run-info objects:
 
   **`Event::rc_weights` is EMPTY when the run has `--rc off`** (the default),
   and then no `rc_*` name is registered and no extra weight value is written:
-  such a file is **byte-identical** to one written before `rc.hpp` existed.
+  its weight block is exactly the pre-`rc.hpp` one (since A10 the file also carries the `lipolgen.*` run attributes, last section).
   That is a gated property, not an aspiration —
   `tests/test_hepmc.cpp` (T15, T15b) and `tests/test_rc_pipeline.cpp` (T6)
   assert it.
@@ -251,3 +251,56 @@ writing it anyway desyncs the vertex count in the `E` line from what
 vertex here always has exactly two incoming beam particles, so
 `HepMC3::WriterAscii` is used as-is (no hand-rolled ASCII) and the vertex is
 written like any other.
+
+## Run provenance attributes
+
+*Added 2026-11-06 under decision A10 of 2026-11-03 (`docs/open_items/run_2026-11-03/DECISIONS.md`,
+the supervisor's choice under the author's delegation); appended, so no line above moved.*
+
+The file's one `GenRunInfo` also carries the run's **physics provenance** as
+`GenRunInfo` string attributes, every name with the one prefix `lipolgen.`:
+`lipolgen.<key>` holds exactly the string the run's npz `meta[<key>]` holds
+(labels included, e.g. `lipolgen.cluster_wave` = `not read on channel inclusive`),
+so a HepMC3 file and the npz of the same run say the same thing. The keys are
+`version`, `channel`, `isotope`, `plan` (when the caller named one),
+`delta_convention` (the Δ normalisation of the cos 2φ term, D4),
+`cluster_wave` (D6), `unpol_sf` and `pol_sf` (D7), `b1_model`, `b1_unpol`,
+`r_source`; `rc`, `rc_tail_model` (D5), `rc_c0_shape` and `rc_scope` when RC
+is on; `fsi` when an FSI weight is built; `li6_cluster_polarization`,
+`deuteron_p_d`, `li6_b1_rank2_transfer` (A1) where the inclusive run reads
+them, written `%.17g` so they round-trip to the npz's numbers; and
+`unpol_sf_extrapolation` / `pol_sf_extrapolation` (D7's frozen grids). One
+function lists them —
+`lipolgen::run_provenance` (`include/lipolgen/pipeline.hpp`), from which the npz
+`meta` fills the same keys — and `HepMC3Writer::set_run_attributes` writes
+them; `lipolgen-run --hepmc`, `Pipeline.write_hepmc` and the `generate_tagged`
+/ `generate_coherent` / `generate_full` examples pass it, so every path that
+holds a `Pipeline` writes the same keys.
+
+*J6 (2026-11-10; `docs/open_items/run_2026-11-10/DECISIONS.md` J6, the
+supervisor's choice under the author's delegation).* Since J6 the two
+extrapolation keys come from `run_provenance` itself — each backend answers for
+itself (`UnpolSF::extrapolation` / `PolSF::extrapolation`; the LHAPDF tier's
+`nearest`), with the strings the Python module wrote before — so the C++
+examples carry them too. A writer that is never given the map
+(`generate_inclusive`, `write_hepmc_example`, `hadronize_example`, which hold
+no `Pipeline`) writes ONE attribute instead, `lipolgen.run_provenance`, and its
+value is:
+
+`not recorded -- this file was written through the LiPolGen HepMC3 writer without a Pipeline's run attributes, so it carries no record of the physics settings (structure functions, conventions, models) that produced its events`
+
+so a file without provenance says so and is told apart from one written before
+A10 (which has no `lipolgen.*` attribute at all); a file whose attributes were
+set never carries `lipolgen.run_provenance`. On an inclusive deuteron run
+`lipolgen.li6_b1_rank2_transfer` carries a label, `not read on isotope d -- …`
+(J1), not a number, and `lipolgen.pol_sf` / `lipolgen.pol_sf_extrapolation`
+name the backend under every fill, the tensor plans included, because g₁
+bounds the deuteron's rank-2 slot (the J1 note of 2026-11-12).
+`g1_clipped_rate_fraction` and `b1_clipped_rate_fraction` — the shares of the
+rate the |g₁| ≤ F₁ clip and the deuteron's spin-1 confinement bind on — are
+npz `meta` keys only, not run attributes.
+
+The attributes sit in the run-level block written before the first event, so
+every event shares them through its one `GenRunInfo`; they change no weight
+name, no weight value and no event record, and a reader that ignores unknown
+run attributes reads the file as before.

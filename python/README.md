@@ -209,7 +209,7 @@ rho = lg.rho_from_populations(1.0, [0.5, 0.3, 0.2], theta=0.9, phi=0.4)
 lg.vector_polarization(rho, 1.0), lg.tensor_polarization(rho, 1.0)
 lg.populations_maxent(1.0, 8/13)             # (P_z, P_zz) = (8/13, 4/13)
 
-# structure functions: a toy backend is always there, tables/LHAPDF optional
+# structure functions: the toys are always there; the run DEFAULTS since D7 are LHAPDF grids
 f2 = lg.ToyF2(); g1 = lg.ToyG1(f2)
 b1 = lg.Li6B1(lg.MillerB1())                 # the rank-2 transfer to 6Li
 if lg._lipolgen.HAVE_LHAPDF:
@@ -246,11 +246,11 @@ lg.estimators.cos2phi_fit(phi_prime, pzz=0.6, nbins=36)
 
 ```python
 beams  = lg.default_configs("6Li")[1]
-bridge = lg.PythiaBridge(beams, lg.PythiaBridgeOptions())
+o = lg.PythiaBridgeOptions(); lg.fill_grid_sf_backends(cfg_pipeline); o.f2_source = cfg_pipeline.unpol_sf_obj  # D7: the run's own F2
+bridge = lg.PythiaBridge(beams, o)                # its T2 species draw on that same object
 lg.set_pythia_hadronizer(cfg_pipeline, bridge)   # a pure C++ hook, no GIL
 p   = lg.Pipeline(cfg_pipeline, plan)
-ev  = p.generate(0, events=True, nthreads=1)     # PythiaBridge is not re-entrant
-print(bridge.stats.n_ok, bridge.stats.n_failed)
+ev  = p.generate(0, events=True, nthreads=1); print(bridge.stats.n_ok, bridge.stats.n_failed)  # not re-entrant
 ```
 
 A hadronizer assigned as a **Python callable** (`cfg.hadronizer = f`) also
@@ -264,7 +264,7 @@ bridge must be given **the same object**: `opts.f2_source = cfg.unpol_sf_obj`
 before `PythiaBridge(...)`. `set_pythia_hadronizer` refuses any other bridge —
 otherwise the run would draw its T2 species from one backend while
 `meta["unpol_sf"]` named another (the toy's F2n/F2p is up to 24 % from
-CT18NLO's). Both unset, as above, is the default and is fine.
+CT18NLO's). Both unset is fine on the toys NAMED; since D7 the default is CT18NLO, attached lazily.
 `lipolgen-run` and `lipolgen.run(hadronize=True, ...)` do this wiring for you.
 
 ---
@@ -375,6 +375,14 @@ rather than reading past its tables.
 --events N | --lumi PB       exclusive
 --seed --run --pz --pzz --pe --rel-lumi-offset
 --cluster-beta --p-d --inclusive-b1
+                             --cluster-beta / --p-d: the ANALYTIC (hulthen)
+                             radial scale and 6Li alpha-d D state -- unread on
+                             the default vmc, bar --cluster-beta on the 7Li T1
+                             triton breakup (the knob table says which)
+--cluster-wave vmc|hulthen   cluster radial forms of the TAGGED channels: 'vmc'
+                             (the ANL VMC AV18 tables) is the default since D6
+                             (2026-10-27), 'hulthen' the analytic pair; an
+                             explicit value is refused on inclusive/coherent
 --triton-sf hulthen|ciofi-simula
                              triton spectral function of the 7Li alpha tag's
                              T1 ('hulthen' default, bit-compatible; 'ciofi-

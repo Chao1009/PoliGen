@@ -109,3 +109,137 @@ def test_electron_generated_mass_is_the_pdg_mass(written):
             assert electrons
             for q in electrons:
                 assert q.generated_mass == pytest.approx(0.51099895e-3, rel=1e-9)
+
+
+def test_a10_a_cli_file_carries_the_npz_meta_as_run_attributes(tmp_path):
+    """A10 (2026-11-03; DECISIONS.md A10, the supervisor's choice under the
+    author's delegation): a `lipolgen-run --hepmc` file records the run's
+    physics provenance as `lipolgen.<key>` GenRunInfo attributes whose values
+    are exactly the npz meta's of the same run (docs/HEPMC3_CONVENTION.md,
+    "Run provenance attributes"), on the default tagged run, an RC run and
+    an inclusive run where the cluster wave and the tail model are labels."""
+    import json
+    from lipolgen import cli
+    for tag, argv in (("tag", ["--channel", "tagged-6Li-alpha"]),
+                      ("rc", ["--channel", "tagged-6Li-alpha", "--rc", "tensor-band"]),
+                      ("inc", ["--channel", "inclusive", "--cluster-wave", "vmc"])):
+        h, z = str(tmp_path / (tag + ".hepmc")), str(tmp_path / (tag + ".npz"))
+        assert cli.main(argv + ["--events", "50", "--seed", "3", "--hepmc", h,
+                                "--npz", z, "--quiet"]) == 0
+        meta = json.loads(str(np.load(z, allow_pickle=False)["meta"]))
+        with pyhepmc.open(h) as f:
+            evs = list(f)
+        ours = {k[len("lipolgen."):]: str(v)
+                for k, v in evs[0].run_info.attributes.items()
+                if k.startswith("lipolgen.")}
+        assert {"version", "delta_convention", "cluster_wave", "unpol_sf",
+                "pol_sf", "unpol_sf_extrapolation"} <= set(ours), (tag, ours)
+        for k, v in ours.items():
+            m = meta[k]
+            assert (v == m) if isinstance(m, str) else float(v) == m, (tag, k, v, m)
+        for ev in evs[1:]:
+            assert {k: str(v) for k, v in ev.run_info.attributes.items()} == \
+                {k: str(v) for k, v in evs[0].run_info.attributes.items()}
+        if tag == "rc":
+            assert ours["rc_tail_model"] == "not read on channel tagged-6Li-alpha"
+        if tag == "inc":
+            assert ours["cluster_wave"] == "not read on channel inclusive"
+            assert "li6_cluster_polarization" in ours
+
+
+def test_j6_extrapolation_keys_and_the_absence_attribute(tmp_path):
+    """J6 (2026-11-10; docs/open_items/run_2026-11-10/DECISIONS.md J6, the
+    supervisor's choice under the author's delegation): the two
+    `*_sf_extrapolation` keys come from `run_provenance` itself, so the
+    Python path (`hepmc_run_attributes`) and a C++ caller of `run_provenance`
+    write the same map, equal to the npz meta's; a file whose writer is never
+    given the map carries ONE attribute saying so (HepMC3_CONVENTION.md, "Run
+    provenance attributes"); on an inclusive deuteron run the transfer is a
+    label and pol_sf / pol_sf_extrapolation name the backend on a tensor
+    plan; the two clip shares are npz meta keys only."""
+    import json
+    from lipolgen import cli
+    for tag, argv in (("d", ["--channel", "inclusive", "--isotope", "d"]),
+                      ("li6hf", ["--channel", "inclusive", "--plan", "helicity-flip"]),
+                      ("coh", ["--channel", "coherent"]),
+                      ("toy", ["--channel", "tagged-d-p", "--plan", "helicity-flip", "--unpol-sf", "toy", "--pol-sf", "toy"])):
+        h, z = str(tmp_path / (tag + ".hepmc")), str(tmp_path / (tag + ".npz"))
+        assert cli.main(argv + ["--events", "20", "--seed", "3", "--hepmc", h,
+                                "--npz", z, "--quiet"]) == 0
+        meta = json.loads(str(np.load(z, allow_pickle=False)["meta"]))
+        with pyhepmc.open(h) as f:
+            ev0 = next(iter(f))
+        ours = {k[len("lipolgen."):]: str(v) for k, v in ev0.run_info.attributes.items()
+                if k.startswith("lipolgen.")}
+        for k in ("unpol_sf_extrapolation", "pol_sf_extrapolation"):
+            assert ours[k] == meta[k], (tag, k)
+        assert "run_provenance" not in ours
+        assert not {"g1_clipped_rate_fraction", "b1_clipped_rate_fraction"} & set(ours)
+        if tag == "d":
+            assert meta["plan"] == "tensor-thirds"
+            assert ours["pol_sf"] == "nnpdfpol" and ours["pol_sf_extrapolation"] == "nearest"
+            assert ours["li6_b1_rank2_transfer"].startswith("not read on isotope d")
+            assert "b1_clipped_rate_fraction" in meta
+        if tag == "li6hf":
+            assert ours["unpol_sf_extrapolation"] == ours["pol_sf_extrapolation"] == "nearest"
+        if tag == "coh":
+            assert ours["pol_sf_extrapolation"] == ours["pol_sf"] == "not read on channel coherent-6Li"
+        if tag == "toy":
+            assert ours["unpol_sf_extrapolation"] == ours["pol_sf_extrapolation"] == "none (closed-form toy)"
+    p = lg.make_pipeline(isotope="6Li", channel="inclusive", events=5)
+    assert lg.hepmc_run_attributes(p) == lg.run_provenance(p)
+    bare = str(tmp_path / "bare.hepmc")
+    cols = lg.run(channel="tagged-6Li-alpha", events=3, seed=3, keep_events=True)
+    with lg.HepMC3Writer(bare) as w:
+        for ev in cols["events"]:
+            w.write(ev)
+    lines = [s for s in open(bare).read().splitlines() if s.startswith("A lipolgen.")]
+    assert lines == ["A lipolgen.run_provenance " + lg.HepMC3Writer.NO_RUN_PROVENANCE]
+    with pyhepmc.open(bare) as f:
+        evs = list(f)
+    assert all(str(e.run_info.attributes["lipolgen.run_provenance"])
+               == lg.HepMC3Writer.NO_RUN_PROVENANCE for e in evs)
+
+
+def test_v_code1_a_wrapped_lhapdf_grid_reports_the_grid_it_wraps():
+    """V (2026-11-17), CODE-1 (the supervisor's ruling of 2026-11-17 under
+    J6, docs/open_items/run_2026-11-10/DECISIONS.md): `PositivityClippedG1`
+    answers `extrapolation()` and the two polarised grid keys for the backend
+    it wraps.  A caller's wrapped LHAPDF grid reports what the bare grid
+    reports; a wrapped toy what a bare toy object reports; the default and
+    the toy selector paths are unchanged."""
+    import math
+    _l = lg._lipolgen
+    if not _l.HAVE_LHAPDF:
+        pytest.skip("no LHAPDF tier")
+    keys = ("pol_sf_extrapolation", "pol_sf_grid_q2_min", "pol_sf_below_grid_frac")
+
+    def run(obj=None, toy=False):
+        cfg = lg.make_config(isotope="6Li", events=20)
+        if toy:
+            _l.set_pol_sf(cfg, _l.PolSfSource.Toy)
+        if obj is not None:
+            cfg.pol_sf_obj = obj
+        m = _l.Pipeline(cfg, _l.helicity_flip_plan(1.0, 0.7, 0.7)).generate()["meta"]
+        m = m if isinstance(m, dict) else __import__("json").loads(str(m))
+        return m
+
+    def same(a, b):
+        return all((isinstance(a[k], float) and math.isnan(a[k]) and math.isnan(b[k])) or a[k] == b[k]
+                   for k in keys)
+
+    default = run()
+    assert default["pol_sf"] == "nnpdfpol" and default["pol_sf_extrapolation"] == "nearest"
+    assert default["pol_sf_grid_q2_min"] == 1.0 and default["pol_sf_below_grid_frac"] == 0.0
+    toysel = run(toy=True)
+    assert toysel["pol_sf_extrapolation"] == "none (closed-form toy)"
+    assert (toysel["pol_sf_grid_q2_min"], toysel["pol_sf_below_grid_frac"]) == (0.0, 0.0)
+    grid = _l.make_lhapdf_pol_sf(_l.POL_SF_DEFAULT)
+    bare, wrapped = run(grid), run(_l.PositivityClippedG1(grid))
+    assert bare["pol_sf"] == wrapped["pol_sf"] == "custom"
+    assert same(bare, wrapped) and wrapped["pol_sf_extrapolation"] == "nearest"
+    assert wrapped["pol_sf_grid_q2_min"] == default["pol_sf_grid_q2_min"]
+    bare_toy, wrapped_toy = run(_l.ToyG1()), run(_l.PositivityClippedG1(_l.ToyG1()))
+    assert same(bare_toy, wrapped_toy)
+    assert wrapped_toy["pol_sf_extrapolation"] == "the backend's own (not an LHAPDF grid)"
+    assert math.isnan(wrapped_toy["pol_sf_grid_q2_min"]) and math.isnan(wrapped_toy["pol_sf_below_grid_frac"])

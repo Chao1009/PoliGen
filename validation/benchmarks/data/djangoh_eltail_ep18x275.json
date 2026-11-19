@@ -1,0 +1,4104 @@
+{
+ "_note": "Vendored NUMBERS from private DJANGOH 4.6.21 runs made for BENCHMARK_PLAN.md sec. 4 row 7 (run 2026-10-26, phase B3), with every input card verbatim; the program itself is not vendored. Read with validation/benchmarks/t4_djangoh_rad_noRad.py, whose header block 'THE DESIGN AND THE TOLERANCE' fixed every setting before the runs (design_block_sha256).",
+ "name": "DJANGOH 4.6.21 elastic radiative tail (IEL31+IEL32+IEL33) and Born, e- 18 x p 275 GeV, four Q2 bins in the matched window; plus the eight-card control against the ePIC samples",
+ "provenance": {
+  "generator": "DJANGOH 4.6.21 = HERACLES 4.6.21 (banner 'VERSION 4.6.21, 05.12.2022', identical to the eight ePIC logs) with PYTHIA 6.424-dj / JETSET 7.409 / SOPHIA as shipped; HERACLES mode, integration only (START 0: no event sampling)",
+  "source_repository": "https://github.com/spiesber/DJANGOH",
+  "source_commit": "e356b847bcacf2f1596ac4ea42c677cef0614176 (main, 2024-12-16, 'Add files via upload')",
+  "source_licence": "NONE STATED: the GitHub API reports license = null for spiesber/DJANGOH (checked 2026-10-26) and no LICENSE file exists at the commit. The program is not vendored; only numbers it printed and the input cards of these runs are reproduced, as facts with attribution.",
+  "source_files_sha256": {
+   "djangoh_h-4.6.21.f": "174f55c6b6ae319af2d8c4d27e5eee0f694b3fcc2a16b04e932b1dee0491d3f6",
+   "djangoh_l.f": "c1607f0c5e45063452bdea3c031f2abca15b6c48397b41a77a3acb3b2f1ab54e",
+   "djangoh_u.f": "d57f3f990a133abd53f6359dbb17da47d75af7f132610dd6bdf9986dc6c8b501",
+   "djangoh_p.f": "b44cf0d362ae0c2143bc0637e41cf239c1fb878d2fcf131e73d2abaad4a68ea9",
+   "djangoh_t.f": "afaeb7f633cb2b9e0d9654aabf37cc1c19096c4c1b7500107d1d5e7f9b3b92eb",
+   "sophia-dj.f": "c7d8596592835c970f07056ae411be97d67ee69b613386aac8003532d708aeda",
+   "pythia-6.4.24-dj.f": "9978ed0aa5b60895c3348d3ca6cebc5761720202e82fbc8f0aa1247cdf2a13d3",
+   "jetset7409.f": "7a4973ab2e765561d1685fde0b76b8be8d1a443ac1c71265eff4efcd0120c841",
+   "gmc_random.f": "a95ff8dc848379e28fba9ea7cd0dcdca4f4f1346fe28d00e11ed98de28c842bf",
+   "cernlibs.f": "87560152737cb735b2d0133ba53d22ec3489d886378a498e7bec22ecbc952e9f",
+   "Makefile-sample": "aea6f7535d4a767655649bd000a4dfb666a671c44cfbba3052eabb7e00511341",
+   "config.mk": "34383d8d4bf594f8fde9c37c43d27b29f36b3ccbd725ac74d42c76fdb83ef90f"
+  },
+  "source_note": "djangoh_h-4.6.21.f was built as djangoh_h.f; the repository's own djangoh_h.f is VERSION 4.6.20, which differs only by the version strings, the HSFLAB/HSACPT zero-transverse-momentum guards of manual sec. 15.1 and comments",
+  "manual": {
+   "file": "djangoh_m-4.6.21.pdf (in the repository at e356b84)",
+   "sha256": "14804a4d118a7a1b33c0ca9e407c7bfb7a0047aea9e92eb398f1cd73f81df50b",
+   "read": "sec. 7 (radiative tail from elastic scattering, Ref. [38] = R. D. Bucoveanu and H. Spiesberger, Eur. Phys. J. A 55 (2019) 57), sec. 9.1 (INT-OPT-NC, SAM-OPT-NC, KINEM-CUTS, INT-ONLY, RNDM-SEEDS, EP-DIPOLE, FLONG), sec. 14 (kinematical cuts), sec. 15 (XIRDEL, the elastic-tail channels since HERACLES 4.6.1)"
+  },
+  "build": {
+   "compiler": "GNU Fortran (Ubuntu 11.4.0-1ubuntu1~22.04.3) 11.4.0",
+   "flags": "-O -Wall -fno-automatic -fcheck=all -g -fbacktrace -ffpe-trap=invalid,zero -fallow-argument-mismatch (config.mk of the repository with LHAPDF set to the deps prefix; -pedantic removed and -fallow-argument-mismatch added: gfortran 11 refuses the REAL(4)/REAL(8) mismatch of the two PYINIT calls in djangoh_h.f, LYSTFU and HSWPDF, under -pedantic; no source line was changed)",
+   "makefile": "Makefile-sample copied to Makefile, unchanged",
+   "config_mk_sha256": "a01f275844c833e1bd35ef19ac7f8522052bfcdaf3892aa598fb0a5fab22e8a2",
+   "binary_sha256": "5aea6fa82f10c78d2847f0d2e5f20d2a344b91a91e5129acfe9854d1a8498c72",
+   "built_utc": "2026-10-26T18:59:43Z (42 s wall, 778 compiler warnings)",
+   "lhapdf": "LHAPDF 6.5.5 (the deps prefix /home/cpeng/Projects/polli/deps/install, built by .github/scripts/build_deps.sh), linked through its LHAGLUE Fortran interface (PYTHIA-type PDFSET, 'LHAPDF6 USING PYTHIA-TYPE LHAGLUE INTERFACE')",
+   "machine": "Linux 6.8.0-124-generic x86_64, AMD Ryzen 9 5900HX, Ubuntu 22.04"
+  },
+  "pdf": {
+   "set": "cteq61, LHAPDF6 SetIndex 10150, member 0 (CTEQ6.1M central; STRUCTFUNC 0 2 10150, the ePIC value)",
+   "fetched": "2026-10-26 with curl from https://lhapdfsets.web.cern.ch/current/cteq61.tar.gz (the lhapdf CLI of the prefix needs its python module, which is not built); kept outside the repository",
+   "tarball_sha256": "5a6f1393d1ff4d946dd23642628f5ca14a6648ab06bdebcf949a8f550a620b92",
+   "member0_sha256": "730c2ce09cab0f5a1b11f86ac045009329eb6467e95950422be18455489ce5ac",
+   "info_sha256": "e437877fd1d7dcdec8f0d47addb71157d5cbfa60aa8576e4f9351b2342d876e0",
+   "difference_from_epic": "the ePIC logs load LHAPDF 5.9.1's cteq61.LHgrid (/cvmfs/sft.cern.ch/lcg/external/lhapdfsets/5.9.1); here LHAPDF 6.5.5's lhagrid1 conversion of the same set -- an interpolation difference (and a different extrapolation below the set's Q_min = 1.3 GeV)",
+   "used_by": "the DIS Born (the displayed fraction's denominator) and the control; the elastic tail carries no PDF"
+  },
+  "epic_templates": {
+   "repository": "https://github.com/eic/InclusiveDjangohSamples",
+   "commit": "9869d9a0d21b9191a1bbec7294b4851feb5ee20a",
+   "runcards_sha256": {
+    "ep.Rad=0.NC.Q2_1000_10000.in": "1f3549a650525210879a00951eb10e7de534edbd1c82f7dba219f4bb26a20857",
+    "ep.Rad=0.NC.Q2_100_1000.in": "81242a5807ab5eba35ef15cf53475747d0ee3f461ba223ac87255d405259562e",
+    "ep.Rad=0.NC.Q2_10_100.in": "f1d7fce4b3690fe41442cedeeb4b8779c4103bb5996afe17cb1f8ea6ac99ab73",
+    "ep.Rad=0.NC.Q2_1_10.in": "a32711adceb3437891e616f0ddbbd22565ed1799f385aa47b7c8ac805de7ad9c",
+    "ep.Rad=1.NC.Q2_1000_10000.in": "8e4d11ee31400be95576a3ce0ca8ca66d17e025be74ca8f376534699da2bc9a3",
+    "ep.Rad=1.NC.Q2_100_1000.in": "2feb0ea4c56ae6db11525f75d1f213411d49ccfa882fd78eb3d09fbe8e45642f",
+    "ep.Rad=1.NC.Q2_10_100.in": "e58b19f969eb68cde90365ede428dfde58d0287343161ced11ff1f5f516d26f3",
+    "ep.Rad=1.NC.Q2_1_10.in": "a30c1ca83b3c06c90d2404472e4da7f6b570c45e9af2825adfeb2ac81b50d00b"
+   },
+   "check": "each runcard's git blob sha1 equals the tree entry at the pinned commit (verified 2026-10-26)",
+   "licence": "NONE STATED (as for djangoh_rad_norad_ep18x275.json): the cards below are derived settings, reproduced as facts with attribution"
+  },
+  "design": {
+   "harness": "validation/benchmarks/t4_djangoh_rad_noRad.py",
+   "design_block_sha256": "fbe067892c7d3b8d6de27f32ce1c52138bd80162b24a7b1677dc6d412af2c91b",
+   "design_written_utc": "2026-10-26T19:11:53Z"
+  },
+  "timeline_utc": {
+   "build_done": "2026-10-26T18:59:43Z",
+   "design_block_written": "2026-10-26T19:11:53Z",
+   "first_run (control_Rad0_Q2_10_100, smoke test of the control card)": "2026-10-26T19:13:21Z",
+   "control_runs": "2026-10-26T19:13:35Z - 19:14:22Z",
+   "isolating_runs": "2026-10-26T19:14:44Z - 19:16:37Z"
+  },
+  "run_by": "run 2026-10-26 phase B3 worker (Claude Opus 5.5) for the LiPolGen benchmark plan; driver tools/djrun.py and vendor tools/vendor_eltail.py kept in the session scratch directory, outside the repository",
+  "papers": [
+   "A. Kwiatkowski, H. Spiesberger, H.-J. Moehring, Comput. Phys. Commun. 69 (1992) 155 (HERACLES)",
+   "K. Charchula, G. A. Schuler, H. Spiesberger, Comput. Phys. Commun. 81 (1994) 381 (DJANGO6)",
+   "H. Spiesberger, DJANGOH manual, version 4.6.21 (djangoh_m-4.6.21.pdf at e356b84)",
+   "R. D. Bucoveanu, H. Spiesberger, Eur. Phys. J. A 55 (2019) 57, arXiv:1811.04970 (the elastic radiative tail, manual Ref. [38])",
+   "CTEQ6.1: arXiv:hep-ph/0303013 (the reference the cteq61 .info file names)"
+  ],
+  "publishing_convention": "nb per e-p collision; A = Z = 1, so per nucleus = per nucleon; unpolarised e- beam and proton"
+ },
+ "units": "nb per e-p collision (A = Z = 1: per nucleus = per nucleon); every per-bin number is sigma(Q2_l >= Q2_lo) - sigma(Q2_l >= Q2_hi) of two runs with identical cards otherwise, errors in quadrature",
+ "window": {
+  "definition": "Q2_lo <= Q2_l < Q2_hi, 1e-5 <= x_l <= xmax(bin), 1e-4 <= y_l <= 0.985; leptonic variables (KINEM-CUTS ICUT = 3); WMIN input 0.0 GeV, raised to M_p = 0.93828 GeV by HSPRLG; xmax = Q2_lo/(Q2_lo + 9 GeV^2 - M_p^2) rounded down to 4 decimals, capped at 0.95, so W_l^2 >= 9 GeV^2 on the whole rectangle",
+  "q2_edges": [
+   1.0,
+   10.0,
+   100.0,
+   1000.0,
+   10000.0
+  ],
+  "xmax": [
+   0.1096,
+   0.5518,
+   0.9249,
+   0.95
+  ],
+  "x_min": 1e-05,
+  "y_min": 0.0001,
+  "y_max": 0.985,
+  "wmin_input_gev": 0.0,
+  "q2max_in_cards": 100000000.0
+ },
+ "bins": [
+  {
+   "q2_lo": 1.0,
+   "q2_hi": 10.0,
+   "xmax": 0.1096,
+   "born_nb": 574.056,
+   "born_err_nb": 0.06359561720244564,
+   "born_direct_q2max_nb": 574.04,
+   "tail_novp_nb": 23.3808849182754,
+   "tail_novp_err_nb": 0.008729216540547875,
+   "tail_novp_channels_nb": {
+    "IEL31": [
+     8.773635936,
+     0.004591950583891337
+    ],
+    "IEL32": [
+     1.1588300522754,
+     0.0004946200008841348
+    ],
+    "IEL33": [
+     13.44841893,
+     0.007407331658674398
+    ]
+   },
+   "tail_vp_nb": 23.7356604363841,
+   "tail_vp_err_nb": 0.008824327415910728,
+   "tail_vp_channels_nb": {
+    "IEL31": [
+     8.987014954,
+     0.004704876533907771
+    ],
+    "IEL32": [
+     1.2005402823841,
+     0.0005066500009648552
+    ],
+    "IEL33": [
+     13.5481052,
+     0.007448234483446396
+    ]
+   },
+   "tail_novp_direct_q2max_nb": 24.54888684
+  },
+  {
+   "q2_lo": 10.0,
+   "q2_hi": 100.0,
+   "xmax": 0.5518,
+   "born_nb": 67.6268,
+   "born_err_nb": 0.007097760589819862,
+   "born_direct_q2max_nb": 67.628,
+   "tail_novp_nb": 1.111466620112,
+   "tail_novp_err_nb": 0.0005334199963026712,
+   "tail_novp_channels_nb": {
+    "IEL31": [
+     0.144296230553,
+     9.994175520476915e-05
+    ],
+    "IEL32": [
+     0.000128126059,
+     5.0657e-08
+    ],
+    "IEL33": [
+     0.9670422635,
+     0.0005239737927186817
+    ]
+   },
+   "tail_vp_nb": 1.12622696884,
+   "tail_vp_err_nb": 0.0005393974162704044,
+   "tail_vp_channels_nb": {
+    "IEL31": [
+     0.148491459355,
+     0.00010973284340161107
+    ],
+    "IEL32": [
+     0.000135149385,
+     5.3462e-08
+    ],
+    "IEL33": [
+     0.9776003601,
+     0.0005281176695585937
+    ]
+   },
+   "tail_novp_direct_q2max_nb": 1.168143105059
+  },
+  {
+   "q2_lo": 100.0,
+   "q2_hi": 1000.0,
+   "xmax": 0.9249,
+   "born_nb": 3.2261130000000002,
+   "born_err_nb": 0.0003296230393308241,
+   "born_direct_q2max_nb": 3.2261,
+   "tail_novp_nb": 0.05516243362021,
+   "tail_novp_err_nb": 2.435614349890975e-05,
+   "tail_novp_channels_nb": {
+    "IEL31": [
+     0.0005577649802100001,
+     8.842268470158605e-07
+    ],
+    "IEL32": [
+     0.0,
+     0.0
+    ],
+    "IEL33": [
+     0.05460466864,
+     2.4340087695456234e-05
+    ]
+   },
+   "tail_vp_nb": 0.05599630833852,
+   "tail_vp_err_nb": 2.472971336594804e-05,
+   "tail_vp_channels_nb": {
+    "IEL31": [
+     0.00057406078852,
+     7.848044314024991e-07
+    ],
+    "IEL32": [
+     0.0,
+     0.0
+    ],
+    "IEL33": [
+     0.05542224755,
+     2.4717257233892275e-05
+    ]
+   },
+   "tail_novp_direct_q2max_nb": 0.056681327782999995
+  },
+  {
+   "q2_lo": 1000.0,
+   "q2_hi": 10000.0,
+   "xmax": 0.95,
+   "born_nb": 0.069364414,
+   "born_err_nb": 6.938700367595791e-06,
+   "born_direct_q2max_nb": 0.069364,
+   "tail_novp_nb": 0.00151825766947284,
+   "tail_novp_err_nb": 5.879800794519737e-07,
+   "tail_novp_channels_nb": {
+    "IEL31": [
+     3.17286731184e-06,
+     9.70081288489377e-09
+    ],
+    "IEL32": [
+     0.0,
+     0.0
+    ],
+    "IEL33": [
+     0.001515084802161,
+     5.879000493806082e-07
+    ]
+   },
+   "tail_vp_nb": 0.00154957486410992,
+   "tail_vp_err_nb": 6.025917034798885e-07,
+   "tail_vp_channels_nb": {
+    "IEL31": [
+     3.26697948092e-06,
+     5.875900354367532e-08
+    ],
+    "IEL32": [
+     0.0,
+     0.0
+    ],
+    "IEL33": [
+     0.001546307884629,
+     5.997200518619901e-07
+    ]
+   },
+   "tail_novp_direct_q2max_nb": 0.00151892722796
+  }
+ ],
+ "control": [
+  {
+   "q2_lo": 1.0,
+   "q2_hi": 10.0,
+   "rad": 0,
+   "sigma_nb": 628.04,
+   "sigma_err_nb": 0.062804,
+   "epic_readme_nb": 627.8853416,
+   "epic_rel_err": 0.0001,
+   "ratio_minus_1": 0.0002463163092896181,
+   "combined_rel_err": 0.0001414213562373095,
+   "pull": 1.7417193261553197,
+   "reproduced": true
+  },
+  {
+   "q2_lo": 1.0,
+   "q2_hi": 10.0,
+   "rad": 1,
+   "sigma_nb": 673.65,
+   "sigma_err_nb": 0.15371,
+   "epic_readme_nb": 673.3778912,
+   "epic_rel_err": 0.00047,
+   "ratio_minus_1": 0.00040409523917550594,
+   "combined_rel_err": 0.0005224593481824205,
+   "pull": 0.7734481937806444,
+   "reproduced": true
+  },
+  {
+   "q2_lo": 10.0,
+   "q2_hi": 100.0,
+   "rad": 0,
+   "sigma_nb": 67.986,
+   "sigma_err_nb": 0.0067986,
+   "epic_readme_nb": 67.97276736,
+   "epic_rel_err": 0.0001,
+   "ratio_minus_1": 0.0001946756107473746,
+   "combined_rel_err": 0.0001414213562373095,
+   "pull": 1.376564444911013,
+   "reproduced": true
+  },
+  {
+   "q2_lo": 10.0,
+   "q2_hi": 100.0,
+   "rad": 1,
+   "sigma_nb": 74.031,
+   "sigma_err_nb": 0.014462,
+   "epic_readme_nb": 74.05000238999999,
+   "epic_rel_err": 0.00043,
+   "ratio_minus_1": -0.00025661565680856757,
+   "combined_rel_err": 0.00047229424673905784,
+   "pull": -0.5433385195359949,
+   "reproduced": true
+  },
+  {
+   "q2_lo": 100.0,
+   "q2_hi": 1000.0,
+   "rad": 0,
+   "sigma_nb": 3.2401,
+   "sigma_err_nb": 0.00032401,
+   "epic_readme_nb": 3.23963694,
+   "epic_rel_err": 0.0001,
+   "ratio_minus_1": 0.00014293576983348544,
+   "combined_rel_err": 0.0001414213562373095,
+   "pull": 1.010708521233771,
+   "reproduced": true
+  },
+  {
+   "q2_lo": 100.0,
+   "q2_hi": 1000.0,
+   "rad": 1,
+   "sigma_nb": 3.7603,
+   "sigma_err_nb": 0.00076388,
+   "epic_readme_nb": 3.760005602,
+   "epic_rel_err": 0.00047,
+   "ratio_minus_1": 7.829722377095116e-05,
+   "combined_rel_err": 0.0005120226823486534,
+   "pull": 0.15291749070920252,
+   "reproduced": true
+  },
+  {
+   "q2_lo": 1000.0,
+   "q2_hi": 10000.0,
+   "rad": 0,
+   "sigma_nb": 0.070161,
+   "sigma_err_nb": 7.0161e-06,
+   "epic_readme_nb": 0.07015936779,
+   "epic_rel_err": 0.0001,
+   "ratio_minus_1": 2.3264320238691738e-05,
+   "combined_rel_err": 0.0001414213562373095,
+   "pull": 0.16450358600474368,
+   "reproduced": true
+  },
+  {
+   "q2_lo": 1000.0,
+   "q2_hi": 10000.0,
+   "rad": 1,
+   "sigma_nb": 0.086138,
+   "sigma_err_nb": 1.8522e-05,
+   "epic_readme_nb": 0.08615325533,
+   "epic_rel_err": 0.00045,
+   "ratio_minus_1": -0.00017707200896310837,
+   "combined_rel_err": 0.0004987350319232101,
+   "pull": -0.3550422521559946,
+   "reproduced": true
+  }
+ ],
+ "runs": {
+  "born_1000_10000_direct_q2max": {
+   "name": "born_1000_10000_direct_q2max",
+   "exit": 0,
+   "wall_s": 0.1,
+   "started_utc": "2026-10-26T19:16:29+00:00",
+   "card_sha256": "09ba21868803eda9174da47ef4f8c5480fa6d94ef4d096e08ff60d51b8a5f797",
+   "stdout_sha256": "ffcff26b1c01c378cd972cc176a897dd33510a5547dbddc937fcdbc37a4baa5c",
+   "out_file": "eltail_out.dat",
+   "out_sha256": "d1aaca8fbea81023500a2881b91290099d7281793bd199aef01d98148a5ec5e4",
+   "summary": {
+    "sections": {
+     "nc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2": [
+       0.069364,
+       6.9364e-06
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION": [
+       0.0,
+       0.0
+      ]
+     },
+     "cc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.p) SIG31C": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION (1/k.q) SIG32C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.qs) SIG33C": [
+       0.0,
+       0.0
+      ]
+     },
+     "el": {
+      "ELASTIC EP WITH CORRECTIONS": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ]
+     }
+    },
+    "total": [
+     0.069364,
+     6.9364e-06
+    ]
+   },
+   "vegas": []
+  },
+  "born_1000_10000_q2min_hi": {
+   "name": "born_1000_10000_q2min_hi",
+   "exit": 0,
+   "wall_s": 0.1,
+   "started_utc": "2026-10-26T19:16:20+00:00",
+   "card_sha256": "cac2cca30c60b0a4b0e93d68b43d98db1fbd22c768689477a995075f093908cc",
+   "stdout_sha256": "935f06cfe63816d8f0dd9bdb9dc6d695d4904a23149ac689b6d3508fe3ba9869",
+   "out_file": "eltail_out.dat",
+   "out_sha256": "b30d0dcb3aaee3595de9f0ec1671a8bd7e3d0f6ae4993ca934e5cc760509b5cb",
+   "summary": {
+    "sections": {
+     "nc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2": [
+       2.2586e-05,
+       2.2586e-09
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION": [
+       0.0,
+       0.0
+      ]
+     },
+     "cc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.p) SIG31C": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION (1/k.q) SIG32C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.qs) SIG33C": [
+       0.0,
+       0.0
+      ]
+     },
+     "el": {
+      "ELASTIC EP WITH CORRECTIONS": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ]
+     }
+    },
+    "total": [
+     2.2586e-05,
+     2.2586e-09
+    ]
+   },
+   "vegas": []
+  },
+  "born_1000_10000_q2min_lo": {
+   "name": "born_1000_10000_q2min_lo",
+   "exit": 0,
+   "wall_s": 0.1,
+   "started_utc": "2026-10-26T19:16:11+00:00",
+   "card_sha256": "7e06cc8b7b746223d6179bd86e2e1cb13761c6eb19c399cfe5de97a387dc946d",
+   "stdout_sha256": "55de6d0911589628a3a9a3f81d00b7e0b17b547591ad032314d97f99f8c52d72",
+   "out_file": "eltail_out.dat",
+   "out_sha256": "5fc8022e4cb6d3162d3bef1d4a14147f7faea2dc2e6002e02b395d47b5223bd2",
+   "summary": {
+    "sections": {
+     "nc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2": [
+       0.069387,
+       6.9387e-06
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION": [
+       0.0,
+       0.0
+      ]
+     },
+     "cc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.p) SIG31C": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION (1/k.q) SIG32C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.qs) SIG33C": [
+       0.0,
+       0.0
+      ]
+     },
+     "el": {
+      "ELASTIC EP WITH CORRECTIONS": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ]
+     }
+    },
+    "total": [
+     0.069387,
+     6.9387e-06
+    ]
+   },
+   "vegas": []
+  },
+  "born_100_1000_direct_q2max": {
+   "name": "born_100_1000_direct_q2max",
+   "exit": 0,
+   "wall_s": 0.1,
+   "started_utc": "2026-10-26T19:16:04+00:00",
+   "card_sha256": "8464b79c9f56b918aafbea08d947df3af13d54b1fcd61a7e605d973b55eb12c7",
+   "stdout_sha256": "51876bcca00cc66d68b8f65a61a4324505e52938962670e1da40e35b80fd0b65",
+   "out_file": "eltail_out.dat",
+   "out_sha256": "15ee880acb954bb8a2f1986cfa480d35b4cc133b94b09a81c438d74e60b162e9",
+   "summary": {
+    "sections": {
+     "nc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2": [
+       3.2261,
+       0.00032261
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION": [
+       0.0,
+       0.0
+      ]
+     },
+     "cc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.p) SIG31C": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION (1/k.q) SIG32C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.qs) SIG33C": [
+       0.0,
+       0.0
+      ]
+     },
+     "el": {
+      "ELASTIC EP WITH CORRECTIONS": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ]
+     }
+    },
+    "total": [
+     3.2261,
+     0.00032261
+    ]
+   },
+   "vegas": []
+  },
+  "born_100_1000_q2min_hi": {
+   "name": "born_100_1000_q2min_hi",
+   "exit": 0,
+   "wall_s": 0.1,
+   "started_utc": "2026-10-26T19:15:55+00:00",
+   "card_sha256": "3a15a364a9cb07d41ec8152413cffe6165053e4e5fe78cd804d8892e5f946139",
+   "stdout_sha256": "b1e3419e6ee2653d754928dc9704576437c69256419a1cca7e05956438f405fa",
+   "out_file": "eltail_out.dat",
+   "out_sha256": "95481478eb85368239ba3ce88fcd8ae42a6778fb3afe37211dec06262bcd1857",
+   "summary": {
+    "sections": {
+     "nc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2": [
+       0.069387,
+       6.9387e-06
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION": [
+       0.0,
+       0.0
+      ]
+     },
+     "cc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.p) SIG31C": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION (1/k.q) SIG32C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.qs) SIG33C": [
+       0.0,
+       0.0
+      ]
+     },
+     "el": {
+      "ELASTIC EP WITH CORRECTIONS": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ]
+     }
+    },
+    "total": [
+     0.069387,
+     6.9387e-06
+    ]
+   },
+   "vegas": []
+  },
+  "born_100_1000_q2min_lo": {
+   "name": "born_100_1000_q2min_lo",
+   "exit": 0,
+   "wall_s": 0.1,
+   "started_utc": "2026-10-26T19:15:46+00:00",
+   "card_sha256": "e6ab616cc764e3fde78ab77b04165f3ccd100c78b01e3df2f30634b64fb1b085",
+   "stdout_sha256": "cc21f3c32b1daec64b73ad022c3e3ef41264462423cf02fdb4545670ea7fdc93",
+   "out_file": "eltail_out.dat",
+   "out_sha256": "f697bb0098c46f7e903a63e364af847eb545afec79529bf4115edaeb4e93bfc0",
+   "summary": {
+    "sections": {
+     "nc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2": [
+       3.2955,
+       0.00032955
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION": [
+       0.0,
+       0.0
+      ]
+     },
+     "cc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.p) SIG31C": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION (1/k.q) SIG32C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.qs) SIG33C": [
+       0.0,
+       0.0
+      ]
+     },
+     "el": {
+      "ELASTIC EP WITH CORRECTIONS": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ]
+     }
+    },
+    "total": [
+     3.2955,
+     0.00032955
+    ]
+   },
+   "vegas": []
+  },
+  "born_10_100_direct_q2max": {
+   "name": "born_10_100_direct_q2max",
+   "exit": 0,
+   "wall_s": 0.2,
+   "started_utc": "2026-10-26T19:15:40+00:00",
+   "card_sha256": "6eb4fe9e3184120812122bd98c8a438fa5635b92bb915cd87fbf1e40cbf947b4",
+   "stdout_sha256": "14b7728f9eb775b5d3ae2f84fc1173ed9118e4b40693bb41befcbb10863e6f81",
+   "out_file": "eltail_out.dat",
+   "out_sha256": "4fae761029c355476da6fbe3aa6b2db7254df50519b1948813b778c5877c3b5f",
+   "summary": {
+    "sections": {
+     "nc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2": [
+       67.628,
+       0.0067628
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION": [
+       0.0,
+       0.0
+      ]
+     },
+     "cc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.p) SIG31C": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION (1/k.q) SIG32C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.qs) SIG33C": [
+       0.0,
+       0.0
+      ]
+     },
+     "el": {
+      "ELASTIC EP WITH CORRECTIONS": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ]
+     }
+    },
+    "total": [
+     67.628,
+     0.0067628
+    ]
+   },
+   "vegas": []
+  },
+  "born_10_100_q2min_hi": {
+   "name": "born_10_100_q2min_hi",
+   "exit": 0,
+   "wall_s": 0.1,
+   "started_utc": "2026-10-26T19:15:27+00:00",
+   "card_sha256": "d4950c5bc31bcd8b02e9d4eaa9bddd109164ec2c17eea742ca4321f121443c64",
+   "stdout_sha256": "cd4d0c63712aac155c3f3d55ecb1adc8edc07dda220154418292c081fbdfe4fe",
+   "out_file": "eltail_out.dat",
+   "out_sha256": "9d9c6451b25eccca9ca5620e1d92c88d9bdfff0415737bdbfef8f14991ecb3a6",
+   "summary": {
+    "sections": {
+     "nc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2": [
+       3.2752,
+       0.00032752
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION": [
+       0.0,
+       0.0
+      ]
+     },
+     "cc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.p) SIG31C": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION (1/k.q) SIG32C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.qs) SIG33C": [
+       0.0,
+       0.0
+      ]
+     },
+     "el": {
+      "ELASTIC EP WITH CORRECTIONS": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ]
+     }
+    },
+    "total": [
+     3.2752,
+     0.00032752
+    ]
+   },
+   "vegas": []
+  },
+  "born_10_100_q2min_lo": {
+   "name": "born_10_100_q2min_lo",
+   "exit": 0,
+   "wall_s": 0.3,
+   "started_utc": "2026-10-26T19:15:14+00:00",
+   "card_sha256": "3e0f3bcbffc104518b8da3f30e810f679d36fee736d57c26d795457c6e92ecff",
+   "stdout_sha256": "a7f1bc7bf83145de1864e8fe105f1c6610b8d4b23b2b71cacdd5203536432bd0",
+   "out_file": "eltail_out.dat",
+   "out_sha256": "360a3dc428a02d11a00c7592259a595cdb9d48a6c1f19950f50db966fa8410d0",
+   "summary": {
+    "sections": {
+     "nc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2": [
+       70.902,
+       0.0070902
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION": [
+       0.0,
+       0.0
+      ]
+     },
+     "cc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.p) SIG31C": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION (1/k.q) SIG32C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.qs) SIG33C": [
+       0.0,
+       0.0
+      ]
+     },
+     "el": {
+      "ELASTIC EP WITH CORRECTIONS": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ]
+     }
+    },
+    "total": [
+     70.902,
+     0.0070902
+    ]
+   },
+   "vegas": []
+  },
+  "born_1_10_direct_q2max": {
+   "name": "born_1_10_direct_q2max",
+   "exit": 0,
+   "wall_s": 0.6,
+   "started_utc": "2026-10-26T19:15:12+00:00",
+   "card_sha256": "50909ae1ed8ce11b1b564c12654014b6597b49f2298c4287bd438ba41a6cded7",
+   "stdout_sha256": "9e6c301c4ffcbfeee3d383c8e436a26af548345129c0d73253f28fedda27f69a",
+   "out_file": "eltail_out.dat",
+   "out_sha256": "f4435cfb8553009deb8c328c685cee7fe9b249bd155c0016816ebc1e6ce757c2",
+   "summary": {
+    "sections": {
+     "nc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2": [
+       574.04,
+       0.057404
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION": [
+       0.0,
+       0.0
+      ]
+     },
+     "cc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.p) SIG31C": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION (1/k.q) SIG32C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.qs) SIG33C": [
+       0.0,
+       0.0
+      ]
+     },
+     "el": {
+      "ELASTIC EP WITH CORRECTIONS": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ]
+     }
+    },
+    "total": [
+     574.04,
+     0.057404
+    ]
+   },
+   "vegas": []
+  },
+  "born_1_10_q2min_hi": {
+   "name": "born_1_10_q2min_hi",
+   "exit": 0,
+   "wall_s": 0.2,
+   "started_utc": "2026-10-26T19:14:57+00:00",
+   "card_sha256": "00c5573544b73288700ce4d5986cc7baae201485a454fc3b0e4185d3ddb0225f",
+   "stdout_sha256": "22adb2851829ef01411023d2cb4494b0c3611b3d259cdda8c06d35449b6f7b8f",
+   "out_file": "eltail_out.dat",
+   "out_sha256": "0a5fba8a767425f0083469a5dbdc9294413931f9946fabf7996ec4fee1b0490c",
+   "summary": {
+    "sections": {
+     "nc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2": [
+       59.144,
+       0.0059144
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION": [
+       0.0,
+       0.0
+      ]
+     },
+     "cc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.p) SIG31C": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION (1/k.q) SIG32C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.qs) SIG33C": [
+       0.0,
+       0.0
+      ]
+     },
+     "el": {
+      "ELASTIC EP WITH CORRECTIONS": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ]
+     }
+    },
+    "total": [
+     59.144,
+     0.0059144
+    ]
+   },
+   "vegas": []
+  },
+  "born_1_10_q2min_lo": {
+   "name": "born_1_10_q2min_lo",
+   "exit": 0,
+   "wall_s": 0.6,
+   "started_utc": "2026-10-26T19:14:44+00:00",
+   "card_sha256": "dd43d34d820ee144041e5c2f70acfd93df71d777ce32573ff30464dfa5120a42",
+   "stdout_sha256": "34d982c004819990b535591b5d7a2462f5d413b04dc0dee912b90b0341d3f431",
+   "out_file": "eltail_out.dat",
+   "out_sha256": "4f45135c3eb906eae26675d30d316c874979ff4d73d3a48a3f5dd356d2b80537",
+   "summary": {
+    "sections": {
+     "nc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2": [
+       633.2,
+       0.06332
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION": [
+       0.0,
+       0.0
+      ]
+     },
+     "cc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.p) SIG31C": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION (1/k.q) SIG32C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.qs) SIG33C": [
+       0.0,
+       0.0
+      ]
+     },
+     "el": {
+      "ELASTIC EP WITH CORRECTIONS": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ]
+     }
+    },
+    "total": [
+     633.2,
+     0.06332
+    ]
+   },
+   "vegas": []
+  },
+  "control_Rad0_Q2_1000_10000": {
+   "name": "control_Rad0_Q2_1000_10000",
+   "exit": 0,
+   "wall_s": 0.2,
+   "started_utc": "2026-10-26T19:14:00+00:00",
+   "card_sha256": "40b297288a15cd7cb9a40c2d18ab6b5a19bb8e540984b8b48441437a805139b6",
+   "stdout_sha256": "5359f15eb4037c899ffafcf24f9d48f1c271e2c9235595640630f04acbe99104",
+   "out_file": "djangoh.NC.norad.18x275_Q2_1000_10000_out.dat",
+   "out_sha256": "67c6e62062e94003628be8a800968d9665f476b90268b225fd1f7dd2b116389f",
+   "summary": {
+    "sections": {
+     "nc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2": [
+       0.070161,
+       7.0161e-06
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION": [
+       0.0,
+       0.0
+      ]
+     },
+     "cc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.p) SIG31C": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION (1/k.q) SIG32C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.qs) SIG33C": [
+       0.0,
+       0.0
+      ]
+     },
+     "el": {
+      "ELASTIC EP WITH CORRECTIONS": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ]
+     }
+    },
+    "total": [
+     0.070161,
+     7.0161e-06
+    ]
+   },
+   "vegas": []
+  },
+  "control_Rad0_Q2_100_1000": {
+   "name": "control_Rad0_Q2_100_1000",
+   "exit": 0,
+   "wall_s": 0.2,
+   "started_utc": "2026-10-26T19:13:59+00:00",
+   "card_sha256": "efb8bae7a084a4097dac08d2ff6db4ac3ba5574194fa44e5b5ad07594ff0d345",
+   "stdout_sha256": "81e51d4adc9dddc1e93b52125900b13e3eeb41f65f8c9db8dd0e32e390a36003",
+   "out_file": "djangoh.NC.norad.18x275_Q2_100_1000_out.dat",
+   "out_sha256": "1696e2628ecfe96332820aafc3a830fc48423744f93044fe3cadf1048b12b56b",
+   "summary": {
+    "sections": {
+     "nc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2": [
+       3.2401,
+       0.00032401
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION": [
+       0.0,
+       0.0
+      ]
+     },
+     "cc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.p) SIG31C": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION (1/k.q) SIG32C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.qs) SIG33C": [
+       0.0,
+       0.0
+      ]
+     },
+     "el": {
+      "ELASTIC EP WITH CORRECTIONS": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ]
+     }
+    },
+    "total": [
+     3.2401,
+     0.00032401
+    ]
+   },
+   "vegas": []
+  },
+  "control_Rad0_Q2_10_100": {
+   "name": "control_Rad0_Q2_10_100",
+   "exit": 0,
+   "wall_s": 0.2,
+   "started_utc": "2026-10-26T19:13:21+00:00",
+   "card_sha256": "e25aae370bc40a637bf6d5bf7f3b421229480869a5d2a0d5fe46c216bfbd7679",
+   "stdout_sha256": "205cc273b124e1442146bb5152f2b931c050579596eda718e4ecc7b530fa65c2",
+   "out_file": "djangoh.NC.norad.18x275_Q2_10_100_out.dat",
+   "out_sha256": "5adb7993bae5b73879360e93289e14e5037904fc69e895bc7130bba7db6f3c7f",
+   "summary": {
+    "sections": {
+     "nc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2": [
+       67.986,
+       0.0067986
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION": [
+       0.0,
+       0.0
+      ]
+     },
+     "cc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.p) SIG31C": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION (1/k.q) SIG32C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.qs) SIG33C": [
+       0.0,
+       0.0
+      ]
+     },
+     "el": {
+      "ELASTIC EP WITH CORRECTIONS": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ]
+     }
+    },
+    "total": [
+     67.986,
+     0.0067986
+    ]
+   },
+   "vegas": []
+  },
+  "control_Rad0_Q2_1_10": {
+   "name": "control_Rad0_Q2_1_10",
+   "exit": 0,
+   "wall_s": 0.5,
+   "started_utc": "2026-10-26T19:13:35+00:00",
+   "card_sha256": "c0fd6b56be9d4e6ad0135062715ac1d642c0a15f60efe89e7478e83dffd7b8ea",
+   "stdout_sha256": "282c1bac806adddf019d880f28ea23d70d8917a38ebb1b3c895fc9c6ed055993",
+   "out_file": "djangoh.NC.norad.18x275_Q2_1_10_out.dat",
+   "out_sha256": "2e444d6cebe9c3e00d99c4858804dda7728fc9e7e501b17a06ba0cd496eafe6a",
+   "summary": {
+    "sections": {
+     "nc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2": [
+       628.04,
+       0.062804
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION": [
+       0.0,
+       0.0
+      ]
+     },
+     "cc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.p) SIG31C": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION (1/k.q) SIG32C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.qs) SIG33C": [
+       0.0,
+       0.0
+      ]
+     },
+     "el": {
+      "ELASTIC EP WITH CORRECTIONS": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ]
+     }
+    },
+    "total": [
+     628.04,
+     0.062804
+    ]
+   },
+   "vegas": []
+  },
+  "control_Rad1_Q2_1000_10000": {
+   "name": "control_Rad1_Q2_1000_10000",
+   "exit": 0,
+   "wall_s": 21.1,
+   "started_utc": "2026-10-26T19:14:01+00:00",
+   "card_sha256": "e98041bd24033239fc9864c2ef0458ed3ac381890d6dfd16316b826c79de08d3",
+   "stdout_sha256": "683ac3f153b6d769ffaf6e5108abdc3f00dfa33f9363a7908c84bf3e12e53f22",
+   "out_file": "djangoh.NC.Rad.18x275_Q2_1000_10000_out.dat",
+   "out_sha256": "c73d29b51d5dd9cef11d7c30d0168447b3b4e1e48868320e97d76a4a1e132f41",
+   "summary": {
+    "sections": {
+     "nc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2": [
+       0.042662,
+       4.2662e-06
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.027908,
+       1.6914e-05
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.014312,
+       6.2049e-06
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0012568,
+       5.5455e-07
+      ],
+      "QUARKONIC RADIATION": [
+       0.0,
+       0.0
+      ]
+     },
+     "cc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.p) SIG31C": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION (1/k.q) SIG32C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.qs) SIG33C": [
+       0.0,
+       0.0
+      ]
+     },
+     "el": {
+      "ELASTIC EP WITH CORRECTIONS": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ]
+     }
+    },
+    "total": [
+     0.086138,
+     1.8522e-05
+    ]
+   },
+   "vegas": [
+    {
+     "ndim": 5,
+     "ncall": 98304.0,
+     "iterations": 18,
+     "integral_nb": 0.0279080229,
+     "std_dev_nb": 1.6914e-05,
+     "chi2_per_itn": 0.89668
+    },
+    {
+     "ndim": 5,
+     "ncall": 98304.0,
+     "iterations": 18,
+     "integral_nb": 0.0143118528,
+     "std_dev_nb": 6.2049e-06,
+     "chi2_per_itn": 0.69966
+    },
+    {
+     "ndim": 5,
+     "ncall": 98304.0,
+     "iterations": 18,
+     "integral_nb": 0.0012568388,
+     "std_dev_nb": 5.5455e-07,
+     "chi2_per_itn": 0.82829
+    }
+   ]
+  },
+  "control_Rad1_Q2_100_1000": {
+   "name": "control_Rad1_Q2_100_1000",
+   "exit": 0,
+   "wall_s": 21.2,
+   "started_utc": "2026-10-26T19:13:59+00:00",
+   "card_sha256": "77d3560b8c7ce48d7e7e571e51a8f50d0ca3e4e4d2646d462c0bee0b9a58de48",
+   "stdout_sha256": "075695cb621473a58b8eb97e182ede3c99b4830e928c285c417b78d899b1c9e2",
+   "out_file": "djangoh.NC.Rad.18x275_Q2_100_1000_out.dat",
+   "out_sha256": "7ebbc2e6ce059f3951304f642688689d606027ccdc284599e7ac5fc2807e4f5b",
+   "summary": {
+    "sections": {
+     "nc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2": [
+       1.9141,
+       0.00019141
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       1.1556,
+       0.00067065
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.65279,
+       0.00031085
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.037845,
+       2.1919e-05
+      ],
+      "QUARKONIC RADIATION": [
+       0.0,
+       0.0
+      ]
+     },
+     "cc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.p) SIG31C": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION (1/k.q) SIG32C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.qs) SIG33C": [
+       0.0,
+       0.0
+      ]
+     },
+     "el": {
+      "ELASTIC EP WITH CORRECTIONS": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ]
+     }
+    },
+    "total": [
+     3.7603,
+     0.00076388
+    ]
+   },
+   "vegas": [
+    {
+     "ndim": 5,
+     "ncall": 98304.0,
+     "iterations": 18,
+     "integral_nb": 1.15563621,
+     "std_dev_nb": 0.00067065,
+     "chi2_per_itn": 0.94012
+    },
+    {
+     "ndim": 5,
+     "ncall": 98304.0,
+     "iterations": 18,
+     "integral_nb": 0.652794528,
+     "std_dev_nb": 0.00031085,
+     "chi2_per_itn": 1.216
+    },
+    {
+     "ndim": 5,
+     "ncall": 98304.0,
+     "iterations": 18,
+     "integral_nb": 0.0378450509,
+     "std_dev_nb": 2.1919e-05,
+     "chi2_per_itn": 1.0903
+    }
+   ]
+  },
+  "control_Rad1_Q2_10_100": {
+   "name": "control_Rad1_Q2_10_100",
+   "exit": 0,
+   "wall_s": 23.0,
+   "started_utc": "2026-10-26T19:13:36+00:00",
+   "card_sha256": "01e2bea66de753657af93f37e13a5d1561edba69dbcd619bb39225f7494e5b53",
+   "stdout_sha256": "5594201cd878863dec219de36efd403c37622cc80abfc73fe56302f71f10a793",
+   "out_file": "djangoh.NC.Rad.18x275_Q2_10_100_out.dat",
+   "out_sha256": "97194f25df208d0831cbf15e8ca5e7ea2638623fa359e5a1dc4ef838181690d6",
+   "summary": {
+    "sections": {
+     "nc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2": [
+       37.635,
+       0.0037635
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       21.172,
+       0.011869
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       14.78,
+       0.0073471
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.44486,
+       0.00036646
+      ],
+      "QUARKONIC RADIATION": [
+       0.0,
+       0.0
+      ]
+     },
+     "cc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.p) SIG31C": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION (1/k.q) SIG32C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.qs) SIG33C": [
+       0.0,
+       0.0
+      ]
+     },
+     "el": {
+      "ELASTIC EP WITH CORRECTIONS": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ]
+     }
+    },
+    "total": [
+     74.031,
+     0.014462
+    ]
+   },
+   "vegas": [
+    {
+     "ndim": 5,
+     "ncall": 98304.0,
+     "iterations": 18,
+     "integral_nb": 21.1718193,
+     "std_dev_nb": 0.011869,
+     "chi2_per_itn": 1.0756
+    },
+    {
+     "ndim": 5,
+     "ncall": 98304.0,
+     "iterations": 18,
+     "integral_nb": 14.7798514,
+     "std_dev_nb": 0.0073471,
+     "chi2_per_itn": 1.5061
+    },
+    {
+     "ndim": 5,
+     "ncall": 98304.0,
+     "iterations": 18,
+     "integral_nb": 0.444855825,
+     "std_dev_nb": 0.00036646,
+     "chi2_per_itn": 1.1838
+    }
+   ]
+  },
+  "control_Rad1_Q2_1_10": {
+   "name": "control_Rad1_Q2_1_10",
+   "exit": 0,
+   "wall_s": 24.9,
+   "started_utc": "2026-10-26T19:13:35+00:00",
+   "card_sha256": "b5c96cd4a839f77e47e8c99bfee6940c95511e1ef98c2ab4df65364dfbebebb0",
+   "stdout_sha256": "7cb9d2378d8b3e0a5e586e524e2631b68f3df572c8ec780e3ff81b10d29461c4",
+   "out_file": "djangoh.NC.Rad.18x275_Q2_1_10_out.dat",
+   "out_sha256": "324927b94d540808c26acf74d898b6dc024d712ceadd69a08b65e13e8b7ab5ff",
+   "summary": {
+    "sections": {
+     "nc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2": [
+       334.72,
+       0.033472
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       189.99,
+       0.12365
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       143.94,
+       0.084821
+      ],
+      "COMPTON CONTRIBUTION": [
+       4.9957,
+       0.0045081
+      ],
+      "QUARKONIC RADIATION": [
+       0.0,
+       0.0
+      ]
+     },
+     "cc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.p) SIG31C": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION (1/k.q) SIG32C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.qs) SIG33C": [
+       0.0,
+       0.0
+      ]
+     },
+     "el": {
+      "ELASTIC EP WITH CORRECTIONS": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ]
+     }
+    },
+    "total": [
+     673.65,
+     0.15371
+    ]
+   },
+   "vegas": [
+    {
+     "ndim": 5,
+     "ncall": 98304.0,
+     "iterations": 18,
+     "integral_nb": 189.991129,
+     "std_dev_nb": 0.12365,
+     "chi2_per_itn": 0.61023
+    },
+    {
+     "ndim": 5,
+     "ncall": 98304.0,
+     "iterations": 18,
+     "integral_nb": 143.942899,
+     "std_dev_nb": 0.084821,
+     "chi2_per_itn": 1.2274
+    },
+    {
+     "ndim": 5,
+     "ncall": 98304.0,
+     "iterations": 18,
+     "integral_nb": 4.99574652,
+     "std_dev_nb": 0.0045081,
+     "chi2_per_itn": 0.82035
+    }
+   ]
+  },
+  "tail_novp_1000_10000_direct_q2max": {
+   "name": "tail_novp_1000_10000_direct_q2max",
+   "exit": 0,
+   "wall_s": 8.1,
+   "started_utc": "2026-10-26T19:16:29+00:00",
+   "card_sha256": "cd8c8e5e4634114afe85fd2108eef9ce40d6d8479790fb2ee250735a18a3c1c8",
+   "stdout_sha256": "92057deff36c21cd6e7102fb0136f758bfb9dc2730cc312c9e9d46a03b66311a",
+   "out_file": "eltail_out.dat",
+   "out_sha256": "7314550dede51c693d74ee723ed767c76cf01d9ecd1f127c0a3dc8cbb82285ac",
+   "summary": {
+    "sections": {
+     "nc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION": [
+       0.0,
+       0.0
+      ]
+     },
+     "cc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.p) SIG31C": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION (1/k.q) SIG32C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.qs) SIG33C": [
+       0.0,
+       0.0
+      ]
+     },
+     "el": {
+      "ELASTIC EP WITH CORRECTIONS": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       3.1759e-06,
+       9.7008e-09
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0015158,
+       5.879e-07
+      ]
+     }
+    },
+    "total": [
+     0.0015189,
+     5.8798e-07
+    ]
+   },
+   "vegas": [
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 20,
+     "integral_nb": 3.17594796e-06,
+     "std_dev_nb": 9.7008e-09,
+     "chi2_per_itn": 1.3196
+    },
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 1,
+     "integral_nb": 0.0,
+     "std_dev_nb": 0.0,
+     "chi2_per_itn": 0.0
+    },
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 20,
+     "integral_nb": 0.00151575128,
+     "std_dev_nb": 5.879e-07,
+     "chi2_per_itn": 1.018
+    }
+   ]
+  },
+  "tail_novp_1000_10000_q2min_hi": {
+   "name": "tail_novp_1000_10000_q2min_hi",
+   "exit": 0,
+   "wall_s": 8.7,
+   "started_utc": "2026-10-26T19:16:20+00:00",
+   "card_sha256": "c4bfab6ff468efd6c514061d95220467272db5301f50e4f2b8a15fd7f3cbae46",
+   "stdout_sha256": "f69202915de48f27baf2326d5190987337abd00fcf2d214c5e20c3f094de1dae",
+   "out_file": "eltail_out.dat",
+   "out_sha256": "3c02dcbbf4f286113486056c707675b9ff2298b9836f8081590962dbb56beddb",
+   "summary": {
+    "sections": {
+     "nc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION": [
+       0.0,
+       0.0
+      ]
+     },
+     "cc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.p) SIG31C": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION (1/k.q) SIG32C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.qs) SIG33C": [
+       0.0,
+       0.0
+      ]
+     },
+     "el": {
+      "ELASTIC EP WITH CORRECTIONS": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       3.0806e-09,
+       1.5811e-11
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       6.6648e-07,
+       2.4096e-10
+      ]
+     }
+    },
+    "total": [
+     6.6956e-07,
+     2.4148e-10
+    ]
+   },
+   "vegas": [
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 20,
+     "integral_nb": 3.08064816e-09,
+     "std_dev_nb": 1.5811e-11,
+     "chi2_per_itn": 1.31
+    },
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 1,
+     "integral_nb": 0.0,
+     "std_dev_nb": 0.0,
+     "chi2_per_itn": 0.0
+    },
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 20,
+     "integral_nb": 6.66477839e-07,
+     "std_dev_nb": 2.4096e-10,
+     "chi2_per_itn": 1.1639
+    }
+   ]
+  },
+  "tail_novp_1000_10000_q2min_lo": {
+   "name": "tail_novp_1000_10000_q2min_lo",
+   "exit": 0,
+   "wall_s": 8.9,
+   "started_utc": "2026-10-26T19:16:11+00:00",
+   "card_sha256": "8cd0a5a951e15020c3361e13595177a74b4fb97080e5d1131c32c36195e471e1",
+   "stdout_sha256": "046967c792b4a23088bff41e8230ed4c9a8973ae1e90d5314c562543b7a21975",
+   "out_file": "eltail_out.dat",
+   "out_sha256": "f872065c8e23930fef8d13dcc79d6462b5e3baf43f05a385caebfe15e636572c",
+   "summary": {
+    "sections": {
+     "nc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION": [
+       0.0,
+       0.0
+      ]
+     },
+     "cc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.p) SIG31C": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION (1/k.q) SIG32C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.qs) SIG33C": [
+       0.0,
+       0.0
+      ]
+     },
+     "el": {
+      "ELASTIC EP WITH CORRECTIONS": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       3.1759e-06,
+       9.7008e-09
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0015158,
+       5.879e-07
+      ]
+     }
+    },
+    "total": [
+     0.0015189,
+     5.8798e-07
+    ]
+   },
+   "vegas": [
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 20,
+     "integral_nb": 3.17594796e-06,
+     "std_dev_nb": 9.7008e-09,
+     "chi2_per_itn": 1.3196
+    },
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 1,
+     "integral_nb": 0.0,
+     "std_dev_nb": 0.0,
+     "chi2_per_itn": 0.0
+    },
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 20,
+     "integral_nb": 0.00151575128,
+     "std_dev_nb": 5.879e-07,
+     "chi2_per_itn": 1.018
+    }
+   ]
+  },
+  "tail_novp_100_1000_direct_q2max": {
+   "name": "tail_novp_100_1000_direct_q2max",
+   "exit": 0,
+   "wall_s": 8.8,
+   "started_utc": "2026-10-26T19:16:04+00:00",
+   "card_sha256": "2f887c223a7258a551f59ec475cb8a133510295bbb2c74b31bea11f22cf867c8",
+   "stdout_sha256": "c8713e449a78a7ede7283c4f6dadb91cfd4c8042547c2dc3baa69f54fe7c69a7",
+   "out_file": "eltail_out.dat",
+   "out_sha256": "44e1fee40ebc08379f83528f5302baed9426083ec24c3991bd80432c5b249893",
+   "summary": {
+    "sections": {
+     "nc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION": [
+       0.0,
+       0.0
+      ]
+     },
+     "cc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.p) SIG31C": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION (1/k.q) SIG32C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.qs) SIG33C": [
+       0.0,
+       0.0
+      ]
+     },
+     "el": {
+      "ELASTIC EP WITH CORRECTIONS": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.00056093,
+       8.8418e-07
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.05612,
+       2.4333e-05
+      ]
+     }
+    },
+    "total": [
+     0.056681,
+     2.4349e-05
+    ]
+   },
+   "vegas": [
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 20,
+     "integral_nb": 0.000560933183,
+     "std_dev_nb": 8.8418e-07,
+     "chi2_per_itn": 2.1144
+    },
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 1,
+     "integral_nb": 0.0,
+     "std_dev_nb": 0.0,
+     "chi2_per_itn": 0.0
+    },
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 20,
+     "integral_nb": 0.0561203946,
+     "std_dev_nb": 2.4333e-05,
+     "chi2_per_itn": 0.95322
+    }
+   ]
+  },
+  "tail_novp_100_1000_q2min_hi": {
+   "name": "tail_novp_100_1000_q2min_hi",
+   "exit": 0,
+   "wall_s": 8.7,
+   "started_utc": "2026-10-26T19:15:55+00:00",
+   "card_sha256": "24745a16f4b06bab0e630a0bd0e25411ff656650b7049cd713b69b01974b1245",
+   "stdout_sha256": "02328730a76f816bd454699317eb6c8125ef01e8930f4d888ac89472aca394c9",
+   "out_file": "eltail_out.dat",
+   "out_sha256": "fb2bfb37d1f85a0f8cff403a4813b26a73e9f44262319bd2c7a17f207a155165",
+   "summary": {
+    "sections": {
+     "nc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION": [
+       0.0,
+       0.0
+      ]
+     },
+     "cc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.p) SIG31C": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION (1/k.q) SIG32C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.qs) SIG33C": [
+       0.0,
+       0.0
+      ]
+     },
+     "el": {
+      "ELASTIC EP WITH CORRECTIONS": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       3.1682e-06,
+       9.1019e-09
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0015157,
+       5.8735e-07
+      ]
+     }
+    },
+    "total": [
+     0.0015189,
+     5.8742e-07
+    ]
+   },
+   "vegas": [
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 20,
+     "integral_nb": 3.16820279e-06,
+     "std_dev_nb": 9.1019e-09,
+     "chi2_per_itn": 1.4083
+    },
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 1,
+     "integral_nb": 0.0,
+     "std_dev_nb": 0.0,
+     "chi2_per_itn": 0.0
+    },
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 20,
+     "integral_nb": 0.00151572596,
+     "std_dev_nb": 5.8735e-07,
+     "chi2_per_itn": 1.0617
+    }
+   ]
+  },
+  "tail_novp_100_1000_q2min_lo": {
+   "name": "tail_novp_100_1000_q2min_lo",
+   "exit": 0,
+   "wall_s": 8.7,
+   "started_utc": "2026-10-26T19:15:46+00:00",
+   "card_sha256": "08c17de74bffb8c6526d241a5c58b238bf911c3fcf642ce73960dbb4cfb416ec",
+   "stdout_sha256": "52f9dc04512590aae7a696d6297062c32e592a5e77c0c5d2aaf8d295a8ce4e84",
+   "out_file": "eltail_out.dat",
+   "out_sha256": "b6ef4715cab219c91105c25326ebfb2ef556006397c7675a916608618c73cc73",
+   "summary": {
+    "sections": {
+     "nc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION": [
+       0.0,
+       0.0
+      ]
+     },
+     "cc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.p) SIG31C": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION (1/k.q) SIG32C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.qs) SIG33C": [
+       0.0,
+       0.0
+      ]
+     },
+     "el": {
+      "ELASTIC EP WITH CORRECTIONS": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.00056093,
+       8.8418e-07
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.05612,
+       2.4333e-05
+      ]
+     }
+    },
+    "total": [
+     0.056681,
+     2.4349e-05
+    ]
+   },
+   "vegas": [
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 20,
+     "integral_nb": 0.000560933183,
+     "std_dev_nb": 8.8418e-07,
+     "chi2_per_itn": 2.1144
+    },
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 1,
+     "integral_nb": 0.0,
+     "std_dev_nb": 0.0,
+     "chi2_per_itn": 0.0
+    },
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 20,
+     "integral_nb": 0.0561203946,
+     "std_dev_nb": 2.4333e-05,
+     "chi2_per_itn": 0.95322
+    }
+   ]
+  },
+  "tail_novp_10_100_direct_q2max": {
+   "name": "tail_novp_10_100_direct_q2max",
+   "exit": 0,
+   "wall_s": 12.7,
+   "started_utc": "2026-10-26T19:15:40+00:00",
+   "card_sha256": "e3e5415c4ee9a221d4b39d5ca7fe5f9d2ec67a9016c0a6229d58460225b93157",
+   "stdout_sha256": "81d266b6487379ac6a630dbd535b26f3713bdfc2a754fd288befae33abaa273c",
+   "out_file": "eltail_out.dat",
+   "out_sha256": "d4b27798192dcbfe3ea648057db1b536c17abc472de8c174f40747bb9b1c4791",
+   "summary": {
+    "sections": {
+     "nc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION": [
+       0.0,
+       0.0
+      ]
+     },
+     "cc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.p) SIG31C": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION (1/k.q) SIG32C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.qs) SIG33C": [
+       0.0,
+       0.0
+      ]
+     },
+     "el": {
+      "ELASTIC EP WITH CORRECTIONS": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.14486,
+       9.9939e-05
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.00012813,
+       5.0657e-08
+      ],
+      "COMPTON CONTRIBUTION": [
+       1.0232,
+       0.00052342
+      ]
+     }
+    },
+    "total": [
+     1.1681,
+     0.00053288
+    ]
+   },
+   "vegas": [
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 20,
+     "integral_nb": 0.144857129,
+     "std_dev_nb": 9.9939e-05,
+     "chi2_per_itn": 2.1589
+    },
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 20,
+     "integral_nb": 0.000128126059,
+     "std_dev_nb": 5.0657e-08,
+     "chi2_per_itn": 1.101
+    },
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 20,
+     "integral_nb": 1.02315785,
+     "std_dev_nb": 0.00052342,
+     "chi2_per_itn": 1.4838
+    }
+   ]
+  },
+  "tail_novp_10_100_q2min_hi": {
+   "name": "tail_novp_10_100_q2min_hi",
+   "exit": 0,
+   "wall_s": 9.5,
+   "started_utc": "2026-10-26T19:15:27+00:00",
+   "card_sha256": "ec35afc40b6b91d4b9ab3be9b0b7a7e4497098076c01c2e7337abffc09f0adae",
+   "stdout_sha256": "508450e74b7b4f6daa69c7f86cf353071d9e53f010c36b546fbffa2dc43139b3",
+   "out_file": "eltail_out.dat",
+   "out_sha256": "11f8df0d15757417d7dbfb3b4c75add2656074ab0cc873ad3d02476c81e41745",
+   "summary": {
+    "sections": {
+     "nc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION": [
+       0.0,
+       0.0
+      ]
+     },
+     "cc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.p) SIG31C": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION (1/k.q) SIG32C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.qs) SIG33C": [
+       0.0,
+       0.0
+      ]
+     },
+     "el": {
+      "ELASTIC EP WITH CORRECTIONS": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0005609,
+       7.421e-07
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.056116,
+       2.4084e-05
+      ]
+     }
+    },
+    "total": [
+     0.056676,
+     2.4095e-05
+    ]
+   },
+   "vegas": [
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 20,
+     "integral_nb": 0.000560898447,
+     "std_dev_nb": 7.421e-07,
+     "chi2_per_itn": 1.6872
+    },
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 1,
+     "integral_nb": 0.0,
+     "std_dev_nb": 0.0,
+     "chi2_per_itn": 0.0
+    },
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 20,
+     "integral_nb": 0.0561155865,
+     "std_dev_nb": 2.4084e-05,
+     "chi2_per_itn": 0.8339
+    }
+   ]
+  },
+  "tail_novp_10_100_q2min_lo": {
+   "name": "tail_novp_10_100_q2min_lo",
+   "exit": 0,
+   "wall_s": 13.0,
+   "started_utc": "2026-10-26T19:15:14+00:00",
+   "card_sha256": "cfccfc43d800965997abab408ca4ebf3604b662137b2f45c25a19e05fcc6e786",
+   "stdout_sha256": "1c898db14be47a549b75e0201055b6ebd2878534c6b5e68e8f81e6f917839333",
+   "out_file": "eltail_out.dat",
+   "out_sha256": "7eea1511301d5e90a87640d08b038a59f346d58897412c0eddcd369ca8a97519",
+   "summary": {
+    "sections": {
+     "nc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION": [
+       0.0,
+       0.0
+      ]
+     },
+     "cc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.p) SIG31C": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION (1/k.q) SIG32C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.qs) SIG33C": [
+       0.0,
+       0.0
+      ]
+     },
+     "el": {
+      "ELASTIC EP WITH CORRECTIONS": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.14486,
+       9.9939e-05
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.00012813,
+       5.0657e-08
+      ],
+      "COMPTON CONTRIBUTION": [
+       1.0232,
+       0.00052342
+      ]
+     }
+    },
+    "total": [
+     1.1681,
+     0.00053288
+    ]
+   },
+   "vegas": [
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 20,
+     "integral_nb": 0.144857129,
+     "std_dev_nb": 9.9939e-05,
+     "chi2_per_itn": 2.1589
+    },
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 20,
+     "integral_nb": 0.000128126059,
+     "std_dev_nb": 5.0657e-08,
+     "chi2_per_itn": 1.101
+    },
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 20,
+     "integral_nb": 1.02315785,
+     "std_dev_nb": 0.00052342,
+     "chi2_per_itn": 1.4838
+    }
+   ]
+  },
+  "tail_novp_1_10_direct_q2max": {
+   "name": "tail_novp_1_10_direct_q2max",
+   "exit": 0,
+   "wall_s": 13.4,
+   "started_utc": "2026-10-26T19:15:13+00:00",
+   "card_sha256": "f47835a6110ece5b177dbcdb27c6afa037fc4c70dafc83aff91bf3ec68cc9e45",
+   "stdout_sha256": "65a3852ec85c1142402636a58dd7c14bef6c6eb9d7212cdbad9fc79325c5c0f1",
+   "out_file": "eltail_out.dat",
+   "out_sha256": "78da03be62297682e6528612030e9fa707f5a97f17d9c2c18659d005d3858b06",
+   "summary": {
+    "sections": {
+     "nc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION": [
+       0.0,
+       0.0
+      ]
+     },
+     "cc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.p) SIG31C": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION (1/k.q) SIG32C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.qs) SIG33C": [
+       0.0,
+       0.0
+      ]
+     },
+     "el": {
+      "ELASTIC EP WITH CORRECTIONS": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       8.9186,
+       0.004591
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       1.1589,
+       0.00049462
+      ],
+      "COMPTON CONTRIBUTION": [
+       14.471,
+       0.0073935
+      ]
+     }
+    },
+    "total": [
+     24.549,
+     0.008717
+    ]
+   },
+   "vegas": [
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 20,
+     "integral_nb": 8.91861816,
+     "std_dev_nb": 0.004591,
+     "chi2_per_itn": 2.6725
+    },
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 20,
+     "integral_nb": 1.15890228,
+     "std_dev_nb": 0.00049462,
+     "chi2_per_itn": 1.3343
+    },
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 20,
+     "integral_nb": 14.4713664,
+     "std_dev_nb": 0.0073935,
+     "chi2_per_itn": 1.5852
+    }
+   ]
+  },
+  "tail_novp_1_10_q2min_hi": {
+   "name": "tail_novp_1_10_q2min_hi",
+   "exit": 0,
+   "wall_s": 14.3,
+   "started_utc": "2026-10-26T19:14:58+00:00",
+   "card_sha256": "d60ed73994dbc09d2d151be11583054a274cdc80bd3cf3e49117f909977e57bd",
+   "stdout_sha256": "ea2d0f8981b2959dae536ad1e7560e91bb51abbcd5a9aff7cfd074eb72a8e5a8",
+   "out_file": "eltail_out.dat",
+   "out_sha256": "9504a50c960236f6c83840878a4eb63670dd1c88e53bffa4d70111fc507bc844",
+   "summary": {
+    "sections": {
+     "nc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION": [
+       0.0,
+       0.0
+      ]
+     },
+     "cc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.p) SIG31C": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION (1/k.q) SIG32C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.qs) SIG33C": [
+       0.0,
+       0.0
+      ]
+     },
+     "el": {
+      "ELASTIC EP WITH CORRECTIONS": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.14498,
+       9.343e-05
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       7.2228e-05,
+       2.9574e-08
+      ],
+      "COMPTON CONTRIBUTION": [
+       1.0229,
+       0.00045246
+      ]
+     }
+    },
+    "total": [
+     1.168,
+     0.000462
+    ]
+   },
+   "vegas": [
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 20,
+     "integral_nb": 0.144982224,
+     "std_dev_nb": 9.343e-05,
+     "chi2_per_itn": 0.88446
+    },
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 20,
+     "integral_nb": 7.22277246e-05,
+     "std_dev_nb": 2.9574e-08,
+     "chi2_per_itn": 1.0032
+    },
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 20,
+     "integral_nb": 1.02294747,
+     "std_dev_nb": 0.00045246,
+     "chi2_per_itn": 1.1898
+    }
+   ]
+  },
+  "tail_novp_1_10_q2min_lo": {
+   "name": "tail_novp_1_10_q2min_lo",
+   "exit": 0,
+   "wall_s": 13.1,
+   "started_utc": "2026-10-26T19:14:44+00:00",
+   "card_sha256": "c110e04b632c9505e27fd5ece98bf71e0c326c87066b2ee456cc906ed26c54e8",
+   "stdout_sha256": "a3cb6aa0ba0e7122488ce828871a9581c7d8c2606b724b13b2197f229ee8f69f",
+   "out_file": "eltail_out.dat",
+   "out_sha256": "376dd46fcf586db3d0e0badf3bdf569248b68a345121030945d808f3ee78c862",
+   "summary": {
+    "sections": {
+     "nc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION": [
+       0.0,
+       0.0
+      ]
+     },
+     "cc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.p) SIG31C": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION (1/k.q) SIG32C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.qs) SIG33C": [
+       0.0,
+       0.0
+      ]
+     },
+     "el": {
+      "ELASTIC EP WITH CORRECTIONS": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       8.9186,
+       0.004591
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       1.1589,
+       0.00049462
+      ],
+      "COMPTON CONTRIBUTION": [
+       14.471,
+       0.0073935
+      ]
+     }
+    },
+    "total": [
+     24.549,
+     0.008717
+    ]
+   },
+   "vegas": [
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 20,
+     "integral_nb": 8.91861816,
+     "std_dev_nb": 0.004591,
+     "chi2_per_itn": 2.6725
+    },
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 20,
+     "integral_nb": 1.15890228,
+     "std_dev_nb": 0.00049462,
+     "chi2_per_itn": 1.3343
+    },
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 20,
+     "integral_nb": 14.4713664,
+     "std_dev_nb": 0.0073935,
+     "chi2_per_itn": 1.5852
+    }
+   ]
+  },
+  "tail_vp_1000_10000_q2min_hi": {
+   "name": "tail_vp_1000_10000_q2min_hi",
+   "exit": 0,
+   "wall_s": 9.0,
+   "started_utc": "2026-10-26T19:16:22+00:00",
+   "card_sha256": "dbfc1b0db10e067c3d9d2a85eb4646a41f4f38a2561d88fa24fe4b488e3db550",
+   "stdout_sha256": "70c68d34be0893cdc765bea377a62d1b73726c9e16c08208e1a66ee5e72c0750",
+   "out_file": "eltail_out.dat",
+   "out_sha256": "2dfb95cb33ab38784f0f140c91f77bf90476615fdeb2ded3b66b62437f1c9813",
+   "summary": {
+    "sections": {
+     "nc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION": [
+       0.0,
+       0.0
+      ]
+     },
+     "cc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.p) SIG31C": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION (1/k.q) SIG32C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.qs) SIG33C": [
+       0.0,
+       0.0
+      ]
+     },
+     "el": {
+      "ELASTIC EP WITH CORRECTIONS": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       3.1715e-09,
+       2.0407e-11
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       6.9005e-07,
+       2.4941e-10
+      ]
+     }
+    },
+    "total": [
+     6.9322e-07,
+     2.5024e-10
+    ]
+   },
+   "vegas": [
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 20,
+     "integral_nb": 3.17149908e-09,
+     "std_dev_nb": 2.0407e-11,
+     "chi2_per_itn": 1.2682
+    },
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 1,
+     "integral_nb": 0.0,
+     "std_dev_nb": 0.0,
+     "chi2_per_itn": 0.0
+    },
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 20,
+     "integral_nb": 6.90045371e-07,
+     "std_dev_nb": 2.4941e-10,
+     "chi2_per_itn": 1.1684
+    }
+   ]
+  },
+  "tail_vp_1000_10000_q2min_lo": {
+   "name": "tail_vp_1000_10000_q2min_lo",
+   "exit": 0,
+   "wall_s": 9.3,
+   "started_utc": "2026-10-26T19:16:13+00:00",
+   "card_sha256": "533f7b78810fb9ef9385f05cc40d927abaf8bc3f62ed240ebedf8f880028499a",
+   "stdout_sha256": "f2befa2650b480ca8dbceb6c7e9cf9e0167703d3a36307742fd2807a9c96769a",
+   "out_file": "eltail_out.dat",
+   "out_sha256": "84beda7ffc5fd09a7dabb80041a8a8b9e08ca6bd3dedfa27bc52a8dc0dc89f96",
+   "summary": {
+    "sections": {
+     "nc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION": [
+       0.0,
+       0.0
+      ]
+     },
+     "cc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.p) SIG31C": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION (1/k.q) SIG32C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.qs) SIG33C": [
+       0.0,
+       0.0
+      ]
+     },
+     "el": {
+      "ELASTIC EP WITH CORRECTIONS": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       3.2702e-06,
+       5.8759e-08
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.001547,
+       5.9972e-07
+      ]
+     }
+    },
+    "total": [
+     0.0015503,
+     6.0259e-07
+    ]
+   },
+   "vegas": [
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 20,
+     "integral_nb": 3.27015098e-06,
+     "std_dev_nb": 5.8759e-08,
+     "chi2_per_itn": 1.0613
+    },
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 1,
+     "integral_nb": 0.0,
+     "std_dev_nb": 0.0,
+     "chi2_per_itn": 0.0
+    },
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 20,
+     "integral_nb": 0.00154699793,
+     "std_dev_nb": 5.9972e-07,
+     "chi2_per_itn": 1.0173
+    }
+   ]
+  },
+  "tail_vp_100_1000_q2min_hi": {
+   "name": "tail_vp_100_1000_q2min_hi",
+   "exit": 0,
+   "wall_s": 9.1,
+   "started_utc": "2026-10-26T19:16:02+00:00",
+   "card_sha256": "94c6e90c02cf038d00dcdf499405b34e268778b8ff6602f52e1a70e3b92b230f",
+   "stdout_sha256": "5c541c3974885c266f05384cec8bc25fd696b90dbe44bee153bccabafd9b273b",
+   "out_file": "eltail_out.dat",
+   "out_sha256": "c5513e7fd39d20fc004ff59c19b2a9cfae1edeb080b5a2d523b83c8c14b92662",
+   "summary": {
+    "sections": {
+     "nc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION": [
+       0.0,
+       0.0
+      ]
+     },
+     "cc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.p) SIG31C": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION (1/k.q) SIG32C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.qs) SIG33C": [
+       0.0,
+       0.0
+      ]
+     },
+     "el": {
+      "ELASTIC EP WITH CORRECTIONS": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       3.2395e-06,
+       9.243e-09
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.001547,
+       5.9892e-07
+      ]
+     }
+    },
+    "total": [
+     0.0015502,
+     5.9899e-07
+    ]
+   },
+   "vegas": [
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 20,
+     "integral_nb": 3.23947348e-06,
+     "std_dev_nb": 9.243e-09,
+     "chi2_per_itn": 1.0416
+    },
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 1,
+     "integral_nb": 0.0,
+     "std_dev_nb": 0.0,
+     "chi2_per_itn": 0.0
+    },
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 20,
+     "integral_nb": 0.00154698125,
+     "std_dev_nb": 5.9892e-07,
+     "chi2_per_itn": 1.0557
+    }
+   ]
+  },
+  "tail_vp_100_1000_q2min_lo": {
+   "name": "tail_vp_100_1000_q2min_lo",
+   "exit": 0,
+   "wall_s": 9.0,
+   "started_utc": "2026-10-26T19:15:53+00:00",
+   "card_sha256": "de2c9af5331f0a2157658ffd6ecee6ab3acb9f3ca82f4897690aa746766497a5",
+   "stdout_sha256": "0963b22da7a8859f2f23341acc5b94c1cfaff7148a58d339262924dff26f3ad7",
+   "out_file": "eltail_out.dat",
+   "out_sha256": "42f1a4462c481c5b4a7f9ef9e690b47afb8a0f9b520946e9e79a35ad09338b10",
+   "summary": {
+    "sections": {
+     "nc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION": [
+       0.0,
+       0.0
+      ]
+     },
+     "cc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.p) SIG31C": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION (1/k.q) SIG32C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.qs) SIG33C": [
+       0.0,
+       0.0
+      ]
+     },
+     "el": {
+      "ELASTIC EP WITH CORRECTIONS": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0005773,
+       7.8475e-07
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.056969,
+       2.471e-05
+      ]
+     }
+    },
+    "total": [
+     0.057547,
+     2.4723e-05
+    ]
+   },
+   "vegas": [
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 20,
+     "integral_nb": 0.000577300262,
+     "std_dev_nb": 7.8475e-07,
+     "chi2_per_itn": 2.2604
+    },
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 1,
+     "integral_nb": 0.0,
+     "std_dev_nb": 0.0,
+     "chi2_per_itn": 0.0
+    },
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 20,
+     "integral_nb": 0.0569692288,
+     "std_dev_nb": 2.471e-05,
+     "chi2_per_itn": 0.95253
+    }
+   ]
+  },
+  "tail_vp_10_100_q2min_hi": {
+   "name": "tail_vp_10_100_q2min_hi",
+   "exit": 0,
+   "wall_s": 9.6,
+   "started_utc": "2026-10-26T19:15:36+00:00",
+   "card_sha256": "4d9286dcaeceb62d1f344c0c92860259e8ed6fb3577889371f1971176cabdb36",
+   "stdout_sha256": "4a3403ab001934f623fdf4662df100e6b2a44939c3c791d109c889a73aec4b20",
+   "out_file": "eltail_out.dat",
+   "out_sha256": "7a0a49d68951305ab6b6b7581b4e80aabdc7f496e94052b29b070ce933f92566",
+   "summary": {
+    "sections": {
+     "nc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION": [
+       0.0,
+       0.0
+      ]
+     },
+     "cc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.p) SIG31C": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION (1/k.q) SIG32C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.qs) SIG33C": [
+       0.0,
+       0.0
+      ]
+     },
+     "el": {
+      "ELASTIC EP WITH CORRECTIONS": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.00057826,
+       7.8995e-07
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.056965,
+       2.448e-05
+      ]
+     }
+    },
+    "total": [
+     0.057543,
+     2.4493e-05
+    ]
+   },
+   "vegas": [
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 20,
+     "integral_nb": 0.000578255645,
+     "std_dev_nb": 7.8995e-07,
+     "chi2_per_itn": 1.4729
+    },
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 1,
+     "integral_nb": 0.0,
+     "std_dev_nb": 0.0,
+     "chi2_per_itn": 0.0
+    },
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 20,
+     "integral_nb": 0.0569648599,
+     "std_dev_nb": 2.448e-05,
+     "chi2_per_itn": 0.83012
+    }
+   ]
+  },
+  "tail_vp_10_100_q2min_lo": {
+   "name": "tail_vp_10_100_q2min_lo",
+   "exit": 0,
+   "wall_s": 14.3,
+   "started_utc": "2026-10-26T19:15:26+00:00",
+   "card_sha256": "730710139dfc44232a854236b97c8ab84631baa9cfb3ff40c8d6190552acaee5",
+   "stdout_sha256": "d34dc61c2dd602345377f9e58b95645aceedcdeb96b5d91f5950558943028c51",
+   "out_file": "eltail_out.dat",
+   "out_sha256": "3643d283934c22717c13f9f08ae8f1f22cf3dcc3bb842d34de34c441d10a1fe8",
+   "summary": {
+    "sections": {
+     "nc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION": [
+       0.0,
+       0.0
+      ]
+     },
+     "cc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.p) SIG31C": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION (1/k.q) SIG32C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.qs) SIG33C": [
+       0.0,
+       0.0
+      ]
+     },
+     "el": {
+      "ELASTIC EP WITH CORRECTIONS": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.14907,
+       0.00010973
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.00013515,
+       5.3462e-08
+      ],
+      "COMPTON CONTRIBUTION": [
+       1.0346,
+       0.00052755
+      ]
+     }
+    },
+    "total": [
+     1.1838,
+     0.00053884
+    ]
+   },
+   "vegas": [
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 20,
+     "integral_nb": 0.149069715,
+     "std_dev_nb": 0.00010973,
+     "chi2_per_itn": 1.9872
+    },
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 20,
+     "integral_nb": 0.000135149385,
+     "std_dev_nb": 5.3462e-08,
+     "chi2_per_itn": 1.1485
+    },
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 20,
+     "integral_nb": 1.03456522,
+     "std_dev_nb": 0.00052755,
+     "chi2_per_itn": 1.4376
+    }
+   ]
+  },
+  "tail_vp_1_10_q2min_hi": {
+   "name": "tail_vp_1_10_q2min_hi",
+   "exit": 0,
+   "wall_s": 15.1,
+   "started_utc": "2026-10-26T19:14:58+00:00",
+   "card_sha256": "129bb0ed5b04869b346b885a742f7d45c1b1b85dc0b486c9a807d26a216fcdb4",
+   "stdout_sha256": "9592d8a4cefe24a644b8835efe35af853d563bf8c9d798fe36e5d01ffd0a2d6c",
+   "out_file": "eltail_out.dat",
+   "out_sha256": "0a8d2b8d606c816a588afb6180902474aca9e1fad718f63284f36ee6b12022aa",
+   "summary": {
+    "sections": {
+     "nc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION": [
+       0.0,
+       0.0
+      ]
+     },
+     "cc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.p) SIG31C": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION (1/k.q) SIG32C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.qs) SIG33C": [
+       0.0,
+       0.0
+      ]
+     },
+     "el": {
+      "ELASTIC EP WITH CORRECTIONS": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.14903,
+       9.5854e-05
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       7.6198e-05,
+       3.1268e-08
+      ],
+      "COMPTON CONTRIBUTION": [
+       1.0342,
+       0.00045702
+      ]
+     }
+    },
+    "total": [
+     1.1833,
+     0.00046697
+    ]
+   },
+   "vegas": [
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 20,
+     "integral_nb": 0.149029666,
+     "std_dev_nb": 9.5854e-05,
+     "chi2_per_itn": 1.3118
+    },
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 20,
+     "integral_nb": 7.61976159e-05,
+     "std_dev_nb": 3.1268e-08,
+     "chi2_per_itn": 1.2165
+    },
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 20,
+     "integral_nb": 1.0341794,
+     "std_dev_nb": 0.00045702,
+     "chi2_per_itn": 1.1851
+    }
+   ]
+  },
+  "tail_vp_1_10_q2min_lo": {
+   "name": "tail_vp_1_10_q2min_lo",
+   "exit": 0,
+   "wall_s": 13.5,
+   "started_utc": "2026-10-26T19:14:45+00:00",
+   "card_sha256": "1330d67a3ca9b8a76db2f6ceb4054fe30fe7a61aac4e98abaf97e22d847aa83b",
+   "stdout_sha256": "5418f6330b0af933a6ab657b302f4608ef2624de8a618b3febdd782ddb66ad1b",
+   "out_file": "eltail_out.dat",
+   "out_sha256": "fe8495986da3ccf0ca950f306b77787571e33ef1af82b3ca9eb9ddf0fda8fd4a",
+   "summary": {
+    "sections": {
+     "nc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       0.0,
+       0.0
+      ],
+      "COMPTON CONTRIBUTION": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION": [
+       0.0,
+       0.0
+      ]
+     },
+     "cc": {
+      "VIRTUAL & SOFT CONTRIBUTIONS SIG2C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.p) SIG31C": [
+       0.0,
+       0.0
+      ],
+      "QUARKONIC RADIATION (1/k.q) SIG32C": [
+       0.0,
+       0.0
+      ],
+      "LEPTONIC RADIATION (1/k.qs) SIG33C": [
+       0.0,
+       0.0
+      ]
+     },
+     "el": {
+      "ELASTIC EP WITH CORRECTIONS": [
+       0.0,
+       0.0
+      ],
+      "INITIAL STATE LEPTONIC RADIATION": [
+       9.136,
+       0.0047039
+      ],
+      "FINAL STATE LEPTONIC RADIATION": [
+       1.2006,
+       0.00050665
+      ],
+      "COMPTON CONTRIBUTION": [
+       14.582,
+       0.0074342
+      ]
+     }
+    },
+    "total": [
+     24.919,
+     0.0088119
+    ]
+   },
+   "vegas": [
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 20,
+     "integral_nb": 9.13604462,
+     "std_dev_nb": 0.0047039,
+     "chi2_per_itn": 2.6781
+    },
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 20,
+     "integral_nb": 1.20061648,
+     "std_dev_nb": 0.00050665,
+     "chi2_per_itn": 1.2692
+    },
+    {
+     "ndim": 4,
+     "ncall": 76832.0,
+     "iterations": 20,
+     "integral_nb": 14.5822846,
+     "std_dev_nb": 0.0074342,
+     "chi2_per_itn": 1.5269
+    }
+   ]
+  }
+ },
+ "cards": {
+  "born_1000_10000_direct_q2max": "OUTFILENAM\noutfiles/eltail\nTITLE\n            DJANGOH 4.6.21 row-7 eltail born, bin 1000_10000, Q2MIN=1000 Q2MAX=10000\nEL-BEAM\n            18D0    0.0D0    -1\nPR-BEAM\n            275D0   0.0D0\nGSW-PARAM\n            2 0 3 1 0 0 2 1 1 1 1\nKINEM-CUTS\n            3   1D-5  0.95D0  1D-4  0.985D0  1000D0  10000D0  0.0D0\nEGAM-MIN\n            0D0\nINT-OPT-NC\n            1 0 0 0 0   0 0 0 0\nINT-OPT-CC\n            0 0 0 0\nINT-ONLY\n            -1\nINT-POINTS\n            100000\nSAM-OPT-NC\n            0 0 0 0 0   0 0 0 0\nSAM-OPT-CC\n            0 0 0 0\nNUCLEUS\n            275D0   1.0D0 1.0D0\nNUCL-MOD\n            0\nSTRUCTFUNC\n            0  2  10150\nPOLPDF\n            0\nLHAPATH\n./PDFsets\nFLONG\n            111  0.01  0.03\nALFAS\n            1   0   0.20   0.235\nNFLAVORS\n            0   5\nIOUNITS\n            6  10  11\nRNDM-SEEDS\n            0 0\nSTART\n            0\nSOPHIA\n            1.5\nOUT-LEP\n            1\nFRAG\n            1\nCASCADES\n            12\nMAX-VIRT\n            5\nWREM-MIN\n            3.0\nCONTINUE\n\n\n",
+  "born_1000_10000_q2min_hi": "OUTFILENAM\noutfiles/eltail\nTITLE\n            DJANGOH 4.6.21 row-7 eltail born, bin 1000_10000, Q2MIN=10000 Q2MAX=1e+08\nEL-BEAM\n            18D0    0.0D0    -1\nPR-BEAM\n            275D0   0.0D0\nGSW-PARAM\n            2 0 3 1 0 0 2 1 1 1 1\nKINEM-CUTS\n            3   1D-5  0.95D0  1D-4  0.985D0  10000D0  100000000D0  0.0D0\nEGAM-MIN\n            0D0\nINT-OPT-NC\n            1 0 0 0 0   0 0 0 0\nINT-OPT-CC\n            0 0 0 0\nINT-ONLY\n            -1\nINT-POINTS\n            100000\nSAM-OPT-NC\n            0 0 0 0 0   0 0 0 0\nSAM-OPT-CC\n            0 0 0 0\nNUCLEUS\n            275D0   1.0D0 1.0D0\nNUCL-MOD\n            0\nSTRUCTFUNC\n            0  2  10150\nPOLPDF\n            0\nLHAPATH\n./PDFsets\nFLONG\n            111  0.01  0.03\nALFAS\n            1   0   0.20   0.235\nNFLAVORS\n            0   5\nIOUNITS\n            6  10  11\nRNDM-SEEDS\n            0 0\nSTART\n            0\nSOPHIA\n            1.5\nOUT-LEP\n            1\nFRAG\n            1\nCASCADES\n            12\nMAX-VIRT\n            5\nWREM-MIN\n            3.0\nCONTINUE\n\n\n",
+  "born_1000_10000_q2min_lo": "OUTFILENAM\noutfiles/eltail\nTITLE\n            DJANGOH 4.6.21 row-7 eltail born, bin 1000_10000, Q2MIN=1000 Q2MAX=1e+08\nEL-BEAM\n            18D0    0.0D0    -1\nPR-BEAM\n            275D0   0.0D0\nGSW-PARAM\n            2 0 3 1 0 0 2 1 1 1 1\nKINEM-CUTS\n            3   1D-5  0.95D0  1D-4  0.985D0  1000D0  100000000D0  0.0D0\nEGAM-MIN\n            0D0\nINT-OPT-NC\n            1 0 0 0 0   0 0 0 0\nINT-OPT-CC\n            0 0 0 0\nINT-ONLY\n            -1\nINT-POINTS\n            100000\nSAM-OPT-NC\n            0 0 0 0 0   0 0 0 0\nSAM-OPT-CC\n            0 0 0 0\nNUCLEUS\n            275D0   1.0D0 1.0D0\nNUCL-MOD\n            0\nSTRUCTFUNC\n            0  2  10150\nPOLPDF\n            0\nLHAPATH\n./PDFsets\nFLONG\n            111  0.01  0.03\nALFAS\n            1   0   0.20   0.235\nNFLAVORS\n            0   5\nIOUNITS\n            6  10  11\nRNDM-SEEDS\n            0 0\nSTART\n            0\nSOPHIA\n            1.5\nOUT-LEP\n            1\nFRAG\n            1\nCASCADES\n            12\nMAX-VIRT\n            5\nWREM-MIN\n            3.0\nCONTINUE\n\n\n",
+  "born_100_1000_direct_q2max": "OUTFILENAM\noutfiles/eltail\nTITLE\n            DJANGOH 4.6.21 row-7 eltail born, bin 100_1000, Q2MIN=100 Q2MAX=1000\nEL-BEAM\n            18D0    0.0D0    -1\nPR-BEAM\n            275D0   0.0D0\nGSW-PARAM\n            2 0 3 1 0 0 2 1 1 1 1\nKINEM-CUTS\n            3   1D-5  0.9249D0  1D-4  0.985D0  100D0  1000D0  0.0D0\nEGAM-MIN\n            0D0\nINT-OPT-NC\n            1 0 0 0 0   0 0 0 0\nINT-OPT-CC\n            0 0 0 0\nINT-ONLY\n            -1\nINT-POINTS\n            100000\nSAM-OPT-NC\n            0 0 0 0 0   0 0 0 0\nSAM-OPT-CC\n            0 0 0 0\nNUCLEUS\n            275D0   1.0D0 1.0D0\nNUCL-MOD\n            0\nSTRUCTFUNC\n            0  2  10150\nPOLPDF\n            0\nLHAPATH\n./PDFsets\nFLONG\n            111  0.01  0.03\nALFAS\n            1   0   0.20   0.235\nNFLAVORS\n            0   5\nIOUNITS\n            6  10  11\nRNDM-SEEDS\n            0 0\nSTART\n            0\nSOPHIA\n            1.5\nOUT-LEP\n            1\nFRAG\n            1\nCASCADES\n            12\nMAX-VIRT\n            5\nWREM-MIN\n            3.0\nCONTINUE\n\n\n",
+  "born_100_1000_q2min_hi": "OUTFILENAM\noutfiles/eltail\nTITLE\n            DJANGOH 4.6.21 row-7 eltail born, bin 100_1000, Q2MIN=1000 Q2MAX=1e+08\nEL-BEAM\n            18D0    0.0D0    -1\nPR-BEAM\n            275D0   0.0D0\nGSW-PARAM\n            2 0 3 1 0 0 2 1 1 1 1\nKINEM-CUTS\n            3   1D-5  0.9249D0  1D-4  0.985D0  1000D0  100000000D0  0.0D0\nEGAM-MIN\n            0D0\nINT-OPT-NC\n            1 0 0 0 0   0 0 0 0\nINT-OPT-CC\n            0 0 0 0\nINT-ONLY\n            -1\nINT-POINTS\n            100000\nSAM-OPT-NC\n            0 0 0 0 0   0 0 0 0\nSAM-OPT-CC\n            0 0 0 0\nNUCLEUS\n            275D0   1.0D0 1.0D0\nNUCL-MOD\n            0\nSTRUCTFUNC\n            0  2  10150\nPOLPDF\n            0\nLHAPATH\n./PDFsets\nFLONG\n            111  0.01  0.03\nALFAS\n            1   0   0.20   0.235\nNFLAVORS\n            0   5\nIOUNITS\n            6  10  11\nRNDM-SEEDS\n            0 0\nSTART\n            0\nSOPHIA\n            1.5\nOUT-LEP\n            1\nFRAG\n            1\nCASCADES\n            12\nMAX-VIRT\n            5\nWREM-MIN\n            3.0\nCONTINUE\n\n\n",
+  "born_100_1000_q2min_lo": "OUTFILENAM\noutfiles/eltail\nTITLE\n            DJANGOH 4.6.21 row-7 eltail born, bin 100_1000, Q2MIN=100 Q2MAX=1e+08\nEL-BEAM\n            18D0    0.0D0    -1\nPR-BEAM\n            275D0   0.0D0\nGSW-PARAM\n            2 0 3 1 0 0 2 1 1 1 1\nKINEM-CUTS\n            3   1D-5  0.9249D0  1D-4  0.985D0  100D0  100000000D0  0.0D0\nEGAM-MIN\n            0D0\nINT-OPT-NC\n            1 0 0 0 0   0 0 0 0\nINT-OPT-CC\n            0 0 0 0\nINT-ONLY\n            -1\nINT-POINTS\n            100000\nSAM-OPT-NC\n            0 0 0 0 0   0 0 0 0\nSAM-OPT-CC\n            0 0 0 0\nNUCLEUS\n            275D0   1.0D0 1.0D0\nNUCL-MOD\n            0\nSTRUCTFUNC\n            0  2  10150\nPOLPDF\n            0\nLHAPATH\n./PDFsets\nFLONG\n            111  0.01  0.03\nALFAS\n            1   0   0.20   0.235\nNFLAVORS\n            0   5\nIOUNITS\n            6  10  11\nRNDM-SEEDS\n            0 0\nSTART\n            0\nSOPHIA\n            1.5\nOUT-LEP\n            1\nFRAG\n            1\nCASCADES\n            12\nMAX-VIRT\n            5\nWREM-MIN\n            3.0\nCONTINUE\n\n\n",
+  "born_10_100_direct_q2max": "OUTFILENAM\noutfiles/eltail\nTITLE\n            DJANGOH 4.6.21 row-7 eltail born, bin 10_100, Q2MIN=10 Q2MAX=100\nEL-BEAM\n            18D0    0.0D0    -1\nPR-BEAM\n            275D0   0.0D0\nGSW-PARAM\n            2 0 3 1 0 0 2 1 1 1 1\nKINEM-CUTS\n            3   1D-5  0.5518D0  1D-4  0.985D0  10D0  100D0  0.0D0\nEGAM-MIN\n            0D0\nINT-OPT-NC\n            1 0 0 0 0   0 0 0 0\nINT-OPT-CC\n            0 0 0 0\nINT-ONLY\n            -1\nINT-POINTS\n            100000\nSAM-OPT-NC\n            0 0 0 0 0   0 0 0 0\nSAM-OPT-CC\n            0 0 0 0\nNUCLEUS\n            275D0   1.0D0 1.0D0\nNUCL-MOD\n            0\nSTRUCTFUNC\n            0  2  10150\nPOLPDF\n            0\nLHAPATH\n./PDFsets\nFLONG\n            111  0.01  0.03\nALFAS\n            1   0   0.20   0.235\nNFLAVORS\n            0   5\nIOUNITS\n            6  10  11\nRNDM-SEEDS\n            0 0\nSTART\n            0\nSOPHIA\n            1.5\nOUT-LEP\n            1\nFRAG\n            1\nCASCADES\n            12\nMAX-VIRT\n            5\nWREM-MIN\n            3.0\nCONTINUE\n\n\n",
+  "born_10_100_q2min_hi": "OUTFILENAM\noutfiles/eltail\nTITLE\n            DJANGOH 4.6.21 row-7 eltail born, bin 10_100, Q2MIN=100 Q2MAX=1e+08\nEL-BEAM\n            18D0    0.0D0    -1\nPR-BEAM\n            275D0   0.0D0\nGSW-PARAM\n            2 0 3 1 0 0 2 1 1 1 1\nKINEM-CUTS\n            3   1D-5  0.5518D0  1D-4  0.985D0  100D0  100000000D0  0.0D0\nEGAM-MIN\n            0D0\nINT-OPT-NC\n            1 0 0 0 0   0 0 0 0\nINT-OPT-CC\n            0 0 0 0\nINT-ONLY\n            -1\nINT-POINTS\n            100000\nSAM-OPT-NC\n            0 0 0 0 0   0 0 0 0\nSAM-OPT-CC\n            0 0 0 0\nNUCLEUS\n            275D0   1.0D0 1.0D0\nNUCL-MOD\n            0\nSTRUCTFUNC\n            0  2  10150\nPOLPDF\n            0\nLHAPATH\n./PDFsets\nFLONG\n            111  0.01  0.03\nALFAS\n            1   0   0.20   0.235\nNFLAVORS\n            0   5\nIOUNITS\n            6  10  11\nRNDM-SEEDS\n            0 0\nSTART\n            0\nSOPHIA\n            1.5\nOUT-LEP\n            1\nFRAG\n            1\nCASCADES\n            12\nMAX-VIRT\n            5\nWREM-MIN\n            3.0\nCONTINUE\n\n\n",
+  "born_10_100_q2min_lo": "OUTFILENAM\noutfiles/eltail\nTITLE\n            DJANGOH 4.6.21 row-7 eltail born, bin 10_100, Q2MIN=10 Q2MAX=1e+08\nEL-BEAM\n            18D0    0.0D0    -1\nPR-BEAM\n            275D0   0.0D0\nGSW-PARAM\n            2 0 3 1 0 0 2 1 1 1 1\nKINEM-CUTS\n            3   1D-5  0.5518D0  1D-4  0.985D0  10D0  100000000D0  0.0D0\nEGAM-MIN\n            0D0\nINT-OPT-NC\n            1 0 0 0 0   0 0 0 0\nINT-OPT-CC\n            0 0 0 0\nINT-ONLY\n            -1\nINT-POINTS\n            100000\nSAM-OPT-NC\n            0 0 0 0 0   0 0 0 0\nSAM-OPT-CC\n            0 0 0 0\nNUCLEUS\n            275D0   1.0D0 1.0D0\nNUCL-MOD\n            0\nSTRUCTFUNC\n            0  2  10150\nPOLPDF\n            0\nLHAPATH\n./PDFsets\nFLONG\n            111  0.01  0.03\nALFAS\n            1   0   0.20   0.235\nNFLAVORS\n            0   5\nIOUNITS\n            6  10  11\nRNDM-SEEDS\n            0 0\nSTART\n            0\nSOPHIA\n            1.5\nOUT-LEP\n            1\nFRAG\n            1\nCASCADES\n            12\nMAX-VIRT\n            5\nWREM-MIN\n            3.0\nCONTINUE\n\n\n",
+  "born_1_10_direct_q2max": "OUTFILENAM\noutfiles/eltail\nTITLE\n            DJANGOH 4.6.21 row-7 eltail born, bin 1_10, Q2MIN=1 Q2MAX=10\nEL-BEAM\n            18D0    0.0D0    -1\nPR-BEAM\n            275D0   0.0D0\nGSW-PARAM\n            2 0 3 1 0 0 2 1 1 1 1\nKINEM-CUTS\n            3   1D-5  0.1096D0  1D-4  0.985D0  1D0  10D0  0.0D0\nEGAM-MIN\n            0D0\nINT-OPT-NC\n            1 0 0 0 0   0 0 0 0\nINT-OPT-CC\n            0 0 0 0\nINT-ONLY\n            -1\nINT-POINTS\n            100000\nSAM-OPT-NC\n            0 0 0 0 0   0 0 0 0\nSAM-OPT-CC\n            0 0 0 0\nNUCLEUS\n            275D0   1.0D0 1.0D0\nNUCL-MOD\n            0\nSTRUCTFUNC\n            0  2  10150\nPOLPDF\n            0\nLHAPATH\n./PDFsets\nFLONG\n            111  0.01  0.03\nALFAS\n            1   0   0.20   0.235\nNFLAVORS\n            0   5\nIOUNITS\n            6  10  11\nRNDM-SEEDS\n            0 0\nSTART\n            0\nSOPHIA\n            1.5\nOUT-LEP\n            1\nFRAG\n            1\nCASCADES\n            12\nMAX-VIRT\n            5\nWREM-MIN\n            3.0\nCONTINUE\n\n\n",
+  "born_1_10_q2min_hi": "OUTFILENAM\noutfiles/eltail\nTITLE\n            DJANGOH 4.6.21 row-7 eltail born, bin 1_10, Q2MIN=10 Q2MAX=1e+08\nEL-BEAM\n            18D0    0.0D0    -1\nPR-BEAM\n            275D0   0.0D0\nGSW-PARAM\n            2 0 3 1 0 0 2 1 1 1 1\nKINEM-CUTS\n            3   1D-5  0.1096D0  1D-4  0.985D0  10D0  100000000D0  0.0D0\nEGAM-MIN\n            0D0\nINT-OPT-NC\n            1 0 0 0 0   0 0 0 0\nINT-OPT-CC\n            0 0 0 0\nINT-ONLY\n            -1\nINT-POINTS\n            100000\nSAM-OPT-NC\n            0 0 0 0 0   0 0 0 0\nSAM-OPT-CC\n            0 0 0 0\nNUCLEUS\n            275D0   1.0D0 1.0D0\nNUCL-MOD\n            0\nSTRUCTFUNC\n            0  2  10150\nPOLPDF\n            0\nLHAPATH\n./PDFsets\nFLONG\n            111  0.01  0.03\nALFAS\n            1   0   0.20   0.235\nNFLAVORS\n            0   5\nIOUNITS\n            6  10  11\nRNDM-SEEDS\n            0 0\nSTART\n            0\nSOPHIA\n            1.5\nOUT-LEP\n            1\nFRAG\n            1\nCASCADES\n            12\nMAX-VIRT\n            5\nWREM-MIN\n            3.0\nCONTINUE\n\n\n",
+  "born_1_10_q2min_lo": "OUTFILENAM\noutfiles/eltail\nTITLE\n            DJANGOH 4.6.21 row-7 eltail born, bin 1_10, Q2MIN=1 Q2MAX=1e+08\nEL-BEAM\n            18D0    0.0D0    -1\nPR-BEAM\n            275D0   0.0D0\nGSW-PARAM\n            2 0 3 1 0 0 2 1 1 1 1\nKINEM-CUTS\n            3   1D-5  0.1096D0  1D-4  0.985D0  1D0  100000000D0  0.0D0\nEGAM-MIN\n            0D0\nINT-OPT-NC\n            1 0 0 0 0   0 0 0 0\nINT-OPT-CC\n            0 0 0 0\nINT-ONLY\n            -1\nINT-POINTS\n            100000\nSAM-OPT-NC\n            0 0 0 0 0   0 0 0 0\nSAM-OPT-CC\n            0 0 0 0\nNUCLEUS\n            275D0   1.0D0 1.0D0\nNUCL-MOD\n            0\nSTRUCTFUNC\n            0  2  10150\nPOLPDF\n            0\nLHAPATH\n./PDFsets\nFLONG\n            111  0.01  0.03\nALFAS\n            1   0   0.20   0.235\nNFLAVORS\n            0   5\nIOUNITS\n            6  10  11\nRNDM-SEEDS\n            0 0\nSTART\n            0\nSOPHIA\n            1.5\nOUT-LEP\n            1\nFRAG\n            1\nCASCADES\n            12\nMAX-VIRT\n            5\nWREM-MIN\n            3.0\nCONTINUE\n\n\n",
+  "control_Rad0_Q2_1000_10000": "OUTFILENAM\noutfiles/djangoh.NC.norad.18x275_Q2_1000_10000\nTITLE\nDJANGOH 4.6.21 for eRHIC for PR, LO at 18x275, Wmin=3.0\nEL-BEAM\n            18D0    0.0D0    -1\nPR-BEAM\n            275D0   0.0D0\nGSW-PARAM\n            2 0 3 1 0 0 2 1 1 1 1\nKINEM-CUTS\n            3   1D-5  1.00D0  1D-4  1.00D0  1.0D3  1.0D4  3.0D0\nEGAM-MIN\n            0D0\nINT-OPT-NC\n            1 0 0 0 0   0 0 0 0 \nINT-OPT-CC\n            0 0 0 0\nINT-ONLY\n            1\nINT-POINTS\n            100000\nSAM-OPT-NC\n            1 0 0 0 0   0 0 0 0\nSAM-OPT-CC\n            0 0 0 0\nNUCLEUS\n            275D0   1.0D0 1.0D0\nNUCL-MOD\n            0\nSTRUCTFUNC\n            0  2  10150\nPOLPDF\n            0\nLHAPATH\n./PDFsets\nFLONG\n            111  0.01  0.03\nALFAS\n            1   0   0.20   0.235\nNFLAVORS\n            0   5\nIOUNITS\n            6  10  11\nRNDM-SEEDS\n            0 0\nSTART\n            0\nSOPHIA\n            1.5\nOUT-LEP\n            1\nFRAG\n            1\nCASCADES\n            12\nMAX-VIRT\n            5\nWREM-MIN\n            3.0\nCONTINUE\n\n\n",
+  "control_Rad0_Q2_100_1000": "OUTFILENAM\noutfiles/djangoh.NC.norad.18x275_Q2_100_1000\nTITLE\nDJANGOH 4.6.21 for eRHIC for PR, LO at 18x275, Wmin=3.0\nEL-BEAM\n            18D0    0.0D0    -1\nPR-BEAM\n            275D0   0.0D0\nGSW-PARAM\n            2 0 3 1 0 0 2 1 1 1 1\nKINEM-CUTS\n            3   1D-5  1.00D0  1D-4  1.00D0  1.0D2  1.0D3  3.0D0\nEGAM-MIN\n            0D0\nINT-OPT-NC\n            1 0 0 0 0   0 0 0 0 \nINT-OPT-CC\n            0 0 0 0\nINT-ONLY\n            1\nINT-POINTS\n            100000\nSAM-OPT-NC\n            1 0 0 0 0   0 0 0 0\nSAM-OPT-CC\n            0 0 0 0\nNUCLEUS\n            275D0   1.0D0 1.0D0\nNUCL-MOD\n            0\nSTRUCTFUNC\n            0  2  10150\nPOLPDF\n            0\nLHAPATH\n./PDFsets\nFLONG\n            111  0.01  0.03\nALFAS\n            1   0   0.20   0.235\nNFLAVORS\n            0   5\nIOUNITS\n            6  10  11\nRNDM-SEEDS\n            0 0\nSTART\n            0\nSOPHIA\n            1.5\nOUT-LEP\n            1\nFRAG\n            1\nCASCADES\n            12\nMAX-VIRT\n            5\nWREM-MIN\n            3.0\nCONTINUE\n\n\n",
+  "control_Rad0_Q2_10_100": "OUTFILENAM\noutfiles/djangoh.NC.norad.18x275_Q2_10_100\nTITLE\nDJANGOH 4.6.21 for eRHIC for PR, LO at 18x275, Wmin=3.0\nEL-BEAM\n            18D0    0.0D0    -1\nPR-BEAM\n            275D0   0.0D0\nGSW-PARAM\n            2 0 3 1 0 0 2 1 1 1 1\nKINEM-CUTS\n            3   1D-5  1.00D0  1D-4  1.00D0  1.0D1  1.0D2  3.0D0\nEGAM-MIN\n            0D0\nINT-OPT-NC\n            1 0 0 0 0   0 0 0 0 \nINT-OPT-CC\n            0 0 0 0\nINT-ONLY\n            1\nINT-POINTS\n            100000\nSAM-OPT-NC\n            1 0 0 0 0   0 0 0 0\nSAM-OPT-CC\n            0 0 0 0\nNUCLEUS\n            275D0   1.0D0 1.0D0\nNUCL-MOD\n            0\nSTRUCTFUNC\n            0  2  10150\nPOLPDF\n            0\nLHAPATH\n./PDFsets\nFLONG\n            111  0.01  0.03\nALFAS\n            1   0   0.20   0.235\nNFLAVORS\n            0   5\nIOUNITS\n            6  10  11\nRNDM-SEEDS\n            0 0\nSTART\n            0\nSOPHIA\n            1.5\nOUT-LEP\n            1\nFRAG\n            1\nCASCADES\n            12\nMAX-VIRT\n            5\nWREM-MIN\n            3.0\nCONTINUE\n\n\n",
+  "control_Rad0_Q2_1_10": "OUTFILENAM\noutfiles/djangoh.NC.norad.18x275_Q2_1_10\nTITLE\nDJANGOH 4.6.21 for eRHIC for PR, LO at 18x275, Wmin=3.0\nEL-BEAM\n            18D0    0.0D0    -1\nPR-BEAM\n            275D0   0.0D0\nGSW-PARAM\n            2 0 3 1 0 0 2 1 1 1 1\nKINEM-CUTS\n            3   1D-5  1.00D0  1D-4  1.00D0  1.0D0  1.0D1  3.0D0\nEGAM-MIN\n            0D0\nINT-OPT-NC\n            1 0 0 0 0   0 0 0 0 \nINT-OPT-CC\n            0 0 0 0\nINT-ONLY\n            1\nINT-POINTS\n            100000\nSAM-OPT-NC\n            1 0 0 0 0   0 0 0 0\nSAM-OPT-CC\n            0 0 0 0\nNUCLEUS\n            275D0   1.0D0 1.0D0\nNUCL-MOD\n            0\nSTRUCTFUNC\n            0  2  10150\nPOLPDF\n            0\nLHAPATH\n./PDFsets\nFLONG\n            111  0.01  0.03\nALFAS\n            1   0   0.20   0.235\nNFLAVORS\n            0   5\nIOUNITS\n            6  10  11\nRNDM-SEEDS\n            0 0\nSTART\n            0\nSOPHIA\n            1.5\nOUT-LEP\n            1\nFRAG\n            1\nCASCADES\n            12\nMAX-VIRT\n            5\nWREM-MIN\n            3.0\nCONTINUE\n\n\n",
+  "control_Rad1_Q2_1000_10000": "OUTFILENAM\noutfiles/djangoh.NC.Rad.18x275_Q2_1000_10000\nTITLE\nDJANGOH 4.6.21, LO at 18x275, Wmin=3.0\nEL-BEAM\n            18D0    0.0D0    -1\nPR-BEAM\n            275D0   0.0D0\nGSW-PARAM\n            2 1 3 1 1 1 2 1 1 1 1\nKINEM-CUTS\n            3   1D-5  1.00D0  1D-4  1.00D0  1.0D3  1.0D4  3.0D0\nEGAM-MIN\n            0D0\nINT-OPT-NC\n            1 18 18 18 18   0 0 0 0 \nINT-OPT-CC\n            0 0 0 0\nINT-ONLY\n            1\nINT-POINTS\n            100000\nSAM-OPT-NC\n            1 1 1 1 1   0 0 0 0\nSAM-OPT-CC\n            0 0 0 0\nNUCLEUS\n            275D0   1.0D0 1.0D0\nNUCL-MOD\n            0\nSTRUCTFUNC\n            0  2  10150\nPOLPDF\n            0\nLHAPATH\n./PDFsets\nFLONG\n            111  0.01  0.03\nALFAS\n            1   0   0.20   0.235\nNFLAVORS\n            0   5\nIOUNITS\n            6  10  11\nRNDM-SEEDS\n            0 0\nSTART\n            0\nSOPHIA\n            1.5\nOUT-LEP\n            1\nFRAG\n            1\nCASCADES\n            12\nMAX-VIRT\n            5\nWREM-MIN\n            3.0\nCONTINUE\n\n\n",
+  "control_Rad1_Q2_100_1000": "OUTFILENAM\noutfiles/djangoh.NC.Rad.18x275_Q2_100_1000\nTITLE\nDJANGOH 4.6.21, LO at 18x275, Wmin=3.0\nEL-BEAM\n            18D0    0.0D0    -1\nPR-BEAM\n            275D0   0.0D0\nGSW-PARAM\n            2 1 3 1 1 1 2 1 1 1 1\nKINEM-CUTS\n            3   1D-5  1.00D0  1D-4  1.00D0  1.0D2  1.0D3  3.0D0\nEGAM-MIN\n            0D0\nINT-OPT-NC\n            1 18 18 18 18   0 0 0 0 \nINT-OPT-CC\n            0 0 0 0\nINT-ONLY\n            1\nINT-POINTS\n            100000\nSAM-OPT-NC\n            1 1 1 1 1   0 0 0 0\nSAM-OPT-CC\n            0 0 0 0\nNUCLEUS\n            275D0   1.0D0 1.0D0\nNUCL-MOD\n            0\nSTRUCTFUNC\n            0  2  10150\nPOLPDF\n            0\nLHAPATH\n./PDFsets\nFLONG\n            111  0.01  0.03\nALFAS\n            1   0   0.20   0.235\nNFLAVORS\n            0   5\nIOUNITS\n            6  10  11\nRNDM-SEEDS\n            0 0\nSTART\n            0\nSOPHIA\n            1.5\nOUT-LEP\n            1\nFRAG\n            1\nCASCADES\n            12\nMAX-VIRT\n            5\nWREM-MIN\n            3.0\nCONTINUE\n\n\n",
+  "control_Rad1_Q2_10_100": "OUTFILENAM\noutfiles/djangoh.NC.Rad.18x275_Q2_10_100\nTITLE\nDJANGOH 4.6.21, LO at 18x275, Wmin=3.0\nEL-BEAM\n            18D0    0.0D0    -1\nPR-BEAM\n            275D0   0.0D0\nGSW-PARAM\n            2 1 3 1 1 1 2 1 1 1 1\nKINEM-CUTS\n            3   1D-5  1.00D0  1D-4  1.00D0  1.0D1  1.0D2  3.0D0\nEGAM-MIN\n            0D0\nINT-OPT-NC\n            1 18 18 18 18   0 0 0 0 \nINT-OPT-CC\n            0 0 0 0\nINT-ONLY\n            1\nINT-POINTS\n            100000\nSAM-OPT-NC\n            1 1 1 1 1   0 0 0 0\nSAM-OPT-CC\n            0 0 0 0\nNUCLEUS\n            275D0   1.0D0 1.0D0\nNUCL-MOD\n            0\nSTRUCTFUNC\n            0  2  10150\nPOLPDF\n            0\nLHAPATH\n./PDFsets\nFLONG\n            111  0.01  0.03\nALFAS\n            1   0   0.20   0.235\nNFLAVORS\n            0   5\nIOUNITS\n            6  10  11\nRNDM-SEEDS\n            0 0\nSTART\n            0\nSOPHIA\n            1.5\nOUT-LEP\n            1\nFRAG\n            1\nCASCADES\n            12\nMAX-VIRT\n            5\nWREM-MIN\n            3.0\nCONTINUE\n\n\n",
+  "control_Rad1_Q2_1_10": "OUTFILENAM\noutfiles/djangoh.NC.Rad.18x275_Q2_1_10\nTITLE\nDJANGOH 4.6.21, LO at 18x275, Wmin=3.0\nEL-BEAM\n            18D0    0.0D0    -1\nPR-BEAM\n            275D0   0.0D0\nGSW-PARAM\n            2 1 3 1 1 1 2 1 1 1 1\nKINEM-CUTS\n            3   1D-5  1.00D0  1D-4  1.00D0  1.0D0  1.0D1  3.0D0\nEGAM-MIN\n            0D0\nINT-OPT-NC\n            1 18 18 18 18   0 0 0 0 \nINT-OPT-CC\n            0 0 0 0\nINT-ONLY\n            1\nINT-POINTS\n            100000\nSAM-OPT-NC\n            1 1 1 1 1   0 0 0 0\nSAM-OPT-CC\n            0 0 0 0\nNUCLEUS\n            275D0   1.0D0 1.0D0\nNUCL-MOD\n            0\nSTRUCTFUNC\n            0  2  10150\nPOLPDF\n            0\nLHAPATH\n./PDFsets\nFLONG\n            111  0.01  0.03\nALFAS\n            1   0   0.20   0.235\nNFLAVORS\n            0   5\nIOUNITS\n            6  10  11\nRNDM-SEEDS\n            0 0\nSTART\n            0\nSOPHIA\n            1.5\nOUT-LEP\n            1\nFRAG\n            1\nCASCADES\n            12\nMAX-VIRT\n            5\nWREM-MIN\n            3.0\nCONTINUE\n\n\n",
+  "tail_novp_1000_10000_direct_q2max": "OUTFILENAM\noutfiles/eltail\nTITLE\n            DJANGOH 4.6.21 row-7 eltail tail, bin 1000_10000, Q2MIN=1000 Q2MAX=10000\nEL-BEAM\n            18D0    0.0D0    -1\nPR-BEAM\n            275D0   0.0D0\nGSW-PARAM\n            2 1 2 1 1 1 2 1 1 1 1\nKINEM-CUTS\n            3   1D-5  0.95D0  1D-4  0.985D0  1000D0  10000D0  0.0D0\nEGAM-MIN\n            0D0\nINT-OPT-NC\n            0 0 0 0 0   0 20 20 20\nINT-OPT-CC\n            0 0 0 0\nINT-ONLY\n            -1\nINT-POINTS\n            100000\nSAM-OPT-NC\n            0 0 0 0 0   0 0 0 0\nSAM-OPT-CC\n            0 0 0 0\nNUCLEUS\n            275D0   1.0D0 1.0D0\nNUCL-MOD\n            0\nSTRUCTFUNC\n            0  2  10150\nPOLPDF\n            0\nLHAPATH\n./PDFsets\nFLONG\n            111  0.01  0.03\nALFAS\n            1   0   0.20   0.235\nNFLAVORS\n            0   5\nIOUNITS\n            6  10  11\nRNDM-SEEDS\n            0 0\nSTART\n            0\nSOPHIA\n            1.5\nOUT-LEP\n            1\nFRAG\n            1\nCASCADES\n            12\nMAX-VIRT\n            5\nWREM-MIN\n            3.0\nCONTINUE\n\n\n",
+  "tail_novp_1000_10000_q2min_hi": "OUTFILENAM\noutfiles/eltail\nTITLE\n            DJANGOH 4.6.21 row-7 eltail tail, bin 1000_10000, Q2MIN=10000 Q2MAX=1e+08\nEL-BEAM\n            18D0    0.0D0    -1\nPR-BEAM\n            275D0   0.0D0\nGSW-PARAM\n            2 1 2 1 1 1 2 1 1 1 1\nKINEM-CUTS\n            3   1D-5  0.95D0  1D-4  0.985D0  10000D0  100000000D0  0.0D0\nEGAM-MIN\n            0D0\nINT-OPT-NC\n            0 0 0 0 0   0 20 20 20\nINT-OPT-CC\n            0 0 0 0\nINT-ONLY\n            -1\nINT-POINTS\n            100000\nSAM-OPT-NC\n            0 0 0 0 0   0 0 0 0\nSAM-OPT-CC\n            0 0 0 0\nNUCLEUS\n            275D0   1.0D0 1.0D0\nNUCL-MOD\n            0\nSTRUCTFUNC\n            0  2  10150\nPOLPDF\n            0\nLHAPATH\n./PDFsets\nFLONG\n            111  0.01  0.03\nALFAS\n            1   0   0.20   0.235\nNFLAVORS\n            0   5\nIOUNITS\n            6  10  11\nRNDM-SEEDS\n            0 0\nSTART\n            0\nSOPHIA\n            1.5\nOUT-LEP\n            1\nFRAG\n            1\nCASCADES\n            12\nMAX-VIRT\n            5\nWREM-MIN\n            3.0\nCONTINUE\n\n\n",
+  "tail_novp_1000_10000_q2min_lo": "OUTFILENAM\noutfiles/eltail\nTITLE\n            DJANGOH 4.6.21 row-7 eltail tail, bin 1000_10000, Q2MIN=1000 Q2MAX=1e+08\nEL-BEAM\n            18D0    0.0D0    -1\nPR-BEAM\n            275D0   0.0D0\nGSW-PARAM\n            2 1 2 1 1 1 2 1 1 1 1\nKINEM-CUTS\n            3   1D-5  0.95D0  1D-4  0.985D0  1000D0  100000000D0  0.0D0\nEGAM-MIN\n            0D0\nINT-OPT-NC\n            0 0 0 0 0   0 20 20 20\nINT-OPT-CC\n            0 0 0 0\nINT-ONLY\n            -1\nINT-POINTS\n            100000\nSAM-OPT-NC\n            0 0 0 0 0   0 0 0 0\nSAM-OPT-CC\n            0 0 0 0\nNUCLEUS\n            275D0   1.0D0 1.0D0\nNUCL-MOD\n            0\nSTRUCTFUNC\n            0  2  10150\nPOLPDF\n            0\nLHAPATH\n./PDFsets\nFLONG\n            111  0.01  0.03\nALFAS\n            1   0   0.20   0.235\nNFLAVORS\n            0   5\nIOUNITS\n            6  10  11\nRNDM-SEEDS\n            0 0\nSTART\n            0\nSOPHIA\n            1.5\nOUT-LEP\n            1\nFRAG\n            1\nCASCADES\n            12\nMAX-VIRT\n            5\nWREM-MIN\n            3.0\nCONTINUE\n\n\n",
+  "tail_novp_100_1000_direct_q2max": "OUTFILENAM\noutfiles/eltail\nTITLE\n            DJANGOH 4.6.21 row-7 eltail tail, bin 100_1000, Q2MIN=100 Q2MAX=1000\nEL-BEAM\n            18D0    0.0D0    -1\nPR-BEAM\n            275D0   0.0D0\nGSW-PARAM\n            2 1 2 1 1 1 2 1 1 1 1\nKINEM-CUTS\n            3   1D-5  0.9249D0  1D-4  0.985D0  100D0  1000D0  0.0D0\nEGAM-MIN\n            0D0\nINT-OPT-NC\n            0 0 0 0 0   0 20 20 20\nINT-OPT-CC\n            0 0 0 0\nINT-ONLY\n            -1\nINT-POINTS\n            100000\nSAM-OPT-NC\n            0 0 0 0 0   0 0 0 0\nSAM-OPT-CC\n            0 0 0 0\nNUCLEUS\n            275D0   1.0D0 1.0D0\nNUCL-MOD\n            0\nSTRUCTFUNC\n            0  2  10150\nPOLPDF\n            0\nLHAPATH\n./PDFsets\nFLONG\n            111  0.01  0.03\nALFAS\n            1   0   0.20   0.235\nNFLAVORS\n            0   5\nIOUNITS\n            6  10  11\nRNDM-SEEDS\n            0 0\nSTART\n            0\nSOPHIA\n            1.5\nOUT-LEP\n            1\nFRAG\n            1\nCASCADES\n            12\nMAX-VIRT\n            5\nWREM-MIN\n            3.0\nCONTINUE\n\n\n",
+  "tail_novp_100_1000_q2min_hi": "OUTFILENAM\noutfiles/eltail\nTITLE\n            DJANGOH 4.6.21 row-7 eltail tail, bin 100_1000, Q2MIN=1000 Q2MAX=1e+08\nEL-BEAM\n            18D0    0.0D0    -1\nPR-BEAM\n            275D0   0.0D0\nGSW-PARAM\n            2 1 2 1 1 1 2 1 1 1 1\nKINEM-CUTS\n            3   1D-5  0.9249D0  1D-4  0.985D0  1000D0  100000000D0  0.0D0\nEGAM-MIN\n            0D0\nINT-OPT-NC\n            0 0 0 0 0   0 20 20 20\nINT-OPT-CC\n            0 0 0 0\nINT-ONLY\n            -1\nINT-POINTS\n            100000\nSAM-OPT-NC\n            0 0 0 0 0   0 0 0 0\nSAM-OPT-CC\n            0 0 0 0\nNUCLEUS\n            275D0   1.0D0 1.0D0\nNUCL-MOD\n            0\nSTRUCTFUNC\n            0  2  10150\nPOLPDF\n            0\nLHAPATH\n./PDFsets\nFLONG\n            111  0.01  0.03\nALFAS\n            1   0   0.20   0.235\nNFLAVORS\n            0   5\nIOUNITS\n            6  10  11\nRNDM-SEEDS\n            0 0\nSTART\n            0\nSOPHIA\n            1.5\nOUT-LEP\n            1\nFRAG\n            1\nCASCADES\n            12\nMAX-VIRT\n            5\nWREM-MIN\n            3.0\nCONTINUE\n\n\n",
+  "tail_novp_100_1000_q2min_lo": "OUTFILENAM\noutfiles/eltail\nTITLE\n            DJANGOH 4.6.21 row-7 eltail tail, bin 100_1000, Q2MIN=100 Q2MAX=1e+08\nEL-BEAM\n            18D0    0.0D0    -1\nPR-BEAM\n            275D0   0.0D0\nGSW-PARAM\n            2 1 2 1 1 1 2 1 1 1 1\nKINEM-CUTS\n            3   1D-5  0.9249D0  1D-4  0.985D0  100D0  100000000D0  0.0D0\nEGAM-MIN\n            0D0\nINT-OPT-NC\n            0 0 0 0 0   0 20 20 20\nINT-OPT-CC\n            0 0 0 0\nINT-ONLY\n            -1\nINT-POINTS\n            100000\nSAM-OPT-NC\n            0 0 0 0 0   0 0 0 0\nSAM-OPT-CC\n            0 0 0 0\nNUCLEUS\n            275D0   1.0D0 1.0D0\nNUCL-MOD\n            0\nSTRUCTFUNC\n            0  2  10150\nPOLPDF\n            0\nLHAPATH\n./PDFsets\nFLONG\n            111  0.01  0.03\nALFAS\n            1   0   0.20   0.235\nNFLAVORS\n            0   5\nIOUNITS\n            6  10  11\nRNDM-SEEDS\n            0 0\nSTART\n            0\nSOPHIA\n            1.5\nOUT-LEP\n            1\nFRAG\n            1\nCASCADES\n            12\nMAX-VIRT\n            5\nWREM-MIN\n            3.0\nCONTINUE\n\n\n",
+  "tail_novp_10_100_direct_q2max": "OUTFILENAM\noutfiles/eltail\nTITLE\n            DJANGOH 4.6.21 row-7 eltail tail, bin 10_100, Q2MIN=10 Q2MAX=100\nEL-BEAM\n            18D0    0.0D0    -1\nPR-BEAM\n            275D0   0.0D0\nGSW-PARAM\n            2 1 2 1 1 1 2 1 1 1 1\nKINEM-CUTS\n            3   1D-5  0.5518D0  1D-4  0.985D0  10D0  100D0  0.0D0\nEGAM-MIN\n            0D0\nINT-OPT-NC\n            0 0 0 0 0   0 20 20 20\nINT-OPT-CC\n            0 0 0 0\nINT-ONLY\n            -1\nINT-POINTS\n            100000\nSAM-OPT-NC\n            0 0 0 0 0   0 0 0 0\nSAM-OPT-CC\n            0 0 0 0\nNUCLEUS\n            275D0   1.0D0 1.0D0\nNUCL-MOD\n            0\nSTRUCTFUNC\n            0  2  10150\nPOLPDF\n            0\nLHAPATH\n./PDFsets\nFLONG\n            111  0.01  0.03\nALFAS\n            1   0   0.20   0.235\nNFLAVORS\n            0   5\nIOUNITS\n            6  10  11\nRNDM-SEEDS\n            0 0\nSTART\n            0\nSOPHIA\n            1.5\nOUT-LEP\n            1\nFRAG\n            1\nCASCADES\n            12\nMAX-VIRT\n            5\nWREM-MIN\n            3.0\nCONTINUE\n\n\n",
+  "tail_novp_10_100_q2min_hi": "OUTFILENAM\noutfiles/eltail\nTITLE\n            DJANGOH 4.6.21 row-7 eltail tail, bin 10_100, Q2MIN=100 Q2MAX=1e+08\nEL-BEAM\n            18D0    0.0D0    -1\nPR-BEAM\n            275D0   0.0D0\nGSW-PARAM\n            2 1 2 1 1 1 2 1 1 1 1\nKINEM-CUTS\n            3   1D-5  0.5518D0  1D-4  0.985D0  100D0  100000000D0  0.0D0\nEGAM-MIN\n            0D0\nINT-OPT-NC\n            0 0 0 0 0   0 20 20 20\nINT-OPT-CC\n            0 0 0 0\nINT-ONLY\n            -1\nINT-POINTS\n            100000\nSAM-OPT-NC\n            0 0 0 0 0   0 0 0 0\nSAM-OPT-CC\n            0 0 0 0\nNUCLEUS\n            275D0   1.0D0 1.0D0\nNUCL-MOD\n            0\nSTRUCTFUNC\n            0  2  10150\nPOLPDF\n            0\nLHAPATH\n./PDFsets\nFLONG\n            111  0.01  0.03\nALFAS\n            1   0   0.20   0.235\nNFLAVORS\n            0   5\nIOUNITS\n            6  10  11\nRNDM-SEEDS\n            0 0\nSTART\n            0\nSOPHIA\n            1.5\nOUT-LEP\n            1\nFRAG\n            1\nCASCADES\n            12\nMAX-VIRT\n            5\nWREM-MIN\n            3.0\nCONTINUE\n\n\n",
+  "tail_novp_10_100_q2min_lo": "OUTFILENAM\noutfiles/eltail\nTITLE\n            DJANGOH 4.6.21 row-7 eltail tail, bin 10_100, Q2MIN=10 Q2MAX=1e+08\nEL-BEAM\n            18D0    0.0D0    -1\nPR-BEAM\n            275D0   0.0D0\nGSW-PARAM\n            2 1 2 1 1 1 2 1 1 1 1\nKINEM-CUTS\n            3   1D-5  0.5518D0  1D-4  0.985D0  10D0  100000000D0  0.0D0\nEGAM-MIN\n            0D0\nINT-OPT-NC\n            0 0 0 0 0   0 20 20 20\nINT-OPT-CC\n            0 0 0 0\nINT-ONLY\n            -1\nINT-POINTS\n            100000\nSAM-OPT-NC\n            0 0 0 0 0   0 0 0 0\nSAM-OPT-CC\n            0 0 0 0\nNUCLEUS\n            275D0   1.0D0 1.0D0\nNUCL-MOD\n            0\nSTRUCTFUNC\n            0  2  10150\nPOLPDF\n            0\nLHAPATH\n./PDFsets\nFLONG\n            111  0.01  0.03\nALFAS\n            1   0   0.20   0.235\nNFLAVORS\n            0   5\nIOUNITS\n            6  10  11\nRNDM-SEEDS\n            0 0\nSTART\n            0\nSOPHIA\n            1.5\nOUT-LEP\n            1\nFRAG\n            1\nCASCADES\n            12\nMAX-VIRT\n            5\nWREM-MIN\n            3.0\nCONTINUE\n\n\n",
+  "tail_novp_1_10_direct_q2max": "OUTFILENAM\noutfiles/eltail\nTITLE\n            DJANGOH 4.6.21 row-7 eltail tail, bin 1_10, Q2MIN=1 Q2MAX=10\nEL-BEAM\n            18D0    0.0D0    -1\nPR-BEAM\n            275D0   0.0D0\nGSW-PARAM\n            2 1 2 1 1 1 2 1 1 1 1\nKINEM-CUTS\n            3   1D-5  0.1096D0  1D-4  0.985D0  1D0  10D0  0.0D0\nEGAM-MIN\n            0D0\nINT-OPT-NC\n            0 0 0 0 0   0 20 20 20\nINT-OPT-CC\n            0 0 0 0\nINT-ONLY\n            -1\nINT-POINTS\n            100000\nSAM-OPT-NC\n            0 0 0 0 0   0 0 0 0\nSAM-OPT-CC\n            0 0 0 0\nNUCLEUS\n            275D0   1.0D0 1.0D0\nNUCL-MOD\n            0\nSTRUCTFUNC\n            0  2  10150\nPOLPDF\n            0\nLHAPATH\n./PDFsets\nFLONG\n            111  0.01  0.03\nALFAS\n            1   0   0.20   0.235\nNFLAVORS\n            0   5\nIOUNITS\n            6  10  11\nRNDM-SEEDS\n            0 0\nSTART\n            0\nSOPHIA\n            1.5\nOUT-LEP\n            1\nFRAG\n            1\nCASCADES\n            12\nMAX-VIRT\n            5\nWREM-MIN\n            3.0\nCONTINUE\n\n\n",
+  "tail_novp_1_10_q2min_hi": "OUTFILENAM\noutfiles/eltail\nTITLE\n            DJANGOH 4.6.21 row-7 eltail tail, bin 1_10, Q2MIN=10 Q2MAX=1e+08\nEL-BEAM\n            18D0    0.0D0    -1\nPR-BEAM\n            275D0   0.0D0\nGSW-PARAM\n            2 1 2 1 1 1 2 1 1 1 1\nKINEM-CUTS\n            3   1D-5  0.1096D0  1D-4  0.985D0  10D0  100000000D0  0.0D0\nEGAM-MIN\n            0D0\nINT-OPT-NC\n            0 0 0 0 0   0 20 20 20\nINT-OPT-CC\n            0 0 0 0\nINT-ONLY\n            -1\nINT-POINTS\n            100000\nSAM-OPT-NC\n            0 0 0 0 0   0 0 0 0\nSAM-OPT-CC\n            0 0 0 0\nNUCLEUS\n            275D0   1.0D0 1.0D0\nNUCL-MOD\n            0\nSTRUCTFUNC\n            0  2  10150\nPOLPDF\n            0\nLHAPATH\n./PDFsets\nFLONG\n            111  0.01  0.03\nALFAS\n            1   0   0.20   0.235\nNFLAVORS\n            0   5\nIOUNITS\n            6  10  11\nRNDM-SEEDS\n            0 0\nSTART\n            0\nSOPHIA\n            1.5\nOUT-LEP\n            1\nFRAG\n            1\nCASCADES\n            12\nMAX-VIRT\n            5\nWREM-MIN\n            3.0\nCONTINUE\n\n\n",
+  "tail_novp_1_10_q2min_lo": "OUTFILENAM\noutfiles/eltail\nTITLE\n            DJANGOH 4.6.21 row-7 eltail tail, bin 1_10, Q2MIN=1 Q2MAX=1e+08\nEL-BEAM\n            18D0    0.0D0    -1\nPR-BEAM\n            275D0   0.0D0\nGSW-PARAM\n            2 1 2 1 1 1 2 1 1 1 1\nKINEM-CUTS\n            3   1D-5  0.1096D0  1D-4  0.985D0  1D0  100000000D0  0.0D0\nEGAM-MIN\n            0D0\nINT-OPT-NC\n            0 0 0 0 0   0 20 20 20\nINT-OPT-CC\n            0 0 0 0\nINT-ONLY\n            -1\nINT-POINTS\n            100000\nSAM-OPT-NC\n            0 0 0 0 0   0 0 0 0\nSAM-OPT-CC\n            0 0 0 0\nNUCLEUS\n            275D0   1.0D0 1.0D0\nNUCL-MOD\n            0\nSTRUCTFUNC\n            0  2  10150\nPOLPDF\n            0\nLHAPATH\n./PDFsets\nFLONG\n            111  0.01  0.03\nALFAS\n            1   0   0.20   0.235\nNFLAVORS\n            0   5\nIOUNITS\n            6  10  11\nRNDM-SEEDS\n            0 0\nSTART\n            0\nSOPHIA\n            1.5\nOUT-LEP\n            1\nFRAG\n            1\nCASCADES\n            12\nMAX-VIRT\n            5\nWREM-MIN\n            3.0\nCONTINUE\n\n\n",
+  "tail_vp_1000_10000_q2min_hi": "OUTFILENAM\noutfiles/eltail\nTITLE\n            DJANGOH 4.6.21 row-7 eltail tail, bin 1000_10000, Q2MIN=10000 Q2MAX=1e+08\nEL-BEAM\n            18D0    0.0D0    -1\nPR-BEAM\n            275D0   0.0D0\nGSW-PARAM\n            2 1 3 1 1 1 2 1 1 1 1\nKINEM-CUTS\n            3   1D-5  0.95D0  1D-4  0.985D0  10000D0  100000000D0  0.0D0\nEGAM-MIN\n            0D0\nINT-OPT-NC\n            0 0 0 0 0   0 20 20 20\nINT-OPT-CC\n            0 0 0 0\nINT-ONLY\n            -1\nINT-POINTS\n            100000\nSAM-OPT-NC\n            0 0 0 0 0   0 0 0 0\nSAM-OPT-CC\n            0 0 0 0\nNUCLEUS\n            275D0   1.0D0 1.0D0\nNUCL-MOD\n            0\nSTRUCTFUNC\n            0  2  10150\nPOLPDF\n            0\nLHAPATH\n./PDFsets\nFLONG\n            111  0.01  0.03\nALFAS\n            1   0   0.20   0.235\nNFLAVORS\n            0   5\nIOUNITS\n            6  10  11\nRNDM-SEEDS\n            0 0\nSTART\n            0\nSOPHIA\n            1.5\nOUT-LEP\n            1\nFRAG\n            1\nCASCADES\n            12\nMAX-VIRT\n            5\nWREM-MIN\n            3.0\nCONTINUE\n\n\n",
+  "tail_vp_1000_10000_q2min_lo": "OUTFILENAM\noutfiles/eltail\nTITLE\n            DJANGOH 4.6.21 row-7 eltail tail, bin 1000_10000, Q2MIN=1000 Q2MAX=1e+08\nEL-BEAM\n            18D0    0.0D0    -1\nPR-BEAM\n            275D0   0.0D0\nGSW-PARAM\n            2 1 3 1 1 1 2 1 1 1 1\nKINEM-CUTS\n            3   1D-5  0.95D0  1D-4  0.985D0  1000D0  100000000D0  0.0D0\nEGAM-MIN\n            0D0\nINT-OPT-NC\n            0 0 0 0 0   0 20 20 20\nINT-OPT-CC\n            0 0 0 0\nINT-ONLY\n            -1\nINT-POINTS\n            100000\nSAM-OPT-NC\n            0 0 0 0 0   0 0 0 0\nSAM-OPT-CC\n            0 0 0 0\nNUCLEUS\n            275D0   1.0D0 1.0D0\nNUCL-MOD\n            0\nSTRUCTFUNC\n            0  2  10150\nPOLPDF\n            0\nLHAPATH\n./PDFsets\nFLONG\n            111  0.01  0.03\nALFAS\n            1   0   0.20   0.235\nNFLAVORS\n            0   5\nIOUNITS\n            6  10  11\nRNDM-SEEDS\n            0 0\nSTART\n            0\nSOPHIA\n            1.5\nOUT-LEP\n            1\nFRAG\n            1\nCASCADES\n            12\nMAX-VIRT\n            5\nWREM-MIN\n            3.0\nCONTINUE\n\n\n",
+  "tail_vp_100_1000_q2min_hi": "OUTFILENAM\noutfiles/eltail\nTITLE\n            DJANGOH 4.6.21 row-7 eltail tail, bin 100_1000, Q2MIN=1000 Q2MAX=1e+08\nEL-BEAM\n            18D0    0.0D0    -1\nPR-BEAM\n            275D0   0.0D0\nGSW-PARAM\n            2 1 3 1 1 1 2 1 1 1 1\nKINEM-CUTS\n            3   1D-5  0.9249D0  1D-4  0.985D0  1000D0  100000000D0  0.0D0\nEGAM-MIN\n            0D0\nINT-OPT-NC\n            0 0 0 0 0   0 20 20 20\nINT-OPT-CC\n            0 0 0 0\nINT-ONLY\n            -1\nINT-POINTS\n            100000\nSAM-OPT-NC\n            0 0 0 0 0   0 0 0 0\nSAM-OPT-CC\n            0 0 0 0\nNUCLEUS\n            275D0   1.0D0 1.0D0\nNUCL-MOD\n            0\nSTRUCTFUNC\n            0  2  10150\nPOLPDF\n            0\nLHAPATH\n./PDFsets\nFLONG\n            111  0.01  0.03\nALFAS\n            1   0   0.20   0.235\nNFLAVORS\n            0   5\nIOUNITS\n            6  10  11\nRNDM-SEEDS\n            0 0\nSTART\n            0\nSOPHIA\n            1.5\nOUT-LEP\n            1\nFRAG\n            1\nCASCADES\n            12\nMAX-VIRT\n            5\nWREM-MIN\n            3.0\nCONTINUE\n\n\n",
+  "tail_vp_100_1000_q2min_lo": "OUTFILENAM\noutfiles/eltail\nTITLE\n            DJANGOH 4.6.21 row-7 eltail tail, bin 100_1000, Q2MIN=100 Q2MAX=1e+08\nEL-BEAM\n            18D0    0.0D0    -1\nPR-BEAM\n            275D0   0.0D0\nGSW-PARAM\n            2 1 3 1 1 1 2 1 1 1 1\nKINEM-CUTS\n            3   1D-5  0.9249D0  1D-4  0.985D0  100D0  100000000D0  0.0D0\nEGAM-MIN\n            0D0\nINT-OPT-NC\n            0 0 0 0 0   0 20 20 20\nINT-OPT-CC\n            0 0 0 0\nINT-ONLY\n            -1\nINT-POINTS\n            100000\nSAM-OPT-NC\n            0 0 0 0 0   0 0 0 0\nSAM-OPT-CC\n            0 0 0 0\nNUCLEUS\n            275D0   1.0D0 1.0D0\nNUCL-MOD\n            0\nSTRUCTFUNC\n            0  2  10150\nPOLPDF\n            0\nLHAPATH\n./PDFsets\nFLONG\n            111  0.01  0.03\nALFAS\n            1   0   0.20   0.235\nNFLAVORS\n            0   5\nIOUNITS\n            6  10  11\nRNDM-SEEDS\n            0 0\nSTART\n            0\nSOPHIA\n            1.5\nOUT-LEP\n            1\nFRAG\n            1\nCASCADES\n            12\nMAX-VIRT\n            5\nWREM-MIN\n            3.0\nCONTINUE\n\n\n",
+  "tail_vp_10_100_q2min_hi": "OUTFILENAM\noutfiles/eltail\nTITLE\n            DJANGOH 4.6.21 row-7 eltail tail, bin 10_100, Q2MIN=100 Q2MAX=1e+08\nEL-BEAM\n            18D0    0.0D0    -1\nPR-BEAM\n            275D0   0.0D0\nGSW-PARAM\n            2 1 3 1 1 1 2 1 1 1 1\nKINEM-CUTS\n            3   1D-5  0.5518D0  1D-4  0.985D0  100D0  100000000D0  0.0D0\nEGAM-MIN\n            0D0\nINT-OPT-NC\n            0 0 0 0 0   0 20 20 20\nINT-OPT-CC\n            0 0 0 0\nINT-ONLY\n            -1\nINT-POINTS\n            100000\nSAM-OPT-NC\n            0 0 0 0 0   0 0 0 0\nSAM-OPT-CC\n            0 0 0 0\nNUCLEUS\n            275D0   1.0D0 1.0D0\nNUCL-MOD\n            0\nSTRUCTFUNC\n            0  2  10150\nPOLPDF\n            0\nLHAPATH\n./PDFsets\nFLONG\n            111  0.01  0.03\nALFAS\n            1   0   0.20   0.235\nNFLAVORS\n            0   5\nIOUNITS\n            6  10  11\nRNDM-SEEDS\n            0 0\nSTART\n            0\nSOPHIA\n            1.5\nOUT-LEP\n            1\nFRAG\n            1\nCASCADES\n            12\nMAX-VIRT\n            5\nWREM-MIN\n            3.0\nCONTINUE\n\n\n",
+  "tail_vp_10_100_q2min_lo": "OUTFILENAM\noutfiles/eltail\nTITLE\n            DJANGOH 4.6.21 row-7 eltail tail, bin 10_100, Q2MIN=10 Q2MAX=1e+08\nEL-BEAM\n            18D0    0.0D0    -1\nPR-BEAM\n            275D0   0.0D0\nGSW-PARAM\n            2 1 3 1 1 1 2 1 1 1 1\nKINEM-CUTS\n            3   1D-5  0.5518D0  1D-4  0.985D0  10D0  100000000D0  0.0D0\nEGAM-MIN\n            0D0\nINT-OPT-NC\n            0 0 0 0 0   0 20 20 20\nINT-OPT-CC\n            0 0 0 0\nINT-ONLY\n            -1\nINT-POINTS\n            100000\nSAM-OPT-NC\n            0 0 0 0 0   0 0 0 0\nSAM-OPT-CC\n            0 0 0 0\nNUCLEUS\n            275D0   1.0D0 1.0D0\nNUCL-MOD\n            0\nSTRUCTFUNC\n            0  2  10150\nPOLPDF\n            0\nLHAPATH\n./PDFsets\nFLONG\n            111  0.01  0.03\nALFAS\n            1   0   0.20   0.235\nNFLAVORS\n            0   5\nIOUNITS\n            6  10  11\nRNDM-SEEDS\n            0 0\nSTART\n            0\nSOPHIA\n            1.5\nOUT-LEP\n            1\nFRAG\n            1\nCASCADES\n            12\nMAX-VIRT\n            5\nWREM-MIN\n            3.0\nCONTINUE\n\n\n",
+  "tail_vp_1_10_q2min_hi": "OUTFILENAM\noutfiles/eltail\nTITLE\n            DJANGOH 4.6.21 row-7 eltail tail, bin 1_10, Q2MIN=10 Q2MAX=1e+08\nEL-BEAM\n            18D0    0.0D0    -1\nPR-BEAM\n            275D0   0.0D0\nGSW-PARAM\n            2 1 3 1 1 1 2 1 1 1 1\nKINEM-CUTS\n            3   1D-5  0.1096D0  1D-4  0.985D0  10D0  100000000D0  0.0D0\nEGAM-MIN\n            0D0\nINT-OPT-NC\n            0 0 0 0 0   0 20 20 20\nINT-OPT-CC\n            0 0 0 0\nINT-ONLY\n            -1\nINT-POINTS\n            100000\nSAM-OPT-NC\n            0 0 0 0 0   0 0 0 0\nSAM-OPT-CC\n            0 0 0 0\nNUCLEUS\n            275D0   1.0D0 1.0D0\nNUCL-MOD\n            0\nSTRUCTFUNC\n            0  2  10150\nPOLPDF\n            0\nLHAPATH\n./PDFsets\nFLONG\n            111  0.01  0.03\nALFAS\n            1   0   0.20   0.235\nNFLAVORS\n            0   5\nIOUNITS\n            6  10  11\nRNDM-SEEDS\n            0 0\nSTART\n            0\nSOPHIA\n            1.5\nOUT-LEP\n            1\nFRAG\n            1\nCASCADES\n            12\nMAX-VIRT\n            5\nWREM-MIN\n            3.0\nCONTINUE\n\n\n",
+  "tail_vp_1_10_q2min_lo": "OUTFILENAM\noutfiles/eltail\nTITLE\n            DJANGOH 4.6.21 row-7 eltail tail, bin 1_10, Q2MIN=1 Q2MAX=1e+08\nEL-BEAM\n            18D0    0.0D0    -1\nPR-BEAM\n            275D0   0.0D0\nGSW-PARAM\n            2 1 3 1 1 1 2 1 1 1 1\nKINEM-CUTS\n            3   1D-5  0.1096D0  1D-4  0.985D0  1D0  100000000D0  0.0D0\nEGAM-MIN\n            0D0\nINT-OPT-NC\n            0 0 0 0 0   0 20 20 20\nINT-OPT-CC\n            0 0 0 0\nINT-ONLY\n            -1\nINT-POINTS\n            100000\nSAM-OPT-NC\n            0 0 0 0 0   0 0 0 0\nSAM-OPT-CC\n            0 0 0 0\nNUCLEUS\n            275D0   1.0D0 1.0D0\nNUCL-MOD\n            0\nSTRUCTFUNC\n            0  2  10150\nPOLPDF\n            0\nLHAPATH\n./PDFsets\nFLONG\n            111  0.01  0.03\nALFAS\n            1   0   0.20   0.235\nNFLAVORS\n            0   5\nIOUNITS\n            6  10  11\nRNDM-SEEDS\n            0 0\nSTART\n            0\nSOPHIA\n            1.5\nOUT-LEP\n            1\nFRAG\n            1\nCASCADES\n            12\nMAX-VIRT\n            5\nWREM-MIN\n            3.0\nCONTINUE\n\n\n"
+ }
+}

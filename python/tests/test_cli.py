@@ -128,10 +128,10 @@ def test_plan_names_all_build():
         assert abs(sum(c.lumi_fraction for c in plan.categories) - 1.0) < 1e-9
 
 
-def test_cluster_wave_flag_reaches_the_config():
+def test_cluster_wave_flag_reaches_the_config():   # D6 (2026-10-29) re-take
     opts = cli.resolve(["--channel", "tagged-alpha", "--cluster-wave", "vmc"])
     assert opts["cluster_wave"] == "vmc"
-    assert cli.resolve(["--channel", "tagged-alpha"])["cluster_wave"] == "hulthen"
+    assert cli.resolve(["--channel", "tagged-alpha"])["cluster_wave"] is None
 
 
 # --------------------------------------------------------------------------
@@ -167,9 +167,14 @@ def test_a_lower_case_isotope_still_runs(typed, resolved, capsys):
     (the typed one is the run's) and on one that implies its own (the typed
     one is dropped, which is how these spellings ran before `choices=`)."""
     # `helicity-flip` is the one plan that takes any j, so the same command
-    # line covers the spin-1/2 beam species as well as 6Li and d.
+    # line covers the spin-1/2 beam species as well as 6Li and d.  D7
+    # (2026-10-29): on the shipped CT18NLO / NNPDFpol1.1 the deuteron's top
+    # cell (x = 0.955) is REFUSED under helicity-flip at config 1 -- A1 =
+    # g1/F1 = 2.02 there, 1 + w_avg = -0.0195, 7 cells -- and --x-max 0.95 is
+    # the cure the refusal computes; the test is about the spelling, so every
+    # spelling runs the same cut window.
     assert cli.main(["--isotope", typed, "--channel", "inclusive",
-                     "--plan", "helicity-flip",
+                     "--plan", "helicity-flip", "--x-max", "0.95",
                      "--events", "2", "--quiet"]) == 0
     assert cli.resolve(["--isotope", typed])["isotope"] == resolved
     capsys.readouterr()
@@ -277,9 +282,11 @@ def test_the_seven_untyped_flags_reach_the_run(tmp_path):
     """
     # (a) the five RC / bookkeeping knobs, on the channel the band applies to
     base, moved = tmp_path / "base.npz", tmp_path / "moved.npz"
+    # D5 (2026-10-29): --rc-tail-model t-peak for RUNTIME (typed, the same in
+    # both runs; a polrad-full table is ~13 s, ~21 s on --rc-c0-shape vmc-ft).
     common = ["--channel", "inclusive", "--isotope", "6Li",
               "--plan", "tensor-thirds", "--events", "2000", "--seed", "4",
-              "--rc", "tensor-band", "--quiet"]
+              "--rc", "tensor-band", "--rc-tail-model", "t-peak", "--quiet"]
     assert cli.main(common + ["--npz", str(base)]) == 0
     assert cli.main(common + [
         "--rc-c0-shape", "vmc-ft",
@@ -342,3 +349,73 @@ def test_nthreads_changes_no_number(tmp_path):
             np.load(str(many), allow_pickle=False) as b:
         for key in ("x", "q2", "phi", "weight", "k", "cos_theta_k", "route"):
             assert np.array_equal(np.asarray(a[key]), np.asarray(b[key])), key
+
+
+# --------------------------------------------------------------------------
+# D6 (2026-10-29): the tagged channels' run default cluster wave is the
+# library's `CLUSTER_WAVE_DEFAULT` (VmcAV18).  The CLI READS it -- "not
+# given" resolves to None (test_cluster_wave_flag_reaches_the_config's
+# re-taken last line), so the config keeps the C++ default -- and never
+# retypes it.  These tests sit at the END of the file so that every line
+# above keeps the number the run records cite.
+
+def test_d6_an_explicit_cluster_wave_off_the_tagged_channels_is_one_line(capsys):
+    """Registry row 11 under D6 and A17 (2026-11-03): `--cluster-wave hulthen`
+    off the tags is refused in one line by `make_config`; the explicit DEFAULT
+    `vmc` there is accepted and labelled not-read (A17, the one rule)."""
+    for wave in ("vmc", "hulthen"):
+        for chan in ("inclusive", "coherent"):
+            if wave == "vmc":   # A17 (2026-11-03): was refused under D6
+                assert cli.main(["--channel", chan, "--cluster-wave", wave, "--events", "10", "--quiet"]) == 0; continue
+            with pytest.raises(SystemExit) as e:
+                cli.main(["--channel", chan, "--cluster-wave", wave, "--events", "10", "--quiet"])
+            msg = str(e.value); assert msg.startswith("PipelineConfig: cluster_wave = '%s'" % wave)
+            assert "\n" not in msg
+
+
+def test_d6_a_tagged_banner_names_the_wave_and_the_npz_records_it(tmp_path, capsys):
+    out = tmp_path / "t.npz"
+    assert cli.main(["--channel", "tagged-alpha", "--events", "200",
+                     "--npz", str(out)]) == 0
+    text = capsys.readouterr().out
+    assert "cluster wave: vmc -- the run default since D6" in text
+    meta = json.loads(str(np.load(out, allow_pickle=False)["meta"]))
+    assert meta["cluster_wave"] == "vmc"
+    assert meta["knob_provenance"]["cluster_wave"]["at_default"] is True
+    assert cli.main(["--channel", "tagged-alpha", "--events", "200",
+                     "--cluster-wave", "hulthen", "--npz", str(out)]) == 0
+    assert "cluster wave: hulthen -- an option" in capsys.readouterr().out
+    meta = json.loads(str(np.load(out, allow_pickle=False)["meta"]))
+    assert meta["cluster_wave"] == "hulthen"
+    # off the tagged channels the key carries the LABEL, never a bare "vmc"
+    assert cli.main(["--channel", "inclusive", "--events", "200",
+                     "--npz", str(out)]) == 0
+    assert "cluster wave:" not in capsys.readouterr().out
+    meta = json.loads(str(np.load(out, allow_pickle=False)["meta"]))
+    assert meta["cluster_wave"] == "not read on channel inclusive"
+    assert meta["knob_provenance"]["cluster_wave"]["status"] == "not-read"   # A17 (2026-11-03): was "refused"
+
+
+def test_a12_the_fsi_banner_prints_the_clipped_cell_fraction(tmp_path, capsys):
+    """A12 (2026-11-03; DECISIONS.md A12, the supervisor's choice under the
+    author's delegation): every FSI run's banner carries one line with the
+    weight table's clipped cell fraction -- the number `meta` records as
+    `fsi_clipped_grid_fraction` -- and a run without FSI carries no such line."""
+    out = tmp_path / "f.npz"
+    for fsi in ("glauber-cluster", "glauber-nucleon", None):
+        argv = ["--channel", "tagged-7Li-alpha", "--plan", "helicity-flip",
+                "--events", "100", "--seed", "5", "--npz", str(out)]
+        assert cli.main(argv + (["--fsi", fsi] if fsi else [])) == 0
+        text = capsys.readouterr().out
+        lines = [s for s in text.splitlines() if "FSI weight table:" in s]
+        meta = json.loads(str(np.load(out, allow_pickle=False)["meta"]))
+        if fsi is None:
+            assert not lines and "fsi_clipped_grid_fraction" not in meta
+            continue
+        assert len(lines) == 1, lines
+        f = meta["fsi_clipped_grid_fraction"]
+        assert lines[0].strip() == ("FSI weight table: %.2f %% of cells clipped at "
+                                    "w_max = 50 (sigma_XN = 40 mb; meta "
+                                    "fsi_clipped_grid_fraction; an unpriced "
+                                    "systematic, A12)" % (100.0 * f))
+        assert f > 0.0

@@ -4,13 +4,30 @@
 static observables, eta_d and Q_d, against every deuteron wave function the
 tree ships (tier T2).
 
-WHAT IS COMPARED.  Two measured numbers, vendored in
-`data/deuteron_static_measured.json` as a SECOND-HAND transcription (from
-02_data_nucleon_deuteron.md sec. 5.2 and include/lipolgen/b1_nuclear.hpp's
-"100 % band" block; neither paper was re-read):
+WHAT IS COMPARED.  Two reference numbers, vendored in
+`data/deuteron_static_measured.json` -- until 2026-10-26 a SECOND-HAND
+transcription (from 02_data_nucleon_deuteron.md sec. 5.2 and
+include/lipolgen/b1_nuclear.hpp's "100 % band" block, neither paper read);
+since 2026-10-26 READ FROM THE PAPERS (phase D; both fetched through the
+institution's APS licence and kept outside the repository, their sha256 in
+the file's provenance):
 
-  eta_d = A_D/A_S = 0.0256(4)       Rodning & Knutson, PRC 41 (1990) 898
-  Q_d   = +0.2859(3) fm^2           Bishop & Cheung, PRA 20 (1979) 381
+  eta_d = A_D/A_S = 0.0256 +- 0.0004    Rodning & Knutson, PRC 41 (1990) 898,
+          Eq. (10), p. 906 -- a MEASUREMENT: tensor analysing powers of
+          sub-Coulomb 208Pb(d,p) and 136Xe(d,p), ten angular distributions
+          (p. 900), compared with DWBA; the error combines statistics,
+          calculations and normalisation (p. 908).  CONFIRMED as
+          transcribed (the file's old method note, "d + 4He", was wrong
+          about the targets and is corrected there).
+  Q_d   = +0.2860 +- 0.0015 fm^2        Bishop & Cheung, PRA 20 (1979) 381,
+          abstract p. 381 and Sec. III pp. 382-383 -- a THEORETICAL
+          calculation of the electric field gradient in D2 that CONFIRMS
+          Reid & Vaida's SEMI-EMPIRICAL Q (a measured eqQ/h over a calculated
+          q).  CORRECTED 2026-10-26 from +0.2859(3) fm^2, which the paper does
+          not print (it is the value AV18's Table X and CD-Bonn's Table XV
+          attribute to it); the old value and its source are kept in the
+          file's _provenance.corrections.  Q_d is recorded, not asserted, so
+          no verdict moves (TOLERANCE, below).
 
 against the three deuteron wave functions the tree ships, each at its
 SHIPPED settings, nothing moved:
@@ -32,10 +49,11 @@ SHIPPED settings, nothing moved:
            as a cross-check on both (Q_d via the tree's
            `alpha_d_quadrupole_fm2`, eta via the tree's spline transformed
            to r = 20 fm: -0.24 %).
-  hulthen  `deuteron_channel()` -- THE DEFAULT deuteron control of the
-           tagged channel: the analytic pair psi_0 = 1/(k^2+kappa^2) -
+  hulthen  `deuteron_channel()` -- the deuteron control of the tagged channel
+           by default until D6 (2026-10-27), an option since (the run default
+           is AV18): the analytic pair psi_0 = 1/(k^2+kappa^2) -
            1/(k^2+beta^2), psi_2 = k^2/((k^2+kappa^2)(k^2+beta^2)^2) at
-           beta = BETA_DEFAULT = 0.30 GeV, P_D = P_D_DEUTERON = 0.045, kappa
+           beta = BETA_DEFAULT = 0.30 GeV, P_D = P_D_DEUTERON_SCENARIO = 0.045 (A1), kappa
            from DEUTERON_P_TAG's separation energy, normalised exactly as
            `TaggedModel` normalises them (the constants N_L are READ from
            `TaggedModel(...).radial_table(L)`, not recomputed).
@@ -79,7 +97,25 @@ TOLERANCE, DECLARED BEFORE THE VERDICT.
     omits; realistic wave functions are expected to fall short by about
     5 % (the scout's preview, before this harness: CD-Bonn 0.2705, -5.4 %).
     The row carries each model's distance (absolute and relative); the
-    status reflects ONLY the asserted eta part.
+    status reflects ONLY the asserted eta part.  The 2026-10-26 correction
+    of the reference (+0.2859(3) -> +0.2860(15) fm^2, Bishop & Cheung's own
+    conclusion) moved each recorded relative distance by -0.033 to -0.036
+    percentage points -- CD-Bonn -5.39 -> -5.42 %, AV18 -5.68 -> -5.71 %,
+    Hulthen +1.56 -> +1.52 % -- and nothing else: the eta pulls (CD-Bonn -0.07,
+    AV18 -1.39, Hulthen +17.20 sigma) and the status did not move, and no
+    tolerance was touched.  In units of the corrected error the impulse-
+    approximation shortfall is about -10 sigma for CD-Bonn and AV18 (it was
+    about -50 on the old 0.0003) -- recorded, the size of the two-body and
+    relativistic terms an IA Q_d omits.  RECORDED 2026-10-26 by phase F of
+    run 2026-10-26 (no number, tolerance or verdict moves; the reference
+    file is not re-vendored -- that is the author's call): the 1979 value,
+    and the literature's 0.2859(3) with it, is superseded by Puchalski,
+    Komasa, Pachucki, PRL 125 (2020) 253001 (INSPIRE 1822750; its abstract
+    read, the paper not), Q_d = 0.285699(15)(18) fm^2 from the D2/HD
+    hyperfine structure and Ramsey's measurement.  Against it the recorded
+    IA distances move by about +0.1 percentage point (CD-Bonn -5.32, AV18
+    -5.61, Hulthen +1.63 %), and a sigma count is meaningless at its
+    2 x 10^-5 error.
 
 THE THREE NORMALISATION RULES (BENCHMARK_PLAN.md sec. 8), for THIS row:
   1. b1 normalisations -- NOT APPLICABLE: no b1 on either side, and no
@@ -101,14 +137,31 @@ channel's high-k tail (eta is an asymptotic, r -> infinity quantity); the
 light-cone convolution or b1; the 6Li alpha-d D wave or its eta (row C-1 of
 00_in_tree_checks.md, a consistency band on the quadrupole dial); the
 deuteron elastic form factors of the RC tail (their F_q(0) is NORMALISED on
-Q_d = 0.2859, an input, so comparing it would be circular).  The S-wave-only
+Q_d = 0.2859, an input, so comparing it would be circular; that tree input
+is the literature's attribution, 0.035 % below Bishop & Cheung's own
+0.2860 -- a constant this row does not move).  The S-wave-only
 Hulthen of `spectator.hpp`'s `MomentumSampler` (the P_D = 0 limit of the
 same pair) is not a separate row: eta = Q_d = 0 there by construction.  The
 survey's sentence (02 sec. 5.2) that eta validates "the S-D mixture of the
 deuteron wave function the tagged channel ... rides on" holds for CD-Bonn
-and AV18 only: the tagged channel's DEFAULT deuteron is the Hulthen pair.
+and AV18 only: the tagged channel's DEFAULT deuteron was the Hulthen pair
+until D6 (2026-10-27) and is AV18 since.  D6 NOTE (2026-10-29): the eta rule
+above covers EVERY shipped wave function and the Hulthen still ships, as
+`--cluster-wave hulthen`, so the row stays FAIL; re-declaring it to "the
+default wave" would be a post-hoc re-declaration, the author's to make.
+A5 NOTE (decision A5 of 2026-11-03 and the supervisor's note of 2026-11-06
+under A5, docs/open_items/run_2026-11-03/DECISIONS.md -- the supervising
+session's choices under the author's delegation; applied 2026-11-06, phase
+P3; validation/benchmarks/README.md convention 8).  The D6 NOTE's reading is
+superseded: the row's HEADLINE is the shipped wave, AV18
+(CLUSTER_WAVE_DEFAULT; HEADLINE_MODEL, checked by `_headline()`), eta
+-1.39 sigma, PASS by the same 2 sigma; CD-Bonn (-0.07 sigma) and the
+Hulthen pair (+17.2 sigma) are recorded sub-rows, and the declared
+all-waves conjunction above is itself a recorded sub-row, FAIL.  Status
+FAIL -> PASS BY THE RULE, not by any physics change: no eta, Q_d,
+tolerance or reference moved.
 
-Run:  source env.sh && python3 validation/benchmarks/t2_deuteron_static.py
+Run:  source env.sh && python3 validation/benchmarks/t2_deuteron_static.py [--plot]
 
 Exit status (validation/benchmarks/README.md): 0 when the harness ran and
 printed its REPORT row -- pass, recorded fail and blocked alike, since the
@@ -143,12 +196,16 @@ DATA = os.path.join(HERE, "data", "deuteron_static_measured.json")
 #: sha256 of every byte of the vendored file, and of its canonical body
 #: (json.dumps(body, sort_keys=True, separators=(",", ":"))), which the file
 #: also records.  Both are re-checked on EVERY read.
-FILE_SHA256 = "6433c31e3c837bd2a88c71417eca5fa4eba51f17495486dd2c21bc99d8f692d5"
-BODY_SHA256 = "18f805e529544681f4b793771f0b2011ba540f1333c30a77f8c0979ad6ede849"
+#: Re-recorded 2026-10-26 with the dated Q_d correction (the 2026-09-26
+#: digests were 6433c31e...f692d5 and 18f805e5...6ede849).
+FILE_SHA256 = "3e62013f573e76f8e622bff87cca8d954b6616ae3578d99b17368d9e06062e0f"
+BODY_SHA256 = "51adce98ee6ebc80fa40278244cffe9d92d94f22ed8c3213b9e62eba75ea4acb"
 
 NAME = "t2_deuteron_static"
 ETA_MAX_PULL = 2.0          # tolerance: |eta - eta_d| <= 2 sigma, every model
 MODELS = ("cdbonn", "av18", "hulthen")
+#: the headline: the shipped wave (A5, 2026-11-03; the all-MODELS conjunction until then)
+HEADLINE_MODEL = "av18"
 R_MAX_FM = 80.0             # closed-form quadrature: e^{-2 kappa 80} ~ 1e-16
 N_INTERVALS = 100000        # Simpson intervals on (0, R_MAX_FM]
 ETA_WINDOW_FM = (20.0, 40.0)  # AV18: the r range the asymptotic ratio is read
@@ -462,7 +519,8 @@ def hulthen(beta=None):
         / (kappa * beta_used * (kappa + beta_used)))
     ratio_an = n0_an / n0
     out = dict(
-        label="Hulthen pair (deuteron_channel() default: beta = %.2f GeV, "
+        label="Hulthen pair (deuteron_channel() default; the tagged runs' "
+              "--cluster-wave hulthen option since D6: beta = %.2f GeV, "
               "P_D = %.3f, kappa = %.6f GeV), TaggedModel normalisation"
               % (beta_used, p_d_nom, kappa),
         eta=eta, eta_source="this harness: -N_2 A/N_0, the k^2 = -kappa^2 "
@@ -511,26 +569,57 @@ def measure(path=DATA):
     return ref, models, band, status
 
 
+def _headline():
+    """A5 (2026-11-03): the headline model must be the shipped cluster wave;
+    a future change of CLUSTER_WAVE_DEFAULT stops the row by name."""
+    import lipolgen as lg  # noqa: WPS433
+    shipped = {lg.ClusterWaveSource.VmcAV18: "av18"}.get(lg.CLUSTER_WAVE_DEFAULT)
+    if HEADLINE_MODEL != shipped:
+        raise RuntimeError("HEADLINE_MODEL = %r is not the shipped cluster wave %r: "
+                           "re-point it by hand (README.md convention 8)"
+                           % (HEADLINE_MODEL, lg.CLUSTER_WAVE_DEFAULT))
+
+
 def run(path=DATA, verbose=True):
     t0 = time.perf_counter()
-    ref, models, band, status = measure(path)
+    _headline()
+    ref, models, band, declared = measure(path)
     e, q = ref["eta_d"], ref["Q_d"]
     failing = [n for n in MODELS if models[n]["eta_status"] == "fail"]
-    generator = ("eta: %s; Q_d (impulse approx., recorded): %s fm^2" % (
+    # A5 (2026-11-03): the headline is the shipped wave's; the declared
+    # all-waves conjunction is a recorded sub-row
+    status = models[HEADLINE_MODEL]["eta_status"]
+    for n in MODELS:
+        models[n]["in_verdict"] = (n == HEADLINE_MODEL)
+    subrows = {"all waves (the declared rule, recorded)": dict(
+        status=declared, in_verdict=False,
+        rule="abs(eta - eta_d) <= %g sigma for every one of %s" % (
+            ETA_MAX_PULL, ", ".join(MODELS)),
+        failing=", ".join("%s %+.1f sigma" % (n, models[n]["eta_pull"])
+                          for n in failing) or "none")}
+    generator = ("%s (the shipped wave; the headline under A5) eta %.6f (%+.2f sigma) "
+                 "%s; the declared all-waves rule %s, recorded; " % (
+                     HEADLINE_MODEL, models[HEADLINE_MODEL]["eta"],
+                     models[HEADLINE_MODEL]["eta_pull"], status.upper(),
+                     declared.upper())
+                 + "eta: %s; Q_d (impulse approx., recorded): %s fm^2" % (
         ", ".join("%s %.6f (%+.2f sigma)" % (n, models[n]["eta"],
                                              models[n]["eta_pull"])
                   for n in MODELS),
         " / ".join("%.6f (%+.2f %%)" % (models[n]["q_d"],
                                         100 * models[n]["q_d_rel_distance"])
                    for n in MODELS)))
-    reference = ("eta_d = %s (Rodning-Knutson PRC 41 (1990) 898), Q_d = %s "
-                 "(Bishop-Cheung PRA 20 (1979) 381); second-hand transcription"
-                 % (e["as_printed"], q["as_printed"]))
-    tolerance = ("abs(eta - eta_d) <= %g sigma for each of %s; Q_d recorded, not "
-                 "asserted" % (ETA_MAX_PULL, ", ".join(MODELS)))
+    reference = ("eta_d = %s (Rodning-Knutson PRC 41 (1990) 898, Eq. (10)), "
+                 "Q_d = %s (Bishop-Cheung PRA 20 (1979) 381, confirming "
+                 "Reid-Vaida); read from the papers 2026-10-26, Q_d corrected "
+                 "from 0.2859(3)" % (e["as_printed"], q["as_printed"]))
+    tolerance = ("abs(eta - eta_d) <= %g sigma on the shipped wave (%s, A5); the "
+                 "declared rule, each of %s, recorded; Q_d recorded, not "
+                 "asserted" % (ETA_MAX_PULL, HEADLINE_MODEL, ", ".join(MODELS)))
     import lipolgen as lg  # noqa: WPS433
     report = dict(name=NAME, generator=generator, reference=reference,
                   tolerance=tolerance, status=status, models=models,
+                  headline=HEADLINE_MODEL, declared_status=declared, subrows=subrows,
                   hulthen_beta_band=band, reference_points=ref,
                   failing=failing,
                   config=dict(lipolgen=getattr(lg, "__version__", None),
@@ -588,19 +677,72 @@ def run(path=DATA, verbose=True):
                      m["eta_status"].upper()))
         print("REPORT | %s | %s | %s | %s | %s" % (
             NAME, generator, reference, tolerance,
-            status.upper() + ("" if status == "pass" else
-                              " (recorded: %s outside; nothing moved)"
-                              % ", ".join("%s %+.1f sigma"
-                                          % (n, models[n]["eta_pull"])
-                                          for n in failing))))
+            status.upper() + (" on the shipped wave (A5); the declared all-waves "
+                              "rule %s (%s), recorded" % (
+                                  declared.upper(), ", ".join(
+                                      "%s eta %+.1f sigma" % (n, models[n]["eta_pull"])
+                                      for n in failing) or "none outside"))))
     return report
+
+
+# ------------------------------------------------------------------ figure
+
+#: the figure's palette slot and row label of each shipped wave
+PLOT_SLOTS = {"hulthen": ("alt", "Hulthen\n(tagged option)"),   # A5 (2026-11-03): AV18 the default slot
+              "av18": ("default", "AV18\n(shipped; headline)"), "cdbonn": ("alt2", "CD-Bonn")}
+
+
+def plot(report, out_dir=None):
+    """A dot-and-band chart: eta of the three shipped waves against the
+    measured eta_d (ink, +- 1 sigma) with the 2 sigma tolerance shaded
+    (left), and the impulse-approximation Q_d against the measured value
+    (right; recorded, not asserted).  The Hulthen beta band is recorded in
+    the row, not drawn.  A view of the row: every number drawn is in it."""
+    if HERE not in sys.path:
+        sys.path.insert(0, HERE)
+    from _plots import BAND, INK, new_figure, save, status_title, style_series
+    models, ref = report["models"], report["reference_points"]
+    fig, ax0 = new_figure()
+    gs = ax0.get_subplotspec().subgridspec(1, 2, width_ratios=(3, 2), wspace=0.05)
+    ax0.remove()
+    ax_e = fig.add_subplot(gs[0, 0])
+    ax_q = fig.add_subplot(gs[0, 1], sharey=ax_e)
+    rows = ("hulthen", "av18", "cdbonn")
+    y_ref = len(rows)
+    e, q = ref["eta_d"], ref["Q_d"]
+    ax_e.axvspan(e["value"] - ETA_MAX_PULL * e["sigma"],
+                 e["value"] + ETA_MAX_PULL * e["sigma"], color=BAND, alpha=0.8,
+                 linewidth=0, zorder=1,
+                 label="tolerance: eta_d +- %g sigma" % ETA_MAX_PULL)
+    for ax, key, r in ((ax_e, "eta", e), (ax_q, "q_d", q)):
+        ax.axvline(r["value"], color=INK, linewidth=0.8, zorder=2)
+        ax.errorbar([r["value"]], [y_ref], xerr=[r["sigma"]],
+                    **style_series("reference", label="_nolegend_"))
+        for i, n in enumerate(rows):
+            ax.plot([models[n][key]], [i], **style_series(
+                PLOT_SLOTS[n][0], label="_nolegend_", marker="o"))
+    ax_e.set_yticks(list(range(y_ref + 1)))
+    ax_e.set_yticklabels([PLOT_SLOTS[n][1] for n in rows] + ["measured"])
+    ax_e.set_ylim(-0.6, y_ref + 0.6)
+    ax_q.tick_params(labelleft=False)
+    ax_e.set_xlabel("eta = A_D / A_S")
+    ax_q.set_xlabel("Q_d [fm^2], impulse approx.")
+    ax_e.legend(loc="center right", fontsize=7)
+    status_title(fig, NAME, report["status"],
+                 "eta pulls: %s sigma; tolerance |pull| <= %g each; Q_d recorded"
+                 % (", ".join("%s %+.2f" % (n, models[n]["eta_pull"])
+                              for n in MODELS), ETA_MAX_PULL))
+    return save(fig, NAME, out_dir)
 
 
 if __name__ == "__main__":
     # Exit convention (module docstring, validation/benchmarks/README.md):
     # 0 = ran and printed its REPORT row, whatever the verdict; 2 = broken.
+    # `--plot` also writes the row's figure (plot()); the same rule holds.
     try:
-        run()
+        rep = run()
+        if "--plot" in sys.argv[1:]:
+            print("figure: %s" % plot(rep))
     except Exception:  # any exception means the harness itself is broken
         traceback.print_exc()
         sys.exit(2)

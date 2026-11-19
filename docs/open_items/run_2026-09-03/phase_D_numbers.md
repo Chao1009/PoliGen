@@ -2119,7 +2119,7 @@ alone: the metadata writer overwrites it from the bridge actually bound.
 
 ### D8.7 Eight more `--pol-sf` reach claims, and where the correct wording is
 
-`include/lipolgen/pipeline.hpp:628-635` has said since §D6 that *the flag pair
+`include/lipolgen/pipeline.hpp:694-696` has said since §D6 that *the flag pair
 reaching "EVERY kernel" is true of `--unpol-sf` alone*, and the table agrees:
 `pol_sf` is `not-read` on the coherent channel under both plans and on EVERY
 channel under `tensor-thirds`, the CLI's own default. §D7.1 fixed the claim in

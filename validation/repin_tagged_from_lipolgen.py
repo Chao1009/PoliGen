@@ -51,6 +51,9 @@ docs/open_items/run_2026-09-23/phase_A_port_gate.md).  The write mode was
 removed at the same time: re-pinning from LiPolGen would now overwrite a live
 polligen port gate.
 
+A13 (2026-11-03): the fourth block, `channels.li6_alpha_vmc`, is checked
+after the three by `check_vmc_block` (the dilutions at the declared 1e-8).
+
 Run:
     source env.sh
     python3 validation/repin_tagged_from_lipolgen.py     # check only
@@ -268,5 +271,62 @@ def main():
           "elsewhere); nothing written." % (len(CHANNELS), QUAD_RTOL, RTOL))
 
 
-if __name__ == "__main__":
+# A13 (2026-11-03): the VMC alpha-d block, `channels.li6_alpha_vmc` -- a
+# REDUCED block (quantum numbers, the ANL table's P_D, the two stretched-state
+# dilutions) of polligen's `li6_alpha_channel(wave="vmc")`, checked against
+# LiPolGen's `li6_alpha_channel(source=VmcAV18)`.  The two dilutions at the
+# DECLARED relative 1e-8 (tests/test_tagged.cpp `kVmcPortRtol`; measured
+# 5.389e-9 / 3.196e-9, phase_P5_port_gate.md), P_D and the quantum numbers at
+# RTOL; the label is each code's own and is not compared.  Check-only.
+VMC_KEY = "li6_alpha_vmc"
+VMC_PORT_RTOL = 1e-8
+
+
+def check_vmc_block(doc):
+    """Return the list of failures of the A13 block (empty = pass)."""
+    bad = []
+    blk = doc["channels"].get(VMC_KEY)
+    if blk is None:
+        return ["channels.%s missing from the file" % VMC_KEY]
+    if blk.get("port_gate_rtol") != VMC_PORT_RTOL:
+        bad.append("port_gate_rtol %r in the file, %r here"
+                   % (blk.get("port_gate_rtol"), VMC_PORT_RTOL))
+    ch = lg.li6_alpha_channel(source=lg.ClusterWaveSource.VmcAV18)
+    model = lg.TaggedModel(ch)
+    rows = [(k, float(getattr(ch, k)), RTOL)
+            for k in ("j_ion", "s_struck", "s_spec", "s_channel")]
+    rows.append(("P_D", float(lg.VMC_P_D_LI6), RTOL))
+    rows.append(("model/vector_dilution", float(model.vector_dilution()),
+                 VMC_PORT_RTOL))
+    rows.append(("model/tensor_dilution", float(model.tensor_dilution()),
+                 VMC_PORT_RTOL))
+    for path, fresh, rtol in rows:
+        node = blk
+        for part in path.split("/"):
+            node = node[part]
+        want = float(node)
+        d = abs(fresh - want)
+        ok = math.isfinite(fresh) and math.isfinite(want) and \
+            d <= rtol * abs(want)
+        print("%s/%s: LiPolGen %.17g, file %.17g, rel %.3e (rtol %g) %s"
+              % (VMC_KEY, path, fresh, want, d / abs(want) if want else d,
+                 rtol, "ok" if ok else "FAIL"))
+        if not ok:
+            bad.append(path)
+    return bad
+
+
+def main_with_vmc():
+    """main() (the three Hulthen model blocks), then the A13 VMC block."""
     main()
+    doc = json.loads((OUT / NAME).read_text())
+    bad = check_vmc_block(doc)
+    if bad:
+        raise SystemExit("LiPolGen disagrees with %s's %s block on: %s"
+                         % (NAME, VMC_KEY, ", ".join(bad)))
+    print("the %s block agrees (rtol %g on the dilutions, %g elsewhere); "
+          "nothing written." % (VMC_KEY, VMC_PORT_RTOL, RTOL))
+
+
+if __name__ == "__main__":
+    main_with_vmc()

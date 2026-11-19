@@ -76,7 +76,7 @@ re-checked on EVERY read: an altered file -- header or row -- is refused
 with a RuntimeError, so `__main__` exits 2.  (Until 2026-09-27 only the row
 was hashed: a changed licence line or A/Z note was read without complaint.)
 
-Run:  source env.sh && python3 validation/benchmarks/t3_li6_charge_ff_fb.py
+Run:  source env.sh && python3 validation/benchmarks/t3_li6_charge_ff_fb.py [--plot]
 
 Exit status (validation/benchmarks/README.md): 0 when the harness ran and
 printed its REPORT row -- pass, recorded fail and blocked alike, since the
@@ -334,11 +334,59 @@ def run(path=DATA, verbose=True):
     return report
 
 
+# ---------------------------------------------------------------- figure
+
+def plot(report, out_dir=None):
+    """|F_C0(q)| / Z of the shipped HoSpin1FF (its C0 sector, folded) and
+    of the UVa Fourier-Bessel density (ink; from the row's vendored
+    coefficients, which the report carries), on a log axis so that each
+    zero shows as a dip, with the must-not-contradict band [q_FB, q_Li71]
+    shaded and the tree's zero marked.  The two curves are evaluated on a q
+    grid for drawing only (the grid includes both zeros); the verdict's
+    numbers -- the zeros, the band, the distance -- are the report's."""
+    if HERE not in sys.path:
+        sys.path.insert(0, HERE)
+    import lipolgen as lg  # noqa: WPS433
+    from _plots import BAND, INK, MUTED, new_figure, save, status_title, style_series
+    row, band_, q0 = report["row"], report["band"], report["tree"]["q0"]
+    fb = FourierBessel(row["a"], row["R"])
+    ff = lg.HoSpin1FF.for_ion(lg.li6())
+    hbarc = lg.HBARC_GEV_FM
+    q_max = 4.2
+    qs = sorted({0.01 * i for i in range(1, int(q_max / 0.01) + 1)}
+                | {report["q_fb"]} | ({q0} if q0 is not None else set()))
+    fig, ax = new_figure()
+    ax.axvspan(band_[0], band_[1], color=BAND, alpha=0.8, linewidth=0, zorder=1,
+               label="band [%.4f (FB zero), %.4f (Li71 minimum)] fm^-1" % band_)
+    ax.plot(qs, [abs(fb.ff_norm(q)) for q in qs], color=INK, linewidth=1.5,
+            zorder=4, label="UVa Fourier-Bessel charge density, 6Li row")
+    ax.plot(qs, [abs(ff.fc((q * hbarc) ** 2)) / row["Z"] for q in qs],
+            **style_series("default", label="HoSpin1FF C0 (shipped, nucleon-folded)"))
+    if q0 is not None:
+        ax.axvline(q0, color=MUTED, linewidth=0.8, linestyle="--", zorder=2,
+                   label="the tree's zero q0 = %.4f fm^-1" % q0)
+    ax.set_yscale("log")
+    ax.set_ylim(1e-8, 2.0)
+    ax.set_xlim(0.0, q_max)
+    ax.set_xlabel("q [fm^-1]")
+    ax.set_ylabel("|F_C0(q)| / Z")
+    ax.legend(loc="lower left", fontsize=7)
+    status_title(fig, NAME, report["status"],
+                 ("tree C0 zero %.4f fm^-1, %+.4f above the band; tolerance: inside "
+                  "the band (T11's [%.1f, %.1f] not moved)"
+                  % (q0, report["distance_above_band"], *T11_WINDOW))
+                 if q0 is not None else report["reason"])
+    return save(fig, NAME, out_dir)
+
+
 if __name__ == "__main__":
     # Exit convention (module docstring, validation/benchmarks/README.md):
     # 0 = ran and printed its REPORT row, whatever the verdict; 2 = broken.
+    # `--plot` also writes the row's figure (plot()); the same rule holds.
     try:
-        run()
+        rep = run()
+        if "--plot" in sys.argv[1:]:
+            print("figure: %s" % plot(rep))
     except Exception:  # any exception means the harness itself is broken
         traceback.print_exc()
         sys.exit(2)

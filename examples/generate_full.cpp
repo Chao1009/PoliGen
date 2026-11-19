@@ -55,7 +55,7 @@
 #include <memory>
 #include <string>
 #include <vector>
-
+#include "lipolgen/lhapdf_sf.hpp"  // D7: the shipped SF grids (attach_shipped_sf_backends)
 #include "lipolgen/hepmc_writer.hpp"
 #include "lipolgen/pipeline.hpp"
 #include "lipolgen/pythia_bridge.hpp"
@@ -166,11 +166,11 @@ int main(int argc, char** argv) {
     const RunPlan plan = plan_of(args.plan, ion.spin, cfg.scenario, argv[0]);
 
     const BeamConfig bc = default_configs(cfg.isotope)[static_cast<std::size_t>(cfg.beam_config)];
-    std::unique_ptr<PythiaBridge> bridge;
+    std::shared_ptr<PythiaBridge> bridge; attach_shipped_sf_backends(cfg);  // D7: CT18NLO / NNPDFpol1.1
     PythiaBridgeStats snapshot;  // last stats() read (bridge dies before we print)
-    if (args.hadronize) {
-      bridge = std::make_unique<PythiaBridge>(bc);
-      cfg.hadronizer = [&](Event& ev, Rng& rng) { bridge->hadronize(ev, rng); };
+    if (args.hadronize) {        // ONE unpolarised backend: the T2 species draw shares the run's
+      PythiaBridgeOptions bo; bo.f2_source = cfg.unpol_sf_obj; bridge = std::make_shared<PythiaBridge>(bc, bo);
+      set_pythia_hadronizer(cfg, bridge);  // refuses a bridge on another backend (D7)
     }
 
     const auto t_build0 = std::chrono::steady_clock::now();
@@ -207,7 +207,7 @@ int main(int argc, char** argv) {
                p.sigma_pb(), static_cast<unsigned long long>(p.size()));
 
     std::unique_ptr<HepMC3Writer> writer;
-    if (!args.out.empty()) writer = std::make_unique<HepMC3Writer>(args.out);
+    if (!args.out.empty()) { writer = std::make_unique<HepMC3Writer>(args.out); writer->set_run_attributes(run_provenance(p, [&] { KnobRunContext c; c.plan_name = args.plan; return c; }())); }  // A10 (2026-11-03): the run's provenance in GenRunInfo
 
     std::uint64_t written = 0, n_tagged = 0, n_taggable = 0;
     double worst_p_rel = 0.0, worst_q = 0.0;

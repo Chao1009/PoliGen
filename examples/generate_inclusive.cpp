@@ -33,7 +33,7 @@
 #include <memory>
 #include <string>
 #include <vector>
-
+#include "lipolgen/lhapdf_sf.hpp"  // D7: the shipped SF grids (make_lhapdf_unpol_sf / _pol_sf)
 #include "lipolgen/beams.hpp"
 #include "lipolgen/bookkeeping.hpp"
 #include "lipolgen/generator.hpp"
@@ -93,12 +93,12 @@ Args parse(int argc, char** argv) {
   return a;
 }
 
-/// The kernel each isotope is generated with: 6Li carries the Miller
-/// deuteron b1 through the rank-2 embedded-deuteron transfer plus a
-/// discovery-scale Delta; 7Li has no published rank-2 input, so its tensor
-/// slots stay empty (xsec.hpp's documented default = identically zero).
+/// The kernel each isotope is generated with -- since D7 (2026-10-27) on the
+/// SHIPPED grids, CT18NLO F2 and NNPDFpol1.1 g1: 6Li carries the Miller b1
+/// through the rank-2 embedded-deuteron transfer plus a discovery-scale Delta;
+/// 7Li has no published rank-2 input (its tensor slots stay identically zero).
 std::shared_ptr<const InclusiveKernel> make_kernel(const Ion& ion) {
-  InclusiveKernel::Options opt;
+  InclusiveKernel::Options opt; opt.f2_source = make_lhapdf_unpol_sf(UNPOL_SF_DEFAULT); opt.g1_model = make_lhapdf_pol_sf(POL_SF_DEFAULT);
   if (std::fabs(ion.spin - 1.0) < 1e-9) {
     static const auto li6_b1 =
         std::make_shared<Li6B1>(std::make_shared<MillerB1>());

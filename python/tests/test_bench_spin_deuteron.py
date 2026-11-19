@@ -8,7 +8,7 @@ path, never retyped:
   row 1   t5_epios_source_modes.py      EPIOS Table II vs spin1_populations
   row 3   t2_hermes_b1_table2.py        HERMES b1^d Table II, chi2 with no tuning
   row 9   t5_est_identity.py            spin_temperature_pzz == EST closed form
-  row 10  t2_bonus_spectator_shape.py   CLAS DB query -- BLOCKED, skips by name
+  row 10  t2_bonus_spectator_shape.py   the 2026-09-23 history files only; the row's own tests are test_bench_bonus.py (since 2026-10-26)
 
 Every row is cheap (the HERMES row, the slowest, is ~5 s), so none sits
 behind the `LIPOLGEN_BENCH=1` opt-in.
@@ -221,7 +221,7 @@ def hermes_rep():
 HERMES_CHI2 = {
     "cdks_conv_mstw": (22.264, 22.009),
     "cdks_conv_default": (22.669, 22.392),
-    "miller_shipped": (5.262, 5.550),
+    "miller_shipped": (6.242, 8.191),   # A5 (2026-11-03): the headline's A_zz on the shipped F1^d, R; K1 (2026-11-17): the run-surface b1, b1/F1 at 2.5 GeV2 (was 5.262, 7.308 -- now the frozen sub-row)
     "miller_x1": (5.297, 4.514),
     "cdks_digitized": (21.782, 21.559),
     "null_b1_zero": (21.799, 21.586),
@@ -230,6 +230,15 @@ HERMES_CHI2 = {
 
 def test_hermes_report_row(hermes_rep):
     _report_row(hermes_rep)
+    # A5 (2026-11-03): the headline is the shipped b1 ("cdks_conv_mstw" until then)
+    assert hermes.HEADLINE == hermes_rep["headline"] == "miller_shipped"
+    h = hermes_rep["configs"]["miller_shipped"]
+    assert (h["status"], h["within_b1"], h["within_azz"]) == ("fail", 3, 2)   # K1 (2026-11-17): was 4, 3
+    assert h["chi2_azz_mstw_r1990"] == pytest.approx(6.515, rel=1e-3)   # A5 (2026-11-03): recorded; K1 (2026-11-17): was 5.550
+    assert h["within_azz_mstw_r1990"] == 3   # K1 (2026-11-17): was 4
+    for p in hermes_rep["per_bin"]:                 # A5 (2026-11-03): the shipped kernel's own F1 is
+        assert p["f1d_shipped_kernel"] == pytest.approx(   # F2/(2x(1 + r_sigma_lt))
+            p["f2d_shipped"] / (2.0 * p["x"] * (1.0 + p["r_shipped"])), rel=1e-12)
     assert set(hermes_rep["configs"]) == set(hermes.CONFIGS)
     assert len(hermes_rep["per_bin"]) == 6
 
@@ -264,7 +273,7 @@ def test_hermes_miller_normalisations_named(hermes_rep):
     assert _l.B1_MILLER_TABLE_TO_PER_NUCLEON == 0.5
     assert _l.B1_CDKS_TABLE_TO_PER_NUCLEON == 1.0
     for p in hermes_rep["per_bin"]:
-        assert p["b1"]["miller_x1"] == 2.0 * p["b1"]["miller_shipped"]
+        assert p["b1"]["miller_x1"] == 2.0 * p["b1_frozen_table"]   # K1 (2026-11-17): twice the frozen table (miller_shipped is the run surface's b1 since K1)
 
 
 def test_hermes_chi2_pinned_no_tuning(hermes_rep):
@@ -301,7 +310,7 @@ def test_hermes_chi2_b1_does_not_depend_on_the_f2_backend(hermes_rep, monkeypatc
     monkeypatch.setattr(hermes, "have_mstw", lambda: (False, "forced by the test"))
     toy = hermes.run(verbose=False)
     assert toy["f2_source"] == "ToyF2"
-    assert toy["headline"] == "cdks_conv_default"
+    assert toy["headline"] == "miller_shipped"   # A5 (2026-11-03): "cdks_conv_default" until then
     assert toy["configs"]["cdks_conv_mstw"] == dict(status="blocked",
                                                     reason="forced by the test")
     for name in hermes.CONFIGS[1:]:
@@ -329,6 +338,37 @@ def test_hermes_f1_rebuild_priced(hermes_rep):
 def test_r1990_typo_guard():
     r = hermes.r1990_factory()
     assert r(0.3, 3.0) == pytest.approx(0.18698, abs=1e-4)
+
+
+def test_hermes_in_grid_subrow_recorded(hermes_rep):
+    """J4 (2026-11-10; decision J4, the supervisor's choice under the
+    author's delegation): one RECORDED sub-row beside the six-bin headline --
+    the headline model on the bins whose <Q2> is at or above the shipped
+    CT18NLO grid's own Q2 floor (read from the library object, never typed
+    in the harness), chosen after the values were seen, no verdict.  The
+    headline (all six bins, its rule, its status) does not move."""
+    import lipolgen._lipolgen as _l
+    floor = _l.make_lhapdf_unpol_sf(_l.UNPOL_SF_DEFAULT).q2_min
+    assert floor == pytest.approx(1.677025, abs=1e-6)     # CT18NLO's QMin 1.295 GeV, squared
+    g = hermes_rep["subrows"][hermes.INGRID_SUBROW]
+    assert list(hermes_rep["subrows"]) == [hermes.INGRID_SUBROW, hermes.FROZEN_SUBROW]   # K1 (2026-11-17): + the frozen table
+    assert (g["status"], g["in_verdict"]) == ("recorded", False)
+    assert "chosen after the values were seen (J4" in g["label"] and "no verdict" in g["label"]
+    assert g["q2_grid_floor"] == floor
+    assert [p["q2"] for p in hermes_rep["per_bin"] if p["below_grid_floor"]] == [0.51, 1.06, 1.65]
+    assert all(p["f2d_frozen_at_floor"] for p in hermes_rep["per_bin"] if p["below_grid_floor"])
+    assert (g["n_bins"], g["ndf"], g["x_in_grid"]) == (3, 3, [0.128, 0.248, 0.452])
+    assert g["chi2_b1"] == pytest.approx(2.229766, rel=1e-5)        # J4 (2026-11-10): measured; K1 (2026-11-17): was 1.894165 (the frozen sub-row's now)
+    assert g["chi2_azz"] == pytest.approx(1.490745, rel=1e-5)       # J4 (2026-11-10): measured; K1 (2026-11-17): was 1.177693
+    assert (g["within_b1"], g["within_azz"]) == (2, 2)              # K1 (2026-11-17): was (2, 3)
+    assert [p["f1d_shipped_over_implied"] for p in hermes_rep["per_bin"]] == pytest.approx(
+        [1.760666, 1.413382, 1.338407, 1.275881, 1.137313, 0.899293], abs=2e-6)
+    assert g["bins_below_floor"] == ("x = 0.012, <Q2> = 0.51 GeV2; x = 0.032, <Q2> = 1.06 GeV2; "
+                                     "x = 0.063, <Q2> = 1.65 GeV2")
+    # the headline is untouched: all six bins, FAIL
+    h = hermes_rep["configs"][hermes.HEADLINE]
+    assert (h["ndf"], h["status"], hermes_rep["status"]) == (6, "fail", "fail")
+    assert h["chi2_b1"] == pytest.approx(6.242, rel=1e-3)   # K1 (2026-11-17): was 5.262
 
 
 # ------------------------------------------------------------------ row 10
@@ -378,12 +418,59 @@ def test_bonus_harness_prints_its_row_on_a_non_utf8_stdout():
         assert b"\\u03b7" in p.stdout, enc      # eta, escaped
 
 
-def test_bonus_row_is_blocked_by_name():
-    rep = bonus.run(verbose=False)
-    _report_row(rep)
-    assert rep["status"] == "blocked"
-    f = rep["findings"]
-    assert f["bonus"]["quantities"] == ["F2n/F2p"]
-    assert f["bonus"]["n_measurements"] == 1
-    assert f["deeps_blocks"] == 115
-    pytest.skip(bonus.BLOCKED_REASON)
+# test_bonus_row_is_blocked_by_name (2026-09-23 .. 2026-10-26) is retired: row
+# 10 was re-wired on the BONuS Supplemental Material on 2026-10-26 and is a
+# measurement (FAIL, recorded), no longer BLOCKED; its verdict, headline
+# numbers and file guards are pinned in test_bench_bonus.py
+# (docs/open_items/run_2026-10-26/phase_B1_bonus.md).  The three history
+# guards above stay: the harness still reads the 2026-09-23 files.
+
+
+def test_t2_hermes_b1_table2_plot_writes_png(hermes_rep, tmp_path):
+    """plot() draws the row's figure -- a view of the report, never the
+    record -- as a non-empty PNG where it is told to (here a tmp dir)."""
+    pytest.importorskip("matplotlib", reason="matplotlib (the figure only)")
+    path = hermes.plot(hermes_rep, out_dir=str(tmp_path))
+    assert path == os.path.join(str(tmp_path), "t2_hermes_b1_table2.png")
+    with open(path, "rb") as f:
+        assert f.read(8) == b"\x89PNG\r\n\x1a\n"
+    assert os.path.getsize(path) > 0
+
+
+def test_hermes_k1_headline_is_the_run_surface_b1_and_the_frozen_table_is_recorded(hermes_rep):
+    """K1 (2026-11-17; DECISIONS.md K1, the author's decision; its details the
+    supervisor's): by convention 8 the headline is the b1 a default deuteron
+    run carries -- since K1 the digitized MillerB1() read as b1/F1 at
+    B1_REFERENCE_Q2 = 2.5 GeV2, b1 = MillerB1(x) F1(x, <Q2>)/F1(x, 2.5), then
+    the J1 note's confinement (which binds at none of the six bins).  The
+    harness's kernel is asserted to be the default Pipeline's own at the six
+    bins, bit for bit; the frozen table (the reading until K1) is ONE recorded
+    sub-row carrying the old headline numbers.  The row's rule and status are
+    untouched: FAIL -> FAIL."""
+    if not _l.HAVE_LHAPDF:
+        pytest.skip("needs the LHAPDF tier (the shipped deuteron kernel)")
+    import lipolgen as lg
+    pipe = _l.Pipeline(lg.make_config(isotope="d", events=10),
+                       lg.make_plan("tensor-thirds", j=1.0)).dis_sampler.kernel
+    assert pipe.b1_reference_q2 == _l.B1_REFERENCE_Q2 == 2.5
+    mil = _l.MillerB1()
+    for p in hermes_rep["per_bin"]:
+        t = pipe.tables(p["x"], p["q2"])
+        assert p["b1"][hermes.HEADLINE] == t.b1                       # the run's b1, bit for bit
+        assert p["b1_frozen_table"] == mil.b1(p["x"], p["q2"], 0.0)   # the frozen table
+        assert p["k1_unconfined_b1"] == t.b1                          # nothing binds here
+        assert p["b1"][hermes.HEADLINE] == pytest.approx(
+            p["b1_frozen_table"] * p["k1_factor"], rel=1e-12)
+    assert [round(p["k1_factor"], 6) for p in hermes_rep["per_bin"]] == [
+        0.847838, 0.905631, 0.952691, 0.999802, 0.980326, 0.884239]      # K1 (2026-11-17): measured
+    f = hermes_rep["subrows"][hermes.FROZEN_SUBROW]
+    assert (f["status"], f["in_verdict"], f["ndf"]) == ("recorded", False, 6)
+    assert f["chi2_b1"] == pytest.approx(5.262, rel=1e-3)          # the headline until K1
+    assert f["chi2_azz"] == pytest.approx(7.308, rel=1e-3)
+    assert f["chi2_azz_mstw_r1990"] == pytest.approx(5.550, rel=1e-3)
+    assert (f["within_b1"], f["within_azz"], f["within_azz_mstw_r1990"]) == (4, 3, 4)
+    g = f["in_grid"]                                                # J4's numbers until K1
+    assert (g["n_bins"], g["within_b1"], g["within_azz"]) == (3, 2, 3)
+    assert g["chi2_b1"] == pytest.approx(1.894165, rel=1e-5)
+    assert g["chi2_azz"] == pytest.approx(1.177693, rel=1e-5)
+    assert hermes_rep["status"] == "fail"

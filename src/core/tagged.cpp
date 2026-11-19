@@ -78,7 +78,7 @@ const Ion& DEUTERON_AV18() {
   // Function-local static, not a namespace-scope one: `deuteron_av18_p_d()`
   // READS `fdeut.av18`, so this must not run before main().
   static const Ion i = [] {
-    Ion d = DEUTERON();
+    Ion d = DEUTERON_SCENARIO();  // A1: any deuteron Ion; only eff_pol is set
     d.eff_pol_p = vector_dilution_of(deuteron_av18_p_d());
     d.eff_pol_n = d.eff_pol_p;
     return d;
@@ -189,7 +189,7 @@ const std::vector<Wave>& li7_vmc_waves() {
 
 /// The AV18 deuteron as a TAGGED two-cluster channel (C5.4): psi_0 = u(k),
 /// psi_2 = w(k) from `fdeut.av18`'s own k-space block, with P_D the table's
-/// own D fraction rather than the `P_D_DEUTERON` scenario.
+/// own D fraction rather than the `P_D_DEUTERON_SCENARIO` 0.045.
 ///
 /// THE STORED RELATIVE SIGN IS + AND THAT IS NOT AN ACCIDENT.  CDKS fix
 /// phi_L = i^L psi_L with phi_2 = -W and U, W >= 0 at low k, so psi_2 = +W:
@@ -268,9 +268,9 @@ TaggedChannel li6_alpha_channel(double beta, double p_d,
   // eff_pol at all, the dilution comes out of its own CG sampling, so it is
   // `BreakupOptions::source` that closes it there, not this line.)  See
   // `DEUTERON_AV18` (tagged.hpp) for what the replacement is and is not.
-  // `Hulthen` is `DEUTERON()`, bit for bit as it always was.
+  // `Hulthen` is `DEUTERON_SCENARIO()` (A1: the pre-A1 `DEUTERON()`, bit for bit).
   c.dis_target = source == ClusterWaveSource::VmcAV18 ? DEUTERON_AV18()
-                                                      : DEUTERON();
+                                                      : DEUTERON_SCENARIO();
   c.validate();
   return c;
 }

@@ -146,6 +146,21 @@ matching `evgen/tests/test_tensor_convention.py`'s
 J=3/2 tensor geometry Q_NN=(3m^2-J(J+1))/3, t_geo=Q_NN*P2(cos theta_S),
 c_eff=3*Q_NN (xsec.py:311-341) is exercised numerically too.
 
+The cos 2phi coefficient (LiPolGen's decision D4, 2026-10-27,
+docs/open_items/run_2026-10-27/DECISIONS.md): `a_cos2phi`, every `a2`
+and the theta_S != 0 `dsigma` rows carry POLLIGEN's coefficient,
+-(1-y)/y^2 per unit Delta for m = +-1 at 90 deg (the JLab LOI's Eq. (9)),
+while LiPolGen's is Jaffe-Manohar's, -(1/2)(1-y)/y^2.  The gates
+(`tests/test_reference.cpp`, `python/tests/test_kernel_reference.py`)
+read the coefficient off this file's own numbers and compare LiPolGen's
+against the literal 1/2 through it; every Delta-free number keeps the
+plain rtol 1e-12.  `_preflight_delta_convention()` makes the dump refuse,
+before anything is written, a polligen whose coefficient is neither 1
+nor 1/2 of -(1-y)/y^2 (or differs between `a_cos2phi` and the kernel),
+and prints which it is.  There is no `--accept-changed-numbers` guard in
+this script (that is `dump_b1_default_li6.py`'s): a re-dump rewrites all
+seven tables with whatever moved, so read the diff.
+
 ## beams.json
 
 `polli_fastsim.beams` (PolarizedLithiumSim/fastsim/polli_fastsim/beams.py).
@@ -286,6 +301,30 @@ boost (no grid quadrature -- rtol=1e-12 applies), at a fixed set of
 species: 6Li, 7Li, or d). Fields: pT, theta, p_lab, R (rigidity ratio),
 xL, kx, ky, kz (spin-frame components after rotation), phi_spec (lab
 azimuth).
+
+`channels.li6_alpha_vmc` (LiPolGen's decision A13, 2026-11-03,
+docs/open_items/run_2026-11-03/DECISIONS.md; the supervisor's choice
+under the author's delegation): a REDUCED block for the ANL VMC alpha-d
+channel, `tagged.li6_alpha_channel(wave="vmc")` -- `label`, `j_ion`,
+`s_struck`, `s_spec`, `s_channel`, `P_D` (the momentum file's printed
+S/D split, `tagged.li6_vmc_tables()[3]`) and `model` = {`vector_dilution`,
+`tensor_dilution`} of `tagged.TaggedModel(channel)` at its default grid.
+No `base`, `waves`, `beam_configs`, grid tables or `boost_spectator`:
+the VMC waves are tables (`wave_dump` does not apply) and the channel's
+kinematics are `li6_alpha`'s.  The block declares its own tolerance,
+`port_gate_rtol` = 1e-8 relative on the two dilutions (a factor 2-3
+above the 5.4e-9 / 3.2e-9 the D6 design measured,
+docs/open_items/run_2026-10-27/plan_D6_cluster_wave_default.md sec. 4.5),
+with its reason and its `scope`: the alpha-d motion only -- not the
+embedded deuteron (polligen keeps the scenario 0.9325 under wave="vmc")
+and not 7Li (polligen refuses wave="vmc" there).  `P_D` and the
+quantum numbers are exact (rtol 1e-12); `label` is polligen's own and
+is not compared.  The gates are `tests/test_tagged.cpp` (`kVmcPortRtol`),
+`validation/repin_tagged_from_lipolgen.py` and
+`python/tests/test_port_gate_li6_vmc.py`, each against LiPolGen's
+`li6_alpha_channel(source=VmcAV18)`; the Hulthen gates above skip the
+key.  The block is written by `build_tagged_li6_alpha_vmc()`, which
+this script's `build_tagged()` adds after the three Hulthen channels.
 
 ## spectator.json
 

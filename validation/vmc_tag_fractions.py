@@ -178,7 +178,7 @@ def energy_label(energies):
 def li6_variants(lp):
     """The four 6Li channels the A_zz comparison needs, in report order.
 
-    `hulthen`         the model default, beta = 0.30, P_D = 0.0867
+    `hulthen`         the factory default (the run default is vmc since D6), beta = 0.30, P_D = 0.0867
     `hulthen-P_D_vmc` the same analytic shapes at the VMC D-state probability
                       -- isolates the P_D change from the SHAPE change
     `vmc`             the production VMC channel

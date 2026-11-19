@@ -129,7 +129,7 @@ ClusterBreakup::ClusterBreakup(BreakupOptions opt) : opt_(std::move(opt)) {
   tsf_ = opt_.triton_sf;   // null = the sequential triton branch, bit for bit
 
   // --- the deuteron's own wave function ------------------------------------
-  // S + D Hulthen at `p_d` (= P_D_DEUTERON by default), or the exact AV18
+  // S + D Hulthen at `p_d` (= P_D_DEUTERON_SCENARIO), or the exact AV18
   // deuteron on `source` = VmcAV18.  IT FOLLOWS `source` BECAUSE THE RATE
   // DOES: `li6_alpha_channel`'s `dis_target` is `DEUTERON_AV18()` on that
   // setting, and a run whose struck-nucleon spin label came from one deuteron

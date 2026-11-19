@@ -54,7 +54,7 @@ TEST_CASE("cluster: Wave::radial reproduces the polligen radial tables" *
           doctest::skip(!tagged_present())) {
   jsonmin::Value ref;
   REQUIRE(load_tagged(ref));
-  for (const auto& kv : ref["channels"].obj()) {
+  for (const auto& kv : ref["channels"].obj()) { if (kv.first == "li6_alpha_vmc") continue;  // A13 (2026-11-03): the VMC block carries no waves (Hulthen radial tables only)
     CAPTURE(kv.first);
     for (const jsonmin::Value& w : kv.second["waves"].arr()) {
       const Wave wave{static_cast<int>(w["l"].num()), w["prob"].num(),

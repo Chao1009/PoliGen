@@ -21,6 +21,18 @@ def tagged_run():
 
 
 @pytest.fixture(scope="module")
+def tagged_run_hulthen():
+    """The same 1e5 events on the `--cluster-wave hulthen` OPTION (D6,
+    2026-10-29): the documented 0.0248 below is that wave's, and the Python's
+    0.0247 a Hulthen prototype's, so the comparison names the wave."""
+    cfg = lg.make_config(isotope="6Li", channel="tagged-alpha", config=1,
+                         events=N_TAGGED, seed=1,
+                         optics="yr-high-acceptance", cluster_wave="hulthen")
+    p = lg.Pipeline(cfg, lg.tensor_thirds_plan(0.7, 0.6))
+    return p, p.generate(0)
+
+
+@pytest.fixture(scope="module")
 def inclusive_run():
     cfg = lg.make_config(isotope="6Li", channel="inclusive", config=1,
                          events=20000, seed=2)
@@ -74,12 +86,24 @@ def test_spin_labels_follow_the_run_plan(tagged_run):
 
 # ---------------------------------------------------------------- physics
 
-def test_tag_fraction_matches_the_documented_yr_number(tagged_run):
-    """docs/USAGE.md 5: 0.0248 at the Yellow Report high-acceptance optics,
-    10 GeV e x 99.5 GeV/u, 6Li alpha tag (Python's own 0.0247)."""
-    _, c = tagged_run
+def test_tag_fraction_matches_the_documented_yr_number(tagged_run_hulthen):
+    """docs/USAGE.md 5: 0.0248 at the Yellow Report high-acceptance optics
+    (0.0249 since the 2026-09-06 S-D fix), 10 GeV e x 99.5 GeV/u, 6Li alpha
+    tag (Python's own 0.0247) -- on the Hulthen wave, by name since D6
+    (2026-10-29)."""
+    _, c = tagged_run_hulthen
     frac = float(np.mean(export.rp_accepted(c)))
     assert frac == pytest.approx(0.0248, rel=0.20), frac
+
+
+def test_tag_fraction_on_the_default_wave_matches_its_model(tagged_run):
+    """D6 (2026-10-29): the same window on the run default, the VMC waves,
+    against the model's own uniform-M tag fraction 0.033810227625842 (the
+    `--cluster-wave` help, 2026-09-06), at the test above's rel 0.20."""
+    _, c = tagged_run
+    assert c["meta"]["cluster_wave"] == "vmc"
+    frac = float(np.mean(export.rp_accepted(c)))
+    assert frac == pytest.approx(0.033810, rel=0.20), frac
 
 
 def test_tag_fraction_rises_at_the_tagging_optics(tagged_run):

@@ -61,7 +61,7 @@ CBT/TMT curves this baseline scales), 7Li (no 7Li DIS data exists), or
 shadowing point by point (NMC's x < 0.002 points are at Q2 = 0.03 .. 0.34,
 below the grid).
 
-Run:  source env.sh && python3 validation/benchmarks/t3_nmc_li6_over_d.py
+Run:  source env.sh && python3 validation/benchmarks/t3_nmc_li6_over_d.py [--plot]
 
 Exit status (validation/benchmarks/README.md): 0 when the harness ran and
 printed its REPORT row -- pass, recorded fail and blocked alike, since the
@@ -235,11 +235,65 @@ def run(path=DATA, verbose=True):
     return report
 
 
+# ---------------------------------------------------------------- figure
+
+def plot(report, out_dir=None):
+    """NMC F2(6Li)/F2(D) vs x (ink, stat (+) sys; the nine points below the
+    LHAPDF grids hollow and grey -- reported, never compared) against the
+    tree's EPPS21 / isoscalar-CT18NLO ratio at each on-grid point's own
+    (x, Q2), with the valence window x >= 0.30 shaded, over the pulls
+    (data - tree)/sigma the row records.  The wrong free-proton ratio is in
+    the row, not drawn.  A view of the row: every number drawn is in it."""
+    if HERE not in sys.path:
+        sys.path.insert(0, HERE)
+    from _plots import BAND, MUTED, new_figure, save, status_title, style_series
+    pts = report["points"]
+    on = sorted((p for p in pts if p["on_grid"]), key=lambda p: p["x"])
+    off = [p for p in pts if not p["on_grid"]]
+    fig, (ax, axp) = new_figure(two_panel=True)
+    for a in (ax, axp):
+        a.axvspan(X_VALENCE, 1.0, color=BAND, alpha=0.8, linewidth=0, zorder=1,
+                  label="valence window x >= %.2f (its own chi2)" % X_VALENCE)
+    ax.errorbar([p["x"] for p in on], [p["ratio"] for p in on],
+                yerr=[p["err"] for p in on], **style_series(
+                    "reference", label="NMC F2(6Li)/F2(D), on grid (Q2 >= %.2f GeV^2)"
+                    % report["q2_min"]))
+    kw = style_series("reference", label="below the grids (not compared)")
+    kw.update(color=MUTED, markerfacecolor="none", zorder=4)
+    ax.errorbar([p["x"] for p in off], [p["ratio"] for p in off],
+                yerr=[p["err"] for p in off], **kw)
+    ax.plot([p["x"] for p in on], [p["tree"] for p in on], **style_series(
+        "default", label="Epps21Ratio / (F2p + F2n)/2 [CT18NLO], each point's Q2",
+        marker="s"))
+    ax.lines[-1].set_linestyle("-")
+    ax.lines[-1].set_linewidth(1.2)
+    ax.lines[-1].set_markersize(4)
+    pk = style_series("default", marker="s")
+    pk.update(label="_nolegend_", markersize=4)
+    axp.plot([p["x"] for p in on], [p["pull"] for p in on], **pk)
+    ax.set_xscale("log")
+    ax.set_xlim(min(p["x"] for p in pts) / 1.6, 1.0)
+    ax.set_ylabel("F2(6Li) / F2(D), per nucleon")
+    ax.legend(loc="lower left", fontsize=7)
+    axp.set_xlabel("x (each point at its own Q2)")
+    axp.set_ylabel("(data - tree)/sigma")
+    status_title(fig, NAME, report["status"],
+                 "x >= %.2f: %.3f/%d (p = %.3f); on grid %.2f/%d (p = %.3f); "
+                 "tolerance p >= %g on both" % (
+                     X_VALENCE, report["chi2_valence"], report["ndf_valence"],
+                     report["p_valence"], report["chi2_ongrid"],
+                     report["ndf_ongrid"], report["p_ongrid"], P_MIN))
+    return save(fig, NAME, out_dir)
+
+
 if __name__ == "__main__":
     # Exit convention (module docstring, validation/benchmarks/README.md):
     # 0 = ran and printed its REPORT row, whatever the verdict; 2 = broken.
+    # `--plot` also writes the row's figure (plot()); the same rule holds.
     try:
-        run()
+        rep = run()
+        if "--plot" in sys.argv[1:]:
+            print("figure: %s" % plot(rep))
     except Exception:  # any exception means the harness itself is broken
         traceback.print_exc()
         sys.exit(2)

@@ -469,8 +469,8 @@ These are not measurements; each carries its own published validation against
 the data of §§B–D, so attaching one imports that validation. **I-2 (MSTW2008
 LO)** deserves the HIGH: it is the PDF CDKS used to compute the b₁ᵈ the A = 2
 gate is defined against, and `OPEN_ITEMS_SOLUTIONS.md` records that the gate's
-peak ratio is 0.843 with MSTW and 0.440 — outside the window — with the shipped
-`ToyF2`. The gate is therefore a statement about a *configuration*, and the
+peak ratio is 0.843 with MSTW and 0.440 — outside the window — with `--b1-unpol`'s
+`ToyF2` default (shipped as the rate's F₂ too until D7). The gate is therefore a statement about a *configuration*, and the
 reference for that configuration now sits in the corpus. **I-4** replaces
 `nucleon_ff`'s dipole+Galster with a world fit that has an error band; its own
 priority stays LOW because the `qe_suppression` ±100 % band dominates anyway.

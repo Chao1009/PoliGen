@@ -1387,16 +1387,16 @@ RcModel::RcModel(RcMode mode, RcOptions opt,
     throw std::runtime_error("RcModel: n_eta must be >= 8 (the eta_A "
                              "quadrature runs in Gauss-Legendre panels of 8)");
   }
-  if (opt_.tail_model == RcTailModel::PolradFull) {
-    // TWO REFUSALS THAT ARE NOT STYLE, both measured.
-    //
-    // (a) `long double` HAS TO BE WIDER THAN `double` HERE.  Eq. (B.3)'s
-    //     a_ik for i = 5, 6 cancel to ~5 decimal digits in the collinear
-    //     region (rc.cpp's `long double` note), and in plain `double` the
-    //     TENSOR column of the tail moves by 14 % between two tanh-sinh step
-    //     sizes that the unpolarised column agrees on to ten digits.  On a
-    //     platform where the two types coincide the number would still be
-    //     produced and would still be wrong, so it is refused instead.
+  if (opt_.tail_model == RcTailModel::PolradFull &&
+      rc_tail_applies(channel_, opt_.with_tail)) {
+    // TWO REFUSALS THAT ARE NOT STYLE, both measured -- and ONLY where a tail
+    // is BUILT (D5, 2026-10-29): a tagged / coherent / with_tail = false run
+    // builds none, so the default may not refuse it for a tail it never runs.
+    // (a) `long double` HAS TO BE WIDER THAN `double` HERE.  Eq. (B.3)'s a_ik
+    //     (i = 5, 6) cancel to ~5 decimal digits in the collinear region; in
+    //     plain `double` the TENSOR column moves 14 % between two tanh-sinh
+    //     steps the unpolarised one agrees on to ten digits (MSVC and Apple
+    //     arm64 are such platforms).  There the number would be wrong: refused.
     if (std::numeric_limits<long double>::digits <=
         std::numeric_limits<double>::digits) {
       throw std::runtime_error(
@@ -1480,18 +1480,18 @@ RcModel::RcModel(RcMode mode, RcOptions opt,
   if (opt_.tail_model != RcTailModel::TPeakPlusLL &&
       opt_.sp_tensor_scale != 0.0) {
     throw std::runtime_error(
-        std::string("RcModel: sp_tensor_scale != 0 needs tail_model = "
-                    "TPeakPlusLL -- it is a fraction OF the leading-log "
-                    "s-/p-peak column u_sp, and ") +
+        std::string("RcModel: sp_tensor_scale != 0 needs tail_model = TPeakPlusLL -- it is a "
+                    "fraction OF the leading-log s-/p-peak column u_sp, and ") +
         (opt_.tail_model == RcTailModel::PolradFull
-             // TWO REFUSALS, OPPOSITE REASONS, AND THE DISTINCTION MATTERS.
-             ? "PolradFull does not compute that column because it does not "
-               "NEED a stand-in: Eq. (18) carries the s- and p-peaks inside "
-               "its own tau_A integral WITH their Eq. (A.4) tensor content, "
-               "so the scale would double-count a term that ran"
-             : "the t-peak-only tail does not compute it at all (the table "
-               "is identically zero), so it would be recorded in meta as a "
-               "price that was never paid") +
+             // TWO REFUSALS, OPPOSITE REASONS, AND THE DISTINCTION MATTERS --
+             ? (rc_tail_applies(channel_, opt_.with_tail)    // and (F5) did a tail RUN?
+                    ? "PolradFull does not compute that column because it does not NEED a stand-in: "
+                      "Eq. (18) carries the s- and p-peaks inside its own tau_A integral WITH their "
+                      "Eq. (A.4) tensor content, so the scale would double-count a term that ran"
+                    : "no tail is BUILT on this run (a tagged or coherent channel, or with_tail = "
+                      "false), so it would be recorded in meta as a price that was never paid")
+             : "the t-peak-only tail does not compute it at all (the table is identically "
+               "zero), so it would be recorded in meta as a price that was never paid") +
         " (rc.hpp, RcOptions::sp_tensor_scale)");
   }
   if (!(opt_.tail_max > 0.0)) {
@@ -1555,8 +1555,8 @@ RcModel::RcModel(RcMode mode, RcOptions opt,
         "same Roman-Pot acceptance multiply the tail and the tagged Born, "
         "and both select the 2 of 6 nucleons inside the deuteron.  "
         "rc_tail == 1 therefore drops a dilution of the same ORDER as the "
-        "inclusive quasi-elastic one (22 % / 73 % / 99.9 % of the inclusive "
-        "tail at x = 0.01 / 0.10 / 0.30), not a negligible one.  It is not "
+        "inclusive quasi-elastic one (39 / 99.8 / 100 % of the default inclusive "
+        "tail, 22 / 73 / 99.9 % of the t-peak's, at x = 0.01 / 0.10 / 0.30, Q^2 = 5), not a negligible one.  It is not "
         "implemented because it needs a TAGGED Born denominator and the tag "
         "acceptance folded into POLRAD Eq. (44), neither of which exists "
         "here or in the literature -- and a fourth piece, the cluster-"
@@ -1985,8 +1985,8 @@ double RcModel::tail_ratio_at(double x, double q2, double q_n,
   // THE LEADING-LOG s+p COLUMNS, and the ONE line that makes `--rc off` and
   // `tail_model = TPeak` bit for bit what they were before this branch
   // existed: under `TPeak` the two tables are identically zero and this block
-  // is not entered at all, so not one floating-point operation of the shipped
-  // default moved.  They are positive and span decades like `sigma_u_`, so
+  // is not entered at all, so not one floating-point operation of the t-peak
+  // model (the default until D5) moved.  They are positive and span decades like `sigma_u_`, so
   // they interpolate in ln by the same rule.
   double su_sp = 0.0, sqe_sp = 0.0;
   if (opt_.tail_model == RcTailModel::TPeakPlusLL) {

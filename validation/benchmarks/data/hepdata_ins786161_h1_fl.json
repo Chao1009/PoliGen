@@ -1,0 +1,455 @@
+{
+  "_provenance": {
+    "what": "H1's measured longitudinal proton structure function F_L at 0.00024 <= x <= 0.0036, 12 <= Q2 <= 90 GeV2 -- the reference side of the 'h1' (low-x EXTRAPOLATION) sub-row of validation/benchmarks/t1_r_world.py (02_data_nucleon_deuteron.md sec. 4 R-5).",
+    "record": {
+      "inspire": "ins786161",
+      "hepdata_doi": "10.17182/hepdata.45340.v1",
+      "hepdata_version": 1,
+      "record_url": "https://www.hepdata.net/record/ins786161",
+      "catalogue_url": "https://www.hepdata.net/record/ins786161?format=json",
+      "catalogue_sha256": "d2929382e35a56804b70b5a0bc0e4b2eb3830f385715f6958390c7025d94e804",
+      "catalogue_bytes": 11610,
+      "title": "Measurement of the Proton Structure Function $F_L$ at Low x",
+      "journal": "Phys.Lett.B 665 (2008) 139-146",
+      "paper_doi": "10.1016/j.physletb.2008.05.070",
+      "arxiv": "arXiv:0805.2809",
+      "n_tables_in_record": 9
+    },
+    "tables_used": [
+      {
+        "name": "Table 1",
+        "doi": "10.17182/hepdata.45340.v1/t1",
+        "location": "Data from F 5",
+        "description": "The measured longitudinal proton structure function FL at Q**2 = 12 GeV**2 extracted from the combined 920,575 and 450 GeV...",
+        "yaml_url": "https://www.hepdata.net/download/table/ins786161/Table 1/yaml",
+        "yaml_sha256": "c039d079b8cc2bc0646ce316b1d3979cef7a53ac3a510714bce34f1e3c83e40d",
+        "yaml_bytes": 655,
+        "yaml_fetched_utc": "2026-10-26T18:55:17.621823Z",
+        "json_url": "https://www.hepdata.net/download/table/ins786161/Table 1/json",
+        "json_sha256": "fab7212b963d57bef1f6e1c6253772e4a9c5035f643af6595b25211e952936bc",
+        "json_bytes": 1720,
+        "json_fetched_utc": "2026-10-26T18:55:18.911893Z",
+        "table_license": "CC0 (https://creativecommons.org/publicdomain/zero/1.0/)"
+      },
+      {
+        "name": "Table 2",
+        "doi": "10.17182/hepdata.45340.v1/t2",
+        "location": "Data from F 5",
+        "description": "The measured longitudinal proton structure function FL at Q**2 = 15 GeV**2 extracted from the combined 920,575 and 450 GeV...",
+        "yaml_url": "https://www.hepdata.net/download/table/ins786161/Table 2/yaml",
+        "yaml_sha256": "3c6c879dbcf09fcb87bb91b7995a6398dc6a173a05b93ead7659e97d847d26d7",
+        "yaml_bytes": 779,
+        "yaml_fetched_utc": "2026-10-26T18:55:19.883817Z",
+        "json_url": "https://www.hepdata.net/download/table/ins786161/Table 2/json",
+        "json_sha256": "2b0b556d42909248bb5aeb0b086395ccaded4e17a4187a9ca2755a554981f3cf",
+        "json_bytes": 1865,
+        "json_fetched_utc": "2026-10-26T18:55:21.665704Z",
+        "table_license": "CC0 (https://creativecommons.org/publicdomain/zero/1.0/)"
+      },
+      {
+        "name": "Table 3",
+        "doi": "10.17182/hepdata.45340.v1/t3",
+        "location": "Data from F 5",
+        "description": "The measured longitudinal proton structure function FL at Q**2 = 20 GeV**2 extracted from the combined 920,575 and 450 GeV...",
+        "yaml_url": "https://www.hepdata.net/download/table/ins786161/Table 3/yaml",
+        "yaml_sha256": "126a2cff27add421db6593d21d8f38fc1227b8060f93361e527a6a8b15b58020",
+        "yaml_bytes": 1021,
+        "yaml_fetched_utc": "2026-10-26T18:55:22.405536Z",
+        "json_url": "https://www.hepdata.net/download/table/ins786161/Table 3/json",
+        "json_sha256": "e5cc7cddd797da70a92f0272d18a1d72538d7ffa4ac644e39b65af82480f6dcb",
+        "json_bytes": 2150,
+        "json_fetched_utc": "2026-10-26T18:55:23.957622Z",
+        "table_license": "CC0 (https://creativecommons.org/publicdomain/zero/1.0/)"
+      },
+      {
+        "name": "Table 4",
+        "doi": "10.17182/hepdata.45340.v1/t4",
+        "location": "Data from F 5",
+        "description": "The measured longitudinal proton structure function FL at Q**2 = 25 GeV**2 extracted from the combined 920,575 and 450 GeV...",
+        "yaml_url": "https://www.hepdata.net/download/table/ins786161/Table 4/yaml",
+        "yaml_sha256": "4545d527db4e9104b29dc4ce65f51f1f9a3e5ca9e71759e12cd35cbce06d69ec",
+        "yaml_bytes": 777,
+        "yaml_fetched_utc": "2026-10-26T18:55:24.738100Z",
+        "json_url": "https://www.hepdata.net/download/table/ins786161/Table 4/json",
+        "json_sha256": "2e68df4bb3a07eef3dee29e92b5447f0f52930fa0da8d1f8f498bfa55e08e8e4",
+        "json_bytes": 1863,
+        "json_fetched_utc": "2026-10-26T18:55:26.493836Z",
+        "table_license": "CC0 (https://creativecommons.org/publicdomain/zero/1.0/)"
+      },
+      {
+        "name": "Table 5",
+        "doi": "10.17182/hepdata.45340.v1/t5",
+        "location": "Data from F 5",
+        "description": "The measured longitudinal proton structure function FL at Q**2 = 35 GeV**2 extracted from the combined 920,575 and 450 GeV...",
+        "yaml_url": "https://www.hepdata.net/download/table/ins786161/Table 5/yaml",
+        "yaml_sha256": "3215d0312bb4cd2c8f0aa2a4e96174a6dd43b869d0a210c42b8c65f11df0755b",
+        "yaml_bytes": 896,
+        "yaml_fetched_utc": "2026-10-26T18:55:27.203622Z",
+        "json_url": "https://www.hepdata.net/download/table/ins786161/Table 5/json",
+        "json_sha256": "5428684efc32a54fac72790a0d4b440e4727fe546bf914674ffaa56ec2704a2c",
+        "json_bytes": 2003,
+        "json_fetched_utc": "2026-10-26T18:55:28.572242Z",
+        "table_license": "CC0 (https://creativecommons.org/publicdomain/zero/1.0/)"
+      },
+      {
+        "name": "Table 6",
+        "doi": "10.17182/hepdata.45340.v1/t6",
+        "location": "Data from F 5",
+        "description": "The measured longitudinal proton structure function FL at Q**2 = 45 GeV**2 extracted from the combined 920,575 and 450 GeV...",
+        "yaml_url": "https://www.hepdata.net/download/table/ins786161/Table 6/yaml",
+        "yaml_sha256": "078d7d6661e8cad6759a1b970ec083882566298188cce0dc531121ef91a1eba3",
+        "yaml_bytes": 899,
+        "yaml_fetched_utc": "2026-10-26T18:55:29.338060Z",
+        "json_url": "https://www.hepdata.net/download/table/ins786161/Table 6/json",
+        "json_sha256": "7a41965645d6e101605241f9cb3a2b80216b44572bb3e178a7cec97ad00c318f",
+        "json_bytes": 2006,
+        "json_fetched_utc": "2026-10-26T18:55:30.644198Z",
+        "table_license": "CC0 (https://creativecommons.org/publicdomain/zero/1.0/)"
+      },
+      {
+        "name": "Table 7",
+        "doi": "10.17182/hepdata.45340.v1/t7",
+        "location": "Data from F 5",
+        "description": "The measured longitudinal proton structure function FL at Q**2 = 60 GeV**2 extracted from the combined 920,575 and 450 GeV...",
+        "yaml_url": "https://www.hepdata.net/download/table/ins786161/Table 7/yaml",
+        "yaml_sha256": "595a39b2cd566261a1df5b6453172d0cda88a3a2d5dda452406dd5cdcbf9204f",
+        "yaml_bytes": 778,
+        "yaml_fetched_utc": "2026-10-26T18:55:31.410762Z",
+        "json_url": "https://www.hepdata.net/download/table/ins786161/Table 7/json",
+        "json_sha256": "5955f68232a72a30689dbeb56d0baed808127ea4ef1d56103d4b4aee2638f786",
+        "json_bytes": 1864,
+        "json_fetched_utc": "2026-10-26T18:55:32.894060Z",
+        "table_license": "CC0 (https://creativecommons.org/publicdomain/zero/1.0/)"
+      },
+      {
+        "name": "Table 8",
+        "doi": "10.17182/hepdata.45340.v1/t8",
+        "location": "Data from F 5",
+        "description": "The measured longitudinal proton structure function FL at Q**2 = 90 GeV**2 extracted from the combined 920,575 and 450 GeV...",
+        "yaml_url": "https://www.hepdata.net/download/table/ins786161/Table 8/yaml",
+        "yaml_sha256": "2b40efe6ca10dd2a3e0bbdd20a0bf6b343b11733d76445d5942727d91226eb20",
+        "yaml_bytes": 532,
+        "yaml_fetched_utc": "2026-10-26T18:55:33.609899Z",
+        "json_url": "https://www.hepdata.net/download/table/ins786161/Table 8/json",
+        "json_sha256": "6ed21e3f896a45e1072f5116f5413922075b7840f1d532a7cd0fbd23939148a2",
+        "json_bytes": 1576,
+        "json_fetched_utc": "2026-10-26T18:55:34.916090Z",
+        "table_license": "CC0 (https://creativecommons.org/publicdomain/zero/1.0/)"
+      },
+      {
+        "name": "Table 9",
+        "doi": "10.17182/hepdata.45340.v1/t9",
+        "location": "Data from T 2,F 6",
+        "description": "The longitudinal proton structure function FL as a function of Q**2 at given values of X extracted from the combined...",
+        "yaml_url": "https://www.hepdata.net/download/table/ins786161/Table 9/yaml",
+        "yaml_sha256": "e8946e739d20c0030fefe544f85c14376344345db4030799e4227f2120fb7e10",
+        "yaml_bytes": 1792,
+        "yaml_fetched_utc": "2026-10-26T18:55:35.732232Z",
+        "json_url": "https://www.hepdata.net/download/table/ins786161/Table 9/json",
+        "json_sha256": "4796eba376e68a3660842d4e7bfc78dfc39c944a903a89c74ef742e76760b0db",
+        "json_bytes": 3087,
+        "json_fetched_utc": "2026-10-26T18:55:37.084841Z",
+        "table_license": "CC0 (https://creativecommons.org/publicdomain/zero/1.0/)"
+      }
+    ],
+    "fetched": "2026-10-26 (UTC); the standard Python `requests` 2.25.1 client with its default identity (no header changed); curl's default identity receives HTTP 403 from www.hepdata.net and was not used",
+    "licence": "CC0-1.0: HEPData 'table_license' CC0 (https://creativecommons.org/publicdomain/zero/1.0/), read from each table's json download; measured quantities, vendored with attribution",
+    "paper": "F. D. Aaron et al. (H1 Collaboration), 'Measurement of the proton structure function F_L(x, Q2) at low x', Phys. Lett. B 665 (2008) 139, doi:10.1016/j.physletb.2008.05.070, arXiv:0805.2809 (read: PolarizedLithiumSim/refs/0805.2809.pdf)",
+    "publishing_convention": "F_L of the PROTON (e+ p, per proton). The record carries F_L ONLY: no F2 and no covariance matrix, so R = F_L/(F2 - F_L) cannot be formed from the record alone. 'averaged' = Tables 9 (= the paper's Table 2: F_L at fixed Q2 averaged over x 'taking the x dependent correlations between the systematic errors into account', at the quoted x); 'per_bin' = Tables 1-8 (the paper's Fig. 5: F_L at each (x, Q2)).",
+    "errors": "averaged: stat, uncorrelated sys, correlated sys -- the record's two 'sys' labels are in that order (Table 9's description: 'The first DSYS error is the uncorrelated systematic error and the second is the correlated systematic error'); their quadrature sum equals the paper's 'total' column to the printed digit (checked; kept as total_as_printed). per_bin: total and stat only. The luminosity uncertainty is not included in any error (paper, captions of Figs. 4-6).",
+    "cross_check": "the eight 'averaged' rows equal the paper's Table 2 as printed (arXiv:0805.2809 p. 14), checked number by number when this file was written",
+    "in_r1998_fit": "NO: published 2008, after R1998 (1998); and every point is below R1998's support x >= 0.005.",
+    "vendored_by": "Written once on 2026-10-26 by a dev-time script kept outside the repository (the C1 worker's scratch directory): every number of `body` is copied from the table's YAML download (HEPData's submission format), whose sha256 is recorded per table under `tables_used`; nothing is rescaled, rounded or re-ordered beyond what `body` states.  The harness that reads this file re-checks the sha256 of every byte of it, and of the canonical body (json.dumps(body, sort_keys=True, separators=(',', ':'), ensure_ascii=True)) recorded as `_body_sha256`, on every read."
+  },
+  "_body_sha256": "2ff5cc7ebe4bc5a2e7d0bdf432cfe0889aa509d914ee6a22af74854c6e425c13",
+  "body": {
+    "quantity": "F_L (proton)",
+    "target": "proton",
+    "columns": {
+      "x": "Bjorken x",
+      "q2": "Q2 [GeV2]",
+      "value": "F_L",
+      "stat": "statistical error",
+      "sys_uncorr": "uncorrelated systematic error",
+      "sys_corr": "correlated systematic error",
+      "total": "total error",
+      "table": "HEPData table number"
+    },
+    "averaged": [
+      {
+        "x": 0.00028,
+        "q2": 12.0,
+        "value": 0.22,
+        "stat": 0.06,
+        "sys_uncorr": 0.05,
+        "sys_corr": 0.08,
+        "total_as_printed": 0.11
+      },
+      {
+        "x": 0.00037,
+        "q2": 15.0,
+        "value": 0.08,
+        "stat": 0.05,
+        "sys_uncorr": 0.04,
+        "sys_corr": 0.09,
+        "total_as_printed": 0.11
+      },
+      {
+        "x": 0.00049,
+        "q2": 20.0,
+        "value": 0.24,
+        "stat": 0.04,
+        "sys_uncorr": 0.04,
+        "sys_corr": 0.09,
+        "total_as_printed": 0.1
+      },
+      {
+        "x": 0.00062,
+        "q2": 25.0,
+        "value": 0.38,
+        "stat": 0.05,
+        "sys_uncorr": 0.05,
+        "sys_corr": 0.08,
+        "total_as_printed": 0.1
+      },
+      {
+        "x": 0.00093,
+        "q2": 35.0,
+        "value": 0.24,
+        "stat": 0.06,
+        "sys_uncorr": 0.06,
+        "sys_corr": 0.09,
+        "total_as_printed": 0.13
+      },
+      {
+        "x": 0.0014,
+        "q2": 45.0,
+        "value": 0.18,
+        "stat": 0.08,
+        "sys_uncorr": 0.08,
+        "sys_corr": 0.14,
+        "total_as_printed": 0.18
+      },
+      {
+        "x": 0.0022,
+        "q2": 60.0,
+        "value": 0.33,
+        "stat": 0.13,
+        "sys_uncorr": 0.13,
+        "sys_corr": 0.19,
+        "total_as_printed": 0.27
+      },
+      {
+        "x": 0.0036,
+        "q2": 90.0,
+        "value": 0.48,
+        "stat": 0.23,
+        "sys_uncorr": 0.22,
+        "sys_corr": 0.22,
+        "total_as_printed": 0.39
+      }
+    ],
+    "per_bin": [
+      {
+        "table": 1,
+        "x": 0.000236,
+        "q2": 12.0,
+        "value": 0.34,
+        "total": 0.18,
+        "stat": 0.12
+      },
+      {
+        "table": 1,
+        "x": 0.000295,
+        "q2": 12.0,
+        "value": 0.17,
+        "total": 0.12,
+        "stat": 0.07
+      },
+      {
+        "table": 2,
+        "x": 0.000311,
+        "q2": 15.0,
+        "value": -0.02,
+        "total": 0.2,
+        "stat": 0.13
+      },
+      {
+        "table": 2,
+        "x": 0.000347,
+        "q2": 15.0,
+        "value": 0.21,
+        "total": 0.12,
+        "stat": 0.08
+      },
+      {
+        "table": 2,
+        "x": 0.000422,
+        "q2": 15.0,
+        "value": -0.04,
+        "total": 0.16,
+        "stat": 0.08
+      },
+      {
+        "table": 3,
+        "x": 0.000372,
+        "q2": 20.0,
+        "value": 0.0,
+        "total": 0.25,
+        "stat": 0.2
+      },
+      {
+        "table": 3,
+        "x": 0.000415,
+        "q2": 20.0,
+        "value": 0.1,
+        "total": 0.19,
+        "stat": 0.14
+      },
+      {
+        "table": 3,
+        "x": 0.000463,
+        "q2": 20.0,
+        "value": 0.59,
+        "total": 0.13,
+        "stat": 0.09
+      },
+      {
+        "table": 3,
+        "x": 0.000525,
+        "q2": 20.0,
+        "value": 0.23,
+        "total": 0.13,
+        "stat": 0.07
+      },
+      {
+        "table": 3,
+        "x": 0.000606,
+        "q2": 20.0,
+        "value": -0.22,
+        "total": 0.19,
+        "stat": 0.1
+      },
+      {
+        "table": 4,
+        "x": 0.000492,
+        "q2": 25.0,
+        "value": 0.58,
+        "total": 0.16,
+        "stat": 0.12
+      },
+      {
+        "table": 4,
+        "x": 0.000615,
+        "q2": 25.0,
+        "value": 0.39,
+        "total": 0.11,
+        "stat": 0.06
+      },
+      {
+        "table": 4,
+        "x": 0.000757,
+        "q2": 25.0,
+        "value": 0.19,
+        "total": 0.18,
+        "stat": 0.1
+      },
+      {
+        "table": 5,
+        "x": 0.000725,
+        "q2": 35.0,
+        "value": 0.31,
+        "total": 0.29,
+        "stat": 0.24
+      },
+      {
+        "table": 5,
+        "x": 0.000811,
+        "q2": 35.0,
+        "value": 0.0,
+        "total": 0.26,
+        "stat": 0.18
+      },
+      {
+        "table": 5,
+        "x": 0.000919,
+        "q2": 35.0,
+        "value": 0.4,
+        "total": 0.16,
+        "stat": 0.1
+      },
+      {
+        "table": 5,
+        "x": 0.00106,
+        "q2": 35.0,
+        "value": 0.14,
+        "total": 0.18,
+        "stat": 0.1
+      },
+      {
+        "table": 6,
+        "x": 0.001043,
+        "q2": 45.0,
+        "value": 0.42,
+        "total": 0.37,
+        "stat": 0.3
+      },
+      {
+        "table": 6,
+        "x": 0.001182,
+        "q2": 45.0,
+        "value": 0.44,
+        "total": 0.35,
+        "stat": 0.25
+      },
+      {
+        "table": 6,
+        "x": 0.001363,
+        "q2": 45.0,
+        "value": 0.2,
+        "total": 0.22,
+        "stat": 0.14
+      },
+      {
+        "table": 6,
+        "x": 0.001808,
+        "q2": 45.0,
+        "value": -0.04,
+        "total": 0.3,
+        "stat": 0.12
+      },
+      {
+        "table": 7,
+        "x": 0.001575,
+        "q2": 60.0,
+        "value": 0.74,
+        "total": 0.56,
+        "stat": 0.48
+      },
+      {
+        "table": 7,
+        "x": 0.001818,
+        "q2": 60.0,
+        "value": 0.23,
+        "total": 0.52,
+        "stat": 0.39
+      },
+      {
+        "table": 7,
+        "x": 0.002411,
+        "q2": 60.0,
+        "value": 0.28,
+        "total": 0.31,
+        "stat": 0.15
+      },
+      {
+        "table": 8,
+        "x": 0.003617,
+        "q2": 90.0,
+        "value": 0.48,
+        "total": 0.39,
+        "stat": 0.24
+      }
+    ]
+  }
+}

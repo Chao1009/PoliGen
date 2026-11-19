@@ -1,0 +1,191 @@
+{
+  "_provenance": {
+    "what": "SLAC E140's measured R = sigma_L/sigma_T on DEUTERIUM at x = 0.2, 0.35, 0.5, 1 <= Q2 <= 10 GeV2 (11 points) -- the reference side of the 'e140' (CLOSURE) sub-row of validation/benchmarks/t1_r_world.py (02_data_nucleon_deuteron.md sec. 4 R-2).",
+    "record": {
+      "inspire": "ins360765",
+      "hepdata_doi": "10.17182/hepdata.22468.v1",
+      "hepdata_version": 1,
+      "record_url": "https://www.hepdata.net/record/ins360765",
+      "catalogue_url": "https://www.hepdata.net/record/ins360765?format=json",
+      "catalogue_sha256": "8a3b836c43447196593787ad3d88c77d1466f128c0b3cdfbef79609233d9a070",
+      "catalogue_bytes": 27026,
+      "title": "Measurement of kinematic and nuclear dependence of R = sigma-L / sigma-t in deep inelastic electron scattering",
+      "journal": "Phys.Rev.D 49 (1994) 5641-5670",
+      "paper_doi": "10.1103/PhysRevD.49.5641",
+      "arxiv": null,
+      "n_tables_in_record": 31
+    },
+    "tables_used": [
+      {
+        "name": "Table 23",
+        "doi": "10.17182/hepdata.22468.v1/t23",
+        "location": "Data from T 7",
+        "description": "No description provided.",
+        "yaml_url": "https://www.hepdata.net/download/table/ins360765/Table 23/yaml",
+        "yaml_sha256": "b080c1fbee6209a72a04de23fe3a34f31f3a63453f301755b8ac0c57151cc114",
+        "yaml_bytes": 1334,
+        "yaml_fetched_utc": "2026-10-26T18:58:41.059808Z",
+        "json_url": "https://www.hepdata.net/download/table/ins360765/Table 23/json",
+        "json_sha256": "e7a21dd1227b1c4b875bf4b6ef82716268a1a25a82fb7419c0a8f04f92c509a9",
+        "json_bytes": 2196,
+        "json_fetched_utc": "2026-10-26T19:06:20.138903Z",
+        "table_license": "CC0 (https://creativecommons.org/publicdomain/zero/1.0/)"
+      },
+      {
+        "name": "Table 24",
+        "doi": "10.17182/hepdata.22468.v1/t24",
+        "location": "Data from T 7",
+        "description": "No description provided.",
+        "yaml_url": "https://www.hepdata.net/download/table/ins360765/Table 24/yaml",
+        "yaml_sha256": "6678d384955909e0d9e93e7281f76193faee0bc624b71ef289ffd2ab863e14d7",
+        "yaml_bytes": 1116,
+        "yaml_fetched_utc": "2026-10-26T18:58:43.120007Z",
+        "json_url": "https://www.hepdata.net/download/table/ins360765/Table 24/json",
+        "json_sha256": "a1f8857f77246464872ed38875ea6863a824ef8846fe1c1c9bbd586b3fc7aa8d",
+        "json_bytes": 1948,
+        "json_fetched_utc": "2026-10-26T19:06:24.276784Z",
+        "table_license": "CC0 (https://creativecommons.org/publicdomain/zero/1.0/)"
+      },
+      {
+        "name": "Table 25",
+        "doi": "10.17182/hepdata.22468.v1/t25",
+        "location": "Data from T 7",
+        "description": "No description provided.",
+        "yaml_url": "https://www.hepdata.net/download/table/ins360765/Table 25/yaml",
+        "yaml_sha256": "8cfe64d3264f5de1e5e3141116890dac72fb8d0809bea2e9bbe71a3b6d158805",
+        "yaml_bytes": 1337,
+        "yaml_fetched_utc": "2026-10-26T18:58:44.602837Z",
+        "json_url": "https://www.hepdata.net/download/table/ins360765/Table 25/json",
+        "json_sha256": "a712afe666c6d4494418353fad72b45ad32fbd31278bd45b19ce7f187023a0ee",
+        "json_bytes": 2199,
+        "json_fetched_utc": "2026-10-26T19:06:28.351543Z",
+        "table_license": "CC0 (https://creativecommons.org/publicdomain/zero/1.0/)"
+      }
+    ],
+    "tables_not_used": "Tables 1-22 (cross sections per beam energy), 26-31 (R and F2 on Fe and Au): the tree's R has no target dependence (r_sigma_lt and r1998 take (x, Q2) only), so the nuclear tables are not compared; the paper's average R_A - R_D is kept below as a quoted fact.",
+    "fetched": "2026-10-26 (UTC); the standard Python `requests` 2.25.1 client with its default identity (no header changed); curl's default identity receives HTTP 403 from www.hepdata.net and was not used",
+    "licence": "CC0-1.0: HEPData 'table_license' CC0 (https://creativecommons.org/publicdomain/zero/1.0/), read from each table's json download; measured quantities, vendored with attribution",
+    "paper": "S. Dasu et al. (SLAC E140), 'Measurement of kinematic and nuclear dependence of R = sigma_L/sigma_T in deep inelastic electron scattering', Phys. Rev. D 49 (1994) 5641, doi:10.1103/PhysRevD.49.5641 (read: PolarizedLithiumSim/refs/SLAC-PUB-5814.pdf, the SLAC-PUB-5814 preprint)",
+    "publishing_convention": "R is a RATIO (convention-free); these are the DEUTERIUM rows (record reaction 'E- DEUT --> E- X'). The paper's Table VII gives the same numbers with 'Statistical and point-to-point systematic errors shown separately. There is an additional normalization error of 0.03 primarily due to radiative corrections' -- that 0.03 is NOT in the record's numbers (its qualifier only says 'Additional normalization uncertainties'); it is kept here as paper_normalisation_error_r, quoted from the Table VII caption.",
+    "errors": "stat and point-to-point sys, separately, symmetric, absolute (as the paper's Table VII).",
+    "paper_quotes": {
+      "normalisation_error_r": {
+        "value": 0.03,
+        "source": "Table VII caption, SLAC-PUB-5814 p. 30"
+      },
+      "ra_minus_rd_average": {
+        "value": 0.001,
+        "stat": 0.018,
+        "sys": 0.016,
+        "source": "sec. IV.B, SLAC-PUB-5814 p. 13: 'The average R_A - R_D is 0.001 +- 0.018(stat) +- 0.016(syst)'"
+      }
+    },
+    "cross_check": "all eleven rows (x, Q2, R, stat, sys) equal the deuterium rows of the paper's Table VII as printed (SLAC-PUB-5814 p. 30), checked number by number when this file was written",
+    "in_r1998_fit": "YES, through [3]: Whitlow et al. 1990 carries E140's R (its record's Table 2, 'Data from experiment E-140', the R_d/R_Fe average) and Abe et al., PLB 452 (1999) 194 fit 'the present data [3,11-14]'; E140's own PRL 61 (1988) 1061 is their ref. [8].",
+    "vendored_by": "Written once on 2026-10-26 by a dev-time script kept outside the repository (the C1 worker's scratch directory): every number of `body` is copied from the table's YAML download (HEPData's submission format), whose sha256 is recorded per table under `tables_used`; nothing is rescaled, rounded or re-ordered beyond what `body` states.  The harness that reads this file re-checks the sha256 of every byte of it, and of the canonical body (json.dumps(body, sort_keys=True, separators=(',', ':'), ensure_ascii=True)) recorded as `_body_sha256`, on every read."
+  },
+  "_body_sha256": "96498c131899688acbcca9218669d4849952522c48c5256a6e4191200ddc8b58",
+  "body": {
+    "quantity": "R = sigma_L/sigma_T",
+    "target": "deuterium",
+    "columns": {
+      "x": "Bjorken x",
+      "q2": "Q2 [GeV2]",
+      "value": "R",
+      "stat": "statistical error",
+      "sys": "point-to-point systematic error",
+      "table": "HEPData table number"
+    },
+    "points": [
+      {
+        "table": 23,
+        "x": 0.2,
+        "q2": 1.0,
+        "value": 0.376,
+        "stat": 0.042,
+        "sys": 0.031
+      },
+      {
+        "table": 23,
+        "x": 0.2,
+        "q2": 1.5,
+        "value": 0.269,
+        "stat": 0.042,
+        "sys": 0.03
+      },
+      {
+        "table": 23,
+        "x": 0.2,
+        "q2": 2.5,
+        "value": 0.104,
+        "stat": 0.047,
+        "sys": 0.027
+      },
+      {
+        "table": 23,
+        "x": 0.2,
+        "q2": 5.0,
+        "value": 0.233,
+        "stat": 0.055,
+        "sys": 0.04
+      },
+      {
+        "table": 24,
+        "x": 0.35,
+        "q2": 1.5,
+        "value": 0.296,
+        "stat": 0.051,
+        "sys": 0.04
+      },
+      {
+        "table": 24,
+        "x": 0.35,
+        "q2": 2.5,
+        "value": 0.153,
+        "stat": 0.033,
+        "sys": 0.025
+      },
+      {
+        "table": 24,
+        "x": 0.35,
+        "q2": 5.0,
+        "value": 0.123,
+        "stat": 0.037,
+        "sys": 0.028
+      },
+      {
+        "table": 25,
+        "x": 0.5,
+        "q2": 2.5,
+        "value": 0.202,
+        "stat": 0.025,
+        "sys": 0.018
+      },
+      {
+        "table": 25,
+        "x": 0.5,
+        "q2": 5.0,
+        "value": 0.102,
+        "stat": 0.026,
+        "sys": 0.022
+      },
+      {
+        "table": 25,
+        "x": 0.5,
+        "q2": 7.5,
+        "value": 0.145,
+        "stat": 0.059,
+        "sys": 0.029
+      },
+      {
+        "table": 25,
+        "x": 0.5,
+        "q2": 10.0,
+        "value": 0.046,
+        "stat": 0.038,
+        "sys": 0.028
+      }
+    ],
+    "paper_normalisation_error_r": 0.03
+  }
+}

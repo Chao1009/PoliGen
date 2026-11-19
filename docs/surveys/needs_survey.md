@@ -49,14 +49,14 @@ W = 1 + w_avg + a_1 cos(phi') + a_2 cos(2 phi'),   phi' = phi - phi_S
 w_avg = t_geo(m, theta_S) * K / D_phi                      [tensor, J>=1]
       + lam_e P_e (m/J) cos(theta_S) * A_par(x,y)          [vector-L]
 a_1   = lam_e P_e (m/J) sin(theta_S) * A_perp(x,y)         [vector-T, gT]
-a_2   = -(1-y)/y^2 * c_eff(m) sin^2(theta_S) * Delta / D_phi  [gluonometry]
+a_2   = -(1-y)/y^2 * c_eff(m) sin^2(theta_S) * Delta / D_phi  [gluonometry; 2026-10-27: the sibling's, LiPolGen's carries -(1/2) since D4]
 ```
 with `D_phi = F1 + (1-y)/(x y^2) F2` and `K = b1 + (1-y)/(x y^2) b2`.
 
 Implementation: `InclusiveKernel.amplitudes` at `xsec.py:345-379`; `_dphi` at `:252-254`, `_tensor_kernel` at `:256-258`, and the actual lines
 
 - tensor rate: `t_geo = TENSOR_LL_SIGN * q_nn * 0.5 * (3.0*ct*ct - 1.0)` (`xsec.py:365`), `w_avg += t_geo * kern / D_phi` (`:367`)
-- double-helicity-flip: `a_2 = -(1.0-y)/(y*y) * c_eff * st*st * t["delta"] / D_phi` (`xsec.py:368-369`)
+- double-helicity-flip: `a_2 = -(1.0-y)/(y*y) * c_eff * st*st * t["delta"] / D_phi` (`xsec.py:368-369`) [2026-10-27: the sibling's coefficient, the LOI's Eq. (9); LiPolGen's is Jaffe–Manohar's −½(1−y)/y² since D4, and HJM has no Δ term]
 - vector: `w_avg += helicity * v * ct * a_parallel` (`:374`), `a_1 = helicity * v * st * a_perp` (`:378`)
 - final density: `w = 1 + w_avg + a1 cos(phi') + a2 cos(2 phi')`, `dsigma_unpol/(2π) * max(w,0)` (`xsec.py:388-395`).
 
@@ -67,7 +67,7 @@ Implementation: `InclusiveKernel.amplitudes` at `xsec.py:345-379`; `_dphi` at `:
 **Analytic asymmetry formulas the kernel must reproduce** (`fastsim/polli_fastsim/asymmetries.py`):
 
 - `azz` (`:101-108`): `num = TENSOR_LL_SIGN * (2/3) * (b1 + (1-y)/(x y²) b2) * ½(3cos²θ_m − 1)`, divided by `phi_averaged_density`.
-- `a_cos2phi` (`:111-113`): `-(1-y)/y² * Delta / D_phi`.
+- `a_cos2phi` (`:111-113`): `-(1-y)/y² * Delta / D_phi`. [2026-10-27: the sibling's coefficient, the LOI's Eq. (9); LiPolGen's is Jaffe–Manohar's −½(1−y)/y² since D4, and HJM has no Δ term]
 - `a_parallel` (`:59-93`): `D(y) * g1/F1` with `depolarization_d = y(2−y)/(y² + 2(1−y)(1+R))` (`:44-56`).
 - errors: `err_a_parallel = 1/(P_e P_z √N)` (`:119-122`), `err_azz = √(2/N)/P_zz` (`:125-129`), `err_cos2phi_amplitude = √(2/N)/P_zz` (`:132-136`).
 
@@ -195,7 +195,7 @@ Plus (`plans/05:54-59`): *"bunch-by-bunch λ_e flips; ion fills with population 
 
 ### 3.2 Spin-dependent cross sections on spin-1 / spin-3/2
 
-`plans/05:135-146`: spin-1 must carry the **HJM set {F₁, F₂, b₁…b₄, Δ, g₁, g₂} in the covariant Cosyn–Weiss classification**, *"whose inclusive limit fixes every sign and y-factor, including the transverse-vector λ_e P_T cos(φ−φ_S) g_T term the fastsim never needed."* Spin-3/2: rank-0/1 exact with P_p = 0.866, P_n = −0.037; rank-2 as scenario inputs; rank-3 dropped.
+`plans/05:135-146`: spin-1 must carry the **HJM set {F₁, F₂, b₁…b₄, Δ, g₁, g₂} in the covariant Cosyn–Weiss classification** [2026-10-27: Δ is Jaffe–Manohar's, PLB 223 (1989) 218, not HJM's], *"whose inclusive limit fixes every sign and y-factor, including the transverse-vector λ_e P_T cos(φ−φ_S) g_T term the fastsim never needed."* Spin-3/2: rank-0/1 exact with P_p = 0.866, P_n = −0.037; rank-2 as scenario inputs; rank-3 dropped.
 
 Open/blocking items:
 - **b₁ sign** (`plans/08:373`, D1): code is opposite to Cosyn Eq. (27)/HERMES; what flips is κ and any O(γ²) subtraction built on it.
@@ -440,7 +440,7 @@ The suite defines expected behaviour at **three distinct tiers**, and this matte
 |---|---|---|
 | Cosyn et al. EPJ A 61 (2025) 83 Eq. (27) | `test_tensor_convention.py:61-69` | `A_zz·(1+ε(y)R) == ±(2/3)b₁/F₁`, rel 1e-12 |
 | Cosyn–Weiss arXiv:2603.23700 Eq. 6.12/6.13, TABLE II | `test_tagged.py:730-785` | `A_T∥` extremes **+0.9997 / −1.9378** vs published +1 / −2. ***Superseded 2026-09-06** — both the −2 mapping and the sibling's missing i^L are wrong (see §5.2's correction). LiPolGen's replacement checks Eq. (6.12) as an identity on AV18: 8.881784e−16 over 26 880 cells, was 2.740499e+00.* |
-| **Hoodbhoy–Jaffe–Manohar NPB 312:571 (1989) Eq. (30)** | `test_recopseudo.py:545-577` | `A = −[(1−y)/y²]⟨c_eff⟩sin²θ_S·Δ/D_φ`, written out *"from the paper rather than taken from the code"*, rtol 1e-12 |
+| **Hoodbhoy–Jaffe–Manohar NPB 312:571 (1989) Eq. (30)** | `test_recopseudo.py:545-577` | `A = −[(1−y)/y²]⟨c_eff⟩sin²θ_S·Δ/D_φ`, written out *"from the paper rather than taken from the code"*, rtol 1e-12 [2026-10-27: the sibling's coefficient, the LOI's Eq. (9); LiPolGen's is Jaffe–Manohar's −½(1−y)/y² since D4, and HJM has no Δ term] |
 | E143 PRD 58:112003 lab-frame ε/D/η | `test_target_mass.py:87-112` | rebuilt from random (E, E′, θ), rel 1e-12 over 64 draws |
 | Kuraev–Fadin / Skrzypek LL spectrum | `test_radiative.py:40-46` | `t = (2α/π)(L−1)` with α = 1/137.035999; `S(t) = 1+3t/8+O(t²)` |
 | Yellow Report Table 10.1 divergences | `test_reco.py:327-338` | proton σ_θ(h,v) = **[220, 380] / [180, 180] / [65, 65]** µrad, high-divergence [150, 150] |
@@ -449,7 +449,7 @@ The suite defines expected behaviour at **three distinct tiers**, and this matte
 
 **Tier 2 — internal identities at rtol 1e-9…1e-14**, each rebuilt independently from raw kinematics rather than compared code-to-code. Beyond what §5.2 listed:
 
-- `test_xsec_identity.py:297-321` — hand-derived closed form `a₂ = −(ε/2)·c_eff·sin²θ_S·(Δ/F₁)/(1+ε·R)` at rtol 1e-12, proving **F₂ cancels exactly** from the cos 2φ amplitude; `:324` then shows scaling F₂ by any k leaves a₂ bit-identical (rtol 1e-14, atol 0.0).
+- `test_xsec_identity.py:297-321` — hand-derived closed form `a₂ = −(ε/2)·c_eff·sin²θ_S·(Δ/F₁)/(1+ε·R)` [2026-10-27: −(ε/4) in LiPolGen since D4, the Jaffe–Manohar coefficient] at rtol 1e-12, proving **F₂ cancels exactly** from the cos 2φ amplitude; `:324` then shows scaling F₂ by any k leaves a₂ bit-identical (rtol 1e-14, atol 0.0).
 - `test_xsec_identity.py:241-272` — θ_S swept continuously; the **magic angle arccos(1/√3) kills the tensor rate shift to <1e-15**.
 - `test_target_mass.py:58-81` — `cap = M²/(W2_min−M²) == 0.09654` (rel 1e-3), plus the cell-wise tighter bound `4M²x(1−x)/(W2_min−M²)`, and the six published per-configuration maxima pinned exactly: `[0.0258, 0.0332, 0.0577, 0.0577, 0.0854, 0.0854]`.
 - `test_target_mass.py:184-236` — the γ² shift scales exactly as 1/Q² at fixed (x,y) (100× Q² divides it by 100 to 5%) and collapses to `(1+γ²)` to 8%/2% at y = 0.05/0.01.

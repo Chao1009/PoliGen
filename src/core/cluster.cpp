@@ -76,7 +76,17 @@ std::vector<double> split_numbers(const std::string& line) {
 
 std::string read_whole(const std::string& path) {
   std::ifstream in(path);
-  if (!in) throw std::runtime_error("cannot open ANL table: " + path);
+  // D6: a DEFAULT tagged run reads these tables -- name its escape, and only its (F6).
+  if (!in) {
+    throw std::runtime_error(
+        "cannot open ANL table: " + path + " -- data_dir() is $LIPOLGEN_DATA_DIR "
+        "when set, else the compiled-in source-tree data/ (an installed library "
+        "finds it only while that tree exists): point LIPOLGEN_DATA_DIR at a "
+        "LiPolGen data/ tree.  On a TAGGED channel, whose run default reads the "
+        "cluster-wave tables since D6 (CLUSTER_WAVE_DEFAULT), --cluster-wave "
+        "hulthen (ClusterWaveSource::Hulthen) opens none of them; no other table "
+        "(an inclusive --b1-model's, --rc-c0-shape vmc-ft's) has a stand-in");
+  }
   std::ostringstream ss;
   ss << in.rdbuf();
   return ss.str();

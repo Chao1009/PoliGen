@@ -7,11 +7,11 @@
 /// `fastsim/polli_fastsim/asymmetries.py`.
 ///
 /// Spin-1 master formula (unpolarized e, target spin at angle theta_m,
-/// projection lambda_m in {+1, 0, -1}; Hoodbhoy-Jaffe-Manohar NPB 312:571):
-///
+/// projection lambda_m in {+1, 0, -1}; b-sector: Hoodbhoy-Jaffe-Manohar NPB
+/// 312:571; Delta: Jaffe-Manohar PLB 223:218, preprint CTP#1712 Eq. (16); D4):
 ///   dsigma/(dx dy dphi)(lambda_m) = (2 y alpha^2 / Q^2) *
 ///       [ F1 + (2/3) a_m b1 + (1-y)/(x y^2) (F2 + (2/3) a_m b2)
-///         - (1-y)/y^2 c_m sin^2(theta_m) Delta(x,Q2) cos(2 phi) ]
+///         - (1/2)(1-y)/y^2 c_m sin^2(theta_m) Delta(x,Q2) cos(2 phi) ]
 ///
 ///   a_m = (1/4) c_m (3 cos^2 theta_m - 1),  c_m = 3|lambda_m| - 2 -> (1,-2,1)
 ///
@@ -24,7 +24,7 @@
 ///   Azz  = (s+ + s- - 2 s0)/(s+ + s- + s0)   (longitudinal, theta_m = 0)
 ///        = -(2/3)[b1 + (1-y)/(x y^2) b2]/[F1 + (1-y)/(x y^2) F2]
 ///        = -(2/3) (b1/F1)/(1 + eps(y) R)  exactly -> measures b1
-///   A2phi(lambda = +-1, theta_m = 90 deg) = -(1-y)/y^2 Delta / D_phi
+///   A2phi(lambda = +-1, theta_m = 90 deg) = -(1/2)(1-y)/y^2 Delta / D_phi
 ///
 /// The overall sign of the tensor RATE sector is `TENSOR_LL_SIGN`
 /// (constants.hpp) -- one constant, defined once, test-guarded.
@@ -120,7 +120,7 @@ double phi_averaged_density(double f1, double f2, double x, double y);
 double azz(double b1, double f1, double f2, double x, double y,
            const double* b2 = nullptr, double theta_m = 0.0);
 
-/// cos(2phi) amplitude for lambda_m = +-1, theta_m = 90 deg.
+/// cos(2phi) amplitude for lambda_m = +-1, theta_m = 90 deg (JM, D4).
 double a_cos2phi(double delta, double f1, double f2, double x, double y);
 
 // --- statistical uncertainties (per kinematic bin with N events total) ---

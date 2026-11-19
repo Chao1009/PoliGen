@@ -70,23 +70,23 @@ bool tagged_blob_present() {
       .good();
 }
 
-
+// D6 (2026-10-29): polligen's tagged.json and the P_D = 0 limits are the HULTHEN family, named.
 const TaggedModel& li6_model() {
-  static const TaggedModel m(li6_alpha_channel());
+  static const TaggedModel m(li6_alpha_channel(BETA_DEFAULT, P_D_LI6, ClusterWaveSource::Hulthen));
   return m;
 }
 const TaggedModel& li7_model() {
-  static const TaggedModel m(li7_alpha_channel());
+  static const TaggedModel m(li7_alpha_channel(BETA_DEFAULT, ClusterWaveSource::Hulthen));
   return m;
 }
 const TaggedModel& deut_model() {
-  static const TaggedModel m(deuteron_channel());
+  static const TaggedModel m(deuteron_channel(BETA_DEFAULT, P_D_DEUTERON_SCENARIO, ClusterWaveSource::Hulthen));  // A1 (2026-11-03): polligen's 0.045, explicitly
   return m;
 }
 const TaggedModel& model_by_key(const std::string& key) {
   if (key == "li6_alpha") return li6_model();
   if (key == "li7_alpha") return li7_model();
-  return deut_model();
+  if (key == "deuteron") return deut_model(); throw std::runtime_error("model_by_key: no Hulthen model for " + key);  // A13 (2026-11-03): no fall-through to the deuteron
 }
 
 /// `np.argmin(np.abs(v - target))`, first index on a tie -- NumPy's rule, and
@@ -159,8 +159,8 @@ TEST_CASE("tagged: channel construction against polligen" *
   jsonmin::Value ref;
   REQUIRE(load_tagged(ref));
   CHECK_CLOSE(P_D_LI6, ref["P_D_LI6"].num(), kRtol);
-  CHECK_CLOSE(P_D_DEUTERON, ref["P_D_DEUTERON"].num(), kRtol);
-  for (const auto& kv : ref["channels"].obj()) {
+  CHECK_CLOSE(P_D_DEUTERON_SCENARIO, ref["P_D_DEUTERON"].num(), kRtol);  // A1 (2026-11-03): polligen's constants, passed explicitly; the shipped default is 0.0576
+  for (const auto& kv : ref["channels"].obj()) { if (kv.first == "li6_alpha_vmc") continue;  // A13 (2026-11-03): the VMC block has its own case (Hulthen loop)
     const TaggedChannel& ch = model_by_key(kv.first).channel();
     const jsonmin::Value& r = kv.second;
     CAPTURE(kv.first);
@@ -196,7 +196,7 @@ TEST_CASE("tagged: the model grid and its tables against polligen" *
   // The file must be polligen's again, not a LiPolGen self-comparison.
   REQUIRE(ref.has("provenance"));
   CHECK(ref["provenance"].str() == "polligen");
-  for (const auto& kv : ref["channels"].obj()) {
+  for (const auto& kv : ref["channels"].obj()) { if (kv.first == "li6_alpha_vmc") continue;  // A13 (2026-11-03): the VMC block has its own case (Hulthen loop)
     const TaggedModel& model = model_by_key(kv.first);
     const jsonmin::Value& m = kv.second["model"];
     CAPTURE(kv.first);
@@ -279,7 +279,7 @@ TEST_CASE("tagged: boost_spectator against polligen (closed form, rtol 1e-12)" *
           doctest::skip(!tagged_blob_present())) {
   jsonmin::Value ref;
   REQUIRE(load_tagged(ref));
-  for (const auto& kv : ref["channels"].obj()) {
+  for (const auto& kv : ref["channels"].obj()) { if (kv.first == "li6_alpha_vmc") continue;  // A13 (2026-11-03): the VMC block has its own case (Hulthen loop)
     const TaggedChannel& ch = model_by_key(kv.first).channel();
     CAPTURE(kv.first);
     for (const jsonmin::Value& row : kv.second["boost_spectator"].arr()) {
@@ -338,7 +338,7 @@ TEST_CASE("tagged: sum_M n_M is isotropic about the axis") {
 }
 
 TEST_CASE("tagged: a pure S wave is m-independent and diagonal in the spin") {
-  const TaggedModel model(li6_alpha_channel(BETA_DEFAULT, 0.0));
+  const TaggedModel model(li6_alpha_channel(BETA_DEFAULT, 0.0, ClusterWaveSource::Hulthen));
   const std::vector<double>& n1 = model.n_of_kc(1.0);
   for (double m : {0.0, -1.0}) {
     const std::vector<double>& n = model.n_of_kc(m);
@@ -500,18 +500,18 @@ TEST_CASE("tagged: 6Li embedded-deuteron dilutions") {
   CHECK(t < 1.0);
   // plans/08 D9: the RANK-2 transfer constant is the model's own tensor
   // dilution, and the closed form 1 - (9/10) P_D
-  CHECK_CLOSE_AT(LI6_B1_RANK2_TRANSFER, t, 0.0, 1e-4);
+  CHECK_CLOSE_AT(LI6_B1_RANK2_TRANSFER_HULTHEN, t, 0.0, 1e-4);  // A1 (2026-11-03): the Hulthen value, named
   CHECK_CLOSE_AT(t, 1.0 - 0.9 * P_D_LI6, 0.0, 1e-4);
   CHECK_CLOSE_AT(LI6_B1_LEGACY_TRANSFER, v, 0.0, 2e-3);
   // deuteron control: the standard 1 - (3/2) w_D
-  CHECK_CLOSE_AT(deut_model().vector_dilution(), 1.0 - 1.5 * P_D_DEUTERON,
+  CHECK_CLOSE_AT(deut_model().vector_dilution(), 1.0 - 1.5 * P_D_DEUTERON_SCENARIO,  // A1 (2026-11-03): named
                  0.0, 1e-3);
 }
 
 TEST_CASE("tagged: the 6Li S-wave limit reduces to the inclusive deuteron") {
   // P_D = 0: p(m_d|M) = delta_{m_d,M}, so the k-integrated tagged tensor
   // asymmetry is the inclusive polarized-deuteron azz, bin by bin.
-  const TaggedModel model(li6_alpha_channel(BETA_DEFAULT, 0.0));
+  const TaggedModel model(li6_alpha_channel(BETA_DEFAULT, 0.0, ClusterWaveSource::Hulthen));
   InclusiveKernel::Options opt;
   opt.b1_func = [](double x, double q2, double f1) { return toy_b1(x, q2, f1); };
   const InclusiveKernel kern(DEUTERON(), opt);
@@ -831,7 +831,7 @@ TEST_CASE("tagged: sample_kc reproduces its own density") {
 TEST_CASE("tagged: the P_D = 0 boost matches spectator.py quantile by quantile") {
   // Same density, same boost algebra, different (and unmatched) random
   // streams: the comparison is quantile by quantile, as in the Python.
-  const TaggedModel model(li6_alpha_channel(BETA_DEFAULT, 0.0));
+  const TaggedModel model(li6_alpha_channel(BETA_DEFAULT, 0.0, ClusterWaveSource::Hulthen));
   const double p_u = default_configs("6Li")[1].ion_momentum_per_nucleon;
   const std::size_t n = 100000;
   Rng rng_a(31337, 0, 0, 23);
@@ -1536,9 +1536,9 @@ TEST_CASE("T25 the deuteron control channel, Hulthen against AV18" *
   CHECK_CLOSE(deuteron_av18_p_d(), 0.057599, 2e-5);
   CHECK(std::fabs(deuteron_av18_p_d() / 0.057599 - 1.0) > 1e-6);
   CHECK_CLOSE(deuteron_av18_p_d(), 0.0575998919874, 1e-9);
-  // ... and it is 28 % ABOVE the scenario P_D_DEUTERON the control is pinned
-  // to.
-  CHECK_CLOSE(deuteron_av18_p_d() / P_D_DEUTERON, 1.28000, 1e-4);
+  // ... and it is 28 % ABOVE the scenario P_D_DEUTERON_SCENARIO the Hulthen
+  // control is pinned to (A1, 2026-11-03: renamed; P_D_DEUTERON is AV18's).
+  CHECK_CLOSE(deuteron_av18_p_d() / P_D_DEUTERON_SCENARIO, 1.28000, 1e-4);
 
   const TaggedModel h(deuteron_channel());
   const TaggedModel v(deuteron_channel(BETA_DEFAULT, P_D_DEUTERON,
@@ -1571,8 +1571,8 @@ TEST_CASE("T25 the deuteron control channel, Hulthen against AV18" *
   CHECK(v.channel().waves[1].vmc->psi()[1] > 0.0);
   // fdeut.av18 prints no MC error column, so this table carries no band.
   CHECK(!v.channel().waves[1].vmc->has_errors());
-  // Hulthen stays bit for bit the default.
-  CHECK(h.channel().waves[1].prob == P_D_DEUTERON);
+  // Hulthen stays bit for bit the FACTORY default (D6's DD-1; the run is VMC).
+  CHECK(h.channel().waves[1].prob == P_D_DEUTERON_SCENARIO);   // A1 (2026-11-03): named
 }
 
 // T26.  C5.3 (the N_ad / P_D spreads) and C5.5 (the inclusive-tagged drift),
@@ -1614,26 +1614,26 @@ TEST_CASE("T26 the alpha-d normalisation spread, and the inclusive drift" *
               5e-2);
   CHECK(std::fabs(mw.tensor_dilution() / m14.tensor_dilution() - 1.0) < 1e-3);
 
-  // --- C5.5.  On the HULTHEN default the inclusive constant and the tagged
+  // --- C5.5.  On the HULTHEN wave (the factories' default) the inclusive constant and the tagged
   // model ARE one wave function, to 7.84e-6 (0.869950 closed form against the
   // measured 0.8699431789; 1.22e-5 before the 2026-09-06 S-D sign fix moved
   // the quadrature residual).  The CHECK below stays at 2e-5.
   const TaggedModel hul(li6_alpha_channel());
   CHECK_CLOSE(hul.vector_dilution(), ALPHA_D_VECTOR_POLARIZATION, 2e-5);
-  CHECK_CLOSE(LI6_CLUSTER_POLARIZATION,
-              li6_cluster_polarization(P_D_LI6, P_D_DEUTERON), 1e-15);
-  // Under VmcAV18 they DRIFT: +11.61 % vector, +6.58 % rank-2.
+  CHECK_CLOSE(LI6_CLUSTER_POLARIZATION_HULTHEN,   // A1 (2026-11-03): the pre-A1 constant, named
+              li6_cluster_polarization(P_D_LI6, P_D_DEUTERON_SCENARIO), 1e-15);
+  // Under VmcAV18 they DRIFT: +11.61 % vector, +6.58 % rank-2 (A1 (2026-11-03): against the Hulthen values).
   CHECK_CLOSE(m14.vector_dilution() / hul.vector_dilution() - 1.0, 0.116131,
               1e-4);
-  CHECK_CLOSE(m14.tensor_dilution() / LI6_B1_RANK2_TRANSFER - 1.0, 0.065762,
+  CHECK_CLOSE(m14.tensor_dilution() / LI6_B1_RANK2_TRANSFER_HULTHEN - 1.0, 0.065762,
               1e-4);
-  CHECK_CLOSE(LI6_CLUSTER_POLARIZATION_VMC / LI6_CLUSTER_POLARIZATION - 1.0,
+  CHECK_CLOSE(LI6_CLUSTER_POLARIZATION_VMC / LI6_CLUSTER_POLARIZATION_HULTHEN - 1.0,
               0.116119, 1e-4);
   // AND SUBSTITUTION IS NOT THE FIX.  The "consistent" reading overshoots the
   // ab initio six-body VMC number by 6.8 % where the shipped one undershoots
   // it by 4.3 %; adding the AV18 deuteron's own P_D leaves 4.6 % over.
-  CHECK_CLOSE(LI6_CLUSTER_POLARIZATION / LI6_POLARIZATION_VMC_SIX_BODY - 1.0,
-              -0.04336, 1e-3);
+  CHECK_CLOSE(LI6_CLUSTER_POLARIZATION_HULTHEN / LI6_POLARIZATION_VMC_SIX_BODY - 1.0,
+              -0.04336, 1e-3);   // A1 (2026-11-03): the Hulthen reading, named
   CHECK_CLOSE(LI6_CLUSTER_POLARIZATION_VMC / LI6_POLARIZATION_VMC_SIX_BODY
                   - 1.0,
               +0.06772, 1e-3);
@@ -1641,8 +1641,8 @@ TEST_CASE("T26 the alpha-d normalisation spread, and the inclusive drift" *
                                                deuteron_av18_p_d());
   CHECK_CLOSE(both, 0.8870761569, 1e-8);
   CHECK_CLOSE(both / LI6_POLARIZATION_VMC_SIX_BODY - 1.0, +0.04608, 1e-3);
-  CHECK(std::fabs(LI6_CLUSTER_POLARIZATION / LI6_POLARIZATION_VMC_SIX_BODY
-                  - 1.0)
+  CHECK(std::fabs(LI6_CLUSTER_POLARIZATION_HULTHEN / LI6_POLARIZATION_VMC_SIX_BODY
+                  - 1.0)   // A1 (2026-11-03): named; the default IS 0.848 now
         < std::fabs(LI6_CLUSTER_POLARIZATION_VMC
                         / LI6_POLARIZATION_VMC_SIX_BODY - 1.0));
 }
@@ -1664,7 +1664,7 @@ TEST_CASE("T26 the alpha-d normalisation spread, and the inclusive drift" *
 // (`deuteron_av18_p_d`, T25), i.e. 0.9136 -- so every polarized tagged-alpha
 // observable under the flag was 2.069 % HIGH against the wave function the flag
 // claims to select, and the run held two deuteron wave-function families.  This
-// pins that it now holds one, and that the Hulthen default is untouched.
+// pins that it now holds one, and that the Hulthen path (the factory default) is untouched.
 TEST_CASE("T27 the embedded deuteron follows --cluster-wave" *
           doctest::skip(!vmc_data_present())) {
   REQUIRE(vmc_data_present());   // the decorator already guaranteed it
@@ -1672,10 +1672,10 @@ TEST_CASE("T27 the embedded deuteron follows --cluster-wave" *
   const TaggedChannel h = li6_alpha_channel();
   const TaggedChannel v = li6_alpha_channel(BETA_DEFAULT, P_D_LI6,
                                             ClusterWaveSource::VmcAV18);
-  // the default is `DEUTERON()` itself, bit for bit
-  CHECK(h.dis_target.eff_pol_p == DEUTERON().eff_pol_p);
-  CHECK(h.dis_target.eff_pol_n == DEUTERON().eff_pol_n);
-  CHECK(h.dis_target.eff_pol_p == DEUTERON_VECTOR_POLARIZATION);
+  // the Hulthen factory's is the scenario deuteron (A1, 2026-11-03: the pre-A1 `DEUTERON()`), bit for bit
+  CHECK(h.dis_target.eff_pol_p == DEUTERON_SCENARIO().eff_pol_p);
+  CHECK(h.dis_target.eff_pol_n == DEUTERON_SCENARIO().eff_pol_n);
+  CHECK(h.dis_target.eff_pol_p == DEUTERON_VECTOR_POLARIZATION_SCENARIO);
   // and the VMC one differs from it in the effective polarizations ALONE
   CHECK(v.dis_target.name == DEUTERON().name);
   CHECK(v.dis_target.A == DEUTERON().A);
@@ -1688,10 +1688,10 @@ TEST_CASE("T27 the embedded deuteron follows --cluster-wave" *
   // --- THE SIZE THAT WAS WRONG.  2.0687 %, and it is EXACT rather than
   // approximate: g1A = Z P_p g1p + N P_n g1n is linear in the effective
   // polarization, so the whole polarized sector carried one factor.
-  const double was_high = DEUTERON().eff_pol_p / v.dis_target.eff_pol_p;
+  const double was_high = DEUTERON_SCENARIO().eff_pol_p / v.dis_target.eff_pol_p;  // A1 (2026-11-03): named
   CHECK_CLOSE(was_high - 1.0, 0.0206872095, 1e-8);
   const InclusiveKernel k_now(v.dis_target);
-  const InclusiveKernel k_before(DEUTERON());
+  const InclusiveKernel k_before(DEUTERON_SCENARIO());   // A1 (2026-11-03): the pre-A1 DEUTERON()
   const double xs[4] = {0.05, 0.1, 0.3, 0.5};
   const double q2s[4] = {2.0, 5.0, 10.0, 20.0};
   for (int i = 0; i < 4; ++i) {
@@ -1737,10 +1737,10 @@ TEST_CASE("T27 the embedded deuteron follows --cluster-wave" *
   CHECK_CLOSE(mv.vector_dilution() * v.dis_target.eff_pol_p
                   / LI6_CLUSTER_POLARIZATION_VMC - 1.0,
               -0.020270, 2e-3);
-  // the Hulthen run's own reading is `LI6_CLUSTER_POLARIZATION`, as it was
+  // the Hulthen run's own reading is `LI6_CLUSTER_POLARIZATION_HULTHEN` (A1 (2026-11-03): the pre-A1 constant)
   const TaggedModel mh(h);
   CHECK_CLOSE(mh.vector_dilution() * h.dis_target.eff_pol_p,
-              LI6_CLUSTER_POLARIZATION, 2e-5);
+              LI6_CLUSTER_POLARIZATION_HULTHEN, 2e-5);
 
   // --- AND THE 7Li CHANNEL DELIBERATELY DOES NOT MOVE: there is no AV18
   // A = 3 wave function in this tree to switch the triton's internal spin
@@ -1755,4 +1755,82 @@ TEST_CASE("T27 the embedded deuteron follows --cluster-wave" *
   CHECK(deuteron_channel(BETA_DEFAULT, P_D_DEUTERON,
                          ClusterWaveSource::VmcAV18)
             .dis_target.eff_pol_n == NEUTRON_TARGET().eff_pol_n);
+}
+
+// A1 (2026-11-03; docs/open_items/run_2026-11-03/DECISIONS.md, the
+// supervisor's choice under the author's delegation).  The two literals A1
+// ships are PINNED to what this tree computes.  DECLARED TOLERANCE: 5e-7
+// absolute on each, half a unit of the sixth decimal the literal is printed
+// to -- the literal is a rounding of the computed number and may not be
+// further from it than its own rounding allows.  Said plainly: the computed
+// values were seen (the pre-A1 dump, and beams.hpp's 0.9826 / 0.057600) BEFORE
+// this tolerance was written; it is set by the literals' rounding, not by them.
+TEST_CASE("A1: the shipped inclusive literals are the tree's own numbers" *
+          doctest::skip(!vmc_data_present())) {
+  // (b) the rank-2 transfer: the VMC alpha-d channel's tensor dilution
+  const TaggedModel vmc(li6_alpha_channel(BETA_DEFAULT, P_D_LI6, ClusterWaveSource::VmcAV18));
+  CHECK_CLOSE_AT(vmc.tensor_dilution(), LI6_B1_RANK2_TRANSFER_VMC, 0.0, 5e-7);
+  CHECK(LI6_B1_RANK2_TRANSFER == LI6_B1_RANK2_TRANSFER_VMC);
+  MESSAGE("A1: VMC tensor_dilution - literal = " << (vmc.tensor_dilution() - LI6_B1_RANK2_TRANSFER_VMC)
+          << " (declared 5e-7)");
+  // ... and the Hulthen one is still what its own channel gives (plans/08 D9 pin)
+  CHECK_CLOSE_AT(li6_model().tensor_dilution(), LI6_B1_RANK2_TRANSFER_HULTHEN, 0.0, 1e-4);
+  // (c) the inclusive deuteron's P_D: fdeut.av18's own D fraction
+  CHECK_CLOSE_AT(deuteron_av18_p_d(), P_D_DEUTERON, 0.0, 5e-7);
+  MESSAGE("A1: deuteron_av18_p_d() - P_D_DEUTERON = " << (deuteron_av18_p_d() - P_D_DEUTERON)
+          << " (declared 5e-7)");
+  // ... and the Hulthen control channel's wave stays the 0.045 scenario
+  CHECK(deuteron_channel().waves[1].prob == P_D_DEUTERON_SCENARIO);
+  // (a) the Hulthen cluster reading is exactly the pre-A1 constant, on the
+  // tag as in the formula; and the band edges sit either side of 0.848
+  CHECK(LI6_CLUSTER_POLARIZATION_HULTHEN == 0.811228375);
+  CHECK(li6_alpha_channel().dis_target.eff_pol_p == 0.9325);
+  const double hi = li6_cluster_polarization(VMC_P_D_LI6, deuteron_av18_p_d());
+  CHECK(LI6_CLUSTER_POLARIZATION_HULTHEN < LI6_CLUSTER_POLARIZATION);
+  CHECK(LI6_CLUSTER_POLARIZATION < hi);
+  CHECK_CLOSE(hi, 0.8870761569, 1e-8);
+}
+
+// ------------------------------------------- A13 (2026-11-03): the VMC alpha-d port gate
+
+namespace {
+/// A13 (2026-11-03): the declared relative tolerance of the VMC alpha-d port
+/// gate -- written before the comparison, a factor 2-3 above the measured
+/// 5.389e-9 (vector) / 3.196e-9 (tensor) residual between polligen's and
+/// LiPolGen's interpolations of the same ANL tables; it catches a sign or
+/// normalisation slip and nothing less, and is never widened.  The file
+/// carries the same number as `channels.li6_alpha_vmc.port_gate_rtol`.
+constexpr double kVmcPortRtol = 1e-8;
+}  // namespace
+
+TEST_CASE("tagged: the VMC alpha-d dilutions against polligen (A13, rtol 1e-8)" *
+          doctest::skip(!tagged_blob_present() || !vmc_data_present())) {
+  // A13 (2026-11-03): `channels.li6_alpha_vmc` is polligen's
+  // `li6_alpha_channel(wave="vmc")`, a REDUCED block (quantum numbers, the ANL
+  // table's P_D, the two stretched-state dilutions).  It covers the alpha-d
+  // motion only: not the embedded deuteron (polligen keeps the scenario
+  // 0.9325) and not 7Li (polligen refuses wave="vmc" there).  The block was
+  // spliced into the committed file byte for byte from the dump of 2026-11-06
+  // (docs/open_items/run_2026-11-03/phase_P5_port_gate.md).
+  jsonmin::Value ref;
+  REQUIRE(load_tagged(ref));
+  REQUIRE(ref["channels"].has("li6_alpha_vmc"));
+  const jsonmin::Value& r = ref["channels"]["li6_alpha_vmc"];
+  CHECK(r["port_gate_rtol"].num() == kVmcPortRtol);
+  const TaggedModel model(li6_alpha_channel(BETA_DEFAULT, P_D_LI6, ClusterWaveSource::VmcAV18));
+  const TaggedChannel& ch = model.channel();
+  CHECK_CLOSE(ch.j_ion, r["j_ion"].num(), kRtol);
+  CHECK_CLOSE(ch.s_struck, r["s_struck"].num(), kRtol);
+  CHECK_CLOSE_AT(ch.s_spec, r["s_spec"].num(), kRtol, 0.0);
+  CHECK_CLOSE(ch.s_channel, r["s_channel"].num(), kRtol);
+  CHECK_CLOSE(VMC_P_D_LI6, r["P_D"].num(), kRtol);   // the table's printed S/D split, both sides
+  CHECK_CLOSE(ch.waves.back().prob, r["P_D"].num(), kRtol);
+  // the label is each code's own ("VMC AV18+UX" here, "VMC alpha-d" there): not compared
+  CHECK_CLOSE(model.vector_dilution(), r["model"]["vector_dilution"].num(), kVmcPortRtol);
+  CHECK_CLOSE(model.tensor_dilution(), r["model"]["tensor_dilution"].num(), kVmcPortRtol);
+  MESSAGE("A13: VMC alpha-d vector rel "
+          << std::fabs(model.vector_dilution() / r["model"]["vector_dilution"].num() - 1.0)
+          << ", tensor rel "
+          << std::fabs(model.tensor_dilution() / r["model"]["tensor_dilution"].num() - 1.0)
+          << " (declared 1e-8)");
 }

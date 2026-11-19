@@ -83,23 +83,35 @@ def ds(dmod):
 
 
 def test_deuteron_static_vendored_file_is_the_transcription(dmod, tmp_path):
+    """Read from the papers on 2026-10-26 (phase D): eta_d confirmed as
+    Rodning & Knutson's Eq. (10); Q_d CORRECTED to what Bishop & Cheung
+    conclude, 0.2860 +- 0.0015 fm^2 -- the 2026-09-26 +0.2859(3), which the
+    paper does not print, kept with its source as a dated correction."""
     doc = dmod.read_vendored()
     pts = doc["body"]["points"]
     assert len(pts) == 2
     assert (pts[0]["quantity"], pts[0]["value"], pts[0]["sigma"]) == ("eta_d", 0.0256, 0.0004)
-    assert (pts[-1]["quantity"], pts[-1]["value"], pts[-1]["sigma"]) == ("Q_d", 0.2859, 0.0003)
+    assert (pts[-1]["quantity"], pts[-1]["value"], pts[-1]["sigma"]) == ("Q_d", 0.2860, 0.0015)
     prov = doc["_provenance"]
-    assert prov["transcription"].startswith("SECOND-HAND")
-    assert "NEITHER SOURCE PAPER WAS RE-READ" in prov["transcription"]
-    assert prov["fetched"].startswith("2026-09-26")
+    assert prov["transcription"].startswith("FIRST-HAND since 2026-10-26")
+    assert prov["transcription_2026_09_26"].startswith("SECOND-HAND")
+    assert "NEITHER SOURCE PAPER WAS RE-READ" in prov["transcription_2026_09_26"]
+    assert prov["fetched"].startswith("2026-10-26")
+    (corr,) = prov["corrections"]
+    assert (corr["date"], corr["quantity"]) == ("2026-10-26", "Q_d")
+    assert (corr["old_value"], corr["old_sigma"]) == (0.2859, 0.0003)
+    assert "b1_nuclear.hpp" in corr["old_source"]
+    assert (corr["new_value"], corr["new_sigma"]) == (0.2860, 0.0015)
+    assert [t["quantity"] for t in prov["transcribed_from_2026_09_26"]] == ["eta_d", "Q_d"]
     ref = dmod.load_reference()
-    assert ref["eta_d"]["as_printed"] == "0.0256(4)"
+    assert ref["eta_d"]["as_printed"] == "0.0256 +- 0.0004"
+    assert ref["Q_d"]["as_printed"] == "+0.2860 +- 0.0015 fm^2"
     # one flipped byte in the body is refused ...
     bad = _flip(dmod.DATA, b'"value": 0.0256,', b'"value": 0.0257,', tmp_path)
     with pytest.raises(RuntimeError, match="sha256"):
         dmod.load_reference(bad)
     # ... and so is one in the provenance (the whole file is digested)
-    bad = _flip(dmod.DATA, b"SECOND-HAND", b"SECOND-HANd", tmp_path)
+    bad = _flip(dmod.DATA, b"FIRST-HAND", b"FIRST-HANd", tmp_path)
     with pytest.raises(RuntimeError, match="sha256"):
         dmod.read_vendored(bad)
 
@@ -147,7 +159,7 @@ def test_deuteron_static_eta_values_and_cross_checks(ds):
     # Hulthen: pole residues, and the large-r ratio of the closed forms
     assert h["eta"] == pytest.approx(0.03247843, rel=1e-6)
     assert h["eta_check_r80"] == pytest.approx(h["eta"], rel=1e-8)
-    assert h["beta_gev"] == 0.30 and h["p_d_nominal"] == lg.P_D_DEUTERON
+    assert h["beta_gev"] == 0.30 and h["p_d_nominal"] == lg.P_D_DEUTERON_SCENARIO   # A1 (2026-11-03): named
 
 
 def test_deuteron_static_qd_values_and_in_tree_cross_checks(ds):
@@ -164,10 +176,12 @@ def test_deuteron_static_qd_values_and_in_tree_cross_checks(ds):
     assert h["cross_checks"]["q_tree_tables"] == pytest.approx(0.289791, abs=2e-6)
     assert abs(h["q_d"] / h["cross_checks"]["q_tree_tables"] - 1) < 3e-3
     assert max(x["q_d_quad_error"] for x in m.values()) < 1e-8
-    # the recorded distances (impulse approximation: about -5 %)
-    assert c["q_d_rel_distance"] == pytest.approx(-0.05389, abs=1e-4)
-    assert a["q_d_rel_distance"] == pytest.approx(-0.05677, abs=1e-4)
-    assert h["q_d_rel_distance"] == pytest.approx(+0.01556, abs=1e-4)
+    # the recorded distances (impulse approximation: about -5 %), against
+    # Bishop & Cheung's 0.2860 since 2026-10-26 (they were -0.05389,
+    # -0.05677 and +0.01556 against the old 0.2859; recorded, not asserted)
+    assert c["q_d_rel_distance"] == pytest.approx(-0.05422, abs=1e-4)
+    assert a["q_d_rel_distance"] == pytest.approx(-0.05710, abs=1e-4)
+    assert h["q_d_rel_distance"] == pytest.approx(+0.01521, abs=1e-4)
 
 
 def test_deuteron_static_verdict_follows_the_numbers(dmod, ds):
@@ -177,17 +191,23 @@ def test_deuteron_static_verdict_follows_the_numbers(dmod, ds):
         assert m["eta_pull"] == pytest.approx((m["eta"] - e["value"]) / e["sigma"],
                                               rel=1e-14)
         assert m["eta_status"] == ("pass" if abs(m["eta_pull"]) <= 2.0 else "fail")
-    assert ds["status"] == ("pass" if all(m["eta_status"] == "pass"
-                                          for m in ds["models"].values()) else "fail")
-    # measured: CD-Bonn and AV18 inside, the DEFAULT Hulthen pair far outside
+    assert ds["declared_status"] == ("pass" if all(m["eta_status"] == "pass"   # A5 (2026-11-03): recorded
+                                                   for m in ds["models"].values()) else "fail")
+    assert (dmod.HEADLINE_MODEL, ds["headline"]) == ("av18", "av18")             # A5 (2026-11-03)
+    assert ds["status"] == ds["models"]["av18"]["eta_status"] == "pass"          # A5 (2026-11-03): FAIL -> PASS by the rule
+    assert [n for n, m in ds["models"].items() if m["in_verdict"]] == ["av18"]   # A5 (2026-11-03)
+    sub = ds["subrows"]["all waves (the declared rule, recorded)"]               # A5 (2026-11-03)
+    assert (sub["status"], sub["in_verdict"], sub["failing"]) == ("fail", False, "hulthen +17.2 sigma")
+    # measured: CD-Bonn and AV18 inside, the Hulthen pair (the default until
+    # D6, an option since) far outside
     assert ds["models"]["cdbonn"]["eta_pull"] == pytest.approx(-0.0715, abs=1e-3)
     assert ds["models"]["av18"]["eta_pull"] == pytest.approx(-1.388, abs=1e-3)
     assert ds["models"]["hulthen"]["eta_pull"] == pytest.approx(17.196, abs=1e-3)
-    assert ds["status"] == "fail" and ds["failing"] == ["hulthen"]
+    assert ds["declared_status"] == "fail" and ds["failing"] == ["hulthen"]   # A5 (2026-11-03): "status" until then
     # Q_d never enters the verdict: a reference Q_d 100x off changes nothing
-    fake = {"eta_d": dict(e), "Q_d": dict(ref["Q_d"], value=28.59)}
+    fake = {"eta_d": dict(e), "Q_d": dict(ref["Q_d"], value=100.0 * ref["Q_d"]["value"])}
     models = {k: dict(v) for k, v in ds["models"].items()}
-    assert dmod.verdict(models, fake) == ds["status"]
+    assert dmod.verdict(models, fake) == ds["declared_status"]   # A5 (2026-11-03)
     # and with every eta inside, the row would pass
     for v in models.values():
         v["eta"] = e["value"] + 1.9 * e["sigma"]
@@ -269,11 +289,13 @@ def test_deuteron_static_report_line(dmod, capsys):
     rows = [l for l in out if l.startswith("REPORT |")]
     subs = [l for l in out if l.startswith("SUBROW |")]
     assert len(rows) == 1 and len(subs) == 3
-    assert rows[0].startswith("REPORT | t2_deuteron_static | eta: cdbonn 0.025571 "
+    assert rows[0].startswith("REPORT | t2_deuteron_static | av18 (the shipped wave; the "
+                              "headline under A5) eta 0.025045 (-1.39 sigma) PASS; the "
+                              "declared all-waves rule FAIL, recorded; eta: cdbonn 0.025571 "
                               "(-0.07 sigma), av18 0.025045 (-1.39 sigma), hulthen "
-                              "0.032478 (+17.20 sigma)")
-    assert rows[0].endswith("| FAIL (recorded: hulthen +17.2 sigma outside; "
-                            "nothing moved)")
+                              "0.032478 (+17.20 sigma)")   # A5 (2026-11-03)
+    assert rows[0].endswith("| PASS on the shipped wave (A5); the declared all-waves rule "
+                            "FAIL (hulthen eta +17.2 sigma), recorded")   # A5 (2026-11-03): FAIL (recorded ...) until then
     assert "np.float64" not in "\n".join(out)
     assert rep["runtime_s"] < 30.0
 
@@ -284,7 +306,7 @@ def test_deuteron_static_exit_codes(tmp_path):
     assert "REPORT | t2_deuteron_static |" in ok.stdout
     bad = _exit_code_on_altered_data(tmp_path, "t2_deuteron_static",
                                      "deuteron_static_measured.json",
-                                     b'"value": 0.2859,', b'"value": 0.2869,')
+                                     b'"value": 0.286,', b'"value": 0.287,')
     assert bad.returncode == 2 and "sha256" in bad.stderr
     assert "REPORT |" not in bad.stdout
 
@@ -401,3 +423,25 @@ def test_devries_exit_codes(tmp_path):
                                      b'"rms_fm": 2.54,', b'"rms_fm": 2.64,')
     assert bad.returncode == 2 and "sha256" in bad.stderr
     assert "REPORT |" not in bad.stdout
+
+
+def test_t2_deuteron_static_plot_writes_png(dmod, ds, tmp_path):
+    """plot() draws the row's figure -- a view of the report, never the
+    record -- as a non-empty PNG where it is told to (here a tmp dir)."""
+    pytest.importorskip("matplotlib", reason="matplotlib (the figure only)")
+    path = dmod.plot(ds, out_dir=str(tmp_path))
+    assert path == os.path.join(str(tmp_path), "t2_deuteron_static.png")
+    with open(path, "rb") as f:
+        assert f.read(8) == b"\x89PNG\r\n\x1a\n"
+    assert os.path.getsize(path) > 0
+
+
+def test_t3_li6_rms_devries_plot_writes_png(rmod, rms, tmp_path):
+    """plot() draws the row's figure -- a view of the report, never the
+    record -- as a non-empty PNG where it is told to (here a tmp dir)."""
+    pytest.importorskip("matplotlib", reason="matplotlib (the figure only)")
+    path = rmod.plot(rms, out_dir=str(tmp_path))
+    assert path == os.path.join(str(tmp_path), "t3_li6_rms_devries.png")
+    with open(path, "rb") as f:
+        assert f.read(8) == b"\x89PNG\r\n\x1a\n"
+    assert os.path.getsize(path) > 0

@@ -70,7 +70,10 @@ def test_sr_reference_constants_are_the_recorded_ones(sr_mod):
     ref = sr_mod.load_reference()
     keys = sorted(ref)
     assert len(ref) == 7
+    # alpha_s(M_Z) = 0.1180(9): PDG 2026 Table 1.1 and the QCD review's
+    # Eq. (9.25), read 2026-10-26 (phase D) -- the value typed, unchanged
     assert keys[0] == "alpha_s_mz" and ref[keys[0]] == 0.1180
+    assert ref["alpha_s_mz_err"] == 0.0009
     assert keys[-1] == "m_z_gev" and ref[keys[-1]] == 91.1879
     # PDG 2026 (pdg-2026.0 wheel): S017AV, Q005M, Q004M
     assert ref["g_A"] == 1.2753 and ref["g_A_err"] == 0.0013
@@ -114,18 +117,18 @@ def test_sr_harness_exit_codes(tmp_path):
 
 def test_sr_rule3_deuteron_is_per_nucleus(sr_mod):
     """BENCHMARK_PLAN sec. 8 rule 3 as the header states it: the deuteron's
-    g1 is PER NUCLEUS, Z P_p g1p + N P_n g1n with P = 1 - 1.5 P_D = 0.9325,
+    g1 is PER NUCLEUS, Z P_p g1p + N P_n g1n with P = 1 - 1.5 P_D = 0.9136 (A1; 0.9325 before),
     not divided by A; the WW transform is linear, so g2_d is the same
     combination of the nucleon g2; the binding's g2_ww IS PolSF.g2p."""
     toy, d = lg.ToyG1(), lg.deuteron()
     assert (d.Z, d.N, d.A) == (1, 1, 2)
-    assert d.eff_pol_p == d.eff_pol_n == pytest.approx(1.0 - 1.5 * 0.045, abs=1e-15)
+    assert d.eff_pol_p == d.eff_pol_n == pytest.approx(1.0 - 1.5 * 0.0576, abs=1e-15)   # A1 (2026-11-03)
     for x, q2 in ((1e-5, 2.0), (1e-3, 5.0), (0.05, 5.0), (0.3, 10.0), (0.8, 5.0)):
         g1d = toy.g1_nucleus(d, x, q2)
-        assert g1d == pytest.approx(0.9325 * (toy.g1p(x, q2) + toy.g1n(x, q2)),
+        assert g1d == pytest.approx(0.9136 * (toy.g1p(x, q2) + toy.g1n(x, q2)),   # A1 (2026-11-03): was 0.9325
                                     rel=1e-14)
         g2d = lg.g2_ww(lambda xx, qq: toy.g1_nucleus(d, xx, qq), x, q2)
-        assert g2d == pytest.approx(0.9325 * (toy.g2p(x, q2) + toy.g2n(x, q2)),
+        assert g2d == pytest.approx(0.9136 * (toy.g2p(x, q2) + toy.g2n(x, q2)),   # A1 (2026-11-03): was 0.9325
                                     rel=1e-12, abs=1e-15)
         assert lg.g2_ww(toy.g1p, x, q2) == toy.g2p(x, q2)
         assert lg.g2_ww(toy.g1n, x, q2) == toy.g2n(x, q2)
@@ -153,13 +156,13 @@ def test_sr_bc_closure_verdict_follows_the_numbers(sr_rep):
 
 
 def test_sr_bc_closure_is_linear_in_g1(sr_rep):
-    """Rule 3's 'the normalisation cancels': T_d = 0.9325 (T_p + T_n)."""
+    """Rule 3's 'the normalisation cancels': T_d = 0.9136 (T_p + T_n) (A1; 0.9325 before)."""
     c = sr_rep["subrows"]["bc_ww"]["cells"]
     for q2 in (2.0, 5.0, 10.0):
         for rp, rn, rd in zip(c[("p", q2)]["rows"], c[("n", q2)]["rows"],
                               c[("d", q2)]["rows"]):
             assert rd["truncation"] == pytest.approx(
-                0.9325 * (rp["truncation"] + rn["truncation"]), rel=1e-8)
+                0.9136 * (rp["truncation"] + rn["truncation"]), rel=1e-8)   # A1 (2026-11-03): was 0.9325
 
 
 def test_sr_bc_closure_is_not_tuned_to_96_points(sr_mod):
@@ -331,21 +334,26 @@ def test_wu_row_passes_and_verdict_follows(wu_rep, wu_mod):
     assert (wu_rep["seed"], wu_rep["runs"], wu_rep["lumi_pb"]) == (
         20260926, (1, 2), 34000.0)
     assert (wu_rep["x_min"], wu_rep["y_min"]) == (0.1, 0.5)
-    assert (wu_rep["n_unweighted"], wu_rep["n_weighted"]) == (3032577, 2987706)
-    assert wu_rep["sigma_u"] == pytest.approx(89.193441, rel=1e-8)
-    assert wu_rep["sigma_w"] == pytest.approx(89.167357, rel=1e-8)
-    assert wu_rep["err_w"] == pytest.approx(0.051588, rel=1e-5)
-    assert wu_rep["pull"] == pytest.approx(0.359, abs=2e-3)
-    assert wu_rep["sigma_cat_pb"] == pytest.approx(89.167123, rel=1e-8)
-    assert wu_rep["sigma_unpol_pb"] == pytest.approx(87.873873, rel=1e-8)
+    # D7 (2026-10-29): re-taken on the shipped CT18NLO / NNPDFpol1.1 kernel --
+    # the harness's physics point IS "the shipped defaults of make_config()".
+    # On the toy (until D7): N = (3032577, 2987706), sigma_u 89.193441, sigma_w
+    # 89.167357, err_w 0.051588, pull 0.359, sigma_cat 89.167123, unpol 87.873873.
+    assert (wu_rep["n_unweighted"], wu_rep["n_weighted"]) == (2714846, 2669772)  # A1 (2026-11-03): was 2712940
+    assert wu_rep["sigma_u"] == pytest.approx(79.848412, rel=1e-8)   # A1 (2026-11-03): was 79.792353
+    assert wu_rep["sigma_w"] == pytest.approx(79.823731, rel=1e-8)   # A1: was 79.767651; A3 (2026-11-03): 79.823733 -> 79.823731, the WW g2 integral reads the clipped g1 above x ~ 0.83
+    assert wu_rep["err_w"] == pytest.approx(0.0488548, rel=1e-5)     # A1 (2026-11-03): was 0.0488204
+    assert wu_rep["pull"] == pytest.approx(0.359, abs=2e-3)          # A1 (2026-11-03): 0.3586
+    assert wu_rep["sigma_cat_pb"] == pytest.approx(79.823529, rel=1e-8)   # A1: was 79.767466; A3 (2026-11-03): was 79.823531, same reason
+    assert wu_rep["sigma_unpol_pb"] == pytest.approx(78.522871, rel=1e-8)
 
 
 def test_wu_sensitivity_is_as_stated(wu_rep):
     """The window was chosen so that the closure can FAIL: the exact
-    polarized shift is +1.47 % and a no-op Mode W would pull ~ +18."""
-    assert wu_rep["rate_shift"] == pytest.approx(1.4717e-2, abs=5e-7)
+    polarized shift is +1.66 % and a no-op Mode W would pull ~ +19.4 (A1,
+    2026-11-03; +1.59 % / +18.61 on D7's grids before A1, +1.47 % / +18.29 on the toy)."""
+    assert wu_rep["rate_shift"] == pytest.approx(1.65641e-2, abs=5e-7)   # D7; A1 (2026-11-03): was 1.58501e-2
     assert wu_rep["null_pull"] > 10.0
-    assert wu_rep["null_pull"] == pytest.approx(18.29, abs=0.02)
+    assert wu_rep["null_pull"] == pytest.approx(19.42, abs=0.02)         # D7; A1 (2026-11-03): was 18.61
 
 
 def test_wu_compare_catches_mutated_weights(wu_rep, wu_mod):
@@ -390,3 +398,14 @@ def test_wu_fixed_seeds_reproduce_and_row_prints(wu_mod, capsys):
     assert rows[0].startswith("REPORT | t5_weighted_unweighted | ")
     assert rows[0].endswith("| " + b["status"].upper())
     assert "np.float64" not in out
+
+
+def test_t5_sum_rules_plot_writes_png(sr_mod, sr_rep, tmp_path):
+    """plot() draws the row's figure -- a view of the report, never the
+    record -- as a non-empty PNG where it is told to (here a tmp dir)."""
+    pytest.importorskip("matplotlib", reason="matplotlib (the figure only)")
+    path = sr_mod.plot(sr_rep, out_dir=str(tmp_path))
+    assert path == os.path.join(str(tmp_path), "t5_sum_rules.png")
+    with open(path, "rb") as f:
+        assert f.read(8) == b"\x89PNG\r\n\x1a\n"
+    assert os.path.getsize(path) > 0

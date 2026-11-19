@@ -76,10 +76,10 @@ InclusiveKernel::InclusiveKernel(Ion ion, Options options)
       g2_scale_(options.g2_scale),
       target_mass_(options.target_mass),
       tensor_gamma_(options.tensor_gamma),
-      g2_npts_(options.g2_npts) {
-  if (!g1_model_) {
-    g1_model_ = std::make_shared<const ToyG1>(nf2_.base(), options.r_func);
-  }
+      g2_npts_(options.g2_npts), confine_rank2_(options.confine_spin1_rank2), b1_ref_q2_(options.b1_reference_q2) {  if (!std::isfinite(b1_ref_q2_) || b1_ref_q2_ < 0.0) { throw std::runtime_error("InclusiveKernel: Options::b1_reference_q2 = " + std::to_string(b1_ref_q2_) + " GeV2 -- must be finite and >= 0 (0 = the frozen table; K1, 2026-11-17)"); }  if (b1_ref_q2_ > 0.0 && std::fabs(ion_.spin - 1.0) > 1e-9) { throw std::runtime_error("InclusiveKernel: Options::b1_reference_q2 reads the SPIN-1 b1 slot as b1/F1 at a reference scale and ion " + ion_.name + " has spin " + std::to_string(ion_.spin) + " -- leave it 0 (K1, 2026-11-17)"); }
+  if (confine_rank2_ && std::fabs(ion_.spin - 1.0) > 1e-9) { throw std::runtime_error("InclusiveKernel: Options::confine_spin1_rank2 is the SPIN-1 positivity domain and ion " + ion_.name + " has spin " + std::to_string(ion_.spin) + " -- leave it off"); }  /* J1 note (2026-11-12) */  if (const auto c = std::dynamic_pointer_cast<const PositivityClippedG1>(g1_model_)) g1_model_ = c->inner();  // A3 (2026-11-03): one clip, never two;
+  if (!g1_model_) g1_model_ = std::make_shared<const ToyG1>(nf2_.base(), options.r_func);
+  g1_model_ = std::make_shared<const PositivityClippedG1>(g1_model_, nf2_.base(), options.r_func);  // |g1| <= F1 per nucleon on THIS kernel's F1 (sf.hpp)
   // `target_mass = true` with `G2Mode::kZero` is NOT refused (xsec.py:126-129):
   // g2 is filled with zeros and the finite-gamma kernel runs on them, which is
   // exactly the g2_scale = 0 twist-3 variation.
@@ -129,7 +129,7 @@ SFTables InclusiveKernel::tables(double x, double q2, bool with_g2) const {
                  }, x, q2, g2_npts_)
                : 0.0;
   }
-  return t;
+  if (rank2 && b1_ref_q2_ > 0.0) { const double s = b1_reference_factor(x, t.f1); t.b1 *= s; t.b2 = (*b2f) ? t.b2 * s : 2.0 * t.b1 * x; }  /* K1 (2026-11-17): b1/F1 at Q0^2 (spin 1 only: the constructor refuses the option elsewhere), BEFORE the confinement; b2 in step (an unset b2 is 2x b1 exactly: the factor 2 is exact) */  if (confine_rank2_ && rank2 && t.f1 > 0.0) { const double lo = -1.5 * t.f1, hi = 3.0 * (t.f1 - std::fabs(t.g1)); if (hi >= lo && (t.b1 < lo || t.b1 > hi)) { const double nb = std::min(std::max(t.b1, lo), hi); t.b2 = (*b2f) ? t.b2 * (t.b1 != 0.0 ? nb / t.b1 : 1.0) : 2.0 * x * nb; t.b1 = nb; } }  return t;  // J1 note (2026-11-12): the spin-1 LO positivity domain on the FINAL b1, b2 in step (an unset b2 stays 2x b1; a set one is scaled by the same factor); an empty window or F1 <= 0 is left to the sampler's refusal; V (2026-11-17), CODE-5: the corner b1 == 0 with a SET b2 and hi < 0 (|g1| > F1) clamps b1 to hi and leaves b2 unchanged while an unset b2 becomes 2x hi -- "b2 in step" is not defined there; it is not reachable on a shipped kernel (|g1| <= F1 since A3, and the deuteron's b2 is unset)
 }
 
 double InclusiveKernel::dphi(const SFTables& t, double x, double y) {
@@ -274,12 +274,12 @@ Amplitudes InclusiveKernel::tensor_amplitudes(const SFTables& t, double x,
     // Delta (gluon transversity) is rank 2 as well but is NOT in POLRAD's
     // b1..b4 basis and nobody has computed RC for a phi-dependent tensor
     // observable, so `rc.hpp` leaves it out of the band by default
-    // (RcScope::TensorRate) and `with_delta` is what buys it back
-    // (RcScope::TensorAll, for pricing the omission).  `amplitudes()` always
-    // wants it -- it is part of W.
+    // (RcScope::TensorRate) and `with_delta` buys it back (TensorAll, for
+    // pricing the omission); `amplitudes()` always wants it.  The factor 1/2
+    // is Jaffe-Manohar's (DELTA_COS2PHI_NORM, D4 2026-10-27; 1 before).
     if (with_delta) {
       out.a2 = out.a2 + (-(1.0 - y) / (y * y) * qc.second * st * st * t.delta
-                         / std::max(den, 1e-30));
+                         * DELTA_COS2PHI_NORM / std::max(den, 1e-30));
     }
   }
   out.a1 = a1_tensor;
@@ -332,6 +332,19 @@ double InclusiveKernel::dsigma(double x, double q2, double phi, double s,
   const double phip = phi - state.phi_s;
   const double w = density(a, phip);
   return dsigma_unpol(x, q2, s) / (2.0 * kPi) * std::max(w, 0.0);
+}
+
+// K1 (2026-11-17; DECISIONS.md K1): the reference-scale factor of the b1
+// slot, F1(x, Q2) / F1(x, Q0^2), with `f1` the kernel's own per-nucleon F1 at
+// the running (x, Q2) and the denominator this kernel's own per-nucleon F1 at
+// Q0^2 = `Options::b1_reference_q2`.  1 where the option is off (0, the
+// frozen table); 0 where F1(x, Q0^2) <= 0 (K1 (g): the only point of the
+// domain there).  At Q2 = Q0^2 the two F1 are the same call, so the factor is
+// exactly 1 and every rank-2 number is the frozen one.
+double InclusiveKernel::b1_reference_factor(double x, double f1) const {
+  if (!(b1_ref_q2_ > 0.0)) return 1.0;
+  const double f1_ref = nf2_.f1a(x, b1_ref_q2_) / static_cast<double>(ion_.A);
+  return f1_ref > 0.0 ? f1 / f1_ref : 0.0;
 }
 
 }  // namespace lipolgen

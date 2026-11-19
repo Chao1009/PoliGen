@@ -278,9 +278,9 @@ struct PythiaBridgeOptions {
   /// so this fallback only fires for callers driving the bridge directly.
   NucleonChoice nucleon_choice = NucleonChoice::ByStructureFunctions;
   /// Unpolarized structure functions for `ByStructureFunctions`.  Null = the
-  /// library's default `ToyF2`, which is also `InclusiveKernel`'s default;
-  /// hand it the same backend the kernel was built with to keep the two
-  /// draws consistent.
+  /// class-level `ToyF2` (`InclusiveKernel`'s null branch).  Since D7 a default
+  /// run's kernel is on CT18NLO: hand it THE SAME object (`set_pythia_
+  /// hadronizer` refuses a mismatch, below) to keep the two draws consistent.
   std::shared_ptr<const UnpolSF> f2_source;
 };
 
@@ -440,6 +440,34 @@ class PythiaBridge {
   struct Impl;
   std::unique_ptr<Impl> impl_;
 };
+
+}  // namespace lipolgen
+
+// ===================================================== D7 (2026-10-27)
+// ONE UNPOLARISED BACKEND FOR THE WHOLE RUN, where the bridge meets the
+// config.  The T2 struck-nucleon SPECIES draw is P(p) = Z F2p/(Z F2p + N F2n)
+// on `PythiaBridgeOptions::f2_source` (null = the bridge's own ToyF2), and the
+// `Pipeline` cannot fill it the way it fills `BreakupOptions::f2`, because the
+// caller builds the bridge.  Since D7 the run's default backend is CT18NLO,
+// attached lazily (pipeline.hpp, "D7"), so a default-option bridge on a default
+// config would draw its T2 species from the toy (F2n/F2p up to 24 % away from
+// CT18NLO's) under a run labelled ct18nlo.  These two make that a refusal in
+// C++ as well as in Python (the binding calls them).
+#include "lipolgen/pipeline.hpp"
+
+namespace lipolgen {
+
+/// Throws std::runtime_error unless `bridge.options().f2_source` IS (identity,
+/// not equality) `cfg.unpol_sf_obj` -- call `fill_grid_sf_backends(cfg)` or
+/// `attach_shipped_sf_backends(cfg)` first, so the slot holds what will run.
+void check_bridge_species_backend(const PipelineConfig& cfg,
+                                  const PythiaBridge& bridge);
+
+/// `fill_grid_sf_backends(cfg)`, the check above, then `cfg.hadronizer` = the
+/// bridge (shared; single-threaded generation only -- PythiaBridge is not
+/// re-entrant).  What a C++ program calls instead of assigning the hook.
+void set_pythia_hadronizer(PipelineConfig& cfg,
+                           std::shared_ptr<PythiaBridge> bridge);
 
 }  // namespace lipolgen
 

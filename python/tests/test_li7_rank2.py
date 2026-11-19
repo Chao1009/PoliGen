@@ -105,8 +105,8 @@ def test_the_7li_tensor_sector_is_exactly_zero_and_the_run_records_it():
     assert sig[0] == sig[1]
     assert (sig[0] - sig[1]) == 0.0
     meta = p.generate(0, False)["meta"]
-    assert meta["b1_model"] == NONE_LABEL == _l.rank2_none_label()
-    assert meta["b1_unpol"] == NONE_LABEL
+    assert meta["b1_model"] == meta["b1_unpol"] == "not read on 7Li (no rank-2 input)"   # A17 (2026-11-03): the row's label, was NONE_LABEL
+    assert meta["knob_provenance"]["b1_model"]["value"] == NONE_LABEL == _l.rank2_none_label()   # A17 (2026-11-03): the value keeps it
     r = meta["rank2_input"]
     assert r == _l.rank2_input_report(cfg, plan)
     assert r.startswith("EMPTY -- 7Li is spin 3/2")
@@ -139,7 +139,7 @@ def test_the_zero_is_recorded_even_without_a_tensor_plan():
     plan = lg.make_plan("helicity-flip", j=1.5, pz=0.7, pe=0.7)
     meta = _l.Pipeline(cfg, plan).generate(0, False)["meta"]
     assert meta["rank2_input"].startswith("EMPTY -- 7Li")
-    assert meta["b1_model"] == NONE_LABEL
+    assert meta["b1_model"] == "not read on 7Li (no rank-2 input)"  # A17 (2026-11-03): the row's label, was NONE_LABEL
     assert plan.pzz_true == pytest.approx(0.4, abs=1e-12)
 
 
@@ -213,7 +213,7 @@ def test_nothing_else_is_relabelled():
     assert not _l.inclusive_rank2_is_empty(six)
     meta = _l.Pipeline(six, lg.tensor_thirds_plan(0.0, 0.6)) \
              .generate(0, False)["meta"]
-    assert meta["b1_model"] == "miller" and meta["b1_unpol"] == "toy"
+    assert meta["b1_model"] == "miller" and meta["b1_unpol"] == "not read at b1_model = miller"  # A17 (2026-11-03): the row's label, was "toy" (b1_unpol)
     assert meta["rank2_input"].startswith("b1_model = miller (spin 1")
 
     d = _cfg("d")
@@ -226,7 +226,7 @@ def test_nothing_else_is_relabelled():
     ck.kernel = _l.default_inclusive_kernel(_l.ion_by_name("7Li"))
     assert not _l.inclusive_rank2_is_empty(ck)
     meta = _l.Pipeline(ck, li7_tensor_plan()).generate(0, False)["meta"]
-    assert meta["b1_model"] == "caller-supplied kernel"
+    assert meta["b1_model"] == "not read with a caller-supplied kernel" # A17 (2026-11-03): the row's label, was "caller-supplied kernel"
     assert meta["rank2_input"] == "caller-supplied kernel"
 
 
@@ -245,7 +245,7 @@ def test_a_tagged_7li_run_is_not_labelled_with_the_inclusive_zero():
     assert "in the event weight" in r
     assert "EMPTY" not in r
     # the b1 labels are the flag's own defaults there, not the ⁷Li label
-    assert meta["b1_model"] == "miller"
+    assert meta["b1_model"] == "not read on channel tagged-7Li-alpha"  # A17 (2026-11-03): the row's label, was "miller", never the 7Li label
 
 
 def test_the_coherent_channel_says_where_its_tensor_signal_is():
@@ -305,7 +305,7 @@ def test_make_plan_refuses_the_spin1_tensor_plans_at_j_32(name):
     assert "SPIN-1 pattern" in msg
     assert "helicity-flip" in msg           # what does take j
     assert "tagged-7Li-alpha" in msg        # what does carry the alignment
-    assert "590952.42641509" in msg         # the measured zero, with its config
+    assert "494062.76099942" in msg         # the measured zero, with its config (D7, 2026-10-29: the shipped grids; the toy's 590952.42641509 beside it)
 
 
 def test_make_plan_still_builds_all_four_at_spin_1_and_helicity_flip_at_32():
@@ -336,13 +336,13 @@ def test_the_sf_selectors_reach_the_7li_inclusive_kernel():
     tensor sector stays exactly zero under every setting, because nothing
     fills the slot the backend would feed.
     """
-    p0, s0 = _sigma()
-    p1, s1 = _sigma(unpol_sf="ct18nlo")
-    assert p1.sigma_pb() < 0.85 * p0.sigma_pb()      # measured ratio 0.795936
+    p0, s0 = _sigma(unpol_sf="toy")     # D7 (2026-10-29): ct18nlo IS the default, the toy the variant
+    p1, s1 = _sigma()
+    assert p1.sigma_pb() < 0.85 * p0.sigma_pb()      # measured ratio 0.836045 on the frozen grid (D7; 0.795936 pre-D7, continued)
     assert s0[0] == s0[1] and s1[0] == s1[1]          # still exactly zero
     meta = p1.generate(0, False)["meta"]
     assert meta["unpol_sf"] == "ct18nlo"
-    assert meta["b1_model"] == NONE_LABEL             # and still no backend
+    assert meta["b1_model"] == "not read on 7Li (no rank-2 input)"  # and still no backend; # A17 (2026-11-03): the row's label, was NONE_LABEL
 
 
 @pytest.mark.skipif(not _l.HAVE_LHAPDF, reason="no LHAPDF tier in this build")
@@ -351,8 +351,8 @@ def test_the_sf_selectors_reach_the_tagged_7li_kernel():
         cfg = _cfg(channel="tagged-7Li-alpha", **kw)
         return _l.Pipeline(cfg, lg.make_plan("helicity-flip", j=1.5, pz=0.7,
                                              pe=0.7))
-    p0, p1 = run(), run(unpol_sf="ct18nlo")
-    assert p1.sigma_pb() < 0.85 * p0.sigma_pb()      # measured ratio 0.792543
+    p0, p1 = run(unpol_sf="toy"), run()   # D7 (2026-10-29): the default IS ct18nlo
+    assert p1.sigma_pb() < 0.85 * p0.sigma_pb()      # measured ratio 0.832599 on the frozen grid (D7; 0.792543 pre-D7, continued)
     assert p1.generate(0, False)["meta"]["unpol_sf"] == "ct18nlo"
 
 
@@ -533,5 +533,5 @@ def test_the_passing_wave_function_gate_ships_no_b1_at_all():
     cfg = _cfg()
     assert _l.inclusive_rank2_is_empty(cfg)
     meta = _l.Pipeline(cfg, li7_tensor_plan()).generate(0, False)["meta"]
-    assert meta["b1_model"] == NONE_LABEL
+    assert meta["b1_model"] == "not read on 7Li (no rank-2 input)"  # A17 (2026-11-03): the row's label, was NONE_LABEL
     assert meta["rank2_input"].startswith("EMPTY -- 7Li is spin 3/2")

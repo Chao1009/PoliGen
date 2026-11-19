@@ -41,7 +41,7 @@ that go through `KnobProvenance::meta_value()` — `pol_sf`, `rc_scope`,
 time in `python/bindings.cpp` — the CLI's `KNOB PROVENANCE` banner block
 (`cli.knob_provenance_lines`), and `python/tests/test_knob_provenance.py`,
 which rebuilds the (spec × knob) matrix — 12 (isotope, channel, plan) specs
-× 81 knob variants = 627 cells (re-measured 2026-09-15; 76 / 592 was Phase A's,
+× 81 knob variants = 627 cells (re-measured 2026-09-15; 76 / 592 was Phase A's; plus, since 2026-11-03, 14 cells of two sub-knobs on the shipped `polrad-full` tail = 641,
 left behind by Phase B), not the full (channel × plan) product; see
 `USAGE.md` §7c — and asserts the table against
 the **output hash**. **A knob added without a row fails that test.** Do not add
@@ -62,7 +62,7 @@ under `helicity-flip` was the second example until 2026-09-06, when
 `--pzz-mode typed` made that flag reachable there and the label moved onto the
 mode.) A rule that depends on
 the RUN PLAN can only be labelled: `validate()` has no plan (`rc_scope` under a
-θ_S = 0 fill).
+θ_S = 0 fill). **An explicit request for the DEFAULT value of a knob the run never reads is handled ONE way** (A17, 2026-11-03 — the supervisor's choice under the author's delegation, `docs/open_items/run_2026-11-03/DECISIONS.md`; until then three ways, by history, the verification's finding C4): it is ACCEPTED and its row is `not-read`, the label naming why — the LABEL branch above, because an explicit default is not a variation and prices nothing — and the `meta` key carries the label in place of the value; a NON-default value keeps its refusal, whose `reason` says which cause. So `--cluster-wave vmc` on `inclusive` / `coherent` is accepted and labelled "not read on channel …", never a bare `vmc` (`hulthen` there stays refused by `make_config`, the CLI and `validate()`); `--rc-tail-model polrad-full` on a run that builds no tail (e.g. `tagged-6Li-alpha --rc tensor-band`) is `not-read`, `meta["rc_tail_model"]` carrying the label beside `rc_tail_applies` False (`t-peak` / `t-peak+ll` there stay refused); every band and tail sub-knob AT ITS DEFAULT where the band or the tail does not apply is `not-read` (its other values stay refused); `--pol-sf nnpdfpol` (D7) on `coherent` is `not-read`, as it was. It reaches EVERY row (the supervisor's note of 2026-11-06 under A17, after `docs/open_items/run_2026-11-03/phase_P4_infrastructure.md` §5–§6): `kernel`, the `b1_*` rows, `r_source`, `cluster_vmc_mc_sigma`, `fsi` off the tags and the rc sub-pieces another knob closes read `not-read` at their default too, their reason opening with the scope clause ("not read at b1_model = miller", "not read on 7Li (no rank-2 input)", "not read with a caller-supplied kernel", …), saying why the axis is closed and ending with the shared A17 sentence; so a run that built has no `refused` row at all — `refused` is the status of a value `validate()` refuses, a configuration that does not build. Pinned by `test_knob_provenance.py::test_an_explicit_default_on_an_unread_knob_is_handled_one_way`.
 
 Why it needs a mechanism at all: the rule was enforced knob by knob and then
 broke five times in one run, each time on an axis the previous fix had not
@@ -79,8 +79,8 @@ knobs recorded nowhere at all
       A_zz(θ_S = 0) (1 + ε(y) R) = −(2/3) b₁/F₁   exactly, at every y,
 
   with P_zz = n₊ + n₋ − 2n₀, i.e. b₁ > 0 means the m = 0 state has the LARGER
-  cross section.  It was `+1` — the repository's own transcription of
-  Hoodbhoy–Jaffe–Manohar — until that date, and setting the constant back is
+  cross section.  It was `+1` — the sibling's slide of the JLab LOI's Eq. (9),
+  long called Hoodbhoy–Jaffe–Manohar's — until that date, and setting it back is
   the whole of the change: nothing else in the library knows the sign.  The
   guard test (`tests/test_xsec.cpp`, "Cosyn Eq. 27: A_zz(theta_S=0)(1 + eps R)
   = -(2/3) b1/F1") is written against the LITERATURE relation itself, with no
@@ -94,20 +94,20 @@ knobs recorded nowhere at all
   What does NOT: |A_zz|, the whole Δ (cos 2φ) sector, and `A_zz^tag(k)`
   (`azz_tensor_curve*`), which is a ratio of cluster-wave populations and
   carries no b₁ at all.
-- **⁶Li effective polarization.** The CLUSTER PICTURE since 2026-08-29
-  (plans/04 #6, closed).  `LI6_CLUSTER_POLARIZATION = (1 − 1.5 P_D_LI6)
-  (1 − 1.5 P_D_DEUTERON) = 0.81123` whole-nucleus, and `LI6().eff_pol_p =
-  eff_pol_n = LI6_CLUSTER_POLARIZATION/3`, so `Z·P_p = N·P_n = 0.81123`.  The
+- **⁶Li effective polarization — since A1 (2026-11-03; `open_items/run_2026-11-03/DECISIONS.md` A1, the supervisor's choice under the author's delegation) the single copies are:** `LI6_CLUSTER_POLARIZATION` = `LI6_POLARIZATION_VMC_SIX_BODY` = **0.848** whole-nucleus (`beams.hpp`; `LI6().eff_pol_p = eff_pol_n = 0.848/3`), band **0.811 … 0.887 around 0.848** (the two cluster readings; the ab initio value is the default); `LI6_B1_RANK2_TRANSFER` = `LI6_B1_RANK2_TRANSFER_VMC` = **0.982576** (`constants.hpp`; the VMC α–d tensor dilution — unquantified systematic: the 4.4 % non-cluster depletion that takes the vector sector from the cluster 0.887 to the six-body 0.848 has no rank-2 counterpart; read by ⁶Li alone since J1 (2026-11-10, the author's decision): the inclusive deuteron's rank-2 slot is `MillerB1` itself, unmapped, its `meta["li6_b1_rank2_transfer"]` the `not read …` label of “Refuse or label”, and a moved `b1_transfer` on it is refused; J1 note (2026-11-12): that slot is confined to the spin-1 positivity domain −(3/2)F₁ ≤ b₁ ≤ 3(F₁ − |g₁|), reported by `meta["b1_clipped_rate_fraction"]`); `P_D_DEUTERON` = **0.0576** (AV18, `deuteron_av18_p_d`), `DEUTERON_VECTOR_POLARIZATION` = **0.9136**.  The pre-A1 values keep names — `LI6_CLUSTER_POLARIZATION_HULTHEN` = 0.811228, `LI6_B1_RANK2_TRANSFER_HULTHEN` = 0.921947, `P_D_DEUTERON_SCENARIO` = 0.045 (still the Hulthén tag's deuteron) — and are reached through the API only (`li6_ion`, `deuteron_ion`, `default_inclusive_kernel(…, b1_transfer)`), which is how the polligen port gates pass them.  The rest of this bullet is the PRE-A1 record (its "default" is the pre-A1 one).
+  The CLUSTER PICTURE since 2026-08-29 (plans/04 #6, closed): pre-A1 `LI6_CLUSTER_POLARIZATION = (1 − 1.5 P_D_LI6)
+  (1 − 1.5 P_D_DEUTERON) = 0.81123` whole-nucleus (now `_HULTHEN`), and `LI6().eff_pol_p =
+  eff_pol_n = LI6_CLUSTER_POLARIZATION/3`, so `Z·P_p = N·P_n = 0.81123` (pre-A1; 0.848 now).  The
   two D-state probabilities live in **`beams.hpp`** — one source of truth, as
   in `polli_fastsim.beams` — and `tagged.hpp` uses those names rather than
-  keeping copies, so **on the Hulthén default** the INCLUSIVE effective
+  keeping copies, so **on the Hulthén wave (the run default until D6, the option since)** the INCLUSIVE effective
   polarization and the TAGGED S/D interference of `li6_alpha_channel` are the
   same wave function seen in two experiments — measured 2026-09-04 and
   re-measured 2026-09-06 on the fixed S–D interference sign, they agree
   to **7.84e−6** (0.869950 against the tagged model's **0.8699431789**, a closed
   form against a grid quadrature; 6.82e−6 absolute).  *(The pre-fix pair was
   0.869939 and 1.22e−5: the fix moves the 96-cell quadrature residual by
-  +4.3e−6 and nothing else here — the dilution is angle-integrated.)*  **Under `--cluster-wave vmc` they do not**: the
+  +4.3e−6 and nothing else here — the dilution is angle-integrated.)*  **Under `vmc` — the run default since D6 (2026-10-27), so between the two DEFAULT runs — they do not**: the
   tagged α–d wave becomes the ANL VMC overlap at `VMC_P_D_LI6` = 0.019355 and
   the inclusive constant does not follow, so the two differ by **+11.61 %** in
   the vector sector and **+6.58 %** in the rank-2 one (`LI6_B1_RANK2_TRANSFER`
@@ -123,7 +123,7 @@ knobs recorded nowhere at all
   FORMULA carries the error, not the choice of P_D.  Author decision
   2026-09-04: the default stays 0.811228, the drift is documented at 11.61 %
   rather than "fixed", and no inclusive ⁶Li polarization is quoted without the
-  band 0.81–0.91 (`docs/open_items/run_2026-09-03/phase_C_numbers.md` §C5.5,
+  band 0.81–0.91 (D6 kept all three pending the answer, registry row 10 — closed by A1, which moved all three; `docs/open_items/run_2026-09-03/phase_C_numbers.md` §C5.5,
   pinned in `tests/test_tagged.cpp` **T26**).  The drift is between a tagged
   row and an inclusive row of one programme, never inside one run — **and that
   sentence was false when it was first written (§C5.5b, 2026-09-04).**  A
@@ -135,15 +135,15 @@ knobs recorded nowhere at all
   (`ClusterBreakup` samples k from that same deuteron).  Every polarized
   tagged-α observable was **+2.069 %** high against the AV18 deuteron
   (P_D = 0.057600) belonging to that overlap.  Since 2026-09-04 both follow
-  the flag (`DEUTERON_AV18()`, `BreakupOptions::source`), the opt-in path moved
-  by −2.027 %, the Hulthén default is bit for bit, and a `vmc` run's
-  whole-nucleus reading is one Hamiltonian's: 0.887076.  `validate()` now also
-  **refuses** `cluster_wave` on `Inclusive` and `CoherentLi6`, where it is
+  the flag (`DEUTERON_AV18()`, `BreakupOptions::source`), that path (opt-in then, the default since D6) moved
+  by −2.027 %, the Hulthén path is bit for bit, and a `vmc` run's
+  whole-nucleus reading is one Hamiltonian's: 0.887076.  `cluster_wave` is also
+  **refused** on `Inclusive` and `CoherentLi6` (since D6 a moved value by `validate()`, an explicit one by `make_config` / the CLI; V-PHYSICS-1 (2026-11-10), A17 (2026-11-03): since A17 only a moved value, an explicit `hulthen`, is refused — an explicit `vmc`, the default, is accepted and labelled `not-read`, "Refuse or label" above), where it is
   never read — accepting it unread was how the 11.61 % above reached a user
   who thought they had asked for a VMC ⁶Li (**T27**, and the pipeline test).
-  The deuteron slot carries `DEUTERON_VECTOR_POLARIZATION =
-  1 − 1.5 P_D_DEUTERON = 0.9325` verbatim, so per-nucleon
-  g₁(⁶Li)/g₁(d) = (1 − 1.5 P_D_LI6)/3 = 0.290 exactly (the deuteron's own D
+  The deuteron slot carried (pre-A1) `DEUTERON_VECTOR_POLARIZATION =
+  1 − 1.5 P_D_DEUTERON = 0.9325` verbatim (0.9136 since A1), so per-nucleon
+  g₁(⁶Li)/g₁(d) = (1 − 1.5 P_D_LI6)/3 = 0.290 exactly pre-A1 (0.309399 since A1; the deuteron's own D
   state cancels between the two isoscalar ions).  The retired Cloet
   convention stays reachable as `LI6_NAIVE_ONE_THIRD` — a whole-nucleus 1.0,
   1.233× this one and above the **0.81–0.91** band of this tree's wave
@@ -161,7 +161,7 @@ knobs recorded nowhere at all
   off by default because that leakage is carried as a SYSTEMATIC of the Δ
   extraction rather than as a correction the extraction subtracts, and
   because switching it on would silently move every published tensor number.
-  Its size is Δ_fake/(γ² b₁) = 0.14–0.16 — the twist-4 Eq. (17e) term almost
+  Its size is Δ_fake/(γ² b₁) = 0.28–0.32 in Jaffe–Manohar units (0.14–0.16 before D4, the Δ-normalisation bullet below) — the twist-4 Eq. (17e) term almost
   alone, the leading-twist T_LL and twist-3 T_LT channels standing 3 : −3 : 1
   and cancelling — which RETIRES the old bound "γ² b₁ × 1.15".
   `tests/test_tensor_gamma.cpp` is the port of
@@ -325,8 +325,8 @@ knobs recorded nowhere at all
   momentum.  `β = x/x_P` and `M_X²` are on the record.  X must be TIMELIKE on
   every channel — a hard check in `Pipeline::add_hadronic_x` and in
   `InclusiveGenerator`, never a clip.
-- **Cluster radial forms.** `ClusterWaveSource::Hulthen` is the DEFAULT
-  everywhere; its radial forms are bit-compatible with `polligen` and with
+- **Cluster radial forms.** `ClusterWaveSource::VmcAV18` is the RUN default since D6 (2026-10-27): `CLUSTER_WAVE_DEFAULT` (`cluster.hpp`) is what `PipelineConfig::cluster_wave`, the CLI, `lg.run` and `lg.make_config` start from, defined once and read everywhere else.  `ClusterWaveSource::Hulthen` is the option, and still the ARGUMENT default of the channel factories and `BreakupOptions` (their β and P_D are its parameters; the polligen port gate `tagged.json` pins it, by name in the tests; since A13 (2026-11-03) the same file also carries a reduced `li6_alpha_vmc` block, polligen's VMC α–d vector and tensor dilutions, which `tests/test_tagged.cpp` gates against `VmcAV18` at the declared `kVmcPortRtol` = 1e−8 — the α–d motion only, not the embedded deuteron and not ⁷Li)
+  — so `lg.li6_alpha_channel()` and `lg.run(channel="tagged-6Li-alpha")` differ; its radial forms are bit-compatible with `polligen` and with
   every number published **since** the 2026-09-06 S–D sign fix (which is every
   ⁷Li number ever published).  The spin-1 tagged numbers published BEFORE that
   date carry the inverted S–D sign and are not reproduced, by design —
@@ -372,8 +372,8 @@ knobs recorded nowhere at all
   P_D is a property of the wave function (`VMC_P_D_LI6` = 0.01935, the file's
   own 0.015861/(0.80362+0.015861), against the 0.0867 SCENARIO placeholder).
   Tables are ZERO outside 5 fm⁻¹ = 0.9866 GeV, so the sampler cannot draw a
-  spectator past it.  The deuteron control channel is Hulthén **by default and
-  follows `--cluster-wave vmc`** (C5.4, 2026-09-04): `fdeut.av18`'s u(k), w(k)
+  spectator past it.  The deuteron control channel follows the run's wave — **the AV18 deuteron by default
+  since D6, Hulthén on `--cluster-wave hulthen`** (C5.4, 2026-09-04): `fdeut.av18`'s u(k), w(k)
   ARE the p–n relative waves, so the sentence that used to stand here — "the
   deuteron control channel is always Hulthen … no d → p+n two-cluster table
   exists" — was false, and the flag had been *silently ignored* there.
@@ -458,14 +458,14 @@ knobs recorded nowhere at all
   ONE event stream reweighted both ways — `--channel tagged-6Li-alpha
   --events 20000 --seed 1234`, `tensor-thirds` at P_z = 0.7 / P_zz = 0.6 /
   P_e = 0.7, at the default σ_XN = 40 mb, with `k`, `cos_theta_k`, `phi_k`,
-  `x` and `q2` bit-identical across the three runs — they differ on
+  `x` and `q2` bit-identical across the three runs — they differ, on the Hulthén α–d of 2026-09-04, on
   **99.50 %** of events by more than **1 %** (|w_nucleon/w_cluster − 1| > 0.01;
   Σw 10419.07 vs 11632.10, i.e. Σw/Σw_off **0.520954** vs **0.581605**) and by
-  up to a factor **68.52** per event.  Σw/Σw_off is the SAMPLE mean weight and
-  is not the model's own grid-integrated `GlauberFsiWeight::survival()`, which
-  is **0.520239** vs **0.582899** — the number `meta["fsi_survival"]` carries
-  and `tests/test_fsi.cpp` pins.  Quote that window with the two numbers; the
-  whole claim is about one stream and one σ_XN.  The weight table
+  up to a factor **68.52** per event (re-measured 2026-10-29 with the wave named, toy SFs: 99.43 % and 69.89 on
+  `--cluster-wave hulthen`; **64.5 %** and **10.14** on the default VMC waves since D6).  Σw/Σw_off is the SAMPLE mean weight, not the
+  model's own grid-integrated `GlauberFsiWeight::survival()`, which is **0.520239** vs **0.582899** on Hulthén and
+  **0.797094** vs **0.819119** on the default — the number `meta["fsi_survival"]` carries (`tests/test_fsi.cpp` pins the Hulthén pair by name).
+  Quote that window with the two numbers; the whole claim is about one stream and one σ_XN.  The weight table
   is built on a (k_z, k_T) grid — a deliberate deviation from the design
   note's literal (k, cos θ_k): the eikonal kernel transfers k_T only, so the
   table is smooth and even in k_z there — and read per event by bilinear
@@ -541,3 +541,92 @@ knobs recorded nowhere at all
   cross sections (`PipelineConfig::apply_optics_lumi_fraction`, default true) —
   the same share rule that keeps `Scenario::run_share` out of
   `sigma_per_category_pb()`.
+- **Δ normalisation — the cos 2φ coefficient.** `DELTA_COS2PHI_NORM = 0.5`
+  (`constants.hpp`) since 2026-10-27 (author decision D4,
+  `open_items/run_2026-10-27/DECISIONS.md`; the implementation record is
+  `open_items/run_2026-10-27/phase_I4_jm_convention.md`): Δ(x, Q²) is the
+  double-helicity-flip amplitude A₊₋,₋₊ normalised like F₁ = ⅓Σ_H A₊H,₊H —
+  Jaffe and Manohar's Δ — and the kernel's term is
+
+      a₂ = −½ · (1−y)/y² · c_eff(m) sin²θ_S · Δ/D_φ,   c_eff = 3Q_NN (= 3m² − 2 at J = 1),
+
+  so a pure m = ±1 state with its axis transverse to the beam carries
+  a₂ = −½(1−y)/y² Δ/D_φ, and a fill carries Σ_m p_m c_eff(m) = P_zz.  The
+  sources that derive the term print this coefficient: Jaffe–Manohar,
+  *Nuclear gluonometry*, PLB 223 (1989) 218, Eq. (16) (read as the MIT
+  preprint CTP#1712; the journal text was not seen); Sather–Schmidt, PRD 42
+  (1990) 1424, Eq. (A7) — "− ½xλΔ₄ cos 2φ" with Δ = Δ₄ in the Bjorken limit
+  (the same bracket's φ-independent tensor term is "+ ⅙(xy²Δ₁ + λΔ₂)");
+  Ma–Wang–Zhang, arXiv:1306.6693, Eq. (23) (their Ĝ_T is this Δ); and, by
+  contraction with the lepton tensor, Detmold–Shanahan's tensor, PRD 94
+  (2016) 014507, Eq. (5), which the JLab LOI arXiv:1803.11206 prints with its
+  Bjorken limit as Eq. (6).  In helicity-response language it is
+  F[U T_TT] = −Δ with T_TT cos 2φ_TT = ½ sin²θ cos 2φ (Pascalutsa–
+  Vanderhaeghen arXiv:2610.09862, Eqs. (26), (27b), (29b), (A8a) —
+  INFERRED, medium confidence: their Δ is identified with A₊₋,₋₊ through
+  HJM).  The coefficient without the ½ is the LOI's own Eq. (9), which the
+  LOI does not derive and which contradicts its Eq. (6), and a 2019
+  proceedings reprint of it; this tree carried it from its first port until
+  2026-10-27, transcribed from the sibling's `docs/Discussions.pptx` p. 5,
+  which it had called the Hoodbhoy–Jaffe–Manohar transcription.
+  Hoodbhoy–Jaffe–Manohar (NPB 312 (1989) 571) is the b-sector's source — the
+  b₁…b₄ decomposition and the c_m = 3m² − 2 pattern — and has no Δ term:
+  there the double-helicity-flip amplitude falls as 1/Q².
+  **The one-line rule: a Δ(x, Q²) or a moment quoted in Jaffe–Manohar,
+  Sather–Schmidt, Detmold–Shanahan or Ma–Wang–Zhang units enters LiPolGen as
+  printed; a cos 2φ amplitude computed with the pre-D4 kernel or with the
+  sibling's `a_cos2phi` is twice LiPolGen's for the same Δ.**  So `C_BAG` =
+  −0.012 (SS90's ∫x Δ dx = C_BAG α_s) and the gluonic Soffer bound of
+  `t5_delta_moment_bound` enter unconverted, and `make_moment_a/b` give
+  SS90's bag model at face value.  Never apply the factor twice: halving the
+  sibling's coefficient AND halving its Δ inputs would leave the bag
+  scenario at ¼ of its pre-D4 amplitude instead of ½.
+  **The parton-model side is NOT one normalisation in every source.**  The
+  JM preprint's Eq. (29) prints α_s/(8π) for ∫x Δ dx against the α_s/(16π)
+  of its own Eqs. (20), (21) and (25) and of SS90 Eq. (3.1) (on the printed
+  Eq. (29) the bag moment would be −0.023 α_s, not −0.012), and its Eq. (31)
+  has a = g_x̂ − g_ŷ where SS90 Eq. (2.11) has −2[g_x̂ − g_ŷ]; the sign of Δ
+  for a given gluon linear polarization also differs between sources (JM
+  Eq. (2) +, DS16 Eq. (13) −).  These are open (the R1 record's §6) and do
+  not touch the cross-section coefficient; `C_BAG` is SS90's, computed with
+  α_s/(16π).
+  **The b-sector beside a separate Δ.**  SS90 (A2) defines
+  Δ₁ = −½(A₊₊,₊₊ + A₊₋,₊₋ − 2A₊₀,₊₀), the helicity-diagonal b₁ that A_zz
+  measures (their (A8)), and the massless kernel — its b₁ slot read as that
+  b₁ (Miller's and HERMES's are A_zz-type), Δ as SS90's Δ₄ — reproduces
+  (A7)/(A8) term by term at leading power: on the default path nothing is
+  counted twice and nothing is to be subtracted.  (SS90's footnote 8,
+  b₁ = Δ₁ + ½Δ₄ in the Bjorken limit, relates their basis to HJM's covariant
+  b₁, which is not the slot.)  Only the opt-in `tensor_gamma` path, whose
+  cos 2φ harmonic reads b₁…b₄, carries an O(γ²Δ) basis question.
+  **What moved:** every Δ-induced cos 2φ amplitude halves per unit Δ (fills
+  with sin θ_S ≠ 0 — `transverse-tensor`, `tensor-flip`, a tilted
+  `helicity-flip` — on a spin-1 inclusive kernel); the shipped
+  `toy_delta_gluon(…, 1e−2)` keeps its scale, so its amplitude halves; the
+  Δ-equivalent of the finite-γ b-sector leakage doubles, Δ_fake/(γ²b₁)
+  0.14–0.16 → 0.28–0.32; a user Δ the sampler refused as driving W negative
+  may now be accepted (the refusal reads a₂).  In a generated file of a
+  tilted plan: φ, and with it the e′ and X four-vectors and every later draw
+  of the per-event stream (the target hook, the struck-nucleon species, the
+  bridge's draws), and `rc_tensor_lo/hi`.  **What did not:** Δ itself, the
+  b-sector and A_zz, every R or F₂ ratio of the cos 2φ amplitude, the
+  `tensor_gamma` harmonics, the coherent channel's c₂, and any run at
+  θ_S = 0 (the default `tensor-thirds` plan is bit for bit unchanged).
+  **Provenance:** the `meta` of `Pipeline.generate()` carries
+  `meta["delta_convention"]` = "jaffe-manohar-1989; cos2phi coefficient
+  -(1/2)(1-y)/y^2 (D4, 2026-10-27)" (`DELTA_CONVENTION`), and so does every
+  .npz the CLI writes (`--npz`, and `--hfs-npz`, which is handed that
+  `meta`); the CLI run banner prints the same string, and
+  `meta["rank2_input"]` names the Jaffe-Manohar Δ.  A HepMC3 file carries
+  no run-level record of the convention (`--hepmc`, `Pipeline.write_hepmc`,
+  the C++ `HepMC3Writer`, every example executable; adding one is a
+  follow-up, since `docs/HEPMC3_CONVENTION.md` is sha256-pinned by the
+  `t6_hepmc3_convention` row), and neither does an .npz written from an
+  event list without that `meta`.  So the key dates only a
+  `Pipeline.generate()` or CLI .npz: one without it was made before D4,
+  with twice the Δ-induced amplitude.  Setting the constant back to 1.0
+  together with `DELTA_CONVENTION` (a `static_assert` beside the two ties
+  them) restores the pre-D4 kernel, which is the whole of the reversal;
+  `tests/test_xsec.cpp` pins both the closed form and the value, and the
+  port gate reads polligen's coefficient off `xsec.json` (it carries the
+  LOI's Eq. (9) until the sibling changes).

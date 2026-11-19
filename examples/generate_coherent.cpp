@@ -37,7 +37,7 @@
 #include <memory>
 #include <string>
 #include <vector>
-
+#include "lipolgen/lhapdf_sf.hpp"  // D7: the shipped SF grids (install_lhapdf_sf_filler)
 #include "lipolgen/hepmc_writer.hpp"
 #include "lipolgen/pipeline.hpp"
 
@@ -122,7 +122,7 @@ RunPlan plan_of(const std::string& name, const Scenario& sc, const char* argv0) 
 int main(int argc, char** argv) {
   const Args args = parse(argc, argv);
   try {
-    PipelineConfig cfg;
+    PipelineConfig cfg; install_lhapdf_sf_filler();  // D7: the Pipeline attaches CT18NLO
     cfg.channel = PipelineChannel::CoherentLi6;
     cfg.isotope = "6Li";
     cfg.beam_config = args.config;
@@ -187,7 +187,7 @@ int main(int argc, char** argv) {
     }
 
     std::unique_ptr<HepMC3Writer> writer;
-    if (!args.out.empty()) writer = std::make_unique<HepMC3Writer>(args.out);
+    if (!args.out.empty()) { writer = std::make_unique<HepMC3Writer>(args.out); writer->set_run_attributes(run_provenance(p, [&] { KnobRunContext c; c.plan_name = args.plan; return c; }())); }  // A10 (2026-11-03): the run's provenance in GenRunInfo
 
     const int nt = 10;
     std::vector<double> hist(nt, 0.0);

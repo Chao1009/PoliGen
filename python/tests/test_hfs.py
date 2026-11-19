@@ -27,7 +27,13 @@ def hadronized():
     cfg = lg.make_config(isotope="6Li", channel="inclusive", config=1,
                          events=N_EVENTS, seed=20260713)
     beams = lg.default_configs(cfg.isotope)[cfg.beam_config]
-    bridge = lg.PythiaBridge(beams, lg.PythiaBridgeOptions())
+    # D7 (2026-10-29): the default run is on CT18NLO, attached lazily, and a
+    # bridge left on its own ToyF2 is refused against it -- so attach the grid
+    # and hand the bridge THE SAME OBJECT, as lipolgen.run and lipolgen-run do.
+    lg.fill_grid_sf_backends(cfg)
+    po = lg.PythiaBridgeOptions()
+    po.f2_source = cfg.unpol_sf_obj
+    bridge = lg.PythiaBridge(beams, po)
     lg.set_pythia_hadronizer(cfg, bridge)
     p = lg.Pipeline(cfg, lg.tensor_thirds_plan(0.7, 0.6))
     cols = p.generate(0, events=True, nthreads=1)   # bridge is not re-entrant
